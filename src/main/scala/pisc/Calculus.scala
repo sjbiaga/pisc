@@ -64,9 +64,6 @@ class Calculus extends JavaTokenParsers:
     prefix ~ opt( "𝟎" | "("~>choice<~")" | agent ) ^^ {
       case pre ~ Some("𝟎") => End(pre._1, `𝟎`) -> pre._2._2
       case pre ~ Some(choice: (Sum, Names)) => End(pre._1, choice._1) -> (pre._2._2 ++ (choice._2 &~ pre._2._1))
-      case pre ~ Some(call: Call)
-        if (Names(call.params: _*) &~ pre._2._1).nonEmpty =>
-        throw AgentCallArgumentsException(call.identifier.asSymbol, Names(call.params: _*) &~ pre._2._1)
       case pre ~ Some(call: Call) => End(pre._1, call) -> pre._2._2
       case pre ~ _ => End(pre._1, `𝟎`) -> pre._2._2
     }
@@ -86,7 +83,7 @@ class Calculus extends JavaTokenParsers:
             case (r, _) => r
           }
         }
-      Seq(ps.map(_._1): _*) -> (if bound.nonEmpty then bound.reduce(_ ++ _) ++ free else free, free)
+      Seq(ps.map(_._1): _*) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
   def action: Parser[(Act, (Names, Names))] =
@@ -158,7 +155,7 @@ object Calculus extends Calculus:
 
   sealed trait Act extends Any with AST
 
-  case class `v`(name: Opd) extends AnyVal with Act
+  case class `v`(name: Opd) extends AnyVal with Act // forcibly
 
   case object `𝜏` extends Act
 
@@ -201,9 +198,6 @@ object Calculus extends Calculus:
 
   case class PrefixChannelParsingException(name: Opd)
     extends ActionParsingException(s"${name.value} is not a channel name but a ${name.kind}")
-
-  case class AgentCallArgumentsException(name: Symbol, args: Names)
-    extends ParsingException(s"The \"actual\" arguments (${args.map(_.name).mkString(", ")}) to call of ${name.name} are not occurring, either free or bound")
 
   def apply(source: Source): List[Bind] = source
     .getLines()

@@ -150,9 +150,10 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1 + before3, after3 + after1)
 
-      case Par(operand, _*) => body(code, operand)
+      case Par(operand, _*) =>
+        body(code, operand)
 
-      case _: Par => ??? // impossible by syntax
+      case _: Par => ??? // not even inaction - impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -198,7 +199,7 @@ final class Program(indent: String = "  "):
 
       case Pre(Opd(Symbol(_)), Opd(par), true) => ??? // not binding a name
 
-      case Pre(ch, _, _) if !ch.isSymbol => ??? // not a channel name
+      case Pre(ch, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case Match(Opd(lhs), Opd(rhs)) =>
 
