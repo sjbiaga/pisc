@@ -25,7 +25,8 @@ Program
 A new name - will be available in the Scala scope:
 
     for
-      x <- `v`()
+      _ <- IO.unit
+      x <- `v`
       .
       .
       .
@@ -33,7 +34,7 @@ A new name - will be available in the Scala scope:
       ()
 
 The inaction - just the `Unit` value () after yield:
-    
+
     for
       _ <- IO.unit
       .
@@ -42,9 +43,12 @@ The inaction - just the `Unit` value () after yield:
     yield
       ()
 
+(That's why `for` always starts with `_ <- IO.unit`.)
+
 A long prefix path - "`vx.x<5>.x(y).𝜏.x(z).z<y>.`":
 
     for
+      _ <- IO.unit
       x <- `v`
       _ <- x("30408bc7-3d40-415d-9a3b-3ea2c6be7f94" -> BigDecimal(5))
       y <- x()
@@ -60,14 +64,15 @@ A long prefix path - "`vx.x<5>.x(y).𝜏.x(z).z<y>.`":
 One can intercalate "`println`"s:
 
     for
+      _ <- IO.unit
       x <- `v`
-      _ <- IO.println(s"new x=$x") 
+      _ <- IO.println(s"new x=$x")
       _ <- x(5)
-      _ <- IO.println("output x(5)") 
+      _ <- IO.println("output x(5)")
       y <- x()
-      _ <- IO.println("input x(y)") 
+      _ <- IO.println("input x(y)")
       _ <- `𝜏`
-      _ <- IO.println("silent transition") 
+      _ <- IO.println("silent transition")
       z <- x()
       _ <- z(y)
       .
