@@ -67,12 +67,12 @@ final implicit class `()`(val name: Name) extends AnyVal:
   /**
     * positive prefix i.e. input
     */
-  def apply(): IO[`()`] = `><`(name._1)(ref).map(`()`)
+  def apply(): IO[`()`] = `><`()(ref).map(`()`)
 
   /**
     * negative prefix i.e. output
     */
-  def apply(value: `()`): IO[Unit] = `><`(name._1, value.name)(ref)
+  def apply(value: `()`): IO[Unit] = `><`(value.name)(ref)
 
 
 inline given Conversion[`()`, Name] = _.name
@@ -114,14 +114,14 @@ object magic:
 
     val random = Random()
 
-    def apply(channel: String, name: Name)(`>R`: Ref[IO, `><`]): IO[Unit] =
+    def apply(name: Name)(`>R`: Ref[IO, `><`]): IO[Unit] =
         Deferred[IO, Unit].flatMap { offerer =>
           IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
             `>R`.modify {
               case `><`(takers, offerers) if takers.nonEmpty =>
                 val i = random.nextInt % takers.size
                 val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
-                `><`(rest, offerers) -> taker.complete(channel -> `>R`).void
+                `><`(rest, offerers) -> taker.complete(name).void
               case `><`(takers, offerers) =>
                 val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                 `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
@@ -129,7 +129,7 @@ object magic:
           }
         }
 
-    def apply(channel: String)(`<R`: Ref[IO, `><`]): IO[Name] =
+    def apply()(`<R`: Ref[IO, `><`]): IO[Name] =
         Deferred[IO, Name].flatMap { taker =>
           IO.uncancelable { poll =>
             `<R`.modify {
