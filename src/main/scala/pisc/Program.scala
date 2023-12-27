@@ -247,7 +247,12 @@ final class Program(indent: String = "  "):
         }
 
         before1 +=
+          (if comprehension then "" else s"${prefix1}for\n") +
           s"${prefix1}_ <- `$identifier`(${args.mkString(", ")})\n"
+
+        after1 =
+          (if comprehension then "" else s"${prefix1}yield\n${prefix1}  ()\n") +
+          after1
 
         prefix1 -> (before1, after1)
 
