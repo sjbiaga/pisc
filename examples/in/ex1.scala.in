@@ -1,0 +1,25 @@
+  def `Main`(): IO[Unit] =
+    for
+      _ <- IO.unit
+      x <- `v`
+      y <- `v`
+      _ <- (
+             for
+               _ <- IO.unit
+               _ <- x(y)
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               z <- x()
+               _ <- if !(y._1 == z._1) then IO.unit else
+                    for
+                      _ <- IO.unit
+                    yield
+                      ()
+             yield
+               ()
+           ).parMapN { (_, _) => }
+    yield
+      ()
