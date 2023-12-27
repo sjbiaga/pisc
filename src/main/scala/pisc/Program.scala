@@ -95,13 +95,11 @@ final class Program(indent: String = "  "):
 
         cp = false -> prefix
 
-        val (prefix3, (before3, after3)) = body(cp -> ("", ""), operand)
+        val (_, (before3, after3)) = body(cp -> ("", ""), operand)
 
-        val before = before1 + before2 + before3 + after3 + separator
+        before1 += before2 + before3 + after3 + separator
 
-        cp = false -> prefix3
-
-        val (_, (before4, after4)) = body(cp -> (before, ""), Sum(it.choices.tail: _*))
+        val (_, (before4, after4)) = body(cp -> (before1, ""), Sum(it.choices.tail: _*))
 
         (prefix1 -> (before4, after4 + after2 + after1))
 
