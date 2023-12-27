@@ -97,7 +97,7 @@ final class Program(indent: String = "  "):
 
         val (prefix3, (before3, after3)) = body(cp -> ("", ""), operand)
 
-        val (before, after) = (before1 + before2 + before3 + separator, after3 + after2 + after1)
+        val (before, after) = (before1 + before2 + before3 + after3 + separator, after2 + after1)
 
         cp = false -> prefix3
 

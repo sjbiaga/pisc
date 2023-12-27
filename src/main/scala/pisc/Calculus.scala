@@ -137,6 +137,7 @@ class Calculus extends JavaTokenParsers:
 
 
 object Calculus extends Calculus:
+
   type Names = Set[Symbol]
 
   type Bind = (Call, Sum)
@@ -171,7 +172,7 @@ object Calculus extends Calculus:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
-    val polarity: String = value match {
+    val kind: String = value match {
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
       case _: String => "string value"
@@ -199,7 +200,7 @@ object Calculus extends Calculus:
     extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: Opd)
-    extends ActionParsingException(s"${name.value} is not a channel name but a ${name.polarity}")
+    extends ActionParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
   case class AgentCallArgumentsException(name: Symbol, args: Names)
     extends ParsingException(s"The \"actual\" arguments (${args.map(_.name).mkString(", ")}) to call of ${name.name} are not occurring, either free or bound")

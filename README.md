@@ -45,7 +45,7 @@ The inaction - just the `Unit` value () after yield:
 
 (That's why `for` always starts with `_ <- IO.unit`.)
 
-A long prefix path - "`vx.x<5>.x(y).𝜏.x(z).z<y>.`":
+A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
 
     for
       _ <- IO.unit
