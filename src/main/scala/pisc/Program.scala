@@ -97,15 +97,19 @@ final class Program(indent: String = "  "):
 
         val (prefix3, (before3, after3)) = body(cp -> ("", ""), operand)
 
-        val (before, after) = (before1 + before2 + before3 + after3 + separator, after2 + after1)
+        val before = before1 + before2 + before3 + after3 + separator
 
         cp = false -> prefix3
 
-        body(cp -> (before, after), Sum(it.choices.tail: _*))
+        val (_, (before4, after4)) = body(cp -> (before, ""), Sum(it.choices.tail: _*))
 
-      case Sum(operand, _*) => body(code, operand)
+        (prefix1 -> (before4, after4 + after2 + after1))
 
-      case Sum(_*) if comprehension => (prefix1, (before1, after1))
+      case Sum(operand, _*) =>
+        body(code, operand)
+
+      case Sum(_*) if comprehension =>
+        (prefix1, (before1, after1))
 
       case Sum(_*) =>
         val before2 =
