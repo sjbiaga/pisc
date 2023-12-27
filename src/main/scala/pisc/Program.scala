@@ -40,6 +40,13 @@ final class Program(indent: String = "  "):
 
   private val constants = Map[AnyRef, String]()
 
+  private def apply(value: AnyRef): String =
+    if !constants.contains(value)
+    then
+      constants(value) = UUID.randomUUID.toString
+
+    constants(value)
+
   def apply(bind: List[Bind]): String = bind
     .map { case (bind, sum) =>
       val code = (false -> indent) -> ("", "")
@@ -131,7 +138,7 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1 + before3, after3 + after1)
 
-      case Par(lhs, _*) => body(code, lhs)
+      case Par(operand, _*) => body(code, operand)
 
       case _: Par => ??? // impossible by syntax
 
@@ -160,11 +167,7 @@ final class Program(indent: String = "  "):
         prefix1 -> (before1, after1)
 
       case Pre(Opd(Symbol(ch)), Opd(value), false) =>
-        if !constants.contains(value)
-        then
-          constants(value) = UUID.randomUUID.toString
-
-        val uuid = constants(value)
+        val uuid = this(value)
 
         val arg = value match
           case it: BigDecimal => s"BigDecimal($it)"
@@ -190,9 +193,11 @@ final class Program(indent: String = "  "):
         def === =
           (lhs, rhs) match
              case (Symbol(x), Symbol(y)) => s"${x}._1 == ${y}._1"
-             case (x: String, y: String) => s"$x == $y"
-             case (x: BigDecimal, y: BigDecimal) => s"$x == $y"
-             case _ => "false"
+             case (Symbol(x), y: String) => s"${x}._1 == ${this(y)}"
+             case (Symbol(x), y: BigDecimal) => s"${x}._1 == \"${this(y)}\""
+             case (x: String, Symbol(y)) => s"\"${this(x)}\" == ${y}._1"
+             case (x: BigDecimal, Symbol(y)) => s"\"${this(x)}\" == ${y}._1"
+             case (x, y) => s"\"${this(x)}\" == \"${this(y)}\""
 
         val prefix2 =
           s"${prefix1}     "
@@ -220,11 +225,7 @@ final class Program(indent: String = "  "):
         val args = params.map {
           case Opd(Symbol(name)) => name
           case Opd(value) =>
-            if !constants.contains(value)
-            then
-              constants(value) = UUID.randomUUID.toString
-
-            val uuid = constants(value)
+            val uuid = this(value)
 
             value match
               case it: BigDecimal => s"\"$uuid\" -> BigDecimal($it)"
