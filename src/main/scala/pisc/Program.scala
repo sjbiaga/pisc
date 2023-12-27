@@ -105,7 +105,17 @@ final class Program(indent: String = "  "):
 
       case Sum(operand, _*) => body(code, operand)
 
-      case Sum(_*) => (prefix1, (before1, after1))
+      case Sum(_*) if comprehension => (prefix1, (before1, after1))
+
+      case Sum(_*) =>
+        val before2 =
+          s"${prefix1}for\n" +
+          s"${prefix1}${indent}_ <- IO.unit\n"
+        val after2 =
+          s"${prefix1}yield\n" +
+          s"${prefix1}${indent}()\n"
+
+        (prefix1, (before1 + before2, after2 + after1))
 
       ///////////////////////////////////////////////////////////// summation //
 
@@ -233,7 +243,7 @@ final class Program(indent: String = "  "):
         }
 
         before1 +=
-          s"${prefix1}`$identifier`(${args.mkString(", ")})\n"
+          s"${prefix1}_ <- `$identifier`(${args.mkString(", ")})\n"
 
         prefix1 -> (before1, after1)
 
