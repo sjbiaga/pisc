@@ -135,7 +135,7 @@ final class Program(indent: String = "  "):
           s"${prefix2}     ,\n"
         val after2 =
           s"${prefix2}     ).parMapN { (${"_, ".repeat(it.components.size-1)}_) => }\n" +
-          (if comprehension then "" else s"${prefix1}yield\n${prefix1}  ()\n")
+          (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n")
 
         val prefix =
           s"${prefix2}     ${indent}"
@@ -246,12 +246,14 @@ final class Program(indent: String = "  "):
               case it: String => s"\"$uuid\" -> $it"
         }
 
+        val prefix2 = prefix1 + (if comprehension then "" else indent)
+
         before1 +=
           (if comprehension then "" else s"${prefix1}for\n") +
-          s"${prefix1}_ <- `$identifier`(${args.mkString(", ")})\n"
+          s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})\n"
 
         after1 =
-          (if comprehension then "" else s"${prefix1}yield\n${prefix1}  ()\n") +
+          (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n") +
           after1
 
         prefix1 -> (before1, after1)
