@@ -28,8 +28,6 @@
 
 package pisc
 
-import java.util.UUID
-
 import scala.collection.mutable.{ HashMap => Map }
 
 import Calculus._
@@ -37,15 +35,6 @@ import Program._
 
 
 final class Program(indent: String = "  "):
-
-  private val constants = Map[AnyRef, String]()
-
-  private def apply(value: AnyRef): String =
-    if !constants.contains(value)
-    then
-      constants(value) = UUID.randomUUID.toString
-
-    constants(value)
 
   def apply(bind: List[Bind]): String = bind
     .map { case (bind, sum) =>
@@ -179,15 +168,20 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1, after1)
 
-      case Pre(Opd(Symbol(ch)), Opd(value), false) =>
-        val uuid = this(value)
+      case Pre(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
+        before1 +=
+          s"${prefix1}_ <- $ch(\"\" -> ${strip(expr)})\n"
 
+        prefix1 -> (before1, after1)
+
+
+      case Pre(Opd(Symbol(ch)), Opd(value), false) =>
         val arg = value match
           case it: BigDecimal => s"BigDecimal($it)"
           case it: String => it
 
         before1 +=
-          s"${prefix1}_ <- $ch(\"$uuid\" -> $arg)\n"
+          s"${prefix1}_ <- $ch(\"\" -> $arg)\n"
 
         prefix1 -> (before1, after1)
 
@@ -197,20 +191,23 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1, after1)
 
-      case Pre(Opd(Symbol(_)), Opd(par), true) => ??? // not binding a name
+      case Pre(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
 
       case Pre(ch, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
-      case Match(Opd(lhs), Opd(rhs)) =>
+      case Match(Opd(lhs), Opd(rhs), mismatch) =>
 
         def === =
+          val op = if mismatch then "!=" else "=="
           (lhs, rhs) match
-             case (Symbol(x), Symbol(y)) => s"${x}._1 == ${y}._1"
-             case (Symbol(x), y: String) => s"${x}._1 == ${this(y)}"
-             case (Symbol(x), y: BigDecimal) => s"${x}._1 == \"${this(y)}\""
-             case (x: String, Symbol(y)) => s"\"${this(x)}\" == ${y}._1"
-             case (x: BigDecimal, Symbol(y)) => s"\"${this(x)}\" == ${y}._1"
-             case (x, y) => s"\"${this(x)}\" == \"${this(y)}\""
+             case (Symbol(x), Symbol(y)) => s"${x}._1 $op ${y}._1"
+             case (Symbol(x), y: String) => s"${x}._2 $op $y"
+             case (Symbol(x), y: BigDecimal) => s"${x}._2 $op $y"
+             case (Symbol(x), Expr(y)) => s"${x}._2 $op ${strip(y)}"
+             case (x: String, Symbol(y)) => s"$x $op ${y}._2"
+             case (x: BigDecimal, Symbol(y)) => s"$x $op ${y}._2"
+             case (Expr(x), Symbol(y)) => s"${strip(x)} $op ${y}._2"
+             case (x, y) => s"$x $op $y"
 
         val prefix2 =
           s"${prefix1}     "
@@ -238,11 +235,15 @@ final class Program(indent: String = "  "):
         val args = params.map {
           case Opd(Symbol(name)) => name
           case Opd(value) =>
-            val uuid = this(value)
-
             value match
-              case it: BigDecimal => s"\"$uuid\" -> BigDecimal($it)"
-              case it: String => s"\"$uuid\" -> $it"
+              case it: BigDecimal => s"\"\" -> BigDecimal($it)"
+              case it: String => s"\"\" -> $it"
+              case Expr(it) =>
+                var expr = it.stripPrefix("'").stripSuffix("'")
+                if expr == it
+                then expr = it.stripPrefix("`").stripSuffix("`")
+
+                s"\"\" -> $expr"
         }
 
         val prefix2 = prefix1 + (if comprehension then "" else indent)
@@ -298,6 +299,13 @@ final class Program(indent: String = "  "):
       case it => ???
 
 object Program:
+
+  def strip(expr_ : String): String =
+    var expr = expr_.stripPrefix("'").stripSuffix("'")
+    if expr == expr_
+    then expr = expr_.stripPrefix("`").stripSuffix("`")
+    expr
+
 
   type Code = ((Boolean, String), (String, String))
   //            ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^

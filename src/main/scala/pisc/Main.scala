@@ -47,7 +47,7 @@ object Main:
       var bwr: BufferedWriter = null
 
       try
-        source = Source.fromFile(s"$examples/pisc/" + in)
+        source = Source.fromFile(s"$examples/pisc/$in")
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 

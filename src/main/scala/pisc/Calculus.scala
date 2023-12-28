@@ -102,19 +102,26 @@ class Calculus extends JavaTokenParsers:
         throw PrefixChannelParsingException(ch)
     } |
     name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ par ~ _ if ch.isSymbol =>
+      case ch ~ _ ~ par ~ _ if ch.isSymbol && par.isSymbol=>
         Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
-      case ch ~ _ ~ _ ~ _ =>
+      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
+      case _ ~ _ ~ par ~ _ if !par.isSymbol =>
+        throw PrefixChannelParsingException(par)
     } |
     "["~name~"="~name~"]" ^^ { // match
       case _ ~ lhs ~ _ ~ rhs ~ _ =>
         Match(lhs, rhs) -> (Names(), Names(lhs, rhs))
+    } |
+    "["~name~"≠"~name~"]" ^^ { // mismatch
+      case _ ~ lhs ~ _ ~ rhs ~ _ =>
+        Match(lhs, rhs, true) -> (Names(), Names(lhs, rhs))
     }
 
   def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
                           floatingPointNumber ^^ { Opd.apply compose BigDecimal.apply } |
-                          stringLiteral ^^ { Opd.apply }
+                          stringLiteral ^^ { Opd.apply } |
+                          expression ^^ { Opd.apply compose Expr.apply }
 
   def agent: Parser[(Call, Names)] =
     IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
@@ -143,6 +150,14 @@ class Calculus extends JavaTokenParsers:
       "" ~> // handle whitespace
       rep1(acceptIf(Character.isUpperCase)("agent identifier expected but '" + _ + "' found"),
           elem("agent identifier part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
+
+  /** Single or back quotes (`'`) enclosing an expression of type String or BigDecimal:
+   *
+   *  - Any character except single or back quotes
+   *  - A backslash followed by a single quote or back quote
+   */
+  def expression: Parser[String] =
+    ("['`]"+"""([^'`]|\\['`])*"""+"['`]").r
 
 
 object Calculus extends Calculus:
@@ -173,7 +188,7 @@ object Calculus extends Calculus:
 
   case class Pre(channel: Opd, name: Opd, polarity: Boolean) extends Act
 
-  case class Match(lhs: Opd, rhs: Opd) extends Act // forcibly
+  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Act // forcibly
 
   case class Seq(actions: Act*) extends AnyVal with AST
 
@@ -185,11 +200,14 @@ object Calculus extends Calculus:
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
       case _: String => "string value"
+      case _: Expr => "scala expression"
     }
 
   case class End(prefix: Seq, process: AST) extends AST
 
   case class Call(identifier: Opd, params: Opd*) extends AST
+
+  case class Expr(expression: String)
 
   // exceptions
 
