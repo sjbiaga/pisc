@@ -38,8 +38,6 @@ import Program._
 
 final class Program(indent: String = "  "):
 
-  def uuid = UUID.randomUUID
-
   def apply(bind: List[Bind]): String = bind
     .map { case (bind, sum) =>
       val code = (false -> indent) -> ("", "") -> None
@@ -216,12 +214,19 @@ final class Program(indent: String = "  "):
           (lhs, rhs) match
              case (Symbol(x), Symbol(y)) => s"${x}._1 $op ${y}._1"
              case (Symbol(x), y: String) => s"${x}._2 $op $y"
-             case (Symbol(x), y: BigDecimal) => s"${x}._2 $op $y"
+             case (Symbol(x), y: BigDecimal) => s"${x}._2 $op BigDecimal($y)"
              case (Symbol(x), Expr(y)) => s"${x}._2 $op ${strip(y)}"
              case (x: String, Symbol(y)) => s"$x $op ${y}._2"
-             case (x: BigDecimal, Symbol(y)) => s"$x $op ${y}._2"
+             case (x: BigDecimal, Symbol(y)) => s"BigDecimal($x) $op ${y}._2"
              case (Expr(x), Symbol(y)) => s"${strip(x)} $op ${y}._2"
-             case (x, y) => s"$x $op $y"
+             case (x: BigDecimal, y: BigDecimal) => s"BigDecimal($x) $op BigDecimal($y)"
+             case (x: BigDecimal, Expr(y)) => s"BigDecimal($x) $op ${strip(y)}"
+             case (Expr(x), y: BigDecimal) => s"${strip(x)} $op BigDecimal($y)"
+             case (x: String, y: String) => s"$x $op $y"
+             case (x: String, Expr(y)) => s"$x $op ${strip(y)}"
+             case (Expr(x), y: String) => s"${strip(x)} $op $y"
+             case (x: BigDecimal, y: String) => s"BigDecimal($x) $op $y /* π: compile error */"
+             case (x: String, y: BigDecimal) => s"$x $op BigDecimal($y) /* π: compile error */"
 
         val prefix2 =
           s"${prefix1}     "
@@ -313,7 +318,13 @@ final class Program(indent: String = "  "):
 
       case it => ???
 
+
 object Program:
+
+  type Code = (((Boolean, String), (String, String)), Option[String])
+  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
+  //             |||||||  indent,   before, after,    semaphore
+  //             whether inside a for-comprehension
 
   def strip(expr_ : String): String =
     var expr = expr_.stripPrefix("'").stripSuffix("'")
@@ -321,8 +332,4 @@ object Program:
     then expr = expr_.stripPrefix("`").stripSuffix("`")
     expr
 
-
-  type Code = (((Boolean, String), (String, String)), Option[UUID])
-  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
-  //             |||||||  indent,   before, after,    semaphore
-  //             whether inside a for-comprehension
+  def uuid = UUID.randomUUID.toString
