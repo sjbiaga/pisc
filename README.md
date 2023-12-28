@@ -16,8 +16,66 @@ producer/consumer but no queue, only `takers` and `offerers`.
 Composition: parallel modelled with - `parMapN`.
 Summation: non-deterministic choice modelled with - `IO.race` and `Semaphore`.
 
+The source code is divided in two: the parser in `Calculus.scala` and the
+`Scala` source code generator in `Program.scala`.
+
+
 Calculus
 --------
+
+The Π-calculus process expressions are exactly as in the literature, with
+both ASCII and UTF-8 characters, and slight variations. There is no `if then else`,
+but there is "match" and "mismatch". Forcibly, a _restriction_ and a _(mis)match_ are
+"considered" _actions_, besides _prefixes_ per se.
+
+The BNF formal grammar is the following. Lexically, `ident` is a channel name - (an
+identifier) starting with lowercase letter; capital `IDENT` is an agent identifier
+starting with uppercase letter. Both may contain single and double quotes.
+
+A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
+with an optional list of "formal" (bound names) parameters, to a process expression. Because
+the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
+with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_. "𝜏" is the _silent transition_.
+
+Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
+
+Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
+
+The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
+the input prefix uses the round parentheses and has the form `NAME(NAME).`. A name
+in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
+or any `Scala` expression between either single or back quotes, that is unwrapped when generated.
+
+A match has the form `[NAME=NAME]` and a mismatch the same, but
+using the `NOT EQUAL TO` unicode `≠` character.
+
+The name before parentheses must be a channel name.
+
+Also, it is possible that (mis)match generates a comparison of two incompatible constants, i.e.,
+that is detected by the `Scala` compiler as an error.
+
+Note that prefixes and the silent transition are followed by a dot, whereas restriction and
+(mis)match are not.
+
+    EQUATION   ::= AGENT "=" CHOICE
+    CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
+    PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
+    SEQUENTIAL ::= PREFIX [ "𝟎" | "(" CHOICE ")" | AGENT ]
+    PREFIX     ::= ACTION { ACTION }
+    ACTION     ::= "𝜏" "."
+	             | "v" "(" NAME ")"
+	             | NAME "<" NAME ">" "."
+	             | NAME "(" NAME ")" "."
+	             | "[" NAME "=" NAME "]"
+	             | "[" NAME "≠" NAME "]"
+    AGENT     ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+
+Not part of the original Π-calculus, an agent (call) expression - unless
+it is binding in an equation -, may be preceded by a sequence of characters wrapped
+between curly braces: these will be joined using the dot "." character, standing for
+a qualified package identifier. Thus, agents in different translated "`.scala`" files
+can be reused; the lexical category is `qual`.
+
 
 Program
 -------
@@ -113,7 +171,7 @@ The `examples` folder has three sub-folders:
 
 The root project folder contains two files: `pi.scala` and `main.scala.in`.
 !!!Warning: do not delete them!!!
-One can edit'em, thought they're ready to generate a main `App`.
+One can edit'em, though they're ready to generate a main `App`.
 
 Let's go backwards. To run an example, `cd` to `examples` and execute:
 
