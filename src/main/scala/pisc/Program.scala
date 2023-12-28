@@ -250,7 +250,7 @@ final class Program(indent: String = "  "):
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
-      case Call(Opd(Symbol(identifier)), params*) =>
+      case Call(Opd(Symbol(identifier)), path, params*) =>
         val args = params.map {
           case Opd(Symbol(name)) => name
           case Opd(value) =>
@@ -270,7 +270,12 @@ final class Program(indent: String = "  "):
         before1 +=
           (if comprehension then "" else s"${prefix1}for\n") +
           semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
-          s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})\n"
+          ( if path.isEmpty
+            then
+              s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})\n"
+            else
+              s"${prefix2}_ <- ${path.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})\n"
+          )
 
         after1 =
           (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n") +

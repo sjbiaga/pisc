@@ -39,7 +39,7 @@ import Calculus._
 class Calculus extends JavaTokenParsers:
 
   def equation: Parser[Bind] =
-    agent~"="~choice ^^ {
+    agent(true)~"="~choice ^^ {
       case (call, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(call.identifier.asSymbol, free &~ bound)
@@ -58,7 +58,7 @@ class Calculus extends JavaTokenParsers:
     }
 
   def sequential: Parser[(End, Names)] =
-    prefix ~ opt( "𝟎" | "("~>choice<~")" | agent ) ^^ {
+    prefix ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
       case pre ~ Some("𝟎") =>
         End(pre._1, `𝟎`) -> pre._2._2
       case pre ~ Some((sum: Sum, free: Names)) =>
@@ -90,24 +90,24 @@ class Calculus extends JavaTokenParsers:
   def action: Parser[(Act, (Names, Names))] =
     "𝜏" <~ "." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
-      case ch if ch.isSymbol =>
-        `v`(ch) -> (Names(ch), Names())
-      case ch =>
+      case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
+      case ch =>
+        `v`(ch) -> (Names(ch), Names())
     } |
     name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
-      case ch ~ _ ~ arg ~ _ if ch.isSymbol =>
-        Pre(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
-      case ch ~ _ ~ _ ~ _ =>
+      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
+      case ch ~ _ ~ arg ~ _ =>
+        Pre(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
     } |
     name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ par ~ _ if ch.isSymbol && par.isSymbol=>
-        Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case _ ~ _ ~ par ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
+      case ch ~ _ ~ par ~ _ =>
+        Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
     "["~name~"="~name~"]" ^^ { // match
       case _ ~ lhs ~ _ ~ rhs ~ _ =>
@@ -123,14 +123,16 @@ class Calculus extends JavaTokenParsers:
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
 
-  def agent: Parser[(Call, Names)] =
-    IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
-      case id ~ Some(params) if !params.forall(_.isSymbol) =>
+  def agent(binding: Boolean = false): Parser[(Call, Names)] =
+    qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
+      case path ~ id ~ _ if binding && path.nonEmpty =>
+        throw EquationQualifiedException(id, path)
+      case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
-      case id ~ Some(params) =>
-        Call(Opd(Symbol(id)), params: _*) -> Names(params: _*)
-      case id ~ _ =>
-        Call(Opd(Symbol(id))) -> Names()
+      case path ~ id ~ Some(params) =>
+        Call(Opd(Symbol(id)), path, params: _*) -> Names(params: _*)
+      case path ~ id ~ _ =>
+        Call(Opd(Symbol(id)), path) -> Names()
     }
 
   /**
@@ -150,6 +152,13 @@ class Calculus extends JavaTokenParsers:
       "" ~> // handle whitespace
       rep1(acceptIf(Character.isUpperCase)("agent identifier expected but '" + _ + "' found"),
           elem("agent identifier part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
+
+  /**
+   * Qualified identifiers to agents in other packages.
+   * @return
+   */
+  def qual: Parser[List[String]] =
+    rep(("""[{][^}]*[}]""").r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
 
   /** Single or back quotes enclosing an expression of type String or BigDecimal:
    *
@@ -205,7 +214,7 @@ object Calculus extends Calculus:
 
   case class End(prefix: Seq, process: AST) extends AST
 
-  case class Call(identifier: Opd, params: Opd*) extends AST
+  case class Call(identifier: Opd, path: List[String], params: Opd*) extends AST
 
   case class Expr(expression: String)
 
@@ -216,6 +225,9 @@ object Calculus extends Calculus:
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
     extends ParsingException(msg, cause)
+
+  case class EquationQualifiedException(id: String, path: List[String])
+    extends EquationParsingException(s"A qualified package ${path.mkString(".")} is present in the left hand side of $id")
 
   case class EquationParamsException(id: String, params: AnyRef*)
     extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
