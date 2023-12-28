@@ -151,13 +151,13 @@ class Calculus extends JavaTokenParsers:
       rep1(acceptIf(Character.isUpperCase)("agent identifier expected but '" + _ + "' found"),
           elem("agent identifier part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  /** Single or back quotes (`'`) enclosing an expression of type String or BigDecimal:
+  /** Single or back quotes enclosing an expression of type String or BigDecimal:
    *
    *  - Any character except single or back quotes
    *  - A backslash followed by a single quote or back quote
    */
   def expression: Parser[String] =
-    ("['`]"+"""([^'`]|\\['`])*"""+"['`]").r
+    ("""'([^']|\\')*'""").r | ("""`([^`]|\\`)*`""").r
 
 
 object Calculus extends Calculus:
