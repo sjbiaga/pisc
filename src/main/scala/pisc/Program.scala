@@ -28,6 +28,8 @@
 
 package pisc
 
+import java.util.UUID
+
 import scala.collection.mutable.{ HashMap => Map }
 
 import Calculus._
@@ -36,14 +38,16 @@ import Program._
 
 final class Program(indent: String = "  "):
 
+  def uuid = UUID.randomUUID
+
   def apply(bind: List[Bind]): String = bind
     .map { case (bind, sum) =>
-      val code = (false -> indent) -> ("", "")
+      val code = (false -> indent) -> ("", "") -> None
       defn(code)(bind, sum)
     }.mkString("\n\n")
 
   private def defn(code: Code)(bind: Call, sum: Sum): String =
-    var ((comprehension, prefix1), (before1, after1)) = code
+    var (((comprehension, prefix1), (before1, after1)), _) = code
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name).map { _.toString + ": Name" }
     before1 +=
@@ -54,14 +58,14 @@ final class Program(indent: String = "  "):
 
     val cp = comprehension -> prefix
 
-    val (_, (before, after)) = body(cp -> (before1, after1), sum)
+    val (_, (before, after)) = body(cp -> (before1, after1) -> None, sum)
 
     before + after
 
   private def body(code: Code, node: AST): (String, (String, String)) =
     //                                      ^^^^^^   ^^^^^^  ^^^^^^
     //                              [Match] prefix,  before, after
-    var (cp @ (comprehension, prefix1), (before1, after1)) = code
+    var ((cp @ (comprehension, prefix1), (before1, after1)), semaphore) = code
 
     node match
 
@@ -69,8 +73,13 @@ final class Program(indent: String = "  "):
 
       case it @ Sum(operand, _, _*) =>
         val prefix2 = prefix1 + (if comprehension then "" else indent)
+
+        val sem = Some(uuid)
+
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
+          s"${prefix2}`${sem.get}` <- Semaphore[IO](1)\n" +
           s"${prefix2}_ <- IO.race\n" +
           s"${prefix2}     (\n"
         val separator =
@@ -84,11 +93,11 @@ final class Program(indent: String = "  "):
 
         cp = false -> prefix
 
-        val (_, (before3, after3)) = body(cp -> ("", ""), operand)
+        val (_, (before3, after3)) = body(cp -> ("", "") -> sem, operand)
 
         before1 += before2 + before3 + after3 + separator
 
-        val (_, (before4, after4)) = body(cp -> (before1, ""), Sum(it.choices.tail: _*))
+        val (_, (before4, after4)) = body(cp -> (before1, "") -> sem, Sum(it.choices.tail: _*))
 
         (prefix1 -> (before4, after4 + after2 + after1))
 
@@ -99,12 +108,15 @@ final class Program(indent: String = "  "):
         (prefix1, (before1, after1))
 
       case Sum(_*) =>
+        val prefix2 = s"${prefix1}${indent}"
+
         val before2 =
           s"${prefix1}for\n" +
-          s"${prefix1}${indent}_ <- IO.unit\n"
+          s"${prefix2}_ <- IO.unit\n" +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
         val after2 =
           s"${prefix1}yield\n" +
-          s"${prefix1}${indent}()\n"
+          s"${prefix2}()\n"
 
         (prefix1, (before1 + before2, after2 + after1))
 
@@ -115,8 +127,10 @@ final class Program(indent: String = "  "):
 
       case it @ Par(_, _, _*) =>
         val prefix2 = prefix1 + (if comprehension then "" else indent)
+
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
           s"${prefix2}_ <- (\n"
         val separator =
           s"${prefix2}     ,\n"
@@ -133,7 +147,7 @@ final class Program(indent: String = "  "):
           .components
           .zipWithIndex
           .foldLeft((before2, "")) { case ((before, after), (operand, i)) =>
-            val (_, (before3, after3)) = body(cp -> (before, after), operand)
+            val (_, (before3, after3)) = body(cp -> (before, after) -> None, operand)
             (before3 + after3 + (if i < it.components.size - 1 then separator else after2), "")
           }
 
@@ -250,6 +264,7 @@ final class Program(indent: String = "  "):
 
         before1 +=
           (if comprehension then "" else s"${prefix1}for\n") +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
           s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})\n"
 
         after1 =
@@ -269,30 +284,30 @@ final class Program(indent: String = "  "):
       case End(Seq(it*), ast) if it.isEmpty =>
         cp = false -> prefix1
 
-        body(cp -> (before1, after1), ast)
+        body(cp -> (before1, after1) -> semaphore, ast)
 
       case End(Seq(it*), ast) =>
+        val prefix2 = s"${prefix1}${indent}"
+
         val before2 =
           s"${prefix1}for\n" +
-          s"${prefix1}${indent}_ <- IO.unit\n"
+          s"${prefix2}_ <- IO.unit\n" +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
         val after2 =
           s"${prefix1}yield\n" +
-          s"${prefix1}${indent}()\n"
-
-        val prefix2 =
-          s"${prefix1}${indent}"
+          s"${prefix2}()\n"
 
         val (prefix3, (before3, after3)) = it
           .foldLeft(prefix2 -> ("", "")) { case ((prefix, (before, after)), action) =>
             cp = true -> prefix
-            body(cp -> (before, after), action)
+            body(cp -> (before, after) -> None, action)
           }
 
         val (before, after) = (before1 + before2 + before3, after3 + after2 + after1)
 
         cp = true -> prefix3
 
-        body(cp -> (before, after), ast)
+        body(cp -> (before, after) -> None, ast)
 
       ////////////////////////////////////////////////////////////// sequence //
 
@@ -307,7 +322,7 @@ object Program:
     expr
 
 
-  type Code = ((Boolean, String), (String, String))
-  //            ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^
-  //            |||||||  indent,   before, after needed for Match
-  //            whether inside a for-comprehension
+  type Code = (((Boolean, String), (String, String)), Option[UUID])
+  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
+  //             |||||||  indent,   before, after,    semaphore
+  //             whether inside a for-comprehension
