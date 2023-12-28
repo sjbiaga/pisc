@@ -14,7 +14,7 @@ Channels for names (`UUID`s) work as CE tutorial's
 producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
-Summation: non-deterministic choice modelled with - `IO.race`.
+Summation: non-deterministic choice modelled with - `IO.race` and `Semaphore`.
 
 Calculus
 --------
@@ -111,13 +111,13 @@ The `examples` folder has three sub-folders:
        in/
        out/
 
-The root project folder contains a file `main.scala.in`.
-!!!Warning: do not delete it!!!
-One can edit it, thought it's ready to generate a main `App`.
+The root project folder contains two files: `pi.scala` and `main.scala.in`.
+!!!Warning: do not delete them!!!
+One can edit'em, thought they're ready to generate a main `App`.
 
 Let's go backwards. To run an example, `cd` to `examples` and execute:
 
-    ./examples $ scala-cli run out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ scala-cli run ../pi.scala out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
 
 To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
 
@@ -131,3 +131,7 @@ where `example/pisc/pi_example.pisc` contains the Π-calculus source (equations 
 expressions).
 
 In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add a top-level `package pi_example` line.
+
+If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
+
+    ./examples $ scala-cli run --interactive ../pi.scala out/pi1.scala out/pi2.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
