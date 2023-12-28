@@ -40,14 +40,11 @@ class Calculus extends JavaTokenParsers:
 
   def equation: Parser[Bind] =
     agent~"="~choice ^^ {
-      case bind ~ _ ~ sum
-        if bind.params.forall(_.isSymbol)
-        && (sum._2 &~ bind.params.map(_.asSymbol).toSet).isEmpty => bind -> sum._1
-      case bind ~ _ ~ sum
-        if bind.params.forall(_.isSymbol) =>
-        throw EquationFreeNamesException(bind.identifier.asSymbol, sum._2 &~ bind.params.map(_.asSymbol).toSet)
-      case bind ~ _ ~ _ =>
-        throw EquationParamsException(bind.identifier.asSymbol, bind.params.filterNot(_.isSymbol).map(_.value):_ *)
+      case (call, bound) ~ _ ~ (sum, free)
+        if (free &~ bound).nonEmpty =>
+        throw EquationFreeNamesException(call.identifier.asSymbol, free &~ bound)
+      case (bind, _) ~ _ ~ (sum, _) =>
+        bind -> sum
     }
 
   def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
@@ -62,10 +59,14 @@ class Calculus extends JavaTokenParsers:
 
   def sequential: Parser[(End, Names)] =
     prefix ~ opt( "𝟎" | "("~>choice<~")" | agent ) ^^ {
-      case pre ~ Some("𝟎") => End(pre._1, `𝟎`) -> pre._2._2
-      case pre ~ Some(choice: (Sum, Names)) => End(pre._1, choice._1) -> (pre._2._2 ++ (choice._2 &~ pre._2._1))
-      case pre ~ Some(call: Call) => End(pre._1, call) -> pre._2._2
-      case pre ~ _ => End(pre._1, `𝟎`) -> pre._2._2
+      case pre ~ Some("𝟎") =>
+        End(pre._1, `𝟎`) -> pre._2._2
+      case pre ~ Some((sum: Sum, free: Names)) =>
+        End(pre._1, sum) -> (pre._2._2 ++ (free &~ pre._2._1))
+      case pre ~ Some((call: Call, free: Names)) =>
+        End(pre._1, call) -> (pre._2._2 ++ (free &~ pre._2._1))
+      case pre ~ _ =>
+        End(pre._1, `𝟎`) -> pre._2._2
     }
 
   def prefix: Parser[(Seq, (Names, Names))] =
@@ -89,29 +90,40 @@ class Calculus extends JavaTokenParsers:
   def action: Parser[(Act, (Names, Names))] =
     "𝜏" <~ "." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
-      case ch if ch.isSymbol => `v`(ch) -> (Names(ch), Names())
-      case ch => throw PrefixChannelParsingException(ch)
+      case ch if ch.isSymbol =>
+        `v`(ch) -> (Names(ch), Names())
+      case ch =>
+        throw PrefixChannelParsingException(ch)
     } |
     name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
-      case ch ~ _ ~ arg ~ _ if ch.isSymbol => Pre(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
-      case ch ~ _ ~ _ ~ _ => throw PrefixChannelParsingException(ch)
+      case ch ~ _ ~ arg ~ _ if ch.isSymbol =>
+        Pre(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
+      case ch ~ _ ~ _ ~ _ =>
+        throw PrefixChannelParsingException(ch)
     } |
     name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ par ~ _ if ch.isSymbol => Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
-      case ch ~ _ ~ _ ~ _ => throw PrefixChannelParsingException(ch)
+      case ch ~ _ ~ par ~ _ if ch.isSymbol =>
+        Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
+      case ch ~ _ ~ _ ~ _ =>
+        throw PrefixChannelParsingException(ch)
     } |
     "["~name~"="~name~"]" ^^ { // match
-      case _ ~ lhs ~ _ ~ rhs ~ _ => Match(lhs, rhs) -> (Names(), Names(lhs, rhs))
+      case _ ~ lhs ~ _ ~ rhs ~ _ =>
+        Match(lhs, rhs) -> (Names(), Names(lhs, rhs))
     }
 
   def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
                           floatingPointNumber ^^ { Opd.apply compose BigDecimal.apply } |
                           stringLiteral ^^ { Opd.apply }
 
-  def agent: Parser[Call] =
+  def agent: Parser[(Call, Names)] =
     IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
-      case id ~ Some(params) => Call(Opd(Symbol(id)), params: _*)
-      case id ~ _ => Call(Opd(Symbol(id)))
+      case id ~ Some(params) if !params.forall(_.isSymbol) =>
+        throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
+      case id ~ Some(params) =>
+        Call(Opd(Symbol(id)), params: _*) -> Names(params: _*)
+      case id ~ _ =>
+        Call(Opd(Symbol(id))) -> Names()
     }
 
   /**
@@ -187,8 +199,8 @@ object Calculus extends Calculus:
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
     extends ParsingException(msg, cause)
 
-  case class EquationParamsException(name: Symbol, params: AnyRef*)
-    extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of ${name.name}")
+  case class EquationParamsException(id: String, params: AnyRef*)
+    extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
   case class EquationFreeNamesException(name: Symbol, free: Names)
     extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
