@@ -35,7 +35,7 @@ import cats.effect.{ Deferred, Ref, IO }
 import magic._
 
 
-type Name = (String, AnyRef)
+type Name = (String, Any)
 
 
 /**
@@ -79,7 +79,7 @@ final implicit class `()`(val name: Name) extends AnyVal:
   def apply(value: `()`): IO[Unit] = `><`(value.name)(ref)
 
 
-inline given Conversion[`()`, Name] = _.name
+given Conversion[`()`, Name] = _.name
 
 
 object magic:

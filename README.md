@@ -51,9 +51,6 @@ using the `NOT EQUAL TO` unicode `≠` character.
 
 The name before parentheses must be a channel name.
 
-Also, it is possible that (mis)match generates a comparison of two incompatible constants, i.e.,
-that is detected by the `Scala` compiler as an error.
-
 Note that input/outut prefixes and the silent transition are followed by a dot,
 whereas restriction and (mis)match are not.
 

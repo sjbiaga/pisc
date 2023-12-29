@@ -119,7 +119,7 @@ class Calculus extends JavaTokenParsers:
     }
 
   def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
-                          floatingPointNumber ^^ { Opd.apply compose BigDecimal.apply } |
+                          floatingPointNumber ^^ { Opd.apply } |
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
 
@@ -203,8 +203,7 @@ object Calculus extends Calculus:
 
     val kind: String = value match {
       case _: Symbol => "channel name"
-      case _: BigDecimal => "decimal number"
-      case _: String => "string value"
+      case _: String => "literal value"
       case _: Expr => "scala expression"
     }
 
