@@ -158,15 +158,13 @@ class Calculus extends JavaTokenParsers:
    * @return
    */
   def qual: Parser[List[String]] =
-    rep(("""[{][^}]*[}]""").r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+    rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
 
-  /** Single or back quotes enclosing an expression of type String or BigDecimal:
-   *
-   *  - Any character except single or back quotes
-   *  - A backslash followed by a single quote or back quote
+  /** Scala comment enclosing any Scala expression.
+   * @return
    */
   def expression: Parser[String] =
-    ("""'([^']|\\')*'""").r | ("""`([^`]|\\`)*`""").r
+    """[/][*].*[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
 
 
 object Calculus extends Calculus:

@@ -182,7 +182,7 @@ final class Program(indent: String = "  "):
 
       case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch(\"\" -> ${strip(expr)})\n"
+          s"${prefix1}_ <- $ch(\"\" -> $expr)\n"
 
         prefix1 -> (before1, after1)
 
@@ -215,16 +215,16 @@ final class Program(indent: String = "  "):
              case (Symbol(x), Symbol(y)) => s"${x}._1 $op ${y}._1"
              case (Symbol(x), y: String) => s"${x}._2 $op $y"
              case (Symbol(x), y: BigDecimal) => s"${x}._2 $op BigDecimal($y)"
-             case (Symbol(x), Expr(y)) => s"${x}._2 $op ${strip(y)}"
+             case (Symbol(x), Expr(y)) => s"${x}._2 $op $y}"
              case (x: String, Symbol(y)) => s"$x $op ${y}._2"
              case (x: BigDecimal, Symbol(y)) => s"BigDecimal($x) $op ${y}._2"
-             case (Expr(x), Symbol(y)) => s"${strip(x)} $op ${y}._2"
+             case (Expr(x), Symbol(y)) => s"$x} $op ${y}._2"
              case (x: BigDecimal, y: BigDecimal) => s"BigDecimal($x) $op BigDecimal($y)"
-             case (x: BigDecimal, Expr(y)) => s"BigDecimal($x) $op ${strip(y)}"
-             case (Expr(x), y: BigDecimal) => s"${strip(x)} $op BigDecimal($y)"
+             case (x: BigDecimal, Expr(y)) => s"BigDecimal($x) $op $y}"
+             case (Expr(x), y: BigDecimal) => s"${x} $op BigDecimal($y)"
              case (x: String, y: String) => s"$x $op $y"
-             case (x: String, Expr(y)) => s"$x $op ${strip(y)}"
-             case (Expr(x), y: String) => s"${strip(x)} $op $y"
+             case (x: String, Expr(y)) => s"$x $op ${y}"
+             case (Expr(x), y: String) => s"${x} $op $y"
              case (x: BigDecimal, y: String) => s"BigDecimal($x) $op $y /* π: compile error */"
              case (x: String, y: BigDecimal) => s"$x $op BigDecimal($y) /* π: compile error */"
 
@@ -257,12 +257,7 @@ final class Program(indent: String = "  "):
             value match
               case it: BigDecimal => s"\"\" -> BigDecimal($it)"
               case it: String => s"\"\" -> $it"
-              case Expr(it) =>
-                var expr = it.stripPrefix("'").stripSuffix("'")
-                if expr == it
-                then expr = it.stripPrefix("`").stripSuffix("`")
-
-                s"\"\" -> $expr"
+              case Expr(it) => s"\"\" -> $it"
         }
 
         val prefix2 = prefix1 + (if comprehension then "" else indent)
@@ -330,11 +325,5 @@ object Program:
   //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
   //             |||||||  indent,   before, after,    semaphore
   //             whether inside a for-comprehension
-
-  def strip(expr_ : String): String =
-    var expr = expr_.stripPrefix("'").stripSuffix("'")
-    if expr == expr_
-    then expr = expr_.stripPrefix("`").stripSuffix("`")
-    expr
 
   def uuid = UUID.randomUUID.toString

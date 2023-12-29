@@ -44,7 +44,7 @@ Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
 the input prefix uses the round parentheses and has the form `NAME(NAME).`. A name
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
-or any `Scala` expression between either single or back quotes, that is unwrapped when generated.
+or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` unicode `≠` character.
