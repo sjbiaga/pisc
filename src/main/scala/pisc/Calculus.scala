@@ -164,7 +164,7 @@ class Calculus extends JavaTokenParsers:
    * @return
    */
   def expression: Parser[String] =
-    """[/][*].*[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
+    """[/][*].*?[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
 
 
 object Calculus extends Calculus:
