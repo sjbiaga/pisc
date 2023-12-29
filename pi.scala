@@ -35,6 +35,9 @@ import cats.effect.{ Deferred, Ref, IO }
 import magic._
 
 
+type Name = (String, AnyRef)
+
+
 /**
   * restriction aka new name
   */
@@ -80,8 +83,6 @@ inline given Conversion[`()`, Name] = _.name
 
 
 object magic:
-
-  type Name = (String, AnyRef)
 
   /**
     * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].

@@ -26,7 +26,7 @@ Calculus
 The Π-calculus process expressions are exactly as in the literature, with
 both ASCII and UTF-8 characters, and slight variations. There is no `if then else`,
 but there is "match" and "mismatch". Forcibly, a _restriction_ and a _(mis)match_ are
-"considered" _actions_, besides _prefixes_ per se.
+"considered" _prefixes_, besides input/output prefixes per se.
 
 The BNF formal grammar is the following. Lexically, `ident` is a channel name - (an
 identifier) starting with lowercase letter; capital `IDENT` is an agent identifier
@@ -54,15 +54,15 @@ The name before parentheses must be a channel name.
 Also, it is possible that (mis)match generates a comparison of two incompatible constants, i.e.,
 that is detected by the `Scala` compiler as an error.
 
-Note that prefixes and the silent transition are followed by a dot, whereas restriction and
-(mis)match are not.
+Note that input/outut prefixes and the silent transition are followed by a dot,
+whereas restriction and (mis)match are not.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
-    SEQUENTIAL ::= PREFIX [ "𝟎" | "(" CHOICE ")" | AGENT ]
-    PREFIX     ::= ACTION { ACTION }
-    ACTION     ::= "𝜏" "."
+    SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
+    PREFIXES   ::= PREFIX { PREFIX }
+    PREFIX     ::= "𝜏" "."
 	             | "v" "(" NAME ")"
 	             | NAME "<" NAME ">" "."
 	             | NAME "(" NAME ")" "."
@@ -72,7 +72,7 @@ Note that prefixes and the silent transition are followed by a dot, whereas rest
 
 Not part of the original Π-calculus, an agent (call) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
-between curly braces: these will be joined using the dot "." character, standing for
+between curly braces: these will be joined using the dot "`.`" character, standing for
 a qualified package identifier. Thus, agents in different translated "`.scala`" files
 can be reused; the lexical category is `qual`.
 
@@ -108,7 +108,7 @@ A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
     for
       _ <- IO.unit
       x <- `v`
-      _ <- x("30408bc7-3d40-415d-9a3b-3ea2c6be7f94" -> BigDecimal(5))
+      _ <- x("" -> BigDecimal(5))
       y <- x()
       _ <- `𝜏`
       z <- x()

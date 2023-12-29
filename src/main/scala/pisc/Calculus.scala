@@ -57,20 +57,20 @@ class Calculus extends JavaTokenParsers:
       Par(es.map(_._1): _*) -> es.map(_._2).reduce(_ ++ _)
     }
 
-  def sequential: Parser[(End, Names)] =
-    prefix ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
+  def sequential: Parser[(Seq, Names)] =
+    prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
       case pre ~ Some("𝟎") =>
-        End(pre._1, `𝟎`) -> pre._2._2
+        Seq(`𝟎`, pre._1: _*) -> pre._2._2
       case pre ~ Some((sum: Sum, free: Names)) =>
-        End(pre._1, sum) -> (pre._2._2 ++ (free &~ pre._2._1))
+        Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ Some((call: Call, free: Names)) =>
-        End(pre._1, call) -> (pre._2._2 ++ (free &~ pre._2._1))
+        Seq(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        End(pre._1, `𝟎`) -> pre._2._2
+        Seq(`𝟎`, pre._1: _*) -> pre._2._2
     }
 
-  def prefix: Parser[(Seq, (Names, Names))] =
-    rep(action) ^^ { ps =>
+  def prefixes: Parser[(List[Pre], (Names, Names))] =
+    rep(prefix) ^^ { ps =>
       val bound = ps.map(_._2._1)
       val free = ps.map(_._2._2)
         .zipWithIndex
@@ -84,10 +84,10 @@ class Calculus extends JavaTokenParsers:
             case (r, _) => r
           }
         }
-      Seq(ps.map(_._1): _*) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
+      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def action: Parser[(Act, (Names, Names))] =
+  def prefix: Parser[(Pre, (Names, Names))] =
     "𝜏" <~ "." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
@@ -99,7 +99,7 @@ class Calculus extends JavaTokenParsers:
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch ~ _ ~ arg ~ _ =>
-        Pre(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
+        IO(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
     } |
     name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -107,7 +107,7 @@ class Calculus extends JavaTokenParsers:
       case _ ~ _ ~ par ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
       case ch ~ _ ~ par ~ _ =>
-        Pre(ch, par, polarity = true) -> (Names(par), Names(ch))
+        IO(ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
     "["~name~"="~name~"]" ^^ { // match
       case _ ~ lhs ~ _ ~ rhs ~ _ =>
@@ -187,19 +187,17 @@ object Calculus extends Calculus:
 
   val `𝟎` = Sum()
 
-  case class Par(components: End*) extends AnyVal with AST
+  case class Par(components: Seq*) extends AnyVal with AST
 
-  sealed trait Act extends Any with AST
+  sealed trait Pre extends Any with AST
 
-  case class `v`(name: Opd) extends AnyVal with Act // forcibly
+  case class `v`(name: Opd) extends AnyVal with Pre // forcibly
 
-  case object `𝜏` extends Act
+  case object `𝜏` extends Pre
 
-  case class Pre(channel: Opd, name: Opd, polarity: Boolean) extends Act
+  case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
 
-  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Act // forcibly
-
-  case class Seq(actions: Act*) extends AnyVal with AST
+  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Pre // forcibly
 
   case class Opd(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -212,7 +210,7 @@ object Calculus extends Calculus:
       case _: Expr => "scala expression"
     }
 
-  case class End(prefix: Seq, process: AST) extends AST
+  case class Seq(process: AST, prefixes: Pre*) extends AST
 
   case class Call(identifier: Opd, path: List[String], params: Opd*) extends AST
 
@@ -235,11 +233,11 @@ object Calculus extends Calculus:
   case class EquationFreeNamesException(name: Symbol, free: Names)
     extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
 
-  sealed class ActionParsingException(msg: String, cause: Throwable = null)
+  sealed class PrefixParsingException(msg: String, cause: Throwable = null)
     extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: Opd)
-    extends ActionParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+    extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
   def apply(source: Source): List[Bind] = source
     .getLines()

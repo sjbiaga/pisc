@@ -159,7 +159,7 @@ final class Program(indent: String = "  "):
       /////////////////////////////////////////////////////////// composition //
 
 
-      // PREFIXES & MATCH //////////////////////////////////////////////////////
+      // RESTRICTION & PREFIXES & (MIS)MATCH ///////////////////////////////////
 
       case `v`(Opd(Symbol(name))) =>
         before1 +=
@@ -174,20 +174,20 @@ final class Program(indent: String = "  "):
         prefix1 -> (before1, after1)
 
 
-      case Pre(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
+      case IO(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
         before1 +=
           s"${prefix1}_ <- $ch($arg)\n"
 
         prefix1 -> (before1, after1)
 
-      case Pre(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
+      case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
         before1 +=
           s"${prefix1}_ <- $ch(\"\" -> ${strip(expr)})\n"
 
         prefix1 -> (before1, after1)
 
 
-      case Pre(Opd(Symbol(ch)), Opd(value), false) =>
+      case IO(Opd(Symbol(ch)), Opd(value), false) =>
         val arg = value match
           case it: BigDecimal => s"BigDecimal($it)"
           case it: String => it
@@ -197,15 +197,15 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1, after1)
 
-      case Pre(Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
+      case IO(Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
         before1 +=
           s"${prefix1}$par <- $ch()\n"
 
         prefix1 -> (before1, after1)
 
-      case Pre(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
+      case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
 
-      case Pre(ch, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
+      case IO(ch, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case Match(Opd(lhs), Opd(rhs), mismatch) =>
 
@@ -245,7 +245,7 @@ final class Program(indent: String = "  "):
 
         prefix3 -> (before1, after1)
 
-      ////////////////////////////////////////////////////// prefixes & match //
+      /////////////////////////////////// restriction & prefixes & (mis)match //
 
 
       // AGENT CALL ////////////////////////////////////////////////////////////
@@ -291,12 +291,12 @@ final class Program(indent: String = "  "):
       // SEQUENCE //////////////////////////////////////////////////////////////
       // followed possibly either by agent call or another process expression //
 
-      case End(Seq(it*), ast) if it.isEmpty =>
+      case Seq(ast, it*) if it.isEmpty =>
         cp = false -> prefix1
 
         body(cp -> (before1, after1) -> semaphore, ast)
 
-      case End(Seq(it*), ast) =>
+      case Seq(ast, it*) =>
         val prefix2 = s"${prefix1}${indent}"
 
         val before2 =
