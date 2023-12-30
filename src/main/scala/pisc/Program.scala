@@ -48,6 +48,7 @@ final class Program(indent: String = "  "):
     var (((comprehension, prefix1), (before1, after1)), _) = code
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name).map { _.toString + ": Name" }
+
     before1 +=
       s"${prefix1}def `$identifier`(${params.mkString(", ")}): IO[Unit] =\n"
 
@@ -174,6 +175,10 @@ final class Program(indent: String = "  "):
         prefix1 -> (before1, after1)
 
 
+      case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
+
+      case IO(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
+
       case IO(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
         before1 +=
           s"${prefix1}_ <- $ch($arg)\n"
@@ -182,14 +187,13 @@ final class Program(indent: String = "  "):
 
       case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch(\"\" -> $expr)\n"
+          s"${prefix1}_ <- $ch($expr)\n"
 
         prefix1 -> (before1, after1)
 
-
       case IO(Opd(Symbol(ch)), Opd(arg), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch(\"\" -> $arg)\n"
+          s"${prefix1}_ <- $ch($arg)\n"
 
         prefix1 -> (before1, after1)
 
@@ -199,23 +203,19 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1, after1)
 
-      case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
-
-      case IO(ch, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case Match(Opd(lhs), Opd(rhs), mismatch) =>
 
         def === =
-          val op = if mismatch then "!=" else "=="
           (lhs, rhs) match
-             case (Symbol(x), Symbol(y)) => s"$x._1 $op $y._1"
-             case (Symbol(x), y: String) => s"$x._2 $op $y"
-             case (Symbol(x), Expr(y)) => s"$x._2 $op $y"
-             case (x: String, Symbol(y)) => s"$x $op $y._2"
-             case (Expr(x), Symbol(y)) => s"$x $op $y._2"
-             case (x: String, y: String) => s"$x $op $y"
-             case (x: String, Expr(y)) => s"$x $op $y"
-             case (Expr(x), y: String) => s"$x $op $y"
+             case (Symbol(x), Symbol(y)) => s"$x === $y"
+             case (Symbol(x), y: String) => s"$x === $y"
+             case (Symbol(x), Expr(y)) => s"$x === $y"
+             case (x: String, Symbol(y)) => s"$x === $y"
+             case (Expr(x), Symbol(y)) => s"$x === $y"
+             case (x: String, y: String) => s"$x === $y"
+             case (x: String, Expr(y)) => s"$x === $y"
+             case (Expr(x), y: String) => s"$x === $y"
 
         val prefix2 =
           s"${prefix1}     "
@@ -223,7 +223,7 @@ final class Program(indent: String = "  "):
           s"${prefix2}${indent}"
 
         before1 +=
-          s"${prefix1}_ <- if !(${===}) then IO.unit else\n" +
+          s"${prefix1}_ <- if ${if mismatch then "" else "!"}(${===}) then IO.unit else\n" +
           s"${prefix2}for\n" +
           s"${prefix3}_ <- IO.unit\n"
 
@@ -244,9 +244,9 @@ final class Program(indent: String = "  "):
           case Opd(Symbol(name)) => name
           case Opd(value) =>
             value match
-              case it: BigDecimal => s"\"\" -> BigDecimal($it)"
-              case it: String => s"\"\" -> $it"
-              case Expr(it) => s"\"\" -> $it"
+              case it: BigDecimal => s"BigDecimal($it)"
+              case it: String => s"$it"
+              case Expr(it) => s"$it"
         }
 
         val prefix2 = prefix1 + (if comprehension then "" else indent)
@@ -292,9 +292,9 @@ final class Program(indent: String = "  "):
           s"${prefix2}()\n"
 
         val (prefix3, (before3, after3)) = it
-          .foldLeft(prefix2 -> ("", "")) { case ((prefix, (before, after)), action) =>
+          .foldLeft(prefix2 -> ("", "")) { case ((prefix, (before, after)), pre) =>
             cp = true -> prefix
-            body(cp -> (before, after) -> None, action)
+            body(cp -> (before, after) -> None, pre)
           }
 
         val (before, after) = (before1 + before2 + before3, after3 + after2 + after1)

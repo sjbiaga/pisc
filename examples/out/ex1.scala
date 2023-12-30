@@ -26,128 +26,10 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-package ex1
+//package math.scala.in
 
-import java.util.UUID
+import cats.effect.{ IO, IOApp }
 
-import cats.effect.{ Deferred, Ref, IO }
-import cats.effect.syntax.all._
-import cats.syntax.all._
-
-import magic._
-
-/**
-  * restriction aka new name
-  */
-object `v`:
-
-  def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-  def flatMap(f: `()` => IO[Unit]): IO[Unit] =
-    ( for
-        ref <- Ref.of[IO, `><`](`><`())
-        channel = UUID.randomUUID.toString
-      yield
-        f(`()`(channel -> ref))
-    ).flatten
-
-/**
-  * silent transition
-  */
-object `𝜏`:
-
-  def map(f: Unit => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-  def flatMap(f: Unit => IO[Unit]): IO[Unit] = f(())
-
-
-/**
-  * prefix
-  */
-final implicit class `()`(val name: Name) extends AnyVal:
-
-  private def ref = name._2.asInstanceOf[Ref[IO, `><`]]
-
-  /**
-    * positive prefix i.e. input
-    */
-  def apply(): IO[`()`] = `><`(name._1)(ref).map(`()`)
-
-  /**
-    * negative prefix i.e. output
-    */
-  def apply(value: `()`): IO[Unit] = `><`(name._1, value.name)(ref)
-
-
-inline given Conversion[`()`, Name] = _.name
-
-
-object magic:
-
-  type Name = (String, AnyRef)
-
-  /**
-    * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
-    *
-    * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
-    */
-  /*
-   *
-   * Copyright (c) 2020 Luis Rodero-Merino
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at.
-   *
-   *     http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   */
-
-  final case class `><`(takers: List[Deferred[IO, Name]], offerers: List[(Name, Deferred[IO, Unit])])
-
-  object `><`:
-
-    inline def apply(): `><` = `><`(Nil, Nil)
-
-    import scala.util.Random
-
-    val random = Random()
-
-    def apply(channel: String, name: Name)(`>R`: Ref[IO, `><`]): IO[Unit] =
-        Deferred[IO, Unit].flatMap { offerer =>
-          IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
-            `>R`.modify {
-              case `><`(takers, offerers) if takers.nonEmpty =>
-                val i = random.nextInt % takers.size
-                val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
-                `><`(rest, offerers) -> taker.complete(channel -> `>R`).void
-              case `><`(takers, offerers) =>
-                val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
-            }.flatten
-          }
-        }
-
-    def apply(channel: String)(`<R`: Ref[IO, `><`]): IO[Name] =
-        Deferred[IO, Name].flatMap { taker =>
-          IO.uncancelable { poll =>
-            `<R`.modify {
-              case `><`(takers, offerers) if offerers.nonEmpty =>
-                val i = random.nextInt % offerers.size
-                val ((name, release), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
-                `><`(takers, rest) -> release.complete(()).as(name)
-              case `><`(takers, offerers) =>
-                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
-            }.flatten
-          }
-        }
-
-
-import cats.effect.IOApp
 
 object App extends IOApp.Simple:
 
@@ -156,28 +38,31 @@ object App extends IOApp.Simple:
 
 object `π`:
 
+  import cats.effect.syntax.all._
+  import cats.syntax.all._
+
+  import `Π`._
+  import `Π`.given
+
+
   def `Main`(): IO[Unit] =
     for
       _ <- IO.unit
       x <- `v`
       y <- `v`
-      _ <- IO.println("x, y")
       _ <- (
              for
                _ <- IO.unit
                _ <- x(y)
-               _ <- IO.println(s"output ${y._1}")
              yield
                ()
            ,
              for
                _ <- IO.unit
                z <- x()
-               _ <- IO.println(s"input ${z._1}")
-               _ <- if !(y._1 == z._1) then IO.println("not match") else
+               _ <- if !(y === z) then IO.unit else
                     for
                       _ <- IO.unit
-                      _ <- IO.println("match")
                     yield
                       ()
              yield

@@ -13,7 +13,7 @@
              for
                _ <- IO.unit
                z <- x()
-               _ <- if !(y._1 == z._1) then IO.unit else
+               _ <- if !(y === z) then IO.unit else
                     for
                       _ <- IO.unit
                     yield

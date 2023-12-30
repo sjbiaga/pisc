@@ -53,14 +53,12 @@ class Calculus extends JavaTokenParsers:
     }
 
   def parallel: Parser[(Par, Names)] = "("~>parallel<~")" ^^ { identity } |
-    rep1sep(sequential, "|") ^^ { es =>
-      Par(es.map(_._1): _*) -> es.map(_._2).reduce(_ ++ _)
+    rep1sep(sequential, "|") ^^ { ss =>
+      Par(ss.map(_._1): _*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential: Parser[(Seq, Names)] =
     prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
-      case pre ~ Some("𝟎") =>
-        Seq(`𝟎`, pre._1: _*) -> pre._2._2
       case pre ~ Some((sum: Sum, free: Names)) =>
         Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ Some((call: Call, free: Names)) =>
@@ -88,7 +86,7 @@ class Calculus extends JavaTokenParsers:
     }
 
   def prefix: Parser[(Pre, (Names, Names))] =
-    "𝜏" <~ "." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
+    "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
@@ -169,9 +167,9 @@ class Calculus extends JavaTokenParsers:
 
 object Calculus extends Calculus:
 
-  type Names = Set[Symbol]
-
   type Bind = (Call, Sum)
+
+  type Names = Set[Symbol]
 
   object Names:
     def apply(os: Opd*): Names = LinkedHashSet.from(os

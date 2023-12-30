@@ -26,14 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//package
+//package math.scala.in
 
-import cats.effect.IO
-import cats.effect.std.Semaphore
-import cats.effect.syntax.all._
-import cats.syntax.all._
-
-import cats.effect.IOApp
+import cats.effect.{ IO, IOApp }
 
 
 object App extends IOApp.Simple:
@@ -43,6 +38,10 @@ object App extends IOApp.Simple:
 
 object `π`:
 
+  import cats.effect.syntax.all._
+  import cats.syntax.all._
+
   import `Π`._
   import `Π`.given
+
 
