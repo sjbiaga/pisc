@@ -28,8 +28,6 @@
 
 package object `Π`:
 
-  import java.util.UUID
-
   import cats.effect.{ Deferred, Ref, IO }
 
   import `Π-magic`._
@@ -55,10 +53,7 @@ package object `Π`:
   /**
     * silent transition
     */
-  object `𝜏`:
-
-    def map(f: Unit => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: Unit => IO[Unit]): IO[Unit] = f(())
+  val `𝜏` = IO.unit
 
 
   /**

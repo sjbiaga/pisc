@@ -214,25 +214,25 @@ object Calculus extends Calculus:
   // exceptions
 
   sealed class ParsingException(msg: String, cause: Throwable = null)
-    extends RuntimeException(msg, cause)
+      extends RuntimeException(msg, cause)
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
-    extends ParsingException(msg, cause)
+      extends ParsingException(msg, cause)
 
   case class EquationQualifiedException(id: String, path: List[String])
-    extends EquationParsingException(s"A qualified package ${path.mkString(".")} is present in the left hand side of $id")
+      extends EquationParsingException(s"A qualified package ${path.mkString(".")} is present in the left hand side of $id")
 
   case class EquationParamsException(id: String, params: AnyRef*)
-    extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
+      extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
   case class EquationFreeNamesException(name: Symbol, free: Names)
-    extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
+      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
 
   sealed class PrefixParsingException(msg: String, cause: Throwable = null)
-    extends ParsingException(msg, cause)
+      extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: Opd)
-    extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+      extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
   def apply(source: Source): List[Bind] = source
     .getLines()

@@ -103,10 +103,10 @@ final class Program(indent: String = "  "):
       case Sum(operand, _*) =>
         body(code, operand)
 
-      case Sum(_*) if comprehension =>
+      case _: Sum if comprehension =>
         (prefix1, (before1, after1))
 
-      case Sum(_*) =>
+      case _: Sum =>
         val prefix2 = s"${prefix1}${indent}"
 
         val before2 =

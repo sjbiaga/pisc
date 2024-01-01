@@ -42,6 +42,5 @@ object `π`:
   import cats.syntax.all._
 
   import `Π`._
-  import `Π`.given
 
 
