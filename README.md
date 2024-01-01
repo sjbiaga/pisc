@@ -42,7 +42,7 @@ Lines starting with a hash `#` character are (line) comments. Blank lines are ig
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
 The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
-the input prefix uses the round parentheses and has the form `NAME(NAME).`. A name
+the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
 or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
@@ -65,7 +65,7 @@ whereas restriction and (mis)match are not.
 	             | NAME "(" NAME ")" "."
 	             | "[" NAME "=" NAME "]"
 	             | "[" NAME "≠" NAME "]"
-    AGENT     ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
 
 Not part of the original Π-calculus, an agent (call) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped

@@ -40,6 +40,7 @@ object `π`:
 
   import cats.effect.syntax.all._
   import cats.syntax.all._
+  import cats.effect.std.Semaphore
 
   import `Π`._
 

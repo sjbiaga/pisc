@@ -40,10 +40,16 @@ class Calculus extends JavaTokenParsers:
 
   def equation: Parser[Bind] =
     agent(true)~"="~choice ^^ {
-      case (call, bound) ~ _ ~ (sum, free)
+      case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(call.identifier.asSymbol, free &~ bound)
-      case (bind, _) ~ _ ~ (sum, _) =>
+        throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
+      case (bind, _) ~ _ ~ (sum_, _) =>
+        var sum = sum_
+        var ast = flatten(sum).asInstanceOf[Sum]
+        while ast != sum
+        do
+          sum = ast
+          ast = flatten(sum).asInstanceOf[Sum]
         bind -> sum
     }
 
@@ -225,14 +231,55 @@ object Calculus extends Calculus:
   case class EquationParamsException(id: String, params: AnyRef*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
-  case class EquationFreeNamesException(name: Symbol, free: Names)
-      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
+  case class EquationFreeNamesException(id: String, free: Names)
+      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
 
   sealed class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: Opd)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+
+  // functions
+
+  val flatten: AST => AST = _ match
+
+    case Sum(Par(Seq(sum: Sum, ps*), ss*), it*)
+        if ps.isEmpty && ss.isEmpty =>
+      val lhs = flatten(sum).asInstanceOf[Sum]
+      if it.isEmpty
+      then
+        Sum(lhs.choices: _*)
+      else
+        val rhs = flatten(Sum(it: _*)).asInstanceOf[Sum]
+        Sum((lhs.choices ++ rhs.choices): _*)
+
+    case Sum(lhs, it*)
+        if it.nonEmpty =>
+      val rhs = flatten(Sum(it: _*)).asInstanceOf[Sum]
+      Sum((lhs +: rhs.choices): _*)
+
+    case Sum(par, _*) =>
+      Sum(flatten(par).asInstanceOf[Par])
+
+    case Par(Seq(Sum(Par(ss*), p*), ps*), it*)
+        if p.isEmpty && ps.isEmpty =>
+      if it.isEmpty
+      then
+        Par(ss: _*)
+      else
+        val rhs = flatten(Par(it: _*)).asInstanceOf[Par]
+        Par((ss ++ rhs.components): _*)
+
+    case Par(lhs, it*)
+        if it.nonEmpty =>
+      val rhs = flatten(Par(it: _*)).asInstanceOf[Par]
+      Par((lhs +: rhs.components): _*)
+
+    case Par(Seq(sum, ps*), _*) =>
+      Par(Seq(flatten(sum).asInstanceOf[Sum], ps: _*))
+
+    case it => it
 
   def apply(source: Source): List[Bind] = source
     .getLines()
