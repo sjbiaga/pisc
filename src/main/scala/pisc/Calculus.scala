@@ -277,7 +277,7 @@ object Calculus extends Calculus:
       Par((lhs +: rhs.components): _*)
 
     case Par(Seq(sum, ps*), _*) =>
-      Par(Seq(flatten(sum).asInstanceOf[Sum], ps: _*))
+      Par(Seq(flatten(sum), ps: _*))
 
     case it => it
 
