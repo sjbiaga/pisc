@@ -32,7 +32,7 @@ import java.util.UUID
 
 import scala.collection.mutable.{ HashMap => Map }
 
-import Calculus._
+import Calculus.{ rate => _, _ }
 import Program._
 
 
@@ -40,7 +40,7 @@ final class Program(indent: String = "  "):
 
   def apply(bind: List[Bind]): String = bind
     .map { case (bind, sum) =>
-      val code = (false -> indent) -> ("", "") -> None
+      val code = (false -> indent) -> ("", "") -> false
       defn(code)(bind, sum)
     }.mkString("\n\n")
 
@@ -49,59 +49,63 @@ final class Program(indent: String = "  "):
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name).map { _.toString + ": Name" }
 
+    val prefix2 =
+      s"${prefix1}     ${" ".repeat(identifier.length)} "
+
     before1 +=
-      s"${prefix1}def `$identifier`(${params.mkString(", ")}): IO[Unit] =\n"
+      s"${prefix1}def `$identifier`(${params.mkString(", ")})(^ : String)\n" +
+      s"${prefix2}(using % : %, / : /, + : +, - : -): IO[Unit] =\n"
 
     val prefix =
       s"${prefix1}$indent"
 
     val cp = comprehension -> prefix
 
-    val (_, (before, after)) = body(cp -> (before1, after1) -> None, sum)
+    val (_, (before, after)) = body(cp -> (before1, after1) -> init(sum), sum)
 
     before + after
 
   private def body(code: Code, node: AST): (String, (String, String)) =
     //                                      ^^^^^^   ^^^^^^  ^^^^^^
     //                              [Match] prefix,  before, after
-    var ((cp @ (comprehension, prefix1), (before1, after1)), semaphore) = code
+    var ((cp @ (comprehension, prefix1), (before1, after1)), setup) = code
 
     node match
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
-      case it @ Sum(operand, _, _*) =>
+      case it @ Sum(enabled, _, _, _*) =>
         val prefix2 = prefix1 + (if comprehension then "" else indent)
-
-        val sem = Some(uuid)
 
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
-          s"${prefix2}`${sem.get}` <- Semaphore[IO](1)\n" +
-          s"${prefix2}_ <- IO.race\n" +
-          s"${prefix2}     (\n"
+          s"${prefix2}_ <- IO.unit\n" +
+          (if setup && enabled.nonEmpty then s"${add(enabled, prefix2)}\n" else "") +
+          (if setup && enabled.nonEmpty then s"${excl(enabled, prefix2)}\n" else "") +
+          s"${prefix2}_ <- (\n"
         val separator =
           s"${prefix2}     ,\n"
         val after2 =
-          s"${prefix2}     )\n" +
-          (if comprehension then "" else s"${prefix1}yield\n${prefix1}  ()\n")
+          s"${prefix2}     ).parMapN { (${"_, ".repeat(it.choices.size-1)}_) => }\n" +
+          (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n")
 
         val prefix =
           s"${prefix2}     ${indent}"
 
         cp = false -> prefix
 
-        val (_, (before3, after3)) = body(cp -> ("", "") -> sem, operand)
+        val (before3, after3) = it
+          .choices
+          .zipWithIndex
+          .foldLeft((before2, "")) { case ((before, after), (operand, i)) =>
+            val (_, (before3, after3)) = body(cp -> (before, after) -> false, operand)
+            (before3 + after3 + (if i < it.choices.size - 1 then separator else after2), "")
+          }
 
-        before1 += before2 + before3 + after3 + separator
+        prefix1 -> (before1 + before3, after3 + after1)
 
-        val (_, (before4, after4)) = body(cp -> (before1, "") -> sem, Sum(it.choices.tail: _*))
-
-        (prefix1 -> (before4, after4 + after2 + after1))
-
-      case Sum(operand, _*) =>
-        body(code, operand)
+      case Sum(_, operand, _*) =>
+        body(code, operand)        
 
       case _: Sum if comprehension =>
         (prefix1, (before1, after1))
@@ -111,8 +115,7 @@ final class Program(indent: String = "  "):
 
         val before2 =
           s"${prefix1}for\n" +
-          s"${prefix2}_ <- IO.unit\n" +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
+          s"${prefix2}_ <- IO.unit\n"
         val after2 =
           s"${prefix1}yield\n" +
           s"${prefix2}()\n"
@@ -124,12 +127,13 @@ final class Program(indent: String = "  "):
 
       // COMPOSITION ///////////////////////////////////////////////////////////
 
-      case it @ Par(_, _, _*) =>
+      case it @ Par(enabled, _, _, _*) =>
         val prefix2 = prefix1 + (if comprehension then "" else indent)
 
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
+          s"${prefix2}_ <- IO.unit\n" +
+          (if setup && enabled.nonEmpty then s"${add(enabled, prefix2)}\n" else "") +
           s"${prefix2}_ <- (\n"
         val separator =
           s"${prefix2}     ,\n"
@@ -146,14 +150,14 @@ final class Program(indent: String = "  "):
           .components
           .zipWithIndex
           .foldLeft((before2, "")) { case ((before, after), (operand, i)) =>
-            val (_, (before3, after3)) = body(cp -> (before, after) -> None, operand)
+            val (_, (before3, after3)) = body(cp -> (before, after) -> false, operand)
             (before3 + after3 + (if i < it.components.size - 1 then separator else after2), "")
           }
 
         prefix1 -> (before1 + before3, after3 + after1)
 
-      case Par(operand, _*) =>
-        body(code, operand)
+      case Par(_, operand, _*) =>
+        body(code, operand)        
 
       case _: Par => ??? // not even inaction - impossible by syntax
 
@@ -168,38 +172,44 @@ final class Program(indent: String = "  "):
 
         prefix1 -> (before1, after1)
 
-      case `𝜏` =>
+      case `𝜏`(uuid, r) =>
         before1 +=
-          s"${prefix1}_ <- `𝜏`\n"
+          (if setup then s"${add(Set(uuid), prefix1)}\n" else "") +
+          s"${prefix1}_ <- `𝜏`(^ + \"$uuid\", ${rate(r)})\n"
 
         prefix1 -> (before1, after1)
 
 
-      case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
+      case IO(_, _, Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
 
-      case IO(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
-
-      case IO(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
+      case IO(_, _, ch, uuid, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
+ 
+      case IO(uuid, r, Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch($arg)\n"
+          (if setup then s"${add(Set(uuid), prefix1)}\n" else "") +
+          s"${prefix1}_ <- $ch(^ + \"$uuid\", ${rate(r)}, $arg)\n"
 
         prefix1 -> (before1, after1)
 
-      case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
+      case IO(uuid, r, Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch($expr)\n"
+          (if setup then s"${add(Set(uuid), prefix1)}\n" else "") +
+          s"${prefix1}_ <- $ch(^ + \"$uuid\", ${rate(r)}, $expr)\n"
 
         prefix1 -> (before1, after1)
 
-      case IO(Opd(Symbol(ch)), Opd(arg), false) =>
+
+      case IO(uuid, r, Opd(Symbol(ch)), Opd(arg), false) =>
         before1 +=
-          s"${prefix1}_ <- $ch($arg)\n"
+          (if setup then s"${add(Set(uuid), prefix1)}\n" else "") +
+          s"${prefix1}_ <- $ch(^ + \"$uuid\", ${rate(r)}, $arg)\n"
 
         prefix1 -> (before1, after1)
 
-      case IO(Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
+      case IO(uuid, r, Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
         before1 +=
-          s"${prefix1}$par <- $ch()\n"
+          (if setup then s"${add(Set(uuid), prefix1)}\n" else "") +
+          s"${prefix1}$par <- $ch(^ + \"$uuid\", ${rate(r)})\n"
 
         prefix1 -> (before1, after1)
 
@@ -253,12 +263,11 @@ final class Program(indent: String = "  "):
 
         before1 +=
           (if comprehension then "" else s"${prefix1}for\n") +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("") +
           ( if path.isEmpty
             then
-              s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})\n"
+              s"${prefix2}_ <- `$identifier`(${args.mkString(", ")})(\"$uuid\")\n"
             else
-              s"${prefix2}_ <- ${path.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})\n"
+              s"${prefix2}_ <- ${path.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})(\"$uuid\")\n"
           )
 
         after1 =
@@ -275,33 +284,33 @@ final class Program(indent: String = "  "):
       // SEQUENCE //////////////////////////////////////////////////////////////
       // followed possibly either by agent call or another process expression //
 
-      case Seq(ast, it*) if it.isEmpty =>
+      case Seq(ast, _, it*) if it.isEmpty =>
         cp = false -> prefix1
 
-        body(cp -> (before1, after1) -> semaphore, ast)
+        body(cp -> (before1, after1) -> init(ast), ast)
 
-      case Seq(ast, it*) =>
+      case Seq(ast, enabled, it*) =>
         val prefix2 = s"${prefix1}${indent}"
 
         val before2 =
           s"${prefix1}for\n" +
-          s"${prefix2}_ <- IO.unit\n" +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
+          s"${prefix2}_ <- IO.unit\n"
         val after2 =
           s"${prefix1}yield\n" +
           s"${prefix2}()\n"
 
-        val (prefix3, (before3, after3)) = it
-          .foldLeft(prefix2 -> ("", "")) { case ((prefix, (before, after)), pre) =>
-            cp = true -> prefix
-            body(cp -> (before, after) -> None, pre)
+        val ((prefix3, (before3, after3)), _) = it
+          .foldLeft(prefix2 -> ("", "") -> (setup && enabled.nonEmpty)) {
+            case (((prefix, (before, after)), setup), pre) =>
+              cp = true -> prefix
+              body(cp -> (before, after) -> setup, pre) -> true
           }
 
         val (before, after) = (before1 + before2 + before3, after3 + after2 + after1)
 
         cp = true -> prefix3
 
-        body(cp -> (before, after) -> None, ast)
+        body(cp -> (before, after) -> init(ast), ast)
 
       ////////////////////////////////////////////////////////////// sequence //
 
@@ -310,9 +319,29 @@ final class Program(indent: String = "  "):
 
 object Program:
 
-  type Code = (((Boolean, String), (String, String)), Option[String])
-  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
-  //             |||||||  indent,   before, after,    semaphore
+  type Code = (((Boolean, String), (String, String)), Boolean)
+  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^
+  //             |||||||  indent,   before, after,    setup
   //             whether inside a for-comprehension
 
   def uuid = UUID.randomUUID.toString
+
+  def add(enabled: Actions, prefix: String): String =
+    s"""${prefix}us = Set(${enabled.mkString("\"", "\", \"", "\"")})\n""" +
+    s"""${prefix}_ <- %.update(us.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })"""
+
+  def excl(enabled: Actions, prefix: String): String =
+    s"""${prefix}_ <- +.update(us.foldLeft(_){ case (it, key) => it + ((^ + key) -> (us - key).map(^ + _)) })"""
+
+  val rate: Option[Option[Any]] => String = _ match
+    case Some(Some(r: BigDecimal)) => s"`@`(BigDecimal($r))"
+    case Some(Some(Expr(r))) => s"`@`($r)"
+    case Some(Some(Symbol(r))) => s"`@`($r)"
+    case Some(_) => "`∞`"
+    case _ => "null"
+
+  val init: AST => Boolean = _ match
+    case Sum(_, _, _, _*) => true
+    case Sum(_, Par(_, _, _, _*), _*) => true
+    case Sum(_, Par(_, Seq(_, _, _*), _*), _*) => true
+    case _ => false

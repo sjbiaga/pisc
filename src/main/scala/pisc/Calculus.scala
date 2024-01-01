@@ -28,6 +28,8 @@
 
 package pisc
 
+import java.util.UUID
+
 import scala.io.Source
 import scala.util.parsing.combinator._
 import scala.collection.Set
@@ -48,23 +50,25 @@ class Calculus extends JavaTokenParsers:
     }
 
   def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
-    rep1sep(parallel, "+") ^^ { ps =>
-      Sum(ps.map(_._1): _*) -> ps.map(_._2).reduce(_ ++ _)
+    rep1sep(parallel, "+") ^^ { ls =>
+      val ps = ls.map(_._1)
+      (Sum(ps.map(_.enabled).reduce(_ ++ _), ps: _*), ls.map(_._2).reduce(_ ++ _))
     }
 
   def parallel: Parser[(Par, Names)] = "("~>parallel<~")" ^^ { identity } |
-    rep1sep(sequential, "|") ^^ { ss =>
-      Par(ss.map(_._1): _*) -> ss.map(_._2).reduce(_ ++ _)
+    rep1sep(sequential, "|") ^^ { ls =>
+      val ss = ls.map(_._1)
+      Par(ss.map(_.enabled).reduce(_ ++ _), ss: _*) -> ls.map(_._2).reduce(_ ++ _)
     }
 
   def sequential: Parser[(Seq, Names)] =
     prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
       case pre ~ Some((sum: Sum, free: Names)) =>
-        Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
+        Seq(sum, Actions(sum, pre._1: _*), pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ Some((call: Call, free: Names)) =>
-        Seq(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
+        Seq(call, Actions(pre._1: _*), pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        Seq(`𝟎`, pre._1: _*) -> pre._2._2
+        Seq(`𝟎`, Actions(pre._1: _*), pre._1: _*) -> pre._2._2
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -86,26 +90,26 @@ class Calculus extends JavaTokenParsers:
     }
 
   def prefix: Parser[(Pre, (Names, Names))] =
-    "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
+    "𝜏"~>opt("@"~>rate)<~"." ^^ { r => `𝜏`(Act(), r) -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch =>
         `v`(ch) -> (Names(ch), Names())
     } |
-    name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
-      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name~opt("@"~>rate)~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
+      case ch ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case ch ~ _ ~ arg ~ _ =>
-        IO(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
+      case ch ~ r ~ _ ~ arg ~ _ =>
+        IO(Act(), r, ch, arg, polarity = false) -> (Names(), Names(ch, arg))
     } |
-    name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name~opt("@"~>rate)~"("~name~")"<~"." ^^ { // positive prefix i.e. input
+      case ch ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ par ~ _ if !par.isSymbol =>
+      case _ ~ _ ~ _ ~ par ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case ch ~ _ ~ par ~ _ =>
-        IO(ch, par, polarity = true) -> (Names(par), Names(ch))
+      case ch ~ r ~ _ ~ par ~ _ =>
+        IO(Act(), r, ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
     "["~name~"="~name~"]" ^^ { // match
       case _ ~ lhs ~ _ ~ rhs ~ _ =>
@@ -120,6 +124,11 @@ class Calculus extends JavaTokenParsers:
                           floatingPointNumber ^^ { Opd.apply } |
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
+
+  def rate: Parser[Option[Any]] = "∞" ^^ { _ => None } |
+                                  floatingPointNumber ^^ { Option.apply compose BigDecimal.apply } |
+                                  super.ident ^^ { Option.apply compose Symbol.apply } |
+                                  expression ^^ { Option.apply compose Expr.apply }
 
   def agent(binding: Boolean = false): Parser[(Call, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
@@ -177,21 +186,47 @@ object Calculus extends Calculus:
       .map(_.asSymbol)
     )
 
+  type Actions = Set[String]
+
+  object Actions:
+    def apply(ls: Pre*): Actions = Set.from { ls
+      .find(_.isInstanceOf[Act])
+      .headOption
+      .map(_.asInstanceOf[Act].uuid)
+    }
+    def apply(sum: Sum, ls: Pre*): Actions =
+      val r = this(ls: _*)
+      if r.isEmpty then sum.enabled else r
+
   sealed trait AST extends Any
 
-  case class Sum(choices: Par*) extends AnyVal with AST
+  case class Sum(enabled: Actions, choices: Par*) extends AST
 
-  val `𝟎` = Sum()
+  val `𝟎` = Sum(Actions())
 
-  case class Par(components: Seq*) extends AnyVal with AST
+  case class Par(enabled: Actions, components: Seq*) extends AST
 
   sealed trait Pre extends Any with AST
 
   case class `v`(name: Opd) extends AnyVal with Pre // forcibly
 
-  case object `𝜏` extends Pre
+  sealed trait Act:
+    val uuid: String
+    val rate: Option[Option[Any]]
 
-  case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
+  object Act:
+    def apply() = UUID.randomUUID.toString
+
+  case class `𝜏`(override val uuid: String,
+                 override val rate: Option[Option[Any]]
+  ) extends Pre with Act
+
+  case class IO(override val uuid: String,
+                override val rate: Option[Option[Any]],
+                channel: Opd,
+                name: Opd,
+                polarity: Boolean
+  ) extends Pre with Act
 
   case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Pre // forcibly
 
@@ -201,11 +236,11 @@ object Calculus extends Calculus:
 
     val kind: String = value match {
       case _: Symbol => "channel name"
-      case _: String => "literal value"
+      case _: String => "scala value"
       case _: Expr => "scala expression"
     }
 
-  case class Seq(process: AST, prefixes: Pre*) extends AST
+  case class Seq(process: AST, enabled: Actions, prefixes: Pre*) extends AST
 
   case class Call(identifier: Opd, path: List[String], params: Opd*) extends AST
 

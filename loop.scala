@@ -26,49 +26,60 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//package main.scala.in
-
-import cats.effect.{ IO, IOApp, Deferred }
+import cats.effect.{ IO, Deferred, Ref }
 import cats.effect.std.{ Queue, Semaphore }
 
-import `Π-loop`._
-import `Π-stats`.{ | => _, _ }
+import `Π-stats`._
 
 
-object App extends IOApp.Simple:
+package object `Π-loop`:
 
-  private def run(% : %, / : /, + : +, - : -): IO[Unit] =
-    ( for
-        _ <- loop(using %, +, -).background
-        _ <- poll(using %, /).background
-      yield
-        ()
-    ).use { _ =>
-      for
-        _ <- `π`.`Main`()("")(using %, /, +, -)
-      yield
-        ()
-    }
+  type % = Ref[IO, Map[String, Option[Rate]]]
 
-  override def run: IO[Unit] =
+  type + = Ref[IO, Map[String, Set[String]]]
+
+  type - = Ref[IO, (Semaphore[IO], Deferred[IO, String])]
+
+  type / = Queue[IO, (String, Rate)]
+
+  def loop(using % : %, + : +, - : -): IO[Unit] =
     for
-      % <- IO.ref(Map[String, Option[Rate]]())
-      / <- Queue.unbounded[IO, (String, Rate)]
-      + <- IO.ref(Map[String, Set[String]]())
-      sem <- Semaphore[IO](1)
-      _ <- sem.acquire
-      turn <- Deferred[IO, String]
-      - <- IO.ref(sem -> turn)
-      _ <- run(%, /, +, -)
+      it <- %.modify { m =>
+        if m.foldLeft(true) {
+          case (false, _) | (_, (_, None)) => false
+          case _ => true
+        }
+        then m -> Some(Map.from(m))
+        else m -> None
+      }
+      _ <- if it.isEmpty || it.get.isEmpty then IO.cede >> loop else
+           for
+             key <- IO.pure(|(it.get))
+             ks <- +.modify { m =>
+               if m.contains(key)
+               then
+                 (m - key) -- m(key) -> m(key)
+               else
+                 m -> Set.empty
+             }
+             _ <- %.update { _ -- ks }
+             (sem, turn) <- -.get
+             _ <- turn.complete(key)
+             _ <- sem.acquire
+             _ <- %.update { _ - key }
+             turn <- Deferred[IO, String]
+             _ <- -.set(sem -> turn)
+             _ <- IO.cede >> loop
+           yield
+             ()
     yield
       ()
 
-
-object `π`:
-
-  import cats.effect.syntax.all._
-  import cats.syntax.all._
-
-  import `Π`._
-
-
+  def poll(using % : %, / : /): IO[Unit] =
+    for
+      it <- /.take
+      (key, r) = it
+      _ <- %.update { _ + (key -> Some(r)) }
+      _ <- IO.cede >> poll
+    yield
+      ()

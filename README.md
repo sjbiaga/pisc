@@ -1,5 +1,5 @@
-Π-calculus in SCala aka PISC ala RISC
-=====================================
+Stochastic Π-calculus in SCala aka PISC ala RISC
+================================================
 
 The Π-calculus maps one to one on Scala for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
@@ -14,7 +14,7 @@ Channels for names (`UUID`s) work as CE tutorial's
 producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
-Summation: non-deterministic choice modelled with - `IO.race` and `Semaphore`.
+Summation: probabilistic choice modelled with - `parMapN`.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -42,8 +42,12 @@ Lines starting with a hash `#` character are (line) comments. Blank lines are ig
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
 The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
-the input prefix uses the round parentheses and has the form `NAME(NAME).`. A name
+the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
+or any `Scala` expression as a Scala comment between `/*` and `*/`.
+
+The _`rate`_ of an action ("𝜏" or prefix) can be optionally annotated with `@`
+and an infinite ("∞"), a `Scala` identifier, a (boxed in a) `BigDecimal` number,
 or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
@@ -59,13 +63,13 @@ whereas restriction and (mis)match are not.
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
     PREFIXES   ::= PREFIX { PREFIX }
-    PREFIX     ::= "𝜏" "."
+    PREFIX     ::= "𝜏" [ @ RATE ] "."
 	             | "v" "(" NAME ")"
-	             | NAME "<" NAME ">" "."
-	             | NAME "(" NAME ")" "."
+	             | NAME [ @ RATE ] "<" NAME ">" "."
+	             | NAME [ @ RATE ] "(" NAME ")" "."
 	             | "[" NAME "=" NAME "]"
 	             | "[" NAME "≠" NAME "]"
-    AGENT     ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
 
 Not part of the original Π-calculus, an agent (call) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
@@ -172,7 +176,7 @@ One can edit'em, though they're ready to generate a main `App`.
 
 Let's go backwards. To run an example, `cd` to `examples` and execute:
 
-    ./examples $ scala-cli run ../pi.scala out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ scala-cli run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
 
 To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
 
@@ -189,4 +193,4 @@ In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add 
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ scala-cli run --interactive ../pi.scala out/pi1.scala out/pi2.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ scala-cli run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1

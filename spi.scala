@@ -29,8 +29,11 @@
 package object `Π`:
 
   import cats.effect.{ Deferred, Ref, IO }
+  import cats.effect.std.{ Queue, Semaphore }
 
-  import `Π-magic`._
+  import `Π-loop`._
+  import `Π-magic`.`><`
+  import `Π-stats`.Rate
 
 
   type Name = Any
@@ -53,7 +56,21 @@ package object `Π`:
   /**
     * silent transition
     */
-  val `𝜏` = IO.unit
+
+  object `𝜏`:
+
+    def apply(key: String, rate: Rate)
+             (using % : %, / : /, - : -): IO[Unit] =
+      def loop: IO[Unit] =
+        for
+          (sem, turn) <- -.get
+          it <- turn.get
+          ok <- %.modify { m => m -> (key == it || m.contains(key)) }
+          _ <- if ok then IO.unit else IO.never
+          _ <- if key != it then IO.cede >> loop else sem.release
+        yield
+          ()
+      /.offer(key -> rate) >> loop
 
 
   /**
@@ -68,12 +85,16 @@ package object `Π`:
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = `><`()(ref).map(`()`)
+    def apply(key: String, rate: Rate)
+             (using % : %, / : /, - : -): IO[`()`] =
+      /.offer(key -> rate) >> `><`(key)(ref).map(`()`)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Unit] = `><`(value.name)(ref)
+    def apply(key: String, rate: Rate, value: `()`)
+             (using % : %, / : /, - : -): IO[Unit] =
+      /.offer(key -> rate) >> `><`(key, value.name)(ref)
 
 
   object `Π-magic`:
@@ -106,36 +127,51 @@ package object `Π`:
 
       inline def apply(): `><` = `><`(Nil, Nil)
 
-      import scala.util.Random
+      def apply(key: String, name: Name)
+               (`>R`: Ref[IO, `><`])
+               (using % : %, - : -): IO[Unit] =
+        for
+          (sem, turn) <- -.get
+          it <- turn.get
+          ok <- %.modify { m => m -> (key == it || m.contains(key)) }
+          _ <- if ok then IO.unit else IO.never
+          _ <- if key != it then IO.cede >> apply(key, name)(`>R`) else
+               sem.release >>
+               Deferred[IO, Unit].flatMap { offerer =>
+                 IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
+                   `>R`.modify {
+                     case `><`(takers, offerers) if takers.nonEmpty =>
+                       `><`(takers.tail, offerers) -> takers.head.complete(name).void
+                     case `><`(takers, offerers) =>
+                       val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                       `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
+                   }.flatten
+                 }
+               }
+        yield
+          ()
 
-      val random = Random()
-
-      def apply(name: Name)(`>R`: Ref[IO, `><`]): IO[Unit] =
-          Deferred[IO, Unit].flatMap { offerer =>
-            IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
-              `>R`.modify {
-                case `><`(takers, offerers) if takers.nonEmpty =>
-                  val i = random.nextInt % takers.size
-                  val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
-                  `><`(rest, offerers) -> taker.complete(name).void
-                case `><`(takers, offerers) =>
-                  val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                  `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
-              }.flatten
-            }
-          }
-
-      def apply()(`<R`: Ref[IO, `><`]): IO[Name] =
-          Deferred[IO, Name].flatMap { taker =>
-            IO.uncancelable { poll =>
-              `<R`.modify {
-                case `><`(takers, offerers) if offerers.nonEmpty =>
-                  val i = random.nextInt % offerers.size
-                  val ((name, release), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
-                  `><`(takers, rest) -> release.complete(()).as(name)
-                case `><`(takers, offerers) =>
-                  val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                  `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
-              }.flatten
-            }
-          }
+      def apply(key: String)
+               (`<R`: Ref[IO, `><`])
+               (using % : %, - : -): IO[Name] =
+        for
+          (sem, turn) <- -.get
+          it <- turn.get
+          ok <- %.modify { m => m -> (key == it || m.contains(key)) }
+          _ <- if ok then IO.unit else IO.never
+          _ <- if key != it then IO.cede >> apply(key)(`<R`) else
+               sem.release >>
+               Deferred[IO, Name].flatMap { taker =>
+                 IO.uncancelable { poll =>
+                   `<R`.modify {
+                     case `><`(takers, offerers) if offerers.nonEmpty =>
+                       val (name, release) = offerers.head
+                       `><`(takers, offerers.tail) -> release.complete(()).as(name)
+                     case `><`(takers, offerers) =>
+                       val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                       `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
+                   }.flatten
+                 }
+               }
+        yield
+          ()

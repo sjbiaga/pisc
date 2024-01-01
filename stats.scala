@@ -26,49 +26,24 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//package main.scala.in
+package object `Π-stats`:
 
-import cats.effect.{ IO, IOApp, Deferred }
-import cats.effect.std.{ Queue, Semaphore }
+  sealed trait Rate extends AnyRef
+  case object `∞` extends Rate
+  case class `@`(rate: BigDecimal) extends Rate
 
-import `Π-loop`._
-import `Π-stats`.{ | => _, _ }
+  import scala.util.Random
 
+  private val random = new Random
 
-object App extends IOApp.Simple:
-
-  private def run(% : %, / : /, + : +, - : -): IO[Unit] =
-    ( for
-        _ <- loop(using %, +, -).background
-        _ <- poll(using %, /).background
-      yield
-        ()
-    ).use { _ =>
-      for
-        _ <- `π`.`Main`()("")(using %, /, +, -)
-      yield
-        ()
-    }
-
-  override def run: IO[Unit] =
-    for
-      % <- IO.ref(Map[String, Option[Rate]]())
-      / <- Queue.unbounded[IO, (String, Rate)]
-      + <- IO.ref(Map[String, Set[String]]())
-      sem <- Semaphore[IO](1)
-      _ <- sem.acquire
-      turn <- Deferred[IO, String]
-      - <- IO.ref(sem -> turn)
-      _ <- run(%, /, +, -)
-    yield
-      ()
-
-
-object `π`:
-
-  import cats.effect.syntax.all._
-  import cats.syntax.all._
-
-  import `Π`._
-
-
+  def |(% : Map[String, Option[Rate]]): String =
+    require(%.nonEmpty)
+    val `0` = %.filter { case (_, Some(`∞`)) => true case _ => false }
+    if `0`.nonEmpty
+    then
+      `0`.drop(random.nextInt(`0`.size)).head._1
+    else if %.forall { case (_, Some(null)) => true case _ => false }
+    then
+        %.drop(random.nextInt(%.size)).head._1
+    else
+        %.drop(random.nextInt(%.size)).head._1
