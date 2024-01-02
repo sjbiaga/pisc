@@ -44,13 +44,13 @@ class Calculus extends JavaTokenParsers:
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
       case (bind, _) ~ _ ~ (sum_, _) =>
-        var sum = sum_
-        var ast = flatten(sum).asInstanceOf[Sum]
+        var sum: AST = sum_
+        var ast = flatten(sum)
         while ast != sum
         do
           sum = ast
-          ast = flatten(sum).asInstanceOf[Sum]
-        bind -> sum
+          ast = flatten(sum)
+        bind -> sum.asInstanceOf[Sum]
     }
 
   def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
@@ -187,7 +187,7 @@ object Calculus extends Calculus:
 
   case class Sum(choices: Par*) extends AnyVal with AST
 
-  val `𝟎` = Sum()
+  val `𝟎` = Sum(Par())
 
   case class Par(components: Seq*) extends AnyVal with AST
 
@@ -207,7 +207,7 @@ object Calculus extends Calculus:
 
     val kind: String = value match {
       case _: Symbol => "channel name"
-      case _: String => "literal value"
+      case _: String => "scala value"
       case _: Expr => "scala expression"
     }
 
@@ -216,6 +216,7 @@ object Calculus extends Calculus:
   case class Call(identifier: Opd, path: List[String], params: Opd*) extends AST
 
   case class Expr(expression: String)
+
 
   // exceptions
 
@@ -239,6 +240,7 @@ object Calculus extends Calculus:
 
   case class PrefixChannelParsingException(name: Opd)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+
 
   // functions
 
@@ -280,6 +282,7 @@ object Calculus extends Calculus:
       Par(Seq(flatten(sum), ps: _*))
 
     case it => it
+
 
   def apply(source: Source): List[Bind] = source
     .getLines()

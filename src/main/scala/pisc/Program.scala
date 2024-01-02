@@ -30,8 +30,6 @@ package pisc
 
 import java.util.UUID
 
-import scala.collection.mutable.{ HashMap => Map }
-
 import Calculus._
 import Program._
 
@@ -43,6 +41,7 @@ final class Program(indent: String = "  "):
       val code = (false -> indent) -> ("", "") -> None
       defn(code)(bind, sum)
     }.mkString("\n\n")
+
 
   private def defn(code: Code)(bind: Call, sum: Sum): String =
     var (((comprehension, prefix1), (before1, after1)), _) = code
@@ -61,9 +60,10 @@ final class Program(indent: String = "  "):
 
     before + after
 
+
   private def body(code: Code, node: AST): (String, (String, String)) =
     //                                      ^^^^^^   ^^^^^^  ^^^^^^
-    //                              [Match] prefix,  before, after
+    //                                      prefix,  before, after
     var ((cp @ (comprehension, prefix1), (before1, after1)), semaphore) = code
 
     node match
@@ -103,21 +103,7 @@ final class Program(indent: String = "  "):
       case Sum(operand, _*) =>
         body(code, operand)
 
-      case _: Sum if comprehension =>
-        (prefix1, (before1, after1))
-
-      case _: Sum =>
-        val prefix2 = s"${prefix1}${indent}"
-
-        val before2 =
-          s"${prefix1}for\n" +
-          s"${prefix2}_ <- IO.unit\n" +
-          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
-        val after2 =
-          s"${prefix1}yield\n" +
-          s"${prefix2}()\n"
-
-        (prefix1, (before1 + before2, after2 + after1))
+      case _: Sum => ??? // not even inaction - impossible by syntax
 
       ///////////////////////////////////////////////////////////// summation //
 
@@ -155,7 +141,21 @@ final class Program(indent: String = "  "):
       case Par(operand, _*) =>
         body(code, operand)
 
-      case _: Par => ??? // not even inaction - impossible by syntax
+      case _: Par if comprehension =>
+        (prefix1, (before1, after1))
+
+      case _: Par =>
+        val prefix2 = s"${prefix1}${indent}"
+
+        val before2 =
+          s"${prefix1}for\n" +
+          s"${prefix2}_ <- IO.unit\n" +
+          semaphore.map(s"${prefix2}_ <- `" + _ + "`.acquire\n").getOrElse("")
+        val after2 =
+          s"${prefix1}yield\n" +
+          s"${prefix2}()\n"
+
+        (prefix1, (before1 + before2, after2 + after1))
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -312,7 +312,6 @@ object Program:
 
   type Code = (((Boolean, String), (String, String)), Option[String])
   //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
-  //             |||||||  indent,   before, after,    semaphore
-  //             whether inside a for-comprehension
+  //             for-c.,  indent,   before, after,    semaphore
 
   def uuid = UUID.randomUUID.toString
