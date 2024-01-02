@@ -66,9 +66,13 @@ object App extends IOApp.Simple:
 
 object `π`:
 
+  import java.util.UUID
+
   import cats.effect.syntax.all._
   import cats.syntax.all._
 
   import `Π`._
+
+  private def `π-uuid` = UUID.randomUUID.toString
 
 

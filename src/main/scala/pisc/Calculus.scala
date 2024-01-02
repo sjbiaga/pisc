@@ -42,11 +42,19 @@ class Calculus extends JavaTokenParsers:
 
   def equation: Parser[Bind] =
     agent(true)~"="~choice ^^ {
-      case (call, bound) ~ _ ~ (sum, free)
+      case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(call.identifier.asSymbol, free &~ bound)
-      case (bind, _) ~ _ ~ (sum, _) =>
-        bind -> sum
+        throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
+      case (bind, _) ~ _ ~ (sum_, _) =>
+        var sum: AST = sum_
+        var ast = flatten(sum)
+        while ast != sum
+        do
+          sum = ast
+          ast = flatten(sum)
+        if !valid(false)(ast) then
+          throw EquationChoiceException(bind.identifier.asSymbol.name)
+        bind -> ast.asInstanceOf[Sum]
     }
 
   def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
@@ -202,7 +210,7 @@ object Calculus extends Calculus:
 
   case class Sum(enabled: Actions, choices: Par*) extends AST
 
-  val `𝟎` = Sum(Actions())
+  val `𝟎` = Sum(Actions(), Par(Actions()))
 
   case class Par(enabled: Actions, components: Seq*) extends AST
 
@@ -246,6 +254,7 @@ object Calculus extends Calculus:
 
   case class Expr(expression: String)
 
+
   // exceptions
 
   sealed class ParsingException(msg: String, cause: Throwable = null)
@@ -260,14 +269,77 @@ object Calculus extends Calculus:
   case class EquationParamsException(id: String, params: AnyRef*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
-  case class EquationFreeNamesException(name: Symbol, free: Names)
-      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of ${name.name}")
+  case class EquationChoiceException(id: String)
+      extends EquationParsingException(s"A probabilistic choice (inaction or agent) is not prefixed in the right hand side of $id")
+
+  case class EquationFreeNamesException(id: String, free: Names)
+      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
 
   sealed class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: Opd)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+
+
+  // functions
+
+  val flatten: AST => AST = _ match
+
+    case Sum(enabled, Par(_, Seq(sum: Sum, _, ps*), ss*), it*)
+        if ps.isEmpty && ss.isEmpty =>
+      val lhs = flatten(sum).asInstanceOf[Sum]
+      if it.isEmpty
+      then
+        Sum(enabled, lhs.choices: _*)
+      else
+        val rhs = flatten(Sum(Set.empty, it: _*)).asInstanceOf[Sum]
+        Sum(enabled, (lhs.choices ++ rhs.choices): _*)
+
+    case Sum(enabled, lhs, it*)
+        if it.nonEmpty =>
+      val rhs = flatten(Sum(Set.empty, it: _*)).asInstanceOf[Sum]
+      Sum(enabled, (lhs +: rhs.choices): _*)
+
+    case Sum(enabled, par, _*) =>
+      Sum(enabled, flatten(par).asInstanceOf[Par])
+
+    case Par(enabled, Seq(Sum(_, Par(_, ss*), p*), _, ps*), it*)
+        if p.isEmpty && ps.isEmpty =>
+      if it.isEmpty
+      then
+        Par(enabled, ss: _*)
+      else
+        val rhs = flatten(Par(Set.empty, it: _*)).asInstanceOf[Par]
+        Par(enabled, (ss ++ rhs.components): _*)
+
+    case Par(enabled, lhs, it*)
+        if it.nonEmpty =>
+      val rhs = flatten(Par(Set.empty, it: _*)).asInstanceOf[Par]
+      Par(enabled, (lhs +: rhs.components): _*)
+
+    case Par(enabled, it @ Seq(sum, _, _*), _*) =>
+      Par(enabled, Seq(flatten(sum), it.enabled, it.prefixes: _*))
+
+    case it => it
+
+
+  def valid(choice: Boolean): AST => Boolean = _ match
+
+    case Sum(_, ps*) =>
+      ps.forall(valid(choice || ps.size > 1))
+
+    case Par(_, ss*)
+        if ss.nonEmpty =>
+      ss.forall(valid(choice))
+
+    case Seq(ast, _, ps*) =>
+      valid(if Actions(ps: _*).nonEmpty then false else choice)(ast)
+
+    case _: Par | _: Call => !choice
+
+    case _ => ???
+
 
   def apply(source: Source): List[Bind] = source
     .getLines()
