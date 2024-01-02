@@ -4,6 +4,8 @@
 The Π-calculus maps one to one on Scala for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
 
+[Stochastic Π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is still experimental.
+
 After code generation, the Π-calculus "processes" could be
 programmatically typed as Scala code using CE `IO`.
 
@@ -35,7 +37,8 @@ starting with uppercase letter. Both may contain single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_. "𝜏" is the _silent transition_.
+with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
+"𝜏" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 
