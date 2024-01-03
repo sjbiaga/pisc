@@ -96,6 +96,8 @@ package object `Π`:
              (using % : %, / : /, - : -): IO[Unit] =
       /.offer(key -> rate) >> `><`(key, value.name)(ref)
 
+    override def toString: String = name.toString
+
 
   object `Π-magic`:
 

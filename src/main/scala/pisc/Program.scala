@@ -54,7 +54,7 @@ final class Program(indent: String = "  "):
   private def defn(code: Code)(bind: Call, sum: Sum): String =
     var (((comprehension, prefix1), (before1, after1)), (_, mutex)) = code
     val identifier = bind.identifier.asSymbol.name
-    val params = bind.params.map(_.asSymbol.name).map { _.toString + ": Name" }
+    val params = bind.params.map(_.asSymbol.name).map { _.toString + ": `()`" }
 
     val prefix2 =
       s"${prefix1}     ${" ".repeat(identifier.length)} "
