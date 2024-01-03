@@ -1,0 +1,12 @@
+# https://github.com/alexj136/nodes/blob/master/examples/greeter
+
+Main = v(stdin)v(stdout) \
+     ( stdout<"What's your name?\n">.stdin(name).Greeter(stdout, name) \
+     | stdout(prompt).stdin</*sc_name*/>.stdout(pi_greet). \
+     ) \
+
+Greeter(stdout, name) = \
+                      ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">. \
+                      | [name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
+                      | [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!\n"*/>. \
+                      ) \

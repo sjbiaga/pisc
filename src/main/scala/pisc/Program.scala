@@ -46,7 +46,7 @@ final class Program(indent: String = "  "):
   private def defn(code: Code)(bind: Call, sum: Sum): String =
     var (((comprehension, prefix1), (before1, after1)), _) = code
     val identifier = bind.identifier.asSymbol.name
-    val params = bind.params.map(_.asSymbol.name).map { _.toString + ": Name" }
+    val params = bind.params.map(_.asSymbol.name).map { _.toString + ": `()`" }
 
     before1 +=
       s"${prefix1}def `$identifier`(${params.mkString(", ")}): IO[Unit] =\n"
@@ -311,7 +311,7 @@ final class Program(indent: String = "  "):
 object Program:
 
   type Code = (((Boolean, String), (String, String)), Option[String])
-  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^
+  //             ^^^^^^^  ^^^^^^    ^^^^^^  ^^^^^^    ^^^^^^^^^^^^^
   //             for-c.,  indent,   before, after,    semaphore
 
   def uuid = UUID.randomUUID.toString

@@ -286,6 +286,10 @@ object Calculus extends Calculus:
 
   def apply(source: Source): List[Bind] = source
     .getLines()
+    .foldLeft(List[String]("")) {
+      case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
+      case (r, l) => r :+ l
+    }
     .filterNot(_.matches("^ *#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
     .map {

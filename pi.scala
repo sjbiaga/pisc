@@ -75,6 +75,8 @@ package object `Π`:
       */
     def apply(value: `()`): IO[Unit] = `><`(value.name)(ref)
 
+    override def toString: String = name.toString
+
 
   object `Π-magic`:
 
