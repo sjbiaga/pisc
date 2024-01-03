@@ -284,7 +284,7 @@ object Calculus extends Calculus:
 
   // functions
 
-  val flatten: AST => AST = _ match
+  val flatten: AST => AST = {
 
     case Sum(enabled, Par(_, Seq(sum: Sum, _, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
@@ -323,8 +323,10 @@ object Calculus extends Calculus:
 
     case it => it
 
+  }
 
-  def valid(choice: Boolean): AST => Boolean = _ match
+
+  def valid(choice: Boolean): AST => Boolean = {
 
     case Sum(_, ps*) =>
       ps.forall(valid(choice || ps.size > 1))
@@ -339,6 +341,8 @@ object Calculus extends Calculus:
     case _: Par | _: Call => !choice
 
     case _ => ???
+
+  }
 
 
   def apply(source: Source): List[Bind] = source

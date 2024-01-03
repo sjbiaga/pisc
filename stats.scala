@@ -44,6 +44,6 @@ package object `Π-stats`:
       `0`.drop(random.nextInt(`0`.size)).head._1
     else if %.forall { case (_, Some(null)) => true case _ => false }
     then
-        %.drop(random.nextInt(%.size)).head._1
+      %.drop(random.nextInt(%.size)).head._1
     else
-        %.drop(random.nextInt(%.size)).head._1
+      %.drop(random.nextInt(%.size)).head._1

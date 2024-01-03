@@ -358,35 +358,53 @@ final class Program(indent: String = "  "):
     val prefix1 = s"$indent"
     val prefix2 = s"$prefix1$indent"
 
-    val exclude = sum
-      .choices
-      .foldLeft(Map[String, Actions]()) {
-        case (r, it @ Par(_, _, _, _*)) =>
-          val enabled = it.components.map(_.enabled).reduce(_ ++ _)
-          enabled.foreach(r(_) = enabled)
-          r
-        case (r, _) => r
-      }
+    val exclude = Map[String, Actions]()
+    val include = Map[String, Actions]()
 
-    val include = sum
-      .choices
-      .foldLeft(Map[String, Actions]()) {
-        case (r, par @ Par(_, _, _, _*)) => par
-          .components
-          .foldLeft(r) {
-            case (r, Seq(ast @ Sum(_, _, _, _*), _, ps*))
-                if Actions(ps: _*).isEmpty =>
-              val ls = ast.choices.map(_.enabled).zipWithIndex
-              ls.foreach { (enabled, i) =>
-                val ks = (ls.take(i) ++ ls.drop(i+1)).map(_._1).reduce(_ ++ _)
-                enabled.foreach(r(_) = ks)
-              }
-              r
-            case (r, _) => r
+    sum.enabled.foreach(exclude(_) = Actions())
+    sum.enabled.foreach(include(_) = Actions())
+
+    lazy val rec: AST => Actions = {
+
+      case Sum(enabled, ps*) =>
+        val ls = ps.map(rec)
+
+        ls.zipWithIndex.foreach { (it, i) =>
+          val ks = (ls.take(i) ++ ls.drop(i+1)).reduce(_ ++ _)
+          it.foreach { k => include(k) = include(k) ++ ks }
+        }
+
+        enabled
+
+      case Par(enabled, ss*) =>
+        val ls = ss.map(rec)
+
+        if ls.isEmpty
+        then
+          Actions()
+        else
+          ls.zipWithIndex.foreach { (it, i) =>
+            val ks = (ls.take(i) ++ ls.drop(i+1)).foldLeft(Actions())(_ ++ _)
+            it.foreach { k => exclude(k) = exclude(k) ++ ks }
           }
-          r
-        case (r, _) => r
-      }
+
+          enabled
+
+      case Seq(ast, _, ps*) =>
+        val enabled = Actions(ps: _*)
+
+        if enabled.isEmpty
+        then
+          rec(ast)
+        else
+          enabled
+
+      case _ =>
+        Actions()
+
+    }
+
+    rec(sum)
 
     val prefix3 =
       s"${prefix2}            "
@@ -402,7 +420,7 @@ final class Program(indent: String = "  "):
       s"""${prefix3}else if key == \"$key\" then Set(${enabled.mkString("\"", "\", \"", "\"")}).map(^ + _)\n"""
     } +
     s"${prefix3}else Set.empty )\n" +
-    s"${prefix2}(en.map(^ + _) -- exc) ++ inc\n"
+    s"${prefix2}((en - key).map(^ + _) -- exc) ++ inc\n"
 
 
 object Program:
