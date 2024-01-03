@@ -379,16 +379,12 @@ final class Program(indent: String = "  "):
       case Par(enabled, ss*) =>
         val ls = ss.map(rec)
 
-        if ls.isEmpty
-        then
-          Actions()
-        else
-          ls.zipWithIndex.foreach { (it, i) =>
-            val ks = (ls.take(i) ++ ls.drop(i+1)).foldLeft(Actions())(_ ++ _)
-            it.foreach { k => exclude(k) = exclude(k) ++ ks }
-          }
+        ls.zipWithIndex.foreach { (it, i) =>
+          val ks = (ls.take(i) ++ ls.drop(i+1)).foldLeft(Actions())(_ ++ _)
+          it.foreach { k => exclude(k) = exclude(k) ++ ks }
+        }
 
-          enabled
+        enabled
 
       case Seq(ast, _, ps*) =>
         val enabled = Actions(ps: _*)

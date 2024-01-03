@@ -133,7 +133,8 @@ class Calculus extends JavaTokenParsers:
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
 
-  def rate: Parser[Option[Any]] = "∞" ^^ { _ => None } |
+  def rate: Parser[Option[Any]] = "("~>rate<~")" ^^ { identity } |
+                                  "∞" ^^ { _ => None } |
                                   floatingPointNumber ^^ { Option.apply compose BigDecimal.apply } |
                                   super.ident ^^ { Option.apply compose Symbol.apply } |
                                   expression ^^ { Option.apply compose Expr.apply }

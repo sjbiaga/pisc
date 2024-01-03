@@ -180,7 +180,7 @@ One can edit'em, though they're ready to generate a main `App`.
 
 Let's go backwards. To run an example, `cd` to `examples` and execute:
 
-    ./examples $ scala-cli run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ scala-cli run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala --dependency org.scalanlp::breeze:2.1.0 --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
 
 To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
 
@@ -197,4 +197,4 @@ In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add 
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ scala-cli run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ scala-cli run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala --dependency org.scalanlp::breeze:2.1.0 --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1

@@ -32,6 +32,10 @@ package object `Π-stats`:
   case object `∞` extends Rate
   case class `@`(rate: BigDecimal) extends Rate
 
+  import breeze.stats.distributions.{ Exponential, Rand }
+  import Rand.VariableSeed._
+
+  import scala.math.log
   import scala.util.Random
 
   private val random = new Random
@@ -40,10 +44,16 @@ package object `Π-stats`:
     require(%.nonEmpty)
     val `0` = %.filter { case (_, Some(`∞`)) => true case _ => false }
     if `0`.nonEmpty
-    then
+    then // immediate
       `0`.drop(random.nextInt(`0`.size)).head._1
     else if %.forall { case (_, Some(null)) => true case _ => false }
-    then
+    then // passive
       %.drop(random.nextInt(%.size)).head._1
-    else
-      %.drop(random.nextInt(%.size)).head._1
+    else // timed
+      %
+        .map(_ -> _.get.asInstanceOf[`@`].rate)
+        .map(_ -> _.toDouble)
+        .map(_ -> Exponential(_))
+        .map(_ -> _.draw())
+        .minBy(_._2)
+        ._1
