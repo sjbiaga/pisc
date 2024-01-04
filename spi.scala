@@ -139,7 +139,7 @@ package object `Π`:
                  IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                    `>R`.modify {
                      case `><`(takers, offerers) if takers.nonEmpty =>
-                       `><`(takers.tail, offerers) -> takers.head.complete(name).void
+                       `><`(takers.init, offerers) -> takers.last.complete(name).void
                      case `><`(takers, offerers) =>
                        val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                        `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
@@ -162,8 +162,8 @@ package object `Π`:
                  IO.uncancelable { poll =>
                    `<R`.modify {
                      case `><`(takers, offerers) if offerers.nonEmpty =>
-                       val (name, release) = offerers.head
-                       `><`(takers, offerers.tail) -> release.complete(()).as(name)
+                       val (name, release) = offerers.last
+                       `><`(takers, offerers.init) -> release.complete(()).as(name)
                      case `><`(takers, offerers) =>
                        val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
                        `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)

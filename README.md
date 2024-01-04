@@ -18,7 +18,7 @@ producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
 Summation: probabilistic choice modelled with - `parMapN`.
-Replication: modelled with - `parMap` and `lazy val`.
+Replication: modelled with - `parMapN` and `lazy val`.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -210,12 +210,17 @@ named `pi` to translate lazily `! P` as:
       pi <- IO {
         lazy val `<uuid>`: IO[Unit] =
           for
-            _ <- Tuple1(
+            _ <- (
                    .  // P
                    .
                    .
-                 ).parMap { _ => }
-            _ <- `<uuid>`
+                 ,
+                   for
+                     _ <- IO.unit
+                     _ <- `<uuid>`
+                   yield
+                     ()
+                 ).parMapN { (_, _) => }
           yield
             ()
         `<uuid>`

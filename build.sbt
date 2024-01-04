@@ -24,7 +24,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(parsercombinators, catseffect, munit % Test)
   )
 
-unmanagedSources / excludeFilter :="spi.scala" || "loop.scala" || "stats.scala"
+unmanagedSources / excludeFilter := "spi.scala" || "loop.scala" || "stats.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

@@ -296,18 +296,27 @@ final class Program(indent: String = "  "):
           s"${prefix3}${indent}"
         val prefix5 =
           s"${prefix4}${indent}"
+        val prefix6 =
+          s"${prefix5}     ${indent}"
+        val prefix7 =
+          s"${prefix6}${indent}"
 
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
           s"${prefix2}pi <- IO {\n" +
           s"${prefix3}lazy val `$name`: IO[Unit] =\n" +
           s"${prefix4}for\n" +
-          s"${prefix5}_ <- Tuple1(\n"
+          s"${prefix5}_ <- (\n"
+        val separator =
+          s"${prefix5}     ,\n"
         val after2 =
-          s"${prefix5}     ).parMap { _ => }\n"
+          s"${prefix6}for\n" +
+          s"${prefix7}_ <- IO.unit\n" +
+          s"${prefix7}_ <- `$name`\n" +
+          s"${prefix6}yield\n${prefix7}()\n" +
+          s"${prefix5}     ).parMapN { (_, _) => }\n"
 
         after1 =
-          s"${prefix5}_ <- `$name`\n" +
           s"${prefix4}yield\n" +
           s"${prefix5}()\n" +
           s"${prefix3}`$name`\n" +
@@ -316,12 +325,9 @@ final class Program(indent: String = "  "):
           (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n") +
           after1
 
-        val prefix =
-          s"${prefix5}     ${indent}"
+        cp = false -> prefix6
 
-        cp = false -> prefix
-
-        body(cp -> (before1 + before2, after2 + after1) -> (implied, mutex), sum)
+        body(cp -> (before1 + before2, separator + after2 + after1) -> (implied, mutex), sum)
 
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
