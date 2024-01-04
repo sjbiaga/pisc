@@ -17,6 +17,7 @@ producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
 Summation: non-deterministic choice modelled with - `IO.race` and `Semaphore`.
+Replication: modelled with - `parMapN` and `lazy val`.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -118,8 +119,7 @@ A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
     for
       _ <- IO.unit
       x <- `v`
-      _ <- x(
-BigDecimal(5))
+      _ <- x(BigDecimal(5))
       y <- x()
       _ <- `𝜏`
       z <- x()
@@ -204,10 +204,14 @@ named `pi` to translate lazily `! P` as:
       .
       pi <- IO {
         lazy val `<uuid>`: IO[Unit] =
-          for // P
-            .
-            .
-            .
+          for
+            _ <- (
+                   .  // P
+                   .
+                   .
+                 ,
+                   for _ <- IO.unit yield ()
+                 ).parMapN { (_, _) => }
             _ <- `<uuid>`
           yield
             ()
