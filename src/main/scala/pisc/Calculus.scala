@@ -318,7 +318,7 @@ object Calculus extends Calculus:
       if it.matches("^ *@.*")
       then // Scala
         Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
-      else
+      else // Pi
         parseAll(equation, it) match
           case Success(result, _) => Right(result)
           case failure: NoSuccess => scala.sys.error(failure.msg)

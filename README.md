@@ -12,7 +12,7 @@ programmatically typed as Scala code using CE `IO`.
 The for-comprehensions vertically put the prefix (after "`for`")
 and the composition/summation (before "`yield`").
 
-Channels for names (`UUID`s) work as CE tutorial's
+Channels for names (`UUID`s) work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
@@ -26,8 +26,9 @@ Calculus
 --------
 
 The Π-calculus process expressions are exactly as in the literature, with
-both ASCII and UTF-8 characters, and slight variations. There is no `if then else`,
-but there is "match" and "mismatch". Forcibly, a _restriction_ and a _(mis)match_ are
+both ASCII and UTF-8 characters, and slight variations. There is "match" and
+"mismatch", but also there is `if then else` or the sugared Elvis operator.
+Forcibly, a _restriction_, a _(mis)match_, `if then else` and _replication_ are
 "considered" _prefixes_, besides input/output prefixes per se.
 
 The BNF formal grammar is the following. Lexically, `ident` is a channel name - (an
@@ -41,6 +42,8 @@ with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_ (with empt
 "𝜏" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
+Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
+backslash continue the previous line (folding from the empty string).
 
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
@@ -50,12 +53,17 @@ in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDec
 or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
-using the `NOT EQUAL TO` unicode `≠` character.
+using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
+_test_,that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
+as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-The name before parentheses must be a channel name.
+Stack safe is the _replication_ unary operator `! CHOICE`, and thus whatever follows
+will never get be executed.
+
+The name before parentheses (angular or round) must be a channel name.
 
 Note that input/outut prefixes and the silent transition are followed by a dot,
-whereas restriction and (mis)match are not.
+whereas restriction, (mis)match, `if then else` and replication are not.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
@@ -63,13 +71,13 @@ whereas restriction and (mis)match are not.
     SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
     PREFIXES   ::= PREFIX { PREFIX }
     PREFIX     ::= "𝜏" "."
-	             | "v" "(" NAME ")"
-	             | NAME "<" NAME ">" "."
-	             | NAME "(" NAME ")" "."
-	             | "[" NAME ("="|"≠") NAME "]"
-	             | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
-	             | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-	             | "!" CHOICE
+                 | "v" "(" NAME ")"
+                 | NAME "<" NAME ">" "."
+                 | NAME "(" NAME ")" "."
+                 | "[" NAME ("="|"≠") NAME "]"
+                 | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
+                 | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
+                 | "!" CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
 
 Not part of the original Π-calculus, an agent (call) expression - unless
@@ -110,7 +118,8 @@ A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
     for
       _ <- IO.unit
       x <- `v`
-      _ <- x("" -> BigDecimal(5))
+      _ <- x(
+BigDecimal(5))
       y <- x()
       _ <- `𝜏`
       z <- x()
@@ -141,13 +150,13 @@ One can intercalate "`println`"s:
     yield
       ()
 
-A match `[x = y] P`
+A [mis]match `[x = y] P` translates as:
 
     for
       .
       .
       .
-      _ <- if !(x._1 == y._1) then IO.unit else
+      _ <- if !(x == y) then IO.unit else
            for
              .
              .
@@ -157,6 +166,61 @@ A match `[x = y] P`
       // nothing more
     yield
       ()
+
+An `if then else` translates `if x = y then P else Q` as:
+
+    for
+      .
+      .
+      .
+      _ <- ( if (x == y)
+             then
+               for // P
+                 .
+                 .
+                 .
+               yield
+                 ()
+             else
+               for // Q
+                 .
+                 .
+                 .
+               yield
+                 ()
+           )
+      .
+      .
+      .
+    yield
+      ()
+
+Each replication operator uses the same variable pattern
+named `pi` to translate lazily `! P` as:
+
+    for
+      .
+      .
+      .
+      pi <- IO {
+        lazy val `<uuid>`: IO[Unit] =
+          for // P
+            .
+            .
+            .
+            _ <- `<uuid>`
+          yield
+            ()
+        `<uuid>`
+      }
+      _ <- pi
+      . // whatever follows
+      . // will never
+      . // be executed
+    yield
+      ()
+
+where `<uuid>` is some generated `java.util.UUID`.
 
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
