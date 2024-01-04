@@ -113,13 +113,9 @@ class Calculus extends JavaTokenParsers:
       case ch ~ _ ~ par ~ _ =>
         IO(ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
-    "["~name~"="~name~"]" ^^ { // match
-      case _ ~ lhs ~ _ ~ rhs ~ _ =>
-        Match(lhs, rhs) -> (Names(), Names(lhs, rhs))
-    } |
-    "["~name~"≠"~name~"]" ^^ { // mismatch
-      case _ ~ lhs ~ _ ~ rhs ~ _ =>
-        Match(lhs, rhs, true) -> (Names(), Names(lhs, rhs))
+    "["~>test<~"]" ^^ { // (mis)match
+      case ((lhs, rhs), mismatch) =>
+        Match(lhs, rhs, mismatch) -> (Names(), Names(lhs, rhs))
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
@@ -217,7 +213,7 @@ object Calculus extends Calculus:
 
   case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
 
-  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Pre // forcibly
+  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean) extends Pre // forcibly
 
   case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
 
@@ -310,7 +306,7 @@ object Calculus extends Calculus:
     case it => it
 
 
-  def apply(source: Source): List[Bind] = source
+  def apply(source: Source): List[Either[String, Bind]] = source
     .getLines()
     .foldLeft(List[String]("")) {
       case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
@@ -318,10 +314,13 @@ object Calculus extends Calculus:
     }
     .filterNot(_.matches("^ *#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map {
-      parseAll(equation, _) match {
-        case Success(result, _) => result
-        case failure: NoSuccess => scala.sys.error(failure.msg)
-      }
+    .map { it =>
+      if it.matches("^ *@.*")
+      then // Scala
+        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+      else
+        parseAll(equation, it) match
+          case Success(result, _) => Right(result)
+          case failure: NoSuccess => scala.sys.error(failure.msg)
     }
     .toList

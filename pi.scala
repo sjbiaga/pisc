@@ -33,9 +33,6 @@ package object `Π`:
   import `Π-magic`._
 
 
-  type Name = Any
-
-
   /**
     * restriction aka new name
     */
@@ -59,7 +56,7 @@ package object `Π`:
   /**
     * prefix
     */
-  final implicit class `()`(val name: Name) extends AnyVal:
+  final implicit class `()`(val name: Any) extends AnyVal:
 
     private def ref = name.asInstanceOf[Ref[IO, `><`]]
 
@@ -102,7 +99,7 @@ package object `Π`:
      * limitations under the License.
      */
 
-    final case class `><`(takers: List[Deferred[IO, Name]], offerers: List[(Name, Deferred[IO, Unit])])
+    final case class `><`(takers: List[Deferred[IO, Any]], offerers: List[(Any, Deferred[IO, Unit])])
 
     object `><`:
 
@@ -112,7 +109,7 @@ package object `Π`:
 
       val random = Random()
 
-      def apply(name: Name)(`>R`: Ref[IO, `><`]): IO[Unit] =
+      def apply(name: Any)(`>R`: Ref[IO, `><`]): IO[Unit] =
           Deferred[IO, Unit].flatMap { offerer =>
             IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
               `>R`.modify {
@@ -127,8 +124,8 @@ package object `Π`:
             }
           }
 
-      def apply()(`<R`: Ref[IO, `><`]): IO[Name] =
-          Deferred[IO, Name].flatMap { taker =>
+      def apply()(`<R`: Ref[IO, `><`]): IO[Any] =
+          Deferred[IO, Any].flatMap { taker =>
             IO.uncancelable { poll =>
               `<R`.modify {
                 case `><`(takers, offerers) if offerers.nonEmpty =>

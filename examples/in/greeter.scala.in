@@ -1,6 +1,5 @@
   given Conversion[`()`, String] = _.name.asInstanceOf[String]
 
-
   def `Main`(): IO[Unit] =
     for
       _ <- IO.unit
@@ -11,7 +10,7 @@
                _ <- IO.unit
                _ <- stdout("What's your name?\n")
                name <- stdin()
-               _ <- `Greeter`(stdout, name)
+               _ <- `Chooser`(stdout, name)
              yield
                ()
            ,
@@ -29,10 +28,43 @@
     yield
       ()
 
-/** CHOOSE THE GREETER TO YOUR LIKE *******************************************/
 
-/*
-  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // (mis)match
+  def `Chooser`(stdout: `()`, name: `()`): IO[Unit] =
+    for
+      `1ea4fb59-0436-4df0-8811-47eab5e8f932` <- Semaphore[IO](1)
+      _ <- IO.race
+           (
+             for
+               _ <- `1ea4fb59-0436-4df0-8811-47eab5e8f932`.acquire
+               _ <- `Greeter'`(stdout, name)
+             yield
+               ()
+           ,
+             for
+               _ <- `1ea4fb59-0436-4df0-8811-47eab5e8f932`.acquire
+               `e1b9e4df-9abc-4ef7-92c6-1226d8954cc8` <- Semaphore[IO](1)
+               _ <- IO.race
+                    (
+                      for
+                        _ <- `e1b9e4df-9abc-4ef7-92c6-1226d8954cc8`.acquire
+                        _ <- `Greeter"`(stdout, name)
+                      yield
+                        ()
+                    ,
+                      for
+                        _ <- `e1b9e4df-9abc-4ef7-92c6-1226d8954cc8`.acquire
+                        _ <- `Greeter"'`(stdout, name)
+                      yield
+                        ()
+                    )
+             yield
+               ()
+           )
+    yield
+      ()
+
+
+  def `Greeter'`(stdout: `()`, name: `()`): IO[Unit] = // match
     for
       _ <- (
              for
@@ -77,7 +109,7 @@
       ()
 
 
-  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // if then else
+  def `Greeter"`(stdout: `()`, name: `()`): IO[Unit] = // if then else
     for
       _ <- IO.unit
       _ <- ( if (name.substring(0,1).toUpperCase === "Q")
@@ -109,9 +141,9 @@
            )
     yield
       ()
-*/
 
-  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // Elvis operator
+
+  def `Greeter"'`(stdout: `()`, name: `()`): IO[Unit] = // Elvis ternary operator
     for
       _ <- IO.unit
       _ <- ( if (name.substring(0,1).toUpperCase === "Q")

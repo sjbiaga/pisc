@@ -36,11 +36,11 @@ import Program._
 
 final class Program(indent: String = "  "):
 
-  def apply(bind: List[Bind]): String = bind
+  def apply(bind: List[Bind]): List[String] = bind
     .map { case (bind, sum) =>
       val code = (false -> indent) -> ("", "") -> None
       defn(code)(bind, sum)
-    }.mkString("\n\n")
+    }
 
 
   private def defn(code: Code)(bind: Call, sum: Sum): String =
@@ -361,12 +361,12 @@ object Program:
   def uuid = UUID.randomUUID.toString
 
   def === : ((AnyRef, AnyRef)) => String = {
-     case (Symbol(x), Symbol(y)) => s"$x === $y"
-     case (Symbol(x), y: String) => s"$x === $y"
-     case (Symbol(x), Expr(y)) => s"$x === $y"
-     case (x: String, Symbol(y)) => s"$x === $y"
-     case (Expr(x), Symbol(y)) => s"$x === $y"
-     case (x: String, y: String) => s"$x === $y"
-     case (x: String, Expr(y)) => s"$x === $y"
-     case (Expr(x), y: String) => s"$x === $y"
+    case (Symbol(x), Symbol(y)) => s"$x === $y"
+    case (Symbol(x), y: String) => s"$x === $y"
+    case (Symbol(x), Expr(y)) => s"$x === $y"
+    case (x: String, Symbol(y)) => s"$x === $y"
+    case (Expr(x), Symbol(y)) => s"$x === $y"
+    case (x: String, y: String) => s"$x === $y"
+    case (x: String, Expr(y)) => s"$x === $y"
+    case (Expr(x), y: String) => s"$x === $y"
   }
