@@ -260,6 +260,8 @@ final class Program(indent: String = "  "):
           s"${prefix4}${indent}"
         val prefix6 =
           s"${prefix5}     ${indent}"
+        val prefix7 =
+          s"${prefix6}${indent}"
 
         val before2 =
           (if comprehension then "" else s"${prefix1}for\n") +
@@ -270,11 +272,13 @@ final class Program(indent: String = "  "):
         val separator =
           s"${prefix5}     ,\n"
         val after2 =
-          s"${prefix6}for _ <- IO.unit yield ()\n" +
-          s"${prefix5}     ).parMapN { (_, _)  => }\n"
+          s"${prefix6}for\n" +
+          s"${prefix7}_ <- IO.unit\n" +
+          s"${prefix7}_ <- `$name`\n" +
+          s"${prefix6}yield\n${prefix7}()\n" +
+          s"${prefix5}     ).parMapN { (_, _) => }\n"
 
         after1 =
-          s"${prefix5}_ <- `$name`\n" +
           s"${prefix4}yield\n" +
           s"${prefix5}()\n" +
           s"${prefix3}`$name`\n" +

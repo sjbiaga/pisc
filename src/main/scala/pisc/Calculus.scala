@@ -91,7 +91,7 @@ class Calculus extends JavaTokenParsers:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = "("~>prefix<~")" ^^ {identity } |
+  def prefix: Parser[(Pre, (Names, Names))] =
     "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>

@@ -114,7 +114,7 @@ package object `Π`:
             IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
               `>R`.modify {
                 case `><`(takers, offerers) if takers.nonEmpty =>
-                  val i = random.nextInt % takers.size
+                  val i = math.abs(random.nextInt) % takers.size
                   val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
                   `><`(rest, offerers) -> taker.complete(name).void
                 case `><`(takers, offerers) =>
@@ -129,7 +129,7 @@ package object `Π`:
             IO.uncancelable { poll =>
               `<R`.modify {
                 case `><`(takers, offerers) if offerers.nonEmpty =>
-                  val i = random.nextInt % offerers.size
+                  val i = math.abs(random.nextInt) % offerers.size
                   val ((name, release), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
                   `><`(takers, rest) -> release.complete(()).as(name)
                 case `><`(takers, offerers) =>

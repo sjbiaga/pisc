@@ -210,9 +210,12 @@ named `pi` to translate lazily `! P` as:
                    .
                    .
                  ,
-                   for _ <- IO.unit yield ()
+                   for
+                     _ <- IO.unit
+                     _ <- `<uuid>`
+                   yield
+                     ()
                  ).parMapN { (_, _) => }
-            _ <- `<uuid>`
           yield
             ()
         `<uuid>`
