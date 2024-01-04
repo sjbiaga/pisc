@@ -91,7 +91,7 @@ class Calculus extends JavaTokenParsers:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] =
+  def prefix: Parser[(Pre, (Names, Names))] = "("~>prefix<~")" ^^ {identity } |
     "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
     "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
@@ -120,12 +120,28 @@ class Calculus extends JavaTokenParsers:
     "["~name~"≠"~name~"]" ^^ { // mismatch
       case _ ~ lhs ~ _ ~ rhs ~ _ =>
         Match(lhs, rhs, true) -> (Names(), Names(lhs, rhs))
+    } |
+    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    test~"?"~choice~":"~choice ^^ { // Elvis operator
+      case cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    "!"~>choice ^^ { // replication
+      case (sum, free) => `!`(sum) -> (Names(), free)
     }
 
   def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
                           floatingPointNumber ^^ { Opd.apply } |
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
+
+  def test: Parser[((Opd, Opd), Boolean)] = "("~>test<~")" ^^ { identity } |
+    name~("="|"≠")~name ^^ {
+      case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
+    }
 
   def agent(binding: Boolean = false): Parser[(Call, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
@@ -195,11 +211,15 @@ object Calculus extends Calculus:
 
   case class `v`(name: Opd) extends AnyVal with Pre // forcibly
 
+  case class `!`(ast: AST) extends AnyVal with Pre
+
   case object `𝜏` extends Pre
 
   case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
 
   case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Pre // forcibly
+
+  case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
 
   case class Opd(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -278,8 +298,14 @@ object Calculus extends Calculus:
       val rhs = flatten(Par(it: _*)).asInstanceOf[Par]
       Par((lhs +: rhs.components): _*)
 
-    case Par(Seq(sum, ps*), _*) =>
-      Par(Seq(flatten(sum), ps: _*))
+    case Par(Seq(ast, ps*), _*) =>
+      Par(Seq(flatten(ast), ps: _*))
+
+    case `!`(sum) =>
+      flatten(sum)
+
+    case `?:`(cond, t, f) =>
+      `?:`(cond, flatten(t).asInstanceOf[Sum], flatten(f).asInstanceOf[Sum])
 
     case it => it
 

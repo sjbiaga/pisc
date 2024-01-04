@@ -10,3 +10,21 @@ Greeter(stdout, name) = \
                       | [name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
                       | [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!\n"*/>. \
                       ) \
+
+Greeter(stdout, name) = \
+                      ( if /*name.substring(0,1).toUpperCase*/ = "Q" \
+                        then stdout<"That's an unusual name.\n">. \
+                        else \
+                          if name = "Voldemort" \
+                          then stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
+                          else stdout</*s"Hello $name!\n"*/>. \
+                      ) \
+
+Greeter(stdout, name) = \
+                      ( /*name.substring(0,1).toUpperCase*/ = "Q" \
+                        ? stdout<"That's an unusual name.\n">. \
+                        : \
+                          name = "Voldemort" \
+                          ? stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
+                          : stdout</*s"Hello $name!\n"*/>. \
+                      ) \

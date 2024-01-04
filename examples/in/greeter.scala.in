@@ -29,8 +29,10 @@
     yield
       ()
 
+/** CHOOSE THE GREETER TO YOUR LIKE *******************************************/
 
-  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] =
+/*
+  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // (mis)match
     for
       _ <- (
              for
@@ -71,5 +73,73 @@
              yield
                ()
            ).parMapN { (_, _, _) => }
+    yield
+      ()
+
+
+  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // if then else
+    for
+      _ <- IO.unit
+      _ <- ( if (name.substring(0,1).toUpperCase === "Q")
+             then
+               for
+                 _ <- IO.unit
+                 _ <- stdout("That's an unusual name.\n")
+               yield
+                 ()
+             else
+               for
+                 _ <- IO.unit
+                 _ <- ( if (name === "Voldemort")
+                        then
+                          for
+                            _ <- IO.unit
+                            _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+                          yield
+                            ()
+                        else
+                          for
+                            _ <- IO.unit
+                            _ <- stdout(s"Hello $name!\n")
+                          yield
+                            ()
+                      )
+               yield
+                 ()
+           )
+    yield
+      ()
+*/
+
+  def `Greeter`(stdout: `()`, name: `()`): IO[Unit] = // Elvis operator
+    for
+      _ <- IO.unit
+      _ <- ( if (name.substring(0,1).toUpperCase === "Q")
+             then
+               for
+                 _ <- IO.unit
+                 _ <- stdout("That's an unusual name.\n")
+               yield
+                 ()
+             else
+               for
+                 _ <- IO.unit
+                 _ <- ( if (name === "Voldemort")
+                        then
+                          for
+                            _ <- IO.unit
+                            _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+                          yield
+                            ()
+                        else
+                          for
+                            _ <- IO.unit
+                            _ <- stdout(s"Hello $name!\n")
+                          yield
+                            ()
+                      )
+               yield
+                 ()
+           )
     yield
       ()

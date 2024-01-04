@@ -66,8 +66,10 @@ whereas restriction and (mis)match are not.
 	             | "v" "(" NAME ")"
 	             | NAME "<" NAME ">" "."
 	             | NAME "(" NAME ")" "."
-	             | "[" NAME "=" NAME "]"
-	             | "[" NAME "≠" NAME "]"
+	             | "[" NAME ("="|"≠") NAME "]"
+	             | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
+	             | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
+	             | "!" CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
 
 Not part of the original Π-calculus, an agent (call) expression - unless
