@@ -38,17 +38,17 @@ import Program._
 
 final class Program(indent: String = "  "):
 
-  def apply(bind: List[Bind]): String =
+  def apply(bind: List[Bind]): List[String] =
     val mutex = Map[String, Sum]()
     bind
       .map { (bind, sum) =>
         val code = (false -> indent) -> ("", "") -> (null, mutex)
         defn(code)(bind, sum)
-      }.mkString("\n\n")
-    + "\n\n" +
-    mutex.map { (method, sum) =>
-      defn(indent, method, sum)
-    }.mkString("\n\n")
+      } :+ {
+        mutex.map { (method, sum) =>
+          defn(indent, method, sum)
+        }.mkString("\n\n")
+      }
 
 
   private def defn(code: Code)(bind: Call, sum: Sum): String =
@@ -183,7 +183,7 @@ final class Program(indent: String = "  "):
       /////////////////////////////////////////////////////////// composition //
 
 
-      // RESTRICTION & PREFIXES & (MIS)MATCH ///////////////////////////////////
+      // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
 
       case `v`(Opd(Symbol(name))) =>
         before1 +=
@@ -244,24 +244,13 @@ final class Program(indent: String = "  "):
 
       case Match(Opd(lhs), Opd(rhs), mismatch) =>
 
-        def === =
-          (lhs, rhs) match
-             case (Symbol(x), Symbol(y)) => s"$x === $y"
-             case (Symbol(x), y: String) => s"$x === $y"
-             case (Symbol(x), Expr(y)) => s"$x === $y"
-             case (x: String, Symbol(y)) => s"$x === $y"
-             case (Expr(x), Symbol(y)) => s"$x === $y"
-             case (x: String, y: String) => s"$x === $y"
-             case (x: String, Expr(y)) => s"$x === $y"
-             case (Expr(x), y: String) => s"$x === $y"
-
         val prefix2 =
           s"${prefix1}     "
         val prefix3 =
           s"${prefix2}${indent}"
 
         before1 +=
-          s"${prefix1}_ <- if ${if mismatch then "" else "!"}(${===}) then IO.unit else\n" +
+          s"${prefix1}_ <- if ${if mismatch then "" else "!"}(${===(lhs -> rhs)}) then IO.unit else\n" +
           s"${prefix2}for\n" +
           s"${prefix3}_ <- IO.unit\n"
 
@@ -272,10 +261,66 @@ final class Program(indent: String = "  "):
 
         prefix3 -> (before1, after1)
 
-      /////////////////////////////////// restriction & prefixes & (mis)match //
+
+      case `?:`(((Opd(lhs), Opd(rhs)), mismatch), t, f) =>
+
+        val prefix2 =
+          s"${prefix1}       "
+        val prefix3 =
+          s"${prefix2}${indent}"
+
+        val before2 =
+          s"${prefix1}_ <- ( if ${if mismatch then "!" else ""}(${===(lhs -> rhs)})\n" +
+          s"${prefix2}then\n"
+        val separator =
+          s"${prefix2}else\n"
+        val after2 =
+          s"${prefix1}     )\n"
+
+        cp = false -> prefix3
+
+        val (_, (before3, after3)) = body(cp -> ("", "") -> (implied, mutex), t)
+
+        body(cp -> (before1 + before2 + before3 + after3 + separator, after2 + after1) -> (implied, mutex), f)
 
 
-      // AGENT CALL ////////////////////////////////////////////////////////////
+      case `!`(sum) =>
+
+        val name = uuid
+
+        val prefix2 = prefix1 + (if comprehension then "" else indent)
+
+        val prefix3 =
+          s"${prefix2}${indent}"
+        val prefix4 =
+          s"${prefix3}${indent}"
+        val prefix5 =
+          s"${prefix4}${indent}"
+
+        before1 +=
+          (if comprehension then "" else s"${prefix1}for\n") +
+          s"${prefix2}pi <- IO {\n" +
+          s"${prefix3}lazy val `$name`: IO[Unit] =\n" +
+          s"${prefix4}for\n"
+
+        after1 =
+          s"${prefix5}_ <- `$name`\n" +
+          s"${prefix4}yield\n" +
+          s"${prefix5}()\n" +
+          s"${prefix3}`$name`\n" +
+          s"${prefix2}}\n" +
+          s"${prefix2}_ <- pi\n" +
+          (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n") +
+          after1
+
+        cp = true -> prefix5
+
+        body(cp -> (before1, after1) -> (implied, mutex), sum)
+
+      ////// restriction | prefixes | (mis)match | if then else | replication //
+
+
+      // agent call ////////////////////////////////////////////////////////////
 
       case Call(Opd(Symbol(identifier)), path, params*) =>
         val args = params.map {
@@ -318,14 +363,13 @@ final class Program(indent: String = "  "):
         body(cp -> (before1, after1) -> (implied, mutex), ast)
 
       case Seq(ast, _, it*) =>
-        val prefix2 = s"${prefix1}${indent}"
+        val prefix2 = prefix1 + (if comprehension then "" else indent)
 
         val before2 =
-          s"${prefix1}for\n" +
+          (if comprehension then "" else s"${prefix1}for\n") +
           s"${prefix2}_ <- IO.unit\n"
         val after2 =
-          s"${prefix1}yield\n" +
-          s"${prefix2}()\n"
+          (if comprehension then "" else s"${prefix1}yield\n${prefix2}()\n")
 
         var first = true
 
@@ -337,7 +381,7 @@ final class Program(indent: String = "  "):
               if first && isAct
               then
                 first = false
-              else if isAct && implied.nonEmpty
+              else if (isAct || !pre.isInstanceOf[`v`]) && implied.nonEmpty
               then
                 implied = Actions()
               body(cp -> (before, after) -> (if isAct then implied else Actions(), mutex), pre)
@@ -426,6 +470,17 @@ object Program:
   //             for-c.,  indent,   before, after,    implied,  mutual exclusive
 
   def uuid = UUID.randomUUID.toString
+
+  def === : ((AnyRef, AnyRef)) => String = {
+    case (Symbol(x), Symbol(y)) => s"$x === $y"
+    case (Symbol(x), y: String) => s"$x === $y"
+    case (Symbol(x), Expr(y)) => s"$x === $y"
+    case (x: String, Symbol(y)) => s"$x === $y"
+    case (Expr(x), Symbol(y)) => s"$x === $y"
+    case (x: String, y: String) => s"$x === $y"
+    case (x: String, Expr(y)) => s"$x === $y"
+    case (Expr(x), y: String) => s"$x === $y"
+  }
 
   def add(enabled: Actions, prefix: String): String =
     s"""${prefix}en = Set(${enabled.mkString("\"", "\", \"", "\"")})\n""" +

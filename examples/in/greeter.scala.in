@@ -1,0 +1,225 @@
+  given Conversion[`()`, String] = _.name.asInstanceOf[String]
+
+  val gen = new scala.util.Random
+
+  def r = 1+math.abs(gen.nextInt%3)
+
+  def `Main`()(^ : String)
+            (using % : %, / : /, + : +, - : -): IO[Unit] =
+    for
+      _ <- IO.unit
+      stdin <- `v`
+      stdout <- `v`
+      _ <- IO.unit
+      en = Set("6fb0230a-000e-4096-ac17-0ae113aeaba7", "cd08cc50-38de-4101-ae68-656a8dcb651b")
+      _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+      _ <- (
+             for
+               _ <- IO.unit
+               _ <- stdout(^ + "6fb0230a-000e-4096-ac17-0ae113aeaba7", null, "What's your name?\n")
+               en = Set("cc01326f-4fea-43dd-8532-719946db5f22")
+               _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+               name <- stdin(^ + "cc01326f-4fea-43dd-8532-719946db5f22", null)
+               _ <- `Chooser`(stdout, name)(`π-uuid`)
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               prompt <- stdout(^ + "cd08cc50-38de-4101-ae68-656a8dcb651b", null)
+               _ <- IO.print(prompt)
+               en = Set("70b6edf4-54f7-4e38-ae35-126082b647f7")
+               _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+               sc_name <- IO { scala.io.StdIn.readLine }
+               _ <- stdin(^ + "70b6edf4-54f7-4e38-ae35-126082b647f7", null, sc_name)
+               en = Set("ed1aec40-a0a8-4220-a3e6-0a41b3928066")
+               _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+               pi_greet <- stdout(^ + "ed1aec40-a0a8-4220-a3e6-0a41b3928066", null)
+               _ <- IO.print(pi_greet)
+             yield
+               ()
+           ).parMapN { (_, _) => }
+    yield
+      ()
+
+
+  def `Chooser`(stdout: `()`, name: `()`)(^ : String)
+               (using % : %, / : /, + : +, - : -): IO[Unit] =
+    for
+      _ <- IO.unit
+      en = Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "3145c04b-86d7-4268-8492-347798528e1a", "d8330967-8d5d-4d42-a707-d21da8f7a022")
+      _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+      _ <- +.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> `b31483e3-c277-419f-8e02-076e10bb1dd0`(en, key)(^)) })
+      _ <- (
+             for
+               _ <- IO.unit
+               _ <- `𝜏`(^ + "710cbca7-f7e6-4947-a50b-c87cd18e801f", `@`(r))
+               _ <- `Greeter'`(stdout, name)(`π-uuid`)
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               _ <- `𝜏`(^ + "3145c04b-86d7-4268-8492-347798528e1a", `@`(r))
+               _ <- `Greeter"`(stdout, name)(`π-uuid`)
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               _ <- `𝜏`(^ + "d8330967-8d5d-4d42-a707-d21da8f7a022", `@`(r))
+               _ <- `Greeter'"`(stdout, name)(`π-uuid`)
+             yield
+               ()
+           ).parMapN { (_, _, _) => }
+    yield
+      ()
+
+
+  def `Greeter'`(stdout: `()`, name: `()`)(^ : String)
+                (using % : %, / : /, + : +, - : -): IO[Unit] =
+    for
+      _ <- IO.unit
+      _ <- (
+             for
+               _ <- IO.unit
+               _ <- if !(name.substring(0,1).toUpperCase === "Q") then IO.unit else
+                    for
+                      _ <- IO.unit
+                      en = Set("2af1a7e5-1273-45ee-b5e4-ab743fa1e775")
+                      _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                      _ <- stdout(^ + "2af1a7e5-1273-45ee-b5e4-ab743fa1e775", null, "That's an unusual name.\n")
+                    yield
+                      ()
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               _ <- if !(name === "Voldemort") then IO.unit else
+                    for
+                      _ <- IO.unit
+                      en = Set("18e35fca-e938-45ae-ad7f-19d5274cb055")
+                      _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                      _ <- stdout(^ + "18e35fca-e938-45ae-ad7f-19d5274cb055", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                    yield
+                      ()
+             yield
+               ()
+           ,
+             for
+               _ <- IO.unit
+               _ <- if (name.substring(0,1).toUpperCase === "Q") then IO.unit else
+                    for
+                      _ <- IO.unit
+                      _ <- if (name === "Voldemort") then IO.unit else
+                           for
+                             _ <- IO.unit
+                             en = Set("8b3a796c-2443-46bc-83aa-8951b4aa4eb1")
+                             _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                             _ <- stdout(^ + "8b3a796c-2443-46bc-83aa-8951b4aa4eb1", null, s"Hello $name!\n")
+                           yield
+                             ()
+                    yield
+                      ()
+             yield
+               ()
+           ).parMapN { (_, _, _) => }
+    yield
+      ()
+
+
+  def `Greeter"`(stdout: `()`, name: `()`)(^ : String)
+                (using % : %, / : /, + : +, - : -): IO[Unit] =
+    for
+      _ <- IO.unit
+      _ <- ( if (name.substring(0,1).toUpperCase === "Q")
+             then
+               for
+                 _ <- IO.unit
+                 en = Set("898e69d2-3347-4fd6-8945-15349d13b782")
+                 _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                 _ <- stdout(^ + "898e69d2-3347-4fd6-8945-15349d13b782", null, "That's an unusual name.\n")
+               yield
+                 ()
+             else
+               for
+                 _ <- IO.unit
+                 _ <- ( if (name === "Voldemort")
+                        then
+                          for
+                            _ <- IO.unit
+                            en = Set("39634784-defb-437f-9e1f-0a6cafd0c0e4")
+                            _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                            _ <- stdout(^ + "39634784-defb-437f-9e1f-0a6cafd0c0e4", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                          yield
+                            ()
+                        else
+                          for
+                            _ <- IO.unit
+                            en = Set("e7319add-93db-4b34-a526-365ff9e16b6d")
+                            _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                            _ <- stdout(^ + "e7319add-93db-4b34-a526-365ff9e16b6d", null, s"Hello $name!\n")
+                          yield
+                            ()
+                      )
+               yield
+                 ()
+           )
+    yield
+      ()
+
+
+  def `Greeter'"`(stdout: `()`, name: `()`)(^ : String)
+                 (using % : %, / : /, + : +, - : -): IO[Unit] =
+    for
+      _ <- IO.unit
+      _ <- ( if (name.substring(0,1).toUpperCase === "Q")
+             then
+               for
+                 _ <- IO.unit
+                 en = Set("5cde8a12-bab1-4b4f-9c65-2e6a55ec0884")
+                 _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                 _ <- stdout(^ + "5cde8a12-bab1-4b4f-9c65-2e6a55ec0884", null, "That's an unusual name.\n")
+               yield
+                 ()
+             else
+               for
+                 _ <- IO.unit
+                 _ <- ( if (name === "Voldemort")
+                        then
+                          for
+                            _ <- IO.unit
+                            en = Set("927cf2ed-612b-4912-ac3d-eaf52bcf66a3")
+                            _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                            _ <- stdout(^ + "927cf2ed-612b-4912-ac3d-eaf52bcf66a3", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                          yield
+                            ()
+                        else
+                          for
+                            _ <- IO.unit
+                            en = Set("02286a71-a609-4242-9a98-a361027903df")
+                            _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
+                            _ <- stdout(^ + "02286a71-a609-4242-9a98-a361027903df", null, s"Hello $name!\n")
+                          yield
+                            ()
+                      )
+               yield
+                 ()
+           )
+    yield
+      ()
+
+
+  def `b31483e3-c277-419f-8e02-076e10bb1dd0`(en: Set[String], key: String)(^ : String): Set[String] =
+    val exc = ( if false then Set.empty
+                else if key == "d8330967-8d5d-4d42-a707-d21da8f7a022" then Set("").map(^ + _)
+                else if key == "3145c04b-86d7-4268-8492-347798528e1a" then Set("").map(^ + _)
+                else if key == "710cbca7-f7e6-4947-a50b-c87cd18e801f" then Set("").map(^ + _)
+                else Set.empty )
+    val inc = ( if false then Set.empty
+                else if key == "d8330967-8d5d-4d42-a707-d21da8f7a022" then Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "3145c04b-86d7-4268-8492-347798528e1a").map(^ + _)
+                else if key == "3145c04b-86d7-4268-8492-347798528e1a" then Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "d8330967-8d5d-4d42-a707-d21da8f7a022").map(^ + _)
+                else if key == "710cbca7-f7e6-4947-a50b-c87cd18e801f" then Set("3145c04b-86d7-4268-8492-347798528e1a", "d8330967-8d5d-4d42-a707-d21da8f7a022").map(^ + _)
+                else Set.empty )
+    ((en - key).map(^ + _) -- exc) ++ inc

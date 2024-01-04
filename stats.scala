@@ -51,6 +51,7 @@ package object `Π-stats`:
       %.drop(random.nextInt(%.size)).head._1
     else // timed
       %
+        .filterNot(_._2 eq None)
         .map(_ -> _.get.asInstanceOf[`@`].rate)
         .map(_ -> _.toDouble)
         .map(_ -> Exponential(_))

@@ -36,9 +36,6 @@ package object `Π`:
   import `Π-stats`.Rate
 
 
-  type Name = Any
-
-
   /**
     * restriction aka new name
     */
@@ -76,11 +73,11 @@ package object `Π`:
   /**
     * prefix
     */
-  final implicit class `()`(val name: Name) extends AnyVal:
+  final implicit class `()`(val name: Any) extends AnyVal:
 
     private def ref = name.asInstanceOf[Ref[IO, `><`]]
 
-    def ===(that: `()`) = this.name == that.name
+    inline def ===(that: `()`) = this.name == that.name
 
     /**
       * positive prefix i.e. input
@@ -123,13 +120,13 @@ package object `Π`:
      * limitations under the License.
      */
 
-    final case class `><`(takers: List[Deferred[IO, Name]], offerers: List[(Name, Deferred[IO, Unit])])
+    final case class `><`(takers: List[Deferred[IO, Any]], offerers: List[(Any, Deferred[IO, Unit])])
 
     object `><`:
 
       inline def apply(): `><` = `><`(Nil, Nil)
 
-      def apply(key: String, name: Name)
+      def apply(key: String, name: Any)
                (`>R`: Ref[IO, `><`])
                (using % : %, - : -): IO[Unit] =
         for
@@ -137,8 +134,7 @@ package object `Π`:
           it <- turn.get
           ok <- %.modify { m => m -> (key == it || m.contains(key)) }
           _ <- if ok then IO.unit else IO.never
-          _ <- if key != it then IO.cede >> apply(key, name)(`>R`) else
-               sem.release >>
+          _ <- if key != it then IO.cede >> apply(key, name)(`>R`) else sem.release >>
                Deferred[IO, Unit].flatMap { offerer =>
                  IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                    `>R`.modify {
@@ -155,15 +151,14 @@ package object `Π`:
 
       def apply(key: String)
                (`<R`: Ref[IO, `><`])
-               (using % : %, - : -): IO[Name] =
+               (using % : %, - : -): IO[Any] =
         for
           (sem, turn) <- -.get
           it <- turn.get
           ok <- %.modify { m => m -> (key == it || m.contains(key)) }
           _ <- if ok then IO.unit else IO.never
-          _ <- if key != it then IO.cede >> apply(key)(`<R`) else
-               sem.release >>
-               Deferred[IO, Name].flatMap { taker =>
+          r <- if key != it then IO.cede >> apply(key)(`<R`) else sem.release >>
+               Deferred[IO, Any].flatMap { taker =>
                  IO.uncancelable { poll =>
                    `<R`.modify {
                      case `><`(takers, offerers) if offerers.nonEmpty =>
@@ -176,4 +171,4 @@ package object `Π`:
                  }
                }
         yield
-          ()
+          r

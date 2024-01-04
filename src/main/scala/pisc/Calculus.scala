@@ -119,19 +119,31 @@ class Calculus extends JavaTokenParsers:
       case ch ~ r ~ _ ~ par ~ _ =>
         IO(Act(), r, ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
-    "["~name~"="~name~"]" ^^ { // match
-      case _ ~ lhs ~ _ ~ rhs ~ _ =>
-        Match(lhs, rhs) -> (Names(), Names(lhs, rhs))
+    "["~>test<~"]" ^^ { // (mis)match
+      case ((lhs, rhs), mismatch) =>
+        Match(lhs, rhs, mismatch) -> (Names(), Names(lhs, rhs))
     } |
-    "["~name~"≠"~name~"]" ^^ { // mismatch
-      case _ ~ lhs ~ _ ~ rhs ~ _ =>
-        Match(lhs, rhs, true) -> (Names(), Names(lhs, rhs))
+    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    test~"?"~choice~":"~choice ^^ { // Elvis operator
+      case cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    "!"~>choice ^^ { // replication
+      case (sum, free) => `!`(sum) -> (Names(), free)
     }
 
   def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
                           floatingPointNumber ^^ { Opd.apply } |
                           stringLiteral ^^ { Opd.apply } |
                           expression ^^ { Opd.apply compose Expr.apply }
+
+  def test: Parser[((Opd, Opd), Boolean)] = "("~>test<~")" ^^ { identity } |
+    name~("="|"≠")~name ^^ {
+      case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
+    }
 
   def rate: Parser[Option[Any]] = "("~>rate<~")" ^^ { identity } |
                                   "∞" ^^ { _ => None } |
@@ -198,10 +210,18 @@ object Calculus extends Calculus:
   type Actions = Set[String]
 
   object Actions:
-    def apply(ls: Pre*): Actions = Set.from { ls
-      .find(_.isInstanceOf[Act])
-      .headOption
-      .map(_.asInstanceOf[Act].uuid)
+    def apply(ls: Pre*): Actions = Set.from {
+      val i = ls.indexWhere(_.isInstanceOf[Act])
+      if i == -1
+      then
+        None
+      else
+        val j = ls.indexWhere(!_.isInstanceOf[`v`])
+        if j < i
+        then
+          None
+        else
+          Some(ls(i).asInstanceOf[Act].uuid)
     }
     def apply(sum: Sum, ls: Pre*): Actions =
       val r = this(ls: _*)
@@ -218,6 +238,8 @@ object Calculus extends Calculus:
   sealed trait Pre extends Any with AST
 
   case class `v`(name: Opd) extends AnyVal with Pre // forcibly
+
+  case class `!`(ast: AST) extends AnyVal with Pre // forcibly
 
   sealed trait Act:
     val uuid: String
@@ -237,7 +259,9 @@ object Calculus extends Calculus:
                 polarity: Boolean
   ) extends Pre with Act
 
-  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean = false) extends Pre // forcibly
+  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean) extends Pre // forcibly
+
+  case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
 
   case class Opd(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -319,8 +343,14 @@ object Calculus extends Calculus:
       val rhs = flatten(Par(Set.empty, it: _*)).asInstanceOf[Par]
       Par(enabled, (lhs +: rhs.components): _*)
 
-    case Par(enabled, it @ Seq(sum, _, _*), _*) =>
-      Par(enabled, Seq(flatten(sum), it.enabled, it.prefixes: _*))
+    case Par(enabled, it @ Seq(ast, _, _*), _*) =>
+      Par(enabled, Seq(flatten(ast), it.enabled, it.prefixes: _*))
+
+    case `!`(sum) =>
+      flatten(sum)
+
+    case `?:`(cond, t, f) =>
+      `?:`(cond, flatten(t).asInstanceOf[Sum], flatten(f).asInstanceOf[Sum])
 
     case it => it
 
@@ -346,7 +376,7 @@ object Calculus extends Calculus:
   }
 
 
-  def apply(source: Source): List[Bind] = source
+  def apply(source: Source): List[Either[String, Bind]] = source
     .getLines()
     .foldLeft(List[String]("")) {
       case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
@@ -354,10 +384,13 @@ object Calculus extends Calculus:
     }
     .filterNot(_.matches("^ *#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map {
-      parseAll(equation, _) match {
-        case Success(result, _) => result
-        case failure: NoSuccess => scala.sys.error(failure.msg)
-      }
+    .map { it =>
+      if it.matches("^ *@.*")
+      then // Scala
+        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+      else // Pi
+        parseAll(equation, it) match
+          case Success(result, _) => Right(result)
+          case failure: NoSuccess => scala.sys.error(failure.msg)
     }
     .toList

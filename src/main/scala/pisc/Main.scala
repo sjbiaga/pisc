@@ -36,6 +36,7 @@ import scala.io.Source
 
 object Main:
 
+  val indent = "  "
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
@@ -51,7 +52,19 @@ object Main:
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val code = Program()(Calculus(source))
+        val bind = Calculus(source).zipWithIndex
+        val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
+
+        val ps = Program(indent)(prog.map(_._1))
+        val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap + (ps.size - 1 -> bind.size)
+
+        val ls = bind.filter(_._1.isLeft).map { it => indent + it._1.left.get -> it._2 }
+
+        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
+          .sortBy(_._2)
+          .map(_._1)
+          .mkString("\n\n")
+
         bwr.write(code, 0, code.length)
       finally
         if bwr ne null then bwr.close()

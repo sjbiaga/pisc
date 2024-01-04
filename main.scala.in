@@ -32,7 +32,7 @@ import cats.effect.{ IO, IOApp, Deferred }
 import cats.effect.std.{ Queue, Semaphore }
 
 import `Π-loop`._
-import `Π-stats`.{ | => _, _ }
+import `Π-stats`.{ Rate, `∞`, `@` }
 
 
 object App extends IOApp.Simple:
