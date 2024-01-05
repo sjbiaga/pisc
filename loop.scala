@@ -52,7 +52,7 @@ package object `Π-loop`:
         then m -> Some(Map.from(m))
         else m -> None
       }
-      _ <- if it.isEmpty || it.get.isEmpty then IO.cede >> loop else
+      _ <- if it.isEmpty || it.get.isEmpty then IO.unit else
            for
              (key, delta) <- IO.pure(|(it.get))
              ks <- +.modify { m =>
@@ -69,9 +69,9 @@ package object `Π-loop`:
              _ <- %.update { _ - key }
              turn <- Deferred[IO, (String, BigDecimal)]
              _ <- -.set(sem -> turn)
-             _ <- IO.cede >> loop
            yield
              ()
+      _ <- IO.cede >> loop
     yield
       ()
 

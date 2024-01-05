@@ -11,30 +11,30 @@
       stdin <- `v`
       stdout <- `v`
       _ <- IO.unit
-      en = Set("6fb0230a-000e-4096-ac17-0ae113aeaba7", "cd08cc50-38de-4101-ae68-656a8dcb651b")
+      en = Set("bf9815f3-7d22-467f-9c66-e55621349967", "7111c4e3-c52e-46ff-8967-5aed5de3ecf9")
       _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
       _ <- (
              for
                _ <- IO.unit
-               _ <- stdout(^ + "6fb0230a-000e-4096-ac17-0ae113aeaba7", null, "What's your name?\n")
-               en = Set("cc01326f-4fea-43dd-8532-719946db5f22")
+               _ <- stdout(^ + "bf9815f3-7d22-467f-9c66-e55621349967", null, "What's your name?\n")
+               en = Set("cc917ec9-96d3-4021-9900-8beadada04bd")
                _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-               name <- stdin(^ + "cc01326f-4fea-43dd-8532-719946db5f22", null)
+               (name, _) <- stdin(^ + "cc917ec9-96d3-4021-9900-8beadada04bd", null)
                _ <- `Chooser`(stdout, name)(`π-uuid`)
              yield
                ()
            ,
              for
                _ <- IO.unit
-               prompt <- stdout(^ + "cd08cc50-38de-4101-ae68-656a8dcb651b", null)
+               (prompt, _) <- stdout(^ + "7111c4e3-c52e-46ff-8967-5aed5de3ecf9", null)
                _ <- IO.print(prompt)
-               en = Set("70b6edf4-54f7-4e38-ae35-126082b647f7")
+               en = Set("2482b272-ac6a-48dd-8868-438cf9179e1a")
                _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
                sc_name <- IO { scala.io.StdIn.readLine }
-               _ <- stdin(^ + "70b6edf4-54f7-4e38-ae35-126082b647f7", null, sc_name)
-               en = Set("ed1aec40-a0a8-4220-a3e6-0a41b3928066")
+               _ <- stdin(^ + "2482b272-ac6a-48dd-8868-438cf9179e1a", null, sc_name)
+               en = Set("57e83bf7-c18c-45a2-b5b2-5a82ca4f06de")
                _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-               pi_greet <- stdout(^ + "ed1aec40-a0a8-4220-a3e6-0a41b3928066", null)
+               (pi_greet, _) <- stdout(^ + "57e83bf7-c18c-45a2-b5b2-5a82ca4f06de", null)
                _ <- IO.print(pi_greet)
              yield
                ()
@@ -47,27 +47,27 @@
                (using % : %, / : /, + : +, - : -): IO[Unit] =
     for
       _ <- IO.unit
-      en = Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "3145c04b-86d7-4268-8492-347798528e1a", "d8330967-8d5d-4d42-a707-d21da8f7a022")
+      en = Set("08a75cb1-c2d7-4997-b17a-f868293eb6b6", "4127b530-469f-4288-8193-8c50b886f7f8", "c9b4c01b-24fd-482a-b94d-1d5dd0147988")
       _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-      _ <- +.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> `b31483e3-c277-419f-8e02-076e10bb1dd0`(en, key)(^)) })
+      _ <- +.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> `d9deacb1-a54e-42fe-a4e9-ecec440fe2e8`(en, key)(^)) })
       _ <- (
              for
                _ <- IO.unit
-               _ <- `𝜏`(^ + "710cbca7-f7e6-4947-a50b-c87cd18e801f", `@`(r))
+               _ <- `𝜏`(^ + "08a75cb1-c2d7-4997-b17a-f868293eb6b6", `@`(r))
                _ <- `Greeter'`(stdout, name)(`π-uuid`)
              yield
                ()
            ,
              for
                _ <- IO.unit
-               _ <- `𝜏`(^ + "3145c04b-86d7-4268-8492-347798528e1a", `@`(r))
+               _ <- `𝜏`(^ + "4127b530-469f-4288-8193-8c50b886f7f8", `@`(r))
                _ <- `Greeter"`(stdout, name)(`π-uuid`)
              yield
                ()
            ,
              for
                _ <- IO.unit
-               _ <- `𝜏`(^ + "d8330967-8d5d-4d42-a707-d21da8f7a022", `@`(r))
+               _ <- `𝜏`(^ + "c9b4c01b-24fd-482a-b94d-1d5dd0147988", `@`(r))
                _ <- `Greeter'"`(stdout, name)(`π-uuid`)
              yield
                ()
@@ -86,9 +86,9 @@
                _ <- if !(name.substring(0,1).toUpperCase === "Q") then IO.unit else
                     for
                       _ <- IO.unit
-                      en = Set("2af1a7e5-1273-45ee-b5e4-ab743fa1e775")
+                      en = Set("9c9474fc-4bb7-4763-8345-5faadb04eb56")
                       _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                      _ <- stdout(^ + "2af1a7e5-1273-45ee-b5e4-ab743fa1e775", null, "That's an unusual name.\n")
+                      _ <- stdout(^ + "9c9474fc-4bb7-4763-8345-5faadb04eb56", null, "That's an unusual name.\n")
                     yield
                       ()
              yield
@@ -99,9 +99,9 @@
                _ <- if !(name === "Voldemort") then IO.unit else
                     for
                       _ <- IO.unit
-                      en = Set("18e35fca-e938-45ae-ad7f-19d5274cb055")
+                      en = Set("bf77e3bb-31fa-4705-a53e-12927e858c2d")
                       _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                      _ <- stdout(^ + "18e35fca-e938-45ae-ad7f-19d5274cb055", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                      _ <- stdout(^ + "bf77e3bb-31fa-4705-a53e-12927e858c2d", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
                     yield
                       ()
              yield
@@ -115,9 +115,9 @@
                       _ <- if (name === "Voldemort") then IO.unit else
                            for
                              _ <- IO.unit
-                             en = Set("8b3a796c-2443-46bc-83aa-8951b4aa4eb1")
+                             en = Set("16dcd8ba-cee3-4491-8956-afe0991b4255")
                              _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                             _ <- stdout(^ + "8b3a796c-2443-46bc-83aa-8951b4aa4eb1", null, s"Hello $name!\n")
+                             _ <- stdout(^ + "16dcd8ba-cee3-4491-8956-afe0991b4255", null, s"Hello $name!\n")
                            yield
                              ()
                     yield
@@ -137,9 +137,9 @@
              then
                for
                  _ <- IO.unit
-                 en = Set("898e69d2-3347-4fd6-8945-15349d13b782")
+                 en = Set("a36cc24f-5a3a-4455-8c46-c6f881920332")
                  _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                 _ <- stdout(^ + "898e69d2-3347-4fd6-8945-15349d13b782", null, "That's an unusual name.\n")
+                 _ <- stdout(^ + "a36cc24f-5a3a-4455-8c46-c6f881920332", null, "That's an unusual name.\n")
                yield
                  ()
              else
@@ -149,17 +149,17 @@
                         then
                           for
                             _ <- IO.unit
-                            en = Set("39634784-defb-437f-9e1f-0a6cafd0c0e4")
+                            en = Set("803bd545-6ee4-48a9-a651-4cc938509af6")
                             _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                            _ <- stdout(^ + "39634784-defb-437f-9e1f-0a6cafd0c0e4", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                            _ <- stdout(^ + "803bd545-6ee4-48a9-a651-4cc938509af6", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
                           yield
                             ()
                         else
                           for
                             _ <- IO.unit
-                            en = Set("e7319add-93db-4b34-a526-365ff9e16b6d")
+                            en = Set("de335697-1111-4220-9c93-c7e9f8a94d64")
                             _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                            _ <- stdout(^ + "e7319add-93db-4b34-a526-365ff9e16b6d", null, s"Hello $name!\n")
+                            _ <- stdout(^ + "de335697-1111-4220-9c93-c7e9f8a94d64", null, s"Hello $name!\n")
                           yield
                             ()
                       )
@@ -178,9 +178,9 @@
              then
                for
                  _ <- IO.unit
-                 en = Set("5cde8a12-bab1-4b4f-9c65-2e6a55ec0884")
+                 en = Set("4f0636f1-5fd9-4079-955d-2b229b804064")
                  _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                 _ <- stdout(^ + "5cde8a12-bab1-4b4f-9c65-2e6a55ec0884", null, "That's an unusual name.\n")
+                 _ <- stdout(^ + "4f0636f1-5fd9-4079-955d-2b229b804064", null, "That's an unusual name.\n")
                yield
                  ()
              else
@@ -190,17 +190,17 @@
                         then
                           for
                             _ <- IO.unit
-                            en = Set("927cf2ed-612b-4912-ac3d-eaf52bcf66a3")
+                            en = Set("43c92cda-d85b-4538-af23-85c917f07044")
                             _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                            _ <- stdout(^ + "927cf2ed-612b-4912-ac3d-eaf52bcf66a3", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
+                            _ <- stdout(^ + "43c92cda-d85b-4538-af23-85c917f07044", null, "WARNING! LORD VOLDEMORT IS HERE!\n")
                           yield
                             ()
                         else
                           for
                             _ <- IO.unit
-                            en = Set("02286a71-a609-4242-9a98-a361027903df")
+                            en = Set("458320da-50be-4122-a956-3e72a8b02dcc")
                             _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
-                            _ <- stdout(^ + "02286a71-a609-4242-9a98-a361027903df", null, s"Hello $name!\n")
+                            _ <- stdout(^ + "458320da-50be-4122-a956-3e72a8b02dcc", null, s"Hello $name!\n")
                           yield
                             ()
                       )
@@ -211,15 +211,15 @@
       ()
 
 
-  def `b31483e3-c277-419f-8e02-076e10bb1dd0`(en: Set[String], key: String)(^ : String): Set[String] =
+  def `d9deacb1-a54e-42fe-a4e9-ecec440fe2e8`(en: Set[String], key: String)(^ : String): Set[String] =
     val exc = ( if false then Set.empty
-                else if key == "d8330967-8d5d-4d42-a707-d21da8f7a022" then Set("").map(^ + _)
-                else if key == "3145c04b-86d7-4268-8492-347798528e1a" then Set("").map(^ + _)
-                else if key == "710cbca7-f7e6-4947-a50b-c87cd18e801f" then Set("").map(^ + _)
+                else if key == "c9b4c01b-24fd-482a-b94d-1d5dd0147988" then Set("").map(^ + _)
+                else if key == "4127b530-469f-4288-8193-8c50b886f7f8" then Set("").map(^ + _)
+                else if key == "08a75cb1-c2d7-4997-b17a-f868293eb6b6" then Set("").map(^ + _)
                 else Set.empty )
     val inc = ( if false then Set.empty
-                else if key == "d8330967-8d5d-4d42-a707-d21da8f7a022" then Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "3145c04b-86d7-4268-8492-347798528e1a").map(^ + _)
-                else if key == "3145c04b-86d7-4268-8492-347798528e1a" then Set("710cbca7-f7e6-4947-a50b-c87cd18e801f", "d8330967-8d5d-4d42-a707-d21da8f7a022").map(^ + _)
-                else if key == "710cbca7-f7e6-4947-a50b-c87cd18e801f" then Set("3145c04b-86d7-4268-8492-347798528e1a", "d8330967-8d5d-4d42-a707-d21da8f7a022").map(^ + _)
+                else if key == "c9b4c01b-24fd-482a-b94d-1d5dd0147988" then Set("08a75cb1-c2d7-4997-b17a-f868293eb6b6", "4127b530-469f-4288-8193-8c50b886f7f8").map(^ + _)
+                else if key == "4127b530-469f-4288-8193-8c50b886f7f8" then Set("08a75cb1-c2d7-4997-b17a-f868293eb6b6", "c9b4c01b-24fd-482a-b94d-1d5dd0147988").map(^ + _)
+                else if key == "08a75cb1-c2d7-4997-b17a-f868293eb6b6" then Set("4127b530-469f-4288-8193-8c50b886f7f8", "c9b4c01b-24fd-482a-b94d-1d5dd0147988").map(^ + _)
                 else Set.empty )
     ((en - key).map(^ + _) -- exc) ++ inc

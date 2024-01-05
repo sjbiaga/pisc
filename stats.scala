@@ -70,7 +70,7 @@ package object `Π-stats`:
       %.drop(random.nextInt(%.size)).head._1 -> BigDecimal(-1)
     else // timed
       val (key, delta) = %
-        .filterNot(_._2 eq None)
+        .filter(_._2.get ne null)
         .map(_ -> _.get.asInstanceOf[`@`].rate)
         .map(_ -> _.toDouble)
         .map(_ -> distrib(_))
