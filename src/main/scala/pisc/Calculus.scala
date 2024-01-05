@@ -216,8 +216,9 @@ object Calculus extends Calculus:
       then
         None
       else
-        val j = ls.indexWhere(!_.isInstanceOf[`v`])
-        if j < i
+        val j = ls.indexWhere { it => !it.isInstanceOf[Act]
+                                   && !it.isInstanceOf[`v`] }
+        if 0 <= j && j < i
         then
           None
         else

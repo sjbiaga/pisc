@@ -26,19 +26,38 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
+import scala.math.log
+import scala.util.Random
+
+import scala.concurrent.duration._
+
+import breeze.stats.distributions.{ Exponential, Rand }
+import Rand.VariableSeed._
+
+import com.github.blemale.scaffeine.{ Scaffeine, Cache }
+
+
 package object `Π-stats`:
 
   sealed trait Rate extends AnyRef
   case object `∞` extends Rate
   case class `@`(rate: BigDecimal) extends Rate
 
-  import breeze.stats.distributions.{ Exponential, Rand }
-  import Rand.VariableSeed._
-
-  import scala.math.log
-  import scala.util.Random
-
   private val random = new Random
+
+  private val cache: Cache[Double, Exponential] =
+    Scaffeine()
+      .recordStats()
+      .expireAfterWrite(1.hour)
+      .maximumSize(500)
+      .build[Double, Exponential]()
+
+  private def distrib(r: Double) =
+    cache.getIfPresent(r).getOrElse {
+      val it = Exponential(r)
+      cache.put(r, it)
+      it
+    }
 
   def |(% : Map[String, Option[Rate]]): String =
     require(%.nonEmpty)
@@ -54,7 +73,7 @@ package object `Π-stats`:
         .filterNot(_._2 eq None)
         .map(_ -> _.get.asInstanceOf[`@`].rate)
         .map(_ -> _.toDouble)
-        .map(_ -> Exponential(_))
+        .map(_ -> distrib(_))
         .map(_ -> _.draw())
         .minBy(_._2)
         ._1

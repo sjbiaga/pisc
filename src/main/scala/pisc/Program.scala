@@ -393,9 +393,12 @@ final class Program(indent: String = "  "):
               if first && isAct
               then
                 first = false
-              else if (isAct || !pre.isInstanceOf[`v`]) && implied.nonEmpty
+              else if isAct || !pre.isInstanceOf[`v`]
               then
-                implied = Actions()
+                first = false
+                if implied.nonEmpty
+                then
+                  implied = Actions()
               body(cp -> (before, after) -> (if isAct then implied else Actions(), mutex), pre)
           }
 
