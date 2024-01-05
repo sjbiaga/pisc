@@ -119,15 +119,15 @@ The inaction - just the `Unit` value () after yield:
 
 (That's why `for` always starts with `_ <- IO.unit`.)
 
-A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
+A long prefix path - "`v(x).x<5>.x(y).𝜏@(1).x@∞(z).z<y>.`":
 
     for
       _ <- IO.unit
       x <- `v`
       _ <- x(BigDecimal(5))
-      y <- x()
-      _ <- `𝜏`
-      z <- x()
+      (y, _) <- x(null)
+      _ <- `𝜏`(BigDecimal(1))
+      (z, _) <- x(`∞`)
       _ <- z(y)
       .
       .
@@ -135,20 +135,23 @@ A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
     yield
       ()
 
+Note that `UUID` first argument is absent.
+
 One can intercalate "`println`"s:
 
     for
       _ <- IO.unit
       x <- `v`
       _ <- IO.println(s"new x=$x")
-      _ <- x(5)
-      _ <- IO.println("output x(5)")
-      y <- x()
+      t <- x(BigDecimal(5))
+      _ <- IO.println("passive output time = $t")
+      (y, _) <- x(null)
       _ <- IO.println("input x(y)")
-      _ <- `𝜏`
-      _ <- IO.println("silent transition")
-      z <- x()
-      _ <- z(y)
+      t <- `𝜏`(BigDecimal(1))
+      _ <- IO.println(s"silent transition time = $t")
+      (z, t) <- x(`∞`)
+      _ <- IO.println(s"immediate input time = $t")
+      _ <- z(y, null)
       .
       .
       .
@@ -247,13 +250,23 @@ The `examples` folder has three sub-folders:
        in/
        out/
 
-The root project folder contains two files: `pi.scala` and `main.scala.in`.
+The root project folder contains four files: `loop.scala`, `stats.scala`, `spi.scala` and `main.scala.in`.
 !!!Warning: do not delete them!!!
 One can edit'em, though they're ready to generate a main `App`.
 
-Let's go backwards. To run an example, `cd` to `examples` and execute:
+Let's go backwards. But first, let's assume there is a shell (`bash`) function "`spi`":
 
-    ./examples $ scala-cli run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala --dependency org.scalanlp::breeze:2.1.0 --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    function spi() {
+        ~/.local/share/coursier/bin/scala-cli "$@"                                             \
+                                              -S 3.4.0-RC1                                     \
+                                              --dependency org.scalanlp::breeze:2.1.0          \
+                                              --dependency org.typelevel::cats-effect:3.5.2    \
+                                              --dependency com.github.blemale::scaffeine:5.2.1
+    }
+
+To run an example, `cd` to `examples` and execute:
+
+    ./examples $ spi run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala
 
 To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
 
@@ -270,4 +283,4 @@ In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add 
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ scala-cli run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala --dependency org.scalanlp::breeze:2.1.0 --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ spi run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala

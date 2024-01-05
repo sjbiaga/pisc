@@ -57,7 +57,7 @@ object App extends IOApp.Simple:
       + <- IO.ref(Map[String, Set[String]]())
       sem <- Semaphore[IO](1)
       _ <- sem.acquire
-      turn <- Deferred[IO, String]
+      turn <- Deferred[IO, (String, BigDecimal)]
       - <- IO.ref(sem -> turn)
       _ <- run(%, /, +, -)
     yield

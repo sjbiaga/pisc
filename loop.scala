@@ -38,7 +38,7 @@ package object `Π-loop`:
 
   type + = Ref[IO, Map[String, Set[String]]]
 
-  type - = Ref[IO, (Semaphore[IO], Deferred[IO, String])]
+  type - = Ref[IO, (Semaphore[IO], Deferred[IO, (String, BigDecimal)])]
 
   type / = Queue[IO, (String, Rate)]
 
@@ -54,7 +54,7 @@ package object `Π-loop`:
       }
       _ <- if it.isEmpty || it.get.isEmpty then IO.cede >> loop else
            for
-             key <- IO.pure(|(it.get))
+             (key, delta) <- IO.pure(|(it.get))
              ks <- +.modify { m =>
                if m.contains(key)
                then
@@ -64,10 +64,10 @@ package object `Π-loop`:
              }
              _ <- %.update { _ -- ks }
              (sem, turn) <- -.get
-             _ <- turn.complete(key)
+             _ <- turn.complete(key -> delta)
              _ <- sem.acquire
              _ <- %.update { _ - key }
-             turn <- Deferred[IO, String]
+             turn <- Deferred[IO, (String, BigDecimal)]
              _ <- -.set(sem -> turn)
              _ <- IO.cede >> loop
            yield

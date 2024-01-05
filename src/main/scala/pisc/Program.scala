@@ -237,7 +237,7 @@ final class Program(indent: String = "  "):
 
         before1 +=
           (if enabled.nonEmpty then s"${add(enabled, prefix1)}\n" else "") +
-          s"${prefix1}$par <- $ch(^ + \"$uuid\", ${rate(r)})\n"
+          s"${prefix1}($par, _) <- $ch(^ + \"$uuid\", ${rate(r)})\n"
 
         prefix1 -> (before1, after1)
 

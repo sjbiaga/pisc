@@ -1,25 +1,28 @@
-  def `Main`(): IO[Unit] =
+  def `Main`()(^ : String)
+            (using % : %, / : /, + : +, - : -): IO[Unit] =
     for
       _ <- IO.unit
       x <- `v`
       y <- `v`
+      _ <- IO.unit
+      en = Set("78679c07-67e6-4e5d-bd30-33b5b94e3d35", "efc7365a-f55d-4074-87de-031a96bf7260")
+      _ <- %.update(en.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })
       _ <- (
              for
                _ <- IO.unit
-               _ <- x(y)
+               t <- x(^ + "78679c07-67e6-4e5d-bd30-33b5b94e3d35", `∞`, y)
+               _ <- IO.println(s"immediate time = $t")
              yield
                ()
            ,
              for
                _ <- IO.unit
-               z <- x()
-               _ <- if !(y === z) then IO.unit else
-                    for
-                      _ <- IO.unit
-                    yield
-                      ()
+               (z, t) <- x(^ + "efc7365a-f55d-4074-87de-031a96bf7260", null)
+               _ <- IO.println(s"passive time = $t")
              yield
                ()
            ).parMapN { (_, _) => }
     yield
       ()
+
+

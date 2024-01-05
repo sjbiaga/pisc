@@ -57,16 +57,16 @@ package object `Π`:
   object `𝜏`:
 
     def apply(key: String, rate: Rate)
-             (using % : %, / : /, - : -): IO[Unit] =
-      def loop: IO[Unit] =
+             (using % : %, / : /, - : -): IO[BigDecimal] =
+      def loop: IO[BigDecimal] =
         for
           (sem, turn) <- -.get
-          it <- turn.get
+          (it, delta) <- turn.get
           ok <- %.modify { m => m -> (key == it || m.contains(key)) }
           _ <- if ok then IO.unit else IO.never
-          _ <- if key != it then IO.cede >> loop else sem.release
+          delta <- if key != it then IO.cede >> loop else sem.release.as(delta)
         yield
-          ()
+          delta
       /.offer(key -> rate) >> loop
 
 
@@ -83,14 +83,14 @@ package object `Π`:
       * positive prefix i.e. input
       */
     def apply(key: String, rate: Rate)
-             (using % : %, / : /, - : -): IO[`()`] =
-      /.offer(key -> rate) >> `><`(key)(ref).map(`()`)
+             (using % : %, / : /, - : -): IO[(`()`, BigDecimal)] =
+      /.offer(key -> rate) >> `><`(key)(ref).map { (r, delta) => `()`(r) -> delta }
 
     /**
       * negative prefix i.e. output
       */
     def apply(key: String, rate: Rate, value: `()`)
-             (using % : %, / : /, - : -): IO[Unit] =
+             (using % : %, / : /, - : -): IO[BigDecimal] =
       /.offer(key -> rate) >> `><`(key, value.name)(ref)
 
     override def toString: String = name.toString
@@ -128,36 +128,36 @@ package object `Π`:
 
       def apply(key: String, name: Any)
                (`>R`: Ref[IO, `><`])
-               (using % : %, - : -): IO[Unit] =
+               (using % : %, - : -): IO[BigDecimal] =
         for
           (sem, turn) <- -.get
-          it <- turn.get
+          (it, delta) <- turn.get
           ok <- %.modify { m => m -> (key == it || m.contains(key)) }
           _ <- if ok then IO.unit else IO.never
-          _ <- if key != it then IO.cede >> apply(key, name)(`>R`) else sem.release >>
+          delta <- if key != it then IO.cede >> apply(key, name)(`>R`) else sem.release >>
                Deferred[IO, Unit].flatMap { offerer =>
                  IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                    `>R`.modify {
                      case `><`(takers, offerers) if takers.nonEmpty =>
-                       `><`(takers.init, offerers) -> takers.last.complete(name).void
+                       `><`(takers.init, offerers) -> takers.last.complete(name)
                      case `><`(takers, offerers) =>
                        val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                        `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
                    }.flatten
                  }
-               }
+               }.as(delta)
         yield
-          ()
+          delta
 
       def apply(key: String)
                (`<R`: Ref[IO, `><`])
-               (using % : %, - : -): IO[Any] =
+               (using % : %, - : -): IO[(Any, BigDecimal)] =
         for
           (sem, turn) <- -.get
-          it <- turn.get
+          (it, delta) <- turn.get
           ok <- %.modify { m => m -> (key == it || m.contains(key)) }
           _ <- if ok then IO.unit else IO.never
-          r <- if key != it then IO.cede >> apply(key)(`<R`) else sem.release >>
+          (r, delta) <- if key != it then IO.cede >> apply(key)(`<R`) else sem.release >>
                Deferred[IO, Any].flatMap { taker =>
                  IO.uncancelable { poll =>
                    `<R`.modify {
@@ -169,6 +169,6 @@ package object `Π`:
                        `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
                    }.flatten
                  }
-               }
+               }.map(_ -> delta)
         yield
-          r
+          r -> delta
