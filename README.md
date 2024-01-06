@@ -71,8 +71,8 @@ whereas restriction, (mis)match, `if then else` and replication are not.
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
     PREFIXES   ::= PREFIX { PREFIX }
-    PREFIX     ::= "𝜏" "."
-                 | "ν" "(" NAME ")"
+    PREFIX     ::= "ν" "(" NAME ")"
+                 | "𝜏" "."
                  | NAME "<" NAME ">" "."
                  | NAME "(" NAME ")" "."
                  | "[" NAME ("="|"≠") NAME "]"
@@ -251,6 +251,7 @@ One can edit'em, though they're ready to generate a main `App`.
 Let's go backwards. But first, let's assume there is a shell (`bash`) function "`pi`":
 
     function pi() {
+        set "$@" ../pi.scala
         ~/.local/share/coursier/bin/scala-cli "$@"                                             \
                                               -S 3.4.0-RC1                                     \
                                               --dependency org.typelevel::cats-effect:3.5.2
@@ -258,7 +259,7 @@ Let's go backwards. But first, let's assume there is a shell (`bash`) function "
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi run ../pi.scala ex.scala
+    ./examples $ pi run ex.scala
 
 To get the final source file `ex.scala`, run `scalafmt` on the `.out` files:
 
@@ -281,14 +282,13 @@ These two steps can be put in a shell (`bash`) function "`pio`"
 
 To get the first `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
 
-    sbt:psc> run ex
+    sbt:pisc> run ex
 
 where `example/pisc/ex.pisc` contains the Π-calculus source (equations binding agents to process
 expressions).
 
-In order to allow multiple `App`s, edit `examples/ex.scala` and add a top-level `package ex` line.
+In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-level `package ex[12]` line.
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi run --interactive ../pi.scala out/pi1.scala out/pi2.scala
-	
+    ./examples $ pi run --interactive ex1.scala ex2.scala

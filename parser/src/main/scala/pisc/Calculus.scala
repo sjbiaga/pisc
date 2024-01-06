@@ -51,7 +51,7 @@ class Calculus extends JavaTokenParsers:
         do
           sum = ast
           ast = flatten(sum)
-        bind -> sum.asInstanceOf[Sum]
+        bind -> ast.asInstanceOf[Sum]
     }
 
   def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
@@ -66,6 +66,8 @@ class Calculus extends JavaTokenParsers:
 
   def sequential: Parser[(Seq, Names)] =
     prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
+      case pre ~ None if pre._1.isEmpty =>
+        throw EmptyParsingException
       case pre ~ Some((sum: Sum, free: Names)) =>
         Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ Some((call: Call, free: Names)) =>
@@ -251,6 +253,9 @@ object Calculus extends Calculus:
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
+
+  case object EmptyParsingException
+      extends ParsingException("Instead of an empty expression there must be at least 𝟎 in place")
 
   sealed class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)

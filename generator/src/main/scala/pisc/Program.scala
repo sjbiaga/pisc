@@ -233,7 +233,6 @@ object Program {
 
       case Seq(ast, it @ _*) if it.isEmpty =>
         body(code, ast)
-//        body(false -> semaphore, ast)
 
       case Seq(ast, it @ _*) =>
         var * = List[Enumerator.Generator]()

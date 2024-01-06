@@ -62,6 +62,7 @@ object `π`:
                 for {
                   _ <- IO.unit
                   i <- ctr.get
+                  _ <- IO.sleep(ms)
                   _ <- x(i)
                   _ <- IO.println(s"out $i")
                 } yield (),
@@ -70,7 +71,6 @@ object `π`:
                   _ <- ctr.update(_ + 1 min 49)
                   i <- ctr.get
                   _ <- if i == 49 then IO.never else IO.unit
-                  _ <- IO.sleep(ms)
                   _ <- `990763fd-eb3e-44ae-977c-36d02d014706`
                 } yield ()
               ).parMapN { (_, _) => }
@@ -87,6 +87,7 @@ object `π`:
               _ <- (
                 for {
                   _   <- IO.unit
+                  _ <- IO.sleep(ms)
                   `y` <- x()
                   _   <- IO.println(s"in $y")
                 } yield (),
@@ -94,7 +95,6 @@ object `π`:
                   _ <- IO.unit
                   i <- ctr.get
                   _ <- if i == 49 then IO.never else IO.unit
-                  _ <- IO.sleep(ms)
                   _ <- `88b6f5a3-dbc1-43fb-aa3f-fe885bb620fe`
                 } yield ()
               ).parMapN { (_, _) => }
