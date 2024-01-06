@@ -27,6 +27,7 @@
  */
 
 package pisc
+package parser
 
 import scala.io.Source
 import scala.util.parsing.combinator._
@@ -93,11 +94,11 @@ class Calculus extends JavaTokenParsers:
 
   def prefix: Parser[(Pre, (Names, Names))] =
     "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
-    "v"~>"("~>name<~")" ^^ { // restriction i.e. new name
+    "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch =>
-        `v`(ch) -> (Names(ch), Names())
+        `ν`(ch) -> (Names(ch), Names())
     } |
     name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -113,9 +114,9 @@ class Calculus extends JavaTokenParsers:
       case ch ~ _ ~ par ~ _ =>
         IO(ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
-    "["~>test<~"]" ^^ { // (mis)match
-      case ((lhs, rhs), mismatch) =>
-        Match(lhs, rhs, mismatch) -> (Names(), Names(lhs, rhs))
+    "["~test~"]"~choice ^^ { // (mis)match
+      case _ ~ cond ~ _ ~ t =>
+        `[]`(cond, t._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
@@ -141,14 +142,14 @@ class Calculus extends JavaTokenParsers:
 
   def agent(binding: Boolean = false): Parser[(Call, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
-      case path ~ id ~ _ if binding && path.nonEmpty =>
-        throw EquationQualifiedException(id, path)
+      case qual ~ id ~ _ if binding && qual.nonEmpty =>
+        throw EquationQualifiedException(id, qual)
       case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
-      case path ~ id ~ Some(params) =>
-        Call(Opd(Symbol(id)), path, params: _*) -> Names(params: _*)
-      case path ~ id ~ _ =>
-        Call(Opd(Symbol(id)), path) -> Names()
+      case qual ~ id ~ Some(params) =>
+        Call(Opd(Symbol(id)), qual, params: _*) -> Names(params: _*)
+      case qual ~ id ~ _ =>
+        Call(Opd(Symbol(id)), qual) -> Names()
     }
 
   /**
@@ -205,7 +206,7 @@ object Calculus extends Calculus:
 
   sealed trait Pre extends Any with AST
 
-  case class `v`(name: Opd) extends AnyVal with Pre // forcibly
+  case class `ν`(name: Opd) extends AnyVal with Pre // forcibly
 
   case class `!`(ast: AST) extends AnyVal with Pre
 
@@ -213,7 +214,7 @@ object Calculus extends Calculus:
 
   case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
 
-  case class Match(lhs: Opd, rhs: Opd, mismatch: Boolean) extends Pre // forcibly
+  case class `[]`(cond: ((Opd, Opd), Boolean), sum: Sum) extends Pre // forcibly
 
   case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
 
@@ -229,7 +230,7 @@ object Calculus extends Calculus:
 
   case class Seq(process: AST, prefixes: Pre*) extends AST
 
-  case class Call(identifier: Opd, path: List[String], params: Opd*) extends AST
+  case class Call(identifier: Opd, qual: List[String], params: Opd*) extends AST
 
   case class Expr(expression: String)
 
@@ -242,8 +243,8 @@ object Calculus extends Calculus:
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class EquationQualifiedException(id: String, path: List[String])
-      extends EquationParsingException(s"A qualified package ${path.mkString(".")} is present in the left hand side of $id")
+  case class EquationQualifiedException(id: String, qual: List[String])
+      extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
 
   case class EquationParamsException(id: String, params: AnyRef*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
@@ -299,6 +300,9 @@ object Calculus extends Calculus:
 
     case `!`(sum) =>
       flatten(sum)
+
+    case `[]`(cond, sum) =>
+      `[]`(cond, flatten(sum).asInstanceOf[Sum])
 
     case `?:`(cond, t, f) =>
       `?:`(cond, flatten(t).asInstanceOf[Sum], flatten(f).asInstanceOf[Sum])

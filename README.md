@@ -39,7 +39,7 @@ starting with uppercase letter. Both may contain single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
 "𝜏" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -72,7 +72,7 @@ whereas restriction, (mis)match, `if then else` and replication are not.
     SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
     PREFIXES   ::= PREFIX { PREFIX }
     PREFIX     ::= "𝜏" "."
-                 | "v" "(" NAME ")"
+                 | "ν" "(" NAME ")"
                  | NAME "<" NAME ">" "."
                  | NAME "(" NAME ")" "."
                  | "[" NAME ("="|"≠") NAME "]"
@@ -95,7 +95,7 @@ A new name - will be available in the Scala scope:
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       .
       .
       .
@@ -114,14 +114,14 @@ The inaction - just the `Unit` value () after yield:
 
 (That's why `for` always starts with `_ <- IO.unit`.)
 
-A long prefix path - "`v(x).x<5>.x(y).𝜏.x(z).z<y>.`":
+A long prefix path - "`ν(x).x<5>.x(y).𝜏.x(z).z<y>.`":
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       _ <- x(BigDecimal(5))
       y <- x()
-      _ <- `𝜏`
+      _ <- 𝜏
       z <- x()
       _ <- z(y)
       .
@@ -134,13 +134,13 @@ One can intercalate "`println`"s:
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       _ <- IO.println(s"new x=$x")
       _ <- x(5)
       _ <- IO.println("output x(5)")
       y <- x()
       _ <- IO.println("input x(y)")
-      _ <- `𝜏`
+      _ <- 𝜏
       _ <- IO.println("silent transition")
       z <- x()
       _ <- z(y)
@@ -158,12 +158,14 @@ A [mis]match `[x = y] P` translates as:
       .
       _ <- if !(x == y) then IO.unit else
            for
-             .
+             . // P
              .
              .
            yield
              ()
-      // nothing more
+      .
+      .
+      .
     yield
       ()
 
@@ -246,23 +248,47 @@ The root project folder contains two files: `pi.scala` and `main.scala.in`.
 !!!Warning: do not delete them!!!
 One can edit'em, though they're ready to generate a main `App`.
 
-Let's go backwards. To run an example, `cd` to `examples` and execute:
+Let's go backwards. But first, let's assume there is a shell (`bash`) function "`pi`":
 
-    ./examples $ scala-cli run ../pi.scala out/pi_example.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    function pi() {
+        ~/.local/share/coursier/bin/scala-cli "$@"                                             \
+                                              -S 3.4.0-RC1                                     \
+                                              --dependency org.typelevel::cats-effect:3.5.2
+    }
 
-To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
+To run an example, `cd` to `examples` and execute:
 
-    ./examples $ rm out/pi_example.scala; cat ../main.scala.in in/pi_example.scala.in > out/pi_example.scala
+    ./examples $ pi run ../pi.scala ex.scala
 
-To get the intermediary `in/pi_example.scala.in` file, execute the `run` command in the `sbt` shell:
+To get the final source file `ex.scala`, run `scalafmt` on the `.out` files:
 
-    sbt:psc> run pi_example
+    ./examples $ rm out/ex.scala; cat out/ex.scala.out | scalafmt --stdin --stdout > ex.scala
 
-where `example/pisc/pi_example.pisc` contains the Π-calculus source (equations binding agents to process
+To get the intermediary `out/ex.scala.out`, concatenate two `.in` files:
+
+    ./examples $ rm out/ex.scala.out; { cat ../main.scala.in; cat in/ex.scala.in | sed -e 's/^/  /'; } > out/ex.scala.out
+
+These two steps can be put in a shell (`bash`) function "`pio`"
+
+    function pio() {
+        while [ $# -gt 0 ]
+        do
+            rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
+            rm "$1".scala; cat out/"$1".scala.out | scalafmt --stdin --stdout > "$1".scala
+            shift
+        done
+    }
+
+To get the first `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
+
+    sbt:psc> run ex
+
+where `example/pisc/ex.pisc` contains the Π-calculus source (equations binding agents to process
 expressions).
 
-In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add a top-level `package pi_example` line.
+In order to allow multiple `App`s, edit `examples/ex.scala` and add a top-level `package ex` line.
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ scala-cli run --interactive ../pi.scala out/pi1.scala out/pi2.scala --dependency org.typelevel::cats-effect:3.5.2 -S 3.4.0-RC1
+    ./examples $ pi run --interactive ../pi.scala out/pi1.scala out/pi2.scala
+	

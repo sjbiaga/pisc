@@ -36,7 +36,7 @@ package object `Π`:
   /**
     * restriction aka new name
     */
-  object `v`:
+  object ν:
 
     def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
     def flatMap(f: `()` => IO[Unit]): IO[Unit] =
@@ -50,7 +50,7 @@ package object `Π`:
   /**
     * silent transition
     */
-  val `𝜏` = IO.unit
+  val 𝜏 = IO.unit
 
 
   /**

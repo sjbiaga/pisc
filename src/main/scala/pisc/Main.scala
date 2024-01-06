@@ -34,9 +34,12 @@ import java.io.{ FileWriter, BufferedWriter }
 
 import scala.io.Source
 
+import parser.Calculus
+import generator.Program
+
+
 object Main:
 
-  val indent = "  "
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
@@ -55,10 +58,10 @@ object Main:
         val bind = Calculus(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
-        val ps = Program(indent)(prog.map(_._1))
+        val ps = Program(prog.map(_._1))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map { it => indent + it._1.left.get -> it._2 }
+        val ls = bind.filter(_._1.isLeft).map { it => it._1.left.get -> it._2 }
 
         val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
           .sortBy(_._2)

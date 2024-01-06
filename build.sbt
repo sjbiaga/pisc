@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "3.4.0-RC1"
+ThisBuild / scalaVersion := "3.3.1"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -11,6 +11,8 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
+  .aggregate(parser, generator)
+  .dependsOn(parser, generator)
   .settings(
     name := "pisc",
     organization := "sjb.ia.ga",
@@ -18,13 +20,39 @@ lazy val root = (project in file("."))
     version := "1.0",
     maxErrors := 5,
     scalaVersion := "3.3.1",
-    javacOptions ++= Seq("-source", "16"),
-    crossScalaVersions ++= Seq("2.13.12", "3.4.0-RC1"),
+    crossScalaVersions ++= Seq("2.13.12", "3.3.1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(parsercombinators, catseffect, munit % Test)
+    libraryDependencies ++= Seq(munit % Test)
   )
 
-unmanagedSources / excludeFilter := "pi.scala"
+lazy val parser = (project in file("parser"))
+  .settings(
+    name := "pisc.parser",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.3.1",
+    crossScalaVersions ++= Seq("2.13.12", "3.3.1"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(parsercombinators, munit % Test)
+  )
+
+lazy val generator = (project in file("generator"))
+  .dependsOn(parser)
+  .settings(
+    name := "pisc.generator",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "2.13.12",
+    crossScalaVersions ++= Seq("2.13.12", "3.3.1"),
+    scalacOptions ++= scala2Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(scalameta, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "pi.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 
