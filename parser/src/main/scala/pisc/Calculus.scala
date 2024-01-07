@@ -95,7 +95,7 @@ class Calculus extends JavaTokenParsers:
     }
 
   def prefix: Parser[(Pre, (Names, Names))] =
-    "𝜏"<~"." ^^ { _ => `𝜏` -> (Names(), Names()) } | // silent prefix
+    "τ"<~"." ^^ { _ => `τ` -> (Names(), Names()) } | // silent prefix
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
@@ -206,19 +206,21 @@ object Calculus extends Calculus:
 
   case class Par(components: Seq*) extends AnyVal with AST
 
+  case class Seq(process: AST, prefixes: Pre*) extends AST
+
   sealed trait Pre extends Any with AST
 
   case class `ν`(name: Opd) extends AnyVal with Pre // forcibly
 
-  case class `!`(ast: AST) extends AnyVal with Pre
-
-  case object `𝜏` extends Pre
+  case object `τ` extends Pre
 
   case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
 
   case class `[]`(cond: ((Opd, Opd), Boolean), sum: Sum) extends Pre // forcibly
 
   case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
+
+  case class `!`(sum: Sum) extends Pre // forcibly
 
   case class Opd(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -229,8 +231,6 @@ object Calculus extends Calculus:
       case _: String => "scala value"
       case _: Expr => "scala expression"
     }
-
-  case class Seq(process: AST, prefixes: Pre*) extends AST
 
   case class Call(identifier: Opd, qual: List[String], params: Opd*) extends AST
 

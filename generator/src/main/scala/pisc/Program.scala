@@ -67,9 +67,9 @@ object Program {
       case it @ Sum(operand, _, _*) =>
         var * = List[Enumerator.Generator]()
 
-        val cs = false -> Some(uuid)
-
         semaphore.map(* :+= `_ <- *.acquire`(_))
+
+        val cs = false -> Some(uuid)
 
         * :+= `* <- Semaphore[IO](1)`(cs._2.get)
 
@@ -94,6 +94,8 @@ object Program {
       case it @ Par(_, _, _*) =>
         var * = List[Enumerator.Generator]()
 
+        semaphore.map(* :+= `_ <- *.acquire`(_))
+
         val cs = false -> None
 
         val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(cs, _).left.get)
@@ -115,6 +117,7 @@ object Program {
         var * = List[Enumerator.Generator]()
 
         * :+= `_ <- IO.unit`
+
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
         Left(`for * yield ()`(* : _*))
@@ -127,8 +130,8 @@ object Program {
       case `ν`(Opd(Symbol(name))) =>
         Right(`* <- *`(name -> "ν"))
 
-      case `𝜏` =>
-        Right(`_ <- *`("𝜏"))
+      case `τ` =>
+        Right(`_ <- *`("τ"))
 
 
       case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
@@ -173,8 +176,6 @@ object Program {
 
         val name = uuid
 
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
         val it =
           `for * yield ()` {
             `_ <- *` {
@@ -201,6 +202,8 @@ object Program {
       case Call(Opd(Symbol(identifier)), qual, params @ _*) =>
         var * = List[Enumerator.Generator]()
 
+        semaphore.map(* :+= `_ <- *.acquire`(_))
+
         val args = params.map {
           case Opd(Symbol(name)) => name
           case Opd(value) =>
@@ -210,8 +213,6 @@ object Program {
               case Expr(it) => s"$it"
             }
         }
-
-        semaphore.map(* :+= `_ <- *.acquire`(_))
 
         if (qual.isEmpty)
           * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})".parse[Term].get)
@@ -237,10 +238,11 @@ object Program {
       case Seq(ast, it @ _*) =>
         var * = List[Enumerator.Generator]()
 
-        val cs = true -> None
-
         * :+= `_ <- IO.unit`
+
         semaphore.map(* :+= `_ <- *.acquire`(_))
+
+        val cs = true -> None
 
         * = (it :+ ast).foldLeft(*)(_ ++ body(cs, _).right.get)
 

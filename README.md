@@ -40,7 +40,7 @@ A source file with the "`.pisc`" extension consists of equations, binding an age
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
 with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
-"𝜏" is the _silent transition_.
+"τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
@@ -72,7 +72,7 @@ whereas restriction, (mis)match, `if then else` and replication are not.
     SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
     PREFIXES   ::= PREFIX { PREFIX }
     PREFIX     ::= "ν" "(" NAME ")"
-                 | "𝜏" "."
+                 | "τ" "."
                  | NAME "<" NAME ">" "."
                  | NAME "(" NAME ")" "."
                  | "[" NAME ("="|"≠") NAME "]"
@@ -114,14 +114,14 @@ The inaction - just the `Unit` value () after yield:
 
 (That's why `for` always starts with `_ <- IO.unit`.)
 
-A long prefix path - "`ν(x).x<5>.x(y).𝜏.x(z).z<y>.`":
+A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 
     for
       _ <- IO.unit
       x <- ν
       _ <- x(BigDecimal(5))
       y <- x()
-      _ <- 𝜏
+      _ <- τ
       z <- x()
       _ <- z(y)
       .
@@ -140,7 +140,7 @@ One can intercalate "`println`"s:
       _ <- IO.println("output x(5)")
       y <- x()
       _ <- IO.println("input x(y)")
-      _ <- 𝜏
+      _ <- τ
       _ <- IO.println("silent transition")
       z <- x()
       _ <- z(y)

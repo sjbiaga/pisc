@@ -68,22 +68,22 @@ object `π`:
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `87c95beb-49ce-4d2b-b001-c36ccfcbefbf` <- Semaphore[IO](1)
+    `b68133dc-d6e7-4015-bd33-de84bcd52be5` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `87c95beb-49ce-4d2b-b001-c36ccfcbefbf`.acquire
+        _ <- `b68133dc-d6e7-4015-bd33-de84bcd52be5`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `87c95beb-49ce-4d2b-b001-c36ccfcbefbf`.acquire
-        `dac4cceb-938e-438e-9e30-801e83ca1c7e` <- Semaphore[IO](1)
+        _ <- `b68133dc-d6e7-4015-bd33-de84bcd52be5`.acquire
+        `992f95cd-c485-45de-a4f1-794739a1d495` <- Semaphore[IO](1)
         _ <- IO.race(
           for {
-            _ <- `dac4cceb-938e-438e-9e30-801e83ca1c7e`.acquire
+            _ <- `992f95cd-c485-45de-a4f1-794739a1d495`.acquire
             _ <- `Greeter"`(stdout, name)
           } yield (),
           for {
-            _ <- `dac4cceb-938e-438e-9e30-801e83ca1c7e`.acquire
+            _ <- `992f95cd-c485-45de-a4f1-794739a1d495`.acquire
             _ <- `Greeter"'`(stdout, name)
           } yield ()
         )

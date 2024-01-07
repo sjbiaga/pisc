@@ -56,7 +56,7 @@ object `π`:
       for {
         _ <- IO.unit
         `pi` <- IO {
-          lazy val `990763fd-eb3e-44ae-977c-36d02d014706`: IO[Unit] =
+          lazy val `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`: IO[Unit] =
             for (
               _ <- (
                 for {
@@ -68,21 +68,21 @@ object `π`:
                 } yield (),
                 for {
                   _ <- IO.unit
-                  _ <- ctr.update(_ + 1 min 49)
+                  _ <- ctr.update(_ + 1 min 50)
                   i <- ctr.get
-                  _ <- if i == 49 then IO.never else IO.unit
-                  _ <- `990763fd-eb3e-44ae-977c-36d02d014706`
+                  _ <- if i == 50 then IO.never else IO.cede
+                  _ <- `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `990763fd-eb3e-44ae-977c-36d02d014706`
+          `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`
         }
         _ <- pi
       } yield (),
       for {
         _ <- IO.unit
         `pi` <- IO {
-          lazy val `88b6f5a3-dbc1-43fb-aa3f-fe885bb620fe`: IO[Unit] =
+          lazy val `5a2b109f-51cf-4406-a9cb-65642d9e47f9`: IO[Unit] =
             for (
               _ <- (
                 for {
@@ -94,12 +94,12 @@ object `π`:
                 for {
                   _ <- IO.unit
                   i <- ctr.get
-                  _ <- if i == 49 then IO.never else IO.unit
-                  _ <- `88b6f5a3-dbc1-43fb-aa3f-fe885bb620fe`
+                  _ <- if i == 50 then IO.never else IO.cede
+                  _ <- `5a2b109f-51cf-4406-a9cb-65642d9e47f9`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `88b6f5a3-dbc1-43fb-aa3f-fe885bb620fe`
+          `5a2b109f-51cf-4406-a9cb-65642d9e47f9`
         }
         _ <- pi
       } yield ()
