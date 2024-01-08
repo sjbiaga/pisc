@@ -46,7 +46,7 @@ object π:
 
   val gen = new scala.util.Random
 
-  def ms = (10+math.abs(gen.nextInt%10)).milliseconds
+  def ms = (10 + math.abs(gen.nextInt % 10)).milliseconds
 
   def Main(): IO[Unit] = for {
     _ <- IO.unit
@@ -56,7 +56,7 @@ object π:
       for {
         _ <- IO.unit
         pi <- IO {
-          lazy val `b9b78d1a-0112-4399-a6b0-2716aab97ebd`: IO[Unit] = {
+          lazy val `09c15fc0-187d-4019-b2d8-de197a5e22ac`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -71,19 +71,19 @@ object π:
                   _ <- c.update(_ + 1 min 50)
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `b9b78d1a-0112-4399-a6b0-2716aab97ebd`
+                  _ <- `09c15fc0-187d-4019-b2d8-de197a5e22ac`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `b9b78d1a-0112-4399-a6b0-2716aab97ebd`
+          `09c15fc0-187d-4019-b2d8-de197a5e22ac`
         }
         _ <- pi
       } yield (),
       for {
         _ <- IO.unit
         pi <- IO {
-          lazy val `559d2997-f0f5-4833-b7f9-928680b92cba`: IO[Unit] = {
+          lazy val `48fa7c57-9bef-445f-ae20-c64811e88e3b`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -96,12 +96,12 @@ object π:
                   _ <- IO.unit
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `559d2997-f0f5-4833-b7f9-928680b92cba`
+                  _ <- `48fa7c57-9bef-445f-ae20-c64811e88e3b`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `559d2997-f0f5-4833-b7f9-928680b92cba`
+          `48fa7c57-9bef-445f-ae20-c64811e88e3b`
         }
         _ <- pi
       } yield ()
