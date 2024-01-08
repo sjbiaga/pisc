@@ -50,56 +50,58 @@ object π:
 
   def Main(): IO[Unit] = for {
     _ <- IO.unit
-    ctr <- IO.ref(0)
+    c <- IO.ref(0)
     x <- ν
     _ <- (
       for {
         _ <- IO.unit
         pi <- IO {
-          lazy val `2b6a0c00-bb72-4448-a79b-06b09c5898c3`: IO[Unit] =
+          lazy val `b9b78d1a-0112-4399-a6b0-2716aab97ebd`: IO[Unit] = {
             for (
               _ <- (
                 for {
                   _ <- IO.unit
-                  i <- ctr.get
+                  i <- c.get
                   _ <- IO.sleep(ms)
                   _ <- x(i)
                   _ <- IO.println(s"out $i")
                 } yield (),
                 for {
                   _ <- IO.unit
-                  _ <- ctr.update(_ + 1 min 50)
-                  i <- ctr.get
+                  _ <- c.update(_ + 1 min 50)
+                  i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `2b6a0c00-bb72-4448-a79b-06b09c5898c3`
+                  _ <- `b9b78d1a-0112-4399-a6b0-2716aab97ebd`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `2b6a0c00-bb72-4448-a79b-06b09c5898c3`
+          }
+          `b9b78d1a-0112-4399-a6b0-2716aab97ebd`
         }
         _ <- pi
       } yield (),
       for {
         _ <- IO.unit
         pi <- IO {
-          lazy val `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`: IO[Unit] =
+          lazy val `559d2997-f0f5-4833-b7f9-928680b92cba`: IO[Unit] = {
             for (
               _ <- (
                 for {
                   _ <- IO.unit
                   _ <- IO.sleep(ms)
                   y <- x()
-                  _   <- IO.println(s"in $y")
+                  _ <- IO.println(s"in $y")
                 } yield (),
                 for {
                   _ <- IO.unit
-                  i <- ctr.get
+                  i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`
+                  _ <- `559d2997-f0f5-4833-b7f9-928680b92cba`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`
+          }
+          `559d2997-f0f5-4833-b7f9-928680b92cba`
         }
         _ <- pi
       } yield ()

@@ -114,9 +114,7 @@ object Program {
         Right(Nil)
 
       case _: Par =>
-        var * = List[Enumerator.Generator]()
-
-        * :+= `_ <- IO.unit`
+        var * = List[Enumerator.Generator](`_ <- IO.unit`)
 
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
@@ -189,10 +187,7 @@ object Program {
         * :+= `* <- *`("pi", `IO { lazy val *: IO[Unit] = …; * }`(name, it))
         * :+= `_ <- *`("pi")
 
-        if (comprehension)
-          Right(*)
-        else
-          Left(`for * yield ()`(* : _*))
+        Right(*)
 
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
@@ -238,7 +233,7 @@ object Program {
       case Seq(ast, it @ _*) =>
         var * = List[Enumerator.Generator]()
 
-        * :+= `_ <- IO.unit`
+        if (!comprehension) * :+= `_ <- IO.unit`
 
         semaphore.map(* :+= `_ <- *.acquire`(_))
 

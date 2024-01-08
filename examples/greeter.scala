@@ -68,22 +68,22 @@ object π:
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078` <- Semaphore[IO](1)
+    `c4562309-69e3-40b2-866c-fbedafc2ceaf` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078`.acquire
+        _ <- `c4562309-69e3-40b2-866c-fbedafc2ceaf`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078`.acquire
-        `3eab2349-8e99-4a7a-8106-41706ac1b7e1` <- Semaphore[IO](1)
+        _ <- `c4562309-69e3-40b2-866c-fbedafc2ceaf`.acquire
+        `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d` <- Semaphore[IO](1)
         _ <- IO.race(
           for {
-            _ <- `3eab2349-8e99-4a7a-8106-41706ac1b7e1`.acquire
+            _ <- `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d`.acquire
             _ <- `Greeter"`(stdout, name)
           } yield (),
           for {
-            _ <- `3eab2349-8e99-4a7a-8106-41706ac1b7e1`.acquire
+            _ <- `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d`.acquire
             _ <- `Greeter"'`(stdout, name)
           } yield ()
         )
@@ -97,37 +97,41 @@ object π:
         _ <- IO.unit
         _ <-
           if (!(name.substring(0, 1).toUpperCase === "Q")) IO.cede
-          else
+          else {
             for {
               _ <- IO.unit
               _ <- stdout("That's an unusual name.\n")
             } yield ()
+          }
       } yield (),
       for {
         _ <- IO.unit
         _ <-
           if (!(name === "Voldemort")) IO.cede
-          else
+          else {
             for {
               _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
             } yield ()
+          }
       } yield (),
       for {
         _ <- IO.unit
         _ <-
           if (name.substring(0, 1).toUpperCase === "Q") IO.cede
-          else
+          else {
             for {
               _ <- IO.unit
               _ <-
                 if (name === "Voldemort") IO.cede
-                else
+                else {
                   for {
                     _ <- IO.unit
                     _ <- stdout(s"Hello $name!\n")
                   } yield ()
+                }
             } yield ()
+          }
       } yield ()
     ).parMapN { (_, _, _) => }
   ) yield ()
@@ -139,7 +143,7 @@ object π:
         _ <- IO.unit
         _ <- stdout("That's an unusual name.\n")
       } yield ()
-      else
+      else {
         for {
           _ <- IO.unit
           _ <-
@@ -147,12 +151,14 @@ object π:
               _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
             } yield ()
-            else
+            else {
               for {
                 _ <- IO.unit
                 _ <- stdout(s"Hello $name!\n")
               } yield ()
+            }
         } yield ()
+      }
   } yield ()
 
   def `Greeter"'`(stdout: `()`, name: `()`): IO[Unit] = for {
@@ -162,7 +168,7 @@ object π:
         _ <- IO.unit
         _ <- stdout("That's an unusual name.\n")
       } yield ()
-      else
+      else {
         for {
           _ <- IO.unit
           _ <-
@@ -170,10 +176,12 @@ object π:
               _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
             } yield ()
-            else
+            else {
               for {
                 _ <- IO.unit
                 _ <- stdout(s"Hello $name!\n")
               } yield ()
+            }
         } yield ()
+      }
   } yield ()
