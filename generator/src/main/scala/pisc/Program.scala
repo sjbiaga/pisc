@@ -47,7 +47,7 @@ object Program {
   //           for-c.,  semaphore
 
 
-  def defn(bind: Call, sum: Sum): Defn.Def = {
+  def defn(bind: `()`, sum: Sum): Defn.Def = {
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
@@ -199,7 +199,7 @@ object Program {
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
-      case Call(Opd(Symbol(identifier)), qual, params @ _*) =>
+      case `()`(Opd(Symbol(identifier)), qual, params @ _*) =>
         var * = List[Enumerator.Generator]()
 
         semaphore.map(* :+= `_ <- *.acquire`(_))
@@ -224,7 +224,7 @@ object Program {
         else
           Left(`for * yield ()`(* : _*))
 
-      case _: Call => ??? // impossible by syntax
+      case _: `()` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// agent call //
 
@@ -306,7 +306,7 @@ object Program {
 
 
   def `* <- *`(* : (String, Term)): Enumerator.Generator =
-    Enumerator.Generator(\(*._1), *._2)
+    Enumerator.Generator(`* <- …`(*._1), *._2)
 
 
   val `_ <- IO.unit` = `_ <- IO.*`("unit")

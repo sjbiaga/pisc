@@ -32,58 +32,58 @@ import cats.effect.{IO, IOApp}
 
 object App extends IOApp.Simple:
 
-  override def run: IO[Unit] = `π`.`Main`()
+  override def run: IO[Unit] = π.Main()
 
-object `π`:
+object π:
 
   import cats.effect.syntax.all._
   import cats.syntax.all._
   import cats.effect.std.Semaphore
 
-  import `Π`._
+  import Π._
 
   given Conversion[`()`, String] = _.name.asInstanceOf[String]
 
   def Main(): IO[Unit] = for {
-    _        <- IO.unit
-    `stdin`  <- ν
-    `stdout` <- ν
+    _      <- IO.unit
+    stdin  <- ν
+    stdout <- ν
     _ <- (
       for {
-        _      <- IO.unit
-        _      <- stdout("What's your name?\n")
-        `name` <- stdin()
-        _      <- Chooser(stdout, name)
+        _    <- IO.unit
+        _    <- stdout("What's your name?\n")
+        name <- stdin()
+        _    <- Chooser(stdout, name)
       } yield (),
       for {
-        _          <- IO.unit
-        `prompt`   <- stdout()
-        _          <- IO.print(prompt)
-        sc_name    <- IO { scala.io.StdIn.readLine }
-        _          <- stdin(sc_name)
-        `pi_greet` <- stdout()
-        _          <- IO.print(pi_greet)
+        _        <- IO.unit
+        prompt   <- stdout()
+        _        <- IO.print(prompt)
+        sc_name  <- IO { scala.io.StdIn.readLine }
+        _        <- stdin(sc_name)
+        pi_greet <- stdout()
+        _        <- IO.print(pi_greet)
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `b68133dc-d6e7-4015-bd33-de84bcd52be5` <- Semaphore[IO](1)
+    `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `b68133dc-d6e7-4015-bd33-de84bcd52be5`.acquire
+        _ <- `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `b68133dc-d6e7-4015-bd33-de84bcd52be5`.acquire
-        `992f95cd-c485-45de-a4f1-794739a1d495` <- Semaphore[IO](1)
+        _ <- `0b5c74f7-8dfc-4b62-bfaf-ac2e9df3e078`.acquire
+        `3eab2349-8e99-4a7a-8106-41706ac1b7e1` <- Semaphore[IO](1)
         _ <- IO.race(
           for {
-            _ <- `992f95cd-c485-45de-a4f1-794739a1d495`.acquire
+            _ <- `3eab2349-8e99-4a7a-8106-41706ac1b7e1`.acquire
             _ <- `Greeter"`(stdout, name)
           } yield (),
           for {
-            _ <- `992f95cd-c485-45de-a4f1-794739a1d495`.acquire
+            _ <- `3eab2349-8e99-4a7a-8106-41706ac1b7e1`.acquire
             _ <- `Greeter"'`(stdout, name)
           } yield ()
         )

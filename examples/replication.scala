@@ -32,15 +32,15 @@ import cats.effect.{IO, IOApp}
 
 object App extends IOApp.Simple:
 
-  override def run: IO[Unit] = `π`.`Main`()
+  override def run: IO[Unit] = π.Main()
 
-object `π`:
+object π:
 
   import cats.effect.syntax.all._
   import cats.syntax.all._
   import cats.effect.std.Semaphore
 
-  import `Π`._
+  import Π._
 
   import scala.concurrent.duration._
 
@@ -49,14 +49,14 @@ object `π`:
   def ms = (10+math.abs(gen.nextInt%10)).milliseconds
 
   def Main(): IO[Unit] = for {
-    _   <- IO.unit
+    _ <- IO.unit
     ctr <- IO.ref(0)
-    `x` <- ν
+    x <- ν
     _ <- (
       for {
         _ <- IO.unit
-        `pi` <- IO {
-          lazy val `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`: IO[Unit] =
+        pi <- IO {
+          lazy val `2b6a0c00-bb72-4448-a79b-06b09c5898c3`: IO[Unit] =
             for (
               _ <- (
                 for {
@@ -71,35 +71,35 @@ object `π`:
                   _ <- ctr.update(_ + 1 min 50)
                   i <- ctr.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`
+                  _ <- `2b6a0c00-bb72-4448-a79b-06b09c5898c3`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `c03dddf2-cbc2-44a3-8571-aa33bfa1bfaa`
+          `2b6a0c00-bb72-4448-a79b-06b09c5898c3`
         }
         _ <- pi
       } yield (),
       for {
         _ <- IO.unit
-        `pi` <- IO {
-          lazy val `5a2b109f-51cf-4406-a9cb-65642d9e47f9`: IO[Unit] =
+        pi <- IO {
+          lazy val `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`: IO[Unit] =
             for (
               _ <- (
                 for {
-                  _   <- IO.unit
+                  _ <- IO.unit
                   _ <- IO.sleep(ms)
-                  `y` <- x()
+                  y <- x()
                   _   <- IO.println(s"in $y")
                 } yield (),
                 for {
                   _ <- IO.unit
                   i <- ctr.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `5a2b109f-51cf-4406-a9cb-65642d9e47f9`
+                  _ <- `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
-          `5a2b109f-51cf-4406-a9cb-65642d9e47f9`
+          `2c028ff3-5fd4-4804-bc8d-7b3cc4740e3d`
         }
         _ <- pi
       } yield ()

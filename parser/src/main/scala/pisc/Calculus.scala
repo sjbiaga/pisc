@@ -31,13 +31,12 @@ package parser
 
 import scala.io.Source
 import scala.util.parsing.combinator._
-import scala.collection.Set
-import scala.collection.mutable.LinkedHashSet
 
+import Pi.{ Names, PrefixChannelParsingException }
 import Calculus._
 
 
-class Calculus extends JavaTokenParsers:
+class Calculus extends Pi:
 
   def equation: Parser[Bind] =
     agent(true)~"="~choice ^^ {
@@ -54,23 +53,23 @@ class Calculus extends JavaTokenParsers:
         bind -> ast.asInstanceOf[Sum]
     }
 
-  def choice: Parser[(Sum, Names)] = "("~>choice<~")" ^^ { identity } |
+  def choice: Parser[(Sum, Names)] = "("~>choice<~")" |
     rep1sep(parallel, "+") ^^ { ps =>
       Sum(ps.map(_._1): _*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel: Parser[(Par, Names)] = "("~>parallel<~")" ^^ { identity } |
+  def parallel: Parser[(Par, Names)] = "("~>parallel<~")" |
     rep1sep(sequential, "|") ^^ { ss =>
       Par(ss.map(_._1): _*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential: Parser[(Seq, Names)] =
     prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
-      case pre ~ None if pre._1.isEmpty =>
+      case (pre, _) ~ None if pre.isEmpty =>
         throw EmptyParsingException
       case pre ~ Some((sum: Sum, free: Names)) =>
         Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
-      case pre ~ Some((call: Call, free: Names)) =>
+      case pre ~ Some((call: `()`, free: Names)) =>
         Seq(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
         Seq(`𝟎`, pre._1: _*) -> pre._2._2
@@ -94,27 +93,12 @@ class Calculus extends JavaTokenParsers:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] =
-    "τ"<~"." ^^ { _ => `τ` -> (Names(), Names()) } | // silent prefix
+  def prefix: Parser[(Pre, (Names, Names))] = `π` |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch =>
         `ν`(ch) -> (Names(ch), Names())
-    } |
-    name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
-      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
-        throw PrefixChannelParsingException(ch)
-      case ch ~ _ ~ arg ~ _ =>
-        IO(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
-    } |
-    name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
-        throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ par ~ _ if !par.isSymbol =>
-        throw PrefixChannelParsingException(par)
-      case ch ~ _ ~ par ~ _ =>
-        IO(ch, par, polarity = true) -> (Names(par), Names(ch))
     } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
@@ -132,36 +116,22 @@ class Calculus extends JavaTokenParsers:
       case (sum, free) => `!`(sum) -> (Names(), free)
     }
 
-  def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
-                          floatingPointNumber ^^ { Opd.apply } |
-                          stringLiteral ^^ { Opd.apply } |
-                          expression ^^ { Opd.apply compose Expr.apply }
-
-  def test: Parser[((Opd, Opd), Boolean)] = "("~>test<~")" ^^ { identity } |
+  def test: Parser[((Opd, Opd), Boolean)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
       case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
     }
 
-  def agent(binding: Boolean = false): Parser[(Call, Names)] =
+  def agent(binding: Boolean = false): Parser[(`()`, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
       case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
       case qual ~ id ~ Some(params) =>
-        Call(Opd(Symbol(id)), qual, params: _*) -> Names(params: _*)
+        `()`(Opd(Symbol(id)), qual, params: _*) -> Names(params: _*)
       case qual ~ id ~ _ =>
-        Call(Opd(Symbol(id)), qual) -> Names()
+        `()`(Opd(Symbol(id)), qual) -> Names()
     }
-
-  /**
-   * Channel names start with lower case.
-   * @return
-   */
-  override def ident: Parser[String] =
-      "" ~> // handle whitespace
-      rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
-          elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
   /**
    * Agent identifiers start with upper case.
@@ -179,24 +149,10 @@ class Calculus extends JavaTokenParsers:
   def qual: Parser[List[String]] =
     rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
 
-  /** Scala comment enclosing any Scala expression.
-   * @return
-   */
-  def expression: Parser[String] =
-    """[/][*].*?[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
-
 
 object Calculus extends Calculus:
 
-  type Bind = (Call, Sum)
-
-  type Names = Set[Symbol]
-
-  object Names:
-    def apply(os: Opd*): Names = LinkedHashSet.from(os
-      .filter(_.isSymbol)
-      .map(_.asSymbol)
-    )
+  type Bind = (`()`, Sum)
 
   sealed trait AST extends Any
 
@@ -222,6 +178,8 @@ object Calculus extends Calculus:
 
   case class `!`(sum: Sum) extends Pre // forcibly
 
+  case class `()`(identifier: Opd, qual: List[String], params: Opd*) extends AST
+
   case class Opd(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
@@ -232,14 +190,12 @@ object Calculus extends Calculus:
       case _: Expr => "scala expression"
     }
 
-  case class Call(identifier: Opd, qual: List[String], params: Opd*) extends AST
-
   case class Expr(expression: String)
 
 
   // exceptions
 
-  sealed class ParsingException(msg: String, cause: Throwable = null)
+  class ParsingException(msg: String, cause: Throwable = null)
       extends RuntimeException(msg, cause)
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
@@ -256,12 +212,6 @@ object Calculus extends Calculus:
 
   case object EmptyParsingException
       extends ParsingException("Instead of an empty expression there must be at least 𝟎 in place")
-
-  sealed class PrefixParsingException(msg: String, cause: Throwable = null)
-      extends ParsingException(msg, cause)
-
-  case class PrefixChannelParsingException(name: Opd)
-      extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
 
   // functions
@@ -304,7 +254,7 @@ object Calculus extends Calculus:
       Par(Seq(flatten(ast), ps: _*))
 
     case `!`(sum) =>
-      flatten(sum)
+      `!`(flatten(sum).asInstanceOf[Sum])
 
     case `[]`(cond, sum) =>
       `[]`(cond, flatten(sum).asInstanceOf[Sum])

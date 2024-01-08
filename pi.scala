@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-package object `Π`:
+package object Π:
 
   import cats.effect.{ Deferred, Ref, IO }
 
@@ -50,7 +50,7 @@ package object `Π`:
   /**
     * silent transition
     */
-  val 𝜏 = IO.unit
+  val τ = IO.unit
 
 
   /**

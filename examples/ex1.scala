@@ -28,13 +28,11 @@
 
 //package main.scala.in
 
-import cats.effect.{ IO, IOApp }
-
+import cats.effect.{IO, IOApp}
 
 object App extends IOApp.Simple:
 
   override def run: IO[Unit] = π.Main()
-
 
 object π:
 
@@ -44,4 +42,19 @@ object π:
 
   import Π._
 
-
+  def Main(): IO[Unit] = for {
+    _ <- IO.unit
+    x <- ν
+    y <- ν
+    _ <- (
+      for {
+        _ <- IO.unit
+        _ <- x(y)
+      } yield (),
+      for {
+        _ <- IO.unit
+        z <- x()
+        _ <- if (!(y === z)) IO.cede else for (_ <- IO.unit) yield ()
+      } yield ()
+    ).parMapN { (_, _) => }
+  } yield ()
