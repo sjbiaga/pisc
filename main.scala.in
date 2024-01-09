@@ -44,4 +44,6 @@ object π:
 
   import Π._
 
+  val `𝟎` = IO.unit
+
 

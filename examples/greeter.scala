@@ -42,6 +42,8 @@ object π:
 
   import Π._
 
+  val `𝟎` = IO.unit
+
   given Conversion[`()`, String] = _.name.asInstanceOf[String]
 
   def Main(): IO[Unit] = for {
@@ -60,21 +62,31 @@ object π:
         _        <- stdin(sc_name)
         pi_greet <- stdout()
         _        <- IO.print(pi_greet)
-        _        <- for (_ <- IO.unit) yield ()
+        _        <- `𝟎`
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `14b17611-2176-48f5-af1b-ba6a085f5ee8` <- Semaphore[IO](1)
+    `437ef433-937a-4066-9b38-4cd945883db0` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `14b17611-2176-48f5-af1b-ba6a085f5ee8`.acquire
+        _ <- `437ef433-937a-4066-9b38-4cd945883db0`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `14b17611-2176-48f5-af1b-ba6a085f5ee8`.acquire
-        _ <- `Greeter'`(stdout, name)
+        _ <- `437ef433-937a-4066-9b38-4cd945883db0`.acquire
+        `e5526054-8f9f-437e-b8d0-91c9f9057152` <- Semaphore[IO](1)
+        _ <- IO.race(
+          for {
+            _ <- `e5526054-8f9f-437e-b8d0-91c9f9057152`.acquire
+            _ <- `Greeter"`(stdout, name)
+          } yield (),
+          for {
+            _ <- `e5526054-8f9f-437e-b8d0-91c9f9057152`.acquire
+            _ <- `Greeter"'`(stdout, name)
+          } yield ()
+        )
       } yield ()
     )
   } yield ()
@@ -87,10 +99,10 @@ object π:
           else {
             for {
               _ <- stdout("That's an unusual name.\n")
-              _ <- for (_ <- IO.unit) yield ()
+              _ <- `𝟎`
             } yield ()
           }
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield (),
       for {
         _ <-
@@ -98,10 +110,10 @@ object π:
           else {
             for {
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
-              _ <- for (_ <- IO.unit) yield ()
+              _ <- `𝟎`
             } yield ()
           }
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield (),
       for {
         _ <-
@@ -113,13 +125,13 @@ object π:
                 else {
                   for {
                     _ <- stdout(s"Hello $name!\n")
-                    _ <- for (_ <- IO.unit) yield ()
+                    _ <- `𝟎`
                   } yield ()
                 }
-              _ <- for (_ <- IO.unit) yield ()
+              _ <- `𝟎`
             } yield ()
           }
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield ()
     ).parMapN { (_, _, _) => }
   ) yield ()
@@ -128,48 +140,48 @@ object π:
     _ <-
       if (name.substring(0, 1).toUpperCase === "Q") for {
         _ <- stdout("That's an unusual name.\n")
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield ()
       else {
         for {
           _ <-
             if (name === "Voldemort") for {
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
-              _ <- for (_ <- IO.unit) yield ()
+              _ <- `𝟎`
             } yield ()
             else {
               for {
                 _ <- stdout(s"Hello $name!\n")
-                _ <- for (_ <- IO.unit) yield ()
+                _ <- `𝟎`
               } yield ()
             }
-          _ <- for (_ <- IO.unit) yield ()
+          _ <- `𝟎`
         } yield ()
       }
-    _ <- for (_ <- IO.unit) yield ()
+    _ <- `𝟎`
   } yield ()
 
   def `Greeter"'`(stdout: `()`, name: `()`): IO[Unit] = for {
     _ <-
       if (name.substring(0, 1).toUpperCase === "Q") for {
         _ <- stdout("That's an unusual name.\n")
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield ()
       else {
         for {
           _ <-
             if (name === "Voldemort") for {
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
-              _ <- for (_ <- IO.unit) yield ()
+              _ <- `𝟎`
             } yield ()
             else {
               for {
                 _ <- stdout(s"Hello $name!\n")
-                _ <- for (_ <- IO.unit) yield ()
+                _ <- `𝟎`
               } yield ()
             }
-          _ <- for (_ <- IO.unit) yield ()
+          _ <- `𝟎`
         } yield ()
       }
-    _ <- for (_ <- IO.unit) yield ()
+    _ <- `𝟎`
   } yield ()

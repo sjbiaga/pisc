@@ -42,77 +42,69 @@ object π:
 
   import Π._
 
+  val `𝟎` = IO.unit
+
   import scala.concurrent.duration._
 
   val gen = new scala.util.Random
 
   def ms = (10 + math.abs(gen.nextInt % 10)).milliseconds
 
-  def Main(): IO[Unit] = for (
-    _ <- for {
-      c <- IO.ref(0)
-      x <- ν
-      _ <- (
-        for (
-          _ <- for {
-            pi <- IO {
-              lazy val `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`: IO[Unit] = {
-                for (
-                  _ <- (
-                    for (
-                      _ <- for {
-                        i <- c.get
-                        _ <- IO.sleep(ms)
-                        _ <- x(i)
-                        _ <- IO.println(s"out $i")
-                        _ <- for (_ <- IO.unit) yield ()
-                      } yield ()
-                    ) yield (),
-                    for {
-                      _ <- IO.unit
-                      _ <- c.update(_ + 1 min 50)
-                      i <- c.get
-                      _ <- if i == 50 then IO.never else IO.cede
-                      _ <- `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`
-                    } yield ()
-                  ).parMapN { (_, _) => }
-                ) yield ()
-              }
-              `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`
-            }
-            _ <- pi
-            _ <- for (_ <- IO.unit) yield ()
-          } yield ()
-        ) yield (),
-        for (
-          _ <- for {
-            pi <- IO {
-              lazy val `a561e3a7-a823-48c2-948f-c27f43d573cd`: IO[Unit] = {
-                for (
-                  _ <- (
-                    for (
-                      _ <- for {
-                        _ <- IO.sleep(ms)
-                        y <- x()
-                        _ <- IO.println(s"in $y")
-                        _ <- for (_ <- IO.unit) yield ()
-                      } yield ()
-                    ) yield (),
-                    for {
-                      _ <- IO.unit
-                      i <- c.get
-                      _ <- if i == 50 then IO.never else IO.cede
-                      _ <- `a561e3a7-a823-48c2-948f-c27f43d573cd`
-                    } yield ()
-                  ).parMapN { (_, _) => }
-                ) yield ()
-              }
-              `a561e3a7-a823-48c2-948f-c27f43d573cd`
-            }
-            _ <- pi
-            _ <- for (_ <- IO.unit) yield ()
-          } yield ()
-        ) yield ()
-      ).parMapN { (_, _) => }
-    } yield ()
-  ) yield ()
+  def Main(): IO[Unit] = for {
+    c <- IO.ref(0)
+    x <- ν
+    _ <- (
+      for {
+        pi <- IO {
+          lazy val `3521e7af-5d14-4f84-a8e6-3d02391fe404`: IO[Unit] = {
+            for (
+              _ <- (
+                for {
+                  i <- c.get
+                  _ <- IO.sleep(ms)
+                  _ <- x(i)
+                  _ <- IO.println(s"out $i")
+                  _ <- `𝟎`
+                } yield (),
+                for {
+                  _ <- IO.unit
+                  _ <- c.update(_ + 1 min 50)
+                  i <- c.get
+                  _ <- if i == 50 then IO.never else IO.cede
+                  _ <- `3521e7af-5d14-4f84-a8e6-3d02391fe404`
+                } yield ()
+              ).parMapN { (_, _) => }
+            ) yield ()
+          }
+          `3521e7af-5d14-4f84-a8e6-3d02391fe404`
+        }
+        _ <- pi
+        _ <- `𝟎`
+      } yield (),
+      for {
+        pi <- IO {
+          lazy val `3356ae0e-ce31-44cf-ba2b-14779c86318f`: IO[Unit] = {
+            for (
+              _ <- (
+                for {
+                  _ <- IO.sleep(ms)
+                  y <- x()
+                  _ <- IO.println(s"in $y")
+                  _ <- `𝟎`
+                } yield (),
+                for {
+                  _ <- IO.unit
+                  i <- c.get
+                  _ <- if i == 50 then IO.never else IO.cede
+                  _ <- `3356ae0e-ce31-44cf-ba2b-14779c86318f`
+                } yield ()
+              ).parMapN { (_, _) => }
+            ) yield ()
+          }
+          `3356ae0e-ce31-44cf-ba2b-14779c86318f`
+        }
+        _ <- pi
+        _ <- `𝟎`
+      } yield ()
+    ).parMapN { (_, _) => }
+  } yield ()

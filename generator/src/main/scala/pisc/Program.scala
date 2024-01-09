@@ -49,11 +49,12 @@ object Program {
 
     Defn.Def(Nil,
              identifier, `()`(params: _*), `: IO[Unit]`,
-             body(None, sum))
+             body(sum)())
   }
 
 
-  def body(semaphore: Option[String], node: AST): List[Enumerator.Generator] = {
+  def body(node: AST)
+          (implicit semaphore: Option[String] = None): List[Enumerator.Generator] = {
     var * = List[Enumerator.Generator]()
 
     node match {
@@ -63,14 +64,14 @@ object Program {
       case it @ Sum(operand, _, _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val sem = Some(uuid)
+        implicit val sem = Some(uuid)
 
         * :+= `* <- Semaphore[IO](1)`(sem.get)
 
-        * :+= `_ <- IO.race ( *, … )`(body(sem, operand), body(sem, Sum(it.choices.tail)))
+        * :+= `_ <- IO.race ( *, … )`(body(operand), body(Sum(it.choices.tail)))
 
       case Sum(operand, _*) =>
-        * = body(semaphore, operand)
+        * = body(operand)
 
       case _: Sum => ???
 
@@ -82,12 +83,12 @@ object Program {
       case it @ Par(_, _, _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(None, _))
+        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
       case Par(operand, _*) =>
-        * = body(semaphore, operand)
+        * = body(operand)
 
       case _: Par =>
         * :+= `_ <- IO.unit`
@@ -127,16 +128,16 @@ object Program {
 
       case `[]`(((Opd(lhs), Opd(rhs)), mismatch), sum) =>
         if (mismatch)
-          * = `_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(None, sum)))
+          * = `_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(sum)()))
         else
-          * = `_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(None, sum)))
+          * = `_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(sum)()))
 
 
       case `?:`(((Opd(lhs), Opd(rhs)), mismatch), t, f) =>
         if (mismatch)
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(None, f), body(None, t)))
+          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
         else
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(None, t), body(None, f)))
+          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(t)(), body(f)()))
 
 
       case `!`(sum) =>
@@ -146,7 +147,7 @@ object Program {
           `for * yield ()` {
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
-                body(None, sum),
+                body(sum)(),
                 `for * yield ()`(`_ <- IO.unit`, `_ <- *`(name))
               )
             }
@@ -187,12 +188,12 @@ object Program {
       // followed possibly either by agent call or another process expression //
 
       case Seq(ast, it @ _*) if it.isEmpty =>
-        * = body(semaphore, ast)
+        * = body(ast)
 
       case Seq(ast, it @ _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        * = (it :+ ast).foldLeft(*)(_ ++ body(None, _))
+        * = (it :+ ast).foldLeft(*)(_ ++ body(_)())
 
         * = `_ <- *`(`for * yield ()`(* : _*))
 
@@ -301,7 +302,7 @@ object Program {
 
   def `_ <- IO.race ( *, … )`(* : Term.ForYield*): Enumerator.Generator =
     `_ <- *`(Term.Apply(Term.Select("IO", "race"),
-                        Term.ArgClause(List(*(0), *(0)), None)))
+                        Term.ArgClause(List(*(0), *(1)), None)))
 
 
   def `( *, … ).parMapN { (_, …) => }`(* : Term.ForYield*): Term =

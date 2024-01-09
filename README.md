@@ -275,7 +275,9 @@ These two steps can be put in a shell (`bash`) function "`pio`"
         while [ $# -gt 0 ]
         do
             rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
-            rm "$1".scala; cat out/"$1".scala.out | scalafmt --stdin --stdout > "$1".scala
+            rm "$1".scala; cat out/"$1".scala.out |
+            scalafmt --stdin --stdout |
+            sed 's/for[ ][(][_][ ][<][-][ ]IO[.]unit[)][ ]yield[ ][(][)]/`𝟎`/g' > "$1".scala
             shift
         done
     }

@@ -42,18 +42,20 @@ object π:
 
   import Π._
 
+  val `𝟎` = IO.unit
+
   def Main(): IO[Unit] = for {
     x <- ν
     y <- ν
     _ <- (
       for {
         _ <- x(y)
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- `𝟎`
       } yield (),
       for {
         z <- x()
-        _ <- if (!(y === z)) IO.cede else for (_ <- IO.unit) yield ()
-        _ <- for (_ <- IO.unit) yield ()
+        _ <- if (!(y === z)) IO.cede else `𝟎`
+        _ <- `𝟎`
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
