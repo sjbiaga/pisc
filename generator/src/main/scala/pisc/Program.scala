@@ -31,6 +31,7 @@ package generator
 
 import java.util.UUID
 
+import scala.annotation.tailrec
 import scala.meta._
 
 import parser.Calculus._
@@ -42,47 +43,34 @@ object Program {
     bind.map { case (bind, sum) => defn(bind, sum).toString }
 
 
-  type Code = (Boolean, Option[String])
-  //           ^^^^^^^  ^^^^^^^^^^^^^
-  //           for-c.,  semaphore
-
-
   def defn(bind: `()`, sum: Sum): Defn.Def = {
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
     Defn.Def(Nil,
-             \(identifier), `()`(params: _*), `: IO[Unit]`,
-             body(false -> None, sum).left.get)
+             identifier, `()`(params: _*), `: IO[Unit]`,
+             body(None, sum))
   }
 
 
-  def body(code: Code, node: AST): Either[Term.ForYield, List[Enumerator.Generator]] = {
-    val (comprehension, semaphore) = code
+  def body(semaphore: Option[String], node: AST): List[Enumerator.Generator] = {
+    var * = List[Enumerator.Generator]()
 
     node match {
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
       case it @ Sum(operand, _, _*) =>
-        var * = List[Enumerator.Generator]()
-
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val cs = false -> Some(uuid)
+        val sem = Some(uuid)
 
-        * :+= `* <- Semaphore[IO](1)`(cs._2.get)
+        * :+= `* <- Semaphore[IO](1)`(sem.get)
 
-        * :+= `_ <- IO.race ( *, … )`(body(cs, operand).left.get ->
-                                      body(cs, Sum(it.choices.tail)).left.get)
-
-        if (comprehension)
-          Right(*)
-        else
-          Left(`for * yield ()`(* : _*))
+        * :+= `_ <- IO.race ( *, … )`(body(sem, operand), body(sem, Sum(it.choices.tail)))
 
       case Sum(operand, _*) =>
-        body(code, operand)
+        * = body(semaphore, operand)
 
       case _: Sum => ???
 
@@ -92,33 +80,21 @@ object Program {
       // COMPOSITION ///////////////////////////////////////////////////////////
 
       case it @ Par(_, _, _*) =>
-        var * = List[Enumerator.Generator]()
-
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val cs = false -> None
-
-        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(cs, _).left.get)
+        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(None, _))
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
-        if (comprehension)
-          Right(*)
-        else
-          Left(`for * yield ()`(* : _*))
-
       case Par(operand, _*) =>
-        body(code, operand)
-
-      case _: Par if comprehension =>
-        Right(Nil)
+        * = body(semaphore, operand)
 
       case _: Par =>
-        var * = List[Enumerator.Generator](`_ <- IO.unit`)
+        * :+= `_ <- IO.unit`
 
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        Left(`for * yield ()`(* : _*))
+        * = `_ <- *`(`for * yield ()`(* : _*))
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -126,10 +102,10 @@ object Program {
       // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
 
       case `ν`(Opd(Symbol(name))) =>
-        Right(`* <- *`(name -> "ν"))
+        * = `* <- *`(name -> "ν")
 
       case `τ` =>
-        Right(`_ <- *`("τ"))
+        * = `_ <- *`("τ")
 
 
       case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
@@ -137,48 +113,40 @@ object Program {
       case IO(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case IO(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
-        Right(`_ <- *`(s"$ch($arg)".parse[Term].get))
+        * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
       case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
-        Right(`_ <- *`(s"$ch($expr)".parse[Term].get))
+        * = `_ <- *`(s"$ch($expr)".parse[Term].get)
 
       case IO(Opd(Symbol(ch)), Opd(arg), false) =>
-        Right(`_ <- *`(s"$ch($arg)".parse[Term].get))
+        * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
       case IO(Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
-        Right(`* <- *`(par -> s"$ch()".parse[Term].get))
+        * = `* <- *`(par -> s"$ch()".parse[Term].get)
 
 
       case `[]`(((Opd(lhs), Opd(rhs)), mismatch), sum) =>
-        val cs = false -> None
-
         if (mismatch)
-          Right(`_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(cs, sum).left.get)))
+          * = `_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(None, sum)))
         else
-          Right(`_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(cs, sum).left.get)))
+          * = `_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(None, sum)))
 
 
       case `?:`(((Opd(lhs), Opd(rhs)), mismatch), t, f) =>
-        val cs = false -> None
-
         if (mismatch)
-          Right(`_ <- *`(`if !* then … else …`(===(lhs -> rhs), body(cs, f).left.get -> body(cs, t).left.get)))
+          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(None, f), body(None, t)))
         else
-          Right(`_ <- *`(`if * then … else …`(===(lhs -> rhs), body(cs, t).left.get -> body(cs, f).left.get)))
+          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(None, t), body(None, f)))
 
 
       case `!`(sum) =>
-        var * = List[Enumerator.Generator]()
-
-        val cs = false -> None
-
         val name = uuid
 
         val it =
           `for * yield ()` {
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
-                body(cs, sum).left.get,
+                body(None, sum),
                 `for * yield ()`(`_ <- IO.unit`, `_ <- *`(name))
               )
             }
@@ -187,16 +155,12 @@ object Program {
         * :+= `* <- *`("pi", `IO { lazy val *: IO[Unit] = …; * }`(name, it))
         * :+= `_ <- *`("pi")
 
-        Right(*)
-
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
       case `()`(Opd(Symbol(identifier)), qual, params @ _*) =>
-        var * = List[Enumerator.Generator]()
-
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
         val args = params.map {
@@ -214,11 +178,6 @@ object Program {
         else
           * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})".parse[Term].get)
 
-        if (comprehension)
-          Right(*)
-        else
-          Left(`for * yield ()`(* : _*))
-
       case _: `()` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// agent call //
@@ -228,29 +187,22 @@ object Program {
       // followed possibly either by agent call or another process expression //
 
       case Seq(ast, it @ _*) if it.isEmpty =>
-        body(code, ast)
+        * = body(semaphore, ast)
 
       case Seq(ast, it @ _*) =>
-        var * = List[Enumerator.Generator]()
-
-        if (!comprehension) * :+= `_ <- IO.unit`
-
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val cs = true -> None
+        * = (it :+ ast).foldLeft(*)(_ ++ body(None, _))
 
-        * = (it :+ ast).foldLeft(*)(_ ++ body(cs, _).right.get)
-
-        if (comprehension)
-          Right(*)
-        else
-          Left(`for * yield ()`(* : _*))
+        * = `_ <- *`(`for * yield ()`(* : _*))
 
       ////////////////////////////////////////////////////////////// sequence //
 
       case it => ???
 
     }
+
+    *
 
   }
 
@@ -269,6 +221,11 @@ object Program {
 
 
   @inline implicit def \(* : Enumerator.Generator): List[Enumerator.Generator] = * :: Nil
+
+  @tailrec
+  @inline implicit def \(* : List[Enumerator.Generator]): Term.ForYield =
+    if (*.nonEmpty) `for * yield ()`(* : _*)
+    else \(`_ <- IO.unit`)
 
   @inline implicit def \(* : String): Term.Name = Term.Name(*)
 
@@ -295,7 +252,7 @@ object Program {
     if (*.size == 0)
       Pat.Wildcard()
     else if (*.size == 1)
-      Pat.Var(\(*.head))
+      Pat.Var(*.head)
     else
       Pat.Tuple(*.map(\(_)).map(Pat.Var(_)).toList)
 
@@ -312,34 +269,44 @@ object Program {
 
 
   def `_ <- IO.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(\("IO"), \(*)))
+    Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
 
 
+  @tailrec
   def `for * yield ()`(* : Enumerator.Generator*): Term.ForYield =
-    Term.ForYield(*.toList, Lit.Unit())
+    if (*.nonEmpty)
+      if (*.size == 1)
+        *.head match {
+          case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
+            it
+          case _ =>
+            Term.ForYield(*.toList, Lit.Unit())
+        }
+      else Term.ForYield(*.toList, Lit.Unit())
+    else `for * yield ()`(`_ <- IO.unit`)
 
 
   def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(\(*), \("acquire")))
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
 
 
   def `* <- Semaphore[IO](1)`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
+                         Term.Apply(Term.ApplyType("Semaphore",
                                                    Type.ArgClause(Type.Name("IO") :: Nil)),
                                     Term.ArgClause(Lit.Int(1) :: Nil, None)
                          )
     )
 
 
-  def `_ <- IO.race ( *, … )`(* : (Term.ForYield, Term.ForYield)): Enumerator.Generator =
-    `_ <- *`(Term.Apply(Term.Select(\("IO"), \("race")),
-                        Term.ArgClause(List(*._1, *._2), None)))
+  def `_ <- IO.race ( *, … )`(* : Term.ForYield*): Enumerator.Generator =
+    `_ <- *`(Term.Apply(Term.Select("IO", "race"),
+                        Term.ArgClause(List(*(0), *(0)), None)))
 
 
   def `( *, … ).parMapN { (_, …) => }`(* : Term.ForYield*): Term =
     Term.Apply(
-      Term.Select(Term.Tuple(*.toList), \("parMapN")),
+      Term.Select(Term.Tuple(*.toList), "parMapN"),
       Term.ArgClause(Term.Block(
                        Term.Function(
                          Term.ParamClause(
@@ -355,21 +322,18 @@ object Program {
 
 
   def `if * then IO.cede else …`(* : Term, `…`: Term.ForYield): Term.If =
-    Term.If(*, Term.Select(\("IO"), \("cede")), `…`, Nil)
+    Term.If(*, Term.Select("IO", "cede"), `…`, Nil)
 
   def `if !* then IO.cede else …`(* : Term, `…`: Term.ForYield): Term.If =
-    Term.If(Term.ApplyUnary(\("!"), *), Term.Select(\("IO"), \("cede")), `…`, Nil)
+    Term.If(Term.ApplyUnary("!", *), Term.Select("IO", "cede"), `…`, Nil)
 
 
-  def `if * then … else …`(* : Term, `…`: (Term.ForYield, Term.ForYield)): Term.If =
-    Term.If(*, `…`._1, `…`._2, Nil)
-
-  def `if !* then … else …`(* : Term, `…`: (Term.ForYield, Term.ForYield)): Term.If =
-    Term.If(Term.ApplyUnary(\("!"), *), `…`._1, `…`._2, Nil)
+  def `if * then … else …`(* : Term, `…`: Term.ForYield*): Term.If =
+    Term.If(*, `…`(0), `…`(1), Nil)
 
 
   def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term.ForYield): Term =
-    Term.Apply(\("IO"),
+    Term.Apply("IO",
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,

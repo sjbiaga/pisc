@@ -48,62 +48,71 @@ object π:
 
   def ms = (10 + math.abs(gen.nextInt % 10)).milliseconds
 
-  def Main(): IO[Unit] = for {
-    _ <- IO.unit
-    c <- IO.ref(0)
-    x <- ν
-    _ <- (
-      for {
-        _ <- IO.unit
-        pi <- IO {
-          lazy val `09c15fc0-187d-4019-b2d8-de197a5e22ac`: IO[Unit] = {
-            for (
-              _ <- (
-                for {
-                  _ <- IO.unit
-                  i <- c.get
-                  _ <- IO.sleep(ms)
-                  _ <- x(i)
-                  _ <- IO.println(s"out $i")
-                } yield (),
-                for {
-                  _ <- IO.unit
-                  _ <- c.update(_ + 1 min 50)
-                  i <- c.get
-                  _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `09c15fc0-187d-4019-b2d8-de197a5e22ac`
-                } yield ()
-              ).parMapN { (_, _) => }
-            ) yield ()
-          }
-          `09c15fc0-187d-4019-b2d8-de197a5e22ac`
-        }
-        _ <- pi
-      } yield (),
-      for {
-        _ <- IO.unit
-        pi <- IO {
-          lazy val `48fa7c57-9bef-445f-ae20-c64811e88e3b`: IO[Unit] = {
-            for (
-              _ <- (
-                for {
-                  _ <- IO.unit
-                  _ <- IO.sleep(ms)
-                  y <- x()
-                  _ <- IO.println(s"in $y")
-                } yield (),
-                for {
-                  _ <- IO.unit
-                  i <- c.get
-                  _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `48fa7c57-9bef-445f-ae20-c64811e88e3b`
-                } yield ()
-              ).parMapN { (_, _) => }
-            ) yield ()
-          }
-          `48fa7c57-9bef-445f-ae20-c64811e88e3b`
-        }
-        _ <- pi
-      } yield ()
-    ).parMapN { (_, _) => }
-  } yield ()
+  def Main(): IO[Unit] = for (
+    _ <- for {
+      c <- IO.ref(0)
+      x <- ν
+      _ <- (
+        for (
+          _ <- for {
+            pi <- IO {
+              lazy val `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`: IO[Unit] = {
+                for (
+                  _ <- (
+                    for (
+                      _ <- for {
+                        i <- c.get
+                        _ <- IO.sleep(ms)
+                        _ <- x(i)
+                        _ <- IO.println(s"out $i")
+                        _ <- for (_ <- IO.unit) yield ()
+                      } yield ()
+                    ) yield (),
+                    for {
+                      _ <- IO.unit
+                      _ <- c.update(_ + 1 min 50)
+                      i <- c.get
+                      _ <- if i == 50 then IO.never else IO.cede
+                      _ <- `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`
+                    } yield ()
+                  ).parMapN { (_, _) => }
+                ) yield ()
+              }
+              `d0205b8d-8d93-4c34-9fc2-a4c209bde96c`
+            }
+            _ <- pi
+            _ <- for (_ <- IO.unit) yield ()
+          } yield ()
+        ) yield (),
+        for (
+          _ <- for {
+            pi <- IO {
+              lazy val `a561e3a7-a823-48c2-948f-c27f43d573cd`: IO[Unit] = {
+                for (
+                  _ <- (
+                    for (
+                      _ <- for {
+                        _ <- IO.sleep(ms)
+                        y <- x()
+                        _ <- IO.println(s"in $y")
+                        _ <- for (_ <- IO.unit) yield ()
+                      } yield ()
+                    ) yield (),
+                    for {
+                      _ <- IO.unit
+                      i <- c.get
+                      _ <- if i == 50 then IO.never else IO.cede
+                      _ <- `a561e3a7-a823-48c2-948f-c27f43d573cd`
+                    } yield ()
+                  ).parMapN { (_, _) => }
+                ) yield ()
+              }
+              `a561e3a7-a823-48c2-948f-c27f43d573cd`
+            }
+            _ <- pi
+            _ <- for (_ <- IO.unit) yield ()
+          } yield ()
+        ) yield ()
+      ).parMapN { (_, _) => }
+    } yield ()
+  ) yield ()

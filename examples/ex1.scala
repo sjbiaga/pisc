@@ -43,18 +43,17 @@ object π:
   import Π._
 
   def Main(): IO[Unit] = for {
-    _ <- IO.unit
     x <- ν
     y <- ν
     _ <- (
       for {
-        _ <- IO.unit
         _ <- x(y)
+        _ <- for (_ <- IO.unit) yield ()
       } yield (),
       for {
-        _ <- IO.unit
         z <- x()
         _ <- if (!(y === z)) IO.cede else for (_ <- IO.unit) yield ()
+        _ <- for (_ <- IO.unit) yield ()
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()

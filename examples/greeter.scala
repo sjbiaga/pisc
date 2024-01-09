@@ -45,48 +45,36 @@ object π:
   given Conversion[`()`, String] = _.name.asInstanceOf[String]
 
   def Main(): IO[Unit] = for {
-    _      <- IO.unit
     stdin  <- ν
     stdout <- ν
     _ <- (
       for {
-        _    <- IO.unit
         _    <- stdout("What's your name?\n")
         name <- stdin()
         _    <- Chooser(stdout, name)
       } yield (),
       for {
-        _        <- IO.unit
         prompt   <- stdout()
         _        <- IO.print(prompt)
         sc_name  <- IO { scala.io.StdIn.readLine }
         _        <- stdin(sc_name)
         pi_greet <- stdout()
         _        <- IO.print(pi_greet)
+        _        <- for (_ <- IO.unit) yield ()
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `c4562309-69e3-40b2-866c-fbedafc2ceaf` <- Semaphore[IO](1)
+    `14b17611-2176-48f5-af1b-ba6a085f5ee8` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `c4562309-69e3-40b2-866c-fbedafc2ceaf`.acquire
+        _ <- `14b17611-2176-48f5-af1b-ba6a085f5ee8`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `c4562309-69e3-40b2-866c-fbedafc2ceaf`.acquire
-        `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d` <- Semaphore[IO](1)
-        _ <- IO.race(
-          for {
-            _ <- `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d`.acquire
-            _ <- `Greeter"`(stdout, name)
-          } yield (),
-          for {
-            _ <- `c3e5b0c5-daa4-4d39-acd5-3d7f7191d26d`.acquire
-            _ <- `Greeter"'`(stdout, name)
-          } yield ()
-        )
+        _ <- `14b17611-2176-48f5-af1b-ba6a085f5ee8`.acquire
+        _ <- `Greeter'`(stdout, name)
       } yield ()
     )
   } yield ()
@@ -94,94 +82,94 @@ object π:
   def `Greeter'`(stdout: `()`, name: `()`): IO[Unit] = for (
     _ <- (
       for {
-        _ <- IO.unit
         _ <-
           if (!(name.substring(0, 1).toUpperCase === "Q")) IO.cede
           else {
             for {
-              _ <- IO.unit
               _ <- stdout("That's an unusual name.\n")
+              _ <- for (_ <- IO.unit) yield ()
             } yield ()
           }
+        _ <- for (_ <- IO.unit) yield ()
       } yield (),
       for {
-        _ <- IO.unit
         _ <-
           if (!(name === "Voldemort")) IO.cede
           else {
             for {
-              _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+              _ <- for (_ <- IO.unit) yield ()
             } yield ()
           }
+        _ <- for (_ <- IO.unit) yield ()
       } yield (),
       for {
-        _ <- IO.unit
         _ <-
           if (name.substring(0, 1).toUpperCase === "Q") IO.cede
           else {
             for {
-              _ <- IO.unit
               _ <-
                 if (name === "Voldemort") IO.cede
                 else {
                   for {
-                    _ <- IO.unit
                     _ <- stdout(s"Hello $name!\n")
+                    _ <- for (_ <- IO.unit) yield ()
                   } yield ()
                 }
+              _ <- for (_ <- IO.unit) yield ()
             } yield ()
           }
+        _ <- for (_ <- IO.unit) yield ()
       } yield ()
     ).parMapN { (_, _, _) => }
   ) yield ()
 
   def `Greeter"`(stdout: `()`, name: `()`): IO[Unit] = for {
-    _ <- IO.unit
     _ <-
       if (name.substring(0, 1).toUpperCase === "Q") for {
-        _ <- IO.unit
         _ <- stdout("That's an unusual name.\n")
+        _ <- for (_ <- IO.unit) yield ()
       } yield ()
       else {
         for {
-          _ <- IO.unit
           _ <-
             if (name === "Voldemort") for {
-              _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+              _ <- for (_ <- IO.unit) yield ()
             } yield ()
             else {
               for {
-                _ <- IO.unit
                 _ <- stdout(s"Hello $name!\n")
+                _ <- for (_ <- IO.unit) yield ()
               } yield ()
             }
+          _ <- for (_ <- IO.unit) yield ()
         } yield ()
       }
+    _ <- for (_ <- IO.unit) yield ()
   } yield ()
 
   def `Greeter"'`(stdout: `()`, name: `()`): IO[Unit] = for {
-    _ <- IO.unit
     _ <-
       if (name.substring(0, 1).toUpperCase === "Q") for {
-        _ <- IO.unit
         _ <- stdout("That's an unusual name.\n")
+        _ <- for (_ <- IO.unit) yield ()
       } yield ()
       else {
         for {
-          _ <- IO.unit
           _ <-
             if (name === "Voldemort") for {
-              _ <- IO.unit
               _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+              _ <- for (_ <- IO.unit) yield ()
             } yield ()
             else {
               for {
-                _ <- IO.unit
                 _ <- stdout(s"Hello $name!\n")
+                _ <- for (_ <- IO.unit) yield ()
               } yield ()
             }
+          _ <- for (_ <- IO.unit) yield ()
         } yield ()
       }
+    _ <- for (_ <- IO.unit) yield ()
   } yield ()
