@@ -50,29 +50,29 @@ class Calculus extends Pi:
         do
           sum = ast
           ast = flatten(sum)
-        bind -> ast.asInstanceOf[Sum]
+        bind -> ast.asInstanceOf[`+`]
     }
 
-  def choice: Parser[(Sum, Names)] = "("~>choice<~")" |
+  def choice: Parser[(`+`, Names)] = "("~>choice<~")" |
     rep1sep(parallel, "+") ^^ { ps =>
-      Sum(ps.map(_._1): _*) -> ps.map(_._2).reduce(_ ++ _)
+      `+`(ps.map(_._1): _*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel: Parser[(Par, Names)] = "("~>parallel<~")" |
+  def parallel: Parser[(`|`, Names)] = "("~>parallel<~")" |
     rep1sep(sequential, "|") ^^ { ss =>
-      Par(ss.map(_._1): _*) -> ss.map(_._2).reduce(_ ++ _)
+      `|`(ss.map(_._1): _*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
-  def sequential: Parser[(Seq, Names)] =
+  def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
       case (pre, _) ~ None if pre.isEmpty =>
         throw EmptyParsingException
-      case pre ~ Some((sum: Sum, free: Names)) =>
-        Seq(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
+      case pre ~ Some((sum: `+`, free: Names)) =>
+        `.`(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ Some((call: `()`, free: Names)) =>
-        Seq(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
+        `.`(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        Seq(`𝟎`, pre._1: _*) -> pre._2._2
+        `.`(`𝟎`, pre._1: _*) -> pre._2._2
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -93,12 +93,12 @@ class Calculus extends Pi:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = `π` |
+  def prefix: Parser[(Pre, (Names, Names))] = `π.` |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch =>
-        `ν`(ch) -> (Names(ch), Names())
+        ν(ch) -> (Names(ch), Names())
     } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
@@ -116,7 +116,7 @@ class Calculus extends Pi:
       case (sum, free) => `!`(sum) -> (Names(), free)
     }
 
-  def test: Parser[((Opd, Opd), Boolean)] = "("~>test<~")" |
+  def test: Parser[((λ, λ), Boolean)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
       case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
     }
@@ -128,9 +128,9 @@ class Calculus extends Pi:
       case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
       case qual ~ id ~ Some(params) =>
-        `()`(Opd(Symbol(id)), qual, params: _*) -> Names(params: _*)
+        `()`(λ(Symbol(id)), qual, params: _*) -> Names(params: _*)
       case qual ~ id ~ _ =>
-        `()`(Opd(Symbol(id)), qual) -> Names()
+        `()`(λ(Symbol(id)), qual) -> Names()
     }
 
   /**
@@ -152,35 +152,35 @@ class Calculus extends Pi:
 
 object Calculus extends Calculus:
 
-  type Bind = (`()`, Sum)
+  type Bind = (`()`, `+`)
 
   sealed trait AST extends Any
 
-  case class Sum(choices: Par*) extends AnyVal with AST
+  case class `+`(choices: `|`*) extends AnyVal with AST
 
-  val `𝟎` = Sum(Par())
+  val `𝟎` = `+`(`|`())
 
-  case class Par(components: Seq*) extends AnyVal with AST
+  case class `|`(components: `.`*) extends AnyVal with AST
 
-  case class Seq(process: AST, prefixes: Pre*) extends AST
+  case class `.`(process: AST, prefixes: Pre*) extends AST
 
   sealed trait Pre extends Any with AST
 
-  case class `ν`(name: Opd) extends AnyVal with Pre // forcibly
+  case class ν(name: λ) extends AnyVal with Pre // forcibly
 
-  case object `τ` extends Pre
+  case object τ extends Pre
 
-  case class IO(channel: Opd, name: Opd, polarity: Boolean) extends Pre
+  case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
 
-  case class `[]`(cond: ((Opd, Opd), Boolean), sum: Sum) extends Pre // forcibly
+  case class `[]`(cond: ((λ, λ), Boolean), sum: `+`) extends Pre // forcibly
 
-  case class `?:`(cond: ((Opd, Opd), Boolean), t: Sum, f: Sum) extends Pre // forcibly
+  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends Pre // forcibly
 
-  case class `!`(sum: Sum) extends Pre // forcibly
+  case class `!`(sum: `+`) extends Pre // forcibly
 
-  case class `()`(identifier: Opd, qual: List[String], params: Opd*) extends AST
+  case class `()`(identifier: λ, qual: List[String], params: λ*) extends AST
 
-  case class Opd(value: AnyRef) extends AST:
+  case class λ(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
@@ -218,49 +218,49 @@ object Calculus extends Calculus:
 
   val flatten: AST => AST = _ match
 
-    case Sum(Par(Seq(sum: Sum, ps*), ss*), it*)
+    case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
-      val lhs = flatten(sum).asInstanceOf[Sum]
+      val lhs = flatten(sum).asInstanceOf[`+`]
       if it.isEmpty
       then
-        Sum(lhs.choices: _*)
+        `+`(lhs.choices: _*)
       else
-        val rhs = flatten(Sum(it: _*)).asInstanceOf[Sum]
-        Sum((lhs.choices ++ rhs.choices): _*)
+        val rhs = flatten(`+`(it: _*)).asInstanceOf[`+`]
+        `+`((lhs.choices ++ rhs.choices): _*)
 
-    case Sum(lhs, it*)
+    case `+`(lhs, it*)
         if it.nonEmpty =>
-      val rhs = flatten(Sum(it: _*)).asInstanceOf[Sum]
-      Sum((lhs +: rhs.choices): _*)
+      val rhs = flatten(`+`(it: _*)).asInstanceOf[`+`]
+      `+`((lhs +: rhs.choices): _*)
 
-    case Sum(par, _*) =>
-      Sum(flatten(par).asInstanceOf[Par])
+    case `+`(par, _*) =>
+      `+`(flatten(par).asInstanceOf[`|`])
 
-    case Par(Seq(Sum(Par(ss*), p*), ps*), it*)
+    case `|`(`.`(`+`(`|`(ss*), p*), ps*), it*)
         if p.isEmpty && ps.isEmpty =>
       if it.isEmpty
       then
-        Par(ss: _*)
+        `|`(ss: _*)
       else
-        val rhs = flatten(Par(it: _*)).asInstanceOf[Par]
-        Par((ss ++ rhs.components): _*)
+        val rhs = flatten(`|`(it: _*)).asInstanceOf[`|`]
+        `|`((ss ++ rhs.components): _*)
 
-    case Par(lhs, it*)
+    case `|`(lhs, it*)
         if it.nonEmpty =>
-      val rhs = flatten(Par(it: _*)).asInstanceOf[Par]
-      Par((lhs +: rhs.components): _*)
+      val rhs = flatten(`|`(it: _*)).asInstanceOf[`|`]
+      `|`((lhs +: rhs.components): _*)
 
-    case Par(Seq(ast, ps*), _*) =>
-      Par(Seq(flatten(ast), ps: _*))
+    case `|`(`.`(ast, ps*), _*) =>
+      `|`(`.`(flatten(ast), ps: _*))
 
     case `!`(sum) =>
-      `!`(flatten(sum).asInstanceOf[Sum])
+      `!`(flatten(sum).asInstanceOf[`+`])
 
     case `[]`(cond, sum) =>
-      `[]`(cond, flatten(sum).asInstanceOf[Sum])
+      `[]`(cond, flatten(sum).asInstanceOf[`+`])
 
     case `?:`(cond, t, f) =>
-      `?:`(cond, flatten(t).asInstanceOf[Sum], flatten(f).asInstanceOf[Sum])
+      `?:`(cond, flatten(t).asInstanceOf[`+`], flatten(f).asInstanceOf[`+`])
 
     case it => it
 

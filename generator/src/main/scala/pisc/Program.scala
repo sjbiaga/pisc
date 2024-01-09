@@ -43,7 +43,7 @@ object Program {
     bind.map { case (bind, sum) => defn(bind, sum).toString }
 
 
-  def defn(bind: `()`, sum: Sum): Defn.Def = {
+  def defn(bind: `()`, sum: `+`): Defn.Def = {
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
@@ -61,36 +61,36 @@ object Program {
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
-      case it @ Sum(operand, _, _*) =>
+      case it @ `+`(operand, _, _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        implicit val sem = Some(uuid)
+        implicit val sem = Some(uid)
 
         * :+= `* <- Semaphore[IO](1)`(sem.get)
 
-        * :+= `_ <- IO.race ( *, … )`(body(operand), body(Sum(it.choices.tail)))
+        * :+= `_ <- IO.race ( *, … )`(body(operand), body(`+`(it.choices.tail)))
 
-      case Sum(operand, _*) =>
+      case `+`(operand, _*) =>
         * = body(operand)
 
-      case _: Sum => ???
+      case _: `+` => ???
 
       ///////////////////////////////////////////////////////////// summation //
 
 
       // COMPOSITION ///////////////////////////////////////////////////////////
 
-      case it @ Par(_, _, _*) =>
+      case it @ `|`(_, _, _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
         val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
-      case Par(operand, _*) =>
+      case `|`(operand, _*) =>
         * = body(operand)
 
-      case _: Par =>
+      case _: `|` =>
         * :+= `_ <- IO.unit`
 
         semaphore.map(* :+= `_ <- *.acquire`(_))
@@ -102,38 +102,38 @@ object Program {
 
       // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
 
-      case `ν`(Opd(Symbol(name))) =>
+      case ν(λ(Symbol(name))) =>
         * = `* <- *`(name -> "ν")
 
       case `τ` =>
         * = `_ <- *`("τ")
 
 
-      case IO(Opd(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
+      case π(λ(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
 
-      case IO(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
+      case π(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
-      case IO(Opd(Symbol(ch)), Opd(Symbol(arg)), false) =>
+      case π(λ(Symbol(ch)), λ(Symbol(arg)), false) =>
         * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
-      case IO(Opd(Symbol(ch)), Opd(Expr(expr)), false) =>
+      case π(λ(Symbol(ch)), λ(Expr(expr)), false) =>
         * = `_ <- *`(s"$ch($expr)".parse[Term].get)
 
-      case IO(Opd(Symbol(ch)), Opd(arg), false) =>
+      case π(λ(Symbol(ch)), λ(arg), false) =>
         * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
-      case IO(Opd(Symbol(ch)), Opd(Symbol(par)), true) =>
+      case π(λ(Symbol(ch)), λ(Symbol(par)), true) =>
         * = `* <- *`(par -> s"$ch()".parse[Term].get)
 
 
-      case `[]`(((Opd(lhs), Opd(rhs)), mismatch), sum) =>
+      case `[]`(((λ(lhs), λ(rhs)), mismatch), sum) =>
         if (mismatch)
           * = `_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(sum)()))
         else
           * = `_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(sum)()))
 
 
-      case `?:`(((Opd(lhs), Opd(rhs)), mismatch), t, f) =>
+      case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
         if (mismatch)
           * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
         else
@@ -141,32 +141,32 @@ object Program {
 
 
       case `!`(sum) =>
-        val name = uuid
+        val uuid = uid
 
         val it =
           `for * yield ()` {
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
                 body(sum)(),
-                `for * yield ()`(`_ <- IO.unit`, `_ <- *`(name))
+                `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
               )
             }
           }
 
-        * :+= `* <- *`("pi", `IO { lazy val *: IO[Unit] = …; * }`(name, it))
-        * :+= `_ <- *`("pi")
+        * :+= `* <- *`("`$uuid`", `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
+        * :+= `_ <- *`("`$uuid`")
 
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
-      case `()`(Opd(Symbol(identifier)), qual, params @ _*) =>
+      case `()`(λ(Symbol(identifier)), qual, params @ _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
         val args = params.map {
-          case Opd(Symbol(name)) => name
-          case Opd(value) =>
+          case λ(Symbol(name)) => name
+          case λ(value) =>
             value match {
               case it: BigDecimal => s"BigDecimal($it)"
               case it: String => s"$it"
@@ -187,10 +187,10 @@ object Program {
       // SEQUENCE //////////////////////////////////////////////////////////////
       // followed possibly either by agent call or another process expression //
 
-      case Seq(ast, it @ _*) if it.isEmpty =>
+      case `.`(ast, it @ _*) if it.isEmpty =>
         * = body(ast)
 
-      case Seq(ast, it @ _*) =>
+      case `.`(ast, it @ _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
         * = (it :+ ast).foldLeft(*)(_ ++ body(_)())
@@ -207,7 +207,7 @@ object Program {
 
   }
 
-  def uuid = UUID.randomUUID.toString
+  def uid = UUID.randomUUID.toString
 
   def === : ((AnyRef, AnyRef)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get

@@ -39,7 +39,7 @@ import Calculus._
 
 class Pi extends JavaTokenParsers:
 
-  def `π`: Parser[(Pre, (Names, Names))] =
+  def `π.`: Parser[(Pre, (Names, Names))] =
     "τ"<~"." ^^ { _ => // silent prefix
       `τ` -> (Names(), Names())
     } |
@@ -47,7 +47,7 @@ class Pi extends JavaTokenParsers:
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch ~ _ ~ arg ~ _ =>
-        IO(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
+        π(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
     } |
     name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -55,13 +55,13 @@ class Pi extends JavaTokenParsers:
       case _ ~ _ ~ par ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
       case ch ~ _ ~ par ~ _ =>
-        IO(ch, par, polarity = true) -> (Names(par), Names(ch))
+        π(ch, par, polarity = true) -> (Names(par), Names(ch))
     }
 
-  def name: Parser[Opd] = ident ^^ { Opd.apply compose Symbol.apply } |
-                          floatingPointNumber ^^ { Opd.apply } |
-                          stringLiteral ^^ { Opd.apply } |
-                          expression ^^ { Opd.apply compose Expr.apply }
+  def name: Parser[λ] = ident ^^ { λ.apply compose Symbol.apply } |
+                        floatingPointNumber ^^ { λ.apply } |
+                        stringLiteral ^^ { λ.apply } |
+                        expression ^^ { λ.apply compose Expr.apply }
 
   /**
    * Channel names start with lower case.
@@ -84,7 +84,7 @@ object Pi extends Pi:
   type Names = Set[Symbol]
 
   object Names:
-    def apply(os: Opd*): Names = LinkedHashSet.from(os
+    def apply(os: λ*): Names = LinkedHashSet.from(os
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
@@ -92,5 +92,5 @@ object Pi extends Pi:
   class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class PrefixChannelParsingException(name: Opd)
+  case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
