@@ -31,6 +31,7 @@ package parser
 
 import scala.collection.Set
 import scala.collection.mutable.LinkedHashSet
+import scala.io.Source
 import scala.util.parsing.combinator._
 
 import Pi._
@@ -79,7 +80,7 @@ class Pi extends JavaTokenParsers:
     """[/][*].*?[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
 
 
-object Pi extends Pi:
+object Pi extends Calculus:
 
   type Names = Set[Symbol]
 
@@ -94,3 +95,23 @@ object Pi extends Pi:
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+
+
+  def apply(source: Source): List[Either[String, Bind]] = source
+    .getLines()
+    .foldLeft(List[String]("")) {
+      case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
+      case (r, l) => r :+ l
+    }
+    .filterNot(_.matches("^ *#.*")) // commented lines
+    .filterNot(_.isBlank) // empty lines
+    .map { it =>
+      if it.matches("^ *@.*")
+      then // Scala
+        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+      else // Pi
+        parseAll(equation, it) match
+          case Success(result, _) => Right(result)
+          case failure: NoSuccess => scala.sys.error(failure.msg)
+    }
+    .toList

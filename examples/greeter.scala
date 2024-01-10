@@ -68,22 +68,22 @@ object π:
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    `437ef433-937a-4066-9b38-4cd945883db0` <- Semaphore[IO](1)
+    `376741ed-d4d5-4edc-a7a3-9b1aacf1430f` <- Semaphore[IO](1)
     _ <- IO.race(
       for {
-        _ <- `437ef433-937a-4066-9b38-4cd945883db0`.acquire
+        _ <- `376741ed-d4d5-4edc-a7a3-9b1aacf1430f`.acquire
         _ <- `Greeter'`(stdout, name)
       } yield (),
       for {
-        _ <- `437ef433-937a-4066-9b38-4cd945883db0`.acquire
-        `e5526054-8f9f-437e-b8d0-91c9f9057152` <- Semaphore[IO](1)
+        _ <- `376741ed-d4d5-4edc-a7a3-9b1aacf1430f`.acquire
+        `9b8acfae-2224-45ab-a770-4d670583870d` <- Semaphore[IO](1)
         _ <- IO.race(
           for {
-            _ <- `e5526054-8f9f-437e-b8d0-91c9f9057152`.acquire
+            _ <- `9b8acfae-2224-45ab-a770-4d670583870d`.acquire
             _ <- `Greeter"`(stdout, name)
           } yield (),
           for {
-            _ <- `e5526054-8f9f-437e-b8d0-91c9f9057152`.acquire
+            _ <- `9b8acfae-2224-45ab-a770-4d670583870d`.acquire
             _ <- `Greeter"'`(stdout, name)
           } yield ()
         )
@@ -95,33 +95,30 @@ object π:
     _ <- (
       for {
         _ <-
-          if (!(name.substring(0, 1).toUpperCase === "Q")) IO.cede
-          else {
-            for {
-              _ <- stdout("That's an unusual name.\n")
-              _ <- `𝟎`
-            } yield ()
-          }
+          if (name.substring(0, 1).toUpperCase === "Q") for {
+            _ <- stdout("That's an unusual name.\n")
+            _ <- `𝟎`
+          } yield ()
+          else `𝟎`
         _ <- `𝟎`
       } yield (),
       for {
         _ <-
-          if (!(name === "Voldemort")) IO.cede
-          else {
-            for {
-              _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
-              _ <- `𝟎`
-            } yield ()
-          }
+          if (name === "Voldemort") for {
+            _ <- stdout("WARNING! LORD VOLDEMORT IS HERE!\n")
+            _ <- `𝟎`
+          } yield ()
+          else `𝟎`
         _ <- `𝟎`
       } yield (),
       for {
         _ <-
-          if (name.substring(0, 1).toUpperCase === "Q") IO.cede
-          else {
+          if (name.substring(0, 1).toUpperCase === "Q") {
+            `𝟎`
+          } else {
             for {
               _ <-
-                if (name === "Voldemort") IO.cede
+                if (name === "Voldemort") `𝟎`
                 else {
                   for {
                     _ <- stdout(s"Hello $name!\n")

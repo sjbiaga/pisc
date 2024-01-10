@@ -64,7 +64,7 @@ object Program {
       case it @ `+`(operand, _, _*) =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        implicit val sem = Some(uid)
+        implicit val sem = Some(id)
 
         * :+= `* <- Semaphore[IO](1)`(sem.get)
 
@@ -126,13 +126,6 @@ object Program {
         * = `* <- *`(par -> s"$ch()".parse[Term].get)
 
 
-      case `[]`(((λ(lhs), λ(rhs)), mismatch), sum) =>
-        if (mismatch)
-          * = `_ <- *`(`if * then IO.cede else …`(===(lhs -> rhs), body(sum)()))
-        else
-          * = `_ <- *`(`if !* then IO.cede else …`(===(lhs -> rhs), body(sum)()))
-
-
       case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
         if (mismatch)
           * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
@@ -141,7 +134,7 @@ object Program {
 
 
       case `!`(sum) =>
-        val uuid = uid
+        val uuid = id
 
         val it =
           `for * yield ()` {
@@ -153,8 +146,8 @@ object Program {
             }
           }
 
-        * :+= `* <- *`("`$uuid`", `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * :+= `_ <- *`("`$uuid`")
+        * :+= `* <- *`(s"$uuid", `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
+        * :+= `_ <- *`(s"$uuid")
 
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
@@ -207,7 +200,7 @@ object Program {
 
   }
 
-  def uid = UUID.randomUUID.toString
+  def id = UUID.randomUUID.toString
 
   def === : ((AnyRef, AnyRef)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
@@ -233,7 +226,7 @@ object Program {
 
   def `()`(* : String*) =
     Member.ParamClauseGroup(
-      Type.ParamClause(Nil), // []
+      Type.ParamClause(Nil),
       Term.ParamClause(*
                         .map(\(_))
                         .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
@@ -320,13 +313,6 @@ object Program {
                      None
       )
     )
-
-
-  def `if * then IO.cede else …`(* : Term, `…`: Term.ForYield): Term.If =
-    Term.If(*, Term.Select("IO", "cede"), `…`, Nil)
-
-  def `if !* then IO.cede else …`(* : Term, `…`: Term.ForYield): Term.If =
-    Term.If(Term.ApplyUnary("!", *), Term.Select("IO", "cede"), `…`, Nil)
 
 
   def `if * then … else …`(* : Term, `…`: Term.ForYield*): Term.If =

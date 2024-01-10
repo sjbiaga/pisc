@@ -55,8 +55,8 @@ object π:
     x <- ν
     _ <- (
       for {
-        pi <- IO {
-          lazy val `3521e7af-5d14-4f84-a8e6-3d02391fe404`: IO[Unit] = {
+        `cecc036c-2113-44e7-9288-bfe57fa604b8` <- IO {
+          lazy val `cecc036c-2113-44e7-9288-bfe57fa604b8`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -71,19 +71,19 @@ object π:
                   _ <- c.update(_ + 1 min 50)
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `3521e7af-5d14-4f84-a8e6-3d02391fe404`
+                  _ <- `cecc036c-2113-44e7-9288-bfe57fa604b8`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `3521e7af-5d14-4f84-a8e6-3d02391fe404`
+          `cecc036c-2113-44e7-9288-bfe57fa604b8`
         }
-        _ <- pi
+        _ <- `cecc036c-2113-44e7-9288-bfe57fa604b8`
         _ <- `𝟎`
       } yield (),
       for {
-        pi <- IO {
-          lazy val `3356ae0e-ce31-44cf-ba2b-14779c86318f`: IO[Unit] = {
+        `9c10cad6-97f4-40be-9f34-02f4d092c2fb` <- IO {
+          lazy val `9c10cad6-97f4-40be-9f34-02f4d092c2fb`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -96,14 +96,14 @@ object π:
                   _ <- IO.unit
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `3356ae0e-ce31-44cf-ba2b-14779c86318f`
+                  _ <- `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `3356ae0e-ce31-44cf-ba2b-14779c86318f`
+          `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
         }
-        _ <- pi
+        _ <- `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
         _ <- `𝟎`
       } yield ()
     ).parMapN { (_, _) => }

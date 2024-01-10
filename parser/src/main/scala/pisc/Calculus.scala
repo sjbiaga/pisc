@@ -29,7 +29,6 @@
 package pisc
 package parser
 
-import scala.io.Source
 import scala.util.parsing.combinator._
 
 import Pi.{ Names, PrefixChannelParsingException }
@@ -100,7 +99,7 @@ class Calculus extends Pi:
     } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        `[]`(cond, t._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ t._2)
+        `?:`(cond, t._1, `𝟎`) -> (Names(), Names(cond._1._1, cond._1._2) ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
@@ -170,13 +169,13 @@ object Calculus extends Calculus:
 
   case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
 
-  case class `[]`(cond: ((λ, λ), Boolean), t: `+`) extends Pre // forcibly
-
   case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends Pre // forcibly
 
   case class `!`(sum: `+`) extends Pre // forcibly
 
-  case class `()`(identifier: λ, qual: List[String], params: λ*) extends AST
+  case class `()`(identifier: λ,
+                  qual: List[String],
+                  params: λ*) extends Pre // forcibly
 
   case class λ(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -253,10 +252,6 @@ object Calculus extends Calculus:
       val f = flatten(ast)
       `|`(`.`(f._1, ps: _*)) -> f._2
 
-    case `[]`(cond, t) =>
-      val f = flatten(t).asInstanceOf[(`+`, Boolean)]
-      `[]`(cond, f._1) -> f._2
-
     case `?:`(cond, t, f) =>
       val t_f = flatten(t).asInstanceOf[(`+`, Boolean)]
       val f_f = flatten(f).asInstanceOf[(`+`, Boolean)]
@@ -267,23 +262,3 @@ object Calculus extends Calculus:
       `!`(f._1) -> f._2
 
     case it => it -> false
-
-
-  def apply(source: Source): List[Either[String, Bind]] = source
-    .getLines()
-    .foldLeft(List[String]("")) {
-      case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
-      case (r, l) => r :+ l
-    }
-    .filterNot(_.matches("^ *#.*")) // commented lines
-    .filterNot(_.isBlank) // empty lines
-    .map { it =>
-      if it.matches("^ *@.*")
-      then // Scala
-        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
-      else // Pi
-        parseAll(equation, it) match
-          case Success(result, _) => Right(result)
-          case failure: NoSuccess => scala.sys.error(failure.msg)
-    }
-    .toList

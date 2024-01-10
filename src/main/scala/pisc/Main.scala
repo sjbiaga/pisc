@@ -34,7 +34,7 @@ import java.io.{ FileWriter, BufferedWriter }
 
 import scala.io.Source
 
-import parser.Calculus
+import parser.Pi
 import generator.Program
 
 
@@ -55,7 +55,7 @@ object Main:
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bind = Calculus(source).zipWithIndex
+        val bind = Pi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
         val ps = Program(prog.map(_._1))
