@@ -26,21 +26,20 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import scala.math.log
-import scala.util.Random
+import _root_.scala.util.Random
 
-import scala.concurrent.duration._
+import _root_.scala.concurrent.duration._
 
-import breeze.stats.distributions.{ Exponential, Rand }
+import _root_.breeze.stats.distributions.{ Exponential, Rand }
 import Rand.VariableSeed._
 
-import com.github.blemale.scaffeine.{ Scaffeine, Cache }
+import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
 
 
 package object `Π-stats`:
 
   sealed trait Rate extends AnyRef
-  case object `∞` extends Rate
+  case object ∞ extends Rate
   case class `@`(rate: BigDecimal) extends Rate
 
   private val random = new Random
@@ -61,19 +60,21 @@ package object `Π-stats`:
 
   def |(% : Map[String, Option[Rate]]): (String, BigDecimal) =
     require(%.nonEmpty)
-    val `0` = %.filter { case (_, Some(`∞`)) => true case _ => false }
+    val `0` = %.filter { case (_, Some(∞)) => true case _ => false }
     if `0`.nonEmpty
     then // immediate
       `0`.drop(random.nextInt(`0`.size)).head._1 -> BigDecimal(0)
-    else if %.forall { case (_, Some(null)) => true case _ => false }
-    then // passive
-      %.drop(random.nextInt(%.size)).head._1 -> BigDecimal(-1)
-    else // timed
-      val (key, delta) = %
-        .filter(_._2.get ne null)
-        .map(_ -> _.get.asInstanceOf[`@`].rate)
-        .map(_ -> _.toDouble)
-        .map(_ -> distrib(_))
-        .map(_ -> _.draw())
-        .minBy(_._2)
-      key -> BigDecimal(delta)
+    else
+      val `0+` = %.filter { case (_, Some(null)) | (_, None) => false case _ => true }
+      if `0+`.nonEmpty
+      then // timed
+        val (key, delta) = `0+`
+          .map(_ -> _.get.asInstanceOf[`@`].rate)
+          .map(_ -> _.toDouble)
+          .map(_ -> distrib(_))
+          .map(_ -> _.draw())
+          .minBy(_._2)
+        key -> BigDecimal(delta)
+      else // passive
+        val `-1` = %.filter { case (_, Some(null)) => true case _ => false }
+        `-1`.drop(random.nextInt(`-1`.size)).head._1 -> BigDecimal(-1)

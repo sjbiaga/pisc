@@ -6,14 +6,14 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-Main = v(stdin)v(stdout) \
+Main = ν(stdin)ν(stdout) \
      ( stdout<"What's your name?\n">.stdin(name).Chooser(stdout, name) \
      | stdout(prompt).stdin</*sc_name*/>.stdout(pi_greet). \
      ) \
 
-Chooser(stdout, name) = 𝜏@r.Greeter'(stdout, name) \
-                      + 𝜏@r.Greeter"(stdout, name) \
-                      + 𝜏@r.Greeter'"(stdout, name) \
+Chooser(stdout, name) = τ@r.Greeter'(stdout, name) \
+                      + τ@r.Greeter"(stdout, name) \
+                      + τ@r.Greeter'"(stdout, name) \
 
 Greeter'(stdout, name) = \
                        ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">. \

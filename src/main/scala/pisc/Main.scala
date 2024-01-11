@@ -32,11 +32,18 @@ import java.nio.charset.Charset
 import java.nio.file.Paths
 import java.io.{ FileWriter, BufferedWriter }
 
+import scala.collection.mutable.{ HashMap => Map }
 import scala.io.Source
+
+import scala.meta._
+
+import parser.{ StochasticPi, Calculus }
+import StochasticPi.Actions
+import generator.Program
+
 
 object Main:
 
-  val indent = "  "
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
@@ -52,22 +59,96 @@ object Main:
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bind = Calculus(source).zipWithIndex
-        val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
+        val bs = StochasticPi(source)
 
-        val ps = Program(indent)(prog.map(_._1))
-        val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap + (ps.size - 1 -> bind.size)
+        val bind = bs.zipWithIndex
+        val prog_ = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
-        val ls = bind.filter(_._1.isLeft).map { it => indent + it._1.left.get -> it._2 }
+        val (prog, (discarded, enabled)) = StochasticPi(prog_.map(_._1))
+
+        val ps = Program(prog)
+        val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
+
+        val ls = bind.filter(_._1.isLeft).map { it => it._1.left.get -> it._2 }
 
         val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
           .sortBy(_._2)
           .map(_._1)
           .mkString("\n\n")
 
-        bwr.write(code, 0, code.length)
+        val trick = `trick-or-treat`("π-trick", discarded).toString
+        val spell = `spell, magic spell`("π-spell", enabled).toString
+        val wand = `magic wand`.toString
+
+        val magic = trick + "\n\n" + spell + "\n\n" + wand + "\n\n"
+
+        bwr.write(magic + code, 0, magic.length + code.length)
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
         if source ne null then source.close()
     }
+
+  val `magic wand`: Defn.Val =
+    val t = Type.Apply(Type.Name("Π-Map"),
+                       Type.ArgClause(List(Type.Name("String"),
+                                           Type.Apply(Type.Name("Π-Set"),
+                                                      Type.ArgClause(List(Type.Name("String")))))))
+    Defn.Val(Mod.Implicit() :: Nil,
+             Pat.Var(Term.Name("π-wand")) :: Nil,
+             Some(Type.Tuple(List(t, t))),
+             Term.ApplyInfix(Term.Name("π-trick"),
+                             Term.Name("->"),
+                             Type.ArgClause(Nil),
+                             Term.ArgClause(Term.Name("π-spell") :: Nil, None)))
+
+  def `trick-or-treat`(name: String, discarded: Map[String, Actions]): Defn.Val =
+    Defn.Val(Nil,
+             List(Pat.Var(Term.Name(name))),
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-Set"),
+                                                            Type.ArgClause(List(Type.Name("String")))))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this(discarded).toList, None)))
+
+  def `spell, magic spell`(name: String, enabled: Map[String, Actions]): Defn.Val =
+    Defn.Val(Nil,
+             List(Pat.Var(Term.Name(name))),
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-Set"),
+                                                            Type.ArgClause(List(Type.Name("String")))))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this(enabled).toList, None)))
+
+  private def apply(self: Map[String, Actions]) =
+    for
+      (id, it) <- self
+    yield
+      Term.ApplyInfix(Lit.String(s"$id"),
+                      Term.Name("->"), Type.ArgClause(Nil),
+                      Term.ArgClause(List(Term.Apply(scollimmSet,
+                                                     Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList, None))), None))
+
+  private val scollimmMap =
+    Term.Select(
+      Term.Select(
+        Term.Select(
+          Term.Select(
+            Term.Name("_root_"),
+            Term.Name("scala")),
+          Term.Name("collection")),
+        Term.Name("immutable")),
+      Term.Name("Map"))
+
+  private val scollimmSet =
+    Term.Select(
+      Term.Select(
+        Term.Select(
+          Term.Select(
+            Term.Name("_root_"),
+            Term.Name("scala")),
+          Term.Name("collection")),
+        Term.Name("immutable")),
+      Term.Name("Set"))

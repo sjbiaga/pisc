@@ -28,11 +28,11 @@
 
 //package main.scala.in
 
-import cats.effect.{ IO, IOApp, Deferred }
-import cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.effect.{ IO, IOApp, Deferred }
+import _root_.cats.effect.std.{ Queue, Semaphore }
 
 import `Π-loop`._
-import `Π-stats`.{ Rate, `∞`, `@` }
+import `Π-stats`.{ Rate, ∞, `@` }
 
 
 object App extends IOApp.Simple:
@@ -40,38 +40,40 @@ object App extends IOApp.Simple:
   private def run(% : %, / : /, + : +, - : -): IO[Unit] =
     ( for
         _ <- loop(using %, +, -).background
-        _ <- poll(using %, /).background
+        _ <- poll(using %, /, +).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- `π`.`Main`()("")(using %, /, +, -)
+        _ <- π.Main()(using "")(using %, /, -)
       yield
         ()
     }
 
   override def run: IO[Unit] =
     for
-      % <- IO.ref(Map[String, Option[Rate]]())
-      / <- Queue.unbounded[IO, (String, Rate)]
-      + <- IO.ref(Map[String, Set[String]]())
-      sem <- Semaphore[IO](1)
-      _ <- sem.acquire
+      %    <- IO.ref(Map[String, Option[Rate]]())
+      /    <- Queue.unbounded[IO, (String, Rate)]
+      +    <- Semaphore[IO](1)
+      sem  <- Semaphore[IO](1)
+      _    <- sem.acquire
       turn <- Deferred[IO, (String, BigDecimal)]
-      - <- IO.ref(sem -> turn)
-      _ <- run(%, /, +, -)
+      -    <- IO.ref(sem -> turn)
+      _    <- run(%, /, +, -)
     yield
       ()
 
 
-object `π`:
+object π:
 
-  import java.util.UUID
+  import _root_.java.util.UUID
 
-  import cats.effect.syntax.all._
-  import cats.syntax.all._
+  import _root_.cats.effect.syntax.all._
+  import _root_.cats.syntax.all._
 
-  import `Π`._
+  import sΠ._
+
+  private val `𝟎` = IO.unit
 
   private def `π-uuid` = UUID.randomUUID.toString
 

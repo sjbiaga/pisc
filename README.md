@@ -30,8 +30,8 @@ Calculus
 The Π-calculus process expressions are exactly as in the literature, with
 both ASCII and UTF-8 characters, and slight variations. There is "match" and
 "mismatch", but also there is `if then else` or the sugared Elvis operator.
-Forcibly, a _restriction_, a _(mis)match_, `if then else` and _replication_ are
-"considered" _prefixes_, besides input/output prefixes per se.
+Forcibly, _restriction_ is "considered" a _prefix_, besides input/output
+prefixes per se.
 
 The BNF formal grammar is the following. Lexically, `ident` is a channel name - (an
 identifier) starting with lowercase letter; capital `IDENT` is an agent identifier
@@ -40,8 +40,8 @@ starting with uppercase letter. Both may contain single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "v". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
-"𝜏" is the _silent transition_.
+with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
+"τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
@@ -54,7 +54,7 @@ the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
 or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
-The _`rate`_ of an action ("𝜏" or prefix) can be optionally annotated with `@`
+The _`rate`_ of an action ("τ" or prefix) can be optionally annotated with `@`
 and an infinite ("∞"), a `Scala` identifier, a (boxed in a) `BigDecimal` number,
 or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
@@ -69,21 +69,25 @@ will never get be executed.
 The name before parentheses (angular or round) must be a channel name.
 
 Note that input/outut prefixes and the silent transition are followed by a dot,
-whereas restriction, (mis)match, `if then else` and replication are not.
+whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`
+and replication are "leaves".
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
-    SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
+    SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
     PREFIXES   ::= PREFIX { PREFIX }
-    PREFIX     ::= "𝜏" [ @ RATE ] "."
-                 | "v" "(" NAME ")"
-                 | NAME [ @ RATE ] "<" NAME ">" "."
-                 | NAME [ @ RATE ] "(" NAME ")" "."
-                 | "[" NAME ("="|"≠") NAME "]"
+    PREFIX     ::= Π "."
+                 | "ν" "(" NAME ")"
+    Π          ::= "τ" [ @ RATE ]
+                 | NAME [ @ RATE ] "<" NAME ">"
+                 | NAME [ @ RATE ] "(" NAME ")"
+    LEAF       ::= "𝟎"
+                 | AGENT
+                 | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" CHOICE
+                 | "!" PREFIX "." CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
 
 Not part of the original Π-calculus, an agent (call) expression - unless
@@ -93,6 +97,10 @@ a qualified package identifier. Thus, agents in different translated "`.scala`" 
 can be reused; the lexical category is `qual`.
 
 
+Stochastic
+----------
+
+
 Program
 -------
 
@@ -100,7 +108,7 @@ A new name - will be available in the Scala scope:
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       .
       .
       .
@@ -119,14 +127,14 @@ The inaction - just the `Unit` value () after yield:
 
 (That's why `for` always starts with `_ <- IO.unit`.)
 
-A long prefix path - "`v(x).x<5>.x(y).𝜏@(1).x@∞(z).z<y>.`":
+A long prefix path - "`v(x).x<5>.x(y).τ@(1).x@∞(z).z<y>.`":
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       _ <- x(BigDecimal(5))
       (y, _) <- x(null)
-      _ <- `𝜏`(BigDecimal(1))
+      _ <- τ(BigDecimal(1))
       (z, _) <- x(`∞`)
       _ <- z(y)
       .
@@ -141,13 +149,13 @@ One can intercalate "`println`"s:
 
     for
       _ <- IO.unit
-      x <- `v`
+      x <- ν
       _ <- IO.println(s"new x=$x")
       t <- x(BigDecimal(5))
       _ <- IO.println("passive output time = $t")
       (y, _) <- x(null)
       _ <- IO.println("input x(y)")
-      t <- `𝜏`(BigDecimal(1))
+      t <- τ(BigDecimal(1))
       _ <- IO.println(s"silent transition time = $t")
       (z, t) <- x(`∞`)
       _ <- IO.println(s"immediate input time = $t")
@@ -166,12 +174,11 @@ A [mis]match `[x = y] P` translates as:
       .
       _ <- if !(x == y) then IO.unit else
            for
-             .
+             . // P
              .
              .
            yield
              ()
-      // nothing more
     yield
       ()
 
@@ -197,14 +204,11 @@ An `if then else` translates `if x = y then P else Q` as:
                yield
                  ()
            )
-      .
-      .
-      .
     yield
       ()
 
 Each replication operator uses the same variable pattern
-named `pi` to translate lazily `! P` as:
+named `pi` to translate lazily `! π. P` as:
 
     for
       .
@@ -220,6 +224,7 @@ named `pi` to translate lazily `! P` as:
                  ,
                    for
                      _ <- IO.unit
+                     π
                      _ <- `<uuid>`
                    yield
                      ()
@@ -228,10 +233,8 @@ named `pi` to translate lazily `! P` as:
             ()
         `<uuid>`
       }
+      π
       _ <- pi
-      . // whatever follows
-      . // will never
-      . // be executed
     yield
       ()
 
@@ -257,6 +260,7 @@ One can edit'em, though they're ready to generate a main `App`.
 Let's go backwards. But first, let's assume there is a shell (`bash`) function "`spi`":
 
     function spi() {
+        set "$@" ../loop.scala ../stats.scala ../spi.scala
         ~/.local/share/coursier/bin/scala-cli "$@"                                             \
                                               -S 3.4.0-RC1                                     \
                                               --dependency org.scalanlp::breeze:2.1.0          \
@@ -266,21 +270,36 @@ Let's go backwards. But first, let's assume there is a shell (`bash`) function "
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ spi run ../loop.scala ../stats.scala ../spi.scala out/pi_example.scala
+    ./examples $ spi run ex.scala
 
-To get the final source file `out/pi_example.scala`, concatenate two `.in` files:
+To get the final source file `ex.scala`, run `scalafmt` on the `.out` files:
 
-    ./examples $ rm out/pi_example.scala; cat ../main.scala.in in/pi_example.scala.in > out/pi_example.scala
+    ./examples $ rm out/ex.scala; cat out/ex.scala.out | scalafmt --stdin --stdout > ex.scala
 
-To get the intermediary `in/pi_example.scala.in` file, execute the `run` command in the `sbt` shell:
+To get the intermediary `out/ex.scala.out`, concatenate two `.in` files:
 
-    sbt:psc> run pi_example
+    ./examples $ rm out/ex.scala.out; { cat ../main.scala.in; cat in/ex.scala.in | sed -e 's/^/  /'; } > out/ex.scala.out
 
-where `example/pisc/pi_example.pisc` contains the Π-calculus source (equations binding agents to process
+These two steps can be put in a shell (`bash`) function "`pio`":
+
+    function pio() {
+        while [ $# -gt 0 ]
+        do
+            rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
+            rm "$1".scala; cat out/"$1".scala.out | scalafmt --stdin --stdout > "$1".scala
+            shift
+        done
+    }
+
+To get the first `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
+
+    sbt:pisc> run ex
+
+where `example/pisc/ex.pisc` contains the stochastic Π-calculus source (equations binding agents to process
 expressions).
 
-In order to allow multiple `App`s, edit `examples/out/pi_example.scala` and add a top-level `package pi_example` line.
+In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-level `package ex[12]` line.
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ spi run --interactive ../loop.scala ../stats.scala ../spi.scala out/pi1.scala out/pi2.scala
+    ./examples $ spi run --interactive ex1.scala ex2.scala

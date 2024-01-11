@@ -36,7 +36,7 @@ package object `Π-loop`:
 
   type % = Ref[IO, Map[String, Option[Rate]]]
 
-  type + = Ref[IO, Map[String, Set[String]]]
+  type + = Semaphore[IO]
 
   type - = Ref[IO, (Semaphore[IO], Deferred[IO, (String, BigDecimal)])]
 
@@ -45,41 +45,31 @@ package object `Π-loop`:
   def loop(using % : %, + : +, - : -): IO[Unit] =
     for
       it <- %.modify { m =>
-        if m.foldLeft(true) {
-          case (false, _) | (_, (_, None)) => false
-          case _ => true
-        }
-        then m -> Some(Map.from(m))
-        else m -> None
-      }
-      _ <- if it.isEmpty || it.get.isEmpty then IO.unit else
-           for
-             (key, delta) <- IO.pure(|(it.get))
-             ks <- +.modify { m =>
-               if m.contains(key)
-               then
-                 (m - key) -- m(key) -> m(key)
-               else
-                 m -> Set.empty
-             }
-             _ <- %.update { _ -- ks }
-             (sem, turn) <- -.get
-             _ <- turn.complete(key -> delta)
-             _ <- sem.acquire
-             _ <- %.update { _ - key }
-             turn <- Deferred[IO, (String, BigDecimal)]
-             _ <- -.set(sem -> turn)
-           yield
-             ()
-      _ <- IO.cede >> loop
+                       if m.exists(_._2 ne None)
+                       then m -> Some(Map.from(m))
+                       else m -> None
+            }
+      _  <- if it.isEmpty then +.acquire else
+            for
+              (key, delta) <- IO.pure(|(it.get))
+              (sem, turn)  <- -.get
+              _            <- turn.complete(key -> delta)
+              _            <- sem.acquire
+              _            <- %.update { _ - key }
+              turn         <- Deferred[IO, (String, BigDecimal)]
+              _            <- -.set(sem -> turn)
+            yield
+              ()
+      _  <- IO.cede >> loop
     yield
       ()
 
-  def poll(using % : %, / : /): IO[Unit] =
+  def poll(using % : %, / : /, + : +): IO[Unit] =
     for
       it <- /.take
       (key, r) = it
-      _ <- %.update { _ + (key -> Some(r)) }
-      _ <- IO.cede >> poll
+      _  <- %.update { _ + (key -> Some(r)) }
+      _  <- +.release
+      _  <- IO.cede >> poll
     yield
       ()
