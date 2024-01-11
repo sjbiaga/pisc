@@ -29,8 +29,8 @@ Calculus
 The Π-calculus process expressions are exactly as in the literature, with
 both ASCII and UTF-8 characters, and slight variations. There is "match" and
 "mismatch", but also there is `if then else` or the sugared Elvis operator.
-Forcibly, a _restriction_, a _(mis)match_, `if then else` and _replication_ are
-"considered" _prefixes_, besides input/output prefixes per se.
+Forcibly, _restriction_ is "considered" a _prefix_, besides input/output
+prefixes per se.
 
 The BNF formal grammar is the following. Lexically, `ident` is a channel name - (an
 identifier) starting with lowercase letter; capital `IDENT` is an agent identifier
@@ -55,27 +55,30 @@ or any `Scala` expression as a Scala comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
-_test_,that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
+_test_, that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the _replication_ unary operator `! CHOICE`, and thus whatever follows
-will never get be executed.
+Stack safe is the _replication_ unary operator `! CHOICE`.
 
 The name before parentheses (angular or round) must be a channel name.
 
 Note that input/outut prefixes and the silent transition are followed by a dot,
-whereas restriction, (mis)match, `if then else` and replication are not.
+whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`
+and replication are "leaves".
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
-    SEQUENTIAL ::= PREFIXES [ "𝟎" | "(" CHOICE ")" | AGENT ]
+    SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
     PREFIXES   ::= PREFIX { PREFIX }
-    PREFIX     ::= "ν" "(" NAME ")"
-                 | "τ" "."
-                 | NAME "<" NAME ">" "."
-                 | NAME "(" NAME ")" "."
-                 | "[" NAME ("="|"≠") NAME "]"
+    PREFIX     ::= Π "."
+                 | "ν" "(" NAME ")"
+    Π          ::= "τ"
+                 | NAME "<" NAME ">"
+                 | NAME "(" NAME ")"
+    LEAF       ::= "𝟎"
+                 | AGENT
+                 | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" CHOICE
@@ -163,9 +166,6 @@ A [mis]match `[x = y] P` translates as:
              .
            yield
              ()
-      .
-      .
-      .
     yield
       ()
 
@@ -191,9 +191,6 @@ An `if then else` translates `if x = y then P else Q` as:
                yield
                  ()
            )
-      .
-      .
-      .
     yield
       ()
 
@@ -223,9 +220,6 @@ named `pi` to translate lazily `! P` as:
         `<uuid>`
       }
       _ <- pi
-      . // whatever follows
-      . // will never
-      . // be executed
     yield
       ()
 
