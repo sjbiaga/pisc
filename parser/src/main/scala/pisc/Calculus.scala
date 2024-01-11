@@ -61,15 +61,31 @@ class Calculus extends Pi:
     }
 
   def sequential: Parser[(`.`, Names)] =
-    prefixes ~ opt( "𝟎" | "("~>choice<~")" | agent() ) ^^ {
+    prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
       case (pre, _) ~ None if pre.isEmpty =>
         throw EmptyParsingException
-      case pre ~ Some((sum: `+`, free: Names)) =>
-        `.`(sum, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
-      case pre ~ Some((call: `()`, free: Names)) =>
-        `.`(call, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
+      case pre ~ Some((end: `&`, free: Names)) =>
+        `.`(end, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
         `.`(`𝟎`, pre._1: _*) -> pre._2._2
+    }
+
+  def leaf: Parser[(`-`, Names)] = agent() |
+    "𝟎" ^^ { _ => (`𝟎`, Names()) } |
+    "["~test~"]"~choice ^^ { // (mis)match
+      case _ ~ cond ~ _ ~ t =>
+        `?:`(cond, t._1, `𝟎`) -> (Names(cond._1._1, cond._1._2) ++ t._2)
+    } |
+    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    test~"?"~choice~":"~choice ^^ { // Elvis operator
+      case cond ~ _ ~ t ~ _ ~ f =>
+        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+    } |
+    "!"~>choice ^^ { // replication
+      case (sum, free) => `!`(sum) -> free
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -90,27 +106,12 @@ class Calculus extends Pi:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = `π.` |
+  def prefix: Parser[(Pre, (Names, Names))] = `π.`<~"." |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case ch if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch =>
         ν(ch) -> (Names(ch), Names())
-    } |
-    "["~test~"]"~choice ^^ { // (mis)match
-      case _ ~ cond ~ _ ~ t =>
-        `?:`(cond, t._1, `𝟎`) -> (Names(), Names(cond._1._1, cond._1._2) ++ t._2)
-    } |
-    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
-      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
-    } |
-    test~"?"~choice~":"~choice ^^ { // Elvis operator
-      case cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(), Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
-    } |
-    "!"~>choice ^^ { // replication
-      case (sum, free) => `!`(sum) -> (Names(), free)
     }
 
   def test: Parser[((λ, λ), Boolean)] = "("~>test<~")" |
@@ -153,13 +154,13 @@ object Calculus extends Calculus:
 
   sealed trait AST extends Any
 
-  case class `+`(choices: `|`*) extends AnyVal with AST
+  case class `+`(choices: `|`*) extends AST
 
-  val `𝟎` = `+`(`|`())
+  object `𝟎` extends `+`(`|`())
 
   case class `|`(components: `.`*) extends AnyVal with AST
 
-  case class `.`(process: AST, prefixes: Pre*) extends AST
+  case class `.`(process: `&`, prefixes: Pre*) extends AST
 
   sealed trait Pre extends Any with AST
 
@@ -169,13 +170,13 @@ object Calculus extends Calculus:
 
   case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
 
-  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends Pre // forcibly
-
-  case class `!`(sum: `+`) extends Pre // forcibly
+  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
 
   case class `()`(identifier: λ,
                   qual: List[String],
-                  params: λ*) extends Pre // forcibly
+                  params: λ*) extends AST
+
+  case class `!`(sum: `+`) extends AnyVal with AST
 
   case class λ(value: AnyRef) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -248,8 +249,8 @@ object Calculus extends Calculus:
       val (rhs, flag) = flatten(`|`(it: _*)).asInstanceOf[(`|`, Boolean)]
       `|`((lhs +: rhs.components): _*) -> flag
 
-    case `|`(`.`(ast, ps*), _*) =>
-      val f = flatten(ast)
+    case `|`(`.`(end, ps*), _*) =>
+      val f = flatten(end).asInstanceOf[(`&`, Boolean)]
       `|`(`.`(f._1, ps: _*)) -> f._2
 
     case `?:`(cond, t, f) =>

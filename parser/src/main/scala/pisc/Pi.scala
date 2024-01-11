@@ -41,16 +41,16 @@ import Calculus._
 class Pi extends JavaTokenParsers:
 
   def `π.`: Parser[(Pre, (Names, Names))] =
-    "τ"<~"." ^^ { _ => // silent prefix
+    "τ" ^^ { _ => // silent prefix
       `τ` -> (Names(), Names())
     } |
-    name~"<"~name~">"<~"." ^^ { // negative prefix i.e. output
+    name~"<"~name~">" ^^ { // negative prefix i.e. output
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case ch ~ _ ~ arg ~ _ =>
         π(ch, arg, polarity = false) -> (Names(), Names(ch, arg))
     } |
-    name~"("~name~")"<~"." ^^ { // positive prefix i.e. input
+    name~"("~name~")" ^^ { // positive prefix i.e. input
       case ch ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case _ ~ _ ~ par ~ _ if !par.isSymbol =>

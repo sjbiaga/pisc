@@ -35,7 +35,6 @@ import java.io.{ FileWriter, BufferedWriter }
 import scala.io.Source
 
 import parser.Pi
-import generator.Program
 
 
 object Main:

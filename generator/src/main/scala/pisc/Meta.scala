@@ -34,173 +34,19 @@ import java.util.UUID
 import scala.annotation.tailrec
 import scala.meta._
 
-import parser.Calculus._
+import parser.Calculus.{ `()`, Expr }
 
 
-object Program {
+object Meta {
 
-  def apply(bind: List[Bind]): List[String] =
-    bind.map { case (bind, sum) => defn(bind, sum).toString }
-
-
-  def defn(bind: `()`, sum: `+`): Defn.Def = {
+  def defn(bind: `()`, prog: Term.ForYield): Defn.Def = {
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
     Defn.Def(Nil,
              identifier, `()`(params: _*), `: IO[Unit]`,
-             body(sum)())
+             prog)
   }
-
-
-  def body(node: AST)
-          (implicit semaphore: Option[String] = None): List[Enumerator.Generator] = {
-    var * = List[Enumerator.Generator]()
-
-    node match {
-
-      // SUMMATION /////////////////////////////////////////////////////////////
-
-      case it @ `+`(operand, _, _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        implicit val sem = Some(id)
-
-        * :+= `* <- Semaphore[IO](1)`(sem.get)
-
-        * :+= `_ <- IO.race ( *, … )`(body(operand), body(`+`(it.choices.tail)))
-
-      case `+`(operand, _*) =>
-        * = body(operand)
-
-      case _: `+` => ???
-
-      ///////////////////////////////////////////////////////////// summation //
-
-
-      // COMPOSITION ///////////////////////////////////////////////////////////
-
-      case it @ `|`(_, _, _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
-
-        * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
-
-      case `|`(operand, _*) =>
-        * = body(operand)
-
-      case _: `|` =>
-        * :+= `_ <- IO.unit`
-
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
-
-      /////////////////////////////////////////////////////////// composition //
-
-
-      // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
-
-      case ν(λ(Symbol(name))) =>
-        * = `* <- *`(name -> "ν")
-
-      case `τ` =>
-        * = `_ <- *`("τ")
-
-
-      case π(λ(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
-
-      case π(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
-
-      case π(λ(Symbol(ch)), λ(Symbol(arg)), false) =>
-        * = `_ <- *`(s"$ch($arg)".parse[Term].get)
-
-      case π(λ(Symbol(ch)), λ(Expr(expr)), false) =>
-        * = `_ <- *`(s"$ch($expr)".parse[Term].get)
-
-      case π(λ(Symbol(ch)), λ(arg), false) =>
-        * = `_ <- *`(s"$ch($arg)".parse[Term].get)
-
-      case π(λ(Symbol(ch)), λ(Symbol(par)), true) =>
-        * = `* <- *`(par -> s"$ch()".parse[Term].get)
-
-
-      case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
-        if (mismatch)
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
-        else
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(t)(), body(f)()))
-
-
-      case `!`(sum) =>
-        val uuid = id
-
-        val it =
-          `for * yield ()` {
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                body(sum)(),
-                `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
-              )
-            }
-          }
-
-        * :+= `* <- *`(s"$uuid", `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * :+= `_ <- *`(s"$uuid")
-
-      ////// restriction | prefixes | (mis)match | if then else | replication //
-
-
-      // AGENT CALL ////////////////////////////////////////////////////////////
-
-      case `()`(λ(Symbol(identifier)), qual, params @ _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        val args = params.map {
-          case λ(Symbol(name)) => name
-          case λ(value) =>
-            value match {
-              case it: BigDecimal => s"BigDecimal($it)"
-              case it: String => s"$it"
-              case Expr(it) => s"$it"
-            }
-        }
-
-        if (qual.isEmpty)
-          * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})".parse[Term].get)
-        else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})".parse[Term].get)
-
-      case _: `()` => ??? // impossible by syntax
-
-      //////////////////////////////////////////////////////////// agent call //
-
-
-      // SEQUENCE //////////////////////////////////////////////////////////////
-      // followed possibly either by agent call or another process expression //
-
-      case `.`(ast, it @ _*) if it.isEmpty =>
-        * = body(ast)
-
-      case `.`(ast, it @ _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        * = (it :+ ast).foldLeft(*)(_ ++ body(_)())
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
-
-      ////////////////////////////////////////////////////////////// sequence //
-
-      case it => ???
-
-    }
-
-    *
-
-  }
-
-  def id = UUID.randomUUID.toString
 
   def === : ((AnyRef, AnyRef)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get

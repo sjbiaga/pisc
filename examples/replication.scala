@@ -55,8 +55,8 @@ object π:
     x <- ν
     _ <- (
       for {
-        `cecc036c-2113-44e7-9288-bfe57fa604b8` <- IO {
-          lazy val `cecc036c-2113-44e7-9288-bfe57fa604b8`: IO[Unit] = {
+        `118b37f7-c9b7-4ead-a4d7-8908df504773` <- IO {
+          lazy val `118b37f7-c9b7-4ead-a4d7-8908df504773`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -71,19 +71,18 @@ object π:
                   _ <- c.update(_ + 1 min 50)
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `cecc036c-2113-44e7-9288-bfe57fa604b8`
+                  _ <- `118b37f7-c9b7-4ead-a4d7-8908df504773`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `cecc036c-2113-44e7-9288-bfe57fa604b8`
+          `118b37f7-c9b7-4ead-a4d7-8908df504773`
         }
-        _ <- `cecc036c-2113-44e7-9288-bfe57fa604b8`
-        _ <- `𝟎`
+        _ <- `118b37f7-c9b7-4ead-a4d7-8908df504773`
       } yield (),
       for {
-        `9c10cad6-97f4-40be-9f34-02f4d092c2fb` <- IO {
-          lazy val `9c10cad6-97f4-40be-9f34-02f4d092c2fb`: IO[Unit] = {
+        `ea9a83c0-75b4-4e9d-b70b-d1f84ec72ee2` <- IO {
+          lazy val `ea9a83c0-75b4-4e9d-b70b-d1f84ec72ee2`: IO[Unit] = {
             for (
               _ <- (
                 for {
@@ -96,15 +95,14 @@ object π:
                   _ <- IO.unit
                   i <- c.get
                   _ <- if i == 50 then IO.never else IO.cede
-                  _ <- `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
+                  _ <- `ea9a83c0-75b4-4e9d-b70b-d1f84ec72ee2`
                 } yield ()
               ).parMapN { (_, _) => }
             ) yield ()
           }
-          `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
+          `ea9a83c0-75b4-4e9d-b70b-d1f84ec72ee2`
         }
-        _ <- `9c10cad6-97f4-40be-9f34-02f4d092c2fb`
-        _ <- `𝟎`
+        _ <- `ea9a83c0-75b4-4e9d-b70b-d1f84ec72ee2`
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
