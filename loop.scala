@@ -55,7 +55,7 @@ package object `Π-loop`:
               turn         <- -.get
               _            <- turn.complete(key -> delta)
               _            <- +._2.acquire
-              _            <- %.update { _ - key }
+              _            <- %.update(_ - key)
               turn         <- Deferred[IO, (String, BigDecimal)]
               _            <- -.set(turn)
             yield
@@ -68,7 +68,13 @@ package object `Π-loop`:
     for
       it <- /.take
       (key, r) = it
-      _  <- %.update { _ + (key -> Some(r)) }
+      _  <- %.update { m =>
+                       if m.contains(key)
+                       then
+                         m + (key -> Some(r))
+                       else
+                         m
+            }
       _  <- +.release
       _  <- IO.cede >> poll
     yield
