@@ -37,15 +37,15 @@ import `Π-stats`.{ Rate, ∞, `@` }
 
 object App extends IOApp.Simple:
 
-  private def run(% : %, / : /, + : +, - : -): IO[Unit] =
+  private def run(% : %, / : /, + : (+, +), - : -): IO[Unit] =
     ( for
         _ <- loop(using %, +, -).background
-        _ <- poll(using %, /, +).background
+        _ <- poll(using %, /, +._1).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- π.Main()(using "")(using %, /, -)
+        _ <- π.Main()(using "")(using %, /, -, +._2)
       yield
         ()
     }
@@ -54,12 +54,12 @@ object App extends IOApp.Simple:
     for
       %    <- IO.ref(Map[String, Option[Rate]]())
       /    <- Queue.unbounded[IO, (String, Rate)]
-      +    <- Semaphore[IO](1)
-      sem  <- Semaphore[IO](1)
-      _    <- sem.acquire
+      +  <- Semaphore[IO](1)
+      &  <- Semaphore[IO](1)
+      _    <- &.acquire
       turn <- Deferred[IO, (String, BigDecimal)]
-      -    <- IO.ref(sem -> turn)
-      _    <- run(%, /, +, -)
+      -    <- IO.ref(turn)
+      _    <- run(%, /, (+, &), -)
     yield
       ()
 

@@ -29,7 +29,6 @@
 package object sΠ:
 
   import _root_.cats.effect.{ Deferred, Ref, IO }
-  import _root_.cats.effect.std.{ Queue, Semaphore }
 
   import `Π-loop`._
   import `Π-magic`.`><`
@@ -41,12 +40,17 @@ package object sΠ:
   type `Π-Set`[A] = _root_.scala.collection.immutable.Set[A]
 
 
+  implicit inline def `π-none`(key: String)
+                              (using ^ : String): (String, Option[Rate]) =
+    ^ + key -> None
+
+
   private def update(discarded: Set[String], enabled: Set[String])
                     (using % : %)
                     (implicit ^ : String): IO[Unit] =
     for
       _ <- %.update { _ -- discarded.map(^ + _) }
-      _ <- %.update(enabled.foldLeft(_){ (it, key) => it + ((^ + key) -> None) })
+      _ <- %.update(enabled.foldLeft(_)(_ + _))
     yield
       ()
 
@@ -72,7 +76,7 @@ package object sΠ:
   object τ:
 
     def apply(rate: Rate)(key: String)
-             (using % : %, / : /, - : -)
+             (using % : %, / : /, - : -, + : +)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[BigDecimal] =
@@ -80,13 +84,13 @@ package object sΠ:
       val (trick, spell) = `π-wand`
       def loop: IO[BigDecimal] =
         for
-          (sem, turn) <- -.get
+          turn <- -.get
           (it, delta) <- turn.get
           ok <- %.modify { m => m -> (key_^ == it || m.contains(key_^)) }
           _ <- if ok then IO.unit else IO.never
           delta <- if key_^ != it then IO.cede >> loop
                    else update(trick.getOrElse(key, Set.empty),
-                               spell.getOrElse(key, Set.empty)) >> sem.release.as(delta)
+                               spell.getOrElse(key, Set.empty)) >> +.release.as(delta)
         yield
           delta
       /.offer(^ + key -> rate) >> loop
@@ -105,7 +109,7 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply(rate: Rate)(key: String)
-             (using % : %, / : /, - : -)
+             (using % : %, / : /, - : -, + : +)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[(`()`, BigDecimal)] =
@@ -115,7 +119,7 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String)
-             (using % : %, / : /, - : -)
+             (using % : %, / : /, - : -, + : +)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[BigDecimal] =
@@ -156,7 +160,7 @@ package object sΠ:
 
       def apply(key: String, name: Any)
                (`>R`: Ref[IO, `><`])
-               (using % : %, - : -)
+               (using % : %, - : -, + : +)
                (implicit ^ : String,
                          `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
                ): IO[BigDecimal] =
@@ -164,13 +168,13 @@ package object sΠ:
         val (trick, spell) = `π-wand`
         def loop: IO[BigDecimal] =
           for
-            (sem, turn) <- -.get
+            turn <- -.get
             (it, delta) <- turn.get
             ok <- %.modify { m => m -> (key_^ == it || m.contains(key_^)) }
             _ <- if ok then IO.unit else IO.never
             delta <- if key_^ != it then IO.cede >> loop
                      else update(trick.getOrElse(key, Set.empty),
-                                 spell.getOrElse(key, Set.empty)) >> sem.release >>
+                                 spell.getOrElse(key, Set.empty)) >> +.release >>
                           Deferred[IO, Unit].flatMap { offerer =>
                             IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                               `>R`.modify {
@@ -188,7 +192,7 @@ package object sΠ:
 
       def apply(key: String)
                (`<R`: Ref[IO, `><`])
-               (using % : %, - : -)
+               (using % : %, - : -, + : +)
                (implicit ^ : String,
                          `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
                ): IO[(Any, BigDecimal)] =
@@ -196,13 +200,13 @@ package object sΠ:
         val (trick, spell) = `π-wand`
         def loop: IO[(Any, BigDecimal)] =
           for
-            (sem, turn) <- -.get
+            turn <- -.get
             (it, delta) <- turn.get
             ok <- %.modify { m => m -> (key_^ == it || m.contains(key_^)) }
             _ <- if ok then IO.unit else IO.never
             (r, delta) <- if key_^ != it then IO.cede >> loop
                           else update(trick.getOrElse(key, Set.empty),
-                                      spell.getOrElse(key, Set.empty)) >> sem.release >>
+                                      spell.getOrElse(key, Set.empty)) >> +.release >>
                                Deferred[IO, Any].flatMap { taker =>
                                  IO.uncancelable { poll =>
                                    `<R`.modify {

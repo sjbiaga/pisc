@@ -175,15 +175,17 @@ object StochasticPi:
 
     }
 
-    lazy val enter: AST => Seq[(State, State)] = _ match
+    lazy val trans: AST => Seq[(State, State)] = _ match
+
+      case `!`(π, _) => Seq(π -> π)
 
       case _: `-` => Nil
 
       case `+`(_, ps*) =>
-        ps.map(enter).reduce(_ ++ _)
+        ps.map(trans).reduce(_ ++ _)
 
       case `|`(ss*) =>
-        ss.map(enter).foldLeft(Seq.empty)(_ ++ _)
+        ss.map(trans).foldLeft(Seq.empty)(_ ++ _)
 
       case `.`(end, ps*) =>
         val k = ps.lastIndexWhere(_.isInstanceOf[State])
@@ -194,15 +196,15 @@ object StochasticPi:
             if j >= 0
           yield
             ps(i).asInstanceOf[State] -> ps(i+1+j).asInstanceOf[State]
-        ) ++ enter(end) ++
+        ) ++ trans(end) ++
         ( if k < 0
           then
             Nil
           else end match
            case it: `+` =>
             Seq(ps(k).asInstanceOf[State] -> it)
-           case it: `!` =>
-            Seq(ps(k).asInstanceOf[State] -> it.prefix)
+           case `!`(π, _) =>
+            Seq(ps(k).asInstanceOf[State] -> π)
            case _ =>
              Nil
         )
@@ -225,7 +227,7 @@ object StochasticPi:
       }
       .map {
         case it @ (_, Some(sum)) =>
-          enter(sum).foreach { (s, t) => enabled(s.uuid) = t.enabled }
+          trans(sum).foreach { (s, t) => enabled(s.uuid) = t.enabled }
           it
         case it => it
       } -> (discarded -> enabled)

@@ -57,14 +57,14 @@ object Program:
       case it: `𝟎`.type =>
 
       case it: `+` if it.choices.size > 1 =>
-        if init then * ++= update(it.enabled)
+        if init then * ++= `… = *; _ <- %.update(…)`(it.enabled)
 
         val fy = it.choices.foldLeft(List[Term.ForYield]())(_ :+ body(_)(false))
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
       case it @ `+`(_, operand, _*) =>
-        if init then * ++= update(it.enabled)
+        if init then * ++= `… = *; _ <- %.update(…)`(it.enabled)
 
         * ++= body(operand)(false)
 
@@ -128,13 +128,13 @@ object Program:
 
 
       case `!`(π, sum) =>
-        val uuid = UUID.randomUUID.toString
+        val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
 
         val `!πP` = body(π)() :+ `_ <- *`(s"`$uuid`(`π-uuid`)".parse[Term].get)
 
         val it =
           `for * yield ()`(
-            (update(π.enabled ++ sum.enabled) :+
+            (`… = *; _ <- %.update(…)`(sum.enabled) :+
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
                 `for * yield ()`(body(sum)(false): _*),

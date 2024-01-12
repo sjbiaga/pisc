@@ -38,26 +38,30 @@ package object `Π-loop`:
 
   type + = Semaphore[IO]
 
-  type - = Ref[IO, (Semaphore[IO], Deferred[IO, (String, BigDecimal)])]
+  type - = Ref[IO, Deferred[IO, (String, BigDecimal)]]
 
   type / = Queue[IO, (String, Rate)]
 
-  def loop(using % : %, + : +, - : -): IO[Unit] =
+  def loop(using % : %, + : (+, +), - : -): IO[Unit] =
     for
       it <- %.modify { m =>
                        if m.exists(_._2 ne None)
                        then m -> Some(Map.from(m))
                        else m -> None
             }
-      _  <- if it.isEmpty then +.acquire else
+      _  <- if it.isEmpty then +._1.acquire else
             for
               (key, delta) <- IO.pure(|(it.get))
-              (sem, turn)  <- -.get
+              turn         <- -.get
               _            <- turn.complete(key -> delta)
-              _            <- sem.acquire
-              _            <- %.update { _ - key }
+              _            <- +._2.acquire
+              _            <- %.update { m =>
+                                         if m(key) ne None
+                                         then m - key
+                                         else m
+                              }
               turn         <- Deferred[IO, (String, BigDecimal)]
-              _            <- -.set(sem -> turn)
+              _            <- -.set(turn)
             yield
               ()
       _  <- IO.cede >> loop
@@ -68,7 +72,13 @@ package object `Π-loop`:
     for
       it <- /.take
       (key, r) = it
-      _  <- %.update { _ + (key -> Some(r)) }
+      _  <- %.update { m =>
+                       if m.contains(key)
+                       then
+                         m + (key -> Some(r))
+                       else
+                         m
+            }
       _  <- +.release
       _  <- IO.cede >> poll
     yield

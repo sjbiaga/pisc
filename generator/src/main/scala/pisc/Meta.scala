@@ -49,7 +49,7 @@ object Meta {
              identifier,
              Member.ParamClauseGroup(
                Type.ParamClause(Nil),
-               List(`()`(params: _*), `(using % : %, / : /, - : -)(implicit ^ : String)`),
+               List(`()`(params: _*), `(using % : %, / : /, - : -, + : +)(implicit ^ : String)`),
              ) :: Nil,
              `: IO[Unit]`,
              prog
@@ -92,11 +92,11 @@ object Meta {
                     ,None)
 
 
-  val `(using % : %, / : /, - : -)(implicit ^ : String)` =
+  val `(using % : %, / : /, - : -, + : +)(implicit ^ : String)` =
     Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) ::
-                       List("%", "/", "-")
+                       List("%", "/", "-", "+")
                        .map { it => Term.Param(Mod.Implicit() :: Nil,
                                                it,
                                                Some(Type.Name(it)),
@@ -198,11 +198,11 @@ object Meta {
     )
 
 
-  def update(enabled: Actions): List[Enumerator] =
+  def `… = *; _ <- %.update(…)`(enabled: Actions): List[Enumerator] =
     if (enabled.nonEmpty) {
       val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
       Enumerator.Val(Pat.Var(uuid), s"""Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
-      `_ <- *`(s"%.update(`$uuid`.foldLeft(_){ case (it, key) => it + ((^ + key) -> None) })".parse[Term].get) :: Nil
+      `_ <- *`(s"%.update(`$uuid`.foldLeft(_)(_ + _))".parse[Term].get) :: Nil
     } else Nil
 
 }
