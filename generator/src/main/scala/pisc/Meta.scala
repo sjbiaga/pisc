@@ -179,7 +179,7 @@ object Meta {
            Type.Apply(Type.Name("IO"),
                       Type.ArgClause(Type.Name("Unit") :: Nil))))
 
-  def `IO { lazy val *: String -> IO[Unit] = { ^ => … } * }`(* : String, `…`: Term.ForYield): Term =
+  def `IO { lazy val *: String -> IO[Unit] = { implicit ^ => … } * }`(* : String, `…`: Term.ForYield): Term =
     Term.Apply("IO",
                Term.ArgClause(
                  Term.Block(
@@ -188,7 +188,10 @@ object Meta {
                             `: String => IO[Unit]`,
                             Term.Block(
                               Term.Function(
-                                Term.ParamClause(Term.Param(Nil, "^", None, None) :: Nil, None), `…`
+                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
+                                                            "^",
+                                                            None,
+                                                            None) :: Nil, None), `…`
                               ) :: Nil
                             )
                    ) :: \(*) :: Nil

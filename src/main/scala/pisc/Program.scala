@@ -134,7 +134,7 @@ object Program:
 
         val it =
           `for * yield ()`(
-            (`… = *; _ <- %.update(…)`(sum.enabled) :+
+            (`… = *; _ <- %.update(…)`(π.enabled ++ sum.enabled) :+
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
                 `for * yield ()`(body(sum)(false): _*),
@@ -143,7 +143,7 @@ object Program:
             }) :_*
           )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: String -> IO[Unit] = { ^ => … } * }`(uuid, it))
+        * :+= `* <- *`(uuid -> `IO { lazy val *: String -> IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!πP`
 
       ////// restriction | prefixes | (mis)match | if then else | replication //

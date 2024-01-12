@@ -177,8 +177,6 @@ object StochasticPi:
 
     lazy val trans: AST => Seq[(State, State)] = _ match
 
-      case `!`(π, _) => Seq(π -> π)
-
       case _: `-` => Nil
 
       case `+`(_, ps*) =>
