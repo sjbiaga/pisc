@@ -29,7 +29,7 @@
 //package main.scala.in
 
 import _root_.cats.effect.{ IO, IOApp, Deferred }
-import _root_.cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-loop`._
 import `Π-stats`.{ Rate, ∞, `@` }
@@ -37,15 +37,15 @@ import `Π-stats`.{ Rate, ∞, `@` }
 
 object App extends IOApp.Simple:
 
-  private def run(% : %, / : /, + : (+, +), - : -): IO[Unit] =
+  private def run(% : %, \ : \, / : /, * : (*, *), + : +, - : -): IO[Unit] =
     ( for
-        _ <- loop(using %, +, -).background
-        _ <- poll(using %, /, +._1).background
+        _ <- loop(using %, \, *, +, -).background
+        _ <- poll(using %, /, *._1).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- π.Main()(using "")(using %, /, -, +._2)
+        _ <- π.Main()(using "")(using %, \, /, *._2, +, -)
       yield
         ()
     }
@@ -53,13 +53,15 @@ object App extends IOApp.Simple:
   override def run: IO[Unit] =
     for
       %    <- IO.ref(Map[String, Option[Rate]]())
+      \    <- IO.ref(Set[String]())
       /    <- Queue.unbounded[IO, (String, Rate)]
-      +  <- Semaphore[IO](1)
-      &  <- Semaphore[IO](1)
-      _    <- &.acquire
+      *    <- Semaphore[IO](1)
+      ^    <- Semaphore[IO](1)
+      _    <- ^.acquire
+      +    <- CyclicBarrier[IO](2)
       turn <- Deferred[IO, (String, BigDecimal)]
       -    <- IO.ref(turn)
-      _    <- run(%, /, (+, &), -)
+      _    <- run(%, \, /, (*, ^), +, -)
     yield
       ()
 

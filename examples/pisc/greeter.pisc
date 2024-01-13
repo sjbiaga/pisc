@@ -11,15 +11,15 @@ Main = ν(stdin)ν(stdout) \
      | stdout(prompt).stdin</*sc_name*/>.stdout(pi_greet). \
      ) \
 
-Chooser(stdout, name) = τ@r.Greeter'(stdout, name) \
+Chooser(stdout, name) = τ.𝟎
+                      + τ@r.Greeter'(stdout, name) \
                       + τ@r.Greeter"(stdout, name) \
-                      + τ@r.Greeter'"(stdout, name) \
+                      + τ@r.Greeter"'(stdout, name) \
 
-Greeter'(stdout, name) = \
-                       ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">. \
-                       | [name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
-                       | [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!\n"*/>. \
-                       ) \
+Greeter'(stdout, name) = 𝟎 \
+                       | ([/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">.) \
+                       | ([name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">.) \
+                       | ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!\n"*/>.) \
 
 Greeter"(stdout, name) = \
                        ( if /*name.substring(0,1).toUpperCase*/ = "Q" \
@@ -30,7 +30,7 @@ Greeter"(stdout, name) = \
                            else stdout</*s"Hello $name!\n"*/>. \
                        ) \
 
-Greeter'"(stdout, name) = \
+Greeter"'(stdout, name) = \
                         ( /*name.substring(0,1).toUpperCase*/ = "Q" \
                           ? stdout<"That's an unusual name.\n">. \
                           : \

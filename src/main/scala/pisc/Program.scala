@@ -57,9 +57,10 @@ object Program:
       case it: `𝟎`.type =>
 
       case it: `+` if it.choices.size > 1 =>
-        if init then * ++= `… = *; _ <- %.update(…)`(it.enabled)
 
         val fy = it.choices.foldLeft(List[Term.ForYield]())(_ :+ body(_)(false))
+
+        if init then * ++= `… = *; _ <- %.update(…)`(it.enabled)
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
@@ -174,7 +175,6 @@ object Program:
 
 
       // SEQUENCE //////////////////////////////////////////////////////////////
-      // followed possibly either by agent call or another process expression //
 
       case `.`(end, it: _*) if it.isEmpty =>
         assert(!end.isInstanceOf[`+`])

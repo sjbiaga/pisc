@@ -26,8 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import cats.effect.{ IO, Deferred, Ref }
-import cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.Monad
+import _root_.cats.effect.{ IO, Deferred, Ref }
+import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-stats`._
 
@@ -36,46 +37,46 @@ package object `Π-loop`:
 
   type % = Ref[IO, Map[String, Option[Rate]]]
 
-  type + = Semaphore[IO]
+  type \ = Ref[IO, Set[String]]
+
+  type * = Semaphore[IO]
+
+  type + = CyclicBarrier[IO]
 
   type - = Ref[IO, Deferred[IO, (String, BigDecimal)]]
 
   type / = Queue[IO, (String, Rate)]
 
-  def loop(using % : %, + : (+, +), - : -): IO[Unit] =
+  def loop(using % : %, \ : \, * : (*, *), + : +, - : -): IO[Unit] =
     for
       it <- %.modify { m =>
                        if m.exists(_._2 ne None)
                        then m -> Some(Map.from(m))
                        else m -> None
             }
-      _  <- if it.isEmpty then +._1.acquire else
+      _  <- if it.isEmpty then *._1.acquire else
             for
               (key, delta) <- IO.pure(|(it.get))
               turn         <- -.get
               _            <- turn.complete(key -> delta)
-              _            <- +._2.acquire
+              _            <- *._2.acquire
+              _            <- Monad[IO].whileM_(\.modify { d => d -> d.nonEmpty })(IO.cede)
               _            <- %.update(_ - key)
               turn         <- Deferred[IO, (String, BigDecimal)]
               _            <- -.set(turn)
+              _            <- *._2.tryAcquire
+              _            <- +.await
             yield
               ()
       _  <- IO.cede >> loop
     yield
       ()
 
-  def poll(using % : %, / : /, + : +): IO[Unit] =
+  def poll(using % : %, / : /, * : *): IO[Unit] =
     for
-      it <- /.take
-      (key, r) = it
-      _  <- %.update { m =>
-                       if m.contains(key)
-                       then
-                         m + (key -> Some(r))
-                       else
-                         m
-            }
-      _  <- +.release
-      _  <- IO.cede >> poll
+      (key, r) <- /.take
+      _        <- %.update(_ + (key -> Some(r)))
+      _        <- *.release
+      _        <- IO.cede >> poll
     yield
       ()
