@@ -34,49 +34,50 @@ import java.util.UUID
 import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
+import scala.meta.Term
+
 import scala.util.parsing.combinator._
 
 import StochasticPi._
 import Calculus._
 
 
-trait StochasticPi extends JavaTokenParsers:
+trait StochasticPi extends Expression:
 
   def `π.`: Parser[(μ, (Names, Names))] =
-    "τ"~>opt("@"~>rate) ^^ { r => // silent prefix
-      τ(r) -> (Names(), Names())
+    "τ"~>opt( "@"~rate | expression ) ^^ { // silent prefix
+      case Some((term, free)) =>
+        `τ`(Some(term), None) -> (Names(), free)
+      case Some(_ ~ r) =>
+        `τ`(None, Some(r)) -> (Names(), Names())
+      case _ =>
+        `τ`(None, None) -> (Names(), Names())
     } |
     name~opt("@"~>rate)~"<"~name~">" ^^ { // negative prefix i.e. output
-      case ch ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+      case (ch, _) ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case ch ~ r ~ _ ~ arg ~ _ =>
-        π(ch, arg, polarity = false, r) -> (Names(), Names(ch, arg))
+      case (ch, name) ~ r ~ _ ~ (arg, free) ~ _ =>
+        π(ch, arg, polarity = false, r) -> (Names(), name ++ free)
     } |
     name~opt("@"~>rate)~"("~name~")" ^^ { // positive prefix i.e. input
-      case ch ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+      case (ch, _) ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ _ ~ par ~ _ if !par.isSymbol =>
+      case _ ~ _ ~ _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case ch ~ r ~ _ ~ par ~ _ =>
-        π(ch, par, polarity = true, r) -> (Names(par), Names(ch))
+      case (ch, name) ~ r ~ _ ~ (par, bound) ~ _ =>
+        π(ch, par, polarity = true, r) -> (bound, name)
     }
 
-  def name: Parser[λ] = ident ^^ { λ.apply compose Symbol.apply } |
-                        floatingPointNumber ^^ { λ.apply } |
-                        stringLiteral ^^ { λ.apply } |
-                        expression ^^ { λ.apply compose Expr.apply }
+  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
+                                 floatingPointNumber ^^ { it => λ(it) -> Names() } |
+                                 stringLiteral ^^ { it => λ(it) -> Names() } |
+                                 expression ^^ { (term, free) => λ(Expr(term)) -> free }
 
   def rate: Parser[Option[Any]] = "("~>rate<~")" |
                                   "∞" ^^ { _ => None } |
                                   floatingPointNumber ^^ { Option.apply compose BigDecimal.apply } |
                                   super.ident ^^ { Option.apply compose Symbol.apply } |
-                                  expression ^^ { Option.apply compose Expr.apply }
-
-  /** Scala comment enclosing any Scala expression.
-   * @return
-   */
-  def expression: Parser[String] =
-    """[/][*].*?[*][/]""".r ^^ { _.stripPrefix("/*").stripSuffix("*/") }
+                                  expression ^^ { (term, _) => Some(Expr(term)) }
 
 
 object StochasticPi:

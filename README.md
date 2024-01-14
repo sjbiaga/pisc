@@ -52,7 +52,7 @@ Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
 the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
-or any `Scala` expression as a Scala comment between `/*` and `*/`.
+or a [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*` and `*/`.
 
 The _`rate`_ of an action ("τ" or prefix) can be optionally annotated with `@`
 and an infinite ("∞"), a `Scala` identifier, a (boxed in a) `BigDecimal` number,
@@ -63,14 +63,16 @@ using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` i
 _test_,that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the _replication_ unary operator `! CHOICE`, and thus whatever follows
-will never get be executed.
+Stack safe is the _replication_ unary operator `! Π . CHOICE`.
 
 The name before parentheses (angular or round) must be a channel name.
 
 Note that input/outut prefixes and the silent transition are followed by a dot,
 whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`
 and replication are "leaves".
+
+Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
+which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
@@ -79,7 +81,7 @@ and replication are "leaves".
     PREFIXES   ::= PREFIX { PREFIX }
     PREFIX     ::= Π "."
                  | "ν" "(" NAME ")"
-    Π          ::= "τ" [ @ RATE ]
+    Π          ::= "τ" [ @ RATE | EXPRESSION ]
                  | NAME [ @ RATE ] "<" NAME ">"
                  | NAME [ @ RATE ] "(" NAME ")"
     LEAF       ::= "𝟎"
@@ -87,8 +89,9 @@ and replication are "leaves".
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" PREFIX "." CHOICE
+                 | "!" Π "." CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    EXPRESSION ::= "/*" ... "*/"
 
 Not part of the original Π-calculus, an agent (call) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
@@ -99,6 +102,170 @@ can be reused; the lexical category is `qual`.
 
 Stochastic
 ----------
+
+The execution of a stochastic Π-calculus program is handled in the files:
+`loop.scala`, `stats.scala` and `spi.scala`. The `Main` agent is called from
+the final generated source file wherein `main.scala.in` was `cat`enated.
+
+From `main.scala.in`, two fibres are launched in `background` and used as `Resource`s,
+such that terminating the program cancels them. However, when a process is _discarded_,
+`IO.never` is used for this situation, so the program won't exit any longer. This
+is something to improve. `IO.canceled` cannot be used as it raises an exception.
+
+Silent transitions, input and output prefixes ("actions") are associated with
+an UUID (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
+trait `State`. The only other expression that is a `State` is... summation.
+
+A `State` contains a `Set` of `enabled` actions `(UUIDs`). These are computed as follows.
+Each silent transition, input or output prefix has (the key of) itself as the only enabled
+action: these are the base cases. The enabled actions of a sequence of prefixes or
+restriction, unless this sequence is empty, is that of the *first* action, if any.
+If the sequence is empty or does not have actions (only restrictions), then the
+enabled actions are either those of the "leaf" expression or of another processs
+expression, that "`end`"s the sequence of prefixes. Both are optional, case in which
+is taken to be the inaction `𝟎`, which has no enabled actions. Besides `𝟎`, other leaf
+expressions are (mis)match, `if then else`, Elvis operator (all three being treated
+the same), agent call and (guarded) replication.
+
+The only case of a leaf that has enabled actions is the latter - a (guard)
+non-positive polarity prefix. Otherwise, another ending process expression must
+follow the sequence between a pair of parentheses. An exception is raised if
+the sequence is empty and the `end`ing is none.
+
+The set of enabled actions of a (parallel) composition is the union of each sequence's.
+set of enabled actions. Finally, the set of enabled actions of a summation is the union
+of each choice's set of enabled actions. Only a summation has a set of enabled actions,
+and thus is a `State`. For the other two cases (sequence and composition) the set of
+enabled actions is only propagated "upwards" by the parser.
+
+The file `StochasticPi.scala` is used to create a _transition "system"_ between `State`s
+for the purpose of enabling the actions in the successor state, immediately prior to
+the "expiration" of the precursor enabled action. From action to consecutive action,
+there is a transition, even if there are restrictions in between (picture these latter
+translation in `Scala`). And finally, if there is a last action in a sequence, then
+there is a transition from it to either an `end`ing summation or replication (guard);
+otherwise there is no transition: but if this were the case - there is no last action -,
+the set of enabled actions of a summation or a (guarded) replication, is directly and
+wholly subsumed in/by another summation; and, of course, eventually, the enabled actions
+of the summation (process) expression pertaining to an agent definitional equation are
+immediately enabled upon its entry in any call.
+
+The latter is the case also for the other three leaf types: (mis)match, `if then else`
+and Elvis operator. For the case of guarded replication, if there is
+a last action of a sequence of actions, there is a transition from that to the
+guard action/prefix. But more importantly, upon the expiration of a last action from
+a sequence of prefixes, if its `end` is a _summation_, the enabled actions of this
+summation are enabled prior to the next _turn_. This contributes and requires that
+`turning` or the `next turn` is "coherent".
+
+Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
+_discarded_ actions. Each choice corresponds to a set of enabled actions. The
+set of enabled actions of the summation is but the union of the former. However,
+even this is handled in the parser, a somewhat "duplicated" algorithm creates
+the discarded actions.
+
+Thus, assume a choice of the sumation and dub it - `it`; the union of the set of
+_all_ enabled actions of the choices to the left - `left`; and, the union of the
+set of _all_ enabled actions of the choices to the right - `right`. Then for
+each key in `it`, the discarded actions is the union of `left` with `right`.
+As an action is part of many summations on the way up to the top level,
+each time there is more than one choice, to the same key there will be added
+more "let/right" discarded actions/keys.
+
+What is the benefit? At execution, when a key is part of the enabled actions,
+performing the action corresponding to that key means two things. First, the
+actions that are in parallel remain the same. Second, whenever the key is
+part of a composition (maybe more than one sequence), than the fact that
+this parallel composition is a choice in a summation, demands that all other
+actions in the other `left` and `right` choices be discarded. So, there maybe
+many summations in which the expired _key_ discards other keys.
+
+The discarded and enabled actions are then embedded as an immutable map from
+`String` to `Set[String]`in the generated output file. These `magical` maps
+are declared as `π-trick` and `π-spell`.
+
+The contention between the enabled actions occurs as follows. Each action in a
+sequence is a `for` generator that calls a method in `spi.scala`; the key of
+this actions is passed as second argument. The method offers the action `rate`
+associated with the key, or enqueues the pair in the `/` `Queue`. That does not mean
+the rate will be used, because the action may be _discarded_. A background fiber
+blocks on `take`ing or dequeuing this `Queue`. It then updates the `%` map
+of all enabled actions by merely setting the rate - which otherwise, at the
+moment these actions were enobled, was set to `None` - which is why it is
+crucial the [enabled] actions are enabled (rate set to `None`, enough to be
+in the `%` map) when parallel fibers are spawned. A second background fiber
+is blocked on a `Semaphore` that the other bacground fiber releases, and
+then loops.
+
+This second background fiber then takes snapshot of the `%` map searching
+for any enabled action that has been "reached", and thus has a associated a
+rate rather than `None`. If this snapshot is empty, than it will block on the
+semaphore shared with the first background fiber.
+
+As soon as the snapshot is non-empty, the second background fiber computes
+statistically - starting from the rate - the _delay_ ("delta") that corresponds
+to the fastest action. It then uses both key and delay to _complete_ a `Deferred`.
+This corresponds to `turning` or the `next turn`. Meanwhile, all methods called
+(in parallel, either summation or composition) from a `for` generator, having
+`offered` the action rate, are (and must _all_ be) blocked on `Deferred.get`'s
+method. As soon as the `Deferred` is `complete`d, each method will compare the
+argument key with the gotten key. One will match. (Otherwise, the rest will
+`IO.cede` and busy `loop`, getting the same different key until blocking again
+on a fresh `Deferred` in the `next turn`, unless becoming discarded).
+
+Before actually performing the action (which occurs eventually), there is
+some "book-keeping" to do. First, the second background fiber blocks on
+a semaphore (initially in the `acquire`d state, and shared with all
+the agents trough the `using` parameter list, as `/`, `%`, or `\`),
+while the winning fiber does some updating to the `%` map and the `\` set,
+before releasing the semaphore. Thus, the invariant that the semaphore
+is in the `acquire`d state with each start of a turn must be preserved.
+There are two cases here:
+
+1. The semaphore is `release`d _before_ the second background fiber
+   `acquire`s it. Hence, that the winning fiber has finished
+   updating. Thus, the second background fiber will _NOT_ remain
+   blocked, and may proceed to awaiting that each discarded key
+   (in the `\` set) is removed while in its method's busy `loop`.
+   The semaphore is now in the `acquire`d case.
+
+2. The semaphore is `release`d _after_ the second background fiber
+   `acquire`s it. The second background fiber blocked politely,
+   awaited nicely, and the `\` set of discarded keys is emptied, but
+   the semaphore is now in the `release`d case.
+
+To maintain the invariant, trying to comply with 2.,
+the semaphore must be `acquired`. But doing so, and trying
+to comply with 1., will result in the second background fiber
+to remain blocked. The way out of this is to use the method
+`tryAcquire` on the semaphore to maintain the invariant in
+either 1. or 2. case.
+
+And now to what happens in order that `turning` be coherent.
+
+Having released the semaphore, were the winning fiber to just
+return control to the `for` comprehension, the next generator
+method could be "caught" in the same "`complete`d" turn - because
+the second background fiber will have not yet reached setting
+the next turn -, and thus "pass through" the "should-be-blocking"
+`Deferred.get`.
+
+Each other contention fiber that lost, awaits for either two
+things: for the next turn, or to be discarded. This occurs in the
+method's busy loop ("passing through" until the next turn), which
+also checks whether the key has become discarded.
+
+To be discarded must happen before the next turn for all keys
+that lost the contention.
+
+Thus, the winning fiber must wait on the second background fiber
+to finish awaiting discarding of keys. After that, the latter
+needs only to set a fresh `Deferred` as the new `next turn`,
+and then...
+
+... Wait for the former as the former waits for the latter? This
+is accomplished with a `CyclicBarrier[IO](2)` from `CE` standard
+library (as are `Queue`, `Semaphore` or `Deferred`).
 
 
 Program
@@ -135,7 +302,7 @@ A long prefix path - "`v(x).x<5>.x(y).τ@(1).x@∞(z).z<y>.`":
       _ <- x(BigDecimal(5))
       (y, _) <- x(null)
       _ <- τ(BigDecimal(1))
-      (z, _) <- x(`∞`)
+      (z, _) <- x(∞)
       _ <- z(y)
       .
       .
@@ -143,7 +310,7 @@ A long prefix path - "`v(x).x<5>.x(y).τ@(1).x@∞(z).z<y>.`":
     yield
       ()
 
-Note that `UUID` first argument is absent.
+Note that `UUID` second argument is absent.
 
 One can intercalate "`println`"s:
 
@@ -157,7 +324,7 @@ One can intercalate "`println`"s:
       _ <- IO.println("input x(y)")
       t <- τ(BigDecimal(1))
       _ <- IO.println(s"silent transition time = $t")
-      (z, t) <- x(`∞`)
+      (z, t) <- x(∞)
       _ <- IO.println(s"immediate input time = $t")
       _ <- z(y, null)
       .
@@ -257,41 +424,17 @@ The root project folder contains four files: `loop.scala`, `stats.scala`, `spi.s
 !!!Warning: do not delete them!!!
 One can edit'em, though they're ready to generate a main `App`.
 
-Let's go backwards. But first, let's assume there is a shell (`bash`) function "`spi`":
-
-    function spi() {
-        set "$@" ../loop.scala ../stats.scala ../spi.scala
-        ~/.local/share/coursier/bin/scala-cli "$@"                                             \
-                                              -S 3.4.0-RC1                                     \
-                                              --dependency org.scalanlp::breeze:2.1.0          \
-                                              --dependency org.typelevel::cats-effect:3.5.2    \
-                                              --dependency com.github.blemale::scaffeine:5.2.1
-    }
+To get and run the examples, one can `source` the functions from `bin/pi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
     ./examples $ spi run ex.scala
 
-To get the final source file `ex.scala`, run `scalafmt` on the `.out` files:
+To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ rm out/ex.scala; cat out/ex.scala.out | scalafmt --stdin --stdout > ex.scala
+    ./examples $ pio ex
 
-To get the intermediary `out/ex.scala.out`, concatenate two `.in` files:
-
-    ./examples $ rm out/ex.scala.out; { cat ../main.scala.in; cat in/ex.scala.in | sed -e 's/^/  /'; } > out/ex.scala.out
-
-These two steps can be put in a shell (`bash`) function "`pio`":
-
-    function pio() {
-        while [ $# -gt 0 ]
-        do
-            rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
-            rm "$1".scala; cat out/"$1".scala.out | scalafmt --stdin --stdout > "$1".scala
-            shift
-        done
-    }
-
-To get the first `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
 
     sbt:pisc> run ex
 

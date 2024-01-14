@@ -39,9 +39,9 @@ import parser.StochasticPi.Actions
 import parser.Calculus.{ `()`, `+`, Expr }
 
 
-object Meta {
+object Meta:
 
-  def defn(bind: `()`, prog: Term.ForYield): Defn.Def = {
+  def defn(bind: `()`, prog: Term.ForYield): Defn.Def =
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
@@ -54,7 +54,7 @@ object Meta {
              `: IO[Unit]`,
              prog
     )
-  }
+
 
   def === : ((AnyRef, AnyRef)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
@@ -77,14 +77,14 @@ object Meta {
   }
 
 
-  @inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
+  inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
   @tailrec
-  @inline implicit def \(* : List[Enumerator]): Term.ForYield =
-    if (*.nonEmpty) `for * yield ()`(* : _*)
+  implicit def \(* : List[Enumerator]): Term.ForYield =
+    if *.nonEmpty then `for * yield ()`(* : _*)
     else \(`_ <- IO.unit`)
 
-  @inline implicit def \(* : String): Term.Name = Term.Name(*)
+  inline implicit def \(* : String): Term.Name = Term.Name(*)
 
 
   def `()`(* : String*) =
@@ -113,9 +113,11 @@ object Meta {
 
 
   def `* <- …`(* : String*): Pat =
-    if (*.size == 0)
+    if *.size == 0
+    then
       Pat.Wildcard()
-    else if (*.size == 1)
+    else if *.size == 1
+    then
       Pat.Var(*.head)
     else
       Pat.Tuple(*.map(\(_)).map(Pat.Var(_)).toList)
@@ -135,13 +137,21 @@ object Meta {
   def `_ <- IO.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
 
+  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(\("IO"),
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
+
 
   @tailrec
   def `for * yield ()`(* : Enumerator*): Term.ForYield =
-    if (*.nonEmpty)
-      if (!(*.head.isInstanceOf[Enumerator.Generator]))
+    if *.nonEmpty
+    then
+      if !(*.head.isInstanceOf[Enumerator.Generator])
+      then
         `for * yield ()`((`_ <- IO.unit` +: *): _*)
-      else if (*.size == 1)
+      else if *.size == 1
+      then
         *.head match {
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
             it
@@ -180,7 +190,7 @@ object Meta {
                       Type.ArgClause(Type.Name("Unit") :: Nil))))
 
   def `IO { lazy val *: String -> IO[Unit] = { implicit ^ => … } * }`(* : String, `…`: Term.ForYield): Term =
-    Term.Apply("IO",
+    Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
                    Defn.Val(Mod.Lazy() :: Nil,
@@ -202,10 +212,10 @@ object Meta {
 
 
   def `… = *; _ <- %.update(…)`(enabled: Actions): List[Enumerator] =
-    if (enabled.nonEmpty) {
+    if enabled.nonEmpty
+    then
       val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
       Enumerator.Val(Pat.Var(uuid), s"""_root_.scala.collection.immutable.Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
       `_ <- *`(s"%.update(`$uuid`.foldLeft(_)(_ + _))".parse[Term].get) :: Nil
-    } else Nil
-
-}
+    else
+      Nil

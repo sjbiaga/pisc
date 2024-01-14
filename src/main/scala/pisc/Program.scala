@@ -98,8 +98,12 @@ object Program:
         * = `* <- *`(name -> "ν")
 
 
-      case it @ τ(r) =>
+      case it @ `τ`(Some(term), r) =>
         * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * :+= `_ <- IO { * }`(term)
+
+      case it @ `τ`(_, r) =>
+        * = `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
 
 
       case it @ π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
@@ -107,17 +111,17 @@ object Program:
       case it @ π(ch,  _, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r) =>
-        * :+= `_ <- *`(s"$ch(${rate(r)}, $arg)(\"${it.uuid}\")".parse[Term].get)
+        * = `_ <- *`(s"$ch(${rate(r)}, $arg)(\"${it.uuid}\")".parse[Term].get)
 
       case it @ π(λ(Symbol(ch)), λ(Expr(expr)), false, r) =>
-        * :+= `_ <- *`(s"$ch(${rate(r)}, $expr)(\"${it.uuid}\")".parse[Term].get)
+        * = `_ <- *`(s"$ch(${rate(r)}, $expr)(\"${it.uuid}\")".parse[Term].get)
 
       case it @ π(λ(Symbol(ch)), λ(arg), false, r) =>
-        * :+= `_ <- *`(s"$ch(${rate(r)}, $arg)(\"${it.uuid}\")".parse[Term].get)
+        * = `_ <- *`(s"$ch(${rate(r)}, $arg)(\"${it.uuid}\")".parse[Term].get)
 
       case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r) =>
-        * :+= Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
-                                   s"$ch(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
+                                 s"$ch(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
 
 
       case it @ `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>

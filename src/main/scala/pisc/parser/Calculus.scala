@@ -34,6 +34,8 @@ import scala.util.parsing.combinator._
 import StochasticPi.{ Act, Actions, nil, Names, State, PrefixChannelParsingException }
 import Calculus._
 
+import scala.meta.Term
+
 
 class Calculus extends StochasticPi:
 
@@ -63,7 +65,7 @@ class Calculus extends StochasticPi:
   def sequential: Parser[(`.`, (Names, Actions))] =
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
       case (pre, _) ~ None if pre.isEmpty =>
-        throw EmptyParsingException
+        throw EmptyNoneParsingException
       case pre ~ Some((end: `&`, free: Names)) =>
         `.`(end, pre._1: _*) -> (pre._2._2 ++ (free &~ pre._2._1), Actions(end, pre._1: _*))
       case pre ~ _ =>
@@ -74,15 +76,15 @@ class Calculus extends StochasticPi:
     "𝟎" ^^ { _ => (`𝟎`, Names()) } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        `?:`(cond, t._1, `𝟎`) -> (Names(cond._1._1, cond._1._2) ++ t._2)
+        `?:`(cond._1, t._1, `𝟎`) -> (cond._2 ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     test~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~`π.`~"."~choice ^^ { // replication
       case _ ~ (π(_, _, true, _), _) ~ _ ~ _ =>
@@ -111,25 +113,26 @@ class Calculus extends StochasticPi:
 
   def prefix: Parser[(Pre, (Names, Names))] = `π.`<~"." |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
-      case ch if !ch.isSymbol =>
+      case (ch, _) if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case ch =>
-        ν(ch) -> (Names(ch), Names())
+      case (ch, name) =>
+        ν(ch) -> (name, Names())
     }
 
-  def test: Parser[((λ, λ), Boolean)] = "("~>test<~")" |
+  def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
-      case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
+      case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
+        (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
     }
 
   def agent(binding: Boolean = false): Parser[(`()`, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
-      case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
-        throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
+      case _ ~ id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
+        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value):_ *)
       case qual ~ id ~ Some(params) =>
-        `()`(λ(Symbol(id)), qual, params: _*) -> Names(params: _*)
+        `()`(λ(Symbol(id)), qual, params.map(_._1): _*) -> params.map(_._2).foldLeft(Names())(_ ++ _)
       case qual ~ id ~ _ =>
         `()`(λ(Symbol(id)), qual) -> Names()
     }
@@ -179,7 +182,8 @@ object Calculus extends Calculus:
 
   case class ν(name: λ) extends Pre // forcibly
 
-  case class τ(override val rate: Option[Option[Any]])
+  case class τ(term: Option[Term],
+               override val rate: Option[Option[Any]])
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
 
@@ -209,7 +213,7 @@ object Calculus extends Calculus:
       case _: Expr => "scala expression"
     }
 
-  case class Expr(expression: String)
+  case class Expr(term: Term)
 
 
   // exceptions
@@ -229,7 +233,7 @@ object Calculus extends Calculus:
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
 
-  case object EmptyParsingException
+  case object EmptyNoneParsingException
       extends ParsingException("Instead of an empty expression there must be some in place")
 
   case object GuardedReplicationException

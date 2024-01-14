@@ -6,35 +6,41 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-Main = ν(stdin)ν(stdout) \
-     ( stdout<"What's your name?\n">.stdin(name).Chooser(stdout, name) \
-     | stdout(prompt).stdin</*sc_name*/>.stdout(pi_greet). \
-     ) \
+Main = ν(stdin)ν(stdout)Greeter(stdin, stdout, "")
 
-Chooser(stdout, name) = τ.𝟎
-                      + τ@r.Greeter'(stdout, name) \
-                      + τ@r.Greeter"(stdout, name) \
+Greeter(stdin, stdout, sc_name) =                                      \
+     ( stdout<"What's your name?\n">.stdin(name).Chooser(stdout, name) \
+     | stdout(prompt)                                                  \
+     . τ/*print(prompt)*/                                              \
+     . τ/*scala.io.StdIn.readLine*/                                    \
+     . stdin<sc_name>                                                  \
+     . stdout(pi_greet)                                                \
+     . τ/*print(pi_greet)*/.                                           \
+     )                                                                 \
+
+Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
+                      + τ@r.Greeter"(stdout, name)  \
                       + τ@r.Greeter"'(stdout, name) \
 
-Greeter'(stdout, name) = 𝟎 \
-                       | ([/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">.) \
-                       | ([name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">.) \
+Greeter'(stdout, name) = 𝟎                                                                                               \
+                       | ([/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.\n">.)               \
+                       | ([name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">.)                             \
                        | ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!\n"*/>.) \
 
-Greeter"(stdout, name) = \
-                       ( if /*name.substring(0,1).toUpperCase*/ = "Q" \
-                         then stdout<"That's an unusual name.\n">. \
-                         else \
-                           if name = "Voldemort" \
+Greeter"(stdout, name) =                                                      \
+                       ( if /*name.substring(0,1).toUpperCase*/ = "Q"         \
+                         then stdout<"That's an unusual name.\n">.            \
+                         else                                                 \
+                           if name = "Voldemort"                              \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
-                           else stdout</*s"Hello $name!\n"*/>. \
-                       ) \
+                           else stdout</*s"Hello $name!\n"*/>.                \
+                       )                                                      \
 
-Greeter"'(stdout, name) = \
-                        ( /*name.substring(0,1).toUpperCase*/ = "Q" \
-                          ? stdout<"That's an unusual name.\n">. \
-                          : \
-                            name = "Voldemort" \
-                            ? stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">. \
-                            : stdout</*s"Hello $name!\n"*/>. \
-                        ) \
+Greeter"'(stdout, name) =                                                     \
+                        ( /*name.substring(0,1).toUpperCase*/ = "Q"           \
+                          ? stdout<"That's an unusual name.\n">.              \
+                          :                                                   \
+                            name = "Voldemort"                                \
+                            ? stdout<"WARNING! LORD VOLDEMORT IS HERE!\n">.   \
+                            : stdout</*s"Hello $name!\n"*/>.                  \
+                        )                                                     \
