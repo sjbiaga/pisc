@@ -51,7 +51,7 @@ Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
 the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
-or any `Scala` expression as a Scala comment between `/*` and `*/`.
+or a [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
@@ -63,8 +63,11 @@ Stack safe is the _replication_ unary operator `! CHOICE`.
 The name before parentheses (angular or round) must be a channel name.
 
 Note that input/outut prefixes and the silent transition are followed by a dot,
-whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`
-and replication are "leaves".
+whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`,
+Elvis operator, and replication are "leaves".
+
+Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
+which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
@@ -73,7 +76,7 @@ and replication are "leaves".
     PREFIXES   ::= PREFIX { PREFIX }
     PREFIX     ::= Π "."
                  | "ν" "(" NAME ")"
-    Π          ::= "τ"
+    Π          ::= "τ" [ EXPRESSION ]
                  | NAME "<" NAME ">"
                  | NAME "(" NAME ")"
     LEAF       ::= "𝟎"
@@ -83,6 +86,7 @@ and replication are "leaves".
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    EXPRESSION ::= "/*" ... "*/"
 
 Not part of the original Π-calculus, an agent (call) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
@@ -242,41 +246,17 @@ The root project folder contains two files: `pi.scala` and `main.scala.in`.
 !!!Warning: do not delete them!!!
 One can edit'em, though they're ready to generate a main `App`.
 
-Let's go backwards. But first, let's assume there is a shell (`bash`) function "`pi`":
-
-    function pi() {
-        set "$@" ../pi.scala
-        ~/.local/share/coursier/bin/scala-cli "$@"                                             \
-                                              -S 3.4.0-RC1                                     \
-                                              --dependency org.typelevel::cats-effect:3.5.2
-    }
+To get and run the examples, one can `source` the functions from `bin/pi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
     ./examples $ pi run ex.scala
 
-To get the final source file `ex.scala`, run `scalafmt` on the `.out` files:
+To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ rm out/ex.scala; cat out/ex.scala.out | scalafmt --stdin --stdout > ex.scala
+    ./examples $ pio ex
 
-To get the intermediary `out/ex.scala.out`, concatenate two `.in` files:
-
-    ./examples $ rm out/ex.scala.out; { cat ../main.scala.in; cat in/ex.scala.in | sed -e 's/^/  /'; } > out/ex.scala.out
-
-These two steps can be put in a shell (`bash`) function "`pio`"
-
-    function pio() {
-        while [ $# -gt 0 ]
-        do
-            rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
-            rm "$1".scala; cat out/"$1".scala.out |
-            scalafmt --stdin --stdout |
-            sed 's/for[ ][(][_][ ][<][-][ ]IO[.]unit[)][ ]yield[ ][(][)]/`𝟎`/g' > "$1".scala
-            shift
-        done
-    }
-
-To get the first `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
 
     sbt:pisc> run ex
 

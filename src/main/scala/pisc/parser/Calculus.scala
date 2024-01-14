@@ -34,6 +34,8 @@ import scala.util.parsing.combinator._
 import Pi.{ Names, PrefixChannelParsingException }
 import Calculus._
 
+import scala.meta.Term
+
 
 class Calculus extends Pi:
 
@@ -74,15 +76,15 @@ class Calculus extends Pi:
     "𝟎" ^^ { _ => (`𝟎`, Names()) } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        `?:`(cond, t._1, `𝟎`) -> (Names(cond._1._1, cond._1._2) ++ t._2)
+        `?:`(cond._1, t._1, `𝟎`) -> (cond._2 ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     test~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond, t._1, f._1) -> (Names(cond._1._1, cond._1._2) ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~>choice ^^ { // replication
       case (sum, free) => `!`(sum) -> free
@@ -108,25 +110,26 @@ class Calculus extends Pi:
 
   def prefix: Parser[(Pre, (Names, Names))] = `π.`<~"." |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
-      case ch if !ch.isSymbol =>
+      case (ch, _) if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case ch =>
-        ν(ch) -> (Names(ch), Names())
+      case (ch, name) =>
+        ν(ch) -> (name, Names())
     }
 
-  def test: Parser[((λ, λ), Boolean)] = "("~>test<~")" |
+  def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
-      case lhs ~ mismatch ~ rhs => lhs -> rhs -> (mismatch != "=")
+      case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
+        (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
     }
 
   def agent(binding: Boolean = false): Parser[(`()`, Names)] =
     qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
-      case _ ~ id ~ Some(params) if binding && !params.forall(_.isSymbol) =>
-        throw EquationParamsException(id, params.filterNot(_.isSymbol).map(_.value):_ *)
+      case _ ~ id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
+        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value):_ *)
       case qual ~ id ~ Some(params) =>
-        `()`(λ(Symbol(id)), qual, params: _*) -> Names(params: _*)
+        `()`(λ(Symbol(id)), qual, params.map(_._1): _*) -> params.map(_._2).foldLeft(Set.empty)(_ ++ _)
       case qual ~ id ~ _ =>
         `()`(λ(Symbol(id)), qual) -> Names()
     }
@@ -148,7 +151,7 @@ class Calculus extends Pi:
     rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
 
 
-object Calculus extends Calculus:
+object Calculus:
 
   type Bind = (`()`, `+`)
 
@@ -166,7 +169,7 @@ object Calculus extends Calculus:
 
   case class ν(name: λ) extends AnyVal with Pre // forcibly
 
-  case object τ extends Pre
+  case class τ(term: Option[Term]) extends AnyVal with Pre
 
   case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
 
@@ -185,10 +188,10 @@ object Calculus extends Calculus:
     val kind: String = value match {
       case _: Symbol => "channel name"
       case _: String => "scala value"
-      case _: Expr => "scala expression"
+      case _: Expr => "scala term"
     }
 
-  case class Expr(expression: String)
+  case class Expr(term: Term)
 
 
   // exceptions

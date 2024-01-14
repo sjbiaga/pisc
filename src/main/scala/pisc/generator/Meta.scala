@@ -37,16 +37,15 @@ import scala.meta._
 import parser.Calculus.{ `()`, Expr }
 
 
-object Meta {
+object Meta:
 
-  def defn(bind: `()`, prog: Term.ForYield): Defn.Def = {
+  def defn(bind: `()`, prog: Term.ForYield): Defn.Def =
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
     Defn.Def(Nil,
              identifier, `()`(params: _*), `: IO[Unit]`,
              prog)
-  }
 
   def === : ((AnyRef, AnyRef)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
@@ -60,14 +59,14 @@ object Meta {
   }
 
 
-  @inline implicit def \(* : Enumerator.Generator): List[Enumerator.Generator] = * :: Nil
+  inline implicit def \(* : Enumerator.Generator): List[Enumerator.Generator] = * :: Nil
 
   @tailrec
-  @inline implicit def \(* : List[Enumerator.Generator]): Term.ForYield =
-    if (*.nonEmpty) `for * yield ()`(* : _*)
+  implicit def \(* : List[Enumerator.Generator]): Term.ForYield =
+    if *.nonEmpty then `for * yield ()`(* : _*)
     else \(`_ <- IO.unit`)
 
-  @inline implicit def \(* : String): Term.Name = Term.Name(*)
+  inline implicit def \(* : String): Term.Name = Term.Name(*)
 
 
   def `()`(* : String*) =
@@ -89,9 +88,11 @@ object Meta {
 
 
   def `* <- …`(* : String*): Pat =
-    if (*.size == 0)
+    if *.size == 0
+    then
       Pat.Wildcard()
-    else if (*.size == 1)
+    else if *.size == 1
+    then
       Pat.Var(*.head)
     else
       Pat.Tuple(*.map(\(_)).map(Pat.Var(_)).toList)
@@ -111,19 +112,28 @@ object Meta {
   def `_ <- IO.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
 
+  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(\("IO"),
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
+
 
   @tailrec
   def `for * yield ()`(* : Enumerator.Generator*): Term.ForYield =
-    if (*.nonEmpty)
-      if (*.size == 1)
+    if *.nonEmpty
+    then
+      if *.size == 1
+      then
         *.head match {
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
             it
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
         }
-      else Term.ForYield(*.toList, Lit.Unit())
-    else `for * yield ()`(`_ <- IO.unit`)
+      else
+        Term.ForYield(*.toList, Lit.Unit())
+    else
+      `for * yield ()`(`_ <- IO.unit`)
 
 
   def `_ <- *.acquire`(* : String): Enumerator.Generator =
@@ -132,7 +142,7 @@ object Meta {
 
   def `* <- Semaphore[IO](1)`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType("Semaphore",
+                         Term.Apply(Term.ApplyType(\("Semaphore"),
                                                    Type.ArgClause(Type.Name("IO") :: Nil)),
                                     Term.ArgClause(Lit.Int(1) :: Nil, None)
                          )
@@ -166,7 +176,7 @@ object Meta {
 
 
   def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term.ForYield): Term =
-    Term.Apply("IO",
+    Term.Apply(\("IO"),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
@@ -177,5 +187,3 @@ object Meta {
                               None
                )
     )
-
-}

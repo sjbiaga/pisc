@@ -74,9 +74,7 @@ object Program:
       case it: `|` if it.components.size > 1 =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        val x = it.components
-
-        val fy = x.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
+        val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
@@ -98,7 +96,11 @@ object Program:
       case ν(λ(Symbol(name))) =>
         * = `* <- *`(name -> "ν")
 
-      case `τ` =>
+      case `τ`(Some(term)) =>
+        * :+= `_ <- *`("τ")
+        * :+= `_ <- IO { * }`(term)
+
+      case `τ`(_) =>
         * = `_ <- *`("τ")
 
 
@@ -109,8 +111,8 @@ object Program:
       case π(λ(Symbol(ch)), λ(Symbol(arg)), false) =>
         * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
-      case π(λ(Symbol(ch)), λ(Expr(expr)), false) =>
-        * = `_ <- *`(s"$ch($expr)".parse[Term].get)
+      case π(λ(Symbol(ch)), λ(Expr(term)), false) =>
+        * = `_ <- *`(Term.Apply(Term.Name(ch), Term.ArgClause(term::Nil, None)))
 
       case π(λ(Symbol(ch)), λ(arg), false) =>
         * = `_ <- *`(s"$ch($arg)".parse[Term].get)
