@@ -40,7 +40,7 @@ import StochasticPi.Names
 
 class Expression extends JavaTokenParsers:
 
-  /** Scala comment enclosing any Scala expression.
+  /** Scala comment enclosing any [[Scalameta]] term.
    * @return
    */
   def expression: Parser[(Term, Names)] =

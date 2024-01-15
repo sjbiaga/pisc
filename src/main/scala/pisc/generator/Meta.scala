@@ -56,14 +56,25 @@ object Meta:
     )
 
 
-  def === : ((AnyRef, AnyRef)) => Term = {
+  def === : ((Any, Any)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
+    case (Symbol(x), y: BigDecimal) => s"$x === $y".parse[Term].get
+    case (Symbol(x), y: Boolean) => s"$x === $y".parse[Term].get
     case (Symbol(x), y: String) => s"$x === $y".parse[Term].get
     case (Symbol(x), Expr(y)) => s"$x === $y".parse[Term].get
+    case (x: BigDecimal, Symbol(y)) => s"$x === $y".parse[Term].get
+    case (x: Boolean, Symbol(y)) => s"$x === $y".parse[Term].get
     case (x: String, Symbol(y)) => s"$x === $y".parse[Term].get
     case (Expr(x), Symbol(y)) => s"$x === $y".parse[Term].get
+    case (x: BigDecimal, y: BigDecimal) => s"$x === $y".parse[Term].get
+    case (x: Boolean, y: Boolean) => s"$x === $y".parse[Term].get
     case (x: String, y: String) => s"$x === $y".parse[Term].get
+    case (Expr(x), Expr(y)) => s"$x === $y".parse[Term].get
+    case (x: BigDecimal, Expr(y)) => s"$x === $y".parse[Term].get
+    case (x: Boolean, Expr(y)) => s"$x === $y".parse[Term].get
     case (x: String, Expr(y)) => s"$x === $y".parse[Term].get
+    case (Expr(x), y: BigDecimal) => s"$x === $y".parse[Term].get
+    case (Expr(x), y: Boolean) => s"$x === $y".parse[Term].get
     case (Expr(x), y: String) => s"$x === $y".parse[Term].get
   }
 

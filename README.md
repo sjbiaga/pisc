@@ -441,8 +441,9 @@ To get the intermediary `in/ex.scala.in` file, execute the `run` command in the 
 where `example/pisc/ex.pisc` contains the stochastic Π-calculus source (equations binding agents to process
 expressions).
 
-In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-level `package ex[12]` line.
+In order to allow multiple `App`s, edit `examples/greeter.scala` and add a top-level `package pisc.greeter` line,
+edit `examples/fibonacci.scala` and add a top-level `package pisc.fibonacci` line,
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ spi run --interactive ex1.scala ex2.scala
+    ./examples $ spi run --interactive fibonacci.scala greeter.scala

@@ -71,6 +71,7 @@ trait StochasticPi extends Expression:
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
                                  floatingPointNumber ^^ { it => λ(it) -> Names() } |
                                  stringLiteral ^^ { it => λ(it) -> Names() } |
+                                 ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ { (term, free) => λ(Expr(term)) -> free }
 
   def rate: Parser[Option[Any]] = "("~>rate<~")" |

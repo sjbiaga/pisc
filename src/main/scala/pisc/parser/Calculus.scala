@@ -171,7 +171,7 @@ object Calculus extends Calculus:
 
   case class `+`(override val enabled: Actions,
                  choices: `|`*) extends AST with State
-  
+
   object `𝟎` extends `+`(nil, `|`())
 
   case class `|`(components: `.`*) extends AnyVal with AST
@@ -203,13 +203,15 @@ object Calculus extends Calculus:
   case class `!`(prefix: μ, sum: `+`)
       extends AST
 
-  case class λ(value: AnyRef) extends AST:
+  case class λ(value: Any) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
     val kind: String = value match {
       case _: Symbol => "channel name"
-      case _: String => "scala value"
+      case _: BigDecimal => "decimal number"
+      case _: Boolean => "true false"
+      case _: String => "string literal"
       case _: Expr => "scala expression"
     }
 
@@ -227,7 +229,7 @@ object Calculus extends Calculus:
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
 
-  case class EquationParamsException(id: String, params: AnyRef*)
+  case class EquationParamsException(id: String, params: Any*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
   case class EquationFreeNamesException(id: String, free: Names)
@@ -243,6 +245,8 @@ object Calculus extends Calculus:
   // functions
 
   val flatten: AST => (AST, Boolean) = _ match
+
+    case it: `𝟎`.type => it -> false
 
     case `+`(enabled, `|`(`.`(sum: `+`, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
@@ -262,6 +266,8 @@ object Calculus extends Calculus:
     case `+`(enabled, par, _*) =>
       val f = flatten(par).asInstanceOf[(`|`, Boolean)]
       `+`(enabled, f._1) -> f._2
+
+    case it @ `|`(`.`(_: `𝟎`.type), _*) => it -> false
 
     case `|`(`.`(`+`(_, `|`(ss*), p*), ps*), it*)
         if p.isEmpty && ps.isEmpty =>

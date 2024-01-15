@@ -1,0 +1,43 @@
+@given Conversion[`()`, Long] = _.name.asInstanceOf[Long]
+
+@val max = 15
+
+@val gen = new scala.util.Random
+
+@def random = math.abs(gen.nextLong)%max
+
+Main = ν(num1)ν(num2)                                   \
+     (                                                  \
+     𝟎                                                  \
+     | (!num1</*random*/>.num2(n).                      \
+        ν(in) (                                         \
+              𝟎                                         \
+              | Fib(n, in)                              \
+              | in(fib).                                \
+                τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                num1(n).num2<n>.                        \
+              )                                         \
+       )                                                \
+     | num1(n).num2<n>.                                 \
+     )                                                  \
+
+Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
+              ν(f)                       \
+              (                          \
+              𝟎                          \
+              | Fibonacci(f, n)          \
+              | f(res).out<res>.         \
+              )                          \
+
+Fibonacci(f, n) = if /*'n < 2*/ = True         \
+                  then                         \
+                    f</*1L*/>.                 \
+                  else                         \
+                    ν(g)ν(h)                   \
+                    (                          \
+                    𝟎                          \
+                    | Fibonacci(g, /*'n-1*/)   \
+                    | Fibonacci(h, /*'n-2*/)   \
+                    | g(p).h(r).f</*'p+'r*/>.  \
+                    )                          \
+

@@ -45,7 +45,7 @@ object Program:
   def apply(prog: List[Bind]): List[String] =
     prog.map { case (bind, Some(sum)) => defn(bind, body(sum)()).toString
                case _ => "" }
- 
+
 
   def body(node: AST)(init: Boolean = true): List[Enumerator] =
     var * = List[Enumerator]()
@@ -54,7 +54,7 @@ object Program:
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
-      case it: `𝟎`.type =>
+      case _: `𝟎`.type =>
 
       case it: `+` if it.choices.size > 1 =>
 
@@ -181,8 +181,6 @@ object Program:
       // SEQUENCE //////////////////////////////////////////////////////////////
 
       case `.`(end, it: _*) if it.isEmpty =>
-        assert(!end.isInstanceOf[`+`])
-
         * = body(end)()
 
       case `.`(end, it: _*) =>
