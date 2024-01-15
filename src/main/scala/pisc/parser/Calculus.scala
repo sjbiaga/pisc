@@ -181,14 +181,16 @@ object Calculus:
 
   case class `!`(sum: `+`) extends AnyVal with AST
 
-  case class λ(value: AnyRef) extends AST:
+  case class λ(value: Any) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
     val kind: String = value match {
       case _: Symbol => "channel name"
-      case _: String => "scala value"
-      case _: Expr => "scala term"
+      case _: BigDecimal => "decimal number"
+      case _: Boolean => "True False"
+      case _: String => "string literal"
+      case _: Expr => "scalameta term"
     }
 
   case class Expr(term: Term)
@@ -205,7 +207,7 @@ object Calculus:
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
 
-  case class EquationParamsException(id: String, params: AnyRef*)
+  case class EquationParamsException(id: String, params: Any*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
 
   case class EquationFreeNamesException(id: String, free: Names)
@@ -218,6 +220,8 @@ object Calculus:
   // functions
 
   val flatten: AST => (AST, Boolean) = _ match
+
+    case it: `𝟎`.type => it -> false
 
     case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
@@ -237,6 +241,8 @@ object Calculus:
     case `+`(par, _*) =>
       val f = flatten(par).asInstanceOf[(`|`, Boolean)]
       `+`(f._1) -> f._2
+
+    case it @ `|`(`.`(_: `𝟎`.type), _*) => it -> false
 
     case `|`(`.`(`+`(`|`(ss*), p*), ps*), it*)
         if p.isEmpty && ps.isEmpty =>

@@ -52,6 +52,8 @@ object Program:
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
+      case _: `𝟎`.type =>
+
       case it: `+` if it.choices.size > 1 =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
@@ -77,6 +79,8 @@ object Program:
         val fy = it.components.foldLeft(List[Term.ForYield]())(_ :+ body(_)())
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
+
+      case `|`(`.`(_: `𝟎`.type, it*), _*) if it.isEmpty => ???
 
       case `|`(operand, _*) =>
         * = body(operand)
