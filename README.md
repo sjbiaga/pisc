@@ -1,5 +1,5 @@
-Π-calculus in SCala aka PISC ala RISC
-=====================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The Π-calculus maps one to one on Scala for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
@@ -73,7 +73,7 @@ which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    PREFIXES   ::= PREFIX { PREFIX }
+    PREFIXES   ::= { PREFIX }
     PREFIX     ::= Π "."
                  | "ν" "(" NAME ")"
     Π          ::= "τ" [ EXPRESSION ]
@@ -85,7 +85,7 @@ which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" CHOICE
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
 Not part of the original Π-calculus, an agent (call) expression - unless

@@ -175,11 +175,11 @@ object Expression:
 
   def apply(self: Term): (Term, Names) = self match
 
-    case it: Term.This => it -> Set.empty
+    case it: Term.This => it -> Names()
 
-    case it: Term.Super => it -> Set.empty
+    case it: Term.Super => it -> Names()
 
-    case it: Term.Name => it -> Set.empty
+    case it: Term.Name => it -> Names()
 
     case it @ Term.Select(qual, _) =>
       val l = apply(qual)
