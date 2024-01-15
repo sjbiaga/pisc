@@ -78,7 +78,7 @@ which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    PREFIXES   ::= PREFIX { PREFIX }
+    PREFIXES   ::= { PREFIX }
     PREFIX     ::= Π "."
                  | "ν" "(" NAME ")"
     Π          ::= "τ" [ @ RATE | EXPRESSION ]
@@ -90,7 +90,7 @@ which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" Π "." CHOICE
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAME { "," NAME } ")" ]
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
 Not part of the original Π-calculus, an agent (call) expression - unless
