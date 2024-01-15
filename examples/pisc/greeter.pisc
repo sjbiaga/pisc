@@ -15,7 +15,7 @@ Greeter(stdin, stdout, sc_name) =                                      \
      . τ/*scala.io.StdIn.readLine*/                                    \
      . stdin<sc_name>                                                  \
      . stdout(pi_greet)                                                \
-     . τ/*print(pi_greet)*/.                                           \
+     . τ/*print(pi_greet)*/. {pisc}{fibonacci}Main                     \
      )                                                                 \
 
 Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \

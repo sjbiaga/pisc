@@ -1,5 +1,5 @@
-Stochastic Π-calculus in SCala aka PISC ala RISC
-================================================
+Stochastic Pi-calculus in SCala aka PISC ala RISC
+=================================================
 
 The Π-calculus maps one to one on Scala for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.

@@ -47,7 +47,7 @@ trait StochasticPi extends Expression:
   def `π.`: Parser[(μ, (Names, Names))] =
     "τ"~>opt( "@"~rate | expression ) ^^ { // silent prefix
       case Some((term, free)) =>
-        `τ`(Some(term), None) -> (Names(), free)
+        `τ`(Some(term), Some(None)) -> (Names(), free)
       case Some(_ ~ r) =>
         `τ`(None, Some(r)) -> (Names(), Names())
       case _ =>
