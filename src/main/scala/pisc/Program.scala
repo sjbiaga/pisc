@@ -80,8 +80,6 @@ object Program:
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
-      case `|`(`.`(_: `𝟎`.type, it*), _*) if it.isEmpty => ???
-
       case `|`(operand, _*) =>
         * = body(operand)
 
