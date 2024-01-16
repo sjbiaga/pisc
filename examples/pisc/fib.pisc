@@ -6,19 +6,19 @@
 
 @def random = math.abs(gen.nextLong)%max
 
-Main = ν(num1)ν(num2)                                   \
+Main = ν(num)                                           \
      (                                                  \
      𝟎                                                  \
-     | (!num1</*random*/>.num2(n).                      \
+     | (!num(n).                                        \
         ν(in) (                                         \
               𝟎                                         \
               | Fib(n, in)                              \
               | in(fib).                                \
                 τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
-                num1(n).num2<n>.                        \
+                num</*random*/>.                        \
               )                                         \
        )                                                \
-     | num1(n).num2<n>.                                 \
+     | num</*random*/>.                                 \
      )                                                  \
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \

@@ -145,6 +145,25 @@ object Program:
           * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t)(), body(f)()))
 
 
+      case `!`(π @ π(_, λ(Symbol(name)), true, _), sum) =>
+        val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
+
+        val `!πP` = body(π)() :+ `_ <- *`(s"`$uuid`($name)(`π-uuid`)".parse[Term].get)
+
+        val it =
+          `for * yield ()`(
+            (`… = *; _ <- %.update(…)`(π.enabled ++ sum.enabled) :+
+            `_ <- *` {
+              `( *, … ).parMapN { (_, …) => }`(
+                `for * yield ()`(body(sum)(false): _*),
+                `for * yield ()`(`!πP`: _*)
+              )
+            }) :_*
+          )
+
+        * :+= `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> name, it))
+        * ++= `!πP`
+
       case `!`(π, sum) =>
         val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
 
@@ -161,7 +180,7 @@ object Program:
             }) :_*
           )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: String -> IO[Unit] = { implicit ^ => … } * }`(uuid, it))
+        * :+= `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!πP`
 
       ////// restriction | prefixes | (mis)match | if then else | replication //

@@ -87,10 +87,8 @@ class Calculus extends StochasticPi:
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~`π.`~"."~choice ^^ { // replication
-      case _ ~ (π(_, _, true, _), _) ~ _ ~ _ =>
-        throw GuardedReplicationException
       case _ ~ π ~ _ ~ (sum, free) =>
-        `!`(π._1, sum) -> (free ++ π._2._2)
+        `!`(π._1, sum) -> ((free &~ π._2._1) ++ π._2._2)
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -237,9 +235,6 @@ object Calculus extends Calculus:
 
   case object EmptyNoneParsingException
       extends ParsingException("Instead of an empty expression there must be some in place")
-
-  case object GuardedReplicationException
-      extends ParsingException("Guarded replication requires prefix of a non-positive polarity, that does not bind")
 
 
   // functions

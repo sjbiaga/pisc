@@ -31,8 +31,6 @@ package generator
 
 import java.util.UUID
 
-import scala.annotation.tailrec
-
 import scala.meta._
 
 import parser.StochasticPi.Actions
@@ -90,7 +88,6 @@ object Meta:
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
-  @tailrec
   implicit def \(* : List[Enumerator]): Term.ForYield =
     if *.nonEmpty then `for * yield ()`(* : _*)
     else \(`_ <- IO.unit`)
@@ -154,7 +151,6 @@ object Meta:
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
 
 
-  @tailrec
   def `for * yield ()`(* : Enumerator*): Term.ForYield =
     if *.nonEmpty
     then
@@ -200,7 +196,35 @@ object Meta:
            Type.Apply(Type.Name("IO"),
                       Type.ArgClause(Type.Name("Unit") :: Nil))))
 
-  def `IO { lazy val *: String -> IO[Unit] = { implicit ^ => … } * }`(* : String, `…`: Term.ForYield): Term =
+
+  def `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(* : (String, String), `…`: Term.ForYield): Term =
+    Term.Apply(\("IO"),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *._1,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil,
+                                                                                *._2,
+                                                                                Some(Type.Name("()")),
+                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                            `: String => IO[Unit]`,
+                            Term.Block(
+                              Term.Function(
+                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
+                                                            "^",
+                                                            None,
+                                                            None) :: Nil, None), `…`
+                              ) :: Nil
+                            )
+                   ) :: \(*._1) :: Nil
+                 ) :: Nil
+                 , None
+               )
+    )
+
+
+  def `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(* : String, `…`: Term.ForYield): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(

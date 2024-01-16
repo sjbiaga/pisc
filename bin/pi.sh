@@ -4,7 +4,7 @@ function pi() {
         set "$@" ../pi.scala
         ~/sjb/coursier/bin/scala-cli "$@" \
                                      -S 3.4.0-RC1 \
-                                     --dependency org.typelevel::cats-effect:3.5.2
+                                     --dependency org.typelevel::cats-effect:3.5.3
 }
 
 function spi() {
@@ -13,7 +13,7 @@ function spi() {
                                      -S 3.4.0-RC1 \
                                      --dependency org.scalanlp::breeze:2.1.0 \
                                      --dependency com.github.blemale::scaffeine:5.2.1 \
-                                     --dependency org.typelevel::cats-effect:3.5.2
+                                     --dependency org.typelevel::cats-effect:3.5.3
 }
 
 function pio() {
