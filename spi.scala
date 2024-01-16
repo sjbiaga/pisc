@@ -41,31 +41,39 @@ package object sΠ:
   type `Π-Set`[A] = _root_.scala.collection.immutable.Set[A]
 
 
-  implicit inline def `π-none`(key: String)
-                              (implicit ^ : String): (String, Option[Rate]) =
-    ^ + key -> None
+  def `π-none`(enabled: `Π-Set`[String])
+              (using % : %)
+              (implicit ^ : String): IO[Unit] =
+    if enabled.isEmpty
+    then
+      IO.cede
+    else
+      for
+        it <- Deferred[IO, BigDecimal]
+        _  <- %.update { m => m + ((^ + enabled.head) -> (it, None)) }
+        _  <- `π-none`(enabled.tail)
+      yield
+        ()
 
 
-  private def update(discarded: Set[String], enabled: Set[String])
+  private def update(discarded: `Π-Set`[String], enabled: `Π-Set`[String])
                     (using % : %, \ : \)
                     (implicit ^ : String): IO[Unit] =
-    \.update { _ ++ discarded.map(^ + _) } >>
-    %.update(enabled.foldLeft(_)(_ + _))
+    \.update(_ ++ discarded.map(^ + _)) >> `π-none`(enabled)
 
   private def barrier(key: String)
-                     (using % : %, \ : \, * : *, + : +)
+                     (using % : %, \ : \, * : *)
                      (implicit ^ : String,
                                `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
                      ): IO[Unit] =
     val (trick, spell) = `π-wand`
-    update(trick.getOrElse(key, Set.empty),
-           spell.getOrElse(key, Set.empty)) >> *.release >> +.await
-
+    update(trick.getOrElse(key, _root_.scala.collection.immutable.Set.empty),
+           spell.getOrElse(key, _root_.scala.collection.immutable.Set.empty)) >> *.release
 
   private def discard(key: String)
-                     (using % : %, \ : \)
+                     (using % : %)
                      (implicit ^ : String): IO[Unit] =
-    %.update(_ - (^ + key)) >> \.update(_ - (^ + key)) >> IO.never
+    %.update(_ - (^ + key)) >> IO.never
 
 
   /**
@@ -73,8 +81,8 @@ package object sΠ:
     */
   object ν:
 
-    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `()` => IO[Unit]): IO[Unit] =
+    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
           ref <- Ref.of[IO, `><`](`><`())
         yield
@@ -89,21 +97,18 @@ package object sΠ:
   object τ:
 
     def apply(rate: Rate)(key: String)
-             (using % : %, \ : \, / : /, * : *, + : +, - : -)
+             (using % : %, \ : \, / : /, * : *)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[BigDecimal] =
-      def loop: IO[BigDecimal] =
-        for
-          turn        <- -.get
-          (it, delta) <- turn.get
-          ko          <- \.modify { d => d -> d.contains(^ + key) }
-          _           <- if !ko then IO.unit else discard(key)
-          delta       <- if ^ + key != it then IO.cede >> loop
-                         else barrier(key).as(delta)
-        yield
-          delta
-      /.offer(^ + key -> rate) >> loop
+      /.offer(^ + key -> rate) >>
+        ( for
+            deferred <- %.modify { m => m -> m(^ + key)._1 }
+            delta    <- deferred.get
+            _        <- if delta eq null then discard(key) else barrier(key)
+          yield
+            delta
+        )
 
 
   /**
@@ -113,13 +118,13 @@ package object sΠ:
 
     private def ref = name.asInstanceOf[Ref[IO, `><`]]
 
-    inline def ===(that: `()`) = this.name == that.name
+    inline def ====(that: `()`) = this.name == that.name
 
     /**
       * positive prefix i.e. input
       */
     def apply(rate: Rate)(key: String)
-             (using % : %, \ : \, / : /, * : *, + : +, - : -)
+             (using % : %, \ : \, / : /, * : *)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[(`()`, BigDecimal)] =
@@ -129,7 +134,7 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String)
-             (using % : %, \ : \, / : /, * : *, + : +, - : -)
+             (using % : %, \ : \, / : /, * : *)
              (implicit ^ : String,
                        `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
              ): IO[BigDecimal] =
@@ -170,59 +175,49 @@ package object sΠ:
 
       def apply(key: String, name: Any)
                (`>R`: Ref[IO, `><`])
-               (using % : %, \ : \, * : *, + : +, - : -)
+               (using % : %, \ : \, * : *)
                (implicit ^ : String,
                          `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
                ): IO[BigDecimal] =
-        def loop: IO[BigDecimal] =
-          for
-            turn        <- -.get
-            (it, delta) <- turn.get
-            ko          <- \.modify { d => d -> d.contains(^ + key) }
-            _           <- if !ko then IO.unit else discard(key)
-            delta       <- if ^ + key != it then IO.cede >> loop
-                           else barrier(key) >>
-                                Deferred[IO, Unit].flatMap { offerer =>
-                                  IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
-                                    `>R`.modify {
-                                      case `><`(takers, offerers) if takers.nonEmpty =>
-                                        `><`(takers.init, offerers) -> takers.last.complete(name)
-                                      case `><`(takers, offerers) =>
-                                        val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                                        `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
-                                    }.flatten
-                                  }
-                                }.as(delta)
-          yield
-            delta
-        loop
+        for
+          deferred <- %.modify { m => m -> m(^ + key)._1 }
+          delta    <- deferred.get
+          _        <- if delta eq null then discard(key) else barrier(key) >>
+                      Deferred[IO, Unit].flatMap { offerer =>
+                        IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
+                          `>R`.modify {
+                            case `><`(takers, offerers) if takers.nonEmpty =>
+                              `><`(takers.init, offerers) -> takers.last.complete(name)
+                            case `><`(takers, offerers) =>
+                              val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                              `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
+                          }.flatten
+                        }
+                      }
+        yield
+          delta
 
       def apply(key: String)
                (`<R`: Ref[IO, `><`])
-               (using % : %, \ : \, * : *, + : +, - : -)
+               (using % : %, \ : \, * : *)
                (implicit ^ : String,
                          `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])
                ): IO[(Any, BigDecimal)] =
-        def loop: IO[(Any, BigDecimal)] =
-          for
-            turn        <- -.get
-            (it, delta) <- turn.get
-            ko          <- \.modify { d => d -> d.contains(^ + key) }
-            _           <- if !ko then IO.unit else discard(key)
-            (r, delta)  <- if ^ + key != it then IO.cede >> loop
-                           else barrier(key) >>
-                                Deferred[IO, Any].flatMap { taker =>
-                                  IO.uncancelable { poll =>
-                                    `<R`.modify {
-                                      case `><`(takers, offerers) if offerers.nonEmpty =>
-                                        val (name, release) = offerers.last
-                                        `><`(takers, offerers.init) -> release.complete(()).as(name)
-                                      case `><`(takers, offerers) =>
-                                        val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                                        `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
-                                    }.flatten
-                                  }
-                                }.map(_ -> delta)
-          yield
-            r -> delta
-        loop
+        for
+          deferred   <- %.modify { m => m -> m(^ + key)._1 }
+          delta      <- deferred.get
+          name       <- if delta eq null then discard(key) else barrier(key) >>
+                        Deferred[IO, Any].flatMap { taker =>
+                          IO.uncancelable { poll =>
+                            `<R`.modify {
+                              case `><`(takers, offerers) if offerers.nonEmpty =>
+                                val (name, release) = offerers.last
+                                `><`(takers, offerers.init) -> release.complete(()).as(name)
+                              case `><`(takers, offerers) =>
+                                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                                `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
+                            }.flatten
+                          }
+                        }
+        yield
+          name -> delta

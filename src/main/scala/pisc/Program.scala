@@ -92,6 +92,19 @@ object Program:
       /////////////////////////////////////////////////////////// composition //
 
 
+      // SEQUENCE //////////////////////////////////////////////////////////////
+
+      case `.`(end, it: _*) if it.isEmpty =>
+        * = body(end)(false)
+
+      case `.`(end, it: _*) =>
+        * = (it :+ end).foldLeft(*)(_ ++ body(_)(false))
+
+        * = `_ <- *`(`for * yield ()`(* : _*))
+
+      ////////////////////////////////////////////////////////////// sequence //
+
+
       // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
 
       case ν(λ(Symbol(name))) =>
@@ -127,9 +140,9 @@ object Program:
       case it @ `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
         if mismatch
         then
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(f)(), body(t)()))
         else
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(t)(), body(f)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t)(), body(f)()))
 
 
       case `!`(π, sum) =>
@@ -176,19 +189,6 @@ object Program:
       case _: `()` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// agent call //
-
-
-      // SEQUENCE //////////////////////////////////////////////////////////////
-
-      case `.`(end, it: _*) if it.isEmpty =>
-        * = body(end)()
-
-      case `.`(end, it: _*) =>
-        * = (it :+ end).foldLeft(*)(_ ++ body(_)(false))
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
-
-      ////////////////////////////////////////////////////////////// sequence //
 
       case _ => ???
 

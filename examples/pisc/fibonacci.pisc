@@ -1,42 +1,41 @@
-@import scala.math.{ signum => sgn }
 @import scala.util.control.TailCalls.{ done, tailcall, TailRec }
 
 @given Conversion[`()`, Long] = _.name.asInstanceOf[Long]
 
 Main = Fib(-1)
 
-Fib(n) = ν(x)                                 \
-( 𝟎                                           \
-|                                             \
-( τ /* print("n = ") */ .                     \
-  τ /* scala.io.StdIn.readLine.toLong */ .    \
-  x<n> .                                      \
-  x</*sgn('n).toLong*/> .                     \
-  x</*                                        \
-  {                                           \
-    def fibonacci(k: Long): TailRec[Long] =   \
-      if (k < 2)                              \
-        done(k * k)                           \
-      else                                    \
-       for                                    \
-         m <- tailcall { fibonacci(k - 2) };  \
-         n <- tailcall { fibonacci(k - 1) }   \
-       yield                                  \
-         m + n                                \
-    ;                                         \
-    if ('n < 0)                               \
-      println("Enter a non-negative number.") \
-    else                                      \
-      fibonacci('n).result                    \
-  }                                           \
-  */> .                                       \
-)                                             \
-|                                             \
-( x(n) .                                      \
-  x(s) .                                      \
-  x(f) .                                      \
-  τ /* if (s >= 0)                            \
-         println(s"fib(${'n}) = $f") */ .     \
-  s = -1 ? Fib(-1) : {pisc}{greeter}Main      \
-)                                             \
-)                                             \
+Fib(n) = ν(x)                                        \
+       ( 𝟎                                           \
+       |                                             \
+       ( τ /* print("n = ") */ .                     \
+         τ /* scala.io.StdIn.readLine.toLong */ .    \
+         x<n> .                                      \
+         x</*                                        \
+         {                                           \
+           def fibonacci(k: Long): TailRec[Long] =   \
+             if (k < 2)                              \
+               done(k * k)                           \
+             else                                    \
+              for                                    \
+                m <- tailcall { fibonacci(k - 2) };  \
+                n <- tailcall { fibonacci(k - 1) }   \
+              yield                                  \
+                m + n                                \
+           ;                                         \
+           if ('n < 0)                               \
+             println("Enter a non-negative number.") \
+           else                                      \
+             fibonacci('n).result                    \
+         }                                           \
+         */> .                                       \
+       )                                             \
+       |                                             \
+       ( x(n) .                                      \
+         x(f) .                                      \
+         τ /* if ('n >= 0)                           \
+                println(s"fib(${'n}) = ${'f}") */ .  \
+         if /*'n < 0*/ = True                        \
+         then Fib(-1)                                \
+         else {pisc}{greeter}Main                    \
+       )                                             \
+       )                                             \

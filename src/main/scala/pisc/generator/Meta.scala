@@ -49,33 +49,33 @@ object Meta:
              identifier,
              Member.ParamClauseGroup(
                Type.ParamClause(Nil),
-               List(`()`(params: _*), `(using % : %, \\ : \\, / : /, * : *, + : +, - : -)(implicit ^ : String)`),
+               List(`()`(params: _*), `(using % : %, \\ : \\, / : /, * : *)(implicit ^ : String)`),
              ) :: Nil,
              `: IO[Unit]`,
              prog
     )
 
 
-  def === : ((Any, Any)) => Term = {
-    case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: Boolean) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: String) => s"$x === $y".parse[Term].get
-    case (Symbol(x), Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: Boolean, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: String, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (Expr(x), Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (x: Boolean, y: Boolean) => s"$x === $y".parse[Term].get
-    case (x: String, y: String) => s"$x === $y".parse[Term].get
-    case (Expr(x), Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: Boolean, Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: String, Expr(y)) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: Boolean) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: String) => s"$x === $y".parse[Term].get
+  def ==== : ((Any, Any)) => Term = {
+    case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (x: String, y: String) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: String, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: String) => s"$x ==== $y".parse[Term].get
   }
 
 
@@ -103,11 +103,11 @@ object Meta:
                     ,None)
 
 
-  val `(using % : %, \\ : \\, / : /, * : *, + : +, - : -)(implicit ^ : String)` =
+  val `(using % : %, \\ : \\, / : /, * : *)(implicit ^ : String)` =
     Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) ::
-                       List("%", "\\", "/", "*", "+", "-")
+                       List("%", "\\", "/", "*")
                        .map { it => Term.Param(Mod.Implicit() :: Nil,
                                                it,
                                                Some(Type.Name(it)),
@@ -226,7 +226,7 @@ object Meta:
     if enabled.nonEmpty
     then
       val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
-      Enumerator.Val(Pat.Var(uuid), s"""_root_.scala.collection.immutable.Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
-      `_ <- *`(s"%.update(`$uuid`.foldLeft(_)(_ + _))".parse[Term].get) :: Nil
+      Enumerator.Val(`* <- …`(uuid), s"""_root_.scala.collection.immutable.Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
+      `_ <- *`(s"`π-none`($uuid)".parse[Term].get) :: Nil
     else
       Nil

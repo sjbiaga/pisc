@@ -155,8 +155,7 @@ and Elvis operator. For the case of guarded replication, if there is
 a last action of a sequence of actions, there is a transition from that to the
 guard action/prefix. But more importantly, upon the expiration of a last action from
 a sequence of prefixes, if its `end` is a _summation_, the enabled actions of this
-summation are enabled prior to the next _turn_. This contributes and requires that
-`turning` or the `next turn` is "coherent".
+summation are enabled _before_ actions are next to be fired (in parallel).
 
 Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
 _discarded_ actions. Each choice corresponds to a set of enabled actions. The
@@ -193,25 +192,25 @@ blocks on `take`ing or dequeuing this `Queue`. It then updates the `%` map
 of all enabled actions by merely setting the rate - which otherwise, at the
 moment these actions were enobled, was set to `None` - which is why it is
 crucial the [enabled] actions are enabled (rate set to `None`, enough to be
-in the `%` map) when parallel fibers are spawned. A second background fiber
+in the `%` map) when actions are fired in parallel. A second background fiber
 is blocked on a `Semaphore` that the other bacground fiber releases, and
-then loops.
+then (blocking) polls for a next "offer".
 
-This second background fiber then takes snapshot of the `%` map searching
+This second background fiber then takes a snapshot of the `%` map searching
 for any enabled action that has been "reached", and thus has a associated a
 rate rather than `None`. If this snapshot is empty, than it will block on the
 semaphore shared with the first background fiber.
 
 As soon as the snapshot is non-empty, the second background fiber computes
 statistically - starting from the rate - the _delay_ ("delta") that corresponds
-to the fastest action. It then uses both key and delay to _complete_ a `Deferred`.
-This corresponds to `turning` or the `next turn`. Meanwhile, all methods called
-(in parallel, either summation or composition) from a `for` generator, having
-`offered` the action rate, are (and must _all_ be) blocked on `Deferred.get`'s
-method. As soon as the `Deferred` is `complete`d, each method will compare the
-argument key with the gotten key. One will match. (Otherwise, the rest will
-`IO.cede` and busy `loop`, getting the same different key until blocking again
-on a fresh `Deferred` in the `next turn`, unless becoming discarded).
+to the fastest action. It then uses the key get an associated `Deferred`, and
+the delay to _complete_ a `Deferred`. One will match. This corresponds to the
+current "winner".
+
+Meanwhile, all methods called (in parallel, either summation or composition)
+from a `for` generator, having `offered` the action rate, are (and must _all_
+be) blocked on `Deferred.get`'s method. As soon as these `Deferred` are `complete`d
+with `null`, each method will `flatMap` to `IO.never`.
 
 Before actually performing the action (which occurs eventually), there is
 some "book-keeping" to do. First, the second background fiber blocks on
@@ -219,19 +218,19 @@ a semaphore (initially in the `acquire`d state, and shared with all
 the agents trough the `using` parameter list, as `/`, `%`, or `\`),
 while the winning fiber does some updating to the `%` map and the `\` set,
 before releasing the semaphore. Thus, the invariant that the semaphore
-is in the `acquire`d state with each start of a turn must be preserved.
+is in the `acquire`d state with each start of a contention must be preserved.
 There are two cases here:
 
 1. The semaphore is `release`d _before_ the second background fiber
    `acquire`s it. Hence, that the winning fiber has finished
    updating. Thus, the second background fiber will _NOT_ remain
-   blocked, and may proceed to awaiting that each discarded key
-   (in the `\` set) is removed while in its method's busy `loop`.
+   blocked, and may proceed to "announcing" each discarded key
+   that it has lost contention, `complete`ing `Deferrred`s with `null`.
    The semaphore is now in the `acquire`d case.
 
 2. The semaphore is `release`d _after_ the second background fiber
    `acquire`s it. The second background fiber blocked politely,
-   awaited nicely, and the `\` set of discarded keys is emptied, but
+   announced nicely, the `\` set of discarded keys emptied, but
    the semaphore is now in the `release`d case.
 
 To maintain the invariant, trying to comply with 2.,
@@ -240,32 +239,6 @@ to comply with 1., will result in the second background fiber
 to remain blocked. The way out of this is to use the method
 `tryAcquire` on the semaphore to maintain the invariant in
 either 1. or 2. case.
-
-And now to what happens in order that `turning` be coherent.
-
-Having released the semaphore, were the winning fiber to just
-return control to the `for` comprehension, the next generator
-method could be "caught" in the same "`complete`d" turn - because
-the second background fiber will have not yet reached setting
-the next turn -, and thus "pass through" the "should-be-blocking"
-`Deferred.get`.
-
-Each other contention fiber that lost, awaits for either two
-things: for the next turn, or to be discarded. This occurs in the
-method's busy loop ("passing through" until the next turn), which
-also checks whether the key has become discarded.
-
-To be discarded must happen before the next turn for all keys
-that lost the contention.
-
-Thus, the winning fiber must wait on the second background fiber
-to finish awaiting discarding of keys. After that, the latter
-needs only to set a fresh `Deferred` as the new `next turn`,
-and then...
-
-... Wait for the former as the former waits for the latter? This
-is accomplished with a `CyclicBarrier[IO](2)` from `CE` standard
-library (as are `Queue`, `Semaphore` or `Deferred`).
 
 
 Program

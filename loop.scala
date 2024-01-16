@@ -26,46 +26,51 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.cats.Monad
 import _root_.cats.effect.{ IO, Deferred, Ref }
-import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+import _root_.cats.effect.std.{ Queue, Semaphore }
 
 import `Π-stats`._
 
 
 package object `Π-loop`:
 
-  type % = Ref[IO, Map[String, Option[Rate]]]
+  type % = Ref[IO, Map[String, (Deferred[IO, BigDecimal], Option[Rate])]]
 
   type \ = Ref[IO, Set[String]]
 
   type * = Semaphore[IO]
 
-  type + = CyclicBarrier[IO]
-
-  type - = Ref[IO, Deferred[IO, (String, BigDecimal)]]
-
   type / = Queue[IO, (String, Rate)]
 
-  def loop(using % : %, \ : \, * : (*, *), + : +, - : -): IO[Unit] =
+  def drop(ks: Set[String])(using % : %, \ : \): IO[Unit] =
+    if ks.isEmpty
+    then
+      IO.cede
+    else
+      for
+        deferred <- %.modify { m => m -> m(ks.head)._1 }
+        _        <- deferred.complete(null)
+        _        <- drop(ks.tail)
+      yield
+        ()
+
+  def loop(using % : %, \ : \, * : (*, *)): IO[Unit] =
     for
       it <- %.modify { m =>
-                       if m.exists(_._2 ne None)
-                       then m -> Some(Map.from(m))
+                       if m.exists(_._2._2 ne None)
+                       then m -> Some(m.map(_ -> _._2).toMap)
                        else m -> None
             }
       _  <- if it.isEmpty then *._1.acquire else
             for
               (key, delta) <- IO.pure(|(it.get))
-              turn         <- -.get
-              _            <- turn.complete(key -> delta)
+              deferred     <- %.modify { m => m -> m(key)._1 }
+              _            <- deferred.complete(delta)
               _            <- *._2.acquire
-              _            <- Monad[IO].whileM_(\.modify { d => d -> d.nonEmpty })(IO.cede)
+              ks           <- \.modify { d => Set.empty -> d }
+              _            <- drop(ks)
               _            <- %.update(_ - key)
-              turn         <- Deferred[IO, (String, BigDecimal)]
-              _            <- -.set(turn)
               _            <- *._2.tryAcquire
-              _            <- +.await
             yield
               ()
       _  <- IO.cede >> loop
@@ -75,7 +80,7 @@ package object `Π-loop`:
   def poll(using % : %, / : /, * : *): IO[Unit] =
     for
       (key, r) <- /.take
-      _        <- %.update(_ + (key -> Some(r)))
+      _        <- %.update { m => m + (key -> (m(key)._1 -> Some(r))) }
       _        <- *.release
       _        <- IO.cede >> poll
     yield

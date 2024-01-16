@@ -99,8 +99,8 @@ object StochasticPi:
         r
       else end match
         case it: `+` => it.enabled
-        case it: `!` => Actions(it.prefix)
-        case _ =>  r
+        case `!`(π, _) => π.enabled
+        case _ => r
 
   val nil = Set[String]()
 
@@ -140,7 +140,7 @@ object StochasticPi:
 
     lazy val split: AST => Actions = {
 
-      case _: `-` => nil
+      case _: `𝟎`.type | _: `()` => nil
 
       case sum @ `+`(enabled, ps*) if ps.size == 1 =>
         assert(enabled == split(ps.head))
@@ -173,13 +173,22 @@ object StochasticPi:
 
         Actions(end, ps: _*)
 
+      case `?:`(_, t, f) =>
+        split(t)
+        split(f)
+        nil
+
+      case `!`(π, sum) =>
+        split(sum)
+        π.enabled
+
       case _ => ???
 
     }
 
     lazy val trans: AST => Seq[(State, State)] = _ match
 
-      case _: `-` => Nil
+      case _: `𝟎`.type | _: `()` => Nil
 
       case `+`(_, ps*) =>
         ps.map(trans).reduce(_ ++ _)
@@ -196,18 +205,22 @@ object StochasticPi:
             if j >= 0
           yield
             ps(i).asInstanceOf[State] -> ps(i+1+j).asInstanceOf[State]
-        ) ++ trans(end) ++
+        ) ++
         ( if k < 0
           then
             Nil
           else end match
-           case it: `+` =>
-            Seq(ps(k).asInstanceOf[State] -> it)
+           case sum: `+` =>
+            Seq(ps(k).asInstanceOf[State] -> sum)
            case `!`(π, _) =>
             Seq(ps(k).asInstanceOf[State] -> π)
            case _ =>
              Nil
-        )
+        ) ++ trans(end)
+
+      case `?:`(_, t, f) => trans(t) ++ trans(f)
+
+      case `!`(_, sum) => trans(sum)
 
       case _ => ???
 
