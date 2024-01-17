@@ -111,12 +111,16 @@ object Program:
         * = `* <- *`(name -> "ν")
 
 
-      case it @ `τ`(Some(term), r) =>
+      case it @ `τ`(Some(Left(enums)), r) =>
+        * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * ++= enums
+
+      case it @ `τ`(Some(Right(term)), r) =>
         * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
         * :+= `_ <- IO { * }`(term)
 
       case it @ `τ`(_, r) =>
-        * = `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
 
 
       case it @ π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser

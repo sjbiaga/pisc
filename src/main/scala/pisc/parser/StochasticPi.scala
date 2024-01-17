@@ -46,8 +46,8 @@ trait StochasticPi extends Expression:
 
   def `π.`: Parser[(μ, (Names, Names))] =
     "τ"~>opt( "@"~rate | expression ) ^^ { // silent prefix
-      case Some((term, free)) =>
-        `τ`(Some(term), Some(None)) -> (Names(), free)
+      case Some((it, free)) =>
+        `τ`(Some(it), Some(None)) -> (Names(), free)
       case Some(_ ~ r) =>
         `τ`(None, Some(r)) -> (Names(), Names())
       case _ =>
@@ -72,13 +72,19 @@ trait StochasticPi extends Expression:
                                  floatingPointNumber ^^ { it => λ(it) -> Names() } |
                                  stringLiteral ^^ { it => λ(it) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
-                                 expression ^^ { (term, free) => λ(Expr(term)) -> free }
+                                 expression ^^ {
+                                   case (Right(term), free) => λ(Expr(term)) -> free
+                                   case (Left(enums), _) => throw TermParsingException(enums)
+                                 }
 
   def rate: Parser[Option[Any]] = "("~>rate<~")" |
                                   "∞" ^^ { _ => None } |
                                   floatingPointNumber ^^ { Option.apply compose BigDecimal.apply } |
                                   super.ident ^^ { Option.apply compose Symbol.apply } |
-                                  expression ^^ { (term, _) => Some(Expr(term)) }
+                                  expression ^^ {
+                                    case (Right(term), free) => Some(Expr(term))
+                                    case (Left(enums), _) => throw TermParsingException(enums)
+                                  }
 
 
 object StochasticPi:
@@ -124,11 +130,18 @@ object StochasticPi:
       .map(_.asSymbol)
     )
 
-  sealed class PrefixParsingException(msg: String, cause: Throwable = null)
+  import scala.meta.Enumerator
+
+  import Expression.ParsingException
+
+  class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+
+  case class TermParsingException(enums: List[Enumerator])
+      extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
   case object ProbabilisticChoiceException
       extends ParsingException("Probabilistic choice requires some prefix enabled on each branch")
@@ -246,12 +259,11 @@ object StochasticPi:
       } -> (discarded -> enabled)
 
 
-  def apply(source: Source): List[Either[String, Bind]] = source
-    .getLines()
-    .foldLeft(List[String]("")) {
-      case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
-      case (r, l) => r :+ l
-    }
+  def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
+    .foldLeft(List[String]() -> false) {
+      case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
+      case ((r, true), l) => (r.init :+ r.last.stripSuffix("\\") + l) -> l.endsWith("\\")
+    }._1
     .filterNot(_.matches("^ *#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
     .map { it =>

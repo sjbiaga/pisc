@@ -34,7 +34,7 @@ import scala.util.parsing.combinator._
 import StochasticPi.{ Act, Actions, nil, Names, State, PrefixChannelParsingException }
 import Calculus._
 
-import scala.meta.Term
+import scala.meta.{ Enumerator, Term }
 
 
 class Calculus extends StochasticPi:
@@ -180,7 +180,7 @@ object Calculus extends Calculus:
 
   case class ν(name: λ) extends Pre // forcibly
 
-  case class τ(term: Option[Term],
+  case class τ(code: Option[Either[List[Enumerator], Term]],
                override val rate: Option[Option[Any]])
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
@@ -208,9 +208,9 @@ object Calculus extends Calculus:
     val kind: String = value match {
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
-      case _: Boolean => "true false"
+      case _: Boolean => "True False"
       case _: String => "string literal"
-      case _: Expr => "scala expression"
+      case _: Expr => "Scalameta Term"
     }
 
   case class Expr(term: Term)
@@ -218,8 +218,7 @@ object Calculus extends Calculus:
 
   // exceptions
 
-  class ParsingException(msg: String, cause: Throwable = null)
-      extends RuntimeException(msg, cause)
+  import Expression.ParsingException
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)

@@ -36,20 +36,70 @@ import scala.meta._
 import scala.util.parsing.combinator._
 
 import StochasticPi.Names
+import Expression.ExpressionParsingException
 
 
 class Expression extends JavaTokenParsers:
 
-  /** Scala comment enclosing any [[Scalameta]] term.
-   * @return
-   */
-  def expression: Parser[(Term, Names)] =
+  /** Scala comment enclosing any [[Scalameta]] term
+    * or [[Enumerator]]s (used for assignment)
+    * @return
+    */
+  def expression: Parser[(Either[List[Enumerator], Term], Names)] =
     """[/][*].*?[*][/]""".r ^^ { it =>
-      Expression(it.stripPrefix("/*").stripSuffix("*/").parse[Term].get)
+      val expr = it.stripPrefix("/*").stripSuffix("*/")
+      try
+        val (term, names) = Expression(expr.parse[Term].get)
+        Right(term) -> names
+      catch _ =>
+        try
+          val (stat, rhs) = Expression(("for {" + expr + " } yield ()").parse[Stat].get)
+          stat match
+            case Term.ForYield(enums, _) =>
+              val lhs = enums
+                .filter {
+                  case Enumerator.Generator(pat, _) =>
+                    pat.isInstanceOf[Lit.Symbol]
+                  case Enumerator.CaseGenerator(pat, _) =>
+                    pat.isInstanceOf[Lit.Symbol]
+                  case Enumerator.Val(pat, _) =>
+                    pat.isInstanceOf[Lit.Symbol]
+                  case _ => false
+                }.map {
+                  case Enumerator.Generator(pat, _) =>
+                    pat.asInstanceOf[Lit.Symbol]
+                  case Enumerator.CaseGenerator(pat, _) =>
+                    pat.asInstanceOf[Lit.Symbol]
+                  case Enumerator.Val(pat, _) =>
+                    pat.asInstanceOf[Lit.Symbol]
+                  case _ => ???
+                }
+                .map(_.value)
+              Left { enums.map {
+                      case it @ Enumerator.Generator(pat, _)
+                          if pat.isInstanceOf[Lit.Symbol] =>
+                        it.copy(pat = Pat.Var(Term.Name(pat.asInstanceOf[Lit.Symbol].value.name)))
+                      case it @ Enumerator.CaseGenerator(pat, _)
+                          if pat.isInstanceOf[Lit.Symbol] =>
+                        it.copy(pat = Pat.Var(Term.Name(pat.asInstanceOf[Lit.Symbol].value.name)))
+                      case it @ Enumerator.Val(pat, _)
+                          if pat.isInstanceOf[Lit.Symbol] =>
+                        it.copy(pat = Pat.Var(Term.Name(pat.asInstanceOf[Lit.Symbol].value.name)))
+                      case it => it
+                    }
+              } -> Set.from(lhs ++ rhs)
+        catch t =>
+          throw ExpressionParsingException(expr, t)
     }
 
 
 object Expression:
+
+  class ParsingException(msg: String, cause: Throwable = null)
+      extends RuntimeException(msg, cause)
+
+  case class ExpressionParsingException(expr: String, cause: Throwable)
+      extends ParsingException(s"Expression `$expr' is not a valid Scalameta Term or Enumerator", cause)
 
   def apply(self: Term.Param): (Term.Param, Names) = self match
     case it @ Term.Param(_, _, _, default) =>
@@ -101,6 +151,21 @@ object Expression:
       val ss = stats.map(apply(_))
       val s2 = ss.map(_._2).foldLeft(Names())(_ ++ _)
       it.copy(early = es.map(_._1), inits = is.map(_._1), stats = ss.map(_._1)) -> (e2 ++ i2 ++ s2)
+
+
+  def apply(self: Enumerator): (Enumerator, Names) = self match
+    case it @ Enumerator.Generator(_, body) =>
+      val b = apply(body)
+      it.copy(rhs = b._1) -> b._2
+    case it @ Enumerator.CaseGenerator(_, body) =>
+      val b = apply(body)
+      it.copy(rhs = b._1) -> b._2
+    case it @ Enumerator.Val(_, body) =>
+      val b = apply(body)
+      it.copy(rhs = b._1) -> b._2
+    case it @ Enumerator.Guard(body) =>
+      val b = apply(body)
+      it.copy(cond = b._1) -> b._2
 
 
   def apply(self: Stat): (Stat, Names) = self match
@@ -292,9 +357,11 @@ object Expression:
       val b = apply(body)
       it.copy(body = b._1) -> b._2
 
-    case it @ Term.ForYield(_, body) =>
+    case it @ Term.ForYield(enums, body) =>
+      val rs = enums.map(apply)
+      val r2 = rs.map(_._2).foldLeft(Names())(_ ++ _)
       val b = apply(body)
-      it.copy(body = b._1) -> b._2
+      it.copy(enums = rs.map(_._1), body = b._1) -> (r2 ++ b._2)
 
     case it @ Term.New(init) =>
       val r = apply(init)

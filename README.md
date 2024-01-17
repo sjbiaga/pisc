@@ -72,7 +72,9 @@ whereas restriction is not; also, inaction, agent call, (mis)match, `if then els
 and replication are "leaves".
 
 Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
-which a `for` generator `_ <- IO { term }` is inserted _after_ the transition.
+which a `for` generator `_ <- IO { term }` is inserted _after_ the transition,
+or any list of `Enumerator`s which are added _after_ the transition. Any symbol
+that is found in these terms is considered a _free_ name.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
