@@ -45,8 +45,8 @@ object Program:
 
 
   def body(node: AST)
-          (implicit semaphore: Option[String] = None): List[Enumerator.Generator] =
-    var * = List[Enumerator.Generator]()
+          (implicit semaphore: Option[String] = None): List[Enumerator] =
+    var * = List[Enumerator]()
 
     node match
 
@@ -57,7 +57,7 @@ object Program:
       case it: `+` if it.choices.size > 1 =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        implicit val sem = Some(id)
+        implicit val sem = Some("_" + UUID.randomUUID.toString.replaceAll("-", "_"))
 
         * :+= `* <- Semaphore[IO](1)`(sem.get)
 
@@ -98,7 +98,11 @@ object Program:
       case ν(λ(Symbol(name))) =>
         * = `* <- *`(name -> "ν")
 
-      case `τ`(Some(term)) =>
+      case `τ`(Some(Left(enums))) =>
+        * :+= `_ <- *`("τ")
+        * ++= enums
+
+      case `τ`(Some(Right(term))) =>
         * :+= `_ <- *`("τ")
         * :+= `_ <- IO { * }`(term)
 
@@ -132,7 +136,7 @@ object Program:
 
 
       case `!`(sum) =>
-        val uuid = id
+        val uuid = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
 
         val it =
           `for * yield ()` {
@@ -194,5 +198,3 @@ object Program:
       case it => ???
 
     *
-
-  def id = UUID.randomUUID.toString

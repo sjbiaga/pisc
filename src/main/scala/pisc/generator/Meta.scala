@@ -31,7 +31,6 @@ package generator
 
 import java.util.UUID
 
-import scala.annotation.tailrec
 import scala.meta._
 
 import parser.Calculus.{ `()`, Expr }
@@ -71,10 +70,9 @@ object Meta:
   }
 
 
-  inline implicit def \(* : Enumerator.Generator): List[Enumerator.Generator] = * :: Nil
+  inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
-  @tailrec
-  implicit def \(* : List[Enumerator.Generator]): Term.ForYield =
+  implicit def \(* : List[Enumerator]): Term.ForYield =
     if *.nonEmpty then `for * yield ()`(* : _*)
     else \(`_ <- IO.unit`)
 
@@ -130,8 +128,7 @@ object Meta:
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
 
 
-  @tailrec
-  def `for * yield ()`(* : Enumerator.Generator*): Term.ForYield =
+  def `for * yield ()`(* : Enumerator*): Term.ForYield =
     if *.nonEmpty
     then
       if *.size == 1

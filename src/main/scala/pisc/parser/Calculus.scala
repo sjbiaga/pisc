@@ -34,7 +34,7 @@ import scala.util.parsing.combinator._
 import Pi.{ Names, PrefixChannelParsingException }
 import Calculus._
 
-import scala.meta.Term
+import scala.meta.{ Enumerator, Term }
 
 
 class Calculus extends Pi:
@@ -163,13 +163,13 @@ object Calculus:
 
   case class `|`(components: `.`*) extends AnyVal with AST
 
-  case class `.`(process: `&`, prefixes: Pre*) extends AST
+  case class `.`(end: `&`, prefixes: Pre*) extends AST
 
   sealed trait Pre extends Any with AST
 
   case class ν(name: λ) extends AnyVal with Pre // forcibly
 
-  case class τ(term: Option[Term]) extends AnyVal with Pre
+  case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre
 
   case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
 
@@ -198,8 +198,7 @@ object Calculus:
 
   // exceptions
 
-  class ParsingException(msg: String, cause: Throwable = null)
-      extends RuntimeException(msg, cause)
+  import Expression.ParsingException
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)

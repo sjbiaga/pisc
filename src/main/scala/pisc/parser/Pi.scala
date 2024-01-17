@@ -43,8 +43,8 @@ class Pi extends Expression:
 
   def `π.`: Parser[(Pre, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
-      case Some((term, free)) =>
-        `τ`(Some(term)) -> (Names(), free)
+      case Some((it, free)) =>
+        `τ`(Some(it)) -> (Names(), free)
       case _ =>
         `τ`(None) -> (Names(), Names())
     } |
@@ -67,7 +67,10 @@ class Pi extends Expression:
                                  floatingPointNumber ^^ { it => λ(it) -> Names() } |
                                  stringLiteral ^^ { it => λ(it) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
-                                 expression ^^ { (term, free) => λ(Expr(term)) -> free }
+                                 expression ^^ {
+                                   case (Right(term), free) => λ(Expr(term)) -> free
+                                   case (Left(enums), _) => throw PrefixChannelTermParsingException(enums)
+                                 }
 
   /**
    * Channel names start with lower case.
@@ -89,19 +92,25 @@ object Pi extends Calculus:
       .map(_.asSymbol)
     )
 
+  import scala.meta.Enumerator
+
+  import Expression.ParsingException
+
   class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
+  case class PrefixChannelTermParsingException(enums: List[Enumerator])
+      extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerators `$enums'")
 
-  def apply(source: Source): List[Either[String, Bind]] = source
-    .getLines()
-    .foldLeft(List[String]("")) {
-      case (r, l) if l.endsWith("\\") => r.init :+ (r.last + l.stripSuffix("\\"))
-      case (r, l) => r :+ l
-    }
+
+  def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
+    .foldLeft(List[String]() -> false) {
+      case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
+      case ((r, true), l) => (r.init :+ r.last.stripSuffix("\\") + l) -> l.endsWith("\\")
+    }._1
     .filterNot(_.matches("^ *#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
     .map { it =>

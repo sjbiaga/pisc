@@ -53,13 +53,13 @@ object π:
   def Fib(n: `()`): IO[Unit] = for {
     x <- ν
     _ <- (
+      `𝟎`,
       for {
         _ <- τ
         _ <- IO {
           print("n = ")
         }
-        _ <- τ
-        n <- IO {
+        n <- IO.blocking {
           scala.io.StdIn.readLine.toLong
         }
         _ <- x(n)
@@ -78,16 +78,15 @@ object π:
           if (n < 0) println("Enter a non-negative number")
           else fibonacci(n).result
         }
-        _ <- `𝟎`
       } yield (),
       for {
         n <- x()
         f <- x()
         _ <- τ
         _ <- IO {
-          println(s"fib($n) = $f")
+          if (n >= 0) println(s"fib($n) = $f")
         }
         _ <- Fib(-1)
       } yield ()
-    ).parMapN { (_, _) => }
+    ).parMapN { (_, _, _) => }
   } yield ()
