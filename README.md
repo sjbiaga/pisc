@@ -17,7 +17,7 @@ producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
 Summation: non-deterministic choice modelled with - `IO.race` and `Semaphore`.
-Replication: modelled with - `parMapN` and `lazy val`.
+[Guarded] Replication: modelled with - `parMapN` and `lazy val` (or `def`).
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -58,7 +58,7 @@ using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` i
 _test_, that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the _replication_ unary operator `! CHOICE`.
+Stack safe is the [guarded] _replication_ unary operator `! [ Π "." ] CHOICE`.
 
 The name before parentheses (angular or round) must be a channel name.
 
@@ -86,7 +86,7 @@ that is found in these terms is considered a _free_ name.
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" CHOICE
+                 | "!" [ "." Π "." ] CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
@@ -207,8 +207,8 @@ named `pi` to translate lazily `! P` as:
       .
       .
       .
-      pi <- IO {
-        lazy val `<uuid>`: IO[Unit] =
+      _<uuid> <- IO {
+        lazy val _<uuid>: IO[Unit] =
           for
             _ <- (
                    .  // P
@@ -217,19 +217,19 @@ named `pi` to translate lazily `! P` as:
                  ,
                    for
                      _ <- IO.unit
-                     _ <- `<uuid>`
+                     _ <- _<uuid>
                    yield
                      ()
                  ).parMapN { (_, _) => }
           yield
             ()
-        `<uuid>`
+        _<uuid>
       }
-      _ <- pi
+      _ <- _<uuid>
     yield
       ()
 
-where `<uuid>` is some generated `java.util.UUID`.
+where `uuid` is some generated `java.util.UUID`.
 
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.

@@ -41,9 +41,10 @@ import Expression.ExpressionParsingException
 
 class Expression extends JavaTokenParsers:
 
-  /** Scala comment enclosing any [[Scalameta]] term.
-   * @return
-   */
+  /** Scala comment enclosing any [[Scalameta]] [[Term]]
+    * or [[Enumerator]]s (used for assignment)
+    * @return
+    */
   def expression: Parser[(Either[List[Enumerator], Term], Names)] =
     """[/][*].*?[*][/]""".r ^^ { it =>
       val expr = it.stripPrefix("/*").stripSuffix("*/")
@@ -98,7 +99,7 @@ object Expression:
       extends RuntimeException(msg, cause)
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
-      extends ParsingException(s"Expression `$expr' is not a valid Scalameta term or enumerator", cause)
+      extends ParsingException(s"Expression `$expr' is not a valid Scalameta Term or Enumerator", cause)
 
   def apply(self: Term.Param): (Term.Param, Names) = self match
     case it @ Term.Param(_, _, _, default) =>

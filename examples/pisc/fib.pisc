@@ -6,19 +6,19 @@
 
 @def random = math.abs(gen.nextLong)%max
 
-Main = ν(num)                                                    \
-     (                                                           \
-     𝟎                                                           \
-     | (!num(n).ν(out) (                                         \
-                       𝟎                                         \
-                       | Fib(n, out)                             \
-                       | out(fib).                               \
-                         τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
-                         num</*random*/>.                        \
-                       )                                         \
-       )                                                         \
-     | num</*random*/>.                                          \
-     )                                                           \
+Main = ν(num)                                                     \
+     (                                                            \
+     𝟎                                                            \
+     | (!.num(n).ν(out) (                                         \
+                        𝟎                                         \
+                        | Fib(n, out)                             \
+                        | out(fib).                               \
+                          τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                          num</*random*/>.                        \
+                        )                                         \
+       )                                                          \
+     | num</*random*/>.                                           \
+     )                                                            \
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
               ν(f)                       \

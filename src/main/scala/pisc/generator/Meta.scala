@@ -47,26 +47,26 @@ object Meta:
              prog)
 
 
-  def === : ((Any, Any)) => Term = {
-    case (Symbol(x), Symbol(y)) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: Boolean) => s"$x === $y".parse[Term].get
-    case (Symbol(x), y: String) => s"$x === $y".parse[Term].get
-    case (Symbol(x), Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: Boolean, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: String, Symbol(y)) => s"$x === $y".parse[Term].get
-    case (Expr(x), Symbol(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (x: Boolean, y: Boolean) => s"$x === $y".parse[Term].get
-    case (x: String, y: String) => s"$x === $y".parse[Term].get
-    case (Expr(x), Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: BigDecimal, Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: Boolean, Expr(y)) => s"$x === $y".parse[Term].get
-    case (x: String, Expr(y)) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: BigDecimal) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: Boolean) => s"$x === $y".parse[Term].get
-    case (Expr(x), y: String) => s"$x === $y".parse[Term].get
+  def ==== : ((Any, Any)) => Term = {
+    case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (x: String, y: String) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: BigDecimal, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: Boolean, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (x: String, Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: Boolean) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), y: String) => s"$x ==== $y".parse[Term].get
   }
 
 
@@ -183,6 +183,25 @@ object Meta:
   def `if * then … else …`(* : Term, `…`: Term.ForYield*): Term.If =
     Term.If(*, `…`(0), `…`(1), Nil)
 
+
+  def `IO { def *(*: ()): IO[Unit] = …; * }`(* : (String, String), `…`: Term.ForYield): Term =
+    Term.Apply(\("IO"),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *._1,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil,
+                                                                                *._2,
+                                                                                Some(Type.Name("()")),
+                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                            `: IO[Unit]`,
+                             `…`
+                   ) :: \(*._1) :: Nil
+                 ) :: Nil
+                 , None
+               )
+    )
 
   def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term.ForYield): Term =
     Term.Apply(\("IO"),

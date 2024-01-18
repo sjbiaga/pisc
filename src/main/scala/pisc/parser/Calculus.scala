@@ -86,8 +86,11 @@ class Calculus extends Pi:
       case cond ~ _ ~ t ~ _ ~ f =>
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~>choice ^^ { // replication
-      case (sum, free) => `!`(sum) -> free
+    "!"~> opt( "."~> `π.` <~"." ) ~ choice ^^ { // guarded replication
+      case Some(π) ~ (sum, free) =>
+        `!`(Some(π._1), sum) -> ((free &~ π._2._1) ++ π._2._2)
+      case None ~ (sum, free) =>
+        `!`(None, sum) -> free
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -159,7 +162,15 @@ object Calculus:
 
   case class `+`(choices: `|`*) extends AST
 
-  object `𝟎` extends `+`(`|`())
+  object `𝟎` extends `+`(`|`()):
+    override def canEqual(that: Any): Boolean =
+      that.isInstanceOf[`+`]
+
+    override def equals(any: Any): Boolean = any match
+      case that: `+`
+          if that.choices.size == 1 =>
+          that.choices.head.components.isEmpty
+      case _ => false
 
   case class `|`(components: `.`*) extends AnyVal with AST
 
@@ -179,7 +190,7 @@ object Calculus:
                   qual: List[String],
                   params: λ*) extends AST
 
-  case class `!`(sum: `+`) extends AnyVal with AST
+  case class `!`(prefix: Option[μ], sum: `+`) extends AST
 
   case class λ(value: Any) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -190,7 +201,7 @@ object Calculus:
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
-      case _: Expr => "scalameta term"
+      case _: Expr => "Scalameta Term"
     }
 
   case class Expr(term: Term)
@@ -218,9 +229,9 @@ object Calculus:
 
   // functions
 
-  val flatten: AST => (AST, Boolean) = _ match
+  val flatten: AST => (AST, Boolean) = {
 
-    case it: `𝟎`.type => it -> false
+    case it @ _0 if `𝟎` == _0 => it -> false
 
     case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
@@ -241,7 +252,7 @@ object Calculus:
       val f = flatten(par).asInstanceOf[(`|`, Boolean)]
       `+`(f._1) -> f._2
 
-    case it @ `|`(`.`(_: `𝟎`.type), _*) => it -> false
+    case it @ `|`(`.`(_0, _*), _*) if `𝟎` == _0 => it -> false
 
     case `|`(`.`(`+`(`|`(ss*), p*), ps*), it*)
         if p.isEmpty && ps.isEmpty =>
@@ -266,8 +277,10 @@ object Calculus:
       val f_f = flatten(f).asInstanceOf[(`+`, Boolean)]
       `?:`(cond, t_f._1, f_f._1) -> (t_f._2 || f_f._2)
 
-    case `!`(sum) =>
+    case `!`(μ, sum) =>
       val f = flatten(sum).asInstanceOf[(`+`, Boolean)]
-      `!`(f._1) -> f._2
+      `!`(μ, f._1) -> f._2
 
     case it => it -> false
+
+  }

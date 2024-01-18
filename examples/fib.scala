@@ -57,38 +57,40 @@ object π:
     _ <- (
       `𝟎`,
       for {
-        _edbd1482_f309_42fa_a2b5_8099d3235013 <- IO {
-          lazy val _edbd1482_f309_42fa_a2b5_8099d3235013: IO[Unit] = {
-            for (
-              _ <- (
-                for {
-                  n   <- num()
-                  out <- ν
-                  _ <- (
-                    `𝟎`,
-                    for (_ <- Fib(n, out)) yield (),
-                    for {
-                      fib <- out()
-                      _   <- τ
-                      _ <- IO {
-                        println(s"fib($n) = $fib")
-                      }
-                      _ <- num(random)
-                    } yield ()
-                  ).parMapN { (_, _, _) => }
-                } yield (),
-                for {
-                  _ <- IO.unit
-                  _ <- _edbd1482_f309_42fa_a2b5_8099d3235013
-                } yield ()
-              ).parMapN { (_, _) => }
-            ) yield ()
-          }
-          _edbd1482_f309_42fa_a2b5_8099d3235013
+        _9c633f3f_ef03_402b_a2f0_8117d1b1546e <- IO {
+          def _9c633f3f_ef03_402b_a2f0_8117d1b1546e(n: `()`): IO[Unit] = for (
+            _ <- (
+              for {
+                out <- ν
+                _ <- (
+                  `𝟎`,
+                  for (_ <- Fib(n, out)) yield (),
+                  for {
+                    fib <- out()
+                    _   <- τ
+                    _ <- IO {
+                      println(s"fib($n) = $fib")
+                    }
+                    _ <- num(random)
+                    _ <- `𝟎`
+                  } yield ()
+                ).parMapN { (_, _, _) => }
+              } yield (),
+              for {
+                n <- num()
+                _ <- _9c633f3f_ef03_402b_a2f0_8117d1b1546e(n)
+              } yield ()
+            ).parMapN { (_, _) => }
+          ) yield ()
+          _9c633f3f_ef03_402b_a2f0_8117d1b1546e
         }
-        _ <- _edbd1482_f309_42fa_a2b5_8099d3235013
+        n <- num()
+        _ <- _9c633f3f_ef03_402b_a2f0_8117d1b1546e(n)
       } yield (),
-      for (_ <- num(random)) yield ()
+      for {
+        _ <- num(random)
+        _ <- `𝟎`
+      } yield ()
     ).parMapN { (_, _, _) => }
   } yield ()
 
@@ -104,13 +106,17 @@ object π:
       for {
         res <- f()
         _   <- out(res)
+        _   <- `𝟎`
       } yield ()
     ).parMapN { (_, _, _) => }
   } yield ()
 
   def Fibonacci(f: `()`, n: `()`): IO[Unit] = for (
     _ <-
-      if (n < 2 === true) for (_ <- f(1L)) yield ()
+      if (n < 2 ==== true) for {
+        _ <- f(1L)
+        _ <- `𝟎`
+      } yield ()
       else {
         for {
           g <- ν
@@ -123,6 +129,7 @@ object π:
               p <- g()
               r <- h()
               _ <- f(p + r)
+              _ <- `𝟎`
             } yield ()
           ).parMapN { (_, _, _, _) => }
         } yield ()

@@ -78,6 +78,7 @@ object π:
           if (n < 0) println("Enter a non-negative number")
           else fibonacci(n).result
         }
+        _ <- `𝟎`
       } yield (),
       for {
         n <- x()

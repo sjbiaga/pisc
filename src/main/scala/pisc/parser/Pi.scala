@@ -41,7 +41,7 @@ import Calculus._
 
 class Pi extends Expression:
 
-  def `π.`: Parser[(Pre, (Names, Names))] =
+  def `π.`: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         `τ`(Some(it)) -> (Names(), free)
@@ -69,7 +69,7 @@ class Pi extends Expression:
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
                                    case (Right(term), free) => λ(Expr(term)) -> free
-                                   case (Left(enums), _) => throw PrefixChannelTermParsingException(enums)
+                                   case (Left(enums), _) => throw TermParsingException(enums)
                                  }
 
   /**
@@ -102,8 +102,8 @@ object Pi extends Calculus:
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
-  case class PrefixChannelTermParsingException(enums: List[Enumerator])
-      extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerators `$enums'")
+  case class TermParsingException(enums: List[Enumerator])
+      extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

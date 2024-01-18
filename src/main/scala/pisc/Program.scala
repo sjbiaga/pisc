@@ -52,12 +52,15 @@ object Program:
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
-      case _: `𝟎`.type =>
+      case it if `𝟎` == it =>
+        semaphore.map(* :+= `_ <- *.acquire`(_))
+
+        * :+= `_ <- *`("𝟎")
 
       case it: `+` if it.choices.size > 1 =>
         semaphore.map(* :+= `_ <- *.acquire`(_))
 
-        implicit val sem = Some("_" + UUID.randomUUID.toString.replaceAll("-", "_"))
+        implicit val sem = Some(id)
 
         * :+= `* <- Semaphore[IO](1)`(sem.get)
 
@@ -80,20 +83,25 @@ object Program:
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(fy: _*))
 
-      case `|`(operand, _*) =>
+      case it @ `|`(operand, _*) =>
         * = body(operand)
-
-      case _: `|` =>
-        * :+= `_ <- IO.unit`
-
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
 
       /////////////////////////////////////////////////////////// composition //
 
 
-      // RESTRICTION | PREFIXES | (MIS)MATCH | IF THEN ELSE | REPLICATION //////
+      // SEQUENCE //////////////////////////////////////////////////////////////
+
+      case `.`(end, it: _*) =>
+        semaphore.map(* :+= `_ <- *.acquire`(_))
+
+        * = (it :+ end).foldLeft(*)(_ ++ body(_)())
+
+        * = `_ <- *`(`for * yield ()`(* : _*))
+
+      ////////////////////////////////////////////////////////////// sequence //
+
+
+      // RESTRICTION | PREFIXES ////////////////////////////////////////////////
 
       case ν(λ(Symbol(name))) =>
         * = `* <- *`(name -> "ν")
@@ -126,17 +134,61 @@ object Program:
       case π(λ(Symbol(ch)), λ(Symbol(par)), true) =>
         * = `* <- *`(par -> s"$ch()".parse[Term].get)
 
+      //////////////////////////////////////////////// restriction | prefixes //
+
+
+      // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR ////////////////////////////
 
       case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
         if mismatch
         then
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(f)(), body(t)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(f)(), body(t)()))
         else
-          * = `_ <- *`(`if * then … else …`(===(lhs -> rhs), body(t)(), body(f)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t)(), body(f)()))
+
+      //////////////////////////// (mis)match | if then else | elvis operator //
 
 
-      case `!`(sum) =>
-        val uuid = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
+      ////// REPLICATION ///////////////////////////////////////////////////////
+
+      case `!`(Some(π @ π(_, λ(Symbol(name)), true)), sum) =>
+        val uuid = id
+
+        val `!.πP` = body(π)() :+ `_ <- *`(s"$uuid($name)".parse[Term].get)
+
+        val it =
+          `for * yield ()`(
+            `_ <- *` {
+              `( *, … ).parMapN { (_, …) => }`(
+                `for * yield ()`(body(sum)(): _*),
+                `for * yield ()`(`!.πP`: _*)
+              )
+            }
+          )
+
+        * :+= `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> name, it))
+        * ++= `!.πP`
+
+      case `!`(Some(μ), sum) =>
+        val uuid = id
+
+        val `!.μP` = body(μ)() :+ `_ <- *`(uuid)
+
+        val it =
+          `for * yield ()`(
+            `_ <- *` {
+              `( *, … ).parMapN { (_, …) => }`(
+                `for * yield ()`(body(sum)(): _*),
+                `for * yield ()`(`!.μP`: _*)
+              )
+            }
+          )
+
+        * :+= `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
+        * ++= `!.μP`
+
+      case `!`(_, sum) =>
+        val uuid = id
 
         val it =
           `for * yield ()` {
@@ -151,14 +203,12 @@ object Program:
         * :+= `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * :+= `_ <- *`(uuid)
 
-      ////// restriction | prefixes | (mis)match | if then else | replication //
+      /////////////////////////////////////////////////////////// replication //
 
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
       case `()`(λ(Symbol(identifier)), qual, params: _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
         val args = params.map {
           case λ(Symbol(name)) => name
           case λ(value) =>
@@ -179,22 +229,8 @@ object Program:
 
       //////////////////////////////////////////////////////////// agent call //
 
-
-      // SEQUENCE //////////////////////////////////////////////////////////////
-      // followed possibly either by agent call or another process expression //
-
-      case `.`(end, it: _*) if it.isEmpty =>
-        * = body(end)
-
-      case `.`(end, it: _*) =>
-        semaphore.map(* :+= `_ <- *.acquire`(_))
-
-        * = (it :+ end).foldLeft(*)(_ ++ body(_)())
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
-
-      ////////////////////////////////////////////////////////////// sequence //
-
       case it => ???
 
     *
+
+  def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
