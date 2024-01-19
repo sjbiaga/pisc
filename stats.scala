@@ -58,23 +58,23 @@ package object `Π-stats`:
       it
     }
 
-  def |(% : Map[String, Option[Rate]]): (String, BigDecimal) =
+  def |(% : Map[String, Rate]): (String, BigDecimal) =
     require(%.nonEmpty)
-    val `0` = %.filter { case (_, Some(∞)) => true case _ => false }
+    val `0` = %.filter(_._2 eq ∞)
     if `0`.nonEmpty
     then // immediate
       `0`.drop(random.nextInt(`0`.size)).head._1 -> BigDecimal(0)
     else
-      val `0+` = %.filter { case (_, Some(null)) | (_, None) => false case _ => true }
+      val `0+` = %.filter(_._2 ne null)
       if `0+`.nonEmpty
       then // timed
         val (key, delta) = `0+`
-          .map(_ -> _.get.asInstanceOf[`@`].rate)
+          .map(_ -> _.asInstanceOf[`@`].rate)
           .map(_ -> _.toDouble)
           .map(_ -> distrib(_))
           .map(_ -> _.draw())
           .minBy(_._2)
         key -> BigDecimal(delta)
       else // passive
-        val `-1` = %.filter { case (_, Some(null)) => true case _ => false }
+        val `-1` = %.filter(_._2 eq null)
         `-1`.drop(random.nextInt(`-1`.size)).head._1 -> BigDecimal(-1)

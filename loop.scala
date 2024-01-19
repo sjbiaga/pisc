@@ -34,41 +34,32 @@ import `Π-stats`._
 
 package object `Π-loop`:
 
-  type % = Ref[IO, Map[String, (Deferred[IO, BigDecimal], Option[Rate])]]
+  type + = (Deferred[IO, BigDecimal], Rate)
 
-  type \ = Ref[IO, Set[String]]
+  type % = Ref[IO, Map[String, Int | +]]
 
   type * = Semaphore[IO]
 
-  type / = Queue[IO, (String, Rate)]
+  type / = Queue[IO, ((String, String), +)]
 
-  def drop(ks: Set[String])(using % : %, \ : \): IO[Unit] =
-    if ks.isEmpty
-    then
-      IO.cede
-    else
-      for
-        deferred <- %.modify { m => m -> m(ks.head)._1 }
-        _        <- deferred.complete(null)
-        _        <- drop(ks.tail)
-      yield
-        ()
-
-  def loop(using % : %, \ : \, * : (*, *)): IO[Unit] =
+  def loop(using % : %, * : (*, *)): IO[Unit] =
     for
       it <- %.modify { m =>
-                       if m.exists(_._2._2 ne None)
-                       then m -> Some(m.map(_ -> _._2).toMap)
+                       if m.exists { (_, v) => v.isInstanceOf[+] }
+                       then m -> Some { m
+                                         .filter { (_, v) => v.isInstanceOf[+] }
+                                         .map { (k, v) => k -> v.asInstanceOf[+] }
+                                         .map(_ -> _._2)
+                                         .toMap
+                                 }
                        else m -> None
             }
       _  <- if it.isEmpty then *._1.acquire else
             for
               (key, delta) <- IO.pure(|(it.get))
-              deferred     <- %.modify { m => m -> m(key)._1 }
+              deferred     <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }
               _            <- deferred.complete(delta)
               _            <- *._2.acquire
-              ks           <- \.modify { d => Set.empty -> d }
-              _            <- drop(ks)
               _            <- %.update(_ - key)
               _            <- *._2.tryAcquire
             yield
@@ -79,9 +70,19 @@ package object `Π-loop`:
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
     for
-      (key, r) <- /.take
-      _        <- %.update { m => m + (key -> (m(key)._1 -> Some(r))) }
-      _        <- *.release
-      _        <- IO.cede >> poll
+      h <- /.take
+      ((_, key), it) = h
+      _ <- %.update { m =>
+                        assert(m.contains(key) && m(key).isInstanceOf[Int])
+                        val ^ = h._1._1
+                        ( if m(key) == 1
+                          then
+                            m - key
+                          else
+                            m + (key -> (m(key).asInstanceOf[Int] - 1))
+                        ) + (^ + key -> it)
+           }
+      _ <- *.release
+      _ <- IO.cede >> poll
     yield
       ()

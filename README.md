@@ -18,7 +18,7 @@ producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
 Summation: probabilistic choice modelled with - `parMapN`.
-Replication: modelled with - `parMapN` and `lazy val`.
+[Guarded] Replication: modelled with - `parMapN` and `lazy val` (or `def`).
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -63,7 +63,7 @@ using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` i
 _test_,that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the _replication_ unary operator `! Π . CHOICE`.
+Stack safe is the [guarded] _replication_ unary operator `! [ "." μ "." ] CHOICE`.
 
 The name before parentheses (angular or round) must be a channel name.
 
@@ -81,9 +81,9 @@ that is found in these terms is considered a _free_ name.
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
     PREFIXES   ::= { PREFIX }
-    PREFIX     ::= Π "."
+    PREFIX     ::= μ "."
                  | "ν" "(" NAME ")"
-    Π          ::= "τ" [ @ RATE | EXPRESSION ]
+    μ          ::= "τ" [ @ RATE | EXPRESSION ]
                  | NAME [ @ RATE ] "<" NAME ">"
                  | NAME [ @ RATE ] "(" NAME ")"
     LEAF       ::= "𝟎"
@@ -91,7 +91,7 @@ that is found in these terms is considered a _free_ name.
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" Π "." CHOICE
+                 | "!" "." μ "." CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
@@ -139,108 +139,6 @@ set of enabled actions. Finally, the set of enabled actions of a summation is th
 of each choice's set of enabled actions. Only a summation has a set of enabled actions,
 and thus is a `State`. For the other two cases (sequence and composition) the set of
 enabled actions is only propagated "upwards" by the parser.
-
-The file `StochasticPi.scala` is used to create a _transition "system"_ between `State`s
-for the purpose of enabling the actions in the successor state, immediately prior to
-the "expiration" of the precursor enabled action. From action to consecutive action,
-there is a transition, even if there are restrictions in between (picture these latter
-translation in `Scala`). And finally, if there is a last action in a sequence, then
-there is a transition from it to either an `end`ing summation or replication (guard);
-otherwise there is no transition: but if this were the case - there is no last action -,
-the set of enabled actions of a summation or a (guarded) replication, is directly and
-wholly subsumed in/by another summation; and, of course, eventually, the enabled actions
-of the summation (process) expression pertaining to an agent definitional equation are
-immediately enabled upon its entry in any call.
-
-The latter is the case also for the other three leaf types: (mis)match, `if then else`
-and Elvis operator. For the case of guarded replication, if there is
-a last action of a sequence of actions, there is a transition from that to the
-guard action/prefix. But more importantly, upon the expiration of a last action from
-a sequence of prefixes, if its `end` is a _summation_, the enabled actions of this
-summation are enabled _before_ actions are next to be fired (in parallel).
-
-Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
-_discarded_ actions. Each choice corresponds to a set of enabled actions. The
-set of enabled actions of the summation is but the union of the former. However,
-even this is handled in the parser, a somewhat "duplicated" algorithm creates
-the discarded actions.
-
-Thus, assume a choice of the sumation and dub it - `it`; the union of the set of
-_all_ enabled actions of the choices to the left - `left`; and, the union of the
-set of _all_ enabled actions of the choices to the right - `right`. Then for
-each key in `it`, the discarded actions is the union of `left` with `right`.
-As an action is part of many summations on the way up to the top level,
-each time there is more than one choice, to the same key there will be added
-more "let/right" discarded actions/keys.
-
-What is the benefit? At execution, when a key is part of the enabled actions,
-performing the action corresponding to that key means two things. First, the
-actions that are in parallel remain the same. Second, whenever the key is
-part of a composition (maybe more than one sequence), than the fact that
-this parallel composition is a choice in a summation, demands that all other
-actions in the other `left` and `right` choices be discarded. So, there maybe
-many summations in which the expired _key_ discards other keys.
-
-The discarded and enabled actions are then embedded as an immutable map from
-`String` to `Set[String]`in the generated output file. These `magical` maps
-are declared as `π-trick` and `π-spell`.
-
-The contention between the enabled actions occurs as follows. Each action in a
-sequence is a `for` generator that calls a method in `spi.scala`; the key of
-this actions is passed as second argument. The method offers the action `rate`
-associated with the key, or enqueues the pair in the `/` `Queue`. That does not mean
-the rate will be used, because the action may be _discarded_. A background fiber
-blocks on `take`ing or dequeuing this `Queue`. It then updates the `%` map
-of all enabled actions by merely setting the rate - which otherwise, at the
-moment these actions were enobled, was set to `None` - which is why it is
-crucial the [enabled] actions are enabled (rate set to `None`, enough to be
-in the `%` map) when actions are fired in parallel. A second background fiber
-is blocked on a `Semaphore` that the other bacground fiber releases, and
-then (blocking) polls for a next "offer".
-
-This second background fiber then takes a snapshot of the `%` map searching
-for any enabled action that has been "reached", and thus has a associated a
-rate rather than `None`. If this snapshot is empty, than it will block on the
-semaphore shared with the first background fiber.
-
-As soon as the snapshot is non-empty, the second background fiber computes
-statistically - starting from the rate - the _delay_ ("delta") that corresponds
-to the fastest action. It then uses the key get an associated `Deferred`, and
-the delay to _complete_ a `Deferred`. One will match. This corresponds to the
-current "winner".
-
-Meanwhile, all methods called (in parallel, either summation or composition)
-from a `for` generator, having `offered` the action rate, are (and must _all_
-be) blocked on `Deferred.get`'s method. As soon as these `Deferred` are `complete`d
-with `null`, each method will `flatMap` to `IO.never`.
-
-Before actually performing the action (which occurs eventually), there is
-some "book-keeping" to do. First, the second background fiber blocks on
-a semaphore (initially in the `acquire`d state, and shared with all
-the agents trough the `using` parameter list, as `/`, `%`, or `\`),
-while the winning fiber does some updating to the `%` map and the `\` set,
-before releasing the semaphore. Thus, the invariant that the semaphore
-is in the `acquire`d state with each start of a contention must be preserved.
-There are two cases here:
-
-1. The semaphore is `release`d _before_ the second background fiber
-   `acquire`s it. Hence, that the winning fiber has finished
-   updating. Thus, the second background fiber will _NOT_ remain
-   blocked, and may proceed to "announcing" each discarded key
-   that it has lost contention, `complete`ing `Deferrred`s with `null`.
-   The semaphore is now in the `acquire`d case.
-
-2. The semaphore is `release`d _after_ the second background fiber
-   `acquire`s it. The second background fiber blocked politely,
-   announced nicely, the `\` set of discarded keys emptied, but
-   the semaphore is now in the `release`d case.
-
-To maintain the invariant, trying to comply with 2.,
-the semaphore must be `acquired`. But doing so, and trying
-to comply with 1., will result in the second background fiber
-to remain blocked. The way out of this is to use the method
-`tryAcquire` on the semaphore to maintain the invariant in
-either 1. or 2. case.
 
 
 Program

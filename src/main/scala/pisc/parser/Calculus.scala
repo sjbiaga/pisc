@@ -86,9 +86,11 @@ class Calculus extends StochasticPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~`π.`~"."~choice ^^ { // replication
-      case _ ~ π ~ _ ~ (sum, free) =>
-        `!`(π._1, sum) -> ((free &~ π._2._1) ++ π._2._2)
+    "!"~> opt( "."~> `μ.` <~"." ) ~ choice ^^ { // [guarded] replication
+      case Some(μ) ~ (sum, free) =>
+        `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
+      case _ ~ (sum, free) =>
+        `!`(None, sum) -> free
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -109,7 +111,7 @@ class Calculus extends StochasticPi:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = `π.`<~"." |
+  def prefix: Parser[(Pre, (Names, Names))] = `μ.`<~"." |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case (ch, _) if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
@@ -170,7 +172,15 @@ object Calculus extends Calculus:
   case class `+`(override val enabled: Actions,
                  choices: `|`*) extends AST with State
 
-  object `𝟎` extends `+`(nil, `|`())
+  object `𝟎` extends `+`(nil, `|`()):
+    override def canEqual(that: Any): Boolean =
+      that.isInstanceOf[`+`]
+
+    override def equals(any: Any): Boolean = any match
+      case that: `+`
+          if that.choices.size == 1 =>
+          that.choices.head.components.isEmpty
+      case _ => false
 
   case class `|`(components: `.`*) extends AnyVal with AST
 
@@ -198,7 +208,7 @@ object Calculus extends Calculus:
                   qual: List[String],
                   params: λ*) extends AST
 
-  case class `!`(prefix: μ, sum: `+`)
+  case class `!`(guard: Option[μ], sum: `+`)
       extends AST
 
   case class λ(value: Any) extends AST:
@@ -238,9 +248,9 @@ object Calculus extends Calculus:
 
   // functions
 
-  val flatten: AST => (AST, Boolean) = _ match
+  val flatten: AST => (AST, Boolean) = {
 
-    case it: `𝟎`.type => it -> false
+    case it @ _0 if `𝟎` == _0 => it -> false
 
     case `+`(enabled, `|`(`.`(sum: `+`, ps*), ss*), it*)
         if ps.isEmpty && ss.isEmpty =>
@@ -261,7 +271,7 @@ object Calculus extends Calculus:
       val f = flatten(par).asInstanceOf[(`|`, Boolean)]
       `+`(enabled, f._1) -> f._2
 
-    case it @ `|`(`.`(_: `𝟎`.type), _*) => it -> false
+    case it @ `|`(`.`(_0, _*), _*) if `𝟎` == _0 => it -> false
 
     case `|`(`.`(`+`(_, `|`(ss*), p*), ps*), it*)
         if p.isEmpty && ps.isEmpty =>
@@ -291,3 +301,5 @@ object Calculus extends Calculus:
       `!`(π, f._1) -> f._2
 
     case it => it -> false
+
+  }

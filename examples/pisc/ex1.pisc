@@ -1,1 +1,1 @@
-Main = ν(x)(𝟎 | (!x@∞<5>.x@∞(z).) | x(z).)
+Main = ν(x)(𝟎 | (!.x@∞<5>.τ/*println("out 5")*/.x@∞(z).τ/*println(s"in ${'z}")*/.) | x(z).)

@@ -26,9 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//package main.scala.in
+package examples
 
-import _root_.cats.effect.{ IO, IOApp, Deferred }
+import _root_.cats.effect.{ IO, IOApp }
 import _root_.cats.effect.std.{ Queue, Semaphore }
 
 import `Π-loop`._
@@ -37,28 +37,27 @@ import `Π-stats`.{ Rate, ∞, `@` }
 
 object App extends IOApp.Simple:
 
-  private def run(% : %, \ : \, / : /, * : (*, *)): IO[Unit] =
+  private def run(% : %, / : /, * : (*, *)): IO[Unit] =
     ( for
-        _ <- loop(using %, \, *).background
+        _ <- loop(using %, *).background
         _ <- poll(using %, /, *._1).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- π.Main()(using "")(using %, \, /, *._2)
+        _ <- π.Main()(using π.`π-uuid`)(using %, /, *._2)
       yield
         ()
     }
 
   override def run: IO[Unit] =
     for
-      %    <- IO.ref(Map[String, (Deferred[IO, BigDecimal], Option[Rate])]())
-      \    <- IO.ref(Set[String]())
-      /    <- Queue.unbounded[IO, (String, Rate)]
+      %    <- IO.ref(Map[String, Int | +]())
+      /    <- Queue.unbounded[IO, ((String, String), +)]
       *    <- Semaphore[IO](1)
       -    <- Semaphore[IO](1)
       _    <- -.acquire
-      _    <- run(%, \, /, (*, -))
+      _    <- run(%, /, (*, -))
     yield
       ()
 
@@ -74,6 +73,6 @@ object π:
 
   private val `𝟎` = IO.unit
 
-  private def `π-uuid` = UUID.randomUUID.toString
+  def `π-uuid` = UUID.randomUUID.toString
 
 

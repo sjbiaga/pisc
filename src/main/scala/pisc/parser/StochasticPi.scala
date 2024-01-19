@@ -44,7 +44,7 @@ import Calculus._
 
 trait StochasticPi extends Expression:
 
-  def `π.`: Parser[(μ, (Names, Names))] =
+  def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~>opt( "@"~rate | expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         `τ`(Some(it), Some(None)) -> (Names(), free)
@@ -105,7 +105,8 @@ object StochasticPi:
         r
       else end match
         case it: `+` => it.enabled
-        case `!`(π, _) => π.enabled
+        case `!`(Some(μ), it) => μ.enabled ++ it.enabled
+        case `!`(_, it) => it.enabled
         case _ => r
 
   val nil = Set[String]()
@@ -147,17 +148,13 @@ object StochasticPi:
       extends ParsingException("Probabilistic choice requires some prefix enabled on each branch")
 
 
-  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions])) =
-
-    val discarded = Map[String, Actions]()
+  def apply(prog: List[Bind]): (List[Bind], Map[String, Actions]) =
 
     lazy val split: AST => Actions = {
 
       case _: `𝟎`.type | _: `()` => nil
 
       case sum @ `+`(enabled, ps*) if ps.size == 1 =>
-        assert(enabled == split(ps.head))
-
         enabled
 
       case sum @ `+`(enabled, ps*) =>
@@ -166,15 +163,7 @@ object StochasticPi:
         ls.zipWithIndex.foreach { (it, i) =>
           if ls(i).isEmpty then throw ProbabilisticChoiceException
           val ks = (ls.take(i) ++ ls.drop(i+1)).reduce(_ ++ _)
-          it.foreach { k =>
-            if !discarded.contains(k)
-            then
-              discarded(k) = Actions()
-            discarded(k) ++= ks
-          }
         }
-
-        assert(enabled == ls.reduce(_ ++ _))
 
         enabled
 
@@ -191,9 +180,13 @@ object StochasticPi:
         split(f)
         nil
 
-      case `!`(π, sum) =>
+      case `!`(Some(μ), sum) =>
         split(sum)
-        π.enabled
+        μ.enabled
+
+      case `!`(_, sum) =>
+        split(sum)
+        sum.enabled
 
       case _ => ???
 
@@ -220,15 +213,21 @@ object StochasticPi:
             ps(i).asInstanceOf[State] -> ps(i+1+j).asInstanceOf[State]
         ) ++
         ( if k < 0
-          then
-            Nil
+          then end match
+            case `!`(Some(μ), sum) =>
+              Seq(μ -> μ) ++ Seq(μ -> sum)
+            case _ =>
+              Nil
           else end match
-           case sum: `+` =>
-            Seq(ps(k).asInstanceOf[State] -> sum)
-           case `!`(π, _) =>
-            Seq(ps(k).asInstanceOf[State] -> π)
-           case _ =>
-             Nil
+            case sum: `+` =>
+              Seq(ps(k).asInstanceOf[State] -> sum)
+            case `!`(Some(μ), sum) =>
+              Seq(ps(k).asInstanceOf[State] -> μ) ++ Seq(μ -> μ) ++
+              Seq(ps(k).asInstanceOf[State] -> sum) ++ Seq(μ -> sum)
+            case `!`(_, sum) =>
+              Seq(ps(k).asInstanceOf[State] -> sum)
+            case _ =>
+              Nil
         ) ++ trans(end)
 
       case `?:`(_, t, f) => trans(t) ++ trans(f)
@@ -253,10 +252,15 @@ object StochasticPi:
       }
       .map {
         case it @ (_, Some(sum)) =>
-          trans(sum).foreach { (s, t) => enabled(s.uuid) = t.enabled }
+          trans(sum).foreach { (s, t) =>
+            if !enabled.contains(s.uuid)
+            then
+              enabled(s.uuid) = Actions()
+             enabled(s.uuid) ++= t.enabled
+           }
           it
         case it => it
-      } -> (discarded -> enabled)
+      } -> enabled
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

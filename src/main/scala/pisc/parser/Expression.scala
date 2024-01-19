@@ -41,7 +41,7 @@ import Expression.ExpressionParsingException
 
 class Expression extends JavaTokenParsers:
 
-  /** Scala comment enclosing any [[Scalameta]] term
+  /** Scala comment enclosing any [[Scalameta]] [[Term]]
     * or [[Enumerator]]s (used for assignment)
     * @return
     */

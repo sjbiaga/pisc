@@ -29,8 +29,6 @@
 package pisc
 package generator
 
-import java.util.UUID
-
 import scala.meta._
 
 import parser.StochasticPi.Actions
@@ -47,7 +45,7 @@ object Meta:
              identifier,
              Member.ParamClauseGroup(
                Type.ParamClause(Nil),
-               List(`()`(params: _*), `(using % : %, \\ : \\, / : /, * : *)(implicit ^ : String)`),
+               List(`()`(params: _*), `(using % : %, / : /, * : *)(implicit ^ : String)`),
              ) :: Nil,
              `: IO[Unit]`,
              prog
@@ -100,11 +98,11 @@ object Meta:
                     ,None)
 
 
-  val `(using % : %, \\ : \\, / : /, * : *)(implicit ^ : String)` =
+  val `(using % : %, / : /, * : *)(implicit ^ : String)` =
     Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) ::
-                       List("%", "\\", "/", "*")
+                       List("%", "/", "*")
                        .map { it => Term.Param(Mod.Implicit() :: Nil,
                                                it,
                                                Some(Type.Name(it)),
@@ -249,8 +247,8 @@ object Meta:
   def `… = *; _ <- %.update(…)`(enabled: Actions): List[Enumerator] =
     if enabled.nonEmpty
     then
-      val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
+      val uuid = Program.id
       Enumerator.Val(`* <- …`(uuid), s"""_root_.scala.collection.immutable.Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
-      `_ <- *`(s"`π-none`($uuid)".parse[Term].get) :: Nil
+      `_ <- *`(s"`π-incr`($uuid)".parse[Term].get) :: Nil
     else
       Nil

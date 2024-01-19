@@ -54,7 +54,8 @@ object Program:
 
       // SUMMATION /////////////////////////////////////////////////////////////
 
-      case _: `𝟎`.type =>
+      case it if `𝟎` == it =>
+        * :+= `_ <- *`("𝟎")
 
       case it: `+` if it.choices.size > 1 =>
 
@@ -84,18 +85,12 @@ object Program:
       case `|`(operand, _*) =>
         * = body(operand)(false)
 
-      case _: `|` =>
-        * :+= `_ <- IO.unit`
-
-        * = `_ <- *`(`for * yield ()`(* : _*))
+      case _: `|` => ???
 
       /////////////////////////////////////////////////////////// composition //
 
 
       // SEQUENCE //////////////////////////////////////////////////////////////
-
-      case `.`(end, it: _*) if it.isEmpty =>
-        * = body(end)(false)
 
       case `.`(end, it: _*) =>
         * = (it :+ end).foldLeft(*)(_ ++ body(_)(false))
@@ -149,43 +144,63 @@ object Program:
           * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t)(), body(f)()))
 
 
-      case `!`(π @ π(_, λ(Symbol(name)), true, _), sum) =>
-        val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
+      case `!`(Some(π @ π(_, λ(Symbol(name)), true, _)), sum) =>
+        val uuid = id
 
-        val `!πP` = body(π)() :+ `_ <- *`(s"`$uuid`($name)(`π-uuid`)".parse[Term].get)
+        val `!.πP` = body(π)() ++
+                     `_ <- *`(s"$uuid($name)(`π-uuid`)".parse[Term].get)
 
         val it =
           `for * yield ()`(
-            (`… = *; _ <- %.update(…)`(π.enabled ++ sum.enabled) :+
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
                 `for * yield ()`(body(sum)(false): _*),
-                `for * yield ()`(`!πP`: _*)
+                `for * yield ()`(`!.πP`: _*)
               )
-            }) :_*
+            }
           )
 
         * :+= `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> name, it))
-        * ++= `!πP`
+        * ++= `!.πP`
 
-      case `!`(π, sum) =>
-        val uuid = "_" + UUID.randomUUID.toString.replace("-", "_")
+      case `!`(Some(μ), sum) =>
+        val uuid = id
 
-        val `!πP` = body(π)() :+ `_ <- *`(s"`$uuid`(`π-uuid`)".parse[Term].get)
+        val `!.μP` = body(μ)() ++
+                     `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
 
         val it =
           `for * yield ()`(
-            (`… = *; _ <- %.update(…)`(π.enabled ++ sum.enabled) :+
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
                 `for * yield ()`(body(sum)(false): _*),
-                `for * yield ()`(`!πP`: _*)
+                `for * yield ()`(`!.μP`: _*)
               )
-            }) :_*
+            }
           )
 
         * :+= `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
-        * ++= `!πP`
+        * ++= `!.μP`
+
+      case `!`(_, sum) =>
+        val uuid = id
+
+        val `!P` = `_ <- IO.unit` ++
+                   `… = *; _ <- %.update(…)`(sum.enabled) ++
+                   `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
+
+        val it =
+          `for * yield ()`(
+            `_ <- *` {
+              `( *, … ).parMapN { (_, …) => }`(
+                `for * yield ()`(body(sum)(false): _*),
+                `for * yield ()`(`!P`: _*)
+              )
+            }
+          )
+
+        * :+= `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
+        * ++= `!P`
 
       ////// restriction | prefixes | (mis)match | if then else | replication //
 
@@ -216,3 +231,5 @@ object Program:
       case _ => ???
 
     *
+
+  def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")

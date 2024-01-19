@@ -26,9 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//package main.scala.in
+package examples
 
-import _root_.cats.effect.{IO, IOApp, Deferred}
+import _root_.cats.effect.{IO, IOApp}
 import _root_.cats.effect.std.{Queue, Semaphore}
 
 import `Π-loop`._
@@ -36,23 +36,22 @@ import `Π-stats`.{Rate, ∞, `@`}
 
 object App extends IOApp.Simple:
 
-  private def run(% : %, \ : \, / : /, * : (*, *)): IO[Unit] = (for
-    _ <- loop(using %, \, *).background
+  private def run(% : %, / : /, * : (*, *)): IO[Unit] = (for
+    _ <- loop(using %, *).background
     _ <- poll(using %, /, *._1).background
   yield ()).use { _ =>
-    for _ <- π.Main()(using "")(using %, \, /, *._2)
+    for _ <- π.Main()(using π.`π-uuid`)(using %, /, *._2)
     yield ()
   }
 
   override def run: IO[Unit] =
     for
-      % <- IO.ref(Map[String, (Deferred[IO, BigDecimal], Option[Rate])]())
-      \ <- IO.ref(Set[String]())
-      / <- Queue.unbounded[IO, (String, Rate)]
+      % <- IO.ref(Map[String, Int | +]())
+      / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](1)
       - <- Semaphore[IO](1)
       _ <- -.acquire
-      _ <- run(%, \, /, (*, -))
+      _ <- run(%, /, (*, -))
     yield ()
 
 object π:
@@ -66,47 +65,57 @@ object π:
 
   private val `𝟎` = IO.unit
 
-  private def `π-uuid` = UUID.randomUUID.toString
+  def `π-uuid` = UUID.randomUUID.toString
 
-  val `π-trick`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map()
-
-  val `π-spell`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
-    "bcc5a5e5-03f6-4197-bf4d-933d909e8f5b" -> _root_.scala.collection.immutable.Set(),
-    "51fa5e1d-5f3e-4f12-aee1-592fc6244b04" -> _root_.scala.collection.immutable.Set()
+  implicit val `π-wand`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
+    "d25e7cda-4b24-49f5-97fb-b56246b58b95" -> _root_.scala.collection.immutable.Set(),
+    "115ee795-b65b-4c08-8f5a-c6f06965ef7c" -> _root_.scala.collection.immutable.Set("115ee795-b65b-4c08-8f5a-c6f06965ef7c", "10246973-bf15-473d-80d8-3d34bac62ea1"),
+    "95f4ad0e-b1a7-496f-aa92-d0782e4550f8" -> _root_.scala.collection.immutable.Set("7dac2404-c1bd-4553-9103-ec0aad100b81"),
+    "7dac2404-c1bd-4553-9103-ec0aad100b81" -> _root_.scala.collection.immutable.Set(),
+    "10246973-bf15-473d-80d8-3d34bac62ea1" -> _root_.scala.collection.immutable.Set("95f4ad0e-b1a7-496f-aa92-d0782e4550f8")
   )
 
-  implicit val `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]) = `π-trick` -> `π-spell`
-
-  def Main()(using ^ : String)(using % : %, \ : \, / : /, * : *): IO[Unit] = for {
+  def Main()(using ^ : String)(using % : %, / : /, * : *): IO[Unit] = for {
     _ <- IO.unit
-    _9855aa2a_3f03_4f09_8e87_5ada85dd56c1 = _root_.scala.collection.immutable.Set("5c1425fa-85da-4369-a537-1237ddceb056", "bcc5a5e5-03f6-4197-bf4d-933d909e8f5b")
-    _ <- `π-none`(_9855aa2a_3f03_4f09_8e87_5ada85dd56c1)
+    _3e01c680_eddf_44ca_8f25_0db8a29dd68d = _root_.scala.collection.immutable.Set("115ee795-b65b-4c08-8f5a-c6f06965ef7c", "10246973-bf15-473d-80d8-3d34bac62ea1", "d25e7cda-4b24-49f5-97fb-b56246b58b95")
+    _ <- `π-incr`(_3e01c680_eddf_44ca_8f25_0db8a29dd68d)
     _ <- for {
       x <- ν
       _ <- (
         `𝟎`,
         for {
-          _b10f25e8_8570_46d1_9cfe_39ed8cb7402c <- IO {
-            lazy val _b10f25e8_8570_46d1_9cfe_39ed8cb7402c: String => IO[Unit] = { implicit ^ =>
-              for {
-                _ <- IO.unit
-                _c468940c_c8ac_432c_bbff_4096927209db = _root_.scala.collection.immutable.Set("5c1425fa-85da-4369-a537-1237ddceb056", "51fa5e1d-5f3e-4f12-aee1-592fc6244b04")
-                _ <- `π-none`(_c468940c_c8ac_432c_bbff_4096927209db)
+          _82d67361_2ec7_49f2_a85d_d853c8a36070 <- IO {
+            lazy val _82d67361_2ec7_49f2_a85d_d853c8a36070: String => IO[Unit] = { implicit ^ =>
+              for (
                 _ <- (
-                  for ((z, _) <- x(∞)("51fa5e1d-5f3e-4f12-aee1-592fc6244b04")) yield (),
                   for {
-                    _ <- x(∞, 5)("5c1425fa-85da-4369-a537-1237ddceb056")
-                    _ <- _b10f25e8_8570_46d1_9cfe_39ed8cb7402c(`π-uuid`)
+                    _      <- τ(∞)("10246973-bf15-473d-80d8-3d34bac62ea1")
+                    _      <- IO {
+                      println("out 5")
+                    }
+                    (z, _) <- x(∞)("95f4ad0e-b1a7-496f-aa92-d0782e4550f8")
+                    _      <- τ(∞)("7dac2404-c1bd-4553-9103-ec0aad100b81")
+                    _      <- IO {
+                      println(s"in $z")
+                    }
+                    _      <- `𝟎`
+                  } yield (),
+                  for {
+                    _ <- x(∞, 5)("115ee795-b65b-4c08-8f5a-c6f06965ef7c")
+                    _ <- _82d67361_2ec7_49f2_a85d_d853c8a36070(`π-uuid`)
                   } yield ()
                 ).parMapN { (_, _) => }
-              } yield ()
+              ) yield ()
             }
-            _b10f25e8_8570_46d1_9cfe_39ed8cb7402c
+            _82d67361_2ec7_49f2_a85d_d853c8a36070
           }
-          _                                     <- x(∞, 5)("5c1425fa-85da-4369-a537-1237ddceb056")
-          _                                     <- _b10f25e8_8570_46d1_9cfe_39ed8cb7402c(`π-uuid`)
+          _                                     <- x(∞, 5)("115ee795-b65b-4c08-8f5a-c6f06965ef7c")
+          _                                     <- _82d67361_2ec7_49f2_a85d_d853c8a36070(`π-uuid`)
         } yield (),
-        for ((z, _) <- x(null)("bcc5a5e5-03f6-4197-bf4d-933d909e8f5b")) yield ()
+        for {
+          (z, _) <- x(null)("d25e7cda-4b24-49f5-97fb-b56246b58b95")
+          _      <- `𝟎`
+        } yield ()
       ).parMapN { (_, _, _) => }
     } yield ()
   } yield ()

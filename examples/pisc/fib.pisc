@@ -9,7 +9,7 @@
 Main = ν(num)                                           \
      (                                                  \
      𝟎                                                  \
-     | (!num(n).                                        \
+     | (!.num(n).                                       \
         ν(in) (                                         \
               𝟎                                         \
               | Fib(n, in)                              \
