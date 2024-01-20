@@ -105,7 +105,7 @@ object StochasticPi:
         r
       else end match
         case it: `+` => it.enabled
-        case `!`(Some(μ), it) => μ.enabled ++ it.enabled
+        case `!`(Some(μ), it) => μ.enabled
         case `!`(_, it) => it.enabled
         case _ => r
 
@@ -148,7 +148,9 @@ object StochasticPi:
       extends ParsingException("Probabilistic choice requires some prefix enabled on each branch")
 
 
-  def apply(prog: List[Bind]): (List[Bind], Map[String, Actions]) =
+  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions])) =
+
+    val discarded = Map[String, Actions]()
 
     lazy val split: AST => Actions = {
 
@@ -163,6 +165,12 @@ object StochasticPi:
         ls.zipWithIndex.foreach { (it, i) =>
           if ls(i).isEmpty then throw ProbabilisticChoiceException
           val ks = (ls.take(i) ++ ls.drop(i+1)).reduce(_ ++ _)
+          it.foreach { k =>
+            if !discarded.contains(k)
+            then
+              discarded(k) = Actions()
+            discarded(k) ++= ks
+          }
         }
 
         enabled
@@ -222,8 +230,8 @@ object StochasticPi:
             case sum: `+` =>
               Seq(ps(k).asInstanceOf[State] -> sum)
             case `!`(Some(μ), sum) =>
-              Seq(ps(k).asInstanceOf[State] -> μ) ++ Seq(μ -> μ) ++
-              Seq(ps(k).asInstanceOf[State] -> sum) ++ Seq(μ -> sum)
+              Seq(ps(k).asInstanceOf[State] -> μ) ++
+              Seq(μ -> μ) ++ Seq(μ -> sum)
             case `!`(_, sum) =>
               Seq(ps(k).asInstanceOf[State] -> sum)
             case _ =>
@@ -260,7 +268,7 @@ object StochasticPi:
            }
           it
         case it => it
-      } -> enabled
+      } -> (discarded -> enabled)
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

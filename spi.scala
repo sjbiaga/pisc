@@ -43,24 +43,32 @@ package object sΠ:
 
   def `π-incr`(enabled: `Π-Set`[String])
               (using % : %): IO[Unit] =
-    if enabled.isEmpty
-    then
-      IO.cede
-    else
-      for
-        _ <- %.update { m =>
-                        val key = enabled.head
-                        m + (key -> (1 + (if m.contains(key) then m(key).asInstanceOf[Int] else 0)))
-             }
-        _ <- `π-incr`(enabled.tail)
-      yield
-        ()
-
+    %.update(enabled.foldLeft(_) { (m, key) =>
+                                   val n = if m.contains(key)
+                                           then m(key).asInstanceOf[Int]
+                                           else 0
+                                   m + (key -> (n + 1))
+                                 }
+    )
 
   private def ready(key: String)
                    (using % : %, * : *)
-                   (implicit `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
-    `π-incr`(`π-wand`.getOrElse(key, _root_.scala.collection.immutable.Set.empty)) >> *.release
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    val (_, spell) = `π-wand`
+    `π-incr`(spell.getOrElse(key, _root_.scala.collection.immutable.Set.empty))
+
+
+  def `π-decr`(discarded: `Π-Set`[String])
+              (using % : %)
+              (implicit ^ : String): IO[Unit] =
+    %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
+
+  private def discard(key: String)
+                     (using % : %)
+                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                               ^ : String): IO[Unit] =
+    val (trick, _) = `π-wand`
+    `π-decr`(trick.getOrElse(key, _root_.scala.collection.immutable.Set.empty))
 
 
   /**
@@ -85,13 +93,14 @@ package object sΠ:
 
     def apply(rate: Rate)(key: String)
              (using % : %, / : /, * : *)
-             (implicit ^ : String,
-                       `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[BigDecimal] =
+             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       ^ : String): IO[BigDecimal] =
+      val (trick, spell) = `π-wand`
       for
         deferred <- Deferred[IO, BigDecimal]
         _        <- /.offer(^ -> key -> (deferred -> rate))
         delta    <- deferred.get
-        _        <- ready(key)
+        _        <- discard(key) >> *.release >> ready(key)
       yield
         delta
 
@@ -110,8 +119,8 @@ package object sΠ:
       */
     def apply(rate: Rate)(key: String)
              (using % : %, / : /, * : *)
-             (implicit ^ : String,
-                       `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[(`()`, BigDecimal)] =
+             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       ^ : String): IO[(`()`, BigDecimal)] =
       for
         deferred   <- Deferred[IO, BigDecimal]
         _          <- /.offer(^ -> key -> (deferred -> rate))
@@ -124,8 +133,8 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /, * : *)
-             (implicit ^ : String,
-                       `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[BigDecimal] =
+             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       ^ : String): IO[BigDecimal] =
       for
         deferred <- Deferred[IO, BigDecimal]
         _        <- /.offer(^ -> key -> (deferred -> rate))
@@ -170,10 +179,11 @@ package object sΠ:
                (deferred: Deferred[IO, BigDecimal])
                (`>R`: Ref[IO, `><`])
                (using % : %, * : *)
-               (implicit `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[BigDecimal] =
+               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                         ^ : String): IO[BigDecimal] =
         for
           delta <- deferred.get
-          _     <- ready(key) >>
+          _     <- discard(key) >> *.release *>
                    Deferred[IO, Unit].flatMap { offerer =>
                      IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                        `>R`.modify {
@@ -184,7 +194,7 @@ package object sΠ:
                            `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
                        }.flatten
                      }
-                   }
+                   } <* ready(key)
         yield
           delta
 
@@ -192,10 +202,11 @@ package object sΠ:
                (deferred: Deferred[IO, BigDecimal])
                (`<R`: Ref[IO, `><`])
                (using % : %, * : *)
-               (implicit `π-wand`: `Π-Map`[String, `Π-Set`[String]]): IO[(Any, BigDecimal)] =
+               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                         ^ : String): IO[(Any, BigDecimal)] =
         for
           delta <- deferred.get
-          name  <- ready(key) >>
+          name  <- discard(key) >> *.release *>
                    Deferred[IO, Any].flatMap { taker =>
                      IO.uncancelable { poll =>
                        `<R`.modify {
@@ -207,6 +218,6 @@ package object sΠ:
                            `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
                        }.flatten
                      }
-                   }
+                   } <* ready(key)
         yield
           name -> delta

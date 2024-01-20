@@ -86,7 +86,7 @@ class Calculus extends StochasticPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~> `μ.` <~"." ) ~ choice ^^ { // [guarded] replication
+    "!"~> opt( "."~>`μ.`<~"." ) ~ choice ^^ { // [guarded] replication
       case Some(μ) ~ (sum, free) =>
         `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
       case _ ~ (sum, free) =>

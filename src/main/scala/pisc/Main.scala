@@ -64,7 +64,7 @@ object Main:
         val bind = bs.zipWithIndex
         val prog_ = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
-        val (prog, enabled) = StochasticPi(prog_.map(_._1))
+        val (prog, (discarded, enabled)) = StochasticPi(prog_.map(_._1))
 
         val ps = Program(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
@@ -76,9 +76,11 @@ object Main:
           .map(_._1)
           .mkString("\n\n")
 
-        val wand = `magic wand`(enabled).toString
+        val trick = `trick-or-treat`("π-trick", discarded).toString
+        val spell = `spell, magic spell`("π-spell", enabled).toString
+        val wand = `magic wand`.toString
 
-        val magic = wand + "\n\n"
+        val magic = trick + "\n\n" + spell + "\n\n" + wand + "\n\n"
 
         bwr.write(magic + code, 0, magic.length + code.length)
       finally
@@ -87,9 +89,32 @@ object Main:
         if source ne null then source.close()
     }
 
-  def `magic wand`(enabled: Map[String, Actions]): Defn.Val =
+  val `magic wand`: Defn.Val =
+    val t = Type.Apply(Type.Name("Π-Map"),
+                       Type.ArgClause(List(Type.Name("String"),
+                                           Type.Apply(Type.Name("Π-Set"),
+                                                      Type.ArgClause(Type.Name("String") :: Nil)))))
     Defn.Val(Mod.Implicit() :: Nil,
              Pat.Var(Term.Name("π-wand")) :: Nil,
+             Some(Type.Tuple(List(t, t))),
+             Term.ApplyInfix(Term.Name("π-trick"),
+                             Term.Name("->"),
+                             Type.ArgClause(Nil),
+                             Term.ArgClause(Term.Name("π-spell") :: Nil, None)))
+
+  def `trick-or-treat`(name: String, discarded: Map[String, Actions]): Defn.Val =
+    Defn.Val(Nil,
+             Pat.Var(Term.Name(name)) :: Nil,
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-Set"),
+                                                            Type.ArgClause(Type.Name("String") :: Nil)))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this(discarded).toList, None)))
+
+  def `spell, magic spell`(name: String, enabled: Map[String, Actions]): Defn.Val =
+    Defn.Val(Nil,
+             Pat.Var(Term.Name(name)) :: Nil,
              Some(Type.Apply(Type.Name("Π-Map"),
                              Type.ArgClause(List(Type.Name("String"),
                                                  Type.Apply(Type.Name("Π-Set"),
@@ -103,8 +128,10 @@ object Main:
     yield
       Term.ApplyInfix(Lit.String(s"$id"),
                       Term.Name("->"), Type.ArgClause(Nil),
-                      Term.ArgClause(List(Term.Apply(scollimmSet,
-                                                     Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList, None))), None))
+                      Term.ArgClause(Term.Apply(scollimmSet,
+                                                Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                                               None)
+                                     ) :: Nil, None))
 
   private val scollimmMap =
     Term.Select(

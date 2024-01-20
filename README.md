@@ -111,8 +111,8 @@ the final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibres are launched in `background` and used as `Resource`s,
 such that terminating the program cancels them. However, when a process is _discarded_,
-`IO.never` is used for this situation, so the program won't exit any longer. This
-is something to improve. `IO.canceled` cannot be used as it raises an exception.
+an uncompletee `Deferred[IO, BigDecimal]` is used for this situation, hence the fiber
+blocks semantically, and so the program won't exit any longer.
 
 Silent transitions, input and output prefixes ("actions") are associated with
 an UUID (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
@@ -122,23 +122,131 @@ A `State` contains a `Set` of `enabled` actions `(UUIDs`). These are computed as
 Each silent transition, input or output prefix has (the key of) itself as the only enabled
 action: these are the base cases. The enabled actions of a sequence of prefixes or
 restriction, unless this sequence is empty, is that of the *first* action, if any.
-If the sequence is empty or does not have actions (only restrictions), then the
+If the sequence is empty or does not have actions (e.g., only restrictions), then the
 enabled actions are either those of the "leaf" expression or of another processs
 expression, that "`end`"s the sequence of prefixes. Both are optional, case in which
 is taken to be the inaction `𝟎`, which has no enabled actions. Besides `𝟎`, other leaf
 expressions are (mis)match, `if then else`, Elvis operator (all three being treated
 the same), agent call and (guarded) replication.
 
-The only case of a leaf that has enabled actions is the latter - a (guard)
-non-positive polarity prefix. Otherwise, another ending process expression must
-follow the sequence between a pair of parentheses. An exception is raised if
-the sequence is empty and the `end`ing is none.
+The only case of a leaf that has enabled actions is the latter - guarded (the prefix
+itself) or not (the process of the) replication. Otherwise, another ending process
+expression must follow the sequence between a pair of parentheses. An exception is
+raised if the sequence is empty and the `end`ing is none.
 
 The set of enabled actions of a (parallel) composition is the union of each sequence's.
 set of enabled actions. Finally, the set of enabled actions of a summation is the union
 of each choice's set of enabled actions. Only a summation has a set of enabled actions,
 and thus is a `State`. For the other two cases (sequence and composition) the set of
 enabled actions is only propagated "upwards" by the parser.
+
+The file `StochasticPi.scala` is used to create a non-deterministic _transition "system"_
+between `State`s for the purpose of enabling the actions in the successor state, immediately
+prior to the "expiration" of the precursor enabled action. From action to consecutive action,
+there is a transition, even if there are restrictions in between (picture these latter
+translation in `Scala`). And finally, if there is a last action in a sequence, then
+there is a transition from it to either an `end`ing summation or replication guard;
+otherwise there is no transition: but if this were the case - there is no last action -,
+the set of enabled actions of a summation or a (guarded) replication, is directly and
+wholly subsumed in/by another summation; and, of course, eventually, the enabled actions
+of the summation (process) expression pertaining to an agent definitional equation are
+immediately enabled upon its entry in any call.
+
+For the other three leaf types: (mis)match, `if then else` and Elvis operator, the set
+of enabled actions is empty, because actions are enabled depending on the test result.
+But more importantly, upon the expiration of a last action from a sequence of prefixes,
+if its `end` is a _summation_, the enabled actions of this summation are enabled _before_
+actions are next to be fired (in parallel).
+
+The transition system is non-deterministic, because for the case of guarded replication
+there is also one transition from the guard prefix to itself and to the process of the
+replication operator - whether there is a last action or not, This means that after expiration
+of the guard action, the enabled actions are again the guard itself and the actions enabled
+by the process that fires up in parallel. In the absence of a last action, the same enabled
+actions propagate "upwards" - the initial case.
+
+Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
+_discarded_ actions. Each choice corresponds to a set of enabled actions. The
+set of enabled actions of the summation is but the union of the former. However,
+even this is handled in the parser, a somewhat "duplicated" algorithm creates
+the discarded actions.
+
+Thus, assume a choice of the sumation and dub it - `it`; the union of the set of
+_all_ enabled actions of the choices to the left - `left`; and, the union of the
+set of _all_ enabled actions of the choices to the right - `right`. Then for
+each key in `it`, the discarded actions is the union of `left` with `right`.
+As an action is part of many summations on the way up to the top level,
+each time there is more than one choice, to the same key there will be added
+more "let/right" discarded actions/keys.
+
+What is the benefit? At execution, when a key is part of the enabled actions,
+performing the action corresponding to that key means two things. First, the
+actions that are in parallel remain the same. Second, whenever the key is
+part of a composition (maybe more than one sequence), than the fact that
+this parallel composition is a choice in a summation, demands that all other
+actions in the other `left` and `right` choices be discarded. So, there maybe
+many summations in which the expired _key_ discards other keys.
+
+The discarded and enabled actions are then embedded as an immutable map from
+`String` to `Set[String]`in the generated output file. These `magical` maps
+are declared as `π-trick` and `π-spell`, while their pair is declared as `π-wand`.
+
+The contention between the enabled actions occurs as follows. Each action in a
+sequence is a `for` generator that calls a method in `spi.scala`; the key of
+this action is passed as second argument. The method is within a unique scope (`^`)
+to distinguish between different actions that correspond to the same key (multisets).
+It creates a `Deferred[IO, BigDecimal]` and offers these together with the action `rate`
+associated with the key, or enqueues a quadruple in the `/` `Queue`. That does not mean
+the rate will be used, because the action may be _discarded_. Then, it blocks semantically
+on the `Deferred.get` method. If discarded, it will never unblock.
+
+A background fiber blocks on `take`ing or dequeuing this `Queue`. It then updates the `%` map
+of all enabled actions by merely mapping the string `^ + key` (where `^` stands for the unique
+scope to the pair `Deferred` & rate - prior, it decreases number associated with the `key` from
+the (dual) `%` map. It is crucial the [enabled] actions are enabled (rate absent, but enough for
+the loose key to be in the `%` map) when actions are fired in parallel. A second background fiber
+is blocked on a `Semaphore` that the other bacground fiber releases, and
+then (blocking) polls for a next "offer".
+
+This second background fiber then awaits for all enabled actions to be "reached",
+and thus have an associated a rate rather than a number. If the multisets are not
+empty, than it will block on the semaphore shared with the first background fiber.
+
+As soon as the multisets are empty, the second background fiber computes
+statistically - starting from the rate - the _delay_ ("delta") that corresponds
+to the fastest action. It then uses the key get an associated `Deferred`, and
+the delay to _complete_ a `Deferred`. One will match. This corresponds to the
+current "winner".
+
+Meanwhile, all methods called (in parallel, either summation or composition)
+from a `for` generator, having `offered` the action rate, are (and must _all_
+be) blocked on `Deferred.get`'s method. As soon as one `Deferred` is `complete`d,
+the rest will remain semantically blocked.
+
+Before actually performing the action (which occurs eventually), there is
+some "book-keeping" to do. First, the second background fiber blocks on
+a semaphore (initially in the `acquire`d state, and shared with all
+the agents trough the `using` parameter list, as `/`, `%`),
+while the winning fiber does some updating to the `%` map,
+before releasing the semaphore. Thus, the invariant that the semaphore
+is in the `acquire`d state with each start of a contention must be preserved.
+There are two cases here:
+
+1. The semaphore is `release`d _before_ the second background fiber
+   `acquire`s it. Hence, that the winning fiber has finished
+   updating. Thus, the second background fiber will _NOT_ remain
+   blocked. The semaphore is now in the `acquire`d case.
+
+2. The semaphore is `release`d _after_ the second background fiber
+   `acquire`s it. The second background fiber blocked, but
+   the semaphore is now in the `release`d case.
+
+To maintain the invariant, trying to comply with 2.,
+the semaphore must be `acquired`. But doing so, and trying
+to comply with 1., will result in the second background fiber
+to remain blocked. The way out of this is to use the method
+`tryAcquire` on the semaphore to maintain the invariant in
+either 1. or 2. case.
 
 
 Program

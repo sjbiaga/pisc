@@ -45,25 +45,25 @@ package object `Π-loop`:
   def loop(using % : %, * : (*, *)): IO[Unit] =
     for
       it <- %.modify { m =>
-                       if m.exists { (_, v) => v.isInstanceOf[+] }
-                       then m -> Some { m
-                                         .filter { (_, v) => v.isInstanceOf[+] }
-                                         .map { (k, v) => k -> v.asInstanceOf[+] }
-                                         .map(_ -> _._2)
-                                         .toMap
-                                 }
-                       else m -> None
+                       if m.exists(_._2.isInstanceOf[Int])
+                       then m -> Map.empty
+                       else m -> m
+                         .map(_ -> _.asInstanceOf[+])
+                         .map(_ -> _._2)
+                         .toMap
             }
-      _  <- if it.isEmpty then *._1.acquire else
-            for
-              (key, delta) <- IO.pure(|(it.get))
-              deferred     <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }
-              _            <- deferred.complete(delta)
-              _            <- *._2.acquire
-              _            <- %.update(_ - key)
-              _            <- *._2.tryAcquire
-            yield
-              ()
+      _  <- if it.isEmpty
+            then *._1.acquire
+            else
+              for
+                (key, delta) <- IO.pure(|(it))
+                deferred     <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }
+                _            <- deferred.complete(delta)
+                _            <- *._2.acquire
+                _            <- %.update(_ - key)
+                _            <- *._2.tryAcquire
+              yield
+                ()
       _  <- IO.cede >> loop
     yield
       ()
@@ -73,7 +73,6 @@ package object `Π-loop`:
       h <- /.take
       ((_, key), it) = h
       _ <- %.update { m =>
-                        assert(m.contains(key) && m(key).isInstanceOf[Int])
                         val ^ = h._1._1
                         ( if m(key) == 1
                           then

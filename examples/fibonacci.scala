@@ -67,13 +67,17 @@ object π:
 
   def `π-uuid` = UUID.randomUUID.toString
 
-  implicit val `π-wand`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
-    "0f136d58-8903-48e2-bd66-278567112dc7" -> _root_.scala.collection.immutable.Set("a0179c37-7983-47bc-9863-e10720a26529"),
-    "83e6a533-65a2-41d0-b473-941c15677912" -> _root_.scala.collection.immutable.Set("d2fdc9d0-d23c-4483-9868-a34a0008772c"),
-    "422b9822-98b9-46c3-8d80-7adb250f0e4f" -> _root_.scala.collection.immutable.Set("83e6a533-65a2-41d0-b473-941c15677912"),
-    "a0179c37-7983-47bc-9863-e10720a26529" -> _root_.scala.collection.immutable.Set(),
-    "5ab44274-84f6-4796-9440-4b756818b8ce" -> _root_.scala.collection.immutable.Set("0f136d58-8903-48e2-bd66-278567112dc7")
+  val `π-trick`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map()
+
+  val `π-spell`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
+    "b58be151-536d-42b3-b902-b2a9ab73b29c" -> _root_.scala.collection.immutable.Set("db20fac4-33e5-489c-ac20-f46a3cae3f3c"),
+    "db20fac4-33e5-489c-ac20-f46a3cae3f3c" -> _root_.scala.collection.immutable.Set("9ed0c78c-be9a-4692-aab5-5af3a9cb56ee"),
+    "ddd2314d-66f4-40a7-9831-8aeaf45bcdfb" -> _root_.scala.collection.immutable.Set("bbf5fc5e-3128-4675-a08e-22cf1e45471b"),
+    "bbf5fc5e-3128-4675-a08e-22cf1e45471b" -> _root_.scala.collection.immutable.Set("b586da4c-c31e-4542-a6a1-162c56603e0d"),
+    "b586da4c-c31e-4542-a6a1-162c56603e0d" -> _root_.scala.collection.immutable.Set()
   )
+
+  implicit val `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]) = `π-trick` -> `π-spell`
 
   import scala.util.control.TailCalls.{done, tailcall, TailRec}
 
@@ -83,21 +87,21 @@ object π:
 
   def Fib(n: `()`)(using ^ : String)(using % : %, / : /, * : *): IO[Unit] = for {
     _ <- IO.unit
-    _df2f17cf_0684_4bc3_8522_c0610292c049 = _root_.scala.collection.immutable.Set("5ab44274-84f6-4796-9440-4b756818b8ce", "422b9822-98b9-46c3-8d80-7adb250f0e4f")
-    _ <- `π-incr`(_df2f17cf_0684_4bc3_8522_c0610292c049)
+    _195e5fc9_72c2_4f05_9660_235dbbca1e8a = _root_.scala.collection.immutable.Set("ddd2314d-66f4-40a7-9831-8aeaf45bcdfb", "b58be151-536d-42b3-b902-b2a9ab73b29c")
+    _ <- `π-incr`(_195e5fc9_72c2_4f05_9660_235dbbca1e8a)
     _ <- for {
       x <- ν
       _ <- (
         `𝟎`,
         for {
-          _ <- τ(∞)("5ab44274-84f6-4796-9440-4b756818b8ce")
+          _ <- τ(∞)("ddd2314d-66f4-40a7-9831-8aeaf45bcdfb")
           _ <- IO {
             print("n = ")
           }
           n <- IO.blocking {
             scala.io.StdIn.readLine.toLong
           }
-          _ <- x(null, n)("0f136d58-8903-48e2-bd66-278567112dc7")
+          _ <- x(null, n)("bbf5fc5e-3128-4675-a08e-22cf1e45471b")
           _ <- x(
             null, {
               def fibonacci(k: Long): TailRec[Long] =
@@ -112,13 +116,13 @@ object π:
                 } yield m + n
               if (n < 0) println("Enter a non-negative number.") else fibonacci(n).result
             }
-          )("a0179c37-7983-47bc-9863-e10720a26529")
+          )("b586da4c-c31e-4542-a6a1-162c56603e0d")
           _ <- `𝟎`
         } yield (),
         for {
-          (n, _) <- x(null)("422b9822-98b9-46c3-8d80-7adb250f0e4f")
-          (f, _) <- x(null)("83e6a533-65a2-41d0-b473-941c15677912")
-          _      <- τ(∞)("d2fdc9d0-d23c-4483-9868-a34a0008772c")
+          (n, _) <- x(null)("b58be151-536d-42b3-b902-b2a9ab73b29c")
+          (f, _) <- x(null)("db20fac4-33e5-489c-ac20-f46a3cae3f3c")
+          _      <- τ(∞)("9ed0c78c-be9a-4692-aab5-5af3a9cb56ee")
           _      <- IO {
             if (n >= 0) println(s"fib($n) = $f")
           }
