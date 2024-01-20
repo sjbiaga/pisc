@@ -190,7 +190,7 @@ object Calculus:
                   qual: List[String],
                   params: λ*) extends AST
 
-  case class `!`(prefix: Option[μ], sum: `+`) extends AST
+  case class `!`(guard: Option[μ], sum: `+`) extends AST
 
   case class λ(value: Any) extends AST:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]

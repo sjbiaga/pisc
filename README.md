@@ -58,7 +58,7 @@ using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` i
 _test_, that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the [guarded] _replication_ unary operator `! [ Π "." ] CHOICE`.
+Stack safe is the [guarded] _replication_ unary operator `! [ "." μ "." ] CHOICE`.
 
 The name before parentheses (angular or round) must be a channel name.
 
@@ -76,9 +76,9 @@ that is found in these terms is considered a _free_ name.
     PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
     PREFIXES   ::= { PREFIX }
-    PREFIX     ::= Π "."
+    PREFIX     ::= μ "."
                  | "ν" "(" NAME ")"
-    Π          ::= "τ" [ EXPRESSION ]
+    μ          ::= "τ" [ EXPRESSION ]
                  | NAME "<" NAME ">"
                  | NAME "(" NAME ")"
     LEAF       ::= "𝟎"
@@ -86,7 +86,7 @@ that is found in these terms is considered a _free_ name.
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" [ "." Π "." ] CHOICE
+                 | "!" [ "." μ "." ] CHOICE
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 

@@ -22,8 +22,8 @@ function pio() {
                 rm out/"$1".scala.out; { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } > out/"$1".scala.out
                 rm "$1".scala; cat out/"$1".scala.out |
                 scalafmt --stdin --stdout |
-                sed 's/for[ ][(][_][ ][<][-][ ]IO[.]unit[)][ ]yield[ ][(][)]/`𝟎`/g' |
-                sed 's|[(]implicit[ ]^[ ][:][ ]String[,][ ][%][ ][:][ ][%][,][ ][\\][ ][:][ ][\\][,][ ][/][ ][:][ ][/][,][ ][*][ ][:][ ][*][,][ ][+][ ][:][ ][+][,][ ][-][ ][:][ ][-][)]|(using ^ : String)(using % : %, \\ : \\, / : /, * : *, + : +, - : -)|' > "$1".scala
+                sed 's/for[ ][(][_][ ][<][-][ ]`𝟎`[)][ ]yield[ ][(][)]/`𝟎`/g' |
+                sed 's|[(]implicit[ ]^[ ][:][ ]String[,][ ][%][ ][:][ ][%][,][ ][/][ ][:][ ][/][,][ ][*][ ][:][ ][*][)]|(using ^ : String)(using % : %, / : /, * : *)|' > "$1".scala
                 shift
         done
 }
