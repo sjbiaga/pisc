@@ -36,6 +36,6 @@ Fib(n) = ν(x)                                                            \
                 println(s"fib(${'n}) = ${'f}") */ .                      \
          if /*'n < 0*/ = True                                            \
          then Fib(-1)                                                    \
-         else {pisc}{greeter}Main                                        \
+         else 𝟎                                                          \
        )                                                                 \
        )                                                                 \

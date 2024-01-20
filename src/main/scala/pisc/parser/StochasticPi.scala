@@ -154,9 +154,11 @@ object StochasticPi:
 
     lazy val split: AST => Actions = {
 
-      case _: `𝟎`.type | _: `()` => nil
+      case _0 if `𝟎` == _0 => nil
+      case  _: `()` => nil
 
       case sum @ `+`(enabled, ps*) if ps.size == 1 =>
+        split(ps.head)
         enabled
 
       case sum @ `+`(enabled, ps*) =>
@@ -202,7 +204,8 @@ object StochasticPi:
 
     lazy val trans: AST => Seq[(State, State)] = _ match
 
-      case _: `𝟎`.type | _: `()` => Nil
+      case _0 if `𝟎` == _0 => Nil
+      case  _: `()` => Nil
 
       case `+`(_, ps*) =>
         ps.map(trans).reduce(_ ++ _)

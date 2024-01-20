@@ -27,14 +27,19 @@
  */
 
 import _root_.cats.effect.{ IO, Deferred, Ref }
-import _root_.cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-stats`._
 
 
 package object `Π-loop`:
 
-  type + = (Deferred[IO, BigDecimal], Rate)
+  import sΠ.{ `Π-magic`, `Π-Map`, `Π-Set` }
+  import `Π-magic`.`><`
+
+  type - = CyclicBarrier[IO]
+
+  type + = (Deferred[IO, BigDecimal], (Ref[IO, `><`], Option[Boolean], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -42,7 +47,8 @@ package object `Π-loop`:
 
   type / = Queue[IO, ((String, String), +)]
 
-  def loop(using % : %, * : (*, *)): IO[Unit] =
+  def loop(`π-trick`: `Π-Map`[String, `Π-Set`[String]])
+          (using % : %, * : *, - : -): IO[Unit] =
     for
       it <- %.modify { m =>
                        if m.exists(_._2.isInstanceOf[Int])
@@ -53,18 +59,30 @@ package object `Π-loop`:
                          .toMap
             }
       _  <- if it.isEmpty
-            then *._1.acquire
+            then *.acquire
             else
               for
-                (key, delta) <- IO.pure(|(it))
-                deferred     <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }
-                _            <- deferred.complete(delta)
-                _            <- *._2.acquire
-                _            <- %.update(_ - key)
-                _            <- *._2.tryAcquire
+                opt <- IO.pure(|(it)(`π-trick`))
+                _   <- if opt.isEmpty
+                       then IO.cede >> loop(`π-trick`)
+                       else
+                         for
+                           _              <- IO.unit
+                           (kd1, kd2)      = opt.get
+                           (key1, delta1)  = kd1
+                           deferred1      <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
+                           (key2, delta2)  = kd2
+                           deferred2      <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                           _              <- deferred1.complete(delta1 max delta2)
+                           _              <- %.update(_ - key1)
+                           _              <- deferred2.complete(delta2 max delta1)
+                           _              <- %.update(_ - key2)
+                           _              <- -.await
+                         yield
+                           ()
               yield
                 ()
-      _  <- IO.cede >> loop
+      _  <- IO.cede >> loop(`π-trick`)
     yield
       ()
 

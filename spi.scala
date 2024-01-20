@@ -28,7 +28,7 @@
 
 package object sΠ:
 
-  import _root_.cats.Monad
+  import _root_.cats.syntax.parallel._
   import _root_.cats.effect.{ Deferred, Ref, IO }
 
   import `Π-loop`._
@@ -52,10 +52,10 @@ package object sΠ:
     )
 
   private def ready(key: String)
-                   (using % : %, * : *)
+                   (using % : %, - : -)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     val (_, spell) = `π-wand`
-    `π-incr`(spell.getOrElse(key, _root_.scala.collection.immutable.Set.empty))
+    `π-incr`(spell.getOrElse(key, _root_.scala.collection.immutable.Set.empty)) >> -.await
 
 
   def `π-decr`(discarded: `Π-Set`[String])
@@ -92,18 +92,23 @@ package object sΠ:
   object τ:
 
     def apply(rate: Rate)(key: String)
-             (using % : %, / : /, * : *)
+             (using % : %, / : /, - : -)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        ^ : String): IO[BigDecimal] =
       val (trick, spell) = `π-wand`
       for
         deferred <- Deferred[IO, BigDecimal]
-        _        <- /.offer(^ -> key -> (deferred -> rate))
+        _        <- /.offer(^ -> key -> (deferred -> (null, None, rate)))
         delta    <- deferred.get
-        _        <- discard(key) >> *.release >> ready(key)
+        _        <- discard(key)
+        _        <- deferred.get
+        _        <- (
+                      ready(key)
+                    ,
+                      -.await
+                    ).parMapN { (_, _) => }
       yield
         delta
-
 
   /**
     * prefix
@@ -118,12 +123,12 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply(rate: Rate)(key: String)
-             (using % : %, / : /, * : *)
+             (using % : %, / : /, - : -)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        ^ : String): IO[(`()`, BigDecimal)] =
       for
         deferred   <- Deferred[IO, BigDecimal]
-        _          <- /.offer(^ -> key -> (deferred -> rate))
+        _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delta) <- `><`(key)(deferred)(ref)
       yield
         `()`(r) -> delta
@@ -132,12 +137,12 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String)
-             (using % : %, / : /, * : *)
+             (using % : %, / : /, - : -)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        ^ : String): IO[BigDecimal] =
       for
         deferred <- Deferred[IO, BigDecimal]
-        _        <- /.offer(^ -> key -> (deferred -> rate))
+        _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
         delta    <- `><`(key, value.name)(deferred)(ref)
       yield
         delta
@@ -178,12 +183,12 @@ package object sΠ:
       def apply(key: String, name: Any)
                (deferred: Deferred[IO, BigDecimal])
                (`>R`: Ref[IO, `><`])
-               (using % : %, * : *)
+               (using % : %, - : -)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          ^ : String): IO[BigDecimal] =
         for
           delta <- deferred.get
-          _     <- discard(key) >> *.release *>
+          _     <- discard(key) >>
                    Deferred[IO, Unit].flatMap { offerer =>
                      IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                        `>R`.modify {
@@ -201,12 +206,12 @@ package object sΠ:
       def apply(key: String)
                (deferred: Deferred[IO, BigDecimal])
                (`<R`: Ref[IO, `><`])
-               (using % : %, * : *)
+               (using % : %, - : -)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          ^ : String): IO[(Any, BigDecimal)] =
         for
           delta <- deferred.get
-          name  <- discard(key) >> *.release *>
+          name  <- discard(key) >>
                    Deferred[IO, Any].flatMap { taker =>
                      IO.uncancelable { poll =>
                        `<R`.modify {

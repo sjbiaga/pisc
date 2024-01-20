@@ -23,7 +23,7 @@ function pio() {
                 rm "$1".scala; cat out/"$1".scala.out |
                 scalafmt --stdin --stdout |
                 sed 's/for[ ][(][_][ ][<][-][ ]`𝟎`[)][ ]yield[ ][(][)]/`𝟎`/g' |
-                sed 's|[(]implicit[ ]^[ ][:][ ]String[,][ ][%][ ][:][ ][%][,][ ][/][ ][:][ ][/][,][ ][*][ ][:][ ][*][)]|(using ^ : String)(using % : %, / : /, * : *)|' > "$1".scala
+                sed 's|[(]implicit[ ]^[ ][:][ ]String[,][ ][%][ ][:][ ][%][,][ ][/][ ][:][ ][/][,][ ][-][ ][:][ ][-][)]|(using ^ : String)(using % : %, / : /, - : -)|' > "$1".scala
                 shift
         done
 }

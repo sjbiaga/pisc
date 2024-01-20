@@ -15,7 +15,6 @@ Greeter(stdin, stdout, line) = \
                                     'line <- IO.blocking { scala.io.StdIn.readLine } */. \
                                                stdin<line>.stdout(greet). \
                                τ/*print('greet)*/. \
-                               {pisc}{fibonacci}Main  \
                              )
 
 Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \

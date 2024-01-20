@@ -126,15 +126,13 @@ class Calculus extends StochasticPi:
     }
 
   def agent(binding: Boolean = false): Parser[(`()`, Names)] =
-    qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
-      case qual ~ id ~ _ if binding && qual.nonEmpty =>
-        throw EquationQualifiedException(id, qual)
-      case _ ~ id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
+    IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
+      case id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value):_ *)
-      case qual ~ id ~ Some(params) =>
-        `()`(λ(Symbol(id)), qual, params.map(_._1): _*) -> params.map(_._2).foldLeft(Names())(_ ++ _)
-      case qual ~ id ~ _ =>
-        `()`(λ(Symbol(id)), qual) -> Names()
+      case id ~ Some(params) =>
+        `()`(λ(Symbol(id)), params.map(_._1): _*) -> params.map(_._2).foldLeft(Names())(_ ++ _)
+      case id ~ _ =>
+        `()`(λ(Symbol(id))) -> Names()
     }
 
   /**
@@ -154,13 +152,6 @@ class Calculus extends StochasticPi:
       "" ~> // handle whitespace
       rep1(acceptIf(Character.isUpperCase)("agent identifier expected but '" + _ + "' found"),
           elem("agent identifier part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
-
-  /**
-   * Qualified identifiers to agents in other packages.
-   * @return
-   */
-  def qual: Parser[List[String]] =
-    rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
 
 
 object Calculus extends Calculus:
@@ -205,7 +196,6 @@ object Calculus extends Calculus:
   case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
 
   case class `()`(identifier: λ,
-                  qual: List[String],
                   params: λ*) extends AST
 
   case class `!`(guard: Option[μ], sum: `+`)
@@ -232,9 +222,6 @@ object Calculus extends Calculus:
 
   sealed class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
-
-  case class EquationQualifiedException(id: String, qual: List[String])
-      extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
 
   case class EquationParamsException(id: String, params: Any*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")

@@ -29,7 +29,7 @@
 package examples
 
 import _root_.cats.effect.{ IO, IOApp }
-import _root_.cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-loop`._
 import `Π-stats`.{ Rate, ∞, `@` }
@@ -37,15 +37,15 @@ import `Π-stats`.{ Rate, ∞, `@` }
 
 object App extends IOApp.Simple:
 
-  private def run(% : %, / : /, * : (*, *)): IO[Unit] =
+  private def run(% : %, / : /, * : *, - : -): IO[Unit] =
     ( for
-        _ <- loop(using %, *).background
-        _ <- poll(using %, /, *._1).background
+        _ <- loop(π.`π-trick`)(using %, *, -).background
+        _ <- poll(using %, /, *).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- π.Main()(using π.`π-uuid`)(using %, /, *._2)
+        _ <- π.Main()(using π.`π-uuid`)(using %, /, -)
       yield
         ()
     }
@@ -55,9 +55,8 @@ object App extends IOApp.Simple:
       %    <- IO.ref(Map[String, Int | +]())
       /    <- Queue.unbounded[IO, ((String, String), +)]
       *    <- Semaphore[IO](1)
-      -    <- Semaphore[IO](1)
-      _    <- -.acquire
-      _    <- run(%, /, (*, -))
+      -    <- CyclicBarrier[IO](3)
+      _    <- run(%, /, *, -)
     yield
       ()
 

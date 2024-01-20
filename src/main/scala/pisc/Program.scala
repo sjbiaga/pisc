@@ -207,7 +207,7 @@ object Program:
 
       // AGENT CALL ////////////////////////////////////////////////////////////
 
-      case `()`(λ(Symbol(identifier)), qual, params: _*) =>
+      case `()`(λ(Symbol(identifier)), params: _*) =>
         val args = params.map {
           case λ(Symbol(name)) => name
           case λ(value) =>
@@ -218,11 +218,7 @@ object Program:
             }
         }
 
-        if qual.isEmpty
-        then
-          * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
-        else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
+        * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
 
       case _: `()` => ??? // impossible by syntax
 
