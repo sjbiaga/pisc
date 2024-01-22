@@ -45,7 +45,7 @@ with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with emp
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
-backslash continue the previous line (folding from the empty string).
+backslash continue the previous line empty string).
 
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
@@ -56,7 +56,7 @@ or a [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*`
 
 The _`rate`_ of an action ("τ" or prefix) can be optionally annotated with `@`
 and an infinite ("∞"), a `Scala` identifier, a (boxed in a) `BigDecimal` number,
-or any `Scala` expression as a Scala comment between `/*` and `*/`.
+or any [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*` and `*/`.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
@@ -92,14 +92,8 @@ that is found in these terms is considered a _free_ name.
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" "." μ "." CHOICE
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
+    AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
-
-Not part of the original Π-calculus, an agent (call) expression - unless
-it is binding in an equation -, may be preceded by a sequence of characters wrapped
-between curly braces: these will be joined using the dot "`.`" character, standing for
-a qualified package identifier. Thus, agents in different translated "`.scala`" files
-can be reused; the lexical category is `qual`.
 
 
 Stochastic
@@ -111,7 +105,7 @@ the final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibres are launched in `background` and used as `Resource`s,
 such that terminating the program cancels them. However, when a process is _discarded_,
-an uncompletee `Deferred[IO, BigDecimal]` is used for this situation, hence the fiber
+an uncompleted `Deferred[IO, BigDecimal]` is used for this situation, hence the fiber
 blocks semantically, and so the program won't exit any longer.
 
 Silent transitions, input and output prefixes ("actions") are associated with
@@ -190,6 +184,40 @@ many summations in which the expired _key_ discards other keys.
 The discarded and enabled actions are then embedded as an immutable map from
 `String` to `Set[String]`in the generated output file. These `magical` maps
 are declared as `π-trick` and `π-spell`, while their pair is declared as `π-wand`.
+
+The contention between the enabled actions occurs as follows. Each action in a
+sequence is a `for` generator that calls a method in `spi.scala`; the key of
+this action is passed as second argument. The method is within a unique scope (`^`)
+to distinguish between different actions that correspond to the same key (multisets).
+It creates a `Deferred[IO, BigDecimal]` and offers these together with the action `rate`
+associated with the key, or enqueues a quadruple in the `/` `Queue`. That does not mean
+the rate will be used, because the action may be _discarded_. Then, it blocks semantically
+on the `Deferred.get` method. If discarded, it will never unblock.
+
+A background fiber blocks on `take`ing or dequeuing this `Queue`. It then updates the `%` map
+of all enabled actions by merely mapping the string `^ + key` (where `^` stands for the unique
+scope to the pair `Deferred` & rate) - prior, it decreases number associated with the `key` from
+the (dual) `%` map. It is crucial the [enabled] actions are enabled (rate absent, but enough for
+the loose key to be in the `%` map) already when actions are fired in parallel. A second
+background fiber is blocked on a `Semaphore` that the other bacground fiber releases, and
+then (blocking) polls for a next "offer".
+
+This second background fiber then awaits for all enabled actions to be "reached",
+and thus have associated a rate rather than a number. If the multisets are not
+empty, than it will block on the semaphore shared with the first background fiber.
+
+As soon as the multisets are empty, the second background fiber computes
+statistically - starting from the rate - the _delay_ ("delta") that corresponds
+to the fastest action. It then uses the key get an associated `Deferred`, and
+the delay to _complete_ a `Deferred`. It does this twice, for actions of opposite
+polarities, unless it's just the case of one "τ". In the former case, the delta
+will correspond to the slower rate action. One more constraint is that these two
+actions do not discard each other.
+
+Meanwhile, all methods called (in parallel, either summation or composition)
+from a `for` generator, having `offered` the action rate, are (and must _all_
+be) blocked on `Deferred.get`'s method. As soon as one (pair of) `Deferred` is
+`complete`d, the rest will remain semantically blocked.
 
 
 Program
@@ -362,12 +390,5 @@ To get the intermediary `in/ex.scala.in` file, execute the `run` command in the 
 
     sbt:pisc> run ex
 
-where `example/pisc/ex.pisc` contains the stochastic Π-calculus source (equations binding agents to process
-expressions).
-
-In order to allow multiple `App`s, edit `examples/greeter.scala` and add a top-level `package pisc.greeter` line,
-edit `examples/fibonacci.scala` and add a top-level `package pisc.fibonacci` line,
-
-If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
-
-    ./examples $ spi run --interactive fibonacci.scala greeter.scala
+where `example/pisc/ex.pisc` contains the stochastic Π-calculus source (equations binding 
+agents to process expressions).

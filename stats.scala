@@ -26,10 +26,10 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
+import _root_.scala.util.Random
+
 import _root_.scala.collection.mutable.{ LinkedHashMap => Map3 }
 import _root_.scala.concurrent.duration._
-
-import _root_.scala.util.control.NonLocalReturns.{ returning, throwReturn => thr }
 
 import _root_.breeze.stats.distributions.{ Exponential, Rand }
 import Rand.VariableSeed._
@@ -47,6 +47,8 @@ package object `Π-stats`:
   sealed trait Rate extends AnyRef
   case object ∞ extends Rate
   case class `@`(rate: BigDecimal) extends Rate
+
+  private val random = new Random
 
   private val distributionCache: Cache[Double, Exponential] =
     Scaffeine()
@@ -76,37 +78,59 @@ package object `Π-stats`:
       it
     }
 
+  private val rateCache: Cache[String, Double] =
+    Scaffeine()
+      .recordStats()
+      .expireAfterWrite(1.hour)
+      .maximumSize(1000)
+      .build[String, Double]()
+
+  private def rate(key: String, it: Double) =
+    rateCache.getIfPresent(key).getOrElse {
+      rateCache.put(key, it)
+      it
+    }
+
+  private def delta: Double => BigDecimal = {
+    case 0.0 => BigDecimal(0)
+    case -1.0 => BigDecimal(-1)
+    case it => BigDecimal(it)
+  }
+
   def |(% : Map[String, (Ref[IO, `><`], Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]]): Option[((String, BigDecimal), (String, BigDecimal))] =
-    returning {
-      val `0` = Map3.from(% // immediate
-        .filter(_._2._3 eq ∞)
-        .map { case (k, (n, p, _)) => k -> (n, p, BigDecimal(0)) }
-      )
-      val `0+` = Map3.from(% // timed
-        .filter(_._2._3.isInstanceOf[`@`])
-        .map { case (k, (n, p, r)) => k -> (n, p, r.asInstanceOf[`@`].rate) }
-        .map { case (k, (n, p, r)) => k -> (n, p, delta(k, r)) }
-        .toList
-        .sortBy(_._2._3)
-        .reverse
-      )
-      val `-1` = Map3.from(% // passive
-        .filter(_._2._3 eq null)
-        .map { case (k, (n, p, _)) => k -> (n, p, BigDecimal(-1)) }
-      )
+    val `0` = Map3.from(% // immediate
+      .filter(_._2._3 eq ∞)
+      .map { case (k, (n, p, _)) => k -> (n, p, 0.0) }
+    )
+    val `0+` = Map3.from(% // timed
+      .filter(_._2._3.isInstanceOf[`@`])
+      .map { case (k, (n, p, r)) => k -> (n, p, r.asInstanceOf[`@`].rate) }
+      .map { case (k, (n, p, r)) => k -> (n, p, rate(k, r.toDouble)) }
+      .toList
+      .sortBy(-_._2._3)
+    )
+    val `-1` = Map3.from(% // passive
+      .filter(_._2._3 eq null)
+      .map { case (k, (n, p, _)) => k -> (n, p, -1.0) }
+    )
 
-      val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
+    var r = List[((String, BigDecimal), (String, BigDecimal))]()
 
-      for
-        (kv, i) <- χ
-        (key1, (name1, polarity1, delta1)) = kv
-        k1 = key1.substring(key1.length/2)
-      do
-        if polarity1 eq None then thr(Some((key1 -> delta1, key1 -> delta1)))
+    val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
+
+    for
+      (kv, i) <- χ
+      (key1, (name1, polarity1, rate1)) = kv
+      k1 = key1.substring(key1.length/2)
+    do
+      if polarity1 eq None
+      then
+        r :+= (key1 -> delta(rate1), key1 -> delta(rate1))
+      else
         for
           (kv, _) <- χ.drop(i+1)
-          (key2, (name2, polarity2, delta2)) = kv
+          (key2, (name2, polarity2, rate2)) = kv
           k2 = key2.substring(key2.length/2)
           if !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
         do
@@ -114,8 +138,11 @@ package object `Π-stats`:
           then
             (polarity1, polarity2) match
               case (Some(true), Some(false)) | (Some(false), Some(true)) =>
-                thr(Some((key1 -> delta1, key2 -> delta2)))
+                r :+= (key1 -> delta(rate1), key2 -> delta(rate2))
               case _ =>
 
+    if r.isEmpty
+    then
       None
-    }
+    else
+      Some(r(random.nextInt(r.size)))

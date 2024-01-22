@@ -69,54 +69,54 @@ object π:
   val `π-trick`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map()
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
-    "5fe53b51-0da5-4d70-8ead-4f2257aa1993" -> _root_.scala.collection.immutable.Set("5fe53b51-0da5-4d70-8ead-4f2257aa1993", "a9a1f355-902e-4f2b-ad93-e42f7c3761a4"),
-    "4257904c-85e8-446e-afa1-1dade81e575f" -> _root_.scala.collection.immutable.Set(),
-    "711acf69-8d6a-44cd-9d9e-ecc70661d563" -> _root_.scala.collection.immutable.Set("4257904c-85e8-446e-afa1-1dade81e575f"),
-    "a9a1f355-902e-4f2b-ad93-e42f7c3761a4" -> _root_.scala.collection.immutable.Set("711acf69-8d6a-44cd-9d9e-ecc70661d563"),
-    "c3ac2897-3d04-4902-9ad2-047a4b6474b2" -> _root_.scala.collection.immutable.Set()
+    "9e7fbd55-32fe-47ea-92a1-b2d3e9b91ad0" -> _root_.scala.collection.immutable.Set(),
+    "288f8da5-8b04-45dc-82a9-809c7eadacea" -> _root_.scala.collection.immutable.Set("9e7fbd55-32fe-47ea-92a1-b2d3e9b91ad0"),
+    "35bde5f4-9d29-4d46-93eb-7b6cfbfca846" -> _root_.scala.collection.immutable.Set("35bde5f4-9d29-4d46-93eb-7b6cfbfca846", "54aed8ad-9193-490f-af89-3b62ed893c05"),
+    "93f95623-9c98-4807-8536-42b4ff36b5c5" -> _root_.scala.collection.immutable.Set(),
+    "54aed8ad-9193-490f-af89-3b62ed893c05" -> _root_.scala.collection.immutable.Set("288f8da5-8b04-45dc-82a9-809c7eadacea")
   )
 
   implicit val `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]) = `π-trick` -> `π-spell`
 
   def Main()(using ^ : String)(using % : %, / : /, - : -): IO[Unit] = for {
     _ <- IO.unit
-    _260cd076_3c87_4c8b_8bc5_0d97c39b2d86 = _root_.scala.collection.immutable.Set("5fe53b51-0da5-4d70-8ead-4f2257aa1993", "c3ac2897-3d04-4902-9ad2-047a4b6474b2")
-    _ <- `π-incr`(_260cd076_3c87_4c8b_8bc5_0d97c39b2d86)
+    _c8f813e9_a47f_43b9_950e_a6e4d38d197f = _root_.scala.collection.immutable.Set("35bde5f4-9d29-4d46-93eb-7b6cfbfca846", "93f95623-9c98-4807-8536-42b4ff36b5c5")
+    _ <- `π-incr`(_c8f813e9_a47f_43b9_950e_a6e4d38d197f)
     _ <- for {
       x <- ν
       _ <- (
         `𝟎`,
         for {
-          _bebe36c2_3bdd_4ee4_9087_be2ef2e86761 <- IO {
-            lazy val _bebe36c2_3bdd_4ee4_9087_be2ef2e86761: String => IO[Unit] = { implicit ^ =>
+          _9f59cfc2_3b32_48df_9487_81b8b9786e1f <- IO {
+            lazy val _9f59cfc2_3b32_48df_9487_81b8b9786e1f: String => IO[Unit] = { implicit ^ =>
               for (
                 _ <- (
                   for {
-                    _      <- τ(∞)("a9a1f355-902e-4f2b-ad93-e42f7c3761a4")
+                    _      <- τ(∞)("54aed8ad-9193-490f-af89-3b62ed893c05")
                     _      <- IO {
                       println("out 5")
                     }
-                    (z, _) <- x(∞)("711acf69-8d6a-44cd-9d9e-ecc70661d563")
-                    _      <- τ(∞)("4257904c-85e8-446e-afa1-1dade81e575f")
+                    (z, _) <- x(∞)("288f8da5-8b04-45dc-82a9-809c7eadacea")
+                    _      <- τ(∞)("9e7fbd55-32fe-47ea-92a1-b2d3e9b91ad0")
                     _      <- IO {
                       println(s"in $z")
                     }
                     _      <- `𝟎`
                   } yield (),
                   for {
-                    _ <- x(∞, 5)("5fe53b51-0da5-4d70-8ead-4f2257aa1993")
-                    _ <- _bebe36c2_3bdd_4ee4_9087_be2ef2e86761(`π-uuid`)
+                    _ <- x(∞, 5)("35bde5f4-9d29-4d46-93eb-7b6cfbfca846")
+                    _ <- _9f59cfc2_3b32_48df_9487_81b8b9786e1f(`π-uuid`)
                   } yield ()
                 ).parMapN { (_, _) => }
               ) yield ()
             }
-            _bebe36c2_3bdd_4ee4_9087_be2ef2e86761
+            _9f59cfc2_3b32_48df_9487_81b8b9786e1f
           }
-          _                                     <- x(∞, 5)("5fe53b51-0da5-4d70-8ead-4f2257aa1993")
-          _                                     <- _bebe36c2_3bdd_4ee4_9087_be2ef2e86761(`π-uuid`)
+          _                                     <- x(∞, 5)("35bde5f4-9d29-4d46-93eb-7b6cfbfca846")
+          _                                     <- _9f59cfc2_3b32_48df_9487_81b8b9786e1f(`π-uuid`)
         } yield (),
         for {
-          (z, _) <- x(null)("c3ac2897-3d04-4902-9ad2-047a4b6474b2")
+          (z, _) <- x(null)("93f95623-9c98-4807-8536-42b4ff36b5c5")
           _      <- `𝟎`
         } yield ()
       ).parMapN { (_, _, _) => }
