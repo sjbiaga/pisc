@@ -71,42 +71,29 @@ package object `Π-stats`:
       .maximumSize(1000)
       .build[String, BigDecimal]()
 
-  private def delta(key: String, rate: BigDecimal) =
+  private def delta(key: String, rate: Double): BigDecimal =
     deltaCache.getIfPresent(key).getOrElse {
-      val it = BigDecimal(distrib(rate.toDouble).draw())
+      val it = delta(rate)
       deltaCache.put(key, it)
       it
     }
 
-  private val rateCache: Cache[String, Double] =
-    Scaffeine()
-      .recordStats()
-      .expireAfterWrite(1.hour)
-      .maximumSize(1000)
-      .build[String, Double]()
-
-  private def rate(key: String, it: Double) =
-    rateCache.getIfPresent(key).getOrElse {
-      rateCache.put(key, it)
-      it
-    }
-
-  private def delta: Double => BigDecimal = {
+  private val delta: Double => BigDecimal = {
     case 0.0 => BigDecimal(0)
     case -1.0 => BigDecimal(-1)
-    case it => BigDecimal(it)
+    case it => BigDecimal(distrib(it).draw())
   }
 
   def |(% : Map[String, (Ref[IO, `><`], Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]]): Option[((String, BigDecimal), (String, BigDecimal))] =
+
     val `0` = Map3.from(% // immediate
       .filter(_._2._3 eq ∞)
       .map { case (k, (n, p, _)) => k -> (n, p, 0.0) }
     )
     val `0+` = Map3.from(% // timed
       .filter(_._2._3.isInstanceOf[`@`])
-      .map { case (k, (n, p, r)) => k -> (n, p, r.asInstanceOf[`@`].rate) }
-      .map { case (k, (n, p, r)) => k -> (n, p, rate(k, r.toDouble)) }
+      .map { case (k, (n, p, r)) => k -> (n, p, r.asInstanceOf[`@`].rate.toDouble) }
       .toList
       .sortBy(-_._2._3)
     )
@@ -120,26 +107,22 @@ package object `Π-stats`:
     val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
 
     for
-      (kv, i) <- χ
-      (key1, (name1, polarity1, rate1)) = kv
+      (kv1, i) <- χ
+      (key1, (name1, polarity1, rate1)) = kv1
       k1 = key1.substring(key1.length/2)
     do
       if polarity1 eq None
       then
-        r :+= (key1 -> delta(rate1), key1 -> delta(rate1))
+        r :+= (key1 -> delta(key1, rate1), key1 -> delta(key1, rate1))
       else
         for
-          (kv, _) <- χ.drop(i+1)
-          (key2, (name2, polarity2, rate2)) = kv
+          (kv2, _) <- χ.drop(i+1)
+          (key2, (name2, polarity2, rate2)) = kv2
+          if (name1 eq name2) && polarity1.get == !polarity2.get
           k2 = key2.substring(key2.length/2)
           if !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
         do
-          if name1 eq name2
-          then
-            (polarity1, polarity2) match
-              case (Some(true), Some(false)) | (Some(false), Some(true)) =>
-                r :+= (key1 -> delta(rate1), key2 -> delta(rate2))
-              case _ =>
+          r :+= (key1 -> delta(key1, rate1), key2 -> delta(key2, rate2))
 
     if r.isEmpty
     then

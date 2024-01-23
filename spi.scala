@@ -95,7 +95,6 @@ package object sΠ:
              (using % : %, / : /, - : -)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        ^ : String): IO[BigDecimal] =
-      val (trick, spell) = `π-wand`
       for
         deferred <- Deferred[IO, BigDecimal]
         _        <- /.offer(^ -> key -> (deferred -> (null, None, rate)))
@@ -174,11 +173,11 @@ package object sΠ:
      * limitations under the License.
      */
 
-    final case class `><`(takers: List[Deferred[IO, Any]], offerers: List[(Any, Deferred[IO, Unit])])
+    final case class `><`(takers: Option[Deferred[IO, Any]], offerers: Option[(Any, Deferred[IO, Unit])])
 
     object `><`:
 
-      inline def apply(): `><` = `><`(Nil, Nil)
+      inline def apply(): `><` = `><`(None, None)
 
       def apply(key: String, name: Any)
                (deferred: Deferred[IO, BigDecimal])
@@ -193,10 +192,10 @@ package object sΠ:
                      IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
                        `>R`.modify {
                          case `><`(takers, offerers) if takers.nonEmpty =>
-                           `><`(takers.init, offerers) -> takers.last.complete(name)
-                         case `><`(takers, offerers) =>
-                           val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                           `><`(takers, name -> offerer :: offerers) -> poll(offerer.get).onCancel(cleanup)
+                           `><`(None, offerers) -> takers.get.complete(name)
+                         case `><`(takers, _) =>
+                           val cleanup = `>R`.update(_.copy(offerers = None))
+                           `><`(takers, Some(name -> offerer)) -> poll(offerer.get).onCancel(cleanup)
                        }.flatten
                      }
                    } <* ready(key)
@@ -216,11 +215,11 @@ package object sΠ:
                      IO.uncancelable { poll =>
                        `<R`.modify {
                          case `><`(takers, offerers) if offerers.nonEmpty =>
-                           val (name, release) = offerers.last
-                           `><`(takers, offerers.init) -> release.complete(()).as(name)
-                         case `><`(takers, offerers) =>
-                           val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                           `><`(taker :: takers, offerers) -> poll(taker.get).onCancel(cleanup)
+                           val (name, release) = offerers.get
+                           `><`(takers, None) -> release.complete(()).as(name)
+                         case `><`(_, offerers) =>
+                           val cleanup = `<R`.update(_.copy(takers = None))
+                           `><`(Some(taker), offerers) -> poll(taker.get).onCancel(cleanup)
                        }.flatten
                      }
                    } <* ready(key)

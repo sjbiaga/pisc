@@ -69,41 +69,41 @@ object π:
   val `π-trick`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map()
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] = _root_.scala.collection.immutable.Map(
-    "883d1404-2753-4ebb-ac3c-6fe704817d75" -> _root_.scala.collection.immutable.Set("e45244ee-84b7-41e0-a9fe-cfc75d1b0289"),
-    "112ede79-2776-4032-99b8-38a69a3eefd2" -> _root_.scala.collection.immutable.Set("eb600e64-f4a3-47ad-ad14-75ef01086fdb"),
-    "d752321f-98c3-4523-a8f9-c71561fdc2b4" -> _root_.scala.collection.immutable.Set("d752321f-98c3-4523-a8f9-c71561fdc2b4", "63cb1482-e529-4cde-856c-b1393136fbc6"),
-    "bfbc74cb-a053-4ac8-bbbe-67efb59bfc2c" -> _root_.scala.collection.immutable.Set("0f4a939f-8be4-4d69-bf1e-1879de5bac8d"),
-    "0f4a939f-8be4-4d69-bf1e-1879de5bac8d" -> _root_.scala.collection.immutable.Set(),
-    "40e19fce-ebf1-40c5-a219-9f9e2a961dba" -> _root_.scala.collection.immutable.Set("bfbc74cb-a053-4ac8-bbbe-67efb59bfc2c"),
-    "49248ab2-1db2-40a6-b853-b140bd757afc" -> _root_.scala.collection.immutable.Set("112ede79-2776-4032-99b8-38a69a3eefd2"),
-    "e45244ee-84b7-41e0-a9fe-cfc75d1b0289" -> _root_.scala.collection.immutable.Set(),
-    "63cb1482-e529-4cde-856c-b1393136fbc6" -> _root_.scala.collection.immutable.Set("883d1404-2753-4ebb-ac3c-6fe704817d75"),
-    "13238855-73ed-4346-9eed-d166f473d4c5" -> _root_.scala.collection.immutable.Set(),
-    "eb600e64-f4a3-47ad-ad14-75ef01086fdb" -> _root_.scala.collection.immutable.Set(),
-    "ab4613a0-ecb1-4eff-a127-84a225e2e382" -> _root_.scala.collection.immutable.Set()
+    "42fbea3e-bd80-4af3-8042-22247249634a" -> _root_.scala.collection.immutable.Set("5d852ce8-f039-48b1-b28a-8520a3bd5e7b"),
+    "cc7abd05-b582-4deb-a5f1-27fd4dcd109a" -> _root_.scala.collection.immutable.Set("2efd2cdb-bbe0-4e5e-81ad-b0794600ecc7"),
+    "3cd4b134-2a1b-4dd5-89e6-6bd666b601bc" -> _root_.scala.collection.immutable.Set(),
+    "9f018a51-eeaa-4fe4-b719-4a2698e56abb" -> _root_.scala.collection.immutable.Set(),
+    "931a50ca-17c6-4574-883e-2830f84d8daa" -> _root_.scala.collection.immutable.Set("42fbea3e-bd80-4af3-8042-22247249634a"),
+    "456b3ba1-107d-4509-88c2-56a772d73956" -> _root_.scala.collection.immutable.Set(),
+    "5d852ce8-f039-48b1-b28a-8520a3bd5e7b" -> _root_.scala.collection.immutable.Set(),
+    "c38883dc-19d3-4deb-bc3c-f5a8edadfdf4" -> _root_.scala.collection.immutable.Set("c38883dc-19d3-4deb-bc3c-f5a8edadfdf4", "cc7abd05-b582-4deb-a5f1-27fd4dcd109a"),
+    "e090a46b-7db2-4e28-bb7e-153dd1686977" -> _root_.scala.collection.immutable.Set(),
+    "2efd2cdb-bbe0-4e5e-81ad-b0794600ecc7" -> _root_.scala.collection.immutable.Set("9f018a51-eeaa-4fe4-b719-4a2698e56abb"),
+    "ecdbbd72-54cc-4d15-8a23-86155a800734" -> _root_.scala.collection.immutable.Set("456b3ba1-107d-4509-88c2-56a772d73956"),
+    "d6cdd8bd-8caa-4a91-aff0-3eed08d7184b" -> _root_.scala.collection.immutable.Set("ecdbbd72-54cc-4d15-8a23-86155a800734")
   )
 
   implicit val `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]) = `π-trick` -> `π-spell`
 
   given Conversion[`()`, Long] = _.name.asInstanceOf[Long]
 
-  val max = 15
+  val max = 11
 
   val gen = new scala.util.Random
 
-  def random = math.abs(gen.nextLong) % max
+  def random = 3 + gen.nextLong(max - 2)
 
   def Main()(using ^ : String)(using % : %, / : /, - : -): IO[Unit] = for {
     _ <- IO.unit
-    _53142b56_9a97_4c28_9961_73f77843c31c = _root_.scala.collection.immutable.Set("d752321f-98c3-4523-a8f9-c71561fdc2b4", "ab4613a0-ecb1-4eff-a127-84a225e2e382")
-    _ <- `π-incr`(_53142b56_9a97_4c28_9961_73f77843c31c)
+    _84ebbe8d_8146_4b35_8e55_7ea8613f4ebe = _root_.scala.collection.immutable.Set("c38883dc-19d3-4deb-bc3c-f5a8edadfdf4", "e090a46b-7db2-4e28-bb7e-153dd1686977")
+    _ <- `π-incr`(_84ebbe8d_8146_4b35_8e55_7ea8613f4ebe)
     _ <- for {
       num <- ν
       _   <- (
         `𝟎`,
         for {
-          _7cb964fa_03b7_4e9f_8a82_5a487744e951 <- IO {
-            def _7cb964fa_03b7_4e9f_8a82_5a487744e951(n: `()`): String => IO[Unit] = { implicit ^ =>
+          _f7dd350c_1e9c_48b4_96ac_398e2caf70d0 <- IO {
+            def _f7dd350c_1e9c_48b4_96ac_398e2caf70d0(n: `()`): String => IO[Unit] = { implicit ^ =>
               for (
                 _ <- (
                   for {
@@ -112,30 +112,30 @@ object π:
                       `𝟎`,
                       for (_ <- Fib(n, in)(using `π-uuid`)) yield (),
                       for {
-                        (fib, _) <- in(null)("63cb1482-e529-4cde-856c-b1393136fbc6")
-                        _        <- τ(∞)("883d1404-2753-4ebb-ac3c-6fe704817d75")
+                        (fib, _) <- in(null)("cc7abd05-b582-4deb-a5f1-27fd4dcd109a")
+                        _        <- τ(∞)("2efd2cdb-bbe0-4e5e-81ad-b0794600ecc7")
                         _        <- IO {
                           println(s"fib($n) = $fib")
                         }
-                        _        <- num(null, random)("e45244ee-84b7-41e0-a9fe-cfc75d1b0289")
+                        _        <- num(null, random)("9f018a51-eeaa-4fe4-b719-4a2698e56abb")
                         _        <- `𝟎`
                       } yield ()
                     ).parMapN { (_, _, _) => }
                   } yield (),
                   for {
-                    (n, _) <- num(null)("d752321f-98c3-4523-a8f9-c71561fdc2b4")
-                    _      <- _7cb964fa_03b7_4e9f_8a82_5a487744e951(n)(`π-uuid`)
+                    (n, _) <- num(null)("c38883dc-19d3-4deb-bc3c-f5a8edadfdf4")
+                    _      <- _f7dd350c_1e9c_48b4_96ac_398e2caf70d0(n)(`π-uuid`)
                   } yield ()
                 ).parMapN { (_, _) => }
               ) yield ()
             }
-            _7cb964fa_03b7_4e9f_8a82_5a487744e951
+            _f7dd350c_1e9c_48b4_96ac_398e2caf70d0
           }
-          (n, _)                                <- num(null)("d752321f-98c3-4523-a8f9-c71561fdc2b4")
-          _                                     <- _7cb964fa_03b7_4e9f_8a82_5a487744e951(n)(`π-uuid`)
+          (n, _)                                <- num(null)("c38883dc-19d3-4deb-bc3c-f5a8edadfdf4")
+          _                                     <- _f7dd350c_1e9c_48b4_96ac_398e2caf70d0(n)(`π-uuid`)
         } yield (),
         for {
-          _ <- num(null, random)("ab4613a0-ecb1-4eff-a127-84a225e2e382")
+          _ <- num(null, random)("e090a46b-7db2-4e28-bb7e-153dd1686977")
           _ <- `𝟎`
         } yield ()
       ).parMapN { (_, _, _) => }
@@ -144,10 +144,10 @@ object π:
 
   def Fib(n: `()`, out: `()`)(using ^ : String)(using % : %, / : /, - : -): IO[Unit] = for {
     _ <- IO.unit
-    _15f22b51_3bda_4a7b_a4d6_9e6d725ae13f = _root_.scala.collection.immutable.Set("40e19fce-ebf1-40c5-a219-9f9e2a961dba")
-    _ <- `π-incr`(_15f22b51_3bda_4a7b_a4d6_9e6d725ae13f)
+    _045834a8_9f5e_42fb_b811_e5abd1cf4fc6 = _root_.scala.collection.immutable.Set("d6cdd8bd-8caa-4a91-aff0-3eed08d7184b")
+    _ <- `π-incr`(_045834a8_9f5e_42fb_b811_e5abd1cf4fc6)
     _ <- for {
-      _ <- τ(∞)("40e19fce-ebf1-40c5-a219-9f9e2a961dba")
+      _ <- τ(∞)("d6cdd8bd-8caa-4a91-aff0-3eed08d7184b")
       _ <- IO {
         println(s"n=$n")
       }
@@ -156,8 +156,8 @@ object π:
         `𝟎`,
         for (_ <- Fibonacci(f, n)(using `π-uuid`)) yield (),
         for {
-          (res, _) <- f(null)("bfbc74cb-a053-4ac8-bbbe-67efb59bfc2c")
-          _        <- out(null, res)("0f4a939f-8be4-4d69-bf1e-1879de5bac8d")
+          (res, _) <- f(null)("ecdbbd72-54cc-4d15-8a23-86155a800734")
+          _        <- out(null, res)("456b3ba1-107d-4509-88c2-56a772d73956")
           _        <- `𝟎`
         } yield ()
       ).parMapN { (_, _, _) => }
@@ -168,17 +168,17 @@ object π:
     _ <-
       if (n < 2 ==== true) for {
         _ <- IO.unit
-        _046e041b_4832_4959_9adb_17913794a9b6 = _root_.scala.collection.immutable.Set("13238855-73ed-4346-9eed-d166f473d4c5")
-        _ <- `π-incr`(_046e041b_4832_4959_9adb_17913794a9b6)
+        _e527c111_4753_4c5e_9716_3dc8246a9f99 = _root_.scala.collection.immutable.Set("3cd4b134-2a1b-4dd5-89e6-6bd666b601bc")
+        _ <- `π-incr`(_e527c111_4753_4c5e_9716_3dc8246a9f99)
         _ <- for {
-          _ <- f(null, 1L)("13238855-73ed-4346-9eed-d166f473d4c5")
+          _ <- f(null, 1L)("3cd4b134-2a1b-4dd5-89e6-6bd666b601bc")
           _ <- `𝟎`
         } yield ()
       } yield ()
       else for {
         _ <- IO.unit
-        _7c64d146_8a8b_4936_9bbc_b54891de4316 = _root_.scala.collection.immutable.Set("49248ab2-1db2-40a6-b853-b140bd757afc")
-        _ <- `π-incr`(_7c64d146_8a8b_4936_9bbc_b54891de4316)
+        _a744b470_ce32_4ef9_b153_555cb5d75ce4 = _root_.scala.collection.immutable.Set("931a50ca-17c6-4574-883e-2830f84d8daa")
+        _ <- `π-incr`(_a744b470_ce32_4ef9_b153_555cb5d75ce4)
         _ <- for {
           g <- ν
           h <- ν
@@ -187,9 +187,9 @@ object π:
             for (_ <- Fibonacci(g, n - 1)(using `π-uuid`)) yield (),
             for (_ <- Fibonacci(h, n - 2)(using `π-uuid`)) yield (),
             for {
-              (p, _) <- g(null)("49248ab2-1db2-40a6-b853-b140bd757afc")
-              (r, _) <- h(null)("112ede79-2776-4032-99b8-38a69a3eefd2")
-              _      <- f(null, p + r)("eb600e64-f4a3-47ad-ad14-75ef01086fdb")
+              (p, _) <- g(null)("931a50ca-17c6-4574-883e-2830f84d8daa")
+              (r, _) <- h(null)("42fbea3e-bd80-4af3-8042-22247249634a")
+              _      <- f(null, p + r)("5d852ce8-f039-48b1-b28a-8520a3bd5e7b")
               _      <- `𝟎`
             } yield ()
           ).parMapN { (_, _, _, _) => }
