@@ -41,26 +41,26 @@ import Calculus._
 
 class Pi extends Expression:
 
-  def `π.`: Parser[(μ, (Names, Names))] =
+  def `μ.`: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         `τ`(Some(it)) -> (Names(), free)
       case _ =>
         `τ`(None) -> (Names(), Names())
     } |
-    name~"<"~name~">" ^^ { // negative prefix i.e. output
+    name~"<"~rep1sep(name, ",")~">" ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ _ ~ (arg, free) ~ _ =>
-        π(ch, arg, polarity = false) -> (Names(), name ++ free)
+      case (ch, name) ~ _ ~ args ~ _ =>
+        π(ch, polarity = false, args.map(_._1): _*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
     } |
-    name~"("~name~")" ^^ { // positive prefix i.e. input
+    name~"("~rep1sep(name, ",")~")" ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ (par, _) ~ _ if !par.isSymbol =>
-        throw PrefixChannelParsingException(par)
-      case (ch, name) ~ _ ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true) -> (bound, name)
+      case _ ~ _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
+        throw PrefixChannelParsingException(params.head._1)
+      case (ch, name) ~ _ ~ params ~ _ =>
+        π(ch, polarity = true, params.map(_._1): _*) -> (params.map(_._2).reduce(_ ++ _), name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |

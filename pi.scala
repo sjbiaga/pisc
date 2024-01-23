@@ -65,12 +65,12 @@ package object Π:
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = `><`()(ref).map(`()`)
+    def apply(): IO[Seq[`()`]] = `><`()(ref).map(_.map(`()`))
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Unit] = `><`(value.name)(ref)
+    def apply(value: `()`*): IO[Unit] = `><`(value.map(_.name))(ref)
 
     override def toString: String = name.toString
 
@@ -99,7 +99,7 @@ package object Π:
      * limitations under the License.
      */
 
-    final case class `><`(takers: List[Deferred[IO, Any]], offerers: List[(Any, Deferred[IO, Unit])])
+    final case class `><`(takers: List[Deferred[IO, Seq[Any]]], offerers: List[(Seq[Any], Deferred[IO, Unit])])
 
     object `><`:
 
@@ -109,7 +109,7 @@ package object Π:
 
       val random = Random()
 
-      def apply(name: Any)(`>R`: Ref[IO, `><`]): IO[Unit] =
+      def apply(name: Seq[Any])(`>R`: Ref[IO, `><`]): IO[Unit] =
           Deferred[IO, Unit].flatMap { offerer =>
             IO.uncancelable { poll => // `poll` used to embed cancelable code, i.e. the call to `offerer.get`
               `>R`.modify {
@@ -124,8 +124,8 @@ package object Π:
             }
           }
 
-      def apply()(`<R`: Ref[IO, `><`]): IO[Any] =
-          Deferred[IO, Any].flatMap { taker =>
+      def apply()(`<R`: Ref[IO, `><`]): IO[Seq[Any]] =
+          Deferred[IO, Seq[Any]].flatMap { taker =>
             IO.uncancelable { poll =>
               `<R`.modify {
                 case `><`(takers, offerers) if offerers.nonEmpty =>

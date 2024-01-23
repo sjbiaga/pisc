@@ -1,0 +1,23 @@
+# https://github.com/alexj136/nodes/blob/master/examples/lists
+
+@given Conversion[`()`, List[Int]] = _.name.asInstanceOf[List[Int]]
+@given Conversion[`()`, Int] = _.name.asInstanceOf[Int]
+
+Main = ν(sumlist)ν(print)ν(rch)                  \
+     ( 𝟎                                         \
+     | Client(sumlist, print, rch, /*Nil*/)      \
+     | Server(sumlist)                           \
+     | print(sum).τ/*println(s"sum=${'sum}")*/.  \
+     )
+
+Client(sumlist, print, rch, l) = τ/*'l <- IO { List(1, 2, 3, 4, 5, 6) }*/.  \
+                                 sumlist<l,rch>.rch(sum).print<sum>.
+
+Server(sumlist) = !.sumlist(list,rch).                                           \
+                  if /*'list.isEmpty*/ = True                                    \
+                  then                                                           \
+                    rch</*0*/>.                                                  \
+                  else                                                           \
+                    ν(rch_recursive_call)                                        \
+                    (sumlist</*'list.tail*/,rch_recursive_call>.                 \
+                     rch_recursive_call(tailsum).rch</*'list.head+'tailsum*/>.)

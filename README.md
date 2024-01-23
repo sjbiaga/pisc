@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC
-======================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The Π-calculus maps one to one on Scala for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
@@ -79,8 +79,8 @@ that is found in these terms is considered a _free_ name.
     PREFIX     ::= μ "."
                  | "ν" "(" NAME ")"
     μ          ::= "τ" [ EXPRESSION ]
-                 | NAME "<" NAME ">"
-                 | NAME "(" NAME ")"
+                 | NAME "<" NAME { "," NAME } ">"
+                 | NAME "(" NAME { "," NAME } ")"
     LEAF       ::= "𝟎"
                  | AGENT
                  | "[" NAME ("="|"≠") NAME "]" CHOICE

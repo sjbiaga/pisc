@@ -107,6 +107,8 @@ object Meta:
     else
       Pat.Tuple(*.map(\(_)).map(Pat.Var(_)).toList)
 
+  def `Seq(*) <- …`(* : String*): Pat =
+      Pat.Extract(\("Seq"), Pat.ArgClause(*.map(\(_)).map(Pat.Var(_)).toList))
 
   def `* <- *`(* : (String, Term)): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*._1), *._2)
@@ -184,24 +186,26 @@ object Meta:
     Term.If(*, `…`(0), `…`(1), Nil)
 
 
-  def `IO { def *(*: ()): IO[Unit] = …; * }`(* : (String, String), `…`: Term.ForYield): Term =
+  def `IO { def *(*: ()): IO[Unit] = …; * }`(* : String, `…`: Term.ForYield, ** : String*): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
-                            *._1,
+                            *,
                             Member.ParamClauseGroup(Type.ParamClause(Nil),
-                                                    Term.ParamClause(Term.Param(Nil,
-                                                                                *._2,
-                                                                                Some(Type.Name("()")),
-                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                                                    Term.ParamClause(**.map { it => Term.Param(Nil,
+                                                                                               it,
+                                                                                               Some(Type.Name("()")),
+                                                                                               None) }.toList,
+                                                                     None) :: Nil) :: Nil,
                             `: IO[Unit]`,
                              `…`
-                   ) :: \(*._1) :: Nil
+                   ) :: \(*) :: Nil
                  ) :: Nil
                  , None
                )
     )
+
 
   def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term.ForYield): Term =
     Term.Apply(\("IO"),

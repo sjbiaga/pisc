@@ -118,21 +118,20 @@ object Program:
         * = `_ <- *`("τ")
 
 
-      case π(λ(Symbol(_)), par, true) if !par.isSymbol => ??? // not binding a name - caught by parser
+      case π(λ(Symbol(ch)), false, args*) =>
+        val arg = args.map {
+          case λ(Symbol(arg)) => arg
+          case λ(Expr(term)) => s"$term"
+          case λ(arg) => s"$arg"
+        }.mkString(", ")
 
-      case π(ch,  _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
-
-      case π(λ(Symbol(ch)), λ(Symbol(arg)), false) =>
         * = `_ <- *`(s"$ch($arg)".parse[Term].get)
 
-      case π(λ(Symbol(ch)), λ(Expr(term)), false) =>
-        * = `_ <- *`(Term.Apply(Term.Name(ch), Term.ArgClause(term::Nil, None)))
-
-      case π(λ(Symbol(ch)), λ(arg), false) =>
-        * = `_ <- *`(s"$ch($arg)".parse[Term].get)
-
-      case π(λ(Symbol(ch)), λ(Symbol(par)), true) =>
-        * = `* <- *`(par -> s"$ch()".parse[Term].get)
+      case π(λ(Symbol(ch)), true, params*) =>
+        val par = params.map {
+          case λ(Symbol(par)) => par
+        }
+        * = Enumerator.Generator(`Seq(*) <- …`(par: _*), s"$ch()".parse[Term].get)
 
       //////////////////////////////////////////////// restriction | prefixes //
 
@@ -151,10 +150,14 @@ object Program:
 
       ////// REPLICATION ///////////////////////////////////////////////////////
 
-      case `!`(Some(π @ π(_, λ(Symbol(name)), true)), sum) =>
+      case `!`(Some(π @ π(_, true, params*)), sum) =>
         val uuid = id
 
-        val `!.πP` = body(π)() :+ `_ <- *`(s"$uuid($name)".parse[Term].get)
+        val par = params.map {
+          case λ(Symbol(name)) => name
+        }
+
+        val `!.πP` = body(π)() :+ `_ <- *`(s"$uuid(${par.mkString(", ")})".parse[Term].get)
 
         val it =
           `for * yield ()`(
@@ -166,7 +169,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> name, it))
+        * :+= `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid, it, par: _*))
         * ++= `!.πP`
 
       case `!`(Some(μ), sum) =>

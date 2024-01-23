@@ -86,9 +86,9 @@ class Calculus extends Pi:
       case cond ~ _ ~ t ~ _ ~ f =>
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~> `π.` <~"." ) ~ choice ^^ { // guarded replication
-      case Some(π) ~ (sum, free) =>
-        `!`(Some(π._1), sum) -> ((free &~ π._2._1) ++ π._2._2)
+    "!"~> opt( "."~> `μ.` <~"." ) ~ choice ^^ { // guarded replication
+      case Some(μ) ~ (sum, free) =>
+        `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
       case None ~ (sum, free) =>
         `!`(None, sum) -> free
     }
@@ -111,7 +111,7 @@ class Calculus extends Pi:
       ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = `π.`<~"." |
+  def prefix: Parser[(Pre, (Names, Names))] = `μ.`<~"." |
     "ν"~>"("~>name<~")" ^^ { // restriction i.e. new name
       case (ch, _) if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
@@ -182,7 +182,7 @@ object Calculus:
 
   case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre
 
-  case class π(channel: λ, name: λ, polarity: Boolean) extends Pre
+  case class π(channel: λ, polarity: Boolean, names: λ*) extends Pre
 
   case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
 
