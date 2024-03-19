@@ -68,10 +68,8 @@ object π:
   } yield ()
 
   def Client(sumlist: `()`, print: `()`, rch: `()`, l: `()`): IO[Unit] = for {
-    _ <- τ
-    l <- IO {
-      List(1, 2, 3, 4, 5, 6)
-    }
+    _        <- τ
+    l        <- IO(List(1, 2, 3, 4, 5, 6))
     _        <- sumlist(l, rch)
     Seq(sum) <- rch()
     _        <- print(sum)
@@ -79,9 +77,8 @@ object π:
   } yield ()
 
   def Server(sumlist: `()`): IO[Unit] = for {
-    _fdc1cfce_1d76_4340_b924_4dab3f97d462 <- IO {
-      def _fdc1cfce_1d76_4340_b924_4dab3f97d462(list: `()`, rch: `()`)
-        : IO[Unit] = for (
+    _f4fbdc73_46a1_474b_97a6_c583c436f65d <- IO {
+      def _f4fbdc73_46a1_474b_97a6_c583c436f65d(list: `()`, rch: `()`): IO[Unit] = for (
         _ <- (
           for (
             _ <-
@@ -102,12 +99,12 @@ object π:
               }) yield (),
           for {
             Seq(list, rch) <- sumlist()
-            _              <- _fdc1cfce_1d76_4340_b924_4dab3f97d462(list, rch)
+            _              <- _f4fbdc73_46a1_474b_97a6_c583c436f65d(list, rch)
           } yield ()
         ).parMapN { (_, _) => }
       ) yield ()
-      _fdc1cfce_1d76_4340_b924_4dab3f97d462
+      _f4fbdc73_46a1_474b_97a6_c583c436f65d
     }
     Seq(list, rch) <- sumlist()
-    _              <- _fdc1cfce_1d76_4340_b924_4dab3f97d462(list, rch)
+    _              <- _f4fbdc73_46a1_474b_97a6_c583c436f65d(list, rch)
   } yield ()

@@ -60,7 +60,12 @@ package object Π:
 
     private def ref = name.asInstanceOf[Ref[IO, `><`]]
 
-    inline def ====(that: `()`) = this.name == that.name
+    def ====(that: `()`) =
+      try
+        this.ref eq that.ref
+      catch
+        case _ =>
+          this.name == that.name
 
     /**
       * positive prefix i.e. input

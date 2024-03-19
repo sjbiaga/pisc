@@ -44,21 +44,24 @@ with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with emp
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
-backslash continue the previous line (folding from the empty string).
+backslash continue the previous line.
 
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
-The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
-the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
+The output prefix uses angular parentheses and has the form `NAME<NAMES>.`, while
+the input prefix uses the round parentheses and has the form `NAME(NAMES).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
 or a [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*` and `*/`.
+The polyadic version allows multiple names separated by comma between parentheses.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
 _test_, that can be used also as `if NAME(=|≠)NAME then CHOICE else CHOICE` or
 as the syntactic sugar `NAME(=|≠)NAME ? CHOICE : CHOICE` Elvis ternary operator.
 
-Stack safe is the [guarded] _replication_ unary operator `! [ "." μ "." ] CHOICE`.
+Stack safe is the [guarded] _replication_ unary operator `! [ "." μ "." ] CHOICE`;
+the guard `"." μ "."` is optional, and it starts with a `"."` so that it is
+distinguished from other prefixes.
 
 The name before parentheses (angular or round) must be a channel name.
 
@@ -79,8 +82,9 @@ that is found in these terms is considered a _free_ name.
     PREFIX     ::= μ "."
                  | "ν" "(" NAME ")"
     μ          ::= "τ" [ EXPRESSION ]
-                 | NAME "<" NAME { "," NAME } ">"
-                 | NAME "(" NAME { "," NAME } ")"
+                 | NAME "<" NAMES ">"
+                 | NAME "(" NAMES ")"
+    NAMES      ::= NAME { "," NAME }
     LEAF       ::= "𝟎"
                  | AGENT
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
@@ -103,7 +107,6 @@ Program
 A new name - will be available in the Scala scope:
 
     for
-      _ <- IO.unit
       x <- ν
       .
       .
@@ -115,18 +118,12 @@ The inaction - just the `Unit` value () after yield:
 
     for
       _ <- IO.unit
-      .
-      .
-      .
     yield
       ()
-
-(That's why `for` always starts with `_ <- IO.unit`.)
 
 A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 
     for
-      _ <- IO.unit
       x <- ν
       _ <- x(BigDecimal(5))
       y <- x()
@@ -142,7 +139,6 @@ A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 One can intercalate "`println`"s:
 
     for
-      _ <- IO.unit
       x <- ν
       _ <- IO.println(s"new x=$x")
       _ <- x(5)
