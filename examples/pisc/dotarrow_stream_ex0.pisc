@@ -1,0 +1,52 @@
+@import scala.sys.process._
+
+@given Conversion[`()`, Option[String]] = _.as[Option[String]]
+
+@val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
+
+@def cli(src: String)(args: String*) = s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+
+@val tmp: String = "sh -c 'mktemp -up dotarrow'" .!! .stripTrailing .stripPrefix("dotarrow/")
+
+@var ex: Option[String] = None
+
+@val run: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                           \
+  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex0.scala"'""" .!                               \
+  && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!                            \
+  && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex0.scala"'""" .!                                                  \
+  && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""" .!                 \
+  && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src" &>/dev/null'""" .!                                 \
+  then {                                                                                                       \
+    val out = s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()}'""" .lazyLines_!                              ;\
+    if out.nonEmpty                                                                                            \
+    then {                                                                                                     \
+      val src = "//> using dep org.typelevel::cats-effect:3.6-0142603\n" + out.mkString("\n")                 ;\
+      if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex0.scala"'""" .!                           \
+      && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
+                                                                >> "dotarrow/tmp/${tmp}_ex0.scala.txt"'""" .!  \
+      && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!                        \
+      && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex0.scala"'""" .!                                             \
+      && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""" .!             \
+      && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src"' &>/dev/null""" .!                             \
+      then {                                                                                                   \
+        Some(s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()}'""" .!!)                                       ;\
+      } else                                                                                                   \
+        None                                                                                                   \
+    } else                                                                                                     \
+      None                                                                                                     \
+  } else                                                                                                       \
+    None                                                                                                       \
+})}
+
+Main = τ /* ex = Some(s"""sh -c 'cat "dotarrow/${args(0)}.scala"'""" .!!)      */.                  \
+       τ /* s"""sh -c 'cp ../dotarrow/stream/bin.in dotarrow/tmp/"${tmp}_ex0.scala.bin"'""" .! */.  \
+       τ /* s"""sh -c 'touch dotarrow/tmp/"${tmp}_ex0.scala.txt"'""" .!        */.                  \
+       ν(ch) ( 𝟎                                               \
+             | ( 𝟎                                             \
+               | !.ch(code)/* run */.                          \
+                   if /* 'code.nonEmpty */ = True              \
+                   then τ /* println('code.get) */. ch<code>.  \
+                   else ch<>.                                  \
+               )                                               \
+             | τ /* println(ex.get) */. ch</*ex*/>.            \
+             )

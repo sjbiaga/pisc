@@ -1,0 +1,63 @@
+@import scala.sys.process._
+
+@given Conversion[`()`, Option[String]] = _.as[Option[String]]
+
+@val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
+
+@def cli(src: String)(args: String*) = s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+
+@val tmp: String = "sh -c 'mktemp -up dotarrow'" .!! .stripTrailing .stripPrefix("dotarrow/")
+
+@val _ = s"""sh -c 'cp ../dotarrow/stream/bin.in dotarrow/tmp/"${tmp}_ex2.scala.bin"'""" .!
+@val _ = s"""sh -c 'touch dotarrow/tmp/"${tmp}_ex2.scala.txt"'""" .!
+
+@val ex2: Option[String] = Some("""sh -c 'cat "dotarrow/ex2.scala"'""" .!!)
+
+@val run: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                           \
+  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex2.scala"'""" .!                               \
+  && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!                            \
+  && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex2.scala"'""" .!                                                  \
+  && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""" .!                 \
+  && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src" &>/dev/null'""" .!                                 \
+  then {                                                                                                       \
+    val out = s"""sh -c '${cli(s"dotarrow/${tmp}_ex2.scala")()}'""" .lazyLines_!                              ;\
+    if out.nonEmpty                                                                                            \
+    then {                                                                                                     \
+      val src = "//> using dep org.typelevel::cats-effect:3.6-0142603\n" + out.mkString("\n")                 ;\
+      if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex2.scala"'""" .!                           \
+      && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex2.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
+                                                                >> "dotarrow/tmp/${tmp}_ex2.scala.txt"'""" .!  \
+      && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!                        \
+      && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex2.scala"'""" .!                                             \
+      && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""" .!             \
+      && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src"' &>/dev/null""" .!                             \
+      then {                                                                                                   \
+        Some(s"""sh -c '${cli(s"dotarrow/${tmp}_ex2.scala")()}'""" .!!)                                       ;\
+      } else                                                                                                   \
+        None                                                                                                   \
+    } else                                                                                                     \
+      None                                                                                                     \
+  } else                                                                                                       \
+    None                                                                                                       \
+})}
+
+Main = ν(ch)ν(lnk) ( 𝟎 | Node1(ch) | Node2(ch, lnk) )
+
+Node1(ch) = τ /* println(s"Node1:\n${ex2.get}") */. ch</*ex2*/>.
+
+Node2(ch, lnk) = ch(code)/* run */.                         \
+                 [/* 'code.nonEmpty */ = True]              \
+                 τ /* println(s"Node2:\n${'code.get}") */.  \
+                 ( 𝟎                                        \
+                 | lnk<ch>. ch<code>.                       \
+                 | Node3(lnk)                               \
+                 )
+
+Node3(lnk) = lnk(ch).                                   \
+             ch(code)/* run */.                         \
+             [/* 'code.nonEmpty */ = True]              \
+             τ /* println(s"Node3:\n${'code.get}") */.  \
+             ν(ch2)ν(lnk2) ( 𝟎                          \
+                           | ch2<code>.                 \
+                           | Node2(ch2, lnk2)           \
+                           )
