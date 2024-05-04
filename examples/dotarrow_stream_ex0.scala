@@ -106,32 +106,29 @@ object π:
     ch <- ν
     _  <- (
       IO.unit,
-      (
-        IO.unit,
-        for {
-          _af23be6f_eee8_4f45_bf12_6110d7e70ca3 <- IO {
-            def _af23be6f_eee8_4f45_bf12_6110d7e70ca3(code: `()`): IO[Unit] =
-              if (!code) IO.cede
-              else (
-                if (code.nonEmpty ==== true) for {
-                  _ <- τ
-                  _ <- IO {
-                    println(code.get)
-                  }
-                  _ <- ch(code)
-                } yield ()
-                else for (_ <- ch(`()`(null))) yield (),
-                for {
-                  code <- ch()(run)
-                  _    <- _af23be6f_eee8_4f45_bf12_6110d7e70ca3(code)
-                } yield ()
-              ).parMapN { (_, _) => }
-            _af23be6f_eee8_4f45_bf12_6110d7e70ca3
-          }
-          code                                  <- ch()(run)
-          _ <- _af23be6f_eee8_4f45_bf12_6110d7e70ca3(code)
-        } yield ()
-      ).parMapN { (_, _) => },
+      for {
+        _c48e0426_e2a6_4944_a6c6_333ea423d441 <- IO {
+          def _c48e0426_e2a6_4944_a6c6_333ea423d441(code: `()`): IO[Unit] =
+            if (!code) IO.cede
+            else (
+              if (code.nonEmpty ==== true) for {
+                _ <- τ
+                _ <- IO {
+                  println(code.get)
+                }
+                _ <- ch(code)
+              } yield ()
+              else for (_ <- ch(`()`(null))) yield (),
+              for {
+                code <- ch()(run)
+                _    <- _c48e0426_e2a6_4944_a6c6_333ea423d441(code)
+              } yield ()
+            ).parMapN { (_, _) => }
+          _c48e0426_e2a6_4944_a6c6_333ea423d441
+        }
+        code                                  <- ch()(run)
+        _ <- _c48e0426_e2a6_4944_a6c6_333ea423d441(code)
+      } yield (),
       for {
         _ <- τ
         _ <- IO {

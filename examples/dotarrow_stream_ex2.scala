@@ -98,7 +98,7 @@ object π:
   def Main(args: String*): IO[Unit] = for {
     ch  <- ν
     lnk <- ν
-    _   <- (IO.unit, Node1(ch), Node2(ch, lnk)).parMapN { (_, _, _) => }
+    _   <- (Node1(ch), Node2(ch, lnk)).parMapN { (_, _) => }
   } yield ()
 
   def Node1(ch: `()`): IO[Unit] = for {
@@ -118,13 +118,12 @@ object π:
           println(s"Node2:\n${code.get}")
         }
         _ <- (
-          IO.unit,
           for {
             _ <- lnk(ch)
             _ <- ch(code)
           } yield (),
           Node3(lnk)
-        ).parMapN { (_, _, _) => }
+        ).parMapN { (_, _) => }
       } yield ()
       else IO.unit
   } yield ()
@@ -140,8 +139,9 @@ object π:
         }
         ch2  <- ν
         lnk2 <- ν
-        _    <- (IO.unit, for (_ <- ch2(code)) yield (), Node2(ch2, lnk2))
-          .parMapN { (_, _, _) => }
+        _    <-
+          (for (_ <- ch2(code)) yield (), Node2(ch2, lnk2)).parMapN { (_, _) =>
+          }
       } yield ()
       else IO.unit
   } yield ()

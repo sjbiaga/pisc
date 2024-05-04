@@ -47,11 +47,7 @@ class Calculus extends Pi:
       case (`()`(λ(Symbol("Main")), _, params*), _) ~ _ ~ _ if params.nonEmpty =>
         throw MainParsingException(params.map(_.asSymbol.name)*)
       case (bind, _) ~ _ ~ (sum, _) =>
-        var f = flatten(sum)
-        while f._2
-        do
-          f = flatten(f._1)
-        bind -> f._1.asInstanceOf[`+`]
+        bind -> flatten(sum)
     }
 
   def choice: Parser[(`+`, Names)] = "("~>choice<~")" |
@@ -237,58 +233,41 @@ object Calculus:
 
   // functions
 
-  val flatten: AST => (AST, Boolean) = {
+  def flatten[T <: AST](ast: T): T =
 
-    case `∅` => ∅ -> false
+    inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-    case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
-        if ps.isEmpty && ss.isEmpty =>
-      val (lhs, _) = flatten(sum).asInstanceOf[(`+`, Boolean)]
-      if it.isEmpty
-      then
-        `+`(lhs.choices*) -> true
-      else
-        val (rhs, _) = flatten(`+`(it*)).asInstanceOf[(`+`, Boolean)]
-        `+`((lhs.choices ++ rhs.choices)*) -> true
+    ast match {
 
-    case `+`(lhs, it*)
-        if it.nonEmpty =>
-      val (rhs, flag) = flatten(`+`(it*)).asInstanceOf[(`+`, Boolean)]
-      `+`((lhs +: rhs.choices)*) -> flag
+      case `∅` => ∅
 
-    case `+`(par, _*) =>
-      val f = flatten(par).asInstanceOf[(`|`, Boolean)]
-      `+`(f._1) -> f._2
+      case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
+          if ps.isEmpty && ss.isEmpty =>
+        val lhs = flatten(sum)
+        val rhs = flatten(`+`(it*))
+        `+`((lhs.choices ++ rhs.choices)*)
 
-    case it @ `|`(`.`(`∅`, _*), _*) => it -> false
+      case `+`(par, it*) =>
+        val lhs = `+`(flatten(par))
+        val rhs = flatten(`+`(it*))
+        `+`((lhs.choices ++ rhs.choices)*)
 
-    case `|`(`.`(`+`(`|`(ss*), p*), ps*), it*)
-        if p.isEmpty && ps.isEmpty =>
-      if it.isEmpty
-      then
-        `|`(ss*) -> true
-      else
-        val (rhs, _) = flatten(`|`(it*)).asInstanceOf[(`|`, Boolean)]
-        `|`((ss ++ rhs.components)*) -> true
+      case `|`(`.`(`+`(lhs @ `|`(_*), p*), ps*), it*)
+          if p.isEmpty && ps.isEmpty =>
+        val rhs = flatten(`|`(it*))
+        `|`((lhs.components ++ rhs.components)*)
 
-    case `|`(lhs, it*)
-        if it.nonEmpty =>
-      val (rhs, flag) = flatten(`|`(it*)).asInstanceOf[(`|`, Boolean)]
-      `|`((lhs +: rhs.components)*) -> flag
+      case `|`(`.`(end: `&`, ps*), it*) =>
+        val lhs = `|`(`.`(flatten(end), ps*))
+        val rhs = flatten(`|`(it*))
+        `|`((lhs.components ++ rhs.components)*)
 
-    case `|`(`.`(end, ps*), _*) =>
-      val f = flatten(end).asInstanceOf[(`&`, Boolean)]
-      `|`(`.`(f._1, ps*)) -> f._2
+      case `?:`(cond, t, f) =>
+        `?:`(cond, flatten(t), flatten(f))
 
-    case `?:`(cond, t, f) =>
-      val t_f = flatten(t).asInstanceOf[(`+`, Boolean)]
-      val f_f = flatten(f).asInstanceOf[(`+`, Boolean)]
-      `?:`(cond, t_f._1, f_f._1) -> (t_f._2 || f_f._2)
+      case `!`(μ, sum) =>
+        `!`(μ, flatten(sum))
 
-    case `!`(μ, sum) =>
-      val f = flatten(sum).asInstanceOf[(`+`, Boolean)]
-      `!`(μ, f._1) -> f._2
+      case it => it
 
-    case it => it -> false
-
-  }
+    }

@@ -52,7 +52,6 @@ object π:
   def Fib(n: `()`): IO[Unit] = for {
     x <- ν
     _ <- (
-      IO.unit,
       for {
         _ <- τ
         _ <- IO {
@@ -87,5 +86,5 @@ object π:
         }
         _ <- if (n < 0 ==== true) Fib(-1) else IO.unit
       } yield ()
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()

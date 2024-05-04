@@ -54,10 +54,9 @@ object π:
   def Main(args: String*): IO[Unit] = for {
     num <- ν
     _   <- (
-      IO.unit,
       for {
-        _2e605b55_4f28_49ee_913a_7cfd4a27653d <- IO {
-          def _2e605b55_4f28_49ee_913a_7cfd4a27653d(n: `()`): IO[Unit] =
+        _0b6666b0_6840_46f9_aa68_eb65cdc07848 <- IO {
+          def _0b6666b0_6840_46f9_aa68_eb65cdc07848(n: `()`): IO[Unit] =
             if (!n) IO.cede
             else (
               for {
@@ -77,16 +76,16 @@ object π:
               } yield (),
               for {
                 n <- num()
-                _ <- _2e605b55_4f28_49ee_913a_7cfd4a27653d(n)
+                _ <- _0b6666b0_6840_46f9_aa68_eb65cdc07848(n)
               } yield ()
             ).parMapN { (_, _) => }
-          _2e605b55_4f28_49ee_913a_7cfd4a27653d
+          _0b6666b0_6840_46f9_aa68_eb65cdc07848
         }
         n                                     <- num()
-        _ <- _2e605b55_4f28_49ee_913a_7cfd4a27653d(n)
+        _ <- _0b6666b0_6840_46f9_aa68_eb65cdc07848(n)
       } yield (),
       for (_ <- num(random)) yield ()
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
 
   def Fib(n: `()`, out: `()`): IO[Unit] = for {
@@ -96,13 +95,12 @@ object π:
     }
     f <- ν
     _ <- (
-      IO.unit,
       Fibonacci(f, n),
       for {
         res <- f()
         _   <- out(res)
       } yield ()
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
 
   def Fibonacci(f: `()`, n: `()`): IO[Unit] =
@@ -111,7 +109,6 @@ object π:
       g <- ν
       h <- ν
       _ <- (
-        IO.unit,
         Fibonacci(g, n - 1),
         Fibonacci(h, n - 2),
         for {
@@ -119,5 +116,5 @@ object π:
           r <- h()
           _ <- f(p + r)
         } yield ()
-      ).parMapN { (_, _, _, _) => }
+      ).parMapN { (_, _, _) => }
     } yield ()

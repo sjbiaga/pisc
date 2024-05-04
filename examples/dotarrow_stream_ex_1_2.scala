@@ -99,32 +99,29 @@ object π:
     ch <- ν
     _  <- (
       IO.unit,
-      (
-        IO.unit,
-        for {
-          _97bcc636_d7e9_459d_ba69_631c4b2e297f <- IO {
-            def _97bcc636_d7e9_459d_ba69_631c4b2e297f(code: `()`): IO[Unit] =
-              if (!code) IO.cede
-              else (
-                if (code.nonEmpty ==== true) for {
-                  _ <- τ
-                  _ <- IO {
-                    println(s"Node1:\n${code.get}")
-                  }
-                  _ <- ch(code)
-                } yield ()
-                else for (_ <- ch(`()`(null))) yield (),
-                for {
-                  code <- ch()(run_ex1)
-                  _    <- _97bcc636_d7e9_459d_ba69_631c4b2e297f(code)
-                } yield ()
-              ).parMapN { (_, _) => }
-            _97bcc636_d7e9_459d_ba69_631c4b2e297f
-          }
-          code                                  <- ch()(run_ex1)
-          _ <- _97bcc636_d7e9_459d_ba69_631c4b2e297f(code)
-        } yield ()
-      ).parMapN { (_, _) => },
+      for {
+        _c652db26_c34e_443c_92c6_ffbd58ecf7dc <- IO {
+          def _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code: `()`): IO[Unit] =
+            if (!code) IO.cede
+            else (
+              if (code.nonEmpty ==== true) for {
+                _ <- τ
+                _ <- IO {
+                  println(s"Node1:\n${code.get}")
+                }
+                _ <- ch(code)
+              } yield ()
+              else for (_ <- ch(`()`(null))) yield (),
+              for {
+                code <- ch()(run_ex1)
+                _    <- _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code)
+              } yield ()
+            ).parMapN { (_, _) => }
+          _c652db26_c34e_443c_92c6_ffbd58ecf7dc
+        }
+        code                                  <- ch()(run_ex1)
+        _ <- _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code)
+      } yield (),
       for {
         _ <- τ
         _ <- IO {
@@ -178,7 +175,7 @@ object π:
   def Node2(): IO[Unit] = for {
     ch  <- ν
     lnk <- ν
-    _   <- (IO.unit, Node3(ch), Node4(ch, lnk)).parMapN { (_, _, _) => }
+    _   <- (Node3(ch), Node4(ch, lnk)).parMapN { (_, _) => }
   } yield ()
 
   def Node3(ch: `()`): IO[Unit] = for {
@@ -198,13 +195,12 @@ object π:
           println(s"Node4:\n${code.get}")
         }
         _ <- (
-          IO.unit,
           for {
             _ <- lnk(ch)
             _ <- ch(code)
           } yield (),
           Node5(lnk)
-        ).parMapN { (_, _, _) => }
+        ).parMapN { (_, _) => }
       } yield ()
       else IO.unit
   } yield ()
@@ -220,8 +216,9 @@ object π:
         }
         ch2  <- ν
         lnk2 <- ν
-        _    <- (IO.unit, for (_ <- ch2(code)) yield (), Node4(ch2, lnk2))
-          .parMapN { (_, _, _) => }
+        _    <-
+          (for (_ <- ch2(code)) yield (), Node4(ch2, lnk2)).parMapN { (_, _) =>
+          }
       } yield ()
       else IO.unit
   } yield ()

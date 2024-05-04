@@ -99,32 +99,29 @@ object π:
     ch <- ν
     _  <- (
       IO.unit,
-      (
-        IO.unit,
-        for {
-          _ca0e99de_127a_4064_a79f_dea240edb088 <- IO {
-            def _ca0e99de_127a_4064_a79f_dea240edb088(code: `()`): IO[Unit] =
-              if (!code) IO.cede
-              else (
-                if (code.nonEmpty ==== true) for {
-                  _ <- τ
-                  _ <- IO {
-                    println(code.get)
-                  }
-                  _ <- ch(code)
-                } yield ()
-                else for (_ <- ch(`()`(null))) yield (),
-                for {
-                  code <- ch()(run)
-                  _    <- _ca0e99de_127a_4064_a79f_dea240edb088(code)
-                } yield ()
-              ).parMapN { (_, _) => }
-            _ca0e99de_127a_4064_a79f_dea240edb088
-          }
-          code                                  <- ch()(run)
-          _ <- _ca0e99de_127a_4064_a79f_dea240edb088(code)
-        } yield ()
-      ).parMapN { (_, _) => },
+      for {
+        _20bada9b_e553_425a_a3ba_d9433f6049f6 <- IO {
+          def _20bada9b_e553_425a_a3ba_d9433f6049f6(code: `()`): IO[Unit] =
+            if (!code) IO.cede
+            else (
+              if (code.nonEmpty ==== true) for {
+                _ <- τ
+                _ <- IO {
+                  println(code.get)
+                }
+                _ <- ch(code)
+              } yield ()
+              else for (_ <- ch(`()`(null))) yield (),
+              for {
+                code <- ch()(run)
+                _    <- _20bada9b_e553_425a_a3ba_d9433f6049f6(code)
+              } yield ()
+            ).parMapN { (_, _) => }
+          _20bada9b_e553_425a_a3ba_d9433f6049f6
+        }
+        code                                  <- ch()(run)
+        _ <- _20bada9b_e553_425a_a3ba_d9433f6049f6(code)
+      } yield (),
       for {
         _ <- τ
         _ <- IO {

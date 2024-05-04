@@ -52,69 +52,67 @@ object π:
     b <- ν
     c <- ν
     _ <- (
-      IO.unit,
       for {
-        _4e5369cb_5cd4_48dd_940d_201154ead6ee <- IO {
-          lazy val _4e5369cb_5cd4_48dd_940d_201154ead6ee: IO[Unit] = (
+        _8815836f_31cf_4e0d_b0d5_d24454e81578 <- IO {
+          lazy val _8815836f_31cf_4e0d_b0d5_d24454e81578: IO[Unit] = (
             IO.unit,
             for {
-              _2d811aba_db22_4f6f_9270_224a5f7f0b5a <- a("a")
+              _30613a35_597c_44ef_9aeb_398db0b5d200 <- a("a")
               _                                     <-
-                if (_2d811aba_db22_4f6f_9270_224a5f7f0b5a eq None) IO.cede
-                else _4e5369cb_5cd4_48dd_940d_201154ead6ee
+                if (_30613a35_597c_44ef_9aeb_398db0b5d200 eq None) IO.cede
+                else _8815836f_31cf_4e0d_b0d5_d24454e81578
             } yield ()
           ).parMapN { (_, _) => }
-          _4e5369cb_5cd4_48dd_940d_201154ead6ee
+          _8815836f_31cf_4e0d_b0d5_d24454e81578
         }
-        _2d811aba_db22_4f6f_9270_224a5f7f0b5a <- a("a")
+        _30613a35_597c_44ef_9aeb_398db0b5d200 <- a("a")
         _                                     <-
-          if (_2d811aba_db22_4f6f_9270_224a5f7f0b5a eq None) IO.cede
-          else _4e5369cb_5cd4_48dd_940d_201154ead6ee
+          if (_30613a35_597c_44ef_9aeb_398db0b5d200 eq None) IO.cede
+          else _8815836f_31cf_4e0d_b0d5_d24454e81578
       } yield (),
       for {
-        _dbbda351_24a9_4340_bb7e_326a48a3bd02 <- IO {
-          lazy val _dbbda351_24a9_4340_bb7e_326a48a3bd02: IO[Unit] = (
+        _c7c6946a_80b5_454b_8ea6_97535d3318ca <- IO {
+          lazy val _c7c6946a_80b5_454b_8ea6_97535d3318ca: IO[Unit] = (
             IO.unit,
             for {
-              _4df28a9a_39a2_454c_85da_4533e65c175d <- b("b")
+              _87078da2_7ff8_494b_a7b8_42fff275f405 <- b("b")
               _                                     <-
-                if (_4df28a9a_39a2_454c_85da_4533e65c175d eq None) IO.cede
-                else _dbbda351_24a9_4340_bb7e_326a48a3bd02
+                if (_87078da2_7ff8_494b_a7b8_42fff275f405 eq None) IO.cede
+                else _c7c6946a_80b5_454b_8ea6_97535d3318ca
             } yield ()
           ).parMapN { (_, _) => }
-          _dbbda351_24a9_4340_bb7e_326a48a3bd02
+          _c7c6946a_80b5_454b_8ea6_97535d3318ca
         }
-        _4df28a9a_39a2_454c_85da_4533e65c175d <- b("b")
+        _87078da2_7ff8_494b_a7b8_42fff275f405 <- b("b")
         _                                     <-
-          if (_4df28a9a_39a2_454c_85da_4533e65c175d eq None) IO.cede
-          else _dbbda351_24a9_4340_bb7e_326a48a3bd02
+          if (_87078da2_7ff8_494b_a7b8_42fff275f405 eq None) IO.cede
+          else _c7c6946a_80b5_454b_8ea6_97535d3318ca
       } yield (),
       for {
-        _d8f0d62a_cfd3_482b_a2b9_7b3ca5649a46 <- IO {
-          lazy val _d8f0d62a_cfd3_482b_a2b9_7b3ca5649a46: IO[Unit] = (
+        _af77d15e_75c1_4917_b81c_84c663bf023b <- IO {
+          lazy val _af77d15e_75c1_4917_b81c_84c663bf023b: IO[Unit] = (
             IO.unit,
             for {
-              _249853ee_15c6_4b05_ad55_6648bbc97c37 <- c("c")
+              _4f336906_363b_4856_be88_abab0b09b2da <- c("c")
               _                                     <-
-                if (_249853ee_15c6_4b05_ad55_6648bbc97c37 eq None) IO.cede
-                else _d8f0d62a_cfd3_482b_a2b9_7b3ca5649a46
+                if (_4f336906_363b_4856_be88_abab0b09b2da eq None) IO.cede
+                else _af77d15e_75c1_4917_b81c_84c663bf023b
             } yield ()
           ).parMapN { (_, _) => }
-          _d8f0d62a_cfd3_482b_a2b9_7b3ca5649a46
+          _af77d15e_75c1_4917_b81c_84c663bf023b
         }
-        _249853ee_15c6_4b05_ad55_6648bbc97c37 <- c("c")
+        _4f336906_363b_4856_be88_abab0b09b2da <- c("c")
         _                                     <-
-          if (_249853ee_15c6_4b05_ad55_6648bbc97c37 eq None) IO.cede
-          else _d8f0d62a_cfd3_482b_a2b9_7b3ca5649a46
+          if (_4f336906_363b_4856_be88_abab0b09b2da eq None) IO.cede
+          else _af77d15e_75c1_4917_b81c_84c663bf023b
       } yield (),
       Hanoi(a, b, c, -1)
-    ).parMapN { (_, _, _, _, _) => }
+    ).parMapN { (_, _, _, _) => }
   } yield ()
 
   def Hanoi(a: `()`, b: `()`, c: `()`, n: `()`): IO[Unit] = for {
     w <- ν
     _ <- (
-      IO.unit,
       for {
         _ <- τ
         _ <- IO.print("n = ")
@@ -134,7 +132,7 @@ object π:
           println(s"#${w} moves")
         }
       } yield ()
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
 
   def Move(from: `()`, to: `()`, z: `()`): IO[Unit] = for {
@@ -161,7 +159,6 @@ object π:
     else for {
       x <- ν
       _ <- (
-        IO.unit,
         Hanoi(a, c, b, n - 1, x),
         for {
           x <- x()
@@ -181,5 +178,5 @@ object π:
             } yield ()
           ).parMapN { (_, _) => }
         } yield ()
-      ).parMapN { (_, _, _) => }
+      ).parMapN { (_, _) => }
     } yield ()
