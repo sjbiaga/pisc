@@ -66,52 +66,52 @@ object π:
 
   val `π-trick`: `Π-Map`[String, `Π-Set`[String]] =
     _root_.scala.collection.immutable.Map(
-      "4c296d62-7c0d-4dc3-a1bc-a3a40fc8d030" -> _root_.scala.collection.immutable
+      "718c67fe-96b1-419b-b074-ab8e39ad604e" -> _root_.scala.collection.immutable
         .Set(
-          "ffda9242-570d-4387-9ee0-0de32c41ba3f",
-          "1db5dbd3-ec90-4286-b888-4e484322c2ee"
+          "8f24a30c-c59f-4707-8398-397ea5bcadfb",
+          "cb315806-0362-4636-9590-8ac133fe13ff"
         ),
-      "1db5dbd3-ec90-4286-b888-4e484322c2ee" -> _root_.scala.collection.immutable
+      "8f24a30c-c59f-4707-8398-397ea5bcadfb" -> _root_.scala.collection.immutable
         .Set(
-          "4c296d62-7c0d-4dc3-a1bc-a3a40fc8d030",
-          "ffda9242-570d-4387-9ee0-0de32c41ba3f"
+          "718c67fe-96b1-419b-b074-ab8e39ad604e",
+          "cb315806-0362-4636-9590-8ac133fe13ff"
         ),
-      "ffda9242-570d-4387-9ee0-0de32c41ba3f" -> _root_.scala.collection.immutable
+      "cb315806-0362-4636-9590-8ac133fe13ff" -> _root_.scala.collection.immutable
         .Set(
-          "4c296d62-7c0d-4dc3-a1bc-a3a40fc8d030",
-          "1db5dbd3-ec90-4286-b888-4e484322c2ee"
+          "718c67fe-96b1-419b-b074-ab8e39ad604e",
+          "8f24a30c-c59f-4707-8398-397ea5bcadfb"
         )
     )
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] =
     _root_.scala.collection.immutable.Map(
-      "e3fc90a3-2b94-401a-abbc-3f9a4fb57f4a" -> _root_.scala.collection.immutable
-        .Set("39d18550-0813-4e5c-88f0-90722f55762b"),
-      "59de1e3c-6cf3-4263-90f9-972b7c335552" -> _root_.scala.collection.immutable
+      "ed4eb2d5-6209-4a6e-9472-4a9f16e5c9b6" -> _root_.scala.collection.immutable
         .Set(),
-      "dc550dd8-2261-4f02-ad15-27816c23c6c5" -> _root_.scala.collection.immutable
-        .Set("e7a1bfbf-4eb1-40f0-9168-47c6d4a37eac"),
-      "fc8f234a-0b3d-4c63-898d-01541c535378" -> _root_.scala.collection.immutable
+      "692d53a5-aefe-4195-84e8-dd673a952838" -> _root_.scala.collection.immutable
         .Set(),
-      "4f672993-5ed0-481b-8efb-e0f4cc12420e" -> _root_.scala.collection.immutable
+      "0416161b-9936-4607-920b-73176235e423" -> _root_.scala.collection.immutable
         .Set(),
-      "6f3c0c6c-a876-412f-8295-9d71b79c84a7" -> _root_.scala.collection.immutable
+      "946ffb9e-2386-491c-abb9-5ddd43f15868" -> _root_.scala.collection.immutable
         .Set(),
-      "846638fe-f88f-4979-abe2-1d10a7212cb6" -> _root_.scala.collection.immutable
+      "1bb6cf6a-5579-452b-888f-3b91332e64c4" -> _root_.scala.collection.immutable
+        .Set("0809352c-8912-402d-8a69-0e4e7dab6667"),
+      "fc6e1c5d-188b-4ddc-902f-a3beae95e112" -> _root_.scala.collection.immutable
         .Set(),
-      "62db4165-2328-43c2-b583-23349e943bb8" -> _root_.scala.collection.immutable
+      "45489be6-4bb9-4dd0-9173-a32db0f735ca" -> _root_.scala.collection.immutable
         .Set(),
-      "dda70efb-0f1a-4e1a-ba02-121b5346be12" -> _root_.scala.collection.immutable
+      "01fb1e0d-5083-40e2-963f-4ef967296328" -> _root_.scala.collection.immutable
+        .Set("1bb6cf6a-5579-452b-888f-3b91332e64c4"),
+      "60906cf9-6172-4b85-95e5-25c5f238fa02" -> _root_.scala.collection.immutable
         .Set(),
-      "fbb0a22d-ab4b-4a0a-bba9-eb2b3f6c2d73" -> _root_.scala.collection.immutable
+      "0809352c-8912-402d-8a69-0e4e7dab6667" -> _root_.scala.collection.immutable
+        .Set("aec39ada-e2de-47c0-a09f-cf47ffead177"),
+      "1d7a0c64-1aff-4ca4-a006-09977e1ed262" -> _root_.scala.collection.immutable
         .Set(),
-      "39d18550-0813-4e5c-88f0-90722f55762b" -> _root_.scala.collection.immutable
-        .Set("90dcfa3a-a90e-4eae-bfae-395a87a6a8cd"),
-      "26a83ffe-351e-414d-83e5-a2f24964ec3b" -> _root_.scala.collection.immutable
+      "8f7a0482-46f7-4dec-a038-8417ecd040e4" -> _root_.scala.collection.immutable
         .Set(),
-      "8b6391ce-aa55-4c44-8731-db7cca859009" -> _root_.scala.collection.immutable
-        .Set("e3fc90a3-2b94-401a-abbc-3f9a4fb57f4a"),
-      "996a3067-e063-49ad-8e89-a8bb671e636a" -> _root_.scala.collection.immutable
+      "4fbcf221-19cc-4ef6-bbf8-a0652543291b" -> _root_.scala.collection.immutable
+        .Set("4f524875-1125-436f-b2c6-98833198d08b"),
+      "8a15d63c-3373-450c-a8da-e44a80951094" -> _root_.scala.collection.immutable
         .Set()
     )
 
@@ -143,81 +143,80 @@ object π:
     / : /
   ): IO[Unit] = for {
     _ <- IO.unit
-    _b15784ee_3a5a_4bde_929b_e32351b9489d =
+    _b93fc677_d77c_4d7a_8a82_e72955c9cbc0 =
       _root_.scala.collection.immutable.Set(
-        "dc550dd8-2261-4f02-ad15-27816c23c6c5",
-        "8b6391ce-aa55-4c44-8731-db7cca859009"
+        "4fbcf221-19cc-4ef6-bbf8-a0652543291b",
+        "01fb1e0d-5083-40e2-963f-4ef967296328"
       )
-    _ <- `π-enable`(_b15784ee_3a5a_4bde_929b_e32351b9489d)
+    _ <- `π-enable`(_b93fc677_d77c_4d7a_8a82_e72955c9cbc0)
     _ <- (
-      IO.unit,
       `π-supervised`(for {
         _         <- stdout(⊤(1L), "What's your name?")(
-          "dc550dd8-2261-4f02-ad15-27816c23c6c5"
+          "4fbcf221-19cc-4ef6-bbf8-a0652543291b"
         )
-        (name, _) <- stdin(⊤(1L))("e7a1bfbf-4eb1-40f0-9168-47c6d4a37eac")
+        (name, _) <- stdin(⊤(1L))("4f524875-1125-436f-b2c6-98833198d08b")
         _         <-
           if (name.isBlank ==== true) for {
             _ <- IO.unit
-            _725b483c_7fa0_4920_93a3_791d14167d49 =
+            _f531c583_2776_4bd5_8600_36d94eba43e3 =
               _root_.scala.collection.immutable
-                .Set("bfb93a64-ef72-438a-889d-a3132878f57f")
-            _ <- `π-enable`(_725b483c_7fa0_4920_93a3_791d14167d49)
+                .Set("b9ed770b-d628-4761-86a7-4463b6225710")
+            _ <- `π-enable`(_f531c583_2776_4bd5_8600_36d94eba43e3)
             _ <-
-              stdout(⊤(1L), `()`(null))("bfb93a64-ef72-438a-889d-a3132878f57f")
+              stdout(⊤(1L), `()`(null))("b9ed770b-d628-4761-86a7-4463b6225710")
             _ <- Greeter(stdin, stdout, line)(using `π-uuid`)
           } yield ()
           else Chooser(stdout, name)(using `π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        (prompt, _) <- stdout(⊤(1L))("8b6391ce-aa55-4c44-8731-db7cca859009")(nl)
-        _           <- τ(⊤(1L))("e3fc90a3-2b94-401a-abbc-3f9a4fb57f4a")
+        (prompt, _) <- stdout(⊤(1L))("01fb1e0d-5083-40e2-963f-4ef967296328")(nl)
+        _           <- τ(⊤(1L))("1bb6cf6a-5579-452b-888f-3b91332e64c4")
         _           <- IO {
           print(prompt)
         }
         line        <- IO.blocking {
           scala.io.StdIn.readLine
         }
-        _          <- stdin(⊤(1L), line)("39d18550-0813-4e5c-88f0-90722f55762b")
-        (greet, _) <- stdout(⊤(1L))("90dcfa3a-a90e-4eae-bfae-395a87a6a8cd")(nl)
+        _          <- stdin(⊤(1L), line)("0809352c-8912-402d-8a69-0e4e7dab6667")
+        (greet, _) <- stdout(⊤(1L))("aec39ada-e2de-47c0-a09f-cf47ffead177")(nl)
         _          <-
           if (!greet ==== false) for {
             _ <- IO.unit
-            _7ed54f27_6026_4469_b824_da70df183868 =
+            _d6546187_fcec_4a55_a360_4c319ddacf69 =
               _root_.scala.collection.immutable
-                .Set("4f672993-5ed0-481b-8efb-e0f4cc12420e")
-            _ <- `π-enable`(_7ed54f27_6026_4469_b824_da70df183868)
-            _ <- τ(⊤(1L))("4f672993-5ed0-481b-8efb-e0f4cc12420e")
+                .Set("45489be6-4bb9-4dd0-9173-a32db0f735ca")
+            _ <- `π-enable`(_d6546187_fcec_4a55_a360_4c319ddacf69)
+            _ <- τ(⊤(1L))("45489be6-4bb9-4dd0-9173-a32db0f735ca")
             _ <- IO {
               print(greet)
             }
           } yield ()
           else IO.unit
       } yield ())
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
 
   def Chooser(stdout: `()`, name: `()`)(using ^ : String)(using % : %, / : /)
     : IO[Unit] = for {
     _ <- IO.unit
-    _b44286f0_c78c_4682_a27e_d5d3dcef760b =
+    _de094c2b_3808_41d5_ac1b_ca2b15f40acc =
       _root_.scala.collection.immutable.Set(
-        "4c296d62-7c0d-4dc3-a1bc-a3a40fc8d030",
-        "ffda9242-570d-4387-9ee0-0de32c41ba3f",
-        "1db5dbd3-ec90-4286-b888-4e484322c2ee"
+        "718c67fe-96b1-419b-b074-ab8e39ad604e",
+        "8f24a30c-c59f-4707-8398-397ea5bcadfb",
+        "cb315806-0362-4636-9590-8ac133fe13ff"
       )
-    _ <- `π-enable`(_b44286f0_c78c_4682_a27e_d5d3dcef760b)
+    _ <- `π-enable`(_de094c2b_3808_41d5_ac1b_ca2b15f40acc)
     _ <- (
       `π-supervised`(for {
-        _ <- τ(`ℝ⁺`(r))("4c296d62-7c0d-4dc3-a1bc-a3a40fc8d030")
+        _ <- τ(`ℝ⁺`(r))("718c67fe-96b1-419b-b074-ab8e39ad604e")
         _ <- `Greeter'`(stdout, name)(using `π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        _ <- τ(`ℝ⁺`(r))("ffda9242-570d-4387-9ee0-0de32c41ba3f")
+        _ <- τ(`ℝ⁺`(r))("8f24a30c-c59f-4707-8398-397ea5bcadfb")
         _ <- `Greeter"`(stdout, name)(using `π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        _ <- τ(`ℝ⁺`(r))("1db5dbd3-ec90-4286-b888-4e484322c2ee")
+        _ <- τ(`ℝ⁺`(r))("cb315806-0362-4636-9590-8ac133fe13ff")
         _ <- `Greeter"'`(stdout, name)(using `π-uuid`)
       } yield ())
     ).parMapN { (_, _, _) => }
@@ -225,16 +224,15 @@ object π:
 
   def `Greeter'`(stdout: `()`, name: `()`)(using ^ : String)(using % : %, / : /)
     : IO[Unit] = (
-    IO.unit,
     `π-supervised`(
       if (name.substring(0, 1).toUpperCase ==== "Q") for {
         _ <- IO.unit
-        _398d393b_ce53_4f9e_96ba_27fa7db0bde1 =
+        _4573d50f_97c6_40aa_ae60_9e20b4ea8758 =
           _root_.scala.collection.immutable
-            .Set("fc8f234a-0b3d-4c63-898d-01541c535378")
-        _ <- `π-enable`(_398d393b_ce53_4f9e_96ba_27fa7db0bde1)
+            .Set("946ffb9e-2386-491c-abb9-5ddd43f15868")
+        _ <- `π-enable`(_4573d50f_97c6_40aa_ae60_9e20b4ea8758)
         _ <- stdout(⊤(1L), "That's an unusual name.")(
-          "fc8f234a-0b3d-4c63-898d-01541c535378"
+          "946ffb9e-2386-491c-abb9-5ddd43f15868"
         )
       } yield ()
       else IO.unit
@@ -242,12 +240,12 @@ object π:
     `π-supervised`(
       if (name ==== "Voldemort") for {
         _ <- IO.unit
-        _7e35c2e3_d5c0_4f21_a6a3_b7a2163cab32 =
+        _a6803b4a_c12e_497e_8d0d_14d8d42e799f =
           _root_.scala.collection.immutable
-            .Set("dda70efb-0f1a-4e1a-ba02-121b5346be12")
-        _ <- `π-enable`(_7e35c2e3_d5c0_4f21_a6a3_b7a2163cab32)
+            .Set("8a15d63c-3373-450c-a8da-e44a80951094")
+        _ <- `π-enable`(_a6803b4a_c12e_497e_8d0d_14d8d42e799f)
         _ <- stdout(⊤(1L), "WARNING! LORD VOLDEMORT IS HERE!")(
-          "dda70efb-0f1a-4e1a-ba02-121b5346be12"
+          "8a15d63c-3373-450c-a8da-e44a80951094"
         )
       } yield ()
       else IO.unit
@@ -257,70 +255,70 @@ object π:
       else if (name ==== "Voldemort") IO.unit
       else for {
         _ <- IO.unit
-        _124779e9_2b86_4071_a8c2_4ee0c721c60a =
+        _08599a71_7dc0_45ee_af2a_7747b9407f47 =
           _root_.scala.collection.immutable
-            .Set("62db4165-2328-43c2-b583-23349e943bb8")
-        _ <- `π-enable`(_124779e9_2b86_4071_a8c2_4ee0c721c60a)
+            .Set("0416161b-9936-4607-920b-73176235e423")
+        _ <- `π-enable`(_08599a71_7dc0_45ee_af2a_7747b9407f47)
         _ <-
-          stdout(⊤(1L), s"Hello $name!")("62db4165-2328-43c2-b583-23349e943bb8")
+          stdout(⊤(1L), s"Hello $name!")("0416161b-9936-4607-920b-73176235e423")
       } yield ()
     )
-  ).parMapN { (_, _, _, _) => }
+  ).parMapN { (_, _, _) => }
 
   def `Greeter"`(stdout: `()`, name: `()`)(using ^ : String)(using % : %, / : /)
     : IO[Unit] =
     if (name.substring(0, 1).toUpperCase ==== "Q") for {
       _ <- IO.unit
-      _ab8cc6b8_7113_41c7_acca_90fb608e9cf2 = _root_.scala.collection.immutable
-        .Set("59de1e3c-6cf3-4263-90f9-972b7c335552")
-      _ <- `π-enable`(_ab8cc6b8_7113_41c7_acca_90fb608e9cf2)
+      _b56752e3_6601_405e_ba15_f1601449b3e0 = _root_.scala.collection.immutable
+        .Set("ed4eb2d5-6209-4a6e-9472-4a9f16e5c9b6")
+      _ <- `π-enable`(_b56752e3_6601_405e_ba15_f1601449b3e0)
       _ <- stdout(⊤(1L), "That's an unusual name.")(
-        "59de1e3c-6cf3-4263-90f9-972b7c335552"
+        "ed4eb2d5-6209-4a6e-9472-4a9f16e5c9b6"
       )
     } yield ()
     else if (name ==== "Voldemort") for {
       _ <- IO.unit
-      _a7aabc64_ae73_4976_8370_bae4363c739c = _root_.scala.collection.immutable
-        .Set("26a83ffe-351e-414d-83e5-a2f24964ec3b")
-      _ <- `π-enable`(_a7aabc64_ae73_4976_8370_bae4363c739c)
+      _6b10cd0e_e4e8_41d5_9232_2c664418d4f4 = _root_.scala.collection.immutable
+        .Set("fc6e1c5d-188b-4ddc-902f-a3beae95e112")
+      _ <- `π-enable`(_6b10cd0e_e4e8_41d5_9232_2c664418d4f4)
       _ <- stdout(⊤(1L), "WARNING! LORD VOLDEMORT IS HERE!")(
-        "26a83ffe-351e-414d-83e5-a2f24964ec3b"
+        "fc6e1c5d-188b-4ddc-902f-a3beae95e112"
       )
     } yield ()
     else for {
       _ <- IO.unit
-      _fbe8e086_4b5e_4481_ba14_b88167f281f4 = _root_.scala.collection.immutable
-        .Set("6f3c0c6c-a876-412f-8295-9d71b79c84a7")
-      _ <- `π-enable`(_fbe8e086_4b5e_4481_ba14_b88167f281f4)
+      _0df59750_4fae_4c1c_b3c5_1fc565ac3f04 = _root_.scala.collection.immutable
+        .Set("1d7a0c64-1aff-4ca4-a006-09977e1ed262")
+      _ <- `π-enable`(_0df59750_4fae_4c1c_b3c5_1fc565ac3f04)
       _ <-
-        stdout(⊤(1L), s"Hello $name!")("6f3c0c6c-a876-412f-8295-9d71b79c84a7")
+        stdout(⊤(1L), s"Hello $name!")("1d7a0c64-1aff-4ca4-a006-09977e1ed262")
     } yield ()
 
   def `Greeter"'`(stdout: `()`, name: `()`)(using ^ : String)(using % : %, / : /)
     : IO[Unit] =
     if (name.substring(0, 1).toUpperCase ==== "Q") for {
       _ <- IO.unit
-      _1e475eb2_3b72_44df_96f8_7a82afb829b2 = _root_.scala.collection.immutable
-        .Set("fbb0a22d-ab4b-4a0a-bba9-eb2b3f6c2d73")
-      _ <- `π-enable`(_1e475eb2_3b72_44df_96f8_7a82afb829b2)
+      _13b695d5_db7c_4b2a_965a_a3144f00d4b1 = _root_.scala.collection.immutable
+        .Set("60906cf9-6172-4b85-95e5-25c5f238fa02")
+      _ <- `π-enable`(_13b695d5_db7c_4b2a_965a_a3144f00d4b1)
       _ <- stdout(⊤(1L), "That's an unusual name.")(
-        "fbb0a22d-ab4b-4a0a-bba9-eb2b3f6c2d73"
+        "60906cf9-6172-4b85-95e5-25c5f238fa02"
       )
     } yield ()
     else if (name ==== "Voldemort") for {
       _ <- IO.unit
-      _160c5030_a5b2_4a04_8ada_ac48f424ca74 = _root_.scala.collection.immutable
-        .Set("996a3067-e063-49ad-8e89-a8bb671e636a")
-      _ <- `π-enable`(_160c5030_a5b2_4a04_8ada_ac48f424ca74)
+      _9df7fd84_47b9_4275_abcc_83d6368f58ab = _root_.scala.collection.immutable
+        .Set("692d53a5-aefe-4195-84e8-dd673a952838")
+      _ <- `π-enable`(_9df7fd84_47b9_4275_abcc_83d6368f58ab)
       _ <- stdout(⊤(1L), "WARNING! LORD VOLDEMORT IS HERE!")(
-        "996a3067-e063-49ad-8e89-a8bb671e636a"
+        "692d53a5-aefe-4195-84e8-dd673a952838"
       )
     } yield ()
     else for {
       _ <- IO.unit
-      _62ed4d5d_dbc4_4d32_9258_d1939f74fc6f = _root_.scala.collection.immutable
-        .Set("846638fe-f88f-4979-abe2-1d10a7212cb6")
-      _ <- `π-enable`(_62ed4d5d_dbc4_4d32_9258_d1939f74fc6f)
+      _18d2e7bf_d5ec_4677_a794_0da37ed92037 = _root_.scala.collection.immutable
+        .Set("8f7a0482-46f7-4dec-a038-8417ecd040e4")
+      _ <- `π-enable`(_18d2e7bf_d5ec_4677_a794_0da37ed92037)
       _ <-
-        stdout(⊤(1L), s"Hello $name!")("846638fe-f88f-4979-abe2-1d10a7212cb6")
+        stdout(⊤(1L), s"Hello $name!")("8f7a0482-46f7-4dec-a038-8417ecd040e4")
     } yield ()

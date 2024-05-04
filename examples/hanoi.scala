@@ -69,42 +69,42 @@ object π:
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] =
     _root_.scala.collection.immutable.Map(
-      "48ca4d55-7bd4-49a3-80bc-255a054d966f" -> _root_.scala.collection.immutable
-        .Set("2d7fb5de-8c06-4246-b8d0-5a34f3bfe7ec"),
-      "65005e4c-0cfa-4a61-a2b1-631b9d15d174" -> _root_.scala.collection.immutable
+      "dd6de97f-6a8e-429b-8ea8-f60ff8fb0308" -> _root_.scala.collection.immutable
+        .Set("dd6de97f-6a8e-429b-8ea8-f60ff8fb0308"),
+      "076529c5-8cdf-4ee4-bfa0-23c2508ede30" -> _root_.scala.collection.immutable
         .Set(),
-      "9a994bac-f34e-4505-8fd1-55d36395a412" -> _root_.scala.collection.immutable
-        .Set("9747b929-89b5-49ff-9b73-66475f3b9549"),
-      "0c1c629b-72ba-40fb-8754-b724d2e53d5e" -> _root_.scala.collection.immutable
+      "cdfe00fc-575d-4c0b-8bac-9b9fa0b386c1" -> _root_.scala.collection.immutable
+        .Set("7873f008-4c8e-429a-8f26-c1943bd49471"),
+      "379a0cfa-fe95-4d28-bebd-a9f7f068a3ab" -> _root_.scala.collection.immutable
+        .Set("6da1a34e-8a03-4603-95f2-aa6ab7b7189f"),
+      "9177d90f-37ad-4544-80c4-4e5f8fa4b2a4" -> _root_.scala.collection.immutable
+        .Set("9177d90f-37ad-4544-80c4-4e5f8fa4b2a4"),
+      "fa7e2152-6f5f-495e-903d-0b00ff51e459" -> _root_.scala.collection.immutable
+        .Set("a6642012-ea01-4111-bca2-859ca4c66caf"),
+      "7d12758d-10ee-4539-b76c-c3772651adaa" -> _root_.scala.collection.immutable
+        .Set("cdfe00fc-575d-4c0b-8bac-9b9fa0b386c1"),
+      "2e30c19b-f650-4a7d-9d1a-6fd5d65f4fcb" -> _root_.scala.collection.immutable
+        .Set("cc1275a3-72fe-4e03-aaec-2877d1cce035"),
+      "6da1a34e-8a03-4603-95f2-aa6ab7b7189f" -> _root_.scala.collection.immutable
+        .Set("de43b72e-122d-4217-9d12-a7ba2f933ce0"),
+      "25c2283f-7775-425d-bb78-9234a026d6a9" -> _root_.scala.collection.immutable
+        .Set("25c2283f-7775-425d-bb78-9234a026d6a9"),
+      "d3ecca01-71b5-49a6-860a-088248d4376b" -> _root_.scala.collection.immutable
         .Set(),
-      "29d86ebe-f9af-4cc3-a042-df7e4ed341fc" -> _root_.scala.collection.immutable
-        .Set("65005e4c-0cfa-4a61-a2b1-631b9d15d174"),
-      "16531015-a5ae-4dac-8ea0-765ea3553fe9" -> _root_.scala.collection.immutable
+      "de43b72e-122d-4217-9d12-a7ba2f933ce0" -> _root_.scala.collection.immutable
+        .Set("d3ecca01-71b5-49a6-860a-088248d4376b"),
+      "a6642012-ea01-4111-bca2-859ca4c66caf" -> _root_.scala.collection.immutable
+        .Set("2a4c43d5-c8e4-405f-b161-d72911c7b937"),
+      "2a4c43d5-c8e4-405f-b161-d72911c7b937" -> _root_.scala.collection.immutable
+        .Set("076529c5-8cdf-4ee4-bfa0-23c2508ede30"),
+      "cc1275a3-72fe-4e03-aaec-2877d1cce035" -> _root_.scala.collection.immutable
         .Set(),
-      "a88805b6-4dd9-42aa-aa0e-4522a795f49e" -> _root_.scala.collection.immutable
-        .Set("824696f1-0117-45ec-9efc-f31ac265cf09"),
-      "693984ee-837d-4197-a71b-57d47e1cc3dd" -> _root_.scala.collection.immutable
-        .Set("cb7071a4-551f-412d-9c62-f62527313da5"),
-      "451b077d-ffb1-4c69-bec3-dd70c008c429" -> _root_.scala.collection.immutable
-        .Set("451b077d-ffb1-4c69-bec3-dd70c008c429"),
-      "72aabaa1-c0ef-404d-8e62-a9e57c54a0b8" -> _root_.scala.collection.immutable
-        .Set("a88805b6-4dd9-42aa-aa0e-4522a795f49e"),
-      "9747b929-89b5-49ff-9b73-66475f3b9549" -> _root_.scala.collection.immutable
+      "5eb2d991-afe9-4784-9471-9f098e230b8f" -> _root_.scala.collection.immutable
+        .Set("7d12758d-10ee-4539-b76c-c3772651adaa"),
+      "d4e6bdb0-e630-403a-9553-7e225107a310" -> _root_.scala.collection.immutable
         .Set(),
-      "2d7fb5de-8c06-4246-b8d0-5a34f3bfe7ec" -> _root_.scala.collection.immutable
-        .Set("29d86ebe-f9af-4cc3-a042-df7e4ed341fc"),
-      "252cebe1-144b-4ef2-bede-0c3964dd12cd" -> _root_.scala.collection.immutable
-        .Set("252cebe1-144b-4ef2-bede-0c3964dd12cd"),
-      "bd3e4137-e011-4bc2-860c-b398fede8d8b" -> _root_.scala.collection.immutable
-        .Set("693984ee-837d-4197-a71b-57d47e1cc3dd"),
-      "853fc36b-7265-4235-9579-20be5680dc03" -> _root_.scala.collection.immutable
-        .Set("853fc36b-7265-4235-9579-20be5680dc03"),
-      "cb742835-c4fd-4114-982d-6bea3521ddc7" -> _root_.scala.collection.immutable
-        .Set("0c1c629b-72ba-40fb-8754-b724d2e53d5e"),
-      "cb7071a4-551f-412d-9c62-f62527313da5" -> _root_.scala.collection.immutable
-        .Set("cb742835-c4fd-4114-982d-6bea3521ddc7"),
-      "824696f1-0117-45ec-9efc-f31ac265cf09" -> _root_.scala.collection.immutable
-        .Set("16531015-a5ae-4dac-8ea0-765ea3553fe9")
+      "7873f008-4c8e-429a-8f26-c1943bd49471" -> _root_.scala.collection.immutable
+        .Set("d4e6bdb0-e630-403a-9553-7e225107a310")
     )
 
   implicit val `π-wand`
@@ -117,89 +117,88 @@ object π:
 
   def Main(args: String*)(using ^ : String)(using % : %, / : /): IO[Unit] = for {
     _ <- IO.unit
-    _23d17176_d0fb_44ed_b241_9a21aeef3c06 =
+    _f7c93b3a_6ee6_461d_b5b2_c725fc489b70 =
       _root_.scala.collection.immutable.Set(
-        "252cebe1-144b-4ef2-bede-0c3964dd12cd",
-        "451b077d-ffb1-4c69-bec3-dd70c008c429",
-        "853fc36b-7265-4235-9579-20be5680dc03"
+        "25c2283f-7775-425d-bb78-9234a026d6a9",
+        "dd6de97f-6a8e-429b-8ea8-f60ff8fb0308",
+        "9177d90f-37ad-4544-80c4-4e5f8fa4b2a4"
       )
-    _ <- `π-enable`(_23d17176_d0fb_44ed_b241_9a21aeef3c06)
+    _ <- `π-enable`(_f7c93b3a_6ee6_461d_b5b2_c725fc489b70)
     a <- ν
     b <- ν
     c <- ν
     _ <- (
-      IO.unit,
       `π-supervised`(for {
-        _b8eafdba_a47c_4f39_9b09_c01d28e60a12 <- IO {
-          lazy val _b8eafdba_a47c_4f39_9b09_c01d28e60a12: String => IO[Unit] = {
+        _9f4a97ff_bd0c_4d86_9c58_de441bf0a8c7 <- IO {
+          lazy val _9f4a97ff_bd0c_4d86_9c58_de441bf0a8c7: String => IO[Unit] = {
             implicit ^ =>
               (
                 IO.unit,
                 `π-supervised`(for {
-                  _51480183_49ee_43ac_88de_25d12daea1d2 <-
-                    a(⊤(1L), "a")("252cebe1-144b-4ef2-bede-0c3964dd12cd")
+                  _8f5c3d2d_6924_402e_b3e6_4495837e1f96 <-
+                    a(⊤(1L), "a")("25c2283f-7775-425d-bb78-9234a026d6a9")
                   _                                     <-
-                    if (_51480183_49ee_43ac_88de_25d12daea1d2 == null) IO.cede
-                    else _b8eafdba_a47c_4f39_9b09_c01d28e60a12(`π-uuid`)
+                    if (_8f5c3d2d_6924_402e_b3e6_4495837e1f96 == null) IO.cede
+                    else _9f4a97ff_bd0c_4d86_9c58_de441bf0a8c7(`π-uuid`)
                 } yield ())
               ).parMapN { (_, _) => }
           }
-          _b8eafdba_a47c_4f39_9b09_c01d28e60a12
+          _9f4a97ff_bd0c_4d86_9c58_de441bf0a8c7
         }
-        _51480183_49ee_43ac_88de_25d12daea1d2 <-
-          a(⊤(1L), "a")("252cebe1-144b-4ef2-bede-0c3964dd12cd")
+        _8f5c3d2d_6924_402e_b3e6_4495837e1f96 <-
+          a(⊤(1L), "a")("25c2283f-7775-425d-bb78-9234a026d6a9")
         _                                     <-
-          if (_51480183_49ee_43ac_88de_25d12daea1d2 == null) IO.cede
-          else _b8eafdba_a47c_4f39_9b09_c01d28e60a12(`π-uuid`)
+          if (_8f5c3d2d_6924_402e_b3e6_4495837e1f96 == null) IO.cede
+          else _9f4a97ff_bd0c_4d86_9c58_de441bf0a8c7(`π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        _61456ca3_b2f3_45f9_adb2_9baf51d2ffd9 <- IO {
-          lazy val _61456ca3_b2f3_45f9_adb2_9baf51d2ffd9: String => IO[Unit] = {
+        _52dbf996_4833_4131_9396_4859925d0d1c <- IO {
+          lazy val _52dbf996_4833_4131_9396_4859925d0d1c: String => IO[Unit] = {
             implicit ^ =>
               (
                 IO.unit,
                 `π-supervised`(for {
-                  _e9922a8e_27f9_450d_8381_e25dd5100538 <-
-                    b(⊤(1L), "b")("451b077d-ffb1-4c69-bec3-dd70c008c429")
+                  _b2aabb1b_fb01_48fc_9366_281daa3d9abd <-
+                    b(⊤(1L), "b")("dd6de97f-6a8e-429b-8ea8-f60ff8fb0308")
                   _                                     <-
-                    if (_e9922a8e_27f9_450d_8381_e25dd5100538 == null) IO.cede
-                    else _61456ca3_b2f3_45f9_adb2_9baf51d2ffd9(`π-uuid`)
+                    if (_b2aabb1b_fb01_48fc_9366_281daa3d9abd == null) IO.cede
+                    else _52dbf996_4833_4131_9396_4859925d0d1c(`π-uuid`)
                 } yield ())
               ).parMapN { (_, _) => }
           }
-          _61456ca3_b2f3_45f9_adb2_9baf51d2ffd9
+          _52dbf996_4833_4131_9396_4859925d0d1c
         }
-        _e9922a8e_27f9_450d_8381_e25dd5100538 <-
-          b(⊤(1L), "b")("451b077d-ffb1-4c69-bec3-dd70c008c429")
+        _b2aabb1b_fb01_48fc_9366_281daa3d9abd <-
+          b(⊤(1L), "b")("dd6de97f-6a8e-429b-8ea8-f60ff8fb0308")
         _                                     <-
-          if (_e9922a8e_27f9_450d_8381_e25dd5100538 == null) IO.cede
-          else _61456ca3_b2f3_45f9_adb2_9baf51d2ffd9(`π-uuid`)
+          if (_b2aabb1b_fb01_48fc_9366_281daa3d9abd == null) IO.cede
+          else _52dbf996_4833_4131_9396_4859925d0d1c(`π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        _40797462_5635_4bc8_9e94_8fa28fac7893 <- IO {
-          lazy val _40797462_5635_4bc8_9e94_8fa28fac7893: String => IO[Unit] = {
+        _38dcfbcd_e8ee_41b7_9c1b_15872b10f3e9 <- IO {
+          lazy val _38dcfbcd_e8ee_41b7_9c1b_15872b10f3e9: String => IO[Unit] = {
             implicit ^ =>
               (
                 IO.unit,
                 `π-supervised`(for {
-                  _fc72766f_1b94_4069_a927_686557dac177 <-
-                    c(⊤(1L), "c")("853fc36b-7265-4235-9579-20be5680dc03")
+                  _4393b159_ead1_4544_b05f_7233d7dc7ef1 <-
+                    c(⊤(1L), "c")("9177d90f-37ad-4544-80c4-4e5f8fa4b2a4")
                   _                                     <-
-                    if (_fc72766f_1b94_4069_a927_686557dac177 == null) IO.cede
-                    else _40797462_5635_4bc8_9e94_8fa28fac7893(`π-uuid`)
+                    if (_4393b159_ead1_4544_b05f_7233d7dc7ef1 == null) IO.cede
+                    else _38dcfbcd_e8ee_41b7_9c1b_15872b10f3e9(`π-uuid`)
                 } yield ())
               ).parMapN { (_, _) => }
           }
-          _40797462_5635_4bc8_9e94_8fa28fac7893
+          _38dcfbcd_e8ee_41b7_9c1b_15872b10f3e9
         }
-        _fc72766f_1b94_4069_a927_686557dac177 <-
-          c(⊤(1L), "c")("853fc36b-7265-4235-9579-20be5680dc03")
+        _4393b159_ead1_4544_b05f_7233d7dc7ef1 <-
+          c(⊤(1L), "c")("9177d90f-37ad-4544-80c4-4e5f8fa4b2a4")
         _                                     <-
-          if (_fc72766f_1b94_4069_a927_686557dac177 == null) IO.cede
-          else _40797462_5635_4bc8_9e94_8fa28fac7893(`π-uuid`)
+          if (_4393b159_ead1_4544_b05f_7233d7dc7ef1 == null) IO.cede
+          else _38dcfbcd_e8ee_41b7_9c1b_15872b10f3e9(`π-uuid`)
       } yield ()),
       `π-supervised`(Hanoi(a, b, c, -1)(using `π-uuid`))
-    ).parMapN { (_, _, _, _, _) => }
+    ).parMapN { (_, _, _, _) => }
   } yield ()
 
   def Hanoi(
@@ -213,17 +212,16 @@ object π:
     / : /
   ): IO[Unit] = for {
     _ <- IO.unit
-    _0f7bec5b_8d18_43b5_9554_79ab8450ba61 =
+    _2b77e423_b916_4665_b98d_deeba1153dc6 =
       _root_.scala.collection.immutable.Set(
-        "43450e21-c997-4d61-b686-3ff9fc580194",
-        "bd3e4137-e011-4bc2-860c-b398fede8d8b"
+        "4d362b72-0065-4a15-ab88-0d99f4befef4",
+        "5eb2d991-afe9-4784-9471-9f098e230b8f"
       )
-    _ <- `π-enable`(_0f7bec5b_8d18_43b5_9554_79ab8450ba61)
+    _ <- `π-enable`(_2b77e423_b916_4665_b98d_deeba1153dc6)
     w <- ν
     _ <- (
-      IO.unit,
       `π-supervised`(for {
-        _ <- τ(⊤(1L))("43450e21-c997-4d61-b686-3ff9fc580194")
+        _ <- τ(⊤(1L))("4d362b72-0065-4a15-ab88-0d99f4befef4")
         _ <- IO.print("n = ")
         n <- IO.blocking {
           try scala.io.StdIn.readLine.toInt
@@ -232,31 +230,31 @@ object π:
         _ <- Hanoi(a, b, c, n, w)(using `π-uuid`)
       } yield ()),
       `π-supervised`(for {
-        (w, _) <- w(⊤(1L))("bd3e4137-e011-4bc2-860c-b398fede8d8b")
-        (a, _) <- a(⊤(1L))("693984ee-837d-4197-a71b-57d47e1cc3dd")(!)
-        (b, _) <- b(⊤(1L))("cb7071a4-551f-412d-9c62-f62527313da5")(!)
-        (c, _) <- c(⊤(1L))("cb742835-c4fd-4114-982d-6bea3521ddc7")(!)
-        _      <- τ(⊤(1L))("0c1c629b-72ba-40fb-8754-b724d2e53d5e")
+        (w, _) <- w(⊤(1L))("5eb2d991-afe9-4784-9471-9f098e230b8f")
+        (a, _) <- a(⊤(1L))("7d12758d-10ee-4539-b76c-c3772651adaa")(!)
+        (b, _) <- b(⊤(1L))("cdfe00fc-575d-4c0b-8bac-9b9fa0b386c1")(!)
+        (c, _) <- c(⊤(1L))("7873f008-4c8e-429a-8f26-c1943bd49471")(!)
+        _      <- τ(⊤(1L))("d4e6bdb0-e630-403a-9553-7e225107a310")
         _      <- IO {
           println(s"#${w} moves")
         }
       } yield ())
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
 
   def Move(from: `()`, to: `()`, z: `()`)(using ^ : String)(using % : %, / : /)
     : IO[Unit] = for {
     _ <- IO.unit
-    _e471ac9b_3b49_4d12_86e9_62c8d8607761 = _root_.scala.collection.immutable
-      .Set("72aabaa1-c0ef-404d-8e62-a9e57c54a0b8")
-    _      <- `π-enable`(_e471ac9b_3b49_4d12_86e9_62c8d8607761)
-    (x, _) <- from(⊤(1L))("72aabaa1-c0ef-404d-8e62-a9e57c54a0b8")
-    (y, _) <- to(⊤(1L))("a88805b6-4dd9-42aa-aa0e-4522a795f49e")
-    _      <- τ(⊤(1L))("824696f1-0117-45ec-9efc-f31ac265cf09")
+    _a469c596_67ce_455c_a379_0b41659d5daa = _root_.scala.collection.immutable
+      .Set("fa7e2152-6f5f-495e-903d-0b00ff51e459")
+    _      <- `π-enable`(_a469c596_67ce_455c_a379_0b41659d5daa)
+    (x, _) <- from(⊤(1L))("fa7e2152-6f5f-495e-903d-0b00ff51e459")
+    (y, _) <- to(⊤(1L))("a6642012-ea01-4111-bca2-859ca4c66caf")
+    _      <- τ(⊤(1L))("2a4c43d5-c8e4-405f-b161-d72911c7b937")
     _      <- IO {
       println(s"${x} -> ${y}")
     }
-    _      <- z(⊤(1L), 1)("16531015-a5ae-4dac-8ea0-765ea3553fe9")
+    _      <- z(⊤(1L), 1)("076529c5-8cdf-4ee4-bfa0-23c2508ede30")
   } yield ()
 
   def Hanoi(
@@ -272,45 +270,44 @@ object π:
   ): IO[Unit] =
     if (n <= 1 ==== true) for {
       _ <- IO.unit
-      _5a2b1c16_e393_4aac_93ab_279aa86891c1 = _root_.scala.collection.immutable
-        .Set("9a994bac-f34e-4505-8fd1-55d36395a412")
-      _ <- `π-enable`(_5a2b1c16_e393_4aac_93ab_279aa86891c1)
+      _a92c7ff5_5d50_4e06_b5b3_d8f2af6a92ee = _root_.scala.collection.immutable
+        .Set("2e30c19b-f650-4a7d-9d1a-6fd5d65f4fcb")
+      _ <- `π-enable`(_a92c7ff5_5d50_4e06_b5b3_d8f2af6a92ee)
       z <- ν
       _ <- (
         `π-supervised`(Move(a, c, z)(using `π-uuid`)),
         `π-supervised`(for {
-          (z, _) <- z(⊤(1L))("9a994bac-f34e-4505-8fd1-55d36395a412")
-          _      <- w(⊤(1L), z)("9747b929-89b5-49ff-9b73-66475f3b9549")
+          (z, _) <- z(⊤(1L))("2e30c19b-f650-4a7d-9d1a-6fd5d65f4fcb")
+          _      <- w(⊤(1L), z)("cc1275a3-72fe-4e03-aaec-2877d1cce035")
         } yield ())
       ).parMapN { (_, _) => }
     } yield ()
     else for {
       _ <- IO.unit
-      _d747f088_f64e_488e_8da5_76cb09038ebb = _root_.scala.collection.immutable
-        .Set("48ca4d55-7bd4-49a3-80bc-255a054d966f")
-      _ <- `π-enable`(_d747f088_f64e_488e_8da5_76cb09038ebb)
+      _d9df2474_a029_4c0d_8654_461499968e44 = _root_.scala.collection.immutable
+        .Set("379a0cfa-fe95-4d28-bebd-a9f7f068a3ab")
+      _ <- `π-enable`(_d9df2474_a029_4c0d_8654_461499968e44)
       x <- ν
       _ <- (
-        IO.unit,
         `π-supervised`(Hanoi(a, c, b, n - 1, x)(using `π-uuid`)),
         `π-supervised`(for {
-          (x, _) <- x(⊤(1L))("48ca4d55-7bd4-49a3-80bc-255a054d966f")
+          (x, _) <- x(⊤(1L))("379a0cfa-fe95-4d28-bebd-a9f7f068a3ab")
           y      <- ν
           _      <- (
             `π-supervised`(Move(a, c, y)(using `π-uuid`)),
             `π-supervised`(for {
-              (y, _) <- y(⊤(1L))("2d7fb5de-8c06-4246-b8d0-5a34f3bfe7ec")
+              (y, _) <- y(⊤(1L))("6da1a34e-8a03-4603-95f2-aa6ab7b7189f")
               z      <- ν
               _      <- (
                 `π-supervised`(Hanoi(b, a, c, n - 1, z)(using `π-uuid`)),
                 `π-supervised`(for {
-                  (z, _) <- z(⊤(1L))("29d86ebe-f9af-4cc3-a042-df7e4ed341fc")
+                  (z, _) <- z(⊤(1L))("de43b72e-122d-4217-9d12-a7ba2f933ce0")
                   _      <-
-                    w(⊤(1L), x + y + z)("65005e4c-0cfa-4a61-a2b1-631b9d15d174")
+                    w(⊤(1L), x + y + z)("d3ecca01-71b5-49a6-860a-088248d4376b")
                 } yield ())
               ).parMapN { (_, _) => }
             } yield ())
           ).parMapN { (_, _) => }
         } yield ())
-      ).parMapN { (_, _, _) => }
+      ).parMapN { (_, _) => }
     } yield ()

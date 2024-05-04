@@ -69,16 +69,16 @@ object π:
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] =
     _root_.scala.collection.immutable.Map(
-      "19966db4-0350-4e4d-91d1-78c229472524" -> _root_.scala.collection.immutable
-        .Set("8f0dd2e1-87fe-4707-bd90-e2745184d8fa"),
-      "8f0dd2e1-87fe-4707-bd90-e2745184d8fa" -> _root_.scala.collection.immutable
-        .Set("aa5c5817-7c55-4b4c-b75b-bda14a27e92c"),
-      "815011a8-0dbb-401f-a5f4-63a1745791c8" -> _root_.scala.collection.immutable
+      "d87e0879-d677-44b8-bb94-c3547432434b" -> _root_.scala.collection.immutable
         .Set(),
-      "ba6d20c8-3f4a-403f-a368-3817217542ac" -> _root_.scala.collection.immutable
-        .Set("66e0ccb6-9a3e-4a53-a27f-94a9803ee982"),
-      "66e0ccb6-9a3e-4a53-a27f-94a9803ee982" -> _root_.scala.collection.immutable
-        .Set("815011a8-0dbb-401f-a5f4-63a1745791c8")
+      "2950fe1b-863a-42cf-bde4-9d56d975ba4d" -> _root_.scala.collection.immutable
+        .Set("96df382d-fe0c-4b10-9d7f-d737ad29b3fd"),
+      "a408137d-af90-43e8-aea7-bb3ebb3cf9e3" -> _root_.scala.collection.immutable
+        .Set("d87e0879-d677-44b8-bb94-c3547432434b"),
+      "c0222c36-a8d2-4301-9b82-2b3aa19b9b38" -> _root_.scala.collection.immutable
+        .Set("2950fe1b-863a-42cf-bde4-9d56d975ba4d"),
+      "3221f0ea-f091-4d6b-86ac-b30d87e2ae33" -> _root_.scala.collection.immutable
+        .Set("a408137d-af90-43e8-aea7-bb3ebb3cf9e3")
     )
 
   implicit val `π-wand`
@@ -94,17 +94,16 @@ object π:
 
   def Fib(n: `()`)(using ^ : String)(using % : %, / : /): IO[Unit] = for {
     _ <- IO.unit
-    _bfa34f36_678f_4c68_b8f7_5041158653c7 =
+    _1ac8fa2d_8f8e_48ff_9cdf_0db57c2f46be =
       _root_.scala.collection.immutable.Set(
-        "ba6d20c8-3f4a-403f-a368-3817217542ac",
-        "19966db4-0350-4e4d-91d1-78c229472524"
+        "3221f0ea-f091-4d6b-86ac-b30d87e2ae33",
+        "c0222c36-a8d2-4301-9b82-2b3aa19b9b38"
       )
-    _ <- `π-enable`(_bfa34f36_678f_4c68_b8f7_5041158653c7)
+    _ <- `π-enable`(_1ac8fa2d_8f8e_48ff_9cdf_0db57c2f46be)
     x <- ν
     _ <- (
-      IO.unit,
       `π-supervised`(for {
-        _ <- τ(⊤(1L))("ba6d20c8-3f4a-403f-a368-3817217542ac")
+        _ <- τ(⊤(1L))("3221f0ea-f091-4d6b-86ac-b30d87e2ae33")
         _ <- IO {
           print("n = ")
         }
@@ -112,7 +111,7 @@ object π:
           try scala.io.StdIn.readLine.toLong
           catch _ => -1L
         }
-        _ <- x(⊤(1L), n)("66e0ccb6-9a3e-4a53-a27f-94a9803ee982")
+        _ <- x(⊤(1L), n)("a408137d-af90-43e8-aea7-bb3ebb3cf9e3")
         _ <- x(
           ⊤(1L), {
             def fibonacci(k: Long): TailRec[Long] =
@@ -128,16 +127,16 @@ object π:
             if (n < 0) println("Enter a non-negative number.")
             else fibonacci(n).result
           }
-        )("815011a8-0dbb-401f-a5f4-63a1745791c8")
+        )("d87e0879-d677-44b8-bb94-c3547432434b")
       } yield ()),
       `π-supervised`(for {
-        (n, _) <- x(⊤(1L))("19966db4-0350-4e4d-91d1-78c229472524")
-        (f, _) <- x(⊤(1L))("8f0dd2e1-87fe-4707-bd90-e2745184d8fa")
-        _      <- τ(⊤(1L))("aa5c5817-7c55-4b4c-b75b-bda14a27e92c")
+        (n, _) <- x(⊤(1L))("c0222c36-a8d2-4301-9b82-2b3aa19b9b38")
+        (f, _) <- x(⊤(1L))("2950fe1b-863a-42cf-bde4-9d56d975ba4d")
+        _      <- τ(⊤(1L))("96df382d-fe0c-4b10-9d7f-d737ad29b3fd")
         _      <- IO {
           if (n >= 0) println(s"fib(${n}) = ${f}")
         }
         _      <- if (n < 0 ==== true) Fib(-1)(using `π-uuid`) else IO.unit
       } yield ())
-    ).parMapN { (_, _, _) => }
+    ).parMapN { (_, _) => }
   } yield ()
