@@ -151,9 +151,7 @@ A new name - will be available in the Scala scope:
     yield
       ()
 
-The inaction - just `IO.Unit`:
-
-    IO.unit
+The inaction - `IO.Unit`.
 
 A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 
