@@ -17,11 +17,11 @@ function ppi() {
         shift
     done
     set ../ppi.scala ${srcs#?}
-    ~/.local/share/coursier/bin/scala-cli run "$@" \
-                                              -q -O -nowarn -S 3.4.2-RC1 \
-                                              --dep org.typelevel::cats-effect:3.6-0142603 \
-                                              ${args#?} \
-                                              2>&1
+    scala-cli run "$@" \
+                  -q -O -nowarn -S 3.4.2-RC1 \
+                  --dep org.typelevel::cats-effect:3.6-0142603 \
+                  ${args#?} \
+                  2>&1
 }
 
 function ppi_() {
@@ -41,11 +41,11 @@ function ppi_() {
         shift
     done
     set ../ppi_.scala ${srcs#?}
-    ~/.local/share/coursier/bin/scala-cli run "$@" \
-                                              -q -O -nowarn -S 3.4.2-RC1 \
-                                              --dep org.typelevel::cats-effect:3.6-0142603 \
-                                              ${args#?} \
-                                              2>&1
+    scala-cli run "$@" \
+                  -q -O -nowarn -S 3.4.2-RC1 \
+                  --dep org.typelevel::cats-effect:3.6-0142603 \
+                  ${args#?} \
+                  2>&1
 }
 
 function ppio() {
@@ -58,4 +58,4 @@ function ppio() {
     done
 }
 
-export ppio ppi ppi_
+export -f ppio ppi ppi_
