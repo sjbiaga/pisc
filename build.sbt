@@ -18,7 +18,7 @@ lazy val root = (project in file("."))
     version := "1.0",
     maxErrors := 5,
     scalaVersion := "3.4.2-RC1",
-    crossScalaVersions ++= Seq("2.13.13", "3.4.2-RC1"),
+    crossScalaVersions ++= Seq("2.13.14", "3.4.2-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
