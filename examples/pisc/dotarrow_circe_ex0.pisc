@@ -12,7 +12,7 @@
 
 @val run: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                           \
   if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex0.scala"'""" .!                               \
-  && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!                            \
+  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!                   \
   && 0 == s"""sh -c 'dotarrowCirce "${tmp}_ex0.scala"'""" .!                                                   \
   && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""" .!                 \
   && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src" &>/dev/null'""" .!                                 \
@@ -27,7 +27,7 @@
       if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex0.scala"'""" .!                           \
       && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
                                                                 >> "dotarrow/tmp/${tmp}_ex0.scala.txt"'""" .!  \
-      && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!                        \
+      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex0.scala")}'""" .!               \
       && 0 == s"""sh -c 'dotarrowCirce2 "${tmp}_ex0.scala"'""" .!                                              \
       && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""" .!             \
       && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src"' &>/dev/null""" .!                             \

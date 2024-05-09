@@ -17,11 +17,11 @@ function pi() {
         shift
     done
     set ../pi.scala ${srcs#?}
-    ~/.local/share/coursier/bin/scala-cli run "$@" \
-                                              -q -O -nowarn -S 3.4.2-RC1 \
-                                              --dep org.typelevel::cats-effect:3.6-0142603 \
-                                              ${args#?} \
-                                              2>&1
+    scala-cli run "$@" \
+                  -q -O -nowarn -S 3.4.2-RC1 \
+                  --dep org.typelevel::cats-effect:3.6-0142603 \
+                  ${args#?} \
+                  2>&1
 }
 
 function pi_() {
@@ -41,11 +41,11 @@ function pi_() {
         shift
     done
     set ../pi_.scala ${srcs#?}
-    ~/.local/share/coursier/bin/scala-cli run "$@" \
-                                              -q -O -nowarn -S 3.4.2-RC1 \
-                                              --dep org.typelevel::cats-effect:3.6-0142603 \
-                                              ${args#?} \
-                                              2>&1
+    scala-cli run "$@" \
+                  -q -O -nowarn -S 3.4.2-RC1 \
+                  --dep org.typelevel::cats-effect:3.6-0142603 \
+                  ${args#?} \
+                  2>&1
 }
 
 function pio() {

@@ -87,13 +87,13 @@ object π:
   ).parMapN { (_, _) => }
 
   def Chooser(stdout: `()`, name: `()`): IO[Unit] = for {
-    _f6bbf037_fa43_4b19_ba87_695a1e27d7dd <- Semaphore[IO](1)
+    _e1ed51ef_c632_4dfe_8364_4788a51732ca <- Semaphore[IO](1)
     _                                     <- (
-      _f6bbf037_fa43_4b19_ba87_695a1e27d7dd.tryAcquire
+      _e1ed51ef_c632_4dfe_8364_4788a51732ca.tryAcquire
         .ifM(`Greeter'`(stdout, name), IO.cede),
-      _f6bbf037_fa43_4b19_ba87_695a1e27d7dd.tryAcquire
+      _e1ed51ef_c632_4dfe_8364_4788a51732ca.tryAcquire
         .ifM(`Greeter"`(stdout, name), IO.cede),
-      _f6bbf037_fa43_4b19_ba87_695a1e27d7dd.tryAcquire.ifM(
+      _e1ed51ef_c632_4dfe_8364_4788a51732ca.tryAcquire.ifM(
         `Greeter"'`(stdout, name),
         IO.cede
       )

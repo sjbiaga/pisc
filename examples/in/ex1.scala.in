@@ -1,0 +1,2 @@
+def Main(args: String*): IO[Unit] = for (x <- ν; y <- ν; _ <- (for (_ <- x(y)) yield (), for (z <- x(); _ <- if (y ==== z) IO.unit else IO.unit) yield ()).parMapN { (_, _) =>
+}) yield ()

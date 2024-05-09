@@ -62,7 +62,7 @@ object π:
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
           )}" >| "dotarrow/${tmp}_ex0.scala"'""".! && 0 == s"""sh -c '${cli(
-            "../source.scala"
+            "../dotarrow/source.scala"
           )(
             s"dotarrow/${tmp}_ex0.scala"
           )}'""".! && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src" &>/dev/null'""".!
@@ -78,7 +78,7 @@ object π:
               )}" >| "dotarrow/${tmp}_ex0.scala"'""".! && 0 == s"""sh -c '${cli(
                 s"dotarrow/${tmp}_ex0.scala"
               )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                                  >> "dotarrow/tmp/${tmp}_ex0.scala.txt"'""".! && 0 == s"""sh -c '${cli(
-                "../source.scala"
+                "../dotarrow/source.scala"
               )(
                 s"dotarrow/${tmp}_ex0.scala"
               )}'""".! && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src"' &>/dev/null""".!
@@ -107,8 +107,8 @@ object π:
     _  <- (
       IO.unit,
       for {
-        _c48e0426_e2a6_4944_a6c6_333ea423d441 <- IO {
-          def _c48e0426_e2a6_4944_a6c6_333ea423d441(code: `()`): IO[Unit] =
+        _59c60370_c936_419c_8b3d_5cfb0d7db01f <- IO {
+          def _59c60370_c936_419c_8b3d_5cfb0d7db01f(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -121,13 +121,13 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run)
-                _    <- _c48e0426_e2a6_4944_a6c6_333ea423d441(code)
+                _    <- _59c60370_c936_419c_8b3d_5cfb0d7db01f(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _c48e0426_e2a6_4944_a6c6_333ea423d441
+          _59c60370_c936_419c_8b3d_5cfb0d7db01f
         }
         code                                  <- ch()(run)
-        _ <- _c48e0426_e2a6_4944_a6c6_333ea423d441(code)
+        _ <- _59c60370_c936_419c_8b3d_5cfb0d7db01f(code)
       } yield (),
       for {
         _ <- τ

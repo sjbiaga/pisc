@@ -26,44 +26,25 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//> using dep org.scalameta:scalameta_2.13:4.9.3
+//package main.scala.in
 
-package dotarrow
-
-import scala.meta.{ Source => File, _ }
-import dialects.Scala3
-
-import java.io.{ FileWriter, BufferedWriter }
-import java.nio.charset.Charset
-import java.nio.file.Paths
-
-import scala.io.Source
+import _root_.cats.effect.{ IO, IOApp, ExitCode }
 
 
-object source:
+object App extends IOApp:
 
-  val dotarrow = "dotarrow"
+  override def run(args: List[String]): IO[ExitCode] =
+    π.Main(args*).as(ExitCode.Success)
 
-  def main(args: Array[String]): Unit =
-    args.foreach { arg =>
-      var in = arg
-      if arg.startsWith(s"$dotarrow/") then in = in.replaceAll(s"$dotarrow/", "")
-      if !arg.endsWith(".scala") then in = in + ".scala"
-      val src = Paths.get(s"$dotarrow/src/", in + ".src").toString
-      var source: Source = null
-      var fwr: FileWriter = null
-      var bwr: BufferedWriter = null
 
-      try
-        source = Source.fromFile(s"$dotarrow/$in")
-        fwr = FileWriter(src, Charset.forName("UTF-8"))
-        bwr = BufferedWriter(fwr)
+object π:
 
-        val top = source.getLines.mkString("\n").parse[File].get.structure
+  import _root_.cats.effect.syntax.all._
+  import _root_.cats.syntax.all._
+  import _root_.cats.effect.std.Semaphore
 
-        bwr.write(top, 0, top.length)
-      finally
-        if bwr ne null then bwr.close()
-        if fwr ne null then fwr.close()
-        if source ne null then source.close()
-    }
+  import Π._
+
+
+  def Main(args: String*): IO[Unit] = for (x <- ν; y <- ν; _ <- (for (_ <- x(y)) yield (), for (z <- x(); _ <- if (y ==== z) IO.unit else IO.unit) yield ()).parMapN { (_, _) =>
+  }) yield ()

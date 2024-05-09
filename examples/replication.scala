@@ -54,8 +54,8 @@ object π:
     x <- ν
     _ <- (
       for {
-        _e635dbb1_01c6_4b9f_809b_f47695b2cd90 <- IO {
-          lazy val _e635dbb1_01c6_4b9f_809b_f47695b2cd90: IO[Unit] = (
+        _bdd35ba0_5905_4da3_b98d_4ab88712b620 <- IO {
+          lazy val _bdd35ba0_5905_4da3_b98d_4ab88712b620: IO[Unit] = (
             for {
               i <- c.get
               _ <- IO.sleep(ms)
@@ -70,16 +70,16 @@ object π:
               _ <- c.update(_ + 1 min 50)
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _e635dbb1_01c6_4b9f_809b_f47695b2cd90
+              _ <- _bdd35ba0_5905_4da3_b98d_4ab88712b620
             } yield ()
           ).parMapN { (_, _) => }
-          _e635dbb1_01c6_4b9f_809b_f47695b2cd90
+          _bdd35ba0_5905_4da3_b98d_4ab88712b620
         }
-        _ <- _e635dbb1_01c6_4b9f_809b_f47695b2cd90
+        _ <- _bdd35ba0_5905_4da3_b98d_4ab88712b620
       } yield (),
       for {
-        _f6741dff_00d2_465f_9d14_840d7911f953 <- IO {
-          lazy val _f6741dff_00d2_465f_9d14_840d7911f953: IO[Unit] = (
+        _d5f0ebe7_51e5_4e1b_83ef_486f111615d5 <- IO {
+          lazy val _d5f0ebe7_51e5_4e1b_83ef_486f111615d5: IO[Unit] = (
             for {
               _ <- IO.sleep(ms)
               y <- x()
@@ -92,12 +92,12 @@ object π:
               _ <- IO.unit
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _f6741dff_00d2_465f_9d14_840d7911f953
+              _ <- _d5f0ebe7_51e5_4e1b_83ef_486f111615d5
             } yield ()
           ).parMapN { (_, _) => }
-          _f6741dff_00d2_465f_9d14_840d7911f953
+          _d5f0ebe7_51e5_4e1b_83ef_486f111615d5
         }
-        _ <- _f6741dff_00d2_465f_9d14_840d7911f953
+        _ <- _d5f0ebe7_51e5_4e1b_83ef_486f111615d5
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()

@@ -19,7 +19,7 @@
 
 @val run_ex1: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                       \
   if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex1.scala"'""" .!                               \
-  && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex1.scala")}'""" .!                            \
+  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex1.scala")}'""" .!                   \
   && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex1.scala"'""" .!                                                  \
   && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex1.scala.tmp" dotarrow/"${tmp}_ex1.scala"'""" .!                 \
   && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex1.scala.src" &>/dev/null'""" .!                                 \
@@ -31,7 +31,7 @@
       if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex1.scala"'""" .!                           \
       && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex1.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
                                                                 >> "dotarrow/tmp/${tmp}_ex1.scala.txt"'""" .!  \
-      && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex1.scala")}'""" .!                        \
+      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex1.scala")}'""" .!               \
       && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex1.scala"'""" .!                                             \
       && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex1.scala.tmp" dotarrow/"${tmp}_ex1.scala"'""" .!             \
       && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex1.scala.src"' &>/dev/null""" .!                             \
@@ -68,7 +68,7 @@ Node1 = ν(ch) ( 𝟎                                                   \
 
 @val run_ex2: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                       \
   if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex2.scala"'""" .!                               \
-  && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!                            \
+  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!                   \
   && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex2.scala"'""" .!                                                  \
   && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""" .!                 \
   && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src" &>/dev/null'""" .!                                 \
@@ -80,7 +80,7 @@ Node1 = ν(ch) ( 𝟎                                                   \
       if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex2.scala"'""" .!                           \
       && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex2.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
                                                                 >> "dotarrow/tmp/${tmp}_ex2.scala.txt"'""" .!  \
-      && 0 == s"""sh -c '${cli("../source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!                        \
+      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex2.scala")}'""" .!               \
       && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex2.scala"'""" .!                                             \
       && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""" .!             \
       && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src"' &>/dev/null""" .!                             \

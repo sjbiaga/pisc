@@ -67,7 +67,7 @@ object π:
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
           )}" >| "dotarrow/${tmp}_ex1.scala"'""".! && 0 == s"""sh -c '${cli(
-            "../source.scala"
+            "../dotarrow/source.scala"
           )(
             s"dotarrow/${tmp}_ex1.scala"
           )}'""".! && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex1.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex1.scala.tmp" dotarrow/"${tmp}_ex1.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex1.scala.src" &>/dev/null'""".!
@@ -83,7 +83,7 @@ object π:
               )}" >| "dotarrow/${tmp}_ex1.scala"'""".! && 0 == s"""sh -c '${cli(
                 s"dotarrow/${tmp}_ex1.scala"
               )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                                  >> "dotarrow/tmp/${tmp}_ex1.scala.txt"'""".! && 0 == s"""sh -c '${cli(
-                "../source.scala"
+                "../dotarrow/source.scala"
               )(
                 s"dotarrow/${tmp}_ex1.scala"
               )}'""".! && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex1.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex1.scala.tmp" dotarrow/"${tmp}_ex1.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex1.scala.src"' &>/dev/null""".!
@@ -100,8 +100,8 @@ object π:
     _  <- (
       IO.unit,
       for {
-        _c652db26_c34e_443c_92c6_ffbd58ecf7dc <- IO {
-          def _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code: `()`): IO[Unit] =
+        _c7cbc358_97c6_42eb_82c7_794ce4dd652c <- IO {
+          def _c7cbc358_97c6_42eb_82c7_794ce4dd652c(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -114,13 +114,13 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run_ex1)
-                _    <- _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code)
+                _    <- _c7cbc358_97c6_42eb_82c7_794ce4dd652c(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _c652db26_c34e_443c_92c6_ffbd58ecf7dc
+          _c7cbc358_97c6_42eb_82c7_794ce4dd652c
         }
         code                                  <- ch()(run_ex1)
-        _ <- _c652db26_c34e_443c_92c6_ffbd58ecf7dc(code)
+        _ <- _c7cbc358_97c6_42eb_82c7_794ce4dd652c(code)
       } yield (),
       for {
         _ <- τ
@@ -144,7 +144,7 @@ object π:
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
           )}" >| "dotarrow/${tmp}_ex2.scala"'""".! && 0 == s"""sh -c '${cli(
-            "../source.scala"
+            "../dotarrow/source.scala"
           )(
             s"dotarrow/${tmp}_ex2.scala"
           )}'""".! && 0 == s"""sh -c 'dotarrowStream "${tmp}_ex2.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src" &>/dev/null'""".!
@@ -160,7 +160,7 @@ object π:
               )}" >| "dotarrow/${tmp}_ex2.scala"'""".! && 0 == s"""sh -c '${cli(
                 s"dotarrow/${tmp}_ex2.scala"
               )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                                  >> "dotarrow/tmp/${tmp}_ex2.scala.txt"'""".! && 0 == s"""sh -c '${cli(
-                "../source.scala"
+                "../dotarrow/source.scala"
               )(
                 s"dotarrow/${tmp}_ex2.scala"
               )}'""".! && 0 == s"""sh -c 'dotarrowStream2 "${tmp}_ex2.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex2.scala.tmp" dotarrow/"${tmp}_ex2.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex2.scala.src"' &>/dev/null""".!
