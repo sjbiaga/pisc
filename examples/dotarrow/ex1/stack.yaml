@@ -1,0 +1,11 @@
+resolver:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/21.yaml
+
+packages:
+- .
+
+#extra-deps:
+#  - data-object-0.3.1.9@sha256:2e20127aa3bfd7eef9e6483725fe323539b4538416f8fa89e30cc9d4d1245947,981
+#  - failure-0.1.2@sha256:70c6930f1798b2781a33fe4efd6c82b7bcc743dab65719c0db56979755560f22,782
+
+system-ghc: false

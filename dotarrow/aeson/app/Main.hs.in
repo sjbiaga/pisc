@@ -1,0 +1,94 @@
+module Main where
+
+import Language.Haskell.Meta.Parse
+import Language.Haskell.TH.Ppr
+import Language.Haskell.TH.Syntax
+
+import Control.Monad (when)
+import Data.Maybe
+import System.Environment
+import System.Exit (exitSuccess, exitFailure)
+
+
+sig :: Dec -> Maybe Dec
+sig s@(SigD (Name (OccName "main") _)
+            (AppT (ConT (Name (OccName "IO") _))
+                  (ConT (Name (OccName "()") _)))) = Just s
+sig _ = Nothing
+
+val :: Dec -> Maybe (Dec, String)
+val v@(ValD m@(VarP (Name (OccName "main") _))
+            (NormalB (DoE Nothing ss)) []) | isEachSimple && isReturnLast = v'nt
+    where isEachSimple = all (isJust . stmt) ss
+          isReturnLast | null ss   = False
+                       | otherwise = case stmt (last ss)
+                                     of Just (_, Return) -> True
+                                        _                -> False
+          v'nt = (\(it, nt) -> (ValD m (NormalB (DoE Nothing it)) [], nt)) <$> stmt' ss
+val _ = Nothing
+
+stmt' :: [Stmt] -> Maybe ([Stmt], String)
+stmt' (my@(BindS (SigP (VarP name'@(Name (OccName name) _))
+                       (ConT (Name (OccName tpe) _))) _):it)
+    = (\ (before, after) ->
+        let iae = [BindS (VarP (Name (OccName "inp_gUgVwYdD8r") NameS))
+                         (AppE (VarE (Name (OccName "read_gUgVwYdD8r") NameS)) (LitE (StringL "itmp.XXXXXXXXXX")))
+                  ,LetS [ValD (ConP (Name (OccName "JsonI_gUgVwYdD8r") NameS) [] [
+                                                                                  WildP
+                                                                                 ]
+                              )
+                              (NormalB (VarE (Name (OccName "inp_gUgVwYdD8r") NameS))) []]
+                  ]
+            oae = [NoBindS (AppE (AppE (VarE (Name (OccName "hPutStrLn") NameS)) (VarE (Name (OccName "stderr") NameS))) (ParensE (UInfixE (LitE (StringL name)) (VarE (Name (OccName "++") NameS)) (UInfixE (LitE (StringL " ")) (VarE (Name (OccName "++") NameS)) (LitE (StringL tpe))))))
+                  ,LetS [ValD (VarP (Name (OccName "out_gUgVwYdD8r") NameS))
+                              (NormalB
+                                       (AppE (AppE
+                                       (ConE (Name (OccName "JsonO_gUgVwYdD8r") NameS))
+                                       (VarE name'))
+                                       (ConE (Name (OccName "Nothing") NameS)))
+                              ) []]
+                  ,NoBindS (AppE (AppE (VarE (Name (OccName "write_gUgVwYdD8r") NameS))
+                                       (VarE (Name (OccName "out_gUgVwYdD8r") NameS))) (LitE (StringL "otmp.XXXXXXXXXX")))
+                  ]
+        in ((iae ++ my : before) ++ (oae ++ NoBindS (VarE (Name (OccName "exitFailure") NameS)) : after), name ++ " " ++ tpe)
+      ) <$> stmt'' [] it
+stmt' [NoBindS (AppE (VarE (Name (OccName "return") _))
+                     (ConE (Name (OccName "()") _)))] = Nothing
+stmt' [] = fail "end statement must be `return ()'"
+stmt' (hd:tl) = (\(it, nt) -> (hd:it, nt)) <$> stmt' tl
+
+stmt'' :: [Stmt] -> [Stmt] -> Maybe ([Stmt], [Stmt])
+stmt'' before after@(NoBindS (AppE (VarE (Name (OccName "return") _))
+                                   (ConE (Name (OccName "()") _))):_) = Just (before, after)
+stmt'' before after@((BindS (SigP (VarP _) (ConT _)) _):_) = Just (before, after)
+stmt'' _ [] = Nothing
+stmt'' before it = stmt'' (before ++ [head it]) (tail it)
+
+data StmtT = Bind
+           | Print
+           | Return
+           | Ignore
+
+stmt :: Stmt -> Maybe (Stmt, StmtT)
+stmt s@(BindS (SigP (VarP _) (ConT _))
+              (AppE (VarE (Name (OccName "pure") _)) _)) = Just (s, Bind)
+stmt s@(NoBindS (AppE (VarE (Name (OccName "print") _)) _)) = Just (s, Print)
+stmt s@(NoBindS (AppE (VarE (Name (OccName "return") _)) (ConE (Name (OccName "()") _)))) = Just (s, Return)
+stmt s@(BindS _ _) = Just (s, Ignore)
+stmt s@(LetS _) = Just (s, Ignore)
+stmt s@(NoBindS _) = Just (s,  Ignore)
+stmt _ = Nothing
+
+main :: IO ()
+main = do
+    args <- getArgs
+    src <- readFile (head args)
+    let decs = case parseDecs src of Right r -> r
+    let val'nt = val (last decs)
+    when (length decs >= 2 && isJust (sig (last (init decs))) && isJust val'nt) $ do
+        let (val', nt) = fromJust val'nt
+        let app = ppr (init decs ++ [val'])
+        print app
+        putStrLn nt
+        exitSuccess
+    exitFailure

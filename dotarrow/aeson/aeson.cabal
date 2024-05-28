@@ -1,0 +1,31 @@
+cabal-version:      2.4
+
+name:               aeson
+
+version:            0.1.0.0
+
+synopsis:           aeson dotarrow
+
+description:        Phase 1 DotArrow Haskell
+
+license:            MIT
+
+license-file:       LICENSE
+
+author:             Sebastian Gliţa-Catina
+
+maintainer:         sjb.ia.ga@gmail.com
+
+category:           Language
+
+executable Main
+    main-is:          Main.hs
+
+    build-depends:
+        base ^>=4.18,
+        haskell-src-meta ^>=0.8,
+        template-haskell ^>=2.20
+
+    hs-source-dirs:   app
+
+    default-language: GHC2021
