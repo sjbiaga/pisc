@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-//> using dep org.scalameta:scalameta_2.13:4.9.3
+//> using dep org.scalameta:scalameta_2.13:4.9.5
 //> using dep org.typelevel::cats-effect:3.6-0142603
 
 import scala.annotation.tailrec

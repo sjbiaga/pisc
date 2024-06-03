@@ -50,7 +50,8 @@ object π:
   val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
 
   def cli(src: String)(args: String*) =
-    s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+    s"""scala-cli compile "$src" &>/dev/null;                                            scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args
+      .mkString(" ")
 
   val tmp: String =
     "sh -c 'mktemp -up dotarrow'".!!.stripTrailing.stripPrefix("dotarrow/")
@@ -107,8 +108,8 @@ object π:
     _  <- (
       IO.unit,
       for {
-        _59c60370_c936_419c_8b3d_5cfb0d7db01f <- IO {
-          def _59c60370_c936_419c_8b3d_5cfb0d7db01f(code: `()`): IO[Unit] =
+        _8500f319_594e_4de7_9612_210ab10e78d7 <- IO {
+          def _8500f319_594e_4de7_9612_210ab10e78d7(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -121,13 +122,13 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run)
-                _    <- _59c60370_c936_419c_8b3d_5cfb0d7db01f(code)
+                _    <- _8500f319_594e_4de7_9612_210ab10e78d7(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _59c60370_c936_419c_8b3d_5cfb0d7db01f
+          _8500f319_594e_4de7_9612_210ab10e78d7
         }
         code                                  <- ch()(run)
-        _ <- _59c60370_c936_419c_8b3d_5cfb0d7db01f(code)
+        _ <- _8500f319_594e_4de7_9612_210ab10e78d7(code)
       } yield (),
       for {
         _ <- τ

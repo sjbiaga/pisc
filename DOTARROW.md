@@ -196,3 +196,37 @@ The `Haskell` source files must have a strict format:
 - the last `do` statement must be `return ()`;
 
 - must not output to `stderr`.
+
+DotArrow - `Scala` & `Haskell`
+------------------------------
+
+This type of "mobile code" _alternatively_ takes the form of either
+`Scala` or `Haskell` programming language, but is very restricted.
+
+The `bin/pi.sh` shell script has been added two functions:
+
+- `dotarrowScalaToHaskell` and `dotarrowHaskellToScala`.
+
+To "execute" the "mobile code", parse the `.pisc` file:
+
+    sbt:π-Calculus2Scala> run dotarrow_circe_aeson_ex0
+
+Choose one `Scala` example from the `examples/dotarrow/` folder, e.g., `ex5.scala`
+or `ex6.scala`, then - in a shell -, `cd` to `examples` folder, and run:
+
+    ./examples $ pio dotarrow_circe_aeson_ex0
+    ./examples $ pi dotarrow_circe_aeson_ex0.scala -- ex5
+
+Note how "`ex5`" was passed as an argument to the `main` method
+in `dotarrow_circe_aeson_ex0.scala`.
+
+The `Scala` source files must have even a stricter format:
+
+- no `package` statements;
+
+- only simple arithmetic expressions (without division) of type `Int` in the
+  `IO { }` blocks.
+
+Note that both [`Scala Cli`](https://scala-cli.virtuslab.org/)
+and [`Ammonite`](https://ammonite.io/) must be installed, as well as
+[`Stack`](https://hackage.haskell.org/package/stack).

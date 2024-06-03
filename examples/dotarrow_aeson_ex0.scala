@@ -53,7 +53,7 @@ object π:
     "sh -c 'mktemp -up dotarrow'".!!.stripTrailing.stripPrefix("dotarrow/")
 
   val cwd: String =
-    s"""sh -c 'readlink -m dotarrow/tmp/${tmp}'""".!!.stripTrailing
+    s"""sh -c 'readlink -m dotarrow/tmp/$tmp'""".!!.stripTrailing
 
   var ex: Option[String] = None
 
@@ -61,35 +61,39 @@ object π:
     IO.pure(it.flatMap { src =>
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
-          )}" >| "${cwd}"/app/Main.hs'""".! && 0 == s"""sh -c 'dotarrowAeson ${tmp}'""".! && 0 == s"""sh -c 'dotarrowAeson2 ${tmp}'""".!
-      then { Some(s"""sh -c 'cat "${cwd}"/app/Main.hs'""".!!) }
+          )}" >| "$cwd"/app/Main.hs'""".! && 0 == s"""sh -c 'dotarrowAeson $tmp'""".! && 0 == s"""sh -c 'dotarrowAeson2 $tmp'""".!
+      then Some(s"""sh -c 'cat "$cwd"/app/Main.hs'""".!!)
       else None
     })
   }
 
+  def Init(src: `()`, ch: `()`): IO[Unit] = for {
+    _ <- τ
+    _ <- IO {
+      println(src)
+    }
+    _ <- ch(Some(src.as[String]))
+  } yield ()
+
   def Main(args: String*): IO[Unit] = for {
     _  <- τ
     _  <- IO {
-      s"""sh -c 'cp -r dotarrow/"${args(0)}" "${cwd}"'""".!
+      s"""sh -c 'cp -r dotarrow/"${args(0)}" "$cwd"'""".!
     }
     _  <- τ
     _  <- IO {
-      ex = Some(s"""sh -c 'cat "${cwd}"/app/Main.hs'""".!!)
+      s"""sh -c 'cp ../dotarrow/aeson/json.in "$cwd".json'""".!
     }
     _  <- τ
     _  <- IO {
-      s"""sh -c 'cp ../dotarrow/aeson/json.in "${cwd}".json'""".!
-    }
-    _  <- τ
-    _  <- IO {
-      s"""sh -c 'touch "${cwd}".txt'""".!
+      s"""sh -c 'touch "$cwd".txt'""".!
     }
     ch <- ν
     _  <- (
       IO.unit,
       for {
-        _151e7b36_3e9b_4396_9286_fdf8840067a7 <- IO {
-          def _151e7b36_3e9b_4396_9286_fdf8840067a7(code: `()`): IO[Unit] =
+        _59073c0a_2fad_4dd9_9812_8eba341480a2 <- IO {
+          def _59073c0a_2fad_4dd9_9812_8eba341480a2(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -102,20 +106,14 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run)
-                _    <- _151e7b36_3e9b_4396_9286_fdf8840067a7(code)
+                _    <- _59073c0a_2fad_4dd9_9812_8eba341480a2(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _151e7b36_3e9b_4396_9286_fdf8840067a7
+          _59073c0a_2fad_4dd9_9812_8eba341480a2
         }
         code                                  <- ch()(run)
-        _ <- _151e7b36_3e9b_4396_9286_fdf8840067a7(code)
+        _ <- _59073c0a_2fad_4dd9_9812_8eba341480a2(code)
       } yield (),
-      for {
-        _ <- τ
-        _ <- IO {
-          println(ex.get)
-        }
-        _ <- ch(ex)
-      } yield ()
+      Init(s"""sh -c 'cat "$cwd"/app/Main.hs'""".!!, ch)
     ).parMapN { (_, _, _) => }
   } yield ()

@@ -1,0 +1,103 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import scala.sys.process._
+
+@given Conversion[`()`, Option[String]] = _.as[Option[String]]
+
+@given Conversion[`()`, String] = _.as[String]
+
+@val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
+
+@def cli(src: String)(args: String*) = s"""scala-cli compile "$src" &>/dev/null; \
+                                           scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args.mkString(" ")
+
+@val tmp: String = "sh -c 'mktemp -up dotarrow'" .!! .stripTrailing .stripPrefix("dotarrow/")
+
+@val tmp2: String = "sh -c 'mktemp -up dotarrow'" .!! .stripTrailing .stripPrefix("dotarrow/")
+
+@val cwd: String = s"""sh -c 'readlink -m dotarrow/tmp/$tmp'""" .!! .stripTrailing
+
+@def circe(src: String): Option[String] = {                                                              \
+  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/$tmp.scala"'""" .!                               \
+  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/$tmp.scala")}'""" .!                   \
+  && 0 == s"""sh -c 'dotarrowCirce "$tmp"'""" .!                                                         \
+  then {                                                                                                 \
+    val out = s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""" .lazyLines_!                              ;\
+    if out.nonEmpty                                                                                      \
+    then {                                                                                               \
+      val src = "//> using dep org.typelevel::cats-effect:3.6-0142603\n" +                               \
+                "//> using dep io.circe::circe-generic:0.15.0-M1\n" +                                    \
+                "//> using dep io.circe::circe-parser:0.15.0-M1\n" +                                     \
+                out.mkString("\n")                                                                      ;\
+      if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/$tmp.scala"'""" .!                           \
+      && 0 == s"""sh -c '${cli(s"dotarrow/$tmp.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
+                                                                          >> "$cwd".txt'""" .!           \
+      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/$tmp.scala")}'""" .!               \
+      && 0 == s"""sh -c 'dotarrowCirce2 "$tmp"'""" .!                                                    \
+      then {                                                                                             \
+        Some(s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""" .!!)                                       ;\
+      } else                                                                                             \
+        None                                                                                             \
+    } else                                                                                               \
+      None                                                                                               \
+  } else                                                                                                 \
+    None                                                                                                 \
+}
+
+@val s2s: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap(circe(_))) }
+
+@val h2h: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>  \
+  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "$cwd"/app/Main.hs'""" .!               \
+  && 0 == s"""sh -c 'dotarrowAeson $tmp'""" .!                                        \
+  && 0 == s"""sh -c 'dotarrowAeson2 $tmp'""" .!                                       \
+  then                                                                                \
+    Some(s"""sh -c 'cat "$cwd"/app/Main.hs'""" .!!)                                   \
+  else                                                                                \
+    None                                                                              \
+})}
+
+@val s2h: String => IO[String] = { src => IO.pure {                       \
+  0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/$tmp.scala"'""" .!;  \
+  0 == s"""sh -c 'dotarrowScalaToHaskell $tmp2 $tmp'""" .!;               \
+  s"""sh -c 'cat "$cwd/app/Main.hs"'""" .!!                               \
+}}
+
+@val h2s: String => IO[String] = { src => IO.pure {                    \
+  0 == s"""sh -c 'echo -n "${bsh(src)}" >| "$cwd"/app/Main.hs'""" .!;  \
+  0 == s"""sh -c 'dotarrowHaskellToScala $tmp2 $tmp'""" .!;            \
+  s"""sh -c 'cat "dotarrow/$tmp.scala"'""" .!!                         \
+}}
+
+Sc2Hs(s2, hs) = !.s2(src)/* s2h */. τ /* println('src) */. hs</* Some(src.as[String]) */>.
+
+Hs2Sc(h2, sc) = !.h2(src)/* h2s */. τ /* println('src) */. sc</* Some(src.as[String]) */>.
+
+Aeson(hs, h2, ch) = !.hs(code)/* h2h */.                                   \
+                      if /* 'code.nonEmpty */ = True                       \
+                      then τ /* println('code.get) */. h2</*'code.get*/>.  \
+                      else ch<ch>.
+
+Circe(sc, s2, ch) = !.sc(code)/* s2s */.                                   \
+                      if /* 'code.nonEmpty */ = True                       \
+                      then τ /* println('code.get) */. s2</*'code.get*/>.  \
+                      else ch<ch>.
+
+Start(src, s2, ch) = τ /* println(src) */.                              \
+                     τ /* code <- IO { circe(src) } */.                 \
+                     if /* code.nonEmpty */ = True                      \
+                     then τ /* println(code.get) */. s2</*code.get*/>.  \
+                     else ch<ch>.
+
+Main = τ /* s"""sh -c 'echo -n "{}" >| "$cwd".json'""" .! */.                           \
+       τ /* s"""sh -c 'echo -n >| "$cwd".txt'""" .! */.                                 \
+       τ /* s"""sh -c 'cp -r ../dotarrow/sc2hs/prj "$cwd"'""" .! */.                    \
+       ν(sc)                                                                            \
+       ν(hs)                                                                            \
+       ν(s2)                                                                            \
+       ν(h2)                                                                            \
+       ν(ch) ( 𝟎                                                                        \
+             | Start(/* s"""sh -c 'cat "dotarrow/${args(0)}.scala"'""" .!! */, s2, ch)  \
+             | Circe(sc, s2, ch) | Sc2Hs(s2, hs)                                        \
+             | Aeson(hs, h2, ch) | Hs2Sc(h2, sc)                                        \
+             | ch(ch). sc<>. hs<>. s2<>. h2<>.                                          \
+             )

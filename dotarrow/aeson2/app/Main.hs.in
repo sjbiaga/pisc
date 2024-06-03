@@ -62,6 +62,8 @@ data StmtT = Bind
 stmt :: Stmt -> Maybe (Stmt, StmtT)
 stmt s@(BindS (SigP (VarP _) (ConT _))
               (AppE (VarE (Name (OccName "pure") _)) _)) = Just (s, Bind)
+stmt s@(BindS (SigP (VarP (Name (OccName _) _)) (ConT (Name (OccName "()") _)))
+              (AppE (VarE (Name (OccName "print") _)) _)) = Just (s, Print)
 stmt s@(NoBindS (AppE (VarE (Name (OccName "print") _)) _)) = Just (s, Print)
 stmt s@(NoBindS (AppE (VarE (Name (OccName "return") _)) (ConE (Name (OccName "()") _)))) = Just (s, Return)
 stmt s@(BindS _ _) = Just (s, Ignore)
@@ -73,7 +75,7 @@ main :: IO ()
 main = do
     args <- getArgs
     src <- readFile (head args)
-    let decs = case parseDecs src of Right r -> r
+    let Right decs = parseDecs src
     let val' = val (last decs)
     when (length decs >= 2 && isJust (sig (last (init decs))) && isJust val') $ do
         let app = ppr (init decs ++ [fromJust val'])

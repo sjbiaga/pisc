@@ -1,10 +1,13 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @import scala.sys.process._
 
 @given Conversion[`()`, Option[String]] = _.as[Option[String]]
 
 @val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
 
-@def cli(src: String)(args: String*) = s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+@def cli(src: String)(args: String*) = s"""scala-cli compile "$src" &>/dev/null; \
+                                           scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args.mkString(" ")
 
 @val tmp: String = "sh -c 'mktemp -up dotarrow'" .!! .stripTrailing .stripPrefix("dotarrow/")
 
@@ -61,40 +64,36 @@ Node1 = ν(ch) ( 𝟎                                                   \
 # ex4.scala #
 #############
 
-@val _ = s"""sh -c 'cp ../dotarrow/circe/json.in dotarrow/tmp/"${tmp}_ex4.scala.json"'""" .!
-@val _ = s"""sh -c 'touch dotarrow/tmp/"${tmp}_ex4.scala.txt"'""" .!
+@val _ = s"""sh -c 'echo "{}" >| dotarrow/tmp/"$tmp.json"'""" .!
+@val _ = s"""sh -c 'touch dotarrow/tmp/"$tmp.txt"'""" .!
 
 @val ex4: Option[String] = Some("""sh -c 'cat "dotarrow/ex4.scala"'""" .!!)
 
-@val run_ex4: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                       \
-  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex4.scala"'""" .!                               \
-  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex4.scala")}'""" .!                   \
-  && 0 == s"""sh -c 'dotarrowCirce "${tmp}_ex4.scala"'""" .!                                                   \
-  && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex4.scala.tmp" dotarrow/"${tmp}_ex4.scala"'""" .!                 \
-  && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex4.scala.src" &>/dev/null'""" .!                                 \
-  then {                                                                                                       \
-    val out = s"""sh -c '${cli(s"dotarrow/${tmp}_ex4.scala")()}'""" .lazyLines_!                              ;\
-    if out.nonEmpty                                                                                            \
-    then {                                                                                                     \
-      val src = "//> using dep org.typelevel::cats-effect:3.6-0142603\n" +                                     \
-                "//> using dep io.circe::circe-generic:0.15.0-M1\n" +                                          \
-                "//> using dep io.circe::circe-parser:0.15.0-M1\n" +                                           \
-                out.mkString("\n")                                                                            ;\
-      if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/${tmp}_ex4.scala"'""" .!                           \
-      && 0 == s"""sh -c '${cli(s"dotarrow/${tmp}_ex4.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
-                                                                >> "dotarrow/tmp/${tmp}_ex4.scala.txt"'""" .!  \
-      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/${tmp}_ex4.scala")}'""" .!               \
-      && 0 == s"""sh -c 'dotarrowCirce2 "${tmp}_ex4.scala"'""" .!                                              \
-      && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex4.scala.tmp" dotarrow/"${tmp}_ex4.scala"'""" .!             \
-      && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex4.scala.src"' &>/dev/null""" .!                             \
-      then {                                                                                                   \
-        Some(s"""sh -c '${cli(s"dotarrow/${tmp}_ex4.scala")()}'""" .!!)                                       ;\
-      } else                                                                                                   \
-        None                                                                                                   \
-    } else                                                                                                     \
-      None                                                                                                     \
-  } else                                                                                                       \
-    None                                                                                                       \
+@val run_ex4: Option[String] => IO[Option[String]] = { it => IO.pure(it.flatMap { src =>                 \
+  if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/$tmp.scala"'""" .!                               \
+  && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/$tmp.scala")}'""" .!                   \
+  && 0 == s"""sh -c 'dotarrowCirce "$tmp"'""" .!                                                         \
+  then {                                                                                                 \
+    val out = s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""" .lazyLines_!                              ;\
+    if out.nonEmpty                                                                                      \
+    then {                                                                                               \
+      val src = "//> using dep org.typelevel::cats-effect:3.6-0142603\n" +                               \
+                "//> using dep io.circe::circe-generic:0.15.0-M1\n" +                                    \
+                "//> using dep io.circe::circe-parser:0.15.0-M1\n" +                                     \
+                out.mkString("\n")                                                                      ;\
+      if 0 == s"""sh -c 'echo -n "${bsh(src)}" >| "dotarrow/$tmp.scala"'""" .!                           \
+      && 0 == s"""sh -c '${cli(s"dotarrow/$tmp.scala")()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"  \
+                                                          >> "dotarrow/tmp/$tmp.txt"'""" .!              \
+      && 0 == s"""sh -c '${cli("../dotarrow/source.scala")(s"dotarrow/$tmp.scala")}'""" .!               \
+      && 0 == s"""sh -c 'dotarrowCirce2 "$tmp"'""" .!                                                    \
+      then {                                                                                             \
+        Some(s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""" .!!)                                       ;\
+      } else                                                                                             \
+        None                                                                                             \
+    } else                                                                                               \
+      None                                                                                               \
+  } else                                                                                                 \
+    None                                                                                                 \
 })}
 
 Node2 = ν(ch)ν(lnk) ( 𝟎 | Node3(ch) | Node4(ch, lnk) )

@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @import scala.util.control.TailCalls.{ done, tailcall, TailRec }
 
 @given Conversion[`()`, Long] = _.as[Long]

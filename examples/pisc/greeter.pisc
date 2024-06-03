@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
 @given Conversion[`()`, String] = _.as[String]

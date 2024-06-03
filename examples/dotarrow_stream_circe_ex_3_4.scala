@@ -50,7 +50,8 @@ object π:
   val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
 
   def cli(src: String)(args: String*) =
-    s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+    s"""scala-cli compile "$src" &>/dev/null;                                            scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args
+      .mkString(" ")
 
   val tmp: String =
     "sh -c 'mktemp -up dotarrow'".!!.stripTrailing.stripPrefix("dotarrow/")
@@ -100,8 +101,8 @@ object π:
     _  <- (
       IO.unit,
       for {
-        _593d42d9_e758_4037_b3f6_4c25aca5b151 <- IO {
-          def _593d42d9_e758_4037_b3f6_4c25aca5b151(code: `()`): IO[Unit] =
+        _5e460c70_ed7d_47f8_b7ee_a205c2f4aadd <- IO {
+          def _5e460c70_ed7d_47f8_b7ee_a205c2f4aadd(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -114,13 +115,13 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run_ex3)
-                _    <- _593d42d9_e758_4037_b3f6_4c25aca5b151(code)
+                _    <- _5e460c70_ed7d_47f8_b7ee_a205c2f4aadd(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _593d42d9_e758_4037_b3f6_4c25aca5b151
+          _5e460c70_ed7d_47f8_b7ee_a205c2f4aadd
         }
         code                                  <- ch()(run_ex3)
-        _ <- _593d42d9_e758_4037_b3f6_4c25aca5b151(code)
+        _ <- _5e460c70_ed7d_47f8_b7ee_a205c2f4aadd(code)
       } yield (),
       for {
         _ <- τ
@@ -132,10 +133,9 @@ object π:
     ).parMapN { (_, _, _) => }
   } yield ()
 
-  val _ =
-    s"""sh -c 'cp ../dotarrow/circe/json.in dotarrow/tmp/"${tmp}_ex4.scala.json"'""".!
+  val _ = s"""sh -c 'echo "{}" >| dotarrow/tmp/"$tmp.json"'""".!
 
-  val _ = s"""sh -c 'touch dotarrow/tmp/"${tmp}_ex4.scala.txt"'""".!
+  val _ = s"""sh -c 'touch dotarrow/tmp/"$tmp.txt"'""".!
 
   val ex4: Option[String] = Some("""sh -c 'cat "dotarrow/ex4.scala"'""".!!)
 
@@ -143,30 +143,28 @@ object π:
     IO.pure(it.flatMap { src =>
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
-          )}" >| "dotarrow/${tmp}_ex4.scala"'""".! && 0 == s"""sh -c '${cli(
+          )}" >| "dotarrow/$tmp.scala"'""".! && 0 == s"""sh -c '${cli(
             "../dotarrow/source.scala"
           )(
-            s"dotarrow/${tmp}_ex4.scala"
-          )}'""".! && 0 == s"""sh -c 'dotarrowCirce "${tmp}_ex4.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex4.scala.tmp" dotarrow/"${tmp}_ex4.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex4.scala.src" &>/dev/null'""".!
+            s"dotarrow/$tmp.scala"
+          )}'""".! && 0 == s"""sh -c 'dotarrowCirce "$tmp"'""".!
       then {
-        val out =
-          s"""sh -c '${cli(s"dotarrow/${tmp}_ex4.scala")()}'""".lazyLines_!;
+        val out = s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""".lazyLines_!;
         if out.nonEmpty then {
           val src =
             "//> using dep org.typelevel::cats-effect:3.6-0142603\n" + "//> using dep io.circe::circe-generic:0.15.0-M1\n" + "//> using dep io.circe::circe-parser:0.15.0-M1\n" + out
               .mkString("\n");
           if 0 == s"""sh -c 'echo -n "${bsh(
                 src
-              )}" >| "dotarrow/${tmp}_ex4.scala"'""".! && 0 == s"""sh -c '${cli(
-                s"dotarrow/${tmp}_ex4.scala"
-              )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                                  >> "dotarrow/tmp/${tmp}_ex4.scala.txt"'""".! && 0 == s"""sh -c '${cli(
+              )}" >| "dotarrow/$tmp.scala"'""".! && 0 == s"""sh -c '${cli(
+                s"dotarrow/$tmp.scala"
+              )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                            >> "dotarrow/tmp/$tmp.txt"'""".! && 0 == s"""sh -c '${cli(
                 "../dotarrow/source.scala"
               )(
-                s"dotarrow/${tmp}_ex4.scala"
-              )}'""".! && 0 == s"""sh -c 'dotarrowCirce2 "${tmp}_ex4.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex4.scala.tmp" dotarrow/"${tmp}_ex4.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex4.scala.src"' &>/dev/null""".!
-          then {
-            Some(s"""sh -c '${cli(s"dotarrow/${tmp}_ex4.scala")()}'""".!!);
-          } else None
+                s"dotarrow/$tmp.scala"
+              )}'""".! && 0 == s"""sh -c 'dotarrowCirce2 "$tmp"'""".!
+          then { Some(s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""".!!); }
+          else None
         } else None
       } else None
     })

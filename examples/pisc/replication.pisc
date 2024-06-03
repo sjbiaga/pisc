@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @import scala.concurrent.duration._
 
 @val gen = new scala.util.Random

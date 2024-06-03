@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @given Conversion[`()`, Long] = _.as[Long]
 
 @val max = 13

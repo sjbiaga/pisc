@@ -1,0 +1,180 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE LambdaCase #-}
+module Main where
+
+import Data.ByteString.Lazy.Char8 (unpack)
+import Language.Haskell.Interpreter
+import Language.Haskell.TH.Syntax
+import System.Process.Typed
+import System.Random
+import System.IO.Unsafe
+
+import HaScalaM.Classes
+import HaScalaM.Classes.Base
+import HaScalaM.Instances.Base
+import HaScalaM.Instances.Enums
+import HaScalaM.Instances.Pat
+import HaScalaM.Instances.Ref
+import HaScalaM.Instances.Stat
+import HaScalaM.Instances.Term
+import HaScalaM.Instances.Type
+import HaScalaM.Instances.Tilde
+import HaScalaM.Instances.Show
+import HaScalaM.Types.Base
+import HaScalaM.Types.Enums
+import HaScalaM.Types.Pat
+import HaScalaM.Types.Ref
+import HaScalaM.Types.Stat
+import HaScalaM.Types.Term
+import HaScalaM.Types.Type
+import HaScalaM.Types.Tilde
+
+source =
+
+amm :: MonadInterpreter mi => String -> mi String
+amm exp =
+       do
+          (out, _) <- readProcess_ (proc "amm" ["-c", i ++ i2 ++ pr])
+          return (unpack out)
+    where i = "import $ivy.`org.scalameta:scalameta_2.13:4.9.5`;"
+          i2 = "import scala.meta._; import dialects.Scala3;"
+          pr = "print(" ++ exp ++ ")"
+
+rnd :: String
+rnd = take 10 $ randomRs ('a','z') $ unsafePerformIO newStdGen
+
+src :: ( s ~ SmStat
+       , MonadInterpreter mi ) => SmSource s -> mi ()
+src (SmSource [SImpExp (SmImportS [io])
+              ,SObject (SmObjectS [] (SmNameT "App") it)
+              ]
+    ) = imp io >> app it
+src _ = pure ()
+
+imp :: ( r ~ SmRef
+       , i ~ SmImportee
+       , MonadInterpreter mi
+       ) => SmImporter r i -> mi ()
+imp (SmImporter (RTSelect (SmSelectRT (TRef (RTName (SmNameT "cats"))) (SmNameT "effect")))
+                [SmNameI (NName (SmIndeterminateN "IO"))
+                ,SmNameI (NName (SmIndeterminateN "IOApp"))
+                ]
+    ) = pure ()
+imp _ = error "imp"
+
+app :: ( i ~ SmInit m n t' t ac
+       , s ~ SmStat
+       , p ~ SmSelf n t'
+       , MonadInterpreter mi
+       ) => SmTemplate m n t' t ac i p s -> mi ()
+app (SmTemplate [] [SmInit (T'Ref (RT'Ref (SmSelectRT' (RTName (SmNameT "IOApp"))
+                                                       (SmNameT' "Simple"))))
+                           (NName SmAnonymousN) []
+                   ]
+                (SmSelf (NName SmAnonymousN) Nothing)
+                [SDef run] []) = def run
+app _ = error "app"
+
+def :: ( m ~ SmMod
+       , n ~ SmName
+       , t' ~ SmType'
+       , t ~ SmTerm
+       , tn ~ SmNameT
+       , g ~ SmParamClauseGroup m n p p' t' b' t pc pc'
+       , MonadInterpreter mi
+       ) => SmDefS m n tn p p' t' b' t pc pc' g -> mi ()
+def (SmDefS [MMod SmOverrideM] (SmNameT "run") []
+            (Just (T'Apply (SmApplyT' (T'Ref (RT'Name (SmNameT' "IO")))
+                                      (SmArgClauseT' [T'Ref (RT'Name (SmNameT' "Unit"))]))))
+            (TForYield it)
+    ) =
+     do
+        ppr ("SigD (Name (OccName \"main\") NameS)" ++
+                  "(AppT (ConT (Name (OccName \"IO\") NameS)) (TupleT 0))")
+        for it
+def _ = error "def"
+
+for ::  ( e ~ SmEnumerator
+        , t ~ SmTerm
+        , MonadInterpreter mi
+        ) => SmForYieldT e t -> mi ()
+for (SmForYieldT it (TLit SmUnitL)) = gs'
+    where gs = foldl (\r e -> r >>= (\(_, i) -> case e
+                                                of EGenerator g -> do t <- gen g
+                                                                      if i + 1 == length it
+                                                                      then
+                                                                          case t
+                                                                          of IOvoid -> pure (t, -1)
+                                                                             _      -> pure (IOerror, -1)
+                                                                      else
+                                                                          pure (t, i + 1)
+                                                   _            -> undefined))
+                     (pure (IOerror, 0)) it
+          gs' = gs >>= (\case (IOerror, _) -> error "for"
+                              _            -> pure ()
+                       )
+
+data GeneratorType = IOerror
+                   | IObind
+                   | IOprintln
+                   | IOvoid
+                   | IOignore
+
+bnd :: MonadInterpreter mi => String -> String -> mi ()
+bnd name = runStmt . ((name ++ "<- [| pure (") ++) . (++ ") |]")
+
+bnd' :: MonadInterpreter mi => String -> String -> mi ()
+bnd' name = runStmt . ((name ++ "<- [| ") ++) . (++ " |]")
+
+ppr :: MonadInterpreter mi => String -> mi ()
+ppr = runStmt . ("ppr (" ++) . (++ ")")
+
+gen :: ( p ~ SmPat
+       , t ~ SmTerm
+       , MonadInterpreter mi
+       ) => SmGeneratorE p t -> mi GeneratorType
+gen (SmGeneratorE (PPat (SmTypedP (PVar (SmVarP (SmNameT name))) (T'Ref (RT'Name (SmNameT' "Unit")))))
+                  (TApply (SmApplyT (TRef (RTName (SmNameT "IO")))
+                                    (SmArgClauseT [TTerm (SmBlockT [STerm (TApply (SmApplyT (TRef (RTName (SmNameT "println")))
+                                                                                            (SmArgClauseT [expr] Nothing)))
+                                                                   ])
+                                                  ] Nothing)))
+    ) = amm (show expr)
+    >>= bnd' name'
+    >>  ppr ("(BindS (SigP (VarP (Name (OccName \"" ++ name ++ "\") NameS)) " ++
+                          "(ConT (Name (OccName \"()\") NameS))) " ++
+                    "(AppE (VarE (Name (OccName \"print\") NameS)) " ++
+                           name' ++
+            "))")
+    >>  pure IOprintln
+    where Name (OccName name') _ = mkName rnd
+gen (SmGeneratorE (PPat (SmTypedP (PVar (SmVarP (SmNameT name)))
+                                  (T'Ref (RT'Name (SmNameT' type')))))
+                  (TApply (SmApplyT (TRef (RTName (SmNameT "IO")))
+                                    (SmArgClauseT [TTerm (SmBlockT [expr])] Nothing)))
+    ) = amm (show expr)
+    >>= bnd name'
+    >>  ppr ("(BindS (SigP (VarP (Name (OccName \"" ++ name ++ "\") NameS)) " ++
+                          "(ConT (Name (OccName \"" ++ type' ++ "\") NameS))) " ++
+                     name' ++
+             ")")
+    >>  pure IObind
+    where Name (OccName name') _ = mkName rnd
+gen (SmGeneratorE (PPat SmWildcardP)
+                  (TRef (RTSelect (SmSelectRT (TApply (SmApplyT (TRef (RTName (SmNameT "IO")))
+                                                                (SmArgClauseT [TTerm (SmBlockT [])] Nothing)))
+                                              (SmNameT "void"))))
+    ) = ppr ("(NoBindS (AppE (VarE (Name (OccName \"return\") NameS)) " ++
+                            "(ConE (Name (OccName \"()\") NameS)))" ++
+             ")")
+    >>  pure IOvoid
+gen _ = error "gen"
+
+main :: IO ()
+main = do
+  _ <- runInterpreter
+     $ setImports ["Prelude", "Language.Haskell.TH.Syntax", "Language.Haskell.TH.Ppr", "System.IO"]
+    >> set [languageExtensions := [Language.Haskell.Interpreter.TemplateHaskell]]
+    >> src source
+    >> runStmt "hFlush stdout"
+  return ()

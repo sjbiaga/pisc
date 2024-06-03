@@ -5,7 +5,6 @@ import System.IO (hPutStrLn, stderr) --  dotarrow
 import Inp_gUgVwYdD8r                --  dotarrow
 import Out_gUgVwYdD8r                --  dotarrow
 
-
 main :: IO ()
 main = do
     x :: Int <- pure ( 2 + 5 )

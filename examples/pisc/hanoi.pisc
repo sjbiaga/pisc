@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @given Conversion[`()`, Int] = _.as[Int]
 
 @val ! : String => IO[String] = { _ => IO.pure(null) }

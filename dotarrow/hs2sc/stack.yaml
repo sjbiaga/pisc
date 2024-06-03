@@ -1,0 +1,10 @@
+resolver:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/21.yaml
+
+packages:
+- .
+
+extra-deps:
+  - archive: ./hascalam-0.1.1.0.tar.gz
+
+system-ghc: false

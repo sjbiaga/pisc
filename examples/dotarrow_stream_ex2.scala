@@ -50,7 +50,8 @@ object π:
   val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
 
   def cli(src: String)(args: String*) =
-    s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+    s"""scala-cli compile "$src" &>/dev/null;                                            scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args
+      .mkString(" ")
 
   val tmp: String =
     "sh -c 'mktemp -up dotarrow'".!!.stripTrailing.stripPrefix("dotarrow/")

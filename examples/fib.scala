@@ -55,8 +55,8 @@ object π:
     num <- ν
     _   <- (
       for {
-        _5eba5565_9909_414d_baca_b69177b8c3c8 <- IO {
-          def _5eba5565_9909_414d_baca_b69177b8c3c8(n: `()`): IO[Unit] =
+        _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75 <- IO {
+          def _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n: `()`): IO[Unit] =
             if (!n) IO.cede
             else (
               for {
@@ -76,13 +76,13 @@ object π:
               } yield (),
               for {
                 n <- num()
-                _ <- _5eba5565_9909_414d_baca_b69177b8c3c8(n)
+                _ <- _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n)
               } yield ()
             ).parMapN { (_, _) => }
-          _5eba5565_9909_414d_baca_b69177b8c3c8
+          _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75
         }
         n                                     <- num()
-        _ <- _5eba5565_9909_414d_baca_b69177b8c3c8(n)
+        _ <- _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n)
       } yield (),
       for (_ <- num(random)) yield ()
     ).parMapN { (_, _) => }

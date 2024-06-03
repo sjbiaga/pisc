@@ -50,7 +50,8 @@ object π:
   val bsh: String => String = _.replaceAll("([`\"\\\\$])", "\\\\$1")
 
   def cli(src: String)(args: String*) =
-    s"scala-cli run $src -q -O -nowarn -S 3.4.2-RC1 -- " + args.mkString(" ")
+    s"""scala-cli compile "$src" &>/dev/null;                                            scala-cli run "$src" -q -O -nowarn -S 3.5.0-RC1 -- """ + args
+      .mkString(" ")
 
   val tmp: String =
     "sh -c 'mktemp -up dotarrow'".!!.stripTrailing.stripPrefix("dotarrow/")
@@ -61,54 +62,56 @@ object π:
     IO.pure(it.flatMap { src =>
       if 0 == s"""sh -c 'echo -n "${bsh(
             src
-          )}" >| "dotarrow/${tmp}_ex0.scala"'""".! && 0 == s"""sh -c '${cli(
+          )}" >| "dotarrow/$tmp.scala"'""".! && 0 == s"""sh -c '${cli(
             "../dotarrow/source.scala"
           )(
-            s"dotarrow/${tmp}_ex0.scala"
-          )}'""".! && 0 == s"""sh -c 'dotarrowCirce "${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src" &>/dev/null'""".!
+            s"dotarrow/$tmp.scala"
+          )}'""".! && 0 == s"""sh -c 'dotarrowCirce "$tmp"'""".!
       then {
-        val out =
-          s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()}'""".lazyLines_!;
+        val out = s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""".lazyLines_!;
         if out.nonEmpty then {
           val src =
             "//> using dep org.typelevel::cats-effect:3.6-0142603\n" + "//> using dep io.circe::circe-generic:0.15.0-M1\n" + "//> using dep io.circe::circe-parser:0.15.0-M1\n" + out
               .mkString("\n");
           if 0 == s"""sh -c 'echo -n "${bsh(
                 src
-              )}" >| "dotarrow/${tmp}_ex0.scala"'""".! && 0 == s"""sh -c '${cli(
-                s"dotarrow/${tmp}_ex0.scala"
-              )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                                  >> "dotarrow/tmp/${tmp}_ex0.scala.txt"'""".! && 0 == s"""sh -c '${cli(
+              )}" >| "dotarrow/$tmp.scala"'""".! && 0 == s"""sh -c '${cli(
+                s"dotarrow/$tmp.scala"
+              )()} 3>&1 1>&2- 2>&3- | sed -e "s/[ ]/\\\\\\\\ /g"                                                            >> "dotarrow/tmp/$tmp.txt"'""".! && 0 == s"""sh -c '${cli(
                 "../dotarrow/source.scala"
               )(
-                s"dotarrow/${tmp}_ex0.scala"
-              )}'""".! && 0 == s"""sh -c 'dotarrowCirce2 "${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'mv dotarrow/tmp/"${tmp}_ex0.scala.tmp" dotarrow/"${tmp}_ex0.scala"'""".! && 0 == s"""sh -c 'rm dotarrow/src/"${tmp}_ex0.scala.src"' &>/dev/null""".!
-          then {
-            Some(s"""sh -c '${cli(s"dotarrow/${tmp}_ex0.scala")()}'""".!!);
-          } else None
+                s"dotarrow/$tmp.scala"
+              )}'""".! && 0 == s"""sh -c 'dotarrowCirce2 "$tmp"'""".!
+          then { Some(s"""sh -c '${cli(s"dotarrow/$tmp.scala")()}'""".!!); }
+          else None
         } else None
       } else None
     })
   }
 
+  def Init(src: `()`, ch: `()`): IO[Unit] = for {
+    _ <- τ
+    _ <- IO {
+      println(src)
+    }
+    _ <- ch(Some(src.as[String]))
+  } yield ()
+
   def Main(args: String*): IO[Unit] = for {
     _  <- τ
     _  <- IO {
-      ex = Some(s"""sh -c 'cat "dotarrow/${args(0)}.scala"'""".!!)
+      s"""sh -c 'echo "{}" >| dotarrow/tmp/"$tmp.json"'""".!
     }
     _  <- τ
     _  <- IO {
-      s"""sh -c 'cp ../dotarrow/circe/json.in dotarrow/tmp/"${tmp}_ex0.scala.json"'""".!
-    }
-    _  <- τ
-    _  <- IO {
-      s"""sh -c 'touch dotarrow/tmp/"${tmp}_ex0.scala.txt"'""".!
+      s"""sh -c 'touch dotarrow/tmp/"$tmp.txt"'""".!
     }
     ch <- ν
     _  <- (
       IO.unit,
       for {
-        _52dbc1b2_1183_4580_ab2b_36dd0c8703b5 <- IO {
-          def _52dbc1b2_1183_4580_ab2b_36dd0c8703b5(code: `()`): IO[Unit] =
+        _070b5655_9de6_4c28_bf73_c6cf24dd2413 <- IO {
+          def _070b5655_9de6_4c28_bf73_c6cf24dd2413(code: `()`): IO[Unit] =
             if (!code) IO.cede
             else (
               if (code.nonEmpty ==== true) for {
@@ -121,20 +124,14 @@ object π:
               else for (_ <- ch(`()`(null))) yield (),
               for {
                 code <- ch()(run)
-                _    <- _52dbc1b2_1183_4580_ab2b_36dd0c8703b5(code)
+                _    <- _070b5655_9de6_4c28_bf73_c6cf24dd2413(code)
               } yield ()
             ).parMapN { (_, _) => }
-          _52dbc1b2_1183_4580_ab2b_36dd0c8703b5
+          _070b5655_9de6_4c28_bf73_c6cf24dd2413
         }
         code                                  <- ch()(run)
-        _ <- _52dbc1b2_1183_4580_ab2b_36dd0c8703b5(code)
+        _ <- _070b5655_9de6_4c28_bf73_c6cf24dd2413(code)
       } yield (),
-      for {
-        _ <- τ
-        _ <- IO {
-          println(ex.get)
-        }
-        _ <- ch(ex)
-      } yield ()
+      Init(s"""sh -c 'cat "dotarrow/${args(0)}.scala"'""".!!, ch)
     ).parMapN { (_, _, _) => }
   } yield ()
