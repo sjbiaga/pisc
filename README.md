@@ -443,3 +443,5 @@ To get the intermediary `in/ex.scala.in` file, execute the `run` command in the 
 
 where `example/pisc/ex.pisc` contains the stochastic π-calculus source (equations binding
 agents to process expressions).
+
+Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

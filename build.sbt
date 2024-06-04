@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "3.4.2-RC1"
+ThisBuild / scalaVersion := "3.5.0-RC1"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -17,8 +17,8 @@ lazy val root = (project in file("."))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.4.2-RC1",
-    crossScalaVersions ++= Seq("2.13.14", "3.4.2-RC1"),
+    scalaVersion := "3.5.0-RC1",
+    crossScalaVersions ++= Seq("2.13.14", "3.5.0-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
