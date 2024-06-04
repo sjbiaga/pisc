@@ -24,9 +24,7 @@ lazy val root = (project in file("."))
   )
 
 unmanagedSources / excludeFilter := "pi*.scala" ||
-                                    "dotarrow/*.scala" ||
-                                    "examples/*.scala" ||
-                                    "examples/dotarrow/*.scala"
+                                    "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

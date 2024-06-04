@@ -298,5 +298,5 @@ Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.
 DotArrow
 --------
 
-[`DotArrow`](https://github.com/sjbiaga/pisc/blob/main/DOTARROW.md) is the codename
+[`DotArrow`](https://github.com/sjbiaga/pisc-dotarrow) is the codename
 for "_mobile code_". It is implemented in a very simplistic fashion.
