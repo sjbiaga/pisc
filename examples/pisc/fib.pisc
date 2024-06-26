@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @given Conversion[`()`, Long] = _.as[Long]
 
 @val max = 11
@@ -7,10 +9,8 @@
 @def random = 3+gen.nextLong(max-2)
 
 Main = ν(num)                                           \
-     ( 𝟎                                                \
-     | (!.num(n).                                       \
-        ν(in) ( 𝟎                                       \
-              | Fib(n, in)                              \
+     ( (!.num(n).                                       \
+        ν(in) ( Fib(n, in)                              \
               | in(fib).                                \
                 τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
                 num</*random*/>.                        \
@@ -21,8 +21,7 @@ Main = ν(num)                                           \
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
               ν(f)                       \
-              ( 𝟎                        \
-              | Fibonacci(f, n)          \
+              ( Fibonacci(f, n)          \
               | f@∞(res).out<res>.       \
               )
 
@@ -31,8 +30,7 @@ Fibonacci(f, n) = if /*'n < 2*/ = True               \
                     f@∞<n>.                          \
                   else                               \
                     ν(g)ν(h)                         \
-                    ( 𝟎                              \
-                    | Fibonacci(g, /*'n-1*/)         \
+                    ( Fibonacci(g, /*'n-1*/)         \
                     | Fibonacci(h, /*'n-2*/)         \
                     | g@∞(p).h@∞(r).f@∞</*'p+'r*/>.  \
                     )

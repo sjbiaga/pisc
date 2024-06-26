@@ -83,7 +83,7 @@ object Program:
       case `|`(operand, _*) =>
         * = body(operand)(false)
 
-      case _: `|` => ???
+      case _: `|` => ??? // impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 

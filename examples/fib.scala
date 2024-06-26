@@ -69,33 +69,33 @@ object π:
 
   val `π-spell`: `Π-Map`[String, `Π-Set`[String]] =
     _root_.scala.collection.immutable.Map(
-      "3c14c50c-2f25-46b5-bc88-b678658ea716" -> _root_.scala.collection.immutable
+      "15794edb-7a9d-42a0-b9c1-c45c743d29cb" -> _root_.scala.collection.immutable
         .Set(),
-      "4ff275ea-6d03-4383-a086-01aa21e6e9ba" -> _root_.scala.collection.immutable
+      "86a11619-baf6-48fd-b66e-ce496e6b3662" -> _root_.scala.collection.immutable
         .Set(),
-      "3a1ed11b-f5b4-4f5b-a901-f43a670667f8" -> _root_.scala.collection.immutable
-        .Set("4ff275ea-6d03-4383-a086-01aa21e6e9ba"),
-      "7bbf7151-ac4e-4c0a-88e0-29e80793d733" -> _root_.scala.collection.immutable
-        .Set("84bf1dc5-c472-447c-b60f-197729cbca59"),
-      "19808100-d00b-4dcf-9b6f-b984a146336a" -> _root_.scala.collection.immutable
-        .Set("6e7e53de-d0ae-4ad4-886e-ee6a96b5f3a9"),
-      "6e7e53de-d0ae-4ad4-886e-ee6a96b5f3a9" -> _root_.scala.collection.immutable
+      "041c92dc-3e69-4d8b-9347-dffd1d2fdbb2" -> _root_.scala.collection.immutable
+        .Set("33c2da7f-dfb5-4513-ab39-58d0a01fb71e"),
+      "1b085ca6-b733-4c4d-83cc-0f6c77b47cf1" -> _root_.scala.collection.immutable
+        .Set("61c4c061-1847-47fc-99a2-085c43c6573a"),
+      "ec9a5513-d213-45cf-b250-0365430f322b" -> _root_.scala.collection.immutable
+        .Set("86a11619-baf6-48fd-b66e-ce496e6b3662"),
+      "7cd91bf2-b1d0-425d-b9dd-265139816547" -> _root_.scala.collection.immutable
+        .Set("ec9a5513-d213-45cf-b250-0365430f322b"),
+      "d3ff2d7a-e89b-4567-8573-906cc795059c" -> _root_.scala.collection.immutable
         .Set(),
-      "57a1440a-951c-4d25-a270-b1fe23e617fa" -> _root_.scala.collection.immutable
-        .Set("19808100-d00b-4dcf-9b6f-b984a146336a"),
-      "84bf1dc5-c472-447c-b60f-197729cbca59" -> _root_.scala.collection.immutable
+      "33c2da7f-dfb5-4513-ab39-58d0a01fb71e" -> _root_.scala.collection.immutable
+        .Set("15794edb-7a9d-42a0-b9c1-c45c743d29cb"),
+      "52bc53f4-6f7f-403b-a75a-1ca1d84f196a" -> _root_.scala.collection.immutable
         .Set(),
-      "a2ad6581-a40a-4f7b-a62b-8af802d50138" -> _root_.scala.collection.immutable
-        .Set("7bbf7151-ac4e-4c0a-88e0-29e80793d733"),
-      "4a055f12-bd57-4359-8c2b-cee214da99aa" -> _root_.scala.collection.immutable
+      "05d72d97-5968-405d-a7bf-ef6a99bc9b32" -> _root_.scala.collection.immutable
         .Set(
-          "4a055f12-bd57-4359-8c2b-cee214da99aa",
-          "57a1440a-951c-4d25-a270-b1fe23e617fa"
+          "05d72d97-5968-405d-a7bf-ef6a99bc9b32",
+          "7cd91bf2-b1d0-425d-b9dd-265139816547"
         ),
-      "3b49fb3b-3489-499a-b64d-800abdfdcaab" -> _root_.scala.collection.immutable
-        .Set(),
-      "81c77f4a-604e-4aef-aab9-fd80f243fe7c" -> _root_.scala.collection.immutable
-        .Set("3a1ed11b-f5b4-4f5b-a901-f43a670667f8")
+      "61c4c061-1847-47fc-99a2-085c43c6573a" -> _root_.scala.collection.immutable
+        .Set("d3ff2d7a-e89b-4567-8573-906cc795059c"),
+      "c4482750-946a-4b41-9506-887482639e36" -> _root_.scala.collection.immutable
+        .Set()
     )
 
   implicit val `π-wand`
@@ -112,50 +112,49 @@ object π:
 
   def Main(args: String*)(using ^ : String)(using % : %, / : /): IO[Unit] = for {
     _ <- IO.unit
-    _db2f9053_3bcb_4501_91f6_74f2d9395d5a =
+    _46d31378_3a3d_40f2_a949_5c2dc1779ce1 =
       _root_.scala.collection.immutable.Set(
-        "4a055f12-bd57-4359-8c2b-cee214da99aa",
-        "3b49fb3b-3489-499a-b64d-800abdfdcaab"
+        "05d72d97-5968-405d-a7bf-ef6a99bc9b32",
+        "52bc53f4-6f7f-403b-a75a-1ca1d84f196a"
       )
-    _   <- `π-enable`(_db2f9053_3bcb_4501_91f6_74f2d9395d5a)
+    _   <- `π-enable`(_46d31378_3a3d_40f2_a949_5c2dc1779ce1)
     num <- ν
     _   <- (
       `π-supervised`(for {
-        _05b98b4b_5d46_4f77_9518_150d7f886ec3 <- IO {
-          def _05b98b4b_5d46_4f77_9518_150d7f886ec3(n: `()`)
+        _72e7923b_27bc_4004_834f_935ecb23b6c1 <- IO {
+          def _72e7923b_27bc_4004_834f_935ecb23b6c1(n: `()`)
             : String => IO[Unit] = { implicit ^ =>
             if (!n) IO.unit
             else (
               `π-supervised`(for {
                 in <- ν
                 _  <- (
-                  IO.unit,
                   `π-supervised`(Fib(n, in)(using `π-uuid`)),
                   `π-supervised`(for {
                     (fib, _) <-
-                      in(⊤(1L))("57a1440a-951c-4d25-a270-b1fe23e617fa")
-                    _        <- τ(⊤(1L))("19808100-d00b-4dcf-9b6f-b984a146336a")
+                      in(⊤(1L))("7cd91bf2-b1d0-425d-b9dd-265139816547")
+                    _        <- τ(⊤(1L))("ec9a5513-d213-45cf-b250-0365430f322b")
                     _        <- IO {
                       println(s"fib(${n}) = ${fib}")
                     }
                     _        <-
-                      num(⊤(1L), random)("6e7e53de-d0ae-4ad4-886e-ee6a96b5f3a9")
+                      num(⊤(1L), random)("86a11619-baf6-48fd-b66e-ce496e6b3662")
                   } yield ())
-                ).parMapN { (_, _, _) => }
+                ).parMapN { (_, _) => }
               } yield ()),
               `π-supervised`(for {
-                (n, _) <- num(⊤(1L))("4a055f12-bd57-4359-8c2b-cee214da99aa")
-                _      <- _05b98b4b_5d46_4f77_9518_150d7f886ec3(n)(`π-uuid`)
+                (n, _) <- num(⊤(1L))("05d72d97-5968-405d-a7bf-ef6a99bc9b32")
+                _      <- _72e7923b_27bc_4004_834f_935ecb23b6c1(n)(`π-uuid`)
               } yield ())
             ).parMapN { (_, _) => }
           }
-          _05b98b4b_5d46_4f77_9518_150d7f886ec3
+          _72e7923b_27bc_4004_834f_935ecb23b6c1
         }
-        (n, _) <- num(⊤(1L))("4a055f12-bd57-4359-8c2b-cee214da99aa")
-        _      <- _05b98b4b_5d46_4f77_9518_150d7f886ec3(n)(`π-uuid`)
+        (n, _) <- num(⊤(1L))("05d72d97-5968-405d-a7bf-ef6a99bc9b32")
+        _      <- _72e7923b_27bc_4004_834f_935ecb23b6c1(n)(`π-uuid`)
       } yield ()),
       `π-supervised`(
-        for (_ <- num(⊤(1L), random)("3b49fb3b-3489-499a-b64d-800abdfdcaab"))
+        for (_ <- num(⊤(1L), random)("52bc53f4-6f7f-403b-a75a-1ca1d84f196a"))
           yield ()
       )
     ).parMapN { (_, _) => }
@@ -164,10 +163,10 @@ object π:
   def Fib(n: `()`, out: `()`)(using ^ : String)(using % : %, / : /): IO[Unit] =
     for {
       _ <- IO.unit
-      _02a03c8d_3b17_49c0_84d7_85eb69e30019 = _root_.scala.collection.immutable
-        .Set("81c77f4a-604e-4aef-aab9-fd80f243fe7c")
-      _ <- `π-enable`(_02a03c8d_3b17_49c0_84d7_85eb69e30019)
-      _ <- τ(⊤(1L))("81c77f4a-604e-4aef-aab9-fd80f243fe7c")
+      _0d4184d0_83aa_44bd_a9e5_bd07b4fac8c8 = _root_.scala.collection.immutable
+        .Set("041c92dc-3e69-4d8b-9347-dffd1d2fdbb2")
+      _ <- `π-enable`(_0d4184d0_83aa_44bd_a9e5_bd07b4fac8c8)
+      _ <- τ(⊤(1L))("041c92dc-3e69-4d8b-9347-dffd1d2fdbb2")
       _ <- IO {
         println(s"n=${n}")
       }
@@ -175,8 +174,8 @@ object π:
       _ <- (
         `π-supervised`(Fibonacci(f, n)(using `π-uuid`)),
         `π-supervised`(for {
-          (res, _) <- f(∞(1L))("3a1ed11b-f5b4-4f5b-a901-f43a670667f8")
-          _        <- out(⊤(1L), res)("4ff275ea-6d03-4383-a086-01aa21e6e9ba")
+          (res, _) <- f(∞(1L))("33c2da7f-dfb5-4513-ab39-58d0a01fb71e")
+          _        <- out(⊤(1L), res)("15794edb-7a9d-42a0-b9c1-c45c743d29cb")
         } yield ())
       ).parMapN { (_, _) => }
     } yield ()
@@ -184,25 +183,25 @@ object π:
   def Fibonacci(f: `()`, n: `()`)(using ^ : String)(using % : %, / : /): IO[Unit] =
     if (n < 2 ==== true) for {
       _ <- IO.unit
-      _f926e751_5b54_48d2_b9fc_8824e810da55 = _root_.scala.collection.immutable
-        .Set("3c14c50c-2f25-46b5-bc88-b678658ea716")
-      _ <- `π-enable`(_f926e751_5b54_48d2_b9fc_8824e810da55)
-      _ <- f(∞(1L), n)("3c14c50c-2f25-46b5-bc88-b678658ea716")
+      _cdbdfb41_f46f_4520_821a_e73830aa1193 = _root_.scala.collection.immutable
+        .Set("c4482750-946a-4b41-9506-887482639e36")
+      _ <- `π-enable`(_cdbdfb41_f46f_4520_821a_e73830aa1193)
+      _ <- f(∞(1L), n)("c4482750-946a-4b41-9506-887482639e36")
     } yield ()
     else for {
       _ <- IO.unit
-      _f5ca5f40_b74e_41f8_8a80_e24d0852ae6b = _root_.scala.collection.immutable
-        .Set("a2ad6581-a40a-4f7b-a62b-8af802d50138")
-      _ <- `π-enable`(_f5ca5f40_b74e_41f8_8a80_e24d0852ae6b)
+      _2c93ef4d_7181_4aa8_9ac3_f950d256e208 = _root_.scala.collection.immutable
+        .Set("1b085ca6-b733-4c4d-83cc-0f6c77b47cf1")
+      _ <- `π-enable`(_2c93ef4d_7181_4aa8_9ac3_f950d256e208)
       g <- ν
       h <- ν
       _ <- (
         `π-supervised`(Fibonacci(g, n - 1)(using `π-uuid`)),
         `π-supervised`(Fibonacci(h, n - 2)(using `π-uuid`)),
         `π-supervised`(for {
-          (p, _) <- g(∞(1L))("a2ad6581-a40a-4f7b-a62b-8af802d50138")
-          (r, _) <- h(∞(1L))("7bbf7151-ac4e-4c0a-88e0-29e80793d733")
-          _      <- f(∞(1L), p + r)("84bf1dc5-c472-447c-b60f-197729cbca59")
+          (p, _) <- g(∞(1L))("1b085ca6-b733-4c4d-83cc-0f6c77b47cf1")
+          (r, _) <- h(∞(1L))("61c4c061-1847-47fc-99a2-085c43c6573a")
+          _      <- f(∞(1L), p + r)("d3ff2d7a-e89b-4567-8573-906cc795059c")
         } yield ())
       ).parMapN { (_, _, _) => }
     } yield ()

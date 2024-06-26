@@ -50,12 +50,12 @@ class Calculus extends StochasticPi:
         bind -> Some(flatten(sum))
     }
 
-  def choice: Parser[(`+`, Names)] = "("~>choice<~")" |
+  def choice: Parser[(`+`, Names)] =
     rep1sep(parallel, "+") ^^ { ps =>
       `+`(ps.map(_._2._2).reduce(_ ++ _), ps.map(_._1)*) -> ps.map(_._2._1).reduce(_ ++ _)
     }
 
-  def parallel: Parser[(`|`, (Names, Actions))] = "("~>parallel<~")" |
+  def parallel: Parser[(`|`, (Names, Actions))] =
     rep1sep(sequential, "|") ^^ { ss =>
       `|`(ss.map(_._1)*) -> (ss.map(_._2._1).reduce(_ ++ _), ss.map(_._2._2).reduce(_ ++ _))
     }
@@ -249,12 +249,12 @@ object Calculus extends Calculus:
           if ps.isEmpty && ss.isEmpty =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(null, it*))
-        `+`(enabled, (lhs.choices ++ rhs.choices)*)
+        `+`(enabled, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
       case `+`(enabled, par, it*) =>
         val lhs = `+`(null, flatten(par))
         val rhs = flatten(`+`(null, it*))
-        `+`(enabled, (lhs.choices ++ rhs.choices)*)
+        `+`(enabled, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
       case `|`(`.`(`+`(_, lhs @ `|`(_*), p*), ps*), it*)
           if p.isEmpty && ps.isEmpty =>

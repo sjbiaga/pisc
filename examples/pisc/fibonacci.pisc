@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @import scala.util.control.TailCalls.{ done, tailcall, TailRec }
 
 @given Conversion[`()`, Long] = _.as[Long]
@@ -5,8 +7,7 @@
 Main = Fib(-1)
 
 Fib(n) = ν(x)                                          \
-       ( 𝟎                                             \
-       |                                               \
+       (                                               \
        ( τ /* _ <- IO { print("n = ") };               \
              'n <- IO.blocking {                       \
                      try                               \

@@ -1,18 +1,18 @@
+# -*- indent-tabs-mode: nil; -*-
+
 @given Conversion[`()`, Int] = _.as[Int]
 
 @val ! : String => IO[String] = { _ => IO.pure(null) }
 
 Main = ν(a)ν(b)ν(c)         \
-     ( 𝟎                    \
-     | (!.a<"a">.𝟎)         \
+     ( (!.a<"a">.𝟎)         \
      | (!.b<"b">.𝟎)         \
      | (!.c<"c">.𝟎)         \
      | Hanoi(a,b,c,/*-1*/)  \
      )
 
 Hanoi(a,b,c,n) = ν(w)                                        \
-               ( 𝟎                                           \
-               | τ/* _ <- IO.print("n = ");                  \
+               ( τ/* _ <- IO.print("n = ");                  \
                     'n <- IO.blocking {                      \
                             try                              \
                               scala.io.StdIn.readLine.toInt  \
@@ -32,8 +32,7 @@ Move(from,to,z) = from(x).to(y).                    \
 Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
                    then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
                    else ν(x)                                     \
-                      ( 𝟎                                        \
-                      | Hanoi(a,c,b,/*'n-1*/,x)                  \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                  \
                       | x(x). ν(y)                               \
                               ( Move(a,c,y)                      \
                               | y(y). ν(z)                       \
