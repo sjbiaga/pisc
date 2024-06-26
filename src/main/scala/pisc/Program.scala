@@ -94,6 +94,8 @@ object Program:
       case `|`(operand, _*) =>
         * = body(operand)
 
+      case _: `|` => ??? // impossible by syntax
+
       /////////////////////////////////////////////////////////// composition //
 
 
@@ -291,7 +293,7 @@ object Program:
 
       //////////////////////////////////////////////////////////// agent call //
 
-      case it => ???
+      case _ => ???
 
     *
 

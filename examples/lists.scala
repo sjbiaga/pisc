@@ -72,8 +72,8 @@ object π:
   } yield ()
 
   def Server(sumlist: `()`): IO[Unit] = for {
-    _db95f6f1_6d91_40dd_839f_cec0d06a1d33 <- IO {
-      def _db95f6f1_6d91_40dd_839f_cec0d06a1d33(list: `()`, rch: `()`)
+    _6f521c99_40d7_482c_9884_f5f58605abf7 <- IO {
+      def _6f521c99_40d7_482c_9884_f5f58605abf7(list: `()`, rch: `()`)
         : IO[Unit] =
         if (!list) IO.cede
         else (
@@ -86,11 +86,11 @@ object π:
           } yield (),
           for {
             Seq(list, rch) <- sumlist()
-            _              <- _db95f6f1_6d91_40dd_839f_cec0d06a1d33(list, rch)
+            _              <- _6f521c99_40d7_482c_9884_f5f58605abf7(list, rch)
           } yield ()
         ).parMapN { (_, _) => }
-      _db95f6f1_6d91_40dd_839f_cec0d06a1d33
+      _6f521c99_40d7_482c_9884_f5f58605abf7
     }
     Seq(list, rch)                        <- sumlist()
-    _ <- _db95f6f1_6d91_40dd_839f_cec0d06a1d33(list, rch)
+    _ <- _6f521c99_40d7_482c_9884_f5f58605abf7(list, rch)
   } yield ()

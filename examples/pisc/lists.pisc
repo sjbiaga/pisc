@@ -1,3 +1,5 @@
+# -*- indent-tabs-mode: nil; -*-
+
 # ./examples $ ppi lists.scala -- 1 2 3 5 7
 
 # https://github.com/alexj136/nodes/blob/master/examples/lists
@@ -6,8 +8,7 @@
 @given Conversion[`()`, Int] = _.as[Int]
 
 Main = ν(sumlist)ν(print)ν(rch)                            \
-     ( 𝟎                                                   \
-     | Client(sumlist, print, rch, /*args.map(_.toInt)*/)  \
+     ( Client(sumlist, print, rch, /*args.map(_.toInt)*/)  \
      | Server(sumlist)                                     \
      | print(sum).τ/*println(s"sum=${'sum}")*/.            \
        sumlist#2<>.                                        \
