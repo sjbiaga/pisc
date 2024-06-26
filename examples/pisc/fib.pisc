@@ -9,9 +9,7 @@
 @def random = 3+gen.nextLong(max)
 
 Main = ν(num)                                                     \
-     ( 𝟎                                                          \
-     | (!.num(n).ν(out) ( 𝟎                                       \
-                        | Fib(n, out)                             \
+     ( (!.num(n).ν(out) ( Fib(n, out)                             \
                         | out(fib).                               \
                           τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
                           num</*random*/>.                        \
@@ -22,8 +20,7 @@ Main = ν(num)                                                     \
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
               ν(f)                       \
-              ( 𝟎                        \
-              | Fibonacci(f, n)          \
+              ( Fibonacci(f, n)          \
               | f(res).out<res>.         \
               )                          \
 
@@ -32,8 +29,7 @@ Fibonacci(f, n) = if /*'n < 2*/ = True         \
                     f<n>.                      \
                   else                         \
                     ν(g)ν(h)                   \
-                    ( 𝟎                        \
-                    | Fibonacci(g, /*'n-1*/)   \
+                    ( Fibonacci(g, /*'n-1*/)   \
                     | Fibonacci(h, /*'n-2*/)   \
                     | g(p).h(r).f</*'p+'r*/>.  \
                     )                          \

@@ -9,17 +9,19 @@
 Main = ν(stdin)ν(stdout)Greeter(stdin, stdout, "")
 
 Greeter(stdin, stdout, line) = \
-                             ( 𝟎 \
-                             | ( stdout<"What's your name?">.stdin(name). \
-                                                                          if /* name.isBlank */ = True \
-                                                                          then stdout<>. Greeter(stdin, stdout, line) \
-                                                                          else Chooser(stdout, name) \
-                               ) \
-                             | stdout(prompt) /* nl */. \
+                             ( \
+                             ( stdout<"What's your name?">.stdin(name). \
+                                                                        if /* name.isBlank */ = True \
+                                                                        then stdout<>. Greeter(stdin, stdout, line) \
+                                                                        else Chooser(stdout, name) \
+                             ) \
+                             | \
+                             ( stdout(prompt) /* nl */. \
                                τ /* _    <- IO { print('prompt) }; \
                                    'line <- IO.blocking { scala.io.StdIn.readLine } */. \
                                                         stdin<line>.stdout(greet) /* nl */. \
                                [/* !greet */ = False] τ/*print('greet)*/. \
+                             ) \
                              )
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
@@ -27,8 +29,7 @@ Chooser(stdout, name) = Greeter'(stdout, name) \
                       + Greeter"'(stdout, name)
 
 Greeter'(stdout, name) = \
-                       ( 𝟎 \
-                       | ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.">. ) \
+                       ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.">. ) \
                        | ( [name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
                        | ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!"*/>.  ) \
                        )

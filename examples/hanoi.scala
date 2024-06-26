@@ -53,58 +53,58 @@ object π:
     c <- ν
     _ <- (
       for {
-        _7c293acb_e0fe_4d25_8f9a_8319d0058a42 <- IO {
-          lazy val _7c293acb_e0fe_4d25_8f9a_8319d0058a42: IO[Unit] = (
+        _37946e94_33dc_46b8_b57f_88c6ae1ebac1 <- IO {
+          lazy val _37946e94_33dc_46b8_b57f_88c6ae1ebac1: IO[Unit] = (
             IO.unit,
             for {
-              _45d71548_5b64_4231_b8d7_6a2a7b85cbc5 <- a("a")
+              _379c1ea3_6461_4755_b5dc_5eb7f9a7080d <- a("a")
               _                                     <-
-                if (_45d71548_5b64_4231_b8d7_6a2a7b85cbc5 eq None) IO.cede
-                else _7c293acb_e0fe_4d25_8f9a_8319d0058a42
+                if (_379c1ea3_6461_4755_b5dc_5eb7f9a7080d eq None) IO.cede
+                else _37946e94_33dc_46b8_b57f_88c6ae1ebac1
             } yield ()
           ).parMapN { (_, _) => }
-          _7c293acb_e0fe_4d25_8f9a_8319d0058a42
+          _37946e94_33dc_46b8_b57f_88c6ae1ebac1
         }
-        _45d71548_5b64_4231_b8d7_6a2a7b85cbc5 <- a("a")
+        _379c1ea3_6461_4755_b5dc_5eb7f9a7080d <- a("a")
         _                                     <-
-          if (_45d71548_5b64_4231_b8d7_6a2a7b85cbc5 eq None) IO.cede
-          else _7c293acb_e0fe_4d25_8f9a_8319d0058a42
+          if (_379c1ea3_6461_4755_b5dc_5eb7f9a7080d eq None) IO.cede
+          else _37946e94_33dc_46b8_b57f_88c6ae1ebac1
       } yield (),
       for {
-        _fe5add9e_b188_44f4_ae7e_a57846d176e1 <- IO {
-          lazy val _fe5add9e_b188_44f4_ae7e_a57846d176e1: IO[Unit] = (
+        _bf7eb467_79a5_44cb_a20e_ed9f0e81792b <- IO {
+          lazy val _bf7eb467_79a5_44cb_a20e_ed9f0e81792b: IO[Unit] = (
             IO.unit,
             for {
-              _1eca7e2e_9c9f_428d_9bae_a2fd5b12ddaa <- b("b")
+              _aeac6506_4659_47a3_9277_f45a854c46a3 <- b("b")
               _                                     <-
-                if (_1eca7e2e_9c9f_428d_9bae_a2fd5b12ddaa eq None) IO.cede
-                else _fe5add9e_b188_44f4_ae7e_a57846d176e1
+                if (_aeac6506_4659_47a3_9277_f45a854c46a3 eq None) IO.cede
+                else _bf7eb467_79a5_44cb_a20e_ed9f0e81792b
             } yield ()
           ).parMapN { (_, _) => }
-          _fe5add9e_b188_44f4_ae7e_a57846d176e1
+          _bf7eb467_79a5_44cb_a20e_ed9f0e81792b
         }
-        _1eca7e2e_9c9f_428d_9bae_a2fd5b12ddaa <- b("b")
+        _aeac6506_4659_47a3_9277_f45a854c46a3 <- b("b")
         _                                     <-
-          if (_1eca7e2e_9c9f_428d_9bae_a2fd5b12ddaa eq None) IO.cede
-          else _fe5add9e_b188_44f4_ae7e_a57846d176e1
+          if (_aeac6506_4659_47a3_9277_f45a854c46a3 eq None) IO.cede
+          else _bf7eb467_79a5_44cb_a20e_ed9f0e81792b
       } yield (),
       for {
-        _e8a63ec7_ea3e_4093_932d_79713db8bf20 <- IO {
-          lazy val _e8a63ec7_ea3e_4093_932d_79713db8bf20: IO[Unit] = (
+        _b5a84271_ed61_4c57_a174_d984854dd12d <- IO {
+          lazy val _b5a84271_ed61_4c57_a174_d984854dd12d: IO[Unit] = (
             IO.unit,
             for {
-              _de13d0d8_6961_4bad_bf09_9147c1257290 <- c("c")
+              _81902077_e41e_44a2_8b46_77b1f8f90f33 <- c("c")
               _                                     <-
-                if (_de13d0d8_6961_4bad_bf09_9147c1257290 eq None) IO.cede
-                else _e8a63ec7_ea3e_4093_932d_79713db8bf20
+                if (_81902077_e41e_44a2_8b46_77b1f8f90f33 eq None) IO.cede
+                else _b5a84271_ed61_4c57_a174_d984854dd12d
             } yield ()
           ).parMapN { (_, _) => }
-          _e8a63ec7_ea3e_4093_932d_79713db8bf20
+          _b5a84271_ed61_4c57_a174_d984854dd12d
         }
-        _de13d0d8_6961_4bad_bf09_9147c1257290 <- c("c")
+        _81902077_e41e_44a2_8b46_77b1f8f90f33 <- c("c")
         _                                     <-
-          if (_de13d0d8_6961_4bad_bf09_9147c1257290 eq None) IO.cede
-          else _e8a63ec7_ea3e_4093_932d_79713db8bf20
+          if (_81902077_e41e_44a2_8b46_77b1f8f90f33 eq None) IO.cede
+          else _b5a84271_ed61_4c57_a174_d984854dd12d
       } yield (),
       Hanoi(a, b, c, -1)
     ).parMapN { (_, _, _, _) => }

@@ -55,14 +55,13 @@ object π:
     num <- ν
     _   <- (
       for {
-        _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75 <- IO {
-          def _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n: `()`): IO[Unit] =
+        _bbda6360_cb98_4e58_ac05_af5e372d6449 <- IO {
+          def _bbda6360_cb98_4e58_ac05_af5e372d6449(n: `()`): IO[Unit] =
             if (!n) IO.cede
             else (
               for {
                 out <- ν
                 _   <- (
-                  IO.unit,
                   Fib(n, out),
                   for {
                     fib <- out()
@@ -72,17 +71,17 @@ object π:
                     }
                     _   <- num(random)
                   } yield ()
-                ).parMapN { (_, _, _) => }
+                ).parMapN { (_, _) => }
               } yield (),
               for {
                 n <- num()
-                _ <- _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n)
+                _ <- _bbda6360_cb98_4e58_ac05_af5e372d6449(n)
               } yield ()
             ).parMapN { (_, _) => }
-          _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75
+          _bbda6360_cb98_4e58_ac05_af5e372d6449
         }
         n                                     <- num()
-        _ <- _a2c808d3_3948_4c33_8c3b_d8bfb06a3d75(n)
+        _ <- _bbda6360_cb98_4e58_ac05_af5e372d6449(n)
       } yield (),
       for (_ <- num(random)) yield ()
     ).parMapN { (_, _) => }

@@ -50,12 +50,12 @@ class Calculus extends Pi:
         bind -> flatten(sum)
     }
 
-  def choice: Parser[(`+`, Names)] = "("~>choice<~")" |
+  def choice: Parser[(`+`, Names)] =
     rep1sep(parallel, "+") ^^ { ps =>
       `+`(ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel: Parser[(`|`, Names)] = "("~>parallel<~")" |
+  def parallel: Parser[(`|`, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
       `|`(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
@@ -245,12 +245,12 @@ object Calculus:
           if ps.isEmpty && ss.isEmpty =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices)*)
+        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
       case `+`(par, it*) =>
         val lhs = `+`(flatten(par))
         val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices)*)
+        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
       case `|`(`.`(`+`(lhs @ `|`(_*), p*), ps*), it*)
           if p.isEmpty && ps.isEmpty =>

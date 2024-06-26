@@ -7,8 +7,7 @@
 Main = Fib(-1)
 
 Fib(n) = ν(x)                                          \
-       ( 𝟎                                             \
-       |                                               \
+       (                                               \
        ( τ /* _ <- IO { print("n = ") };               \
              'n <- IO.blocking {                       \
                      try                               \
