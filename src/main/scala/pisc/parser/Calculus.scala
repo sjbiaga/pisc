@@ -245,19 +245,20 @@ object Calculus extends Calculus:
 
       case `∅` => ∅
 
-      case `+`(enabled, `|`(`.`(sum: `+`, ps*), ss*), it*)
-          if ps.isEmpty && ss.isEmpty =>
+      case `+`(enabled, `|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(null, it*))
-        `+`(enabled, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
+        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
+        if ps.isEmpty then ∅ else `+`(enabled, ps*)
 
       case `+`(enabled, par, it*) =>
         val lhs = `+`(null, flatten(par))
         val rhs = flatten(`+`(null, it*))
-        `+`(enabled, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
+        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
+        if ps.isEmpty then ∅ else `+`(enabled, ps*)
 
-      case `|`(`.`(`+`(_, lhs @ `|`(_*), p*), ps*), it*)
-          if p.isEmpty && ps.isEmpty =>
+      case `|`(`.`(`+`(_, par)), it*) =>
+        val lhs = flatten(par)
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
 
@@ -269,9 +270,14 @@ object Calculus extends Calculus:
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))
 
+      case `!`(None, sum) =>
+        flatten(sum) match
+          case `+`(_, `|`(`.`(end: `!`))) => end
+          case it => `!`(None, it)
+
       case `!`(μ, sum) =>
         `!`(μ, flatten(sum))
 
-      case it => it
+      case _ => ast
 
     }
