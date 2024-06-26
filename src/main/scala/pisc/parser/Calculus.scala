@@ -241,19 +241,20 @@ object Calculus:
 
       case `∅` => ∅
 
-      case `+`(`|`(`.`(sum: `+`, ps*), ss*), it*)
-          if ps.isEmpty && ss.isEmpty =>
+      case `+`(`|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))
+        if ps.isEmpty then ∅ else `+`(ps*)
 
       case `+`(par, it*) =>
         val lhs = `+`(flatten(par))
         val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))
+        if ps.isEmpty then ∅ else `+`(ps*)
 
-      case `|`(`.`(`+`(lhs @ `|`(_*), p*), ps*), it*)
-          if p.isEmpty && ps.isEmpty =>
+      case `|`(`.`(`+`(par)), it*) =>
+        val lhs = flatten(par)
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
 
@@ -265,9 +266,14 @@ object Calculus:
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))
 
+      case `!`(None, sum) =>
+        flatten(sum) match
+          case `+`(`|`(`.`(end: `!`))) => end
+          case it => `!`(None, it)
+
       case `!`(μ, sum) =>
         `!`(μ, flatten(sum))
 
-      case it => it
+      case _ => ast
 
     }
