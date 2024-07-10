@@ -1,0 +1,45 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ ppi_ hanoi.scala
+
+@given Conversion[`()`, Int] = _.as[Int]
+
+@val ! : Seq[Any] => IO[Seq[Any]] = { _ => IO.pure(Seq(null)) }
+
+Main = ν(a,b,c)             \
+     ( (!.a<"a">.𝟎)         \
+     | (!.b<"b">.𝟎)         \
+     | (!.c<"c">.𝟎)         \
+     | Hanoi(a,b,c,/*-1*/)  \
+     )
+
+Hanoi(a,b,c,n) = ν(w)                                        \
+               ( τ/* _ <- IO.print("n = ");                  \
+                    'n <- IO.blocking {                      \
+                            try                              \
+                              scala.io.StdIn.readLine.toInt  \
+                            catch _ => -1                    \
+                          }                                  \
+                   */.                                       \
+                 [ /*'n > 0*/ = True ] Hanoi(a,b,c,n,w)      \
+               | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
+                 τ/*println(s"#${'w} moves")*/.              \
+               )
+
+
+Move(from,to,z) = from(x).to(y).                    \
+                  τ/*println(s"${'x} -> ${'y}")*/.  \
+                                z</*1*/>.
+
+Hanoi(a,b,c,n,w) = if n = 1                                      \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
+                   else ν(x)                                     \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                  \
+                      | x(x). ν(y)                               \
+                              ( Move(a,c,y)                      \
+                              | y(y). ν(z)                       \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)  \
+                                      | z(z).w</*'x+'y+'z*/>.    \
+                                      )                          \
+                              )                                  \
+                      )
