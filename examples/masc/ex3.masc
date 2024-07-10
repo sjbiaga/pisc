@@ -1,0 +1,13 @@
+# -*- indent-tabs-mode: nil; -*-
+
+Repl =      ! . (n) . n. n. n . 𝟎
+#           ^ ^^^^^^^
+# __________| |_____|
+# replication  guard 
+
+Stop(m) = m [ <> ]
+#             ^^
+#             ||
+#             null
+
+Main = ν(w) w [ Repl | ν(m) ( <open m> | m [ m [ Stop(m) ] ] ) ]
