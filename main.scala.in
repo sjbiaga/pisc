@@ -1,0 +1,76 @@
+/*
+ * Copyright (c) 2023-2024 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+//package main.scala.in
+
+import _root_.cats.effect.{ IO, IOApp, ExitCode }
+import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
+
+import `Π-loop`._
+import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
+
+
+object App extends IOApp:
+
+  private def run(args: List[String])(% : %, / : /, * : *): IO[Unit] =
+    ( for
+        _ <- loop(π.`π-trick`)(using %, *).background
+        _ <- poll(using %, /, *).background
+      yield
+        ()
+    ).use { _ =>
+      π.Main(args*)(using π.`π-uuid`)(using %, /)
+    }
+
+  override def run(args: List[String]): IO[ExitCode] =
+    for
+      % <- IO.ref(_root_.scala.collection.immutable.Map[String, Int | +]())
+      / <- Queue.unbounded[IO, ((String, String), +)]
+      * <- Semaphore[IO](1)
+      _ <- run(args)(%, /, *)
+    yield
+      ExitCode.Success
+
+
+object π:
+
+  import _root_.java.util.UUID
+
+  import _root_.cats.effect.syntax.all._
+  import _root_.cats.syntax.all._
+
+  import sΠ._
+
+  def `π-uuid` = UUID.randomUUID.toString
+
+  def `π-supervised`(io: => IO[Unit]): IO[Unit] =
+    for
+      _ <- Supervisor[IO](await = true).use(_.supervise(io).void)
+    yield
+      ()
+

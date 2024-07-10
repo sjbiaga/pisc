@@ -1,0 +1,46 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import scala.util.control.TailCalls.{ done, tailcall, TailRec }
+
+@given Conversion[`()`, Long] = _.as[Long]
+
+Main = Fib(-1)
+
+Fib(n) = ν(x)                                          \
+       (                                               \
+       ( τ /* _ <- IO { print("n = ") };               \
+             'n <- IO.blocking {                       \
+                     try                               \
+                       scala.io.StdIn.readLine.toLong  \
+                     catch _ => -1L                    \
+                   } */ .                              \
+         x<n> .                                        \
+         x</*                                          \
+         {                                             \
+           def fibonacci(k: Long): TailRec[Long] =     \
+             if (k < 2)                                \
+               done(k * k)                             \
+             else                                      \
+               for                                     \
+                 m <- tailcall { fibonacci(k - 2) };   \
+                 n <- tailcall { fibonacci(k - 1) }    \
+               yield                                   \
+                 m + n                                 \
+           ;                                           \
+           if ('n < 0)                                 \
+             println("Enter a non-negative number.")   \
+           else                                        \
+             fibonacci('n).result                      \
+         }                                             \
+         */> .                                         \
+       )                                               \
+       |                                               \
+       ( x(n) .                                        \
+         x(f) .                                        \
+         τ /* if ('n >= 0)                             \
+                println(s"fib(${'n}) = ${'f}") */ .    \
+         if /*'n < 0*/ = True                          \
+         then Fib(-1)                                  \
+         else 𝟎                                        \
+       )                                               \
+       )                                               \
