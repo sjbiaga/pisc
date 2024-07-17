@@ -39,8 +39,8 @@ object App extends IOApp:
 
 object π:
 
-  import _root_.cats.effect.syntax.all._
   import _root_.cats.syntax.all._
+  import _root_.cats.effect.syntax.all._
   import _root_.cats.effect.std.Semaphore
 
   import Π._

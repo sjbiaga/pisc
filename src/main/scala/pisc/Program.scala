@@ -34,6 +34,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
+import parser.`Pre | AST`
 import generator.Meta._
 
 
@@ -43,7 +44,7 @@ object Program:
     bind.map { case (bind, sum) => defn(bind, body(sum)()).toString }
 
 
-  def body(node: AST)
+  def body(node: `Pre | AST`)
           (implicit semaphore: Option[String] = None): List[Enumerator] =
     var * = List[Enumerator]()
 
@@ -58,7 +59,10 @@ object Program:
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
 
-      case it: `+` if it.choices.size > 1 =>
+      case `+`(operand) =>
+        * = body(operand)
+
+      case it: `+` =>
         implicit val sem = Some(id)
 
         val ios = it.choices.foldLeft(List[Term]())(_ :+ body(_))
@@ -72,17 +76,15 @@ object Program:
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
 
-      case `+`(operand, _*) =>
-        * = body(operand)
-
-      case _: `+` => ??? // ∅ - caught by parser
-
       ///////////////////////////////////////////////////////////// summation //
 
 
       // COMPOSITION ///////////////////////////////////////////////////////////
 
-      case it: `|` if it.components.size > 1 =>
+      case `|`(operand) =>
+        * = body(operand)
+
+      case it: `|` =>
         val ios = it.components.foldLeft(List[Term]())(_ :+ body(_)())
 
         val ** = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -90,11 +92,6 @@ object Program:
         semaphore
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
-
-      case `|`(operand, _*) =>
-        * = body(operand)
-
-      case _: `|` => ??? // impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 

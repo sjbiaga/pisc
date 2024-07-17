@@ -63,7 +63,7 @@ class Calculus extends PolyadicPi:
   def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
       case (Nil, _) ~ None =>
-        throw EmptyParsingException
+        `.`(∅) -> Names()
       case pre ~ Some((end: `&`, free: Names)) =>
         `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
@@ -71,7 +71,6 @@ class Calculus extends PolyadicPi:
     }
 
   def leaf: Parser[(`-`, Names)] = agent() |
-    "𝟎" ^^ { _ => (∅, Names()) } |
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         `?:`(cond._1, t._1, ∅) -> (cond._2 ++ t._2)
@@ -174,7 +173,7 @@ object Calculus:
 
   case class `.`(end: `&`, prefixes: Pre*) extends AST
 
-  sealed trait Pre extends Any with AST
+  sealed trait Pre extends Any
 
   case class ν(names: String*) extends AnyVal with Pre // forcibly
 
@@ -193,7 +192,7 @@ object Calculus:
 
   case class `!`(guard: Option[μ], sum: `+`) extends AST
 
-  case class λ(value: Any) extends AST:
+  case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
@@ -226,9 +225,6 @@ object Calculus:
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
-
-  case object EmptyParsingException
-      extends ParsingException("Instead of an empty expression there must be at least 𝟎 in place")
 
 
   // functions

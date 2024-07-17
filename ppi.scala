@@ -133,7 +133,7 @@ package object Π:
      */
 
     final case class ><(takers: List[Deferred[IO, Seq[Any]]],
-                          offerers: List[(Seq[Any], Deferred[IO, Option[Unit]])])
+                        offerers: List[(Seq[Any], Deferred[IO, Option[Unit]])])
 
     type >*< = Ref[IO, ><]
 
