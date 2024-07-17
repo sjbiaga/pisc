@@ -44,7 +44,7 @@ object App extends IOApp:
       yield
         ()
     ).use { _ =>
-      π.Main(args*)(using π.`π-uuid`)(using %, /)
+      sΠ.`π-enable`(π.`π-main`)(using %) >> π.Main(args*)(using π.`π-uuid`)(using %, /)
     }
 
   override def run(args: List[String]): IO[ExitCode] =
@@ -61,8 +61,8 @@ object π:
 
   import _root_.java.util.UUID
 
-  import _root_.cats.effect.syntax.all._
   import _root_.cats.syntax.all._
+  import _root_.cats.effect.syntax.all._
 
   import sΠ._
 

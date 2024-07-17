@@ -40,6 +40,7 @@ import dialects.Scala3
 
 import parser.{ StochasticPi, Calculus }
 import StochasticPi.Actions
+import Calculus.{ `(*)`,  λ }
 import generator.Program
 
 
@@ -65,7 +66,7 @@ object Main:
         val bind = bs.zipWithIndex
         val prog_ = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
-        val (prog, (discarded, enabled)) = StochasticPi(prog_.map(_._1))
+        val (prog, (discarded, excluded, enabled)) = StochasticPi(prog_.map(_._1))
 
         val ps = Program(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
@@ -82,8 +83,20 @@ object Main:
         val wand = `magic wand`.toString
 
         val magic = trick + "\n\n" + spell + "\n\n" + wand + "\n\n"
+        val elvis = `if-then-else`("π-elvis", excluded).toString + "\n\n"
 
-        bwr.write(magic + code, 0, magic.length + code.length)
+        val init = this(
+          prog
+            .find {
+              case (`(*)`(λ(Symbol("Main")), _*), _) => true
+              case _ => false
+            }
+            .get
+            ._2
+            .enabled
+        ).toString + "\n\n"
+
+        bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
@@ -123,6 +136,16 @@ object Main:
              Term.Apply(scollimmMap,
                         Term.ArgClause(this(enabled).toList, None)))
 
+  def `if-then-else`(name: String, excluded: Map[String, Actions]): Defn.Val =
+    Defn.Val(Mod.Implicit() :: Nil,
+             Pat.Var(Term.Name(name)) :: Nil,
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-Set"),
+                                                            Type.ArgClause(Type.Name("String") :: Nil)))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this(excluded).toList, None)))
+
   private def apply(self: Map[String, Actions]) =
     for
       (id, it) <- self
@@ -133,6 +156,15 @@ object Main:
                                                 Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
                                                                None)
                                      ) :: Nil, None))
+
+  private def apply(it: Actions): Defn.Val =
+    Defn.Val(Nil,
+             Pat.Var(Term.Name("π-main")) :: Nil,
+             None,
+             Term.Apply(scollimmSet,
+                        Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                       None)
+             ))
 
   private val scollimmMap =
     Term.Select(

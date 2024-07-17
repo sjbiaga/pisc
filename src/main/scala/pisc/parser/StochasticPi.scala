@@ -119,24 +119,14 @@ object StochasticPi:
   type Actions = Set[String]
 
   object Actions:
-    def apply(ps: Pre*): Actions = Set.from {
+    def apply(ps: Pre*): Actions = Set.from(
       ps
         .filter(_.isInstanceOf[Act with Key])
         .headOption
         .map(_.asInstanceOf[Act with Key].uuid)
-    }
-    def apply(end: `&`, ps: Pre*): Actions =
-      val r = this(ps*)
-      if r.nonEmpty
-      then
-        r
-      else end match
-        case it: `+` => it.enabled
-        case `!`(Some(μ), _) => μ.enabled
-        case `!`(_, it) => it.enabled
-        case _ => r
+    )
 
-  val nil = Set[String]()
+  def nil = Actions()
 
 
   trait Act:
@@ -158,6 +148,9 @@ object StochasticPi:
       .map(_.asSymbol)
     )
 
+
+  // exceptions
+
   import scala.meta.Enumerator
 
   import Expression.ParsingException
@@ -174,33 +167,143 @@ object StochasticPi:
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
-  case object ProbabilisticChoiceException
-      extends ParsingException("Probabilistic choice requires some prefix enabled on each branch")
 
+  // functions
 
-  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions])) =
+  def `(*) => +`(prog: List[Bind]): `(*)` => `+` = {
+    case `(*)`(λ(Symbol(identifier)), args*) =>
+      prog
+        .find {
+          case (`(*)`(λ(Symbol(`identifier`)), params*), _) if params.size == args.size => true
+          case _ => false
+        }
+        .get
+        ._2
+  }
+
+  def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+
+    def τ = Calculus.τ(None, Some(-Long.MaxValue))
+
+    val excluded = Map[String, Actions]()
+
+    def parse[T <: AST](ast: T): (T, Actions) =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case `∅` => (∅, nil)
+
+        case it: `+` =>
+          val sum = it.choices.foldLeft(`+`(nil)) {
+            case (sum, par) =>
+              val (par2, enabled2) = parse(par)
+              assert(enabled2.nonEmpty)
+              assert((sum.enabled & enabled2).isEmpty)
+              (`+`(sum.enabled ++ enabled2, (sum.choices :+ par2)*))
+          }
+          (sum, sum.enabled)
+
+        case it: `|` =>
+          val (par, enabled) = it.components.foldLeft((`|`(), nil)) {
+            case ((par, enabled), seq) =>
+              val (seq2, enabled2) = parse(seq)
+              assert(enabled2.nonEmpty)
+              assert((enabled & enabled2).isEmpty)
+              (`|`((par.components :+ seq2)*), enabled ++ enabled2)
+          }
+          (par, enabled)
+
+        case `.`(end, ps*) =>
+          val (it, enabled) = parse(end)
+          if Actions(ps*).nonEmpty
+          then
+            (`.`(it, ps*), Actions(ps*))
+          else if enabled.nonEmpty then
+            (`.`(it, ps*), enabled)
+          else
+            assert(it.isInstanceOf[`(*)`])
+            val ps2 = ps :+ τ
+            (`.`(it, ps2*), Actions(ps2*))
+
+        case `!`(Some(μ), sum) =>
+          val (it, _) = parse(sum)
+          (`!`(Some(μ), it), μ.enabled)
+
+        case `!`(_, sum) =>
+          var (it, enabled) = parse(sum)
+
+          if enabled.isEmpty
+          then
+            assert(∅ == sum)
+            val ps = τ :: Nil
+            enabled = Actions(ps*)
+            it = `+`(enabled, `|`(`.`(∅, ps*)))
+
+          (`!`(None, it), enabled)
+
+        case `?:`(c, t, f) =>
+          var (t_t, t_enabled) = parse(t)
+          var (f_f, f_enabled) = parse(f)
+
+          if t_enabled.isEmpty
+          then
+            assert(∅ == t_t)
+            val ps = τ :: Nil
+            t_enabled = Actions(ps*)
+            t_t = `+`(t_enabled, `|`(`.`(∅, ps*)))
+
+          if f_enabled.isEmpty
+          then
+            assert(∅ == f_f)
+            val ps = τ :: Nil
+            f_enabled = Actions(ps*)
+            f_f = `+`(f_enabled, `|`(`.`(∅, ps*)))
+
+          if t_enabled.exists(excluded.contains(_))
+          then
+            val ps = τ :: Nil
+            t_enabled = Actions(ps*)
+            t_t = `+`(t_enabled, `|`(`.`(t_t, ps*)))
+
+          if f_enabled.exists(excluded.contains(_))
+          then
+            val ps = τ :: Nil
+            f_enabled = Actions(ps*)
+            f_f = `+`(f_enabled, `|`(`.`(f_f, ps*)))
+
+          t_enabled.foreach(excluded(_) = f_enabled)
+          f_enabled.foreach(excluded(_) = t_enabled)
+
+          assert((t_enabled & f_enabled).isEmpty)
+          (`?:`(c, t_t, f_f), t_enabled ++ f_enabled)
+
+        case it: `(*)` => (it, nil)
+
+    val prog = _prog.map(_ -> parse(_)._1)
 
     val discarded = Map[String, Actions]()
 
     lazy val split: AST => Actions = {
 
       case `∅` => nil
-      case  _: `(*)` => nil
 
-      case sum @ `+`(enabled, ps*) if ps.size == 1 =>
-        split(ps.head)
+      case `+`(enabled, par) =>
+        split(par)
         enabled
 
-      case sum @ `+`(enabled, ps*) =>
+      case `+`(enabled, ps*) =>
         val ls = ps.map(split)
 
         ls.zipWithIndex.foreach { (it, i) =>
-          if ls(i).isEmpty then throw ProbabilisticChoiceException
+          assert(it.nonEmpty)
           val ks = (ls.take(i) ++ ls.drop(i+1)).reduce(_ ++ _)
+          assert((it & ks).isEmpty)
           it.foreach { k =>
             if !discarded.contains(k)
             then
-              discarded(k) = Actions()
+              discarded(k) = nil
             discarded(k) ++= ks
           }
         }
@@ -211,14 +314,25 @@ object StochasticPi:
         ss.map(split).foldLeft(nil)(_ ++ _)
 
       case `.`(end, ps*) =>
-        split(end)
+        var enabled = split(end)
 
-        Actions(end, ps*)
+        if Actions(ps*).nonEmpty then
+          enabled = Actions(ps*)
+
+        enabled
 
       case `?:`(_, t, f) =>
         split(t)
         split(f)
-        nil
+
+        t.enabled.foreach { k => assert(!excluded.contains(k)) }
+        f.enabled.foreach { k => assert(!excluded.contains(k)) }
+
+        t.enabled.headOption.foreach(excluded(_) = f.enabled)
+        f.enabled.headOption.foreach(excluded(_) = t.enabled)
+
+        assert((t.enabled & f.enabled).isEmpty)
+        t.enabled ++ f.enabled
 
       case `!`(Some(μ), sum) =>
         split(sum)
@@ -228,14 +342,14 @@ object StochasticPi:
         split(sum)
         sum.enabled
 
-      case _ => ???
+      case it: `(*)` =>
+        `(*) => +`(prog)(it).enabled
 
     }
 
-    lazy val trans: AST => Seq[(State, State)] = _ match
+    lazy val trans: AST => Seq[(State, State)] = {
 
       case `∅` => Nil
-      case  _: `(*)` => Nil
 
       case `+`(_, ps*) =>
         ps.map(trans).reduce(_ ++ _)
@@ -244,7 +358,7 @@ object StochasticPi:
         ss.map(trans).foldLeft(Seq.empty)(_ ++ _)
 
       case `.`(end, ps*) =>
-        val k = ps.lastIndexWhere(_.isInstanceOf[State])
+        trans(end) ++
         ( for
             i <- 0 until ps.size
             if ps(i).isInstanceOf[State]
@@ -253,55 +367,57 @@ object StochasticPi:
           yield
             ps(i).asInstanceOf[State] -> ps(i+1+j).asInstanceOf[State]
         ) ++
-        ( if k < 0
+        {
+          val k = ps.lastIndexWhere(_.isInstanceOf[State])
+          if k < 0
           then end match
-            case `!`(Some(μ), sum) =>
-              Seq(μ -> μ) ++ Seq(μ -> sum)
-            case _ =>
-              Nil
+            case `!`(Some(μ), sum) => Seq(μ -> μ, μ -> sum)
+            case _ => Nil
           else end match
             case sum: `+` =>
               Seq(ps(k).asInstanceOf[State] -> sum)
+            case `?:`(_, t, f) =>
+              Seq(ps(k).asInstanceOf[State] -> t
+                 ,ps(k).asInstanceOf[State] -> f)
             case `!`(Some(μ), sum) =>
-              Seq(ps(k).asInstanceOf[State] -> μ) ++
-              Seq(μ -> μ) ++ Seq(μ -> sum)
+              Seq(ps(k).asInstanceOf[State] -> μ, μ -> μ, μ -> sum)
             case `!`(_, sum) =>
               Seq(ps(k).asInstanceOf[State] -> sum)
-            case _ =>
-              Nil
-        ) ++ trans(end)
+            case it: `(*)` =>
+              val sum = `(*) => +`(prog)(it)
+              Seq(ps(k).asInstanceOf[State] -> sum)
+        }
 
-      case `?:`(_, t, f) => trans(t) ++ trans(f)
+      case `?:`(_, t, f) =>
+        trans(t) ++ trans(f)
 
-      case `!`(_, sum) => trans(sum)
+      case `!`(_, sum) =>
+        trans(sum)
 
-      case _ => ???
+      case  _: `(*)` => Nil
+
+    }
+
+    excluded.clear
 
     val enabled = Map[String, Actions]()
 
     prog
       .map {
-        case it @ (bind, Some(sum)) =>
-          try
-            split(sum)
-            it
-          catch
-            case t: ParsingException =>
-              t.printStackTrace
-              bind -> None
-        case it => it
+        case it @ (_, sum) =>
+          split(sum)
+          it
       }
       .map {
-        case it @ (_, Some(sum)) =>
+        case it @ (_, sum) =>
           trans(sum).foreach { (s, t) =>
             if !enabled.contains(s.uuid)
             then
-              enabled(s.uuid) = Actions()
+              enabled(s.uuid) = nil
              enabled(s.uuid) ++= t.enabled
-           }
+          }
           it
-        case it => it
-      } -> (discarded -> enabled)
+      } -> (discarded, excluded, enabled)
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

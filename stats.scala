@@ -26,19 +26,19 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import scala.util.control.NonLocalReturns.{ returning, throwReturn => thr }
-import scala.util.Random
+import _root_.scala.util.control.NonLocalReturns.{ returning, throwReturn => thr }
+import _root_.scala.util.Random
 
-import scala.collection.mutable.HashMap
-import scala.concurrent.duration._
+import _root_.scala.collection.mutable.HashMap
+import _root_.scala.concurrent.duration._
 
-import breeze.stats.distributions.Exponential
-import breeze.stats.distributions.Rand.VariableSeed._
+import _root_.breeze.stats.distributions.Exponential
+import _root_.breeze.stats.distributions.Rand.VariableSeed._
 
-import cats.data.NonEmptyList
-import cats.effect.{ IO, Ref }
+import _root_.cats.data.NonEmptyList
+import _root_.cats.effect.{ IO, Ref }
 
-import com.github.blemale.scaffeine.{ Scaffeine, Cache }
+import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
 
 
 package object `Π-stats`:

@@ -5,9 +5,9 @@
 @val ! : String => IO[String] = { _ => IO.pure(null) }
 
 Main = ν(a,b,c)             \
-     ( (!.a<"a">.𝟎)         \
-     | (!.b<"b">.𝟎)         \
-     | (!.c<"c">.𝟎)         \
+     ( (!.a<"a">.)          \
+     | (!.b<"b">.)          \
+     | (!.c<"c">.)          \
      | Hanoi(a,b,c,/*-1*/)  \
      )
 
@@ -20,10 +20,9 @@ Hanoi(a,b,c,n) = ν(w)                                        \
                           }                                  \
                    */.                                       \
                  Hanoi(a,b,c,n,w)                            \
-               | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
-                 τ/*println(s"#${'w} moves")*/.              \
+               | w(w). τ/*println(s"#${'w} moves")*/.        \
+                       a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
                )
-
 
 Move(from,to,z) = from(x).to(y).                    \
                   τ/*println(s"${'x} -> ${'y}")*/.  \

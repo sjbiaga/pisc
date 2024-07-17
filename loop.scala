@@ -26,10 +26,10 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import cats.syntax.parallel._
+import _root_.cats.syntax.parallel._
 
-import cats.effect.{ IO, Deferred, Ref }
-import cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+import _root_.cats.effect.{ IO, Deferred, Ref }
+import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-stats`._
 
@@ -74,10 +74,9 @@ package object `Π-loop`:
                                               -         <- CyclicBarrier[IO](if key1 == key2 then 2 else 3)
                                               deferred1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
                                               deferred2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                              _         <- %.update(_ - key1 - key2)
                                               _         <- deferred1.complete(Some(delay -> -))
-                                              _         <- %.update(_ - key1)
                                               _         <- deferred2.complete(Some(delay -> -))
-                                              _         <- %.update(_ - key2)
                                               _         <- -.await
                                             yield
                                               ()

@@ -47,31 +47,30 @@ class Calculus extends StochasticPi:
       case (`(*)`(λ(Symbol("Main")), _, params*), _) ~ _ ~ _ if params.nonEmpty =>
         throw MainParsingException(params.map(_.asSymbol.name)*)
       case (bind, _) ~ _ ~ (sum, _) =>
-        bind -> Some(flatten(sum))
+        bind -> flatten(sum)
     }
 
   def choice: Parser[(`+`, Names)] =
     rep1sep(parallel, "+") ^^ { ps =>
-      `+`(ps.map(_._2._2).reduce(_ ++ _), ps.map(_._1)*) -> ps.map(_._2._1).reduce(_ ++ _)
+      `+`(nil, ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel: Parser[(`|`, (Names, Actions))] =
+  def parallel: Parser[(`|`, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      `|`(ss.map(_._1)*) -> (ss.map(_._2._1).reduce(_ ++ _), ss.map(_._2._2).reduce(_ ++ _))
+      `|`(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
-  def sequential: Parser[(`.`, (Names, Actions))] =
+  def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (pre, _) ~ None if pre.isEmpty =>
-        throw EmptyNoneParsingException
+      case (Nil, _) ~ None =>
+        `.`(∅) -> Names() // inaction
       case pre ~ Some((end: `&`, free: Names)) =>
-        `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1), Actions(end, pre._1*))
+        `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        `.`(∅, pre._1*) -> (pre._2._2, Actions(pre._1*))
+        `.`(∅, pre._1*) -> pre._2._2
     }
 
-  def leaf: Parser[(`-`, Names)] = agent() |
-    "𝟎" ^^ { _ => (∅, Names()) } |
+  def leaf: Parser[(`-`, Names)] = agent() | // invocation
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         `?:`(cond._1, t._1, ∅) -> (cond._2 ++ t._2)
@@ -154,7 +153,7 @@ class Calculus extends StochasticPi:
 
 object Calculus extends Calculus:
 
-  type Bind = (`(*)`, Option[`+`])
+  type Bind = (`(*)`, `+`)
 
   sealed trait AST extends Any
 
@@ -173,9 +172,9 @@ object Calculus extends Calculus:
 
   case class `|`(components: `.`*) extends AnyVal with AST
 
-  case class `.`(process: `&`, prefixes: Pre*) extends AST
+  case class `.`(end: `&`, prefixes: Pre*) extends AST
 
-  sealed trait Pre extends Any with AST
+  sealed trait Pre extends Any
 
   case class ν(names: String*) extends AnyVal with Pre // forcibly
 
@@ -195,12 +194,20 @@ object Calculus extends Calculus:
   case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
 
   case class `(*)`(identifier: λ,
-                   params: λ*) extends AST
+                   params: λ*) extends AST:
+    override def canEqual(that: Any): Boolean =
+      that.isInstanceOf[`(*)`]
 
-  case class `!`(guard: Option[μ], sum: `+`)
-      extends AST
+    override def equals(any: Any): Boolean = any match
+      case that: `(*)` => this.identifier.asSymbol.name == that.identifier.asSymbol.name
+                       && this.params.map(_.asSymbol.name) == that.params.map(_.asSymbol.name)
+      case _ => false
 
-  case class λ(value: Any) extends AST:
+    override def hashCode(): Int = (identifier.asSymbol.name, params.map(_.asSymbol.name)).##
+
+  case class `!`(guard: Option[μ], sum: `+`) extends AST
+
+  case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
@@ -234,9 +241,6 @@ object Calculus extends Calculus:
   case class PrefixChannelsParsingException(names: λ*)
       extends PrefixParsingException(s"${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
 
-  case object EmptyNoneParsingException
-      extends ParsingException("Instead of an empty expression there must be some in place")
-
 
   // functions
 
@@ -244,21 +248,21 @@ object Calculus extends Calculus:
 
     inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-    ast match {
+    ast match
 
       case `∅` => ∅
 
-      case `+`(enabled, `|`(`.`(sum: `+`)), it*) =>
+      case `+`(_, `|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(null, it*))
         val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
-        if ps.isEmpty then ∅ else `+`(enabled, ps*)
+        if ps.isEmpty then ∅ else `+`(nil, ps*)
 
-      case `+`(enabled, par, it*) =>
+      case `+`(_, par, it*) =>
         val lhs = `+`(null, flatten(par))
         val rhs = flatten(`+`(null, it*))
         val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
-        if ps.isEmpty then ∅ else `+`(enabled, ps*)
+        if ps.isEmpty then ∅ else `+`(nil, ps*)
 
       case `|`(`.`(`+`(_, par)), it*) =>
         val lhs = flatten(par)
@@ -282,5 +286,3 @@ object Calculus extends Calculus:
         `!`(μ, flatten(sum))
 
       case _ => ast
-
-    }

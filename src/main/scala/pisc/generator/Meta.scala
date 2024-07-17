@@ -278,15 +278,5 @@ object Meta:
     )
 
 
-  def `… = *; _ <- π-enable(…)`(enabled: Actions): List[Enumerator] =
-    if enabled.nonEmpty
-    then
-      val uuid = Program.id
-      Enumerator.Val(`* <- …`(uuid), s"""_root_.scala.collection.immutable.Set(${enabled.mkString("\"", "\", \"", "\"")})""".parse[Term].get) ::
-      `_ <- *`(s"`π-enable`($uuid)".parse[Term].get) :: Nil
-    else
-      Nil
-
-
   val `()(null)`: Term =
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))

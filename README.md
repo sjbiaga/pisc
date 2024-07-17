@@ -35,26 +35,28 @@ both ASCII and UTF-8 characters, and slight variations. There is "match" and
 Forcibly, _restriction_ is "considered" a _prefix_, besides input/output
 prefixes per se.
 
-The BNF formal grammar is the following.
+The BNF formal grammar for processes is the following.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= PARALLEL { "+" PARALLEL }
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    PREFIXES   ::= { PREFIX }
-    PREFIX     ::= μ "."
-                 | "ν" "(" NAME ")"
-    μ          ::= "τ" [ @ RATE ] [ EXPRESSION ]
-                 | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
-                 | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
-    LEAF       ::= "𝟎"
-                 | AGENT
+    LEAF       ::= AGENT
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" "." μ "." CHOICE
     AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
+
+The BNF formal grammar for prefixes is the following.
+
+    PREFIXES   ::= { PREFIX }
+    PREFIX     ::= μ "."
+                 | "ν" "(" NAME ")"
+    μ          ::= "τ" [ @ RATE ] [ EXPRESSION ]
+                 | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
+                 | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain
@@ -63,7 +65,7 @@ single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_ (with empty parallel).
 "τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -98,7 +100,7 @@ This may be used to cease guarded replication with input prefix guard: i.e., if 
 `null` is received, the (stack-safe, recursive) replication stops.
 
 Note that input/output prefixes and the silent transition are followed by a dot,
-whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`
+whereas restriction is not; also, inaction, invocation, (mis)match, `if then else`
 and replication are "leaves".
 
 Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
@@ -125,7 +127,7 @@ replication stops.
 
 And if, for each guarded replication, care is taken of to *stop* each, then the
 entire program exits; unless prevented by non-exiting - self or mutual - recursive
-agent calls or unguarded replication.
+invocations or unguarded replication.
 
 Unlike the rest of the agents, the `Main` agent has the command line arguments
 spliced as `vararg` parameter(s).
@@ -139,71 +141,118 @@ The execution of a stochastic π-calculus program is handled in the files:
 called from the final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibers are launched in `background` and used as `Resource`s,
-such that terminating the program cancels them. Even when a process is _discarded_,
-a `Deferred[IO, Option[(Double, -)]]` completed with `None` is used for this situation,
-hence the fiber does not block semantically (so the program would not exit any longer).
+such that terminating the program cancels them. Even when a process is _excluded_ or
+_discarded_, a `Deferred[IO, Option[(Double, -)]]` completed with `None` is used
+for these situations, hence the fiber does not block semantically (so the program
+would not exit any longer).
 
 Silent transitions, input and output prefixes ("actions") are associated with
-an UUID (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
+an `UUID` (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
 trait `State`. The only other expression that is a `State` is... summation (or choice).
 
-A `State` contains a `Set` of `enabled` actions `(UUIDs`). These are computed as follows.
-Each silent transition, input or output prefix has (the key of) itself as the only enabled
-action: these are the base cases. The enabled actions of a sequence of prefixes or
-restriction, unless this sequence is empty, is that of the *first* action, if any.
-If the sequence is empty or does not have actions (e.g., only restrictions), then the
-enabled actions are either those of the "leaf" expression or of another process
-expression, that "`end`"s the sequence of prefixes. Both are optional, case in which
-is taken to be the inaction `𝟎`, which has no enabled actions. Besides `𝟎`, other leaf
-expressions are (mis)match, `if then else`, Elvis operator (all three being treated
-the same), agent call and (guarded) replication.
+A `State` contains a `Set` of `enabled` actions `(UUIDs`). _Parsing_ the equations
+binding agents to process expressions, results in finding the enabled actions
+for all summations - including those corresponding to the bound agents. The `State`
+"transition system" is such that each "precursor" _completed_ action (i.e., that
+is not excluded or discarded) prior to its "expiration", immediately enables other
+"successor" actions, including possibly, again itself.
 
-The only case of a leaf that has enabled actions is the latter - guarded (the prefix
-itself) or not (the process of the) replication. Otherwise, another ending process
-expression must follow the sequence between a pair of parentheses. An exception is
-raised if the sequence is empty and the `end`ing is none.
+Unlike π-calculus, where communication occurs unhindered whenever a channel inputs
+and outputs, in stochastic π-calculus actions have rates, and depending on these
+there is a "probabilistic" _election_ which determine which channels are selected for
+input/output. Therefore, it is important that there should be a "moment" for this
+election to consider _all_ enabled actions when selecting the pairs to communicate,
+or otherwise - if some enabled actions are provisionally "pending" - none.
 
-The set of enabled actions of a (parallel) composition is the union of each sequence's
-set of enabled actions. Finally, the set of enabled actions of a summation is the union
-of each choice's set of enabled actions. Only a summation has a set of enabled actions,
-and thus is a `State`. For the other two cases (sequence and composition) the set of
-enabled actions is only propagated "upwards" by the parser.
+Thus, in advance, it is always known which (as well as how many of _the same_)
+enabled actions are just pending before blocking for their completion;
+the latter may result in either success, or in actions being discarded (as not
+having been probabilistically chosen) - by completion with `None`.
 
-The file `StochasticPi.scala` is used to create a [non-]deterministic _transition "system"_
+Pending actions will soon reach blocking for their completion. As long as there
+are pending actions enabled but not yet blocked for completion, _none_ of the
+other enabled actions actually blocking, do participate in what corresponds to
+probabilistic choice - the election mentioned above: there is patience for that
+"moment" to arrive. Of course, it may be hard to catch, for instance - unguarded
+replication.
+
+Even if many of the same action (i.e., with the same key) are enabled, these are
+distinguished upon completion by a unique `UUID`, either per agent invocation, or
+per replication. And due to the atomicity of updates, the management of the data
+structure for the enabled actions, is coherent among all actions thus "firing"
+in parallel. This makes actions behave as multisets.
+
+Given that a summation is a list of choices, a choice is a list of (parallel)
+compositions, and a composition is a list of (sequential) prefixes ended with
+either a leaf or summation, when parsing the equations for resolving the
+enabled actions, an _invariant_ ensures that (a) for each action there is a
+non-empty set of enabled actions, unless (b) this action is the last in a sequence
+of prefixes ending with inaction.
+
+When violated, the invariant is maintained by inserting immediate τ-actions
+(referred to as _implicit_, in contrast with those that are explicitly occurring)
+with weight equal to `Long.MaxValue` - where appropriate,
+
+- for the case of guarded replication, the guard itself is the enabled action:
+  it enables itself, and other actions (a), unless the replicated process is
+  inaction (b);
+
+- for unguarded replication, the invariant holds (a), unless the replicated
+  process is inaction: in this case, the latter is rewritten as "τ@∞.()" (a);
+
+- likewise for (mis)match: on either branch, the invariant holds (a), unless
+  the ensuing process is inaction: in this case, the latter is rewritten as
+  "τ@∞.()" (a);
+
+- the sole case of a leaf that is not prefixed by an action remains invocation:
+  in this case, its prefixes are appended "τ@∞." (a).
+
+Sticking to this scheme (of implicit τ-actions), after parsing the equations,
+each composition or choice will have a non-empty set of enabled actions (a).
+If an equation is self-recursive, among the enabled actions of the last (implicit
+or explicit) action some self-recursive invocation is prefixed with, is this last
+action itself.
+
+In the single case of (mis)match, the enabled actions on both branches become the
+enabled actions for this kind of process expression. However, given that while
+the enabled actions on the active branch only will be reached, the (enabled)
+actions on the passive branch must so be _excluded_: but this mutual exclusion must
+occur on behalf of just _one_ of the enabled actions; otherwise, whereas it were
+enabled exactly once, an excluded action could risk being "disabled" more than once.
+
+Here, there is a subtlety: if there are nested (mis)matches, the one enabled action
+chosen to exclude the passive nesting branch, might belong to the passive nested
+branch, in which case the exclusion of the passive nesting branch never occurs.
+For this situation, the nested (mis)match is prefixed with "τ@∞." (a).
+
+The file `StochasticPi.scala` is used to create a [non-]deterministic _"transition system"_
 between `State`s for the purpose of enabling the actions in the successor state, immediately
 prior to the "expiration" of the precursor enabled action. From action to successive action,
 there is a transition, even if there are restrictions in between (picture these latter
-translation in `Scala`). And finally, if there is a last action in a sequence, then
-there is a transition from it to either an `end`ing summation or replication guard;
-otherwise there is no transition: but if this were the case - there is no last action -,
-the set of enabled actions of a summation or a (guarded) replication, is directly and
-wholly subsumed in/by another summation; and, of course, eventually, the enabled actions
-of the summation (process) expression pertaining to an agent definitional equation are
-immediately enabled upon its entry in any call.
+translation in `Scala`). And finally, as there always is a last action in a sequence (either
+explicit or implicit), there is a transition from it to either an `end`ing summation or
+replication guard.
 
-For the other three leaf types: (mis)match, `if then else` and Elvis operator, the set
-of enabled actions is empty, because actions are enabled depending on the test result.
-But more importantly, upon the expiration of a last action from a sequence of prefixes,
-if its `end` is a _summation_, the enabled actions of this summation are enabled _before_
-actions are next to be fired (in parallel).
+But more importantly, upon the expiration of the last action from a sequence of prefixes,
+the enabled actions are enabled _before_ they are next to be "fired" (in parallel) - which
+means blocking for their completion.
 
 The transition system is non-deterministic, because for the case of guarded replication
-there is also one transition from the guard prefix to itself and to the process of the
-replication operator - whether there is a last action or not. This means that after expiration
-of the guard action, the enabled actions are again the guard itself and the actions enabled
-by the process that fires up in parallel. In the absence of a last action, the same enabled
-actions propagate "upwards" - the initial case.
+there is also one transition from the guard to itself and to the replicated process.
+This means that after expiration of the guard action, the enabled actions are again
+the guard itself and the enabled actions of the process that fires up in parallel.
 
 Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
 _discarded_ actions. Each choice corresponds to a set of enabled actions. The
 set of enabled actions of the summation is but the union of the former. However,
-even this is handled in the parser, a somewhat "duplicated" algorithm creates
-the discarded actions.
+a somewhat "duplicated" algorithm creates the discarded actions: and, with this
+occasion, alse the _excluded_ actions.
 
-Thus, assume a choice of the summation and dub it - `it`; the union of the set of
-_all_ enabled actions of the choices to the left - `left`; and, the union of the
-set of _all_ enabled actions of the choices to the right - `right`. Then for
-each key in `it`, the discarded actions is the union of `left` with `right`.
+Thus, assume a choice of the summation; the union of the set of _all_ enabled
+actions of the choices to the left; and, the union of the set of _all_ enabled
+actions of the choices to the right. Then for each key in the summation, the
+discarded actions is the union of "left" with "right".
+
 As an action is part of many summations on the way up to the top level,
 each time there is more than one choice, to the same key there will be added
 more "left/right" discarded actions/keys.
@@ -213,16 +262,17 @@ performing the action corresponding to that key means two things. First, the
 actions that are in parallel remain the same. Second, whenever the key is
 part of a composition (maybe more than one sequence), then the fact that
 this parallel composition is a choice in a summation, demands that all other
-actions in the other `left` and `right` choices be discarded. So, there may be
+actions in the other "left" and "right" choices be discarded. So, there may be
 many summations in which the expired _key_ discards other keys.
 
-The discarded and enabled actions are then embedded as an immutable map from
-`String` to `Set[String]`in the generated output file. These `magical` maps
-are declared as `π-trick` and `π-spell`, while their pair is declared as `π-wand`.
+The discarded, excluded and enabled actions are then embedded as an immutable map
+from `String` to `Set[String]`in the generated output file. These `magical` maps
+are declared as `π-trick`, `π-elvis` and `π-spell`, respectively.
 
-The contention between the enabled actions occurs as follows. Each action in a
-sequence is a `for` generator that calls a method in `spi.scala`; the key of
-this action is passed as second argument. The method is within a unique scope (`^`)
+The contention between the enabled actions occurs as follows. First, it "disables"
+the excluded actions associated, if any. Each action in a sequence is a `for`
+generator that calls a method in `spi.scala` (or `spi_.scala`); the key of this
+action is passed as second argument. The method is within a unique scope (`^`)
 to distinguish between different actions that correspond to the same key (multisets).
 It creates a `Deferred[IO, Option[(Double, -)]]` and offers these together with the
 action `rate` associated with the key, or enqueues a quadruple in the `/` `Queue`.
@@ -241,13 +291,13 @@ There are two kinds of keys:
 - the size of an `UUID`, each action has hard-coded a unique key; in the dual `%`
   map, these correspond to numbers: a number increases (`π-enable` method in
   `spi.scala`) as more actions - with the same key, i.e., in parallel - are enabled,
-  but decreases (`poll` method in `loop.scala`) as the actions are "executed": when
+  but decreases (`poll` method in `loop.scala`) as the actions are "fired": when
   the number/counter reaches zero, a key is removed from the `%` map (also, when
   keys are `π-discard`ed);
 
 - double the size of the former, concatenating the `UUID` of the current scope
   (`implicit ^`) with actions' keys, and replacing the value in the dual `map` by
-  mapping `^ + key` to the triple `Ref` & `Deferred` & rate, each "executed" action
+  mapping `^ + key` to the triple `Ref` & `Deferred` & rate, each "fired" action
   has also associated a runtime unique key; to the "same actions", there may
   correspond concomitantly a number _and_ a triple in the dual `%` map.
 
@@ -256,10 +306,10 @@ the loose key to be in the `%` map) already when actions are fired in parallel.
 A second background fiber is blocked on a `Semaphore` that the other background
 fiber releases, and then (blocking) polls for a next "offer".
 
-This second background fiber then awaits for all enabled actions to be "reached",
-and thus have associated a rate rather than a number (the value type of the `%` map
-is a `Scala 3` _union_ type). If the multisets are not empty, then it will block on the
-semaphore shared with the first background fiber.
+This second background fiber then awaits for all enabled actions to be "reached"
+or "fired", and thus have associated a rate rather than a number (the value type
+of the `%` map is a `Scala 3` _union_ type). If the multisets are not empty,
+then it will block on the semaphore shared with the first background fiber.
 
 As soon as the multisets are empty, the second background fiber computes
 [statistically](https://github.com/scalanlp/breeze) - starting from the
@@ -277,9 +327,9 @@ Meanwhile, all methods called (in parallel, either summation or composition)
 from a `for` generator, having `offered` the action rate, are (and must _all_
 be) blocked on `Deferred.get`'s method. As soon as one (pair of) `Deferred` is
 `complete`d, the rest - upon being discarded - will be semantically unblocked
-and canceled. Upon `complete`ion, a `CyclicBarrier[IO](3)` is also passed,
-such that all three fibers (the loop, the positive polarity action and the
-negative polarity action) await, and only continue as soon as - after the
+and canceled. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
+passed, such that all three fibers (the loop, the positive polarity action and
+the negative polarity action) `await`, and only continue as soon as - after the
 "communication" but not before its result -, the keys to be discarded are
 discarded and the keys to be enabled are enabled.
 

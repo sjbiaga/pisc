@@ -35,17 +35,17 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus.{ rate => _, _ }
+import parser.`Pre | AST`
 import generator.Meta._
 
 
 object Program:
 
   def apply(prog: List[Bind]): List[String] =
-    prog.map { case (bind, Some(sum)) => defn(bind, body(sum)()).toString
-               case _ => "" }
+    prog.map { (bind, sum) => defn(bind, body(sum)).toString }
 
 
-  def body(node: AST)(init: Boolean = true): List[Enumerator] =
+  def body(node: `Pre | AST`): List[Enumerator] =
     var * = List[Enumerator]()
 
     node match
@@ -53,37 +53,28 @@ object Program:
       // SUMMATION /////////////////////////////////////////////////////////////
 
       case `∅` =>
-        val ** = `_ <- IO.unit`
+        * = `_ <- IO.unit`
 
-      case it: `+` if it.choices.size > 1 =>
+      case `+`(_, operand) =>
+        * ++= body(operand)
 
-        val ios = it.choices.foldLeft(List[Term]())(_ :+ body(_)(false))
-
-        if init then * ++= `… = *; _ <- π-enable(…)`(it.enabled)
+      case it: `+` =>
+        val ios = it.choices.foldLeft(List[Term]())(_ :+ body(_))
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
-
-      case it @ `+`(_, operand, _*) =>
-        if init then * ++= `… = *; _ <- π-enable(…)`(it.enabled)
-
-        * ++= body(operand)(false)
-
-      case _: `+` => ??? // ∅ - caught by parser
 
       ///////////////////////////////////////////////////////////// summation //
 
 
       // COMPOSITION ///////////////////////////////////////////////////////////
 
-      case it: `|` if it.components.size > 1 =>
-        val ios = it.components.foldLeft(List[Term]())(_ :+ body(_)(false))
+      case `|`(operand) =>
+        * = body(operand)
+
+      case it: `|` =>
+        val ios = it.components.foldLeft(List[Term]())(_ :+ body(_))
 
         * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
-
-      case `|`(operand, _*) =>
-        * = body(operand)(false)
-
-      case _: `|` => ??? // impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -91,7 +82,7 @@ object Program:
       // SEQUENCE //////////////////////////////////////////////////////////////
 
       case `.`(end, it*) =>
-        * = (it :+ end).foldLeft(*)(_ ++ body(_)(false))
+        * = (it :+ end).foldLeft(*)(_ ++ body(_))
 
       ////////////////////////////////////////////////////////////// sequence //
 
@@ -103,27 +94,23 @@ object Program:
 
 
       case it @ τ(Some(Left(enums)), r) =>
-        * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
         * ++= enums
 
       case it @ τ(Some(Right(term)), r) =>
-        * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
         * :+= `_ <- IO { * }`(term)
 
       case it @ τ(_, r) =>
-        * :+= `_ <- *`(s"τ(${rate(r)})(\"${it.uuid}\")".parse[Term].get)
+        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
 
-
-      case it @ π(λ(Symbol(_)), par, true, _, _) if !par.isSymbol => ??? // not binding a name - caught by parser
-
-      case it @ π(ch,  _, _, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
 
       case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some(Left(enums))) =>
         val code = `for * yield ()`(enums*)
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -133,7 +120,7 @@ object Program:
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -141,7 +128,7 @@ object Program:
       case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, _) =>
         * = `_ <- *`(Term.Apply(
                        Term.Apply( \(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                       Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                       Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                      ))
 
       case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some(Left(enums))) =>
@@ -149,7 +136,7 @@ object Program:
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -159,7 +146,7 @@ object Program:
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -167,7 +154,7 @@ object Program:
       case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, _) =>
         * = `_ <- *`(Term.Apply(
                        Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                       Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                       Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                      ))
 
       case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some(Left(enums))) =>
@@ -175,7 +162,7 @@ object Program:
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -185,7 +172,7 @@ object Program:
         * = `_ <- *`(Term.Apply(
                        Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                         Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ),
                        Term.ArgClause(code::Nil, None)
                      ))
@@ -193,7 +180,7 @@ object Program:
       case it @ π(λ(Symbol(ch)), λ(arg), false, r, _) =>
         * = `_ <- *`(Term.Apply(
                        Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                       Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                       Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                      ))
 
       case π(_, _, true, _, Some(Left(_))) => ??? // Scalameta Enumerator - caught by parser
@@ -203,7 +190,7 @@ object Program:
                                  Term.Apply(
                                    Term.Apply(
                                      Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::Nil, None)),
-                                     Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                                     Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                                    ),
                                    Term.ArgClause(code::Nil, None)
                                  ))
@@ -212,8 +199,10 @@ object Program:
         * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                  Term.Apply(
                                    Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::Nil, None)),
-                                   Term.ArgClause(s"\"${it.uuid}\"".parse[Term].get::Nil, None)
+                                   Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                                  ))
+
+      case _: π => ??? // caught by parser
 
       //////////////////////////////////////////////// restriction | prefixes //
 
@@ -221,11 +210,13 @@ object Program:
       // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR ////////////////////////////
 
       case it @ `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+        val t_* = body(t)
+        val f_* = body(f)
         if mismatch
         then
-          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(f)(), body(t)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f_*, t_*))
         else
-          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t)(), body(f)()))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t_*, f_*))
 
       //////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -235,7 +226,7 @@ object Program:
       case `!`(Some(π @ π(_, λ(Symbol(par)), true, _, _)), sum) =>
         val uuid = id
 
-        val `!.π⋯` = body(π)() ++
+        val `!.π⋯` = body(π) ++
                      `_ <- *`(s"$uuid($par)(`π-uuid`)".parse[Term].get)
 
         val it =
@@ -244,7 +235,7 @@ object Program:
               Term.If(Term.ApplyUnary("!", par),
                       `IO.cede`,
                       `( *, … ).parMapN { (_, …) => }`(
-                        `for * yield ()`(body(sum)(false)*),
+                        `for * yield ()`(body(sum)*),
                         `for * yield ()`(`!.π⋯`*)
                       )
               )
@@ -258,7 +249,7 @@ object Program:
         val uuid = id
         val uuid2 = id
 
-        val `body(μ)()` = body(μ)().head match
+        val `body(μ)()` = body(μ).head match
           case it @ Enumerator.Generator(Pat.Wildcard(), _) =>
             it.copy(pat = Pat.Var(uuid2))
 
@@ -274,7 +265,7 @@ object Program:
           `for * yield ()`(
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)(false)*),
+                `for * yield ()`(body(sum)*),
                 `for * yield ()`(`!.μ⋯`*)
               )
             }
@@ -286,14 +277,13 @@ object Program:
       case `!`(_, sum) =>
         val uuid = id
 
-        val `!⋯` = `… = *; _ <- π-enable(…)`(sum.enabled) ++
-                   `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
+        val `!⋯` = `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
 
         val it =
           `for * yield ()`(
             `_ <- *` {
               `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)(false)*),
+                `for * yield ()`(body(sum)*),
                 `for * yield ()`(`!⋯`*)
               )
             }
@@ -305,7 +295,7 @@ object Program:
       /////////////////////////////////////////////////////////// replication //
 
 
-      // AGENT CALL ////////////////////////////////////////////////////////////
+      // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(λ(Symbol(identifier)), params*) =>
         val args = params.map {
@@ -322,9 +312,7 @@ object Program:
 
       case _: `(*)` => ??? // impossible by syntax
 
-      //////////////////////////////////////////////////////////// agent call //
-
-      case _ => ???
+      //////////////////////////////////////////////////////////// invocation //
 
     *
 

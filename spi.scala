@@ -71,7 +71,12 @@ package object sΠ:
                    (using % : %)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     val (_, spell) = `π-wand`
-    `π-enable`(spell.getOrElse(key, _root_.scala.collection.immutable.Set.empty)) >> -.await
+    ( if spell.contains(key)
+      then
+        `π-enable`(spell(key))
+      else
+        IO.unit
+    ) >> -.await
 
 
   private def unblock(m: _root_.scala.collection.immutable.Map[String, Int | +], head: String, tail: `Π-Set`[String])
@@ -100,7 +105,32 @@ package object sΠ:
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                ^ : String): IO[Unit] =
     val (trick, _) = `π-wand`
-    `π-discard`(trick.getOrElse(key, _root_.scala.collection.immutable.Set.empty))
+    if trick.contains(key)
+    then
+      `π-discard`(trick(key))
+    else
+      IO.unit
+
+
+  private def `π-exclude`(excluded: `Π-Set`[String])
+                         (using % : %): IO[Unit] =
+    %.update(excluded.foldLeft(_) { (m, key) =>
+                                    if m(key) == 1
+                                    then
+                                      m - key
+                                    else
+                                      m + (key -> (m(key).asInstanceOf[Int] - 1))
+                                  }
+    )
+
+  private def exclude(key: String)
+                     (using % : %)
+                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
+    if `π-elvis`.contains(key)
+    then
+      `π-exclude`(`π-elvis`(key))
+    else
+      IO.unit
 
 
   /**
@@ -126,8 +156,10 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
+        _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, -)]]
         _dummy_ref <- Ref.of[IO, ><](><())
         _          <- /.offer(^ -> key -> (deferred -> (_dummy_ref, None, rate)))
@@ -162,8 +194,10 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
+        _        <- exclude(key)
         deferred <- Deferred[IO, Option[(Double, -)]]
         _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
         delay    <- ><(key, value.name)(deferred)(ref)
@@ -176,8 +210,10 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)(code: => IO[Any])
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
+        _        <- exclude(key)
         deferred <- Deferred[IO, Option[(Double, -)]]
         _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
         delay    <- ><(key, value.name)(code)(deferred)(ref)
@@ -190,8 +226,10 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
+        _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, -)]]
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key)(deferred)(ref)
@@ -204,8 +242,10 @@ package object sΠ:
     def apply[T](rate: Rate)(key: String)(code: T => IO[T])
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
+        _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, -)]]
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key)(code)(deferred)(ref)
