@@ -36,6 +36,7 @@ import dialects.Scala3
 import parser.Ambient
 import Ambient.{ AST => _, _ }
 import parser.Calculus._
+import parser.`Pre | AST`
 import generator.Meta._
 
 
@@ -45,7 +46,7 @@ object Program:
     bind.map { case (bind, par) => defn(bind, body(par)).toString }
 
 
-  def body(node: AST): List[Enumerator] =
+  def body(node: `Pre | AST`): List[Enumerator] =
     var * = List[Enumerator]()
 
     node match
@@ -207,7 +208,7 @@ object Program:
       //////////////////////////////////////////////////////////////// output //
 
 
-      // AGENT CALL ////////////////////////////////////////////////////////////
+      // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(identifier, qual, params*) =>
         if qual.isEmpty
@@ -216,7 +217,7 @@ object Program:
         else
           * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${params.mkString(", ")})".parse[Term].get)
 
-      //////////////////////////////////////////////////////////// agent call //
+      //////////////////////////////////////////////////////////// invocation //
 
     *
 

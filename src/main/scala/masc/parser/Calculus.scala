@@ -58,7 +58,7 @@ class Calculus extends Ambient:
   def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
       case (Nil, _) ~ None =>
-        throw EmptyParsingException
+        `.`(∅) -> Names() // void
       case pre ~ Some((end: `&`, free: Names)) =>
         `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
@@ -66,7 +66,6 @@ class Calculus extends Ambient:
     }
 
   def leaf: Parser[(`-`, Names)] = agent() |
-    "𝟎" ^^ { _ => (∅, Names()) } | // void
     "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
       case Some((it, bound)) ~ (par, free) =>
         `!`(Some(it), par) -> (free &~ bound)
@@ -171,7 +170,7 @@ object Calculus:
 
   case class `.`(end: `&`, prefixes: Pre*) extends AST
 
-  sealed trait Pre extends Any with AST
+  sealed trait Pre extends Any
 
   case class ν(names: String*) extends AnyVal with Pre // forcibly
 
@@ -207,9 +206,6 @@ object Calculus:
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
-
-  case object EmptyParsingException
-      extends ParsingException("Instead of an empty expression there must be at least 𝟎 in place")
 
   import scala.meta.Enumerator
 

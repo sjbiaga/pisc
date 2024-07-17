@@ -34,27 +34,32 @@ literature, with both ASCII and UTF-8 characters, and slight variations.
 Forcibly, _restriction_ is "considered" a _prefix_, besides input/capability
 actions per se; output action is a _leaf_, like ambient and [guarded] replication.
 
-The BNF formal grammar is the following.
+The BNF formal grammar for processes is the following.
 
     EQUATION   ::= AGENT "=" PARALLEL
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
+    LEAF       ::= AGENT
+                 | "!" [ "." "(" NAME ")" "." ] PARALLEL
+                 | NAME "[" PARALLEL "]"
+                 | "<" CAPS ">" [ EXPRESSION ]
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
+    EXPRESSION ::= "/*" ... "*/"
+
+The BNF formal grammar for prefixes is the following.
+
     PREFIXES   ::= { PREFIX }
     PREFIX     ::= "τ" [ EXPRESSION ] "."
                  | "ν" "(" NAME { "," NAME } ")"
                  | CAPS "."
                  | "(" NAME ")" [ EXPRESSION ] "."
-    LEAF       ::= "𝟎"
-                 | AGENT
-                 | "!" [ "." "(" NAME ")" "." ] PARALLEL
-                 | NAME "[" PARALLEL "]"
-                 | "<" CAPS ">" [ EXPRESSION ]
+
+The BNF formal grammar for capabilities is the following.
+
     CAPS       ::= CAPABILITY { "." CAPABILITY }
     CAPABILITY ::= "ε"
                  | ( "in" | "out" | "open" ) NAME
                  | NAME
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
-    EXPRESSION ::= "/*" ... "*/"
 
 Lexically, `ident` is an ambient name - (an identifier) starting with lowercase letter;
 it may contain single and double quotes.
@@ -62,7 +67,7 @@ it may contain single and double quotes.
 A source file with the "`.masc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "𝟎" is _inaction_ or _void_ (empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or _void_ (empty parallel).
 "τ" is the _silent transition_ - which does not exist in the original calculus.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -83,7 +88,7 @@ will be associated with it, as the common value of all `IOLocal`s corresponding 
 the fibers created in parallel by `parMapN`. The `NAME` must have been previously
 introduced using "ν" - an ambient name.
 
-Not part of the original `Ambient Calculus`, an agent (call) expression - unless
+Not part of the original `Ambient Calculus`, an agent (invocation) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
 between curly braces: these will be joined using the dot "`.`" character, standing for
 a qualified package identifier. Thus, agents in different translated "`.scala`" files
@@ -107,7 +112,7 @@ for the possibility to have per-fiber copies of the same `IOLocal`. And so, in
 fact, ambients are not differentiated at runtime (running in parallel) except
 that the "_ether_" used for communication is resolved starting with an `IOLocal`.
 
-An `IOLocal` is a parameter to each agent (so including "`Main`") call, and is
+An `IOLocal` is a parameter to each agent (so including "`Main`") invocation, and is
 thus available to be altered when "launching" ambients in parallel. The value of
 these `IOLocal`s are `UUID`s. Were it not for the capability to "`open`" ambients,
 the ether would not have been mixed as it is when two ambients are "merged" into
