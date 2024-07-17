@@ -6,12 +6,11 @@
 
 @val nl: String => IO[String] = { it => IO { s"$it\n" } }
 
-Main = ν(stdin)ν(stdout)Greeter(stdin, stdout, "")
+Main = ν(stdin, stdout) Greeter(stdin, stdout, "")
 
 Greeter(stdin, stdout, line) = \
-                             ( \
                              ( stdout<"What's your name?">.stdin(name). \
-                                                                        if /* name.isBlank */ = True \
+                                                                        if /* 'name.isBlank */ = True \
                                                                         then stdout<>. Greeter(stdin, stdout, line) \
                                                                         else Chooser(stdout, name) \
                              ) \
@@ -20,18 +19,17 @@ Greeter(stdin, stdout, line) = \
                                τ /* _    <- IO { print('prompt) }; \
                                    'line <- IO.blocking { scala.io.StdIn.readLine } */. \
                                                         stdin<line>.stdout(greet) /* nl */. \
-                               [/* !greet */ = False] τ/*print('greet)*/. \
+                               [/* !'greet */ = False] τ/*print('greet)*/. \
                              ) \
-                             )
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
                       + Greeter"(stdout, name) \
                       + Greeter"'(stdout, name)
 
 Greeter'(stdout, name) = \
-                       ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"]stdout<"That's an unusual name.">. ) \
-                       | ( [name = "Voldemort"]stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
-                       | ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"]stdout</*s"Hello $name!"*/>.  ) \
+                       ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">. ) \
+                       | ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
+                       | ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.  ) \
                        )
 
 Greeter"(stdout, name) = \
@@ -40,7 +38,7 @@ Greeter"(stdout, name) = \
                          else \
                            if name = "Voldemort" \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           else stdout</*s"Hello $name!"*/>. \
+                           else stdout</*s"Hello ${'name}!"*/>. \
                        )
 
 Greeter"'(stdout, name) = \
@@ -49,5 +47,5 @@ Greeter"'(stdout, name) = \
                           : \
                             name = "Voldemort" \
                             ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                            : stdout</*s"Hello $name!"*/>. \
+                            : stdout</*s"Hello ${'name}!"*/>. \
                         )

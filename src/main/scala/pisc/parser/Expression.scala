@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.mutable.LinkedHashSet
+import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.util.parsing.combinator._
 
@@ -209,7 +209,7 @@ object Expression:
         it.copy(args = as) -> asns
 
       case sm.Lit.Symbol(free @ Symbol(name)) =>
-        sm.Pat.Var(sm.Term.Name(name)) -> LinkedHashSet(free)
+        sm.Pat.Var(sm.Term.Name(name)) -> Set(free)
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -230,7 +230,7 @@ object Expression:
 
       case it @ sm.Term.Name(name) if name.startsWith("'") =>
         val free = Symbol(name.stripPrefix("'"))
-        sm.Pat.Var(sm.Term.Name(free.name)) -> LinkedHashSet(free)
+        sm.Pat.Var(sm.Term.Name(free.name)) -> Set(free)
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -539,7 +539,7 @@ object Expression:
         it.copy(args = as) -> asns
 
       case it @ sm.Lit.Symbol(free @ Symbol(name)) =>
-         sm.Term.Name(name) -> LinkedHashSet(free)
+         sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
