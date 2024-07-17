@@ -36,22 +36,16 @@ both ASCII and UTF-8 characters, and slight variations. There is "match" and
 Forcibly, _restriction_ is "considered" a _prefix_, besides input/output
 prefixes per se.
 
-The BNF formal grammar is the following.
+The BNF formal grammar for processes is the following.
 
     EQUATION   ::= AGENT "=" CHOICE
     CHOICE     ::= PARALLEL { "+" PARALLEL }
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    PREFIXES   ::= { PREFIX }
-    PREFIX     ::= "ν" "(" NAME ")"
-                 | "start" "(" trans ")" "[" CHOICE "]" "."
-                 | "end" "(" trans ")" "."
-				 | μ "."
     μ          ::= "τ" [ EXPRESSION ]
                  | NAME "<" [ NAME ] ">" [ EXPRESSION ]
                  | NAME "(" NAME ")" [ EXPRESSION ]
-    LEAF       ::= "𝟎"
-                 | AGENT
+    LEAF       ::= AGENT
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
@@ -60,6 +54,14 @@ The BNF formal grammar is the following.
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
+The BNF formal grammar for prefixes is the following.
+
+    PREFIXES   ::= { PREFIX }
+    PREFIX     ::= "ν" "(" NAME ")"
+                 | "start" "(" trans ")" "[" CHOICE "]" "."
+                 | "end" "(" trans ")" "."
+				 | μ "."
+
 Lexically, `ident` is a channel or transaction name - (an identifier) starting with
 lowercase letter; capital `IDENT` is an agent identifier starting with uppercase
 letter. Both may contain single and double quotes.
@@ -67,7 +69,7 @@ letter. Both may contain single and double quotes.
 A source file with the "`.pixc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "𝟎" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_ (with empty parallel).
 "τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -97,7 +99,7 @@ This may be used to cease guarded replication with _input_ prefix guard: i.e.,
 if a `null` is received, the (stack-safe, recursive) replication stops.
 
 Note that input/output prefixes and the silent transition are followed by a dot,
-whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`,
+whereas restriction is not; also, inaction, invocation, (mis)match, `if then else`,
 Elvis operator, and replication are "leaves".
 
 Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
@@ -126,7 +128,7 @@ And if, for each guarded replication, care is taken of to *stop* each, then the
 entire program exits; unless prevented by non-exiting - self or mutual - recursive
 agent calls or unguarded replication.
 
-Not part of the original π-calculus, an agent (call) expression - unless
+Not part of the original π-calculus, an agent (invocation) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
 between curly braces: these will be joined using the dot "`.`" character, standing for
 a qualified package identifier. Thus, agents in different translated "`.scala`" files

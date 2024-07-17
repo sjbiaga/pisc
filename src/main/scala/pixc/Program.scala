@@ -34,16 +34,17 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
+import parser.`Pre | AST`
 import generator.Meta._
 
 
 object Program:
 
   def apply(bind: List[Bind]): List[String] =
-    bind.map { case (bind, sum) => defn(bind, body(sum)()).toString }
+    bind.map { (bind, sum) => defn(bind, body(sum)()).toString }
 
 
-  def body(node: AST)
+  def body(node: `Pre | AST`)
           (implicit semaphore: Option[String] = None): List[Enumerator] =
     var * = List[Enumerator]()
 
@@ -342,7 +343,7 @@ object Program:
       /////////////////////////////////////////////////////////// replication //
 
 
-      // AGENT CALL ////////////////////////////////////////////////////////////
+      // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(λ(Symbol(identifier)), qual, params*) =>
         val args = params.map {
@@ -363,7 +364,7 @@ object Program:
 
       case _: `(*)` => ??? // impossible by syntax
 
-      //////////////////////////////////////////////////////////// agent call //
+      //////////////////////////////////////////////////////////// invocation //
 
 
       // TRANSACTION ///////////////////////////////////////////////////////////
