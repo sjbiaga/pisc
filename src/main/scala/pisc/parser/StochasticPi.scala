@@ -220,7 +220,8 @@ object StochasticPi:
           if Actions(ps*).nonEmpty
           then
             (`.`(it, ps*), Actions(ps*))
-          else if enabled.nonEmpty then
+          else if enabled.nonEmpty
+          then
             (`.`(it, ps*), enabled)
           else
             assert(it.isInstanceOf[`(*)`])
@@ -261,13 +262,15 @@ object StochasticPi:
             f_enabled = Actions(ps*)
             f_f = `+`(f_enabled, `|`(`.`(∅, ps*)))
 
-          if t_enabled.exists(excluded.contains(_))
+          if t_t.choices.size > 1
+          || t_enabled.exists(excluded.contains(_))
           then
             val ps = τ :: Nil
             t_enabled = Actions(ps*)
             t_t = `+`(t_enabled, `|`(`.`(t_t, ps*)))
 
-          if f_enabled.exists(excluded.contains(_))
+          if f_f.choices.size > 1
+          || f_enabled.exists(excluded.contains(_))
           then
             val ps = τ :: Nil
             f_enabled = Actions(ps*)
@@ -324,6 +327,9 @@ object StochasticPi:
       case `?:`(_, t, f) =>
         split(t)
         split(f)
+
+        assert(t.choices.size == 1)
+        assert(f.choices.size == 1)
 
         t.enabled.foreach { k => assert(!excluded.contains(k)) }
         f.enabled.foreach { k => assert(!excluded.contains(k)) }

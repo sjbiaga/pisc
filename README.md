@@ -141,10 +141,10 @@ The execution of a stochastic π-calculus program is handled in the files:
 called from the final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibers are launched in `background` and used as `Resource`s,
-such that terminating the program cancels them. Even when a process is _excluded_ or
-_discarded_, a `Deferred[IO, Option[(Double, -)]]` completed with `None` is used
-for these situations, hence the fiber does not block semantically (so the program
-would not exit any longer).
+such that terminating the program cancels them. Even when a process is _discarded_,
+a `Deferred[IO, Option[(Double, -)]]` completed with `None` is used for this
+situation, hence the fiber does not block semantically (so the program would not
+exit any longer).
 
 Silent transitions, input and output prefixes ("actions") are associated with
 an `UUID` (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
@@ -173,8 +173,7 @@ Pending actions will soon reach blocking for their completion. As long as there
 are pending actions enabled but not yet blocked for completion, _none_ of the
 other enabled actions actually blocking, do participate in what corresponds to
 probabilistic choice - the election mentioned above: there is patience for that
-"moment" to arrive. Of course, it may be hard to catch, for instance - unguarded
-replication.
+"moment" to arrive. Of course, it may be hard to catch (for unguarded replication).
 
 Even if many of the same action (i.e., with the same key) are enabled, these are
 distinguished upon completion by a unique `UUID`, either per agent invocation, or
@@ -220,10 +219,13 @@ actions on the passive branch must so be _excluded_: but this mutual exclusion m
 occur on behalf of just _one_ of the enabled actions; otherwise, whereas it were
 enabled exactly once, an excluded action could risk being "disabled" more than once.
 
-Here, there is a subtlety: if there are nested (mis)matches, the one enabled action
-chosen to exclude the passive nesting branch, might belong to the passive nested
-branch, in which case the exclusion of the passive nesting branch never occurs.
-For this situation, the nested (mis)match is prefixed with "τ@∞." (a).
+Here, there are two subtleties. First, if the process on the active branch is a
+summation, then there is not exactly one of the enabled actions on which behalf
+the passive branch must be excluded, while finding them all becomes complicated.
+Second, if there are nested (mis)matches, the one enabled action chosen to exclude
+the passive nesting branch, might belong to the passive nested branch, in which case
+the exclusion of the passive nesting branch never occurs. For these two situations,
+the nested (mis)match is prefixed with "τ@∞." (a).
 
 The file `StochasticPi.scala` is used to create a [non-]deterministic _"transition system"_
 between `State`s for the purpose of enabling the actions in the successor state, immediately
@@ -265,7 +267,7 @@ this parallel composition is a choice in a summation, demands that all other
 actions in the other "left" and "right" choices be discarded. So, there may be
 many summations in which the expired _key_ discards other keys.
 
-The discarded, excluded and enabled actions are then embedded as an immutable map
+The discarded, excluded, and enabled actions are then embedded as an immutable map
 from `String` to `Set[String]`in the generated output file. These `magical` maps
 are declared as `π-trick`, `π-elvis` and `π-spell`, respectively.
 
