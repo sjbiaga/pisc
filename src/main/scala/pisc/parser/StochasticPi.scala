@@ -114,7 +114,7 @@ trait StochasticPi extends Expression:
     }
 
 
-object StochasticPi:
+object StochasticPi extends Calculus:
 
   type Actions = Set[String]
 
@@ -224,7 +224,7 @@ object StochasticPi:
           then
             (`.`(it, ps*), enabled)
           else
-            assert(it.isInstanceOf[`(*)`])
+            assert(∅ == it || it.isInstanceOf[`(*)`])
             val ps2 = ps :+ τ
             (`.`(it, ps2*), Actions(ps2*))
 
@@ -237,7 +237,7 @@ object StochasticPi:
 
           if enabled.isEmpty
           then
-            assert(∅ == sum)
+            assert(∅ == it)
             val ps = τ :: Nil
             enabled = Actions(ps*)
             it = `+`(enabled, `|`(`.`(∅, ps*)))

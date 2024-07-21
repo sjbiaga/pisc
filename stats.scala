@@ -168,62 +168,72 @@ package object `Π-stats`:
     //             ^^^^^^  ^^^^^^  ^^^^^^     ^^^  ^^^^^^
     //             key1    key1|2  duration   pri  delay
 
+    var s = Set[String]()
+
     val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
 
     returning {
       for
         ((key1, (name1, polarity1, (rate1, weight1))), i) <- χ
-        k1 = key1.substring(key1.length/2)
       do
         if p == 0 then thr(())
-        if polarity1 eq None
+        if !s.contains(key1)
         then
-          val (rate, (priority, duration)) =
-            if msrt.contains(name1 -> polarity1)
-            then
-              BigDecimal(1) * rate1 -> (2 -> Double.PositiveInfinity)
-            else if mswi.contains(name1 -> polarity1)
-            then
-              BigDecimal(1) * weight1 -> (1 -> 0.0)
-            else if mswp.contains(name1 -> polarity1)
-            then
-              BigDecimal(1) * weight1 -> (3 -> Double.NaN)
-            else
-              ???
-          val delay = delta(rate)
-          r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay, name1)
-          p -= 1
-        else
-          for
-            ((key2, (name2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
-            if name1 == name2 && polarity1.get == !polarity2.get
-            k2 = key2.substring(key2.length/2)
-            if !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
-          do
+          if polarity1 eq None
+          then
             val (rate, (priority, duration)) =
               if msrt.contains(name1 -> polarity1)
-              && msrt.contains(name2 -> polarity2)
               then
-                val apr1 = msrt(name1 -> polarity1)
-                val apr2 = msrt(name2 -> polarity2)
-                ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
+                BigDecimal(1) * rate1 -> (2 -> Double.PositiveInfinity)
               else if mswi.contains(name1 -> polarity1)
-                   && mswi.contains(name2 -> polarity2)
               then
-                val apr1 = mswi(name1 -> polarity1)
-                val apr2 = mswi(name2 -> polarity2)
-                ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (1 -> 0.0)
+                BigDecimal(1) * weight1 -> (1 -> 0.0)
               else if mswp.contains(name1 -> polarity1)
-                   && mswp.contains(name2 -> polarity2)
               then
-                val apr1 = mswp(name1 -> polarity1)
-                val apr2 = mswp(name2 -> polarity2)
-                ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (3 -> Double.NaN)
+                BigDecimal(1) * weight1 -> (3 -> Double.NaN)
               else
-                throw CombinedActivitiesException("crossed")
+                ???
             val delay = delta(rate)
-            r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay, name2)
+            s += key1
+            r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay, name1)
             p -= 1
+          else returning {
+            for
+              ((key2, (name2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
+            do
+              if !s.contains(key2) && name1 == name2 && polarity1.get != polarity2.get
+              then
+                val k1 = key1.substring(key1.length/2)
+                val k2 = key2.substring(key2.length/2)
+                if !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
+                then
+                  val (rate, (priority, duration)) =
+                    if msrt.contains(name1 -> polarity1)
+                    && msrt.contains(name2 -> polarity2)
+                    then
+                      val apr1 = msrt(name1 -> polarity1)
+                      val apr2 = msrt(name2 -> polarity2)
+                      ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
+                    else if mswi.contains(name1 -> polarity1)
+                         && mswi.contains(name2 -> polarity2)
+                    then
+                      val apr1 = mswi(name1 -> polarity1)
+                      val apr2 = mswi(name2 -> polarity2)
+                      ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (1 -> 0.0)
+                    else if mswp.contains(name1 -> polarity1)
+                         && mswp.contains(name2 -> polarity2)
+                    then
+                      val apr1 = mswp(name1 -> polarity1)
+                      val apr2 = mswp(name2 -> polarity2)
+                      ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (3 -> Double.NaN)
+                    else
+                      throw CombinedActivitiesException("crossed")
+                  val delay = delta(rate)
+                  s = s + key1 + key2
+                  r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay, name2)
+                  p -= 1
+                  thr(())
+          }
     }
 
     NonEmptyList.fromList {

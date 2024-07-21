@@ -34,7 +34,7 @@ import java.util.UUID
 import scala.meta._
 import dialects.Scala3
 
-import parser.Calculus.{ rate => _, _ }
+import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
 
@@ -249,17 +249,17 @@ object Program:
         val uuid = id
         val uuid2 = id
 
-        val `body(μ)()` = body(μ).head match
+        val `body(μ)` = body(μ).head match
           case it @ Enumerator.Generator(Pat.Wildcard(), _) =>
             it.copy(pat = Pat.Var(uuid2))
 
-        val `!.μ⋯` = `body(μ)()` :: `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("=="),
-                                                                       Type.ArgClause(Nil),
-                                                                       Term.ArgClause(Lit.Null() :: Nil, None)),
-                                                       `IO.cede`,
-                                                       s"$uuid(`π-uuid`)".parse[Term].get,
-                                                       Nil)
-                                             } :: Nil
+        val `!.μ⋯` = `body(μ)` :: `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("=="),
+                                                                     Type.ArgClause(Nil),
+                                                                     Term.ArgClause(Lit.Null() :: Nil, None)),
+                                                     `IO.cede`,
+                                                     s"$uuid(`π-uuid`)".parse[Term].get,
+                                                     Nil)
+                                           } :: Nil
 
         val it =
           `for * yield ()`(

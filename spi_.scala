@@ -28,7 +28,6 @@
 
 package object sΠ:
 
-  import _root_.cats.syntax.parallel._
   import _root_.cats.effect.{ Deferred, Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Supervisor }
@@ -280,15 +279,15 @@ package object sΠ:
      * limitations under the License.
      */
 
-    final case class ><(takers: Option[Deferred[IO, (Any, CyclicBarrier[IO])]],
-                        offerers: Option[(Any, Deferred[IO, (Unit, CyclicBarrier[IO])])],
+    final case class ><(takers: List[Deferred[IO, (Any, CyclicBarrier[IO])]],
+                        offerers: List[(Any, Deferred[IO, (Unit, CyclicBarrier[IO])])],
                         stop: Boolean)
 
     type >*< = Ref[IO, ><]
 
     object >< :
 
-      inline def apply(): >< = ><(None, None, false)
+      inline def apply(): >< = ><(Nil, Nil, false)
 
       def apply(key: String, name: Any)
                (deferred: Deferred[IO, Option[(Double, -)]])
@@ -306,10 +305,11 @@ package object sΠ:
           (_, b2)    <- IO.uncancelable { poll =>
                           `>R`.modify {
                             case it @ ><(takers, _, _) if takers.nonEmpty =>
-                              it.copy(takers = None) -> takers.get.complete(name -> b2).void.map(_ -> b2)
+                              val (taker, rest) = takers.head -> takers.tail
+                              it.copy(takers = rest) -> taker.complete(name -> b2).void.map(_ -> b2)
                             case it =>
-                              val cleanup = `>R`.update(_.copy(offerers = None))
-                              it.copy(offerers = Some(name -> offerer)) -> poll(offerer.get).onCancel(cleanup)
+                              val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                              it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
                           }.flatten
                         }
           _          <- b2.await
@@ -334,10 +334,11 @@ package object sΠ:
           (_, b2)    <- IO.uncancelable { poll =>
                           `>R`.modify {
                             case it @ ><(takers, _, _) if takers.nonEmpty =>
-                              it.copy(takers = None) -> takers.get.complete(name -> b2).void.map(_ -> b2)
+                              val (taker, rest) = takers.head -> takers.tail
+                              it.copy(takers = rest) -> taker.complete(name -> b2).void.map(_ -> b2)
                             case it =>
-                              val cleanup = `>R`.update(_.copy(offerers = None))
-                              it.copy(offerers = Some(name -> offerer)) -> poll(offerer.get).onCancel(cleanup)
+                              val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                              it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
                           }.flatten <* supervised(code)
                         }
           _          <- b2.await
@@ -362,11 +363,11 @@ package object sΠ:
                           IO.uncancelable { poll =>
                             `<R`.modify {
                               case it @ ><(_, offerers, _) if offerers.nonEmpty =>
-                                val (name, offerer) = offerers.get
-                                it.copy(offerers = None) -> offerer.complete(() -> b2).as(name).map(_ -> b2)
+                                val ((name, offerer), rest) = offerers.head -> offerers.tail
+                                it.copy(offerers = rest) -> offerer.complete(() -> b2).as(name).map(_ -> b2)
                               case it =>
-                                val cleanup = `<R`.update(_.copy(takers = None))
-                                it.copy(takers = Some(taker)) -> poll(taker.get).onCancel(cleanup)
+                                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                                it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
                             }.flatten
                           }
                         }
@@ -391,11 +392,11 @@ package object sΠ:
                           IO.uncancelable { poll =>
                             `<R`.modify {
                               case it @ ><(_, offerers, _) if offerers.nonEmpty =>
-                                val (name, offerer) = offerers.get
-                                it.copy(offerers = None) -> offerer.complete(() -> b2).as(name).map(_ -> b2)
+                                val ((name, offerer), rest) = offerers.head -> offerers.tail
+                                it.copy(offerers = rest) -> offerer.complete(() -> b2).as(name).map(_ -> b2)
                               case it =>
-                                val cleanup = `<R`.update(_.copy(takers = None))
-                                it.copy(takers = Some(taker)) -> poll(taker.get).onCancel(cleanup)
+                                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                                it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
                             }.flatten.flatMap {
                               case it @ (null, _) => IO.pure(it)
                               case (it: T, b2) => (code andThen supervised)(it)

@@ -45,7 +45,7 @@ The BNF formal grammar for processes is the following.
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" "." μ "." CHOICE
+                 | "!" [ "." μ "." ] CHOICE
     AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
     EXPRESSION ::= "/*" ... "*/"
 
@@ -203,8 +203,8 @@ with weight equal to `Long.MaxValue` - where appropriate,
   the ensuing process is inaction: in this case, the latter is rewritten as
   "τ@∞.()" (a);
 
-- the sole case of a leaf that is not prefixed by an action remains invocation:
-  in this case, its prefixes are appended "τ@∞." (a).
+- the sole case of a leaf that is not prefixed by an action remains (either
+  inaction or) invocation: in this case, its prefixes are appended "τ@∞." (a).
 
 Sticking to this scheme (of implicit τ-actions), after parsing the equations,
 each composition or choice will have a non-empty set of enabled actions (a).

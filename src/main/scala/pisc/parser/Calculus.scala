@@ -151,7 +151,7 @@ class Calculus extends StochasticPi:
           elem("agent identifier part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
 
-object Calculus extends Calculus:
+object Calculus:
 
   type Bind = (`(*)`, `+`)
 
