@@ -30,6 +30,8 @@ package object Π:
 
   import _root_.java.util.UUID
 
+  import _root_.scala.collection.immutable.{ List, Map, Set }
+
   import _root_.cats.effect.{ Deferred, Ref, IO, IOLocal }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor }
@@ -60,7 +62,7 @@ package object Π:
     */
   final case class `}{`(xa: `)(`,
                         root: `)*(`,
-                        children: List[`)*(`])
+                        children: Set[`)*(`])
 
 
   object `}{`:
@@ -77,7 +79,7 @@ package object Π:
                               val tree = it(key)
                               val `}{`(_, _, children) = tree
                               it + (node -> `}{`(xa, key, children))
-                                 + (key  -> tree.copy(children = node :: children))
+                                 + (key  -> tree.copy(children = children + node))
                             }
         _    <- `1`.release
       yield
@@ -87,13 +89,11 @@ package object Π:
                       (implicit `][`: `][`): IO[Unit] =
       `][`.update { it =>
                     val tree = it(temp.root)
-                    var `}{`(_, _, children) = tree
-                    assert(1 == children.count(_ == root))
-                    children = children.filterNot(_ == root)
-                    it + (temp.root -> tree.copy(children = join :: children))
+                    val `}{`(_, _, children) = tree
+                    it + (temp.root -> tree.copy(children = children - root + join))
                   }
 
-    private def merge_(join: `)*(`, tail: List[`)*(`])
+    private def merge_(join: `)*(`, tail: Set[`)*(`])
                       (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -108,9 +108,8 @@ package object Π:
                      (implicit `][`: `][`): IO[Unit] =
       `][`.update { it =>
                     val temp = it(join)
-                    var `}{`(_, _, children) = temp
-                    children = children.filterNot(_ == node)
-                    it + (join -> temp.copy(children = tree.children ++ children))
+                    val `}{`(_, _, children) = temp
+                    it + (join -> temp.copy(children = children - node ++ tree.children))
                   } >> merge_(join, tree.children)
 
     def apply(xa: `)(`)(`)(`: IOLocal[`)(`])
@@ -147,7 +146,7 @@ package object Π:
         id  = `)(`()
         key = Set(id)
         lo <- IOLocal[`)(`](id)
-        map = Map[`)*(`, `}{`](key -> `}{`(xa, null, Nil))
+        map = Map[`)*(`, `}{`](key -> `}{`(xa, null, Set.empty))
         tr <- Ref.of[IO, Map[`)*(`, `}{`]](map)
       yield
         (lo, tr)
@@ -232,26 +231,46 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`, xa: `)(`)
-             (implicit `1`: Semaphore[IO]): IO[Option[Unit]] = ><(value.name, xa)(ref)
+    def apply(value: `()`, `)(`: IOLocal[`)(`])
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
+      for
+        xa <- Π.`][`(`)(`)
+        r  <- ><(value.name, xa)(ref)
+      yield
+        r
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`, xa: `)(`)(code: => IO[Any])
-             (implicit `1`: Semaphore[IO]): IO[Option[Unit]] = ><(value.name, xa)(code)(ref)
+    def apply(value: `()`, `)(`: IOLocal[`)(`])(code: => IO[Any])
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
+      for
+        xa <- Π.`][`(`)(`)
+        r  <- ><(value.name, xa)(code)(ref)
+      yield
+        r
 
     /**
       * positive prefix i.e. input
       */
-    def apply(xa: `)(`)
-             (implicit `1`: Semaphore[IO]): IO[`()`] = ><(xa)(ref).map(`()`)
+    def apply(`)(`: IOLocal[`)(`])
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
+      for
+        xa <- Π.`][`(`)(`)
+        r  <- ><(xa)(ref).map(`()`)
+      yield
+        r
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T](xa: `)(`)(code: T => IO[T])
-             (implicit `1`: Semaphore[IO]): IO[`()`] = ><(xa)(code)(ref).map(`()`)
+    def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
+                (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
+      for
+        xa <- Π.`][`(`)(`)
+        r  <- ><(xa)(code)(ref).map(`()`)
+      yield
+        r
 
     override def toString: String = if name == null then "null" else name.toString
 
