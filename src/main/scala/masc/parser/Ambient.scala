@@ -45,7 +45,7 @@ class Ambient extends Expression:
 
   def caps: Parser[(List[AST], Names)] =
     repsep(cap, ".") ^^ { cs =>
-      cs.map(_._1).filterNot(_.isInstanceOf[ε.type]) -> (Names() :: cs.map(_._2)).reduce(_ ++ _)
+      cs.map(_._1).filterNot(_.isInstanceOf[ε.type]) -> cs.map(_._2).foldLeft(Names())(_ ++ _)
     }
 
   def cap: Parser[(AST, Names)] =

@@ -76,12 +76,12 @@ class Calculus extends Ambient:
       case (amb, name) ~ _ ~ (par, free) ~ _ =>
         `[]`(amb, par) -> (name ++ free)
     } |
-    "<"~caps~">" ~ opt( expression ) ^^ { // output action
-      case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+    ("<"~>caps<~">") ~ opt( expression ) ^^ { // output action
+      case _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case _ ~ (path, free) ~ _ ~ Some((Right(it), free2)) =>
+      case (path, free) ~ Some((Right(it), free2)) =>
         `<>`(Some(it), path*) -> (free ++ free2)
-      case _ ~ (path, free) ~ _ ~ _ =>
+      case (path, free) ~ _ =>
         `<>`(None, path*) -> free
     }
 
@@ -117,13 +117,13 @@ class Calculus extends Ambient:
       case (path, free) =>
       `..`(path*) -> (Names(), free)
     } |
-    "("~name~")" ~ opt( expression ) <~ "." ^^ { // input action
-      case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+    ("("~>name<~")") ~ opt( expression ) <~ "." ^^ { // input action
+      case _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case _ ~ (amb, bound) ~ _ ~ Some((Right(it), free2)) =>
-        `()`(Some(it), amb) -> (bound, free2)
-      case _ ~ (amb, bound) ~ _ ~ _ =>
-        `()`(None, amb) -> (bound, Names())
+      case (name, bound) ~ Some((Right(it), free2)) =>
+        `()`(Some(it), name) -> (bound, free2)
+      case (name, bound) ~ _ =>
+        `()`(None, name) -> (bound, Names())
     }
 
   def agent(binding: Boolean = false): Parser[(`(*)`, Names)] =

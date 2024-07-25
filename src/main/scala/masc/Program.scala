@@ -33,8 +33,7 @@ import java.util.UUID
 import scala.meta._
 import dialects.Scala3
 
-import parser.Ambient
-import Ambient.{ AST => _, _ }
+import parser.Ambient._
 import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
@@ -100,24 +99,16 @@ object Program:
       case `..`(path*) =>
         * = `_ <- *`(Term.Apply(
                        Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil, None)),
-                       Term.ArgClause(fold(path.head, path.tail*) :: Nil, None)))
+                       Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
 
 
-      case `()`(it, amb) =>
-        val uuid = id
-
-        val term = Term.Apply(
-                     Term.Apply(\("()"), Term.ArgClause(Nil, None)),
-                     Term.ArgClause(\(uuid) :: Nil, None))
-
-        * = List(
-          `* <- *`(uuid -> Term.Apply(Term.Select("Π", "]["), Term.ArgClause(\(")(") :: Nil, None))),
-          it match
-            case Some(code) =>
-              `* <- *`(amb -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
-            case _ =>
-              `* <- *`(amb -> term)
-        )
+      case `()`(it, name) =>
+        val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil, None))
+        * = it match
+              case Some(code) =>
+                `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
+              case _ =>
+                `* <- *`(name -> term)
 
       //////////////////////////////////////////////// restriction | prefixes //
 
@@ -173,37 +164,24 @@ object Program:
 
       /////////////////////////////////////////////////////////////// AMBIENT //
 
-      // OUTPUT ////////////////////////////////////////////////////////////////
-
       case `<>`(it) =>
-        val uuid = id
-
-        val term = Term.Apply(`<>(null)`, Term.ArgClause(\(uuid) :: Nil, None))
-
-        * = List(
-          `* <- *`(uuid -> Term.Apply(Term.Select("Π", "]["), Term.ArgClause(\(")(") :: Nil, None))),
-          it match
-            case Some(code) =>
-              `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
-            case _ =>
-              `_ <- *`(term)
-        )
+        val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
+        * = it match
+              case Some(code) =>
+                `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+              case _ =>
+                `_ <- *`(term)
 
       case `<>`(it, path*) =>
-        val uuid = id
-
         val term = Term.Apply(
-                     Term.Apply(\("<>"), Term.ArgClause(fold(path.head, path.tail*) :: Nil, None)),
-                     Term.ArgClause(\(uuid) :: Nil, None))
+                     Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)),
+                     Term.ArgClause(\(")(") :: Nil, None))
 
-        * = List(
-          `* <- *`(uuid -> Term.Apply(Term.Select("Π", "]["), Term.ArgClause(\(")(") :: Nil, None))),
-          it match
-            case Some(code) =>
-              `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
-            case _ =>
-              `_ <- *`(term)
-        )
+        * = it match
+              case Some(code) =>
+                `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+              case _ =>
+                `_ <- *`(term)
 
       //////////////////////////////////////////////////////////////// output //
 
@@ -220,21 +198,5 @@ object Program:
       //////////////////////////////////////////////////////////// invocation //
 
     *
-
-  def fold(head: Ambient.AST, tail: Ambient.AST*): Term =
-    val next = if tail.isEmpty then \("None")
-               else Term.Apply(\("Some"), Term.ArgClause(fold(tail.head, tail.tail*) :: Nil, None))
-    head match
-      case ζ(op, amb) =>
-        Term.Apply(\("ζ"),
-                   Term.ArgClause(
-                     Term.Apply(\("Some"),
-                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil, None))
-                     :: \(amb) :: next :: Nil, None))
-
-      case Λ(name) =>
-        Term.Apply(\("ζ"), Term.ArgClause(\("None") :: \(name) :: next :: Nil, None))
-
-      case _ => ??? // neither name nor path - caught by parser
 
   def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")

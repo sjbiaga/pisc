@@ -30,6 +30,8 @@ package object Π:
 
   import _root_.java.util.UUID
 
+  import _root_.scala.collection.immutable.{ List, Set, Map }
+
   import _root_.cats.data.NonEmptyList
 
   import _root_.cats.effect.{ Deferred, IOLocal, IO, Ref }
@@ -69,32 +71,7 @@ package object Π:
 
   object ζ:
 
-    private def remove_(node: `)*(`, tail: List[`)*(`])
-                       (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree, heth) = it(tail.head)
-                      var `}{`(_, _, _, siblings) = tree
-                      // assert(1 == siblings.count(_ == node))
-                      siblings = siblings.filterNot(_ == node)
-                      it + (tail.head -> (tree.copy(siblings = siblings), heth))
-                    } >> remove_(node, tail.tail)
-
-    private def remove(node: `)*(`, tree: `}{`)
-                      (implicit `][`: `][`): IO[Unit] =
-      val `}{`(_, root, _, siblings) = tree
-      `][`.update { it =>
-                    val (tree, reth) = it(root)
-                    var `}{`(_, _, children, _) = tree
-                    // assert(1 == children.count(_ == node))
-                    children = children.filterNot(_ == node)
-                    it + (root -> (tree.copy(children = children), reth))
-                  } >> remove_(node, siblings)
-
-    private def insert_(node: `)*(`, tail: List[`)*(`])
+    private def remove_(node: `)*(`, tail: Set[`)*(`])
                        (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -103,7 +80,28 @@ package object Π:
         `][`.update { it =>
                       val (tree, heth) = it(tail.head)
                       val `}{`(_, _, _, siblings) = tree
-                      it + (tail.head -> (tree.copy(siblings = node :: siblings), heth))
+                      it + (tail.head -> (tree.copy(siblings = siblings - node), heth))
+                    } >> remove_(node, tail.tail)
+
+    private def remove(node: `)*(`, tree: `}{`)
+                      (implicit `][`: `][`): IO[Unit] =
+      val `}{`(_, root, _, siblings) = tree
+      `][`.update { it =>
+                    val (tree, reth) = it(root)
+                    val `}{`(_, _, children, _) = tree
+                    it + (root -> (tree.copy(children = children - node), reth))
+                  } >> remove_(node, siblings)
+
+    private def insert_(node: `)*(`, tail: Set[`)*(`])
+                       (implicit `][`: `][`): IO[Unit] =
+      if tail.isEmpty
+      then
+        IO.cede
+      else
+        `][`.update { it =>
+                      val (tree, heth) = it(tail.head)
+                      val `}{`(_, _, _, siblings) = tree
+                      it + (tail.head -> (tree.copy(siblings = siblings + node), heth))
                     } >> insert_(node, tail.tail)
 
     private def insert(node: `)*(`, root: `)*(`)
@@ -115,13 +113,13 @@ package object Π:
                               val (ntree, neth) = it(node)
                               val (rtree, reth) = it(root)
                               val `}{`(_, _, children, _) = rtree
-                              it + (root -> (rtree.copy(children = node :: children), reth))
+                              it + (root -> (rtree.copy(children = children + node), reth))
                                  + (node -> (ntree.copy(root = root, siblings = children), neth))
                             }
       yield
         ()
 
-    private def update_(root: `)*(`, join: `)*(`, tail: List[`)*(`])
+    private def update_(root: `)*(`, join: `)*(`, tail: Set[`)*(`])
                        (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -129,23 +127,19 @@ package object Π:
       else
         `][`.update { it =>
                       val (tree, heth) = it(tail.head)
-                      var `}{`(_, _, _, siblings) = tree
-                      // assert(1 == siblings.count(_ == root))
-                      siblings = siblings.filterNot(_ == root)
-                      it + (tail.head -> (tree.copy(siblings = join :: siblings), heth))
+                      val `}{`(_, _, _, siblings) = tree
+                      it + (tail.head -> (tree.copy(siblings = siblings - root + join), heth))
                     } >> update_(root, join, tail.tail)
 
     private def update(temp: `}{`, root: `)*(`, join: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
       `][`.update { it =>
                     val (tree, reth) = it(temp.root)
-                    var `}{`(_, _, children, _) = tree
-                    // assert(1 == children.count(_ == root))
-                    children = children.filterNot(_ == root)
-                    it + (temp.root -> (tree.copy(children = join :: children), reth))
+                    val `}{`(_, _, children, _) = tree
+                    it + (temp.root -> (tree.copy(children = children - root + join), reth))
                   } >> update_(root, join, temp.siblings)
 
-    private def merge_(join: `)*(`, tail: List[`)*(`])
+    private def merge_(join: `)*(`, tail: Set[`)*(`])
                       (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -156,7 +150,7 @@ package object Π:
                       it + (tail.head -> (tree.copy(root = join), heth))
                     } >> merge_(join, tail.tail)
 
-    private def merge__(siblings: List[`)*(`], tail: List[`)*(`])
+    private def merge__(siblings: Set[`)*(`], tail: Set[`)*(`])
                        (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -206,7 +200,7 @@ package object Π:
                                        val tree = it(key)._1
                                        it -> (1 != tree.siblings.count(it(_)._1.amb eq amb))
                                      }
-              _       <- if blocked then `1`.release >> IO.cede >> apply(`)(`)(caps)
+              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
                          else
                            for
                              (node, root, tree) <- `][`.modify { it =>
@@ -232,7 +226,7 @@ package object Π:
                                        val tree = it(key)._1
                                        it -> (it(tree.root)._1.amb ne amb)
                                      }
-              _       <- if blocked then `1`.release >> IO.cede >> apply(`)(`)(caps)
+              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
                          else
                            for
                              (node, root, tree) <- `][`.modify { it =>
@@ -257,7 +251,7 @@ package object Π:
                                        val tree = it(key)._1
                                        it -> (1 != tree.children.count(it(_)._1.amb eq amb))
                                      }
-              _       <- if blocked then `1`.release >> IO.cede >> apply(`)(`)(caps)
+              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
                          else
                            for
                              (root, (temp, reth), node, (tree, neth)) <- `][`.modify { it =>
@@ -296,11 +290,11 @@ package object Π:
     */
   final case class `}{`(amb: `)(`,
                         root: `)*(`,
-                        children: List[`)*(`],
-                        siblings: List[`)*(`])
+                        children: Set[`)*(`],
+                        siblings: Set[`)*(`])
 
   object `}{`:
-    private def apply_(node: `)*(`, tail: List[`)*(`])
+    private def apply_(node: `)*(`, tail: Set[`)*(`])
                       (implicit `][`: `][`): IO[Unit] =
       if tail.isEmpty
       then
@@ -309,7 +303,7 @@ package object Π:
         `][`.update { it =>
                       val (tree, ceth) = it(tail.head)
                       val `}{`(_, _, _, siblings) = tree
-                      it + (tail.head -> (tree.copy(siblings = node :: siblings), ceth))
+                      it + (tail.head -> (tree.copy(siblings = siblings + node), ceth))
                     } >> apply_(node, tail.tail)
 
     def apply(`)(`: IOLocal[`)(`], amb: `)(`)
@@ -326,8 +320,8 @@ package object Π:
                                   val key = it.keys.find(_.contains(root)).get
                                   val (tree, reth) = it(key)
                                   val `}{`(_, _, children, _) = tree
-                                  (it + (node -> (`}{`(amb, key, Nil, children), neth))
-                                      + (key  -> (tree.copy(children = node :: children), reth))) -> children
+                                  (it + (node -> (`}{`(amb, key, Set.empty, children), neth))
+                                      + (key  -> (tree.copy(children = children + node), reth))) -> children
                                 }
         _        <- apply_(node, children)
         _        <- `1`.release
@@ -348,7 +342,7 @@ package object Π:
         uuid = `)(`()
         root = Set(uuid)
         lo  <- IOLocal[`)(`](uuid)
-        map  = Map[`)*(`, (`}{`, >*<)](root -> (`}{`(amb, null, Nil, Nil), eth))
+        map  = Map[`)*(`, (`}{`, >*<)](root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
         tr  <- Ref.of[IO, Map[`)*(`, (`}{`, >*<)]](map)
       yield
         (lo, tr)
@@ -404,22 +398,42 @@ package object Π:
     */
   object <> :
 
-     def apply(wrap: `)(`)(`>R`: >*<)
-              (implicit `1`: Semaphore[IO]): IO[Unit] = ><(wrap)(`>R`)
+     def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])
+              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+       for
+         `>R` <- Π.`][`(`)(`)
+         _    <- ><(wrap)(`>R`)
+       yield
+         ()
 
-     def apply(wrap: `)(`)(`>R`: >*<)(code: => IO[Any])
-              (implicit `1`: Semaphore[IO]): IO[Unit] = ><(wrap)(code)(`>R`)
+     def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])(code: => IO[Any])
+              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+       for
+         `>R` <- Π.`][`(`)(`)
+         _    <- ><(wrap)(code)(`>R`)
+       yield
+         ()
 
   /**
     * input
     */
   object `()`:
 
-    def apply()(`<R`: >*<)
-               (implicit `1`: Semaphore[IO]): IO[`)(`] = ><()(`<R`)
+    def apply(`)(`: IOLocal[`)(`])
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
+       for
+         `<R` <- Π.`][`(`)(`)
+         name <- ><()(`<R`)
+       yield
+         name
 
-    def apply[T]()(`<R`: >*<)(code: T => IO[T])
-                  (implicit `1`: Semaphore[IO]): IO[`)(`] = ><()(code)(`<R`)
+    def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
+                (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
+       for
+         `<R` <- Π.`][`(`)(`)
+         name <- ><()(code)(`<R`)
+       yield
+         name
 
 
   object `Π-magic`:

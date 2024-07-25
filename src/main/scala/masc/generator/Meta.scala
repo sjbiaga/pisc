@@ -35,6 +35,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus.`(*)`
+import parser.Ambient.{ AST, ζ, Λ }
 
 
 object Meta:
@@ -133,7 +134,10 @@ object Meta:
   def `for * yield ()`(* : Enumerator*): Term =
     if *.nonEmpty
     then
-      if *.size == 1
+      if !(*.head.isInstanceOf[Enumerator.Generator])
+      then
+        `for * yield ()`((`_ <- IO.unit` +: *)*)
+      else if *.size == 1
       then
         *.head match
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
@@ -211,3 +215,20 @@ object Meta:
                                                None)
                               ) :: Nil, None)
     )
+
+
+  def `ζ(op, *, …)`(head: AST, tail: Seq[AST]): Term =
+    val next = if tail.isEmpty then \("None")
+               else Term.Apply(\("Some"), Term.ArgClause(`ζ(op, *, …)`(tail.head, tail.tail) :: Nil, None))
+    head match
+      case ζ(op, amb) =>
+        Term.Apply(\("ζ"),
+                   Term.ArgClause(
+                     Term.Apply(\("Some"),
+                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil, None))
+                     :: \(amb) :: next :: Nil, None))
+
+      case Λ(name) =>
+        Term.Apply(\("ζ"), Term.ArgClause(\("None") :: \(name) :: next :: Nil, None))
+
+      case _ => ??? // neither name nor path - caught by parser

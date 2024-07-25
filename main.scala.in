@@ -28,7 +28,7 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode, Ref }
+import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode }
 import _root_.cats.effect.std.Semaphore
 
 
@@ -38,9 +38,9 @@ object App extends IOApp:
     for
       semaphore  <- Semaphore[IO](1)
       (lo, tree) <- Π.`][`()
-      exitcode   <- π.Main(lo)(args*)(tree, semaphore).as(ExitCode.Success)
+      _          <- π.Main(lo)(args*)(tree, semaphore)
     yield
-      exitcode
+      ExitCode.Success
 
 object π:
 
