@@ -149,7 +149,10 @@ object Meta:
   def `for * yield ()`(* : Enumerator*): Term =
     if *.nonEmpty
     then
-      if *.size == 1
+      if !(*.head.isInstanceOf[Enumerator.Generator])
+      then
+        `for * yield ()`((`_ <- IO.unit` +: *)*)
+      else if *.size == 1
       then
         *.head match
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
