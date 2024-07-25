@@ -26,6 +26,8 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
+import _root_.scala.collection.immutable.Map
+
 import _root_.cats.syntax.parallel._
 
 import _root_.cats.effect.{ IO, Deferred, Ref }
@@ -42,7 +44,7 @@ package object `Π-loop`:
 
   type + = (Deferred[IO, Option[(Double, -)]], (>*<, Option[Boolean], Rate))
 
-  type % = Ref[IO, _root_.scala.collection.immutable.Map[String, Int | +]]
+  type % = Ref[IO, Map[String, Int | +]]
 
   type * = Semaphore[IO]
 
@@ -53,7 +55,7 @@ package object `Π-loop`:
     for
       it <- %.modify { m =>
                        if m.exists(_._2.isInstanceOf[Int])
-                       then m -> _root_.scala.collection.immutable.Map.empty
+                       then m -> Map.empty
                        else m -> m
                          .map(_ -> _.asInstanceOf[+])
                          .map(_ -> _._2)

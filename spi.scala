@@ -28,6 +28,8 @@
 
 package object sΠ:
 
+  import _root_.scala.collection.immutable.List
+
   import _root_.cats.effect.{ Deferred, Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.Supervisor

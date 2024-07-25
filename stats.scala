@@ -29,6 +29,7 @@
 import _root_.scala.util.control.NonLocalReturns.{ returning, throwReturn => thr }
 import _root_.scala.util.Random
 
+import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.collection.mutable.HashMap
 import _root_.scala.concurrent.duration._
 
