@@ -318,22 +318,22 @@ As soon as the multisets are empty, the second background fiber computes
 rate(s) and/or weight(s) - the _delay(s)_ (or duration(s) or "delta(s)") that
 correspond(s) to the fastest action(s). In plural, because the programmer can
 set a degree of parallelism - the number of cores - allowing for multiple
-communications to occur, as long as these do not share the same channel and
-do not discard each other - otherwise, until such a gap, only the first (satisfying
-these two conditions) are returned: for each (pair), it then uses a key to get an
-associated `Deferred`, and the delay to _complete_ a `Deferred`; it does this twice,
-for actions of opposite polarities, unless it's just the case of a single "τ".
-One more constraint is that the two actions (in a pair) do not discard each other.
+communications to occur (simultaneously), as long as these do not discard each
+other - only those satisfying this condition are returned: for each (pair), it
+then uses a key to get an associated `Deferred`, and the delay to _complete_ a
+`Deferred`; it does this twice, for actions of opposite polarities, unless it's
+just the case of a single "τ". One obvious constraint is that the two actions
+(in a pair) do not discard each other.
 
 Meanwhile, all methods called (in parallel, either summation or composition)
 from a `for` generator, having `offered` the action rate, are (and must _all_
 be) blocked on `Deferred.get`'s method. As soon as one (pair of) `Deferred` is
 `complete`d, the rest - upon being discarded - will be semantically unblocked
 and canceled. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
-passed, such that all three fibers (the loop, the positive polarity action and
-the negative polarity action) `await`, and only continue as soon as - after the
-"communication" but not before its result -, the keys to be discarded are
-discarded and the keys to be enabled are enabled.
+passed, such that all three fibers (a parallel fiber from the loop, the positive
+polarity action and the negative polarity action) `await`, and only continue as
+soon as - after the "communication" but not before its result -, the keys to be
+discarded are discarded and the keys to be enabled are enabled.
 
 Program
 -------

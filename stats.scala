@@ -165,9 +165,9 @@ package object `Π-stats`:
 
     var p = parallelism
 
-    var r = List[((String, String, Double), ((Int, Double), >*<))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2  duration   pri  delay
+    var r = List[((String, String, Double), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^    ^^^  ^^^^^^
+    //             key1    key1|2  duration  pri  delay
 
     var s = Set[String]()
 
@@ -196,7 +196,7 @@ package object `Π-stats`:
                 ???
             val delay = delta(rate)
             s += key1
-            r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay, name1)
+            r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay)
             p -= 1
           else returning {
             for
@@ -231,7 +231,7 @@ package object `Π-stats`:
                       throw CombinedActivitiesException("crossed")
                   val delay = delta(rate)
                   s = s + key1 + key2
-                  r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay, name2)
+                  r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
                   p -= 1
                   thr(())
           }
@@ -239,14 +239,13 @@ package object `Π-stats`:
 
     NonEmptyList.fromList {
       ( for
-          (((key1, key2, _), (_, name)), i) <- r.sortBy(_._2._1).reverse.zipWithIndex
+          (((key1, key2, _), _), i) <- r.sortBy(_._2).reverse.zipWithIndex
           k1 = key1.substring(key1.length/2)
           k2 = key2.substring(key2.length/2)
         yield
           r(i)._1 -> {
             0 > r.indexWhere(
               {
-                case (_, (_, `name`)) => true
                 case ((key, _, _), _)
                     if {
                       val k = key.substring(key.length/2)
@@ -264,6 +263,6 @@ package object `Π-stats`:
           }
       )
       .reverse
-      .takeWhile(_._2)
+      .filter(_._2)
       .map(_._1)
     }

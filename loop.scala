@@ -98,11 +98,12 @@ package object `Π-loop`:
       ((_, key), it) = h
       _ <- %.update { m =>
                       val ^ = h._1._1
-                      ( if m(key) == 1
+                      val n = m(key).asInstanceOf[Int]
+                      ( if n == 1
                         then
                           m - key
                         else
-                          m + (key -> (m(key).asInstanceOf[Int] - 1))
+                          m + (key -> (n - 1))
                       ) + (^ + key -> it)
            }
       _ <- *.release

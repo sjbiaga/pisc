@@ -79,8 +79,8 @@ trait StochasticPi extends Expression:
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
-                                 floatingPointNumber ^^ { it => λ(it) -> Names() } |
-                                 stringLiteral ^^ { it => λ(it) -> Names() } |
+                                 floatingPointNumber ^^ { λ(_) -> Names() } |
+                                 stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
                                    case (Right(term), free) => λ(Expr(term)) -> free

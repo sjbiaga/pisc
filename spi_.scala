@@ -28,7 +28,7 @@
 
 package object sΠ:
 
-  import _root_.scala.collection.immutable.List
+  import _root_.scala.collection.immutable.{ List, Map, Set }
 
   import _root_.cats.effect.{ Deferred, Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
@@ -40,9 +40,9 @@ package object sΠ:
   import `Π-stats`.Rate
 
 
-  type `Π-Map`[K, +V] = _root_.scala.collection.immutable.Map[K, V]
+  type `Π-Map`[K, +V] = Map[K, V]
 
-  type `Π-Set`[A] = _root_.scala.collection.immutable.Set[A]
+  type `Π-Set`[A] = Set[A]
 
 
   /**
@@ -56,6 +56,7 @@ package object sΠ:
       yield
         it
     ).flatten
+
 
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): IO[Unit] =
@@ -79,10 +80,10 @@ package object sΠ:
     ) >> -.await
 
 
-  private def unblock(m: _root_.scala.collection.immutable.Map[String, Int | +], head: String, tail: `Π-Set`[String])
+  private def unblock(m: Map[String, Int | +], head: String, tail: `Π-Set`[String])
                      (implicit ^ : String): IO[Unit] =
+    val deferred = m(^ + head).asInstanceOf[+]._1
     for
-      deferred <- IO.pure(m(^ + head).asInstanceOf[+]._1)
       _        <- deferred.complete(None)
       _        <- if tail.isEmpty then IO.unit
                   else unblock(m, tail.head, tail.tail)
@@ -113,8 +114,7 @@ package object sΠ:
 
 
   private def `π-exclude`(excluded: `Π-Set`[String])
-                         (using % : %)
-                         (implicit ^ : String): IO[Unit] =
+                         (using % : %): IO[Unit] =
     %.update(excluded.foldLeft(_) { (m, key) =>
                                     if m(key) == 1
                                     then
@@ -126,8 +126,7 @@ package object sΠ:
 
   private def exclude(key: String)
                      (using % : %)
-                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                               ^ : String): IO[Unit] =
+                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
     if `π-elvis`.contains(key)
     then
       `π-exclude`(`π-elvis`(key))
