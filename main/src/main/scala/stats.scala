@@ -26,9 +26,6 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.util.control.NonLocalReturns.{ returning, throwReturn => thr }
-import _root_.scala.util.Random
-
 import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.collection.mutable.HashMap
 import _root_.scala.concurrent.duration._
@@ -50,8 +47,6 @@ package object `Π-stats`:
   case class ∞(weight: Long) extends AnyVal with Rate
   case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate
   case class ⊤(weight: Long) extends AnyVal with Rate
-
-  private val random = new Random
 
   private val distributionCache: Cache[Double, Exponential] =
     Scaffeine()
@@ -163,98 +158,99 @@ package object `Π-stats`:
       .map { case (k, (n, p, r: ⊤)) => k -> (n, p, Double.NaN -> r.weight) }
     )
 
-    var p = parallelism
-
     var r = List[((String, String, Double), (Int, Double))]()
     //             ^^^^^^  ^^^^^^  ^^^^^^    ^^^  ^^^^^^
     //             key1    key1|2  duration  pri  delay
 
-    var s = Set[String]()
-
     val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
 
-    returning {
-      for
-        ((key1, (name1, polarity1, (rate1, weight1))), i) <- χ
-      do
-        if p == 0 then thr(())
-        if !s.contains(key1)
-        then
-          if polarity1 eq None
+    for
+      ((key1, (name1, polarity1, (rate1, weight1))), i) <- χ
+    do
+      if polarity1 eq None
+      then
+        val (rate, (priority, duration)) =
+          if msrt.contains(name1 -> polarity1)
           then
-            val (rate, (priority, duration)) =
-              if msrt.contains(name1 -> polarity1)
-              then
-                BigDecimal(1) * rate1 -> (2 -> Double.PositiveInfinity)
-              else if mswi.contains(name1 -> polarity1)
-              then
-                BigDecimal(1) * weight1 -> (1 -> 0.0)
-              else if mswp.contains(name1 -> polarity1)
-              then
-                BigDecimal(1) * weight1 -> (3 -> Double.NaN)
-              else
-                ???
-            val delay = delta(rate)
-            s += key1
-            r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay)
-            p -= 1
-          else returning {
-            for
-              ((key2, (name2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
-            do
-              if !s.contains(key2) && name1 == name2 && polarity1.get != polarity2.get
-              then
-                val k1 = key1.substring(key1.length/2)
-                val k2 = key2.substring(key2.length/2)
-                if !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
+            BigDecimal(1) * rate1 -> (2 -> Double.PositiveInfinity)
+          else if mswi.contains(name1 -> polarity1)
+          then
+            BigDecimal(1) * weight1 -> (1 -> 0.0)
+          else if mswp.contains(name1 -> polarity1)
+          then
+            BigDecimal(1) * weight1 -> (3 -> Double.NaN)
+          else
+            ???
+        val delay = delta(rate)
+        r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay)
+      else
+        val ^ = key1.substring(0, key1.length/2)
+        for
+          ((key2, (name2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
+        do
+          if name1 == name2 && polarity1.get != polarity2.get
+          then
+            val ^^ = key2.substring(0, key2.length/2)
+            if ^ != ^^
+            || {
+              val k1 = key1.substring(key1.length/2)
+              val k2 = key2.substring(key2.length/2)
+              !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
+            }
+            then
+              val (rate, (priority, duration)) =
+                if msrt.contains(name1 -> polarity1)
+                && msrt.contains(name2 -> polarity2)
                 then
-                  val (rate, (priority, duration)) =
-                    if msrt.contains(name1 -> polarity1)
-                    && msrt.contains(name2 -> polarity2)
-                    then
-                      val apr1 = msrt(name1 -> polarity1)
-                      val apr2 = msrt(name2 -> polarity2)
-                      ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
-                    else if mswi.contains(name1 -> polarity1)
-                         && mswi.contains(name2 -> polarity2)
-                    then
-                      val apr1 = mswi(name1 -> polarity1)
-                      val apr2 = mswi(name2 -> polarity2)
-                      ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (1 -> 0.0)
-                    else if mswp.contains(name1 -> polarity1)
-                         && mswp.contains(name2 -> polarity2)
-                    then
-                      val apr1 = mswp(name1 -> polarity1)
-                      val apr2 = mswp(name2 -> polarity2)
-                      ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (3 -> Double.NaN)
-                    else
-                      throw CombinedActivitiesException("crossed")
-                  val delay = delta(rate)
-                  s = s + key1 + key2
-                  r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
-                  p -= 1
-                  thr(())
-          }
-    }
+                  val apr1 = msrt(name1 -> polarity1)
+                  val apr2 = msrt(name2 -> polarity2)
+                  ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
+                else if mswi.contains(name1 -> polarity1)
+                     && mswi.contains(name2 -> polarity2)
+                then
+                  val apr1 = mswi(name1 -> polarity1)
+                  val apr2 = mswi(name2 -> polarity2)
+                  ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (1 -> 0.0)
+                else if mswp.contains(name1 -> polarity1)
+                     && mswp.contains(name2 -> polarity2)
+                then
+                  val apr1 = mswp(name1 -> polarity1)
+                  val apr2 = mswp(name2 -> polarity2)
+                  ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (3 -> Double.NaN)
+                else
+                  throw CombinedActivitiesException("crossed")
+              val delay = delta(rate)
+              r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
+
+    r = r.sortBy(_._2).reverse
 
     NonEmptyList.fromList {
       ( for
-          (((key1, key2, _), _), i) <- r.sortBy(_._2).reverse.zipWithIndex
+          (((key1, key2, _), _), i) <- r.zipWithIndex
           k1 = key1.substring(key1.length/2)
           k2 = key2.substring(key2.length/2)
         yield
+          val ^ = key1.substring(0, key1.length/2)
+          val ^^ = key2.substring(0, key2.length/2)
           r(i)._1 -> {
             0 > r.indexWhere(
               {
+                case ((`key1`, _, _), _) | ((_, `key2`, _), _) => true
                 case ((key, _, _), _)
                     if {
                       val k = key.substring(key.length/2)
-                      `π-trick`.contains(k) && (`π-trick`(k).contains(k1) || `π-trick`(k).contains(k2))
+                      `π-trick`.contains(k) && {
+                        val ^^^ = key.substring(0, key.length/2)
+                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                      }
                     } => true
                 case ((_, key, _), _)
                     if {
                       val k = key.substring(key.length/2)
-                      `π-trick`.contains(k) && (`π-trick`(k).contains(k1) || `π-trick`(k).contains(k2))
+                      `π-trick`.contains(k) && {
+                        val ^^^ = key.substring(0, key.length/2)
+                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                      }
                     } => true
                 case _ => false
               }
@@ -265,4 +261,5 @@ package object `Π-stats`:
       .reverse
       .filter(_._2)
       .map(_._1)
+      .take(parallelism)
     }

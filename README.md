@@ -46,17 +46,18 @@ The BNF formal grammar for processes is the following.
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" [ "." μ "." ] CHOICE
-    AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
-    EXPRESSION ::= "/*" ... "*/"
+    AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES   ::= { PREFIX }
     PREFIX     ::= μ "."
-                 | "ν" "(" NAME ")"
+                 | "ν" "(" NAMES ")"
     μ          ::= "τ" [ @ RATE ] [ EXPRESSION ]
                  | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
                  | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
+    NAMES      :: NAME { "," NAME }
+    EXPRESSION ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain
@@ -329,7 +330,7 @@ Meanwhile, all methods called (in parallel, either summation or composition)
 from a `for` generator, having `offered` the action rate, are (and must _all_
 be) blocked on `Deferred.get`'s method. As soon as one (pair of) `Deferred` is
 `complete`d, the rest - upon being discarded - will be semantically unblocked
-and canceled. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
+_and_ canceled. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
 passed, such that all three fibers (a parallel fiber from the loop, the positive
 polarity action and the negative polarity action) `await`, and only continue as
 soon as - after the "communication" but not before its result -, the keys to be
