@@ -75,7 +75,7 @@ package object Π:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = name.asInstanceOf[>*<]
+    private def ref = as[>*<]
 
     def ====(that: `()`) =
       try
