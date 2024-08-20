@@ -1,1 +1,1 @@
-/home/sjb/src/sbt/pisc/main_/src/main/scala/spi_.scala
+main_/src/main/scala/spi_.scala
