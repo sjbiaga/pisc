@@ -139,8 +139,8 @@ package object sΠ:
     */
   object ν:
 
-    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] =
+    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
+    def flatMap(f: `()` => IO[Unit]): IO[Unit] =
       ( for
           ref <- Ref.of[IO, ><](><())
         yield
@@ -177,7 +177,7 @@ package object sΠ:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = name.asInstanceOf[>*<]
+    private def ref = as[>*<]
 
     def ====(that: `()`) =
       try
@@ -241,10 +241,10 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply[T](rate: Rate)(key: String)(code: T => IO[T])
-             (using % : %, / : /)
-             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[(`()`, Double)] =
+                (using % : %, / : /)
+                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[(`()`, Double)] =
       for
         _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, -)]]

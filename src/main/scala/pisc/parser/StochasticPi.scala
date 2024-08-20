@@ -53,28 +53,28 @@ trait StochasticPi extends Expression:
       case _ ~ r ~ _ =>
         τ(None, r) -> (Names(), Names())
     } |
-    name~opt("@"~>rate)~"<"~opt(name)~">" ~ opt( expression ) ^^ { // negative prefix i.e. output
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+      case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~ _ ~ Some((arg, free)) ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, free2)) =>
         π(ch, arg, polarity = false, r, Some(it)) -> (Names(), name ++ free ++ free2)
-      case (ch, name) ~ r ~ _ ~ Some((arg, free)) ~ _ ~ _ =>
+      case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, r, None) -> (Names(), name ++ free)
-      case (ch, name) ~ r ~ _ ~ _ ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
         π(ch, λ(Expr(`()(null)`)), polarity = false, r, Some(it)) -> (Names(), name ++ free2)
-      case (ch, name) ~ r ~ _ ~ _ ~ _ ~ _ =>
+      case (ch, name) ~ r ~ _ ~ _ =>
         π(ch, λ(Expr(`()(null)`)), polarity = false, r, None) -> (Names(), name)
     } |
-    name~opt("@"~>rate)~"("~name~")" ~ opt( expression ) ^^ { // positive prefix i.e. input
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+      case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ _ ~ (par, _) ~ _ ~ _ if !par.isSymbol =>
+      case _ ~ _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case _ ~ _ ~ _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ r ~ _ ~ (par, bound) ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ r ~ (par, bound) ~ Some((it, free2)) =>
         π(ch, par, polarity = true, r, Some(it)) -> (bound, name ++ free2)
-      case (ch, name) ~ r ~ _ ~ (par, bound) ~ _ ~ _ =>
+      case (ch, name) ~ r ~ (par, bound) ~ _ =>
         π(ch, par, polarity = true, r, None) -> (bound, name)
     }
 

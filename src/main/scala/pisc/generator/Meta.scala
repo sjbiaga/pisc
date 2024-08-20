@@ -120,7 +120,7 @@ object Meta:
     Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) ::
-                       List("%", "/")
+                     List("%", "/")
                        .map { it => Term.Param(Mod.Implicit() :: Nil,
                                                it,
                                                Some(Type.Name(it)),
