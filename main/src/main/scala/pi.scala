@@ -51,7 +51,10 @@ package object Π:
     */
   final class `)(`(private val value: Any):
     override def hashCode: Int = value.##
-    override def toString: String = if value == null then "null" else value.toString
+    override def equals(any: Any): Boolean = any match
+      case that: `)(` => this.value == that.value
+      case _ => false
+    override def toString: String = value.toString
 
   object `)(`:
     def apply(): `)(` = new `)(`(UUID.randomUUID)
@@ -60,13 +63,13 @@ package object Π:
   /**
     * Transactions' trees' nodes.
     */
-  final case class `}{`(xa: `)(`,
+  final case class `}{`(xa: `()`,
                         root: `)*(`,
                         children: Set[`)*(`])
 
 
   object `}{`:
-    def apply(`)(`: IOLocal[`)(`], xa: `)(`)
+    def apply(`)(`: IOLocal[`)(`], xa: `()`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
       for
         _    <- `1`.acquire
@@ -114,7 +117,7 @@ package object Π:
       yield
         ()
 
-    def apply(xa: `)(`)(`)(`: IOLocal[`)(`])
+    def apply(xa: `()`)(`)(`: IOLocal[`)(`])
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
       for
         _                        <- `1`.acquire
@@ -122,7 +125,7 @@ package object Π:
         (root, temp, node, tree) <- `][`.modify { it =>
                                                   val key = it.keys.find(_.contains(node)).get
                                                   val tree = it(key)
-                                                  assert(tree.xa eq xa)
+                                                  assert(tree.xa.as[`)(`] eq xa.as[`)(`])
                                                   val root = tree.root
                                                   val temp = it(root)
                                                   it -> (root, temp, key, tree)
@@ -146,7 +149,7 @@ package object Π:
       val key = Set(id)
       for
         lo <- IOLocal[`)(`](id)
-        xa  = new `)(`(())
+        xa  = `()`(new `)(`(()))
         map = Map[`)*(`, `}{`](key -> `}{`(xa, null, Set.empty))
         tr <- Ref.of[IO, Map[`)*(`, `}{`]](map)
       yield
@@ -158,7 +161,7 @@ package object Π:
       * but its release delayed until input/output action.
       */
     def apply(`)(`: IOLocal[`)(`])
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         _    <- `1`.acquire
         node <- `)(`.get
@@ -175,8 +178,8 @@ package object Π:
     */
   object χ:
 
-    def map(f: `)(` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `)(` => IO[Unit]): IO[Unit] = f(new `)(`(()))
+    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
+    def flatMap(f: `()` => IO[Unit]): IO[Unit] = f(`()`(new `)(`(())))
 
 
   /**
@@ -219,7 +222,8 @@ package object Π:
 
     import _root_.cats.syntax.flatMap._
 
-    private def ref = name.asInstanceOf[>*<]
+    private def ref = as[>*<]
+    private def xct = as[`)(`]
 
     def ====(that: `()`) =
       try
@@ -238,7 +242,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(value.name, xa)(ref)
+        r  <- ><(value.name, xa.xct)(ref)
       yield
         r
 
@@ -249,7 +253,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(value.name, xa)(code)(ref)
+        r  <- ><(value.name, xa.xct)(code)(ref)
       yield
         r
 
@@ -260,7 +264,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa)(ref).map(`()`)
+        r  <- ><(xa.xct)(ref).map(`()`)
       yield
         r
 
@@ -271,7 +275,7 @@ package object Π:
                 (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa)(code)(ref).map(`()`)
+        r  <- ><(xa.xct)(code)(ref).map(`()`)
       yield
         r
 

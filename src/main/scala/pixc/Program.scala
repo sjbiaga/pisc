@@ -101,7 +101,7 @@ object Program:
       case `.`(end, it*) =>
         val ** = it.headOption match
           case Some(χ(name, Some(sum))) =>
-            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(`|`(`.`(sum), `.`(end, it.tail*)))()
+            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(flatten(`|`(`.`(sum), `.`(end, it.tail*))))()
 
             `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ios)) :: Nil
 

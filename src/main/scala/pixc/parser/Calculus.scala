@@ -121,11 +121,11 @@ class Calculus extends Pi:
     } |
     ("start"~>"("~> ident("transaction") <~ ")") ~ ("["~> choice <~"]"<~".") ^^ {
       case name ~ (sum, free) =>
-        χ(name, Some(sum)) -> (Names(), free)
+        χ(name, Some(sum)) -> (Names() + Symbol(name), free)
     } |
     "end"~>"("~> ident("transaction") <~ ")"<~"." ^^ {
       case name =>
-        χ(name, None) -> (Names(), Names())
+        χ(name, None) -> (Names(), Names() + Symbol(name))
     } |
     `μ.`<~"."
 
