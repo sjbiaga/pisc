@@ -37,28 +37,28 @@ prefixes per se.
 The BNF formal grammar for processes is the following.
 
     EQUATION   ::= AGENT "=" CHOICE
-    CHOICE     ::= "(" CHOICE ")" | PARALLEL { "+" PARALLEL }
-    PARALLEL   ::= "(" PARALLEL ")" | SEQUENTIAL { "|" SEQUENTIAL }
+    CHOICE     ::= PARALLEL { "+" PARALLEL }
+    PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    NAMES      ::= NAME { "," NAME }
     LEAF       ::= AGENT
                  | "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" [ "." μ "." ] CHOICE
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
-    EXPRESSION ::= "/*" ... "*/"
-    ARITY      ::= "#" NATURAL_NUMBER
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES   ::= { PREFIX }
     PREFIX     ::= μ "."
-                 | "ν" "(" NAME ")"
+                 | "ν" "(" NAMES ")"
     μ          ::= "τ" [ EXPRESSION ]
                  | NAME "<" NAMES ">" [ EXPRESSION ]
                  | NAME ARITY "<" ">" [ EXPRESSION ]
                  | NAME "(" NAMES ")" [ EXPRESSION ]
+    NAMES      ::= NAME { "," NAME }
+    ARITY      ::= "#" NATURAL_NUMBER
+    EXPRESSION ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain
