@@ -236,7 +236,7 @@ object Calculus:
 
     inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-    ast match {
+    ast match
 
       case `∅` => ∅
 
@@ -252,15 +252,18 @@ object Calculus:
         val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))
         if ps.isEmpty then ∅ else `+`(ps*)
 
-      case `|`(`.`(`+`(par)), it*) =>
-        val lhs = flatten(par)
+      case `|`(`.`(`+`(par*)), it*) =>
+        val lhs = par.map(flatten(_))
+        val rhs = flatten(`|`(it*))
+        `|`((lhs.flatMap(_.components) ++ rhs.components)*)
+
+      case `|`(seq, it*) =>
+        val lhs = `|`(flatten(seq))
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
 
-      case `|`(`.`(end: `&`, ps*), it*) =>
-        val lhs = `|`(`.`(flatten(end), ps*))
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+      case `.`(end, it*) =>
+        `.`(flatten(end), it*)
 
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))
@@ -274,5 +277,3 @@ object Calculus:
         `!`(μ, flatten(sum))
 
       case _ => ast
-
-    }

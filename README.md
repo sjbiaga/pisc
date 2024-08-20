@@ -49,17 +49,18 @@ The BNF formal grammar for processes is the following.
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" [ "." μ "." ] CHOICE
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
-    EXPRESSION ::= "/*" ... "*/"
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES   ::= { PREFIX }
     PREFIX     ::= μ "."
-                 | "ν" "(" NAME ")"
+                 | "ν" "(" NAMES ")"
     μ          ::= "τ" [ EXPRESSION ]
                  | NAME "<" [ NAME ] ">" [ EXPRESSION ]
                  | NAME "(" NAME ")" [ EXPRESSION ]
+    NAMES      ::= NAME { "," NAME }
+    EXPRESSION ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain
