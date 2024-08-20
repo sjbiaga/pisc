@@ -189,11 +189,12 @@ object Program:
       // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(identifier, qual, params*) =>
+        val args = params.map("`" + _ + "`")
         if qual.isEmpty
         then
-          * :+= `_ <- *`(s"`$identifier`(`)(`)(${params.mkString(", ")})".parse[Term].get)
+          * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
         else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${params.mkString(", ")})".parse[Term].get)
+          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
 
       //////////////////////////////////////////////////////////// invocation //
 

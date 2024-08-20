@@ -43,16 +43,17 @@ The BNF formal grammar for processes is the following.
                  | "!" [ "." "(" NAME ")" "." ] PARALLEL
                  | NAME "[" PARALLEL "]"
                  | "<" CAPS ">" [ EXPRESSION ]
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAME { "," NAME } ")" ]
-    EXPRESSION ::= "/*" ... "*/"
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES   ::= { PREFIX }
     PREFIX     ::= "τ" [ EXPRESSION ] "."
-                 | "ν" "(" NAME { "," NAME } ")"
+                 | "ν" "(" NAMES ")"
                  | CAPS "."
                  | "(" NAME ")" [ EXPRESSION ] "."
+    NAMES      ::= NAME { "," NAME }
+    EXPRESSION ::= "/*" ... "*/"
 
 The BNF formal grammar for capabilities is the following.
 
