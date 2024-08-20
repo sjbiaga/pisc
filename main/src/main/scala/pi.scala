@@ -77,7 +77,7 @@ package object Π:
         _    <- `][`.update { it =>
                               val key = it.keys.find(_.contains(root)).get
                               val tree @ `}{`(_, _, children) = it(key)
-                              it + (node -> `}{`(xa, key, children))
+                              it + (node -> `}{`(xa, key, Set.empty))
                                  + (key  -> tree.copy(children = children + node))
                             }
         _    <- `1`.release
@@ -104,10 +104,15 @@ package object Π:
 
     private def merge(tree: `}{`, join: `)*(`, node: `)*(`)
                      (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val temp @ `}{`(_, _, children) = it(join)
-                    it + (join -> temp.copy(children = children - node ++ tree.children))
-                  } >> merge_(join, tree.children)
+      for
+        _        <- `][`.update { it =>
+                                  val temp @ `}{`(_, _, children) = it(join)
+                                  it + (join -> temp.copy(children = children - node ++ tree.children))
+                                }
+        children <- `][`.modify { it => it -> it(join).children }
+        _        <- merge_(join, children)
+      yield
+        ()
 
     def apply(xa: `)(`)(`)(`: IOLocal[`)(`])
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
@@ -123,7 +128,7 @@ package object Π:
                                                   it -> (root, temp, key, tree)
                                                 }
         join                      = root ++ node
-        _                        <- `][`.update { it => ((it - root) - node) + (join -> temp) }
+        _                        <- `][`.update(_ - root - node + (join -> temp))
         _                        <- update(temp, root, join)
         _                        <- merge(tree, join, node)
         _                        <- `1`.release
@@ -137,12 +142,11 @@ package object Π:
 
   object `][`:
     def apply(): IO[(IOLocal[`)(`], `][`)] =
+      val id  = `)(`()
+      val key = Set(id)
       for
-        _ <- IO.unit
-        xa = new `)(`(())
-        id  = `)(`()
-        key = Set(id)
         lo <- IOLocal[`)(`](id)
+        xa  = new `)(`(())
         map = Map[`)*(`, `}{`](key -> `}{`(xa, null, Set.empty))
         tr <- Ref.of[IO, Map[`)*(`, `}{`]](map)
       yield

@@ -92,8 +92,7 @@ object Meta:
       Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(Type.Name("String"))), None) :: Nil, None) ::
       Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), Some(Type.Apply(Type.Name("Semaphore"),
-                                                                                 Type.ArgClause(Type.Name("IO") :: Nil))), None) ::
+                       Term.Param(Mod.Implicit() :: Nil, \("1"), `:`("Semaphore", "IO"), None) ::
                        Nil, Some(Mod.Implicit())) ::
       Nil
     ) :: Nil
@@ -108,8 +107,7 @@ object Meta:
                         .toList,
                        None) ::
       Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), Some(Type.Apply(Type.Name("Semaphore"),
-                                                                                 Type.ArgClause(Type.Name("IO") :: Nil))), None) ::
+                       Term.Param(Mod.Implicit() :: Nil, \("1"), `:`("Semaphore", "IO"), None) ::
                        Nil, Some(Mod.Implicit())) ::
       Nil
     ) :: Nil
@@ -253,8 +251,6 @@ object Meta:
   val `()(null)`: Term =
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
 
-
-  val `][()()`: Term = Term.Apply(Term.Select("Π", "]["), Term.ArgClause(\(")(") :: Nil, None))
 
   def `* <- χ; _ <- }{()(, *)`(name: String): List[Enumerator] =
     `* <- *`(name -> "χ") ::

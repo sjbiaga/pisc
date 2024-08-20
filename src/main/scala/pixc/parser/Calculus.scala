@@ -88,7 +88,8 @@ class Calculus extends Pi:
         `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
       case _ ~ (sum, free) =>
         `!`(None, sum) -> free
-    } | ident("transaction") ~ ("["~> choice <~"]") ^^ { // transaction
+    } |
+    ident("transaction") ~ ("["~> choice <~"]") ^^ { // transaction
       case name ~ (sum, free) =>
         `[]`(name, sum) -> free
     }
@@ -208,7 +209,7 @@ object Calculus:
 
   case class `[]`(name: String, sum: `+`) extends AST
 
-  case class λ(value: Any) extends AST:
+  case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
@@ -291,9 +292,10 @@ object Calculus:
 
       case `[]`(name, sum) =>
         flatten(sum) match
-          case it if it.choices.size != 1 =>
+          case it @ `+`(_) =>
+            `[]`(name, it)
+          case it =>
             `[]`(name, `+`(`|`(`.`(it, τ(None)))))
-          case it => `[]`(name, it)
 
       case _ => ast
 

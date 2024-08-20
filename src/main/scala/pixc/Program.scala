@@ -59,7 +59,10 @@ object Program:
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
 
-      case it: `+` if it.choices.size > 1 =>
+      case `+`(operand) =>
+        * = body(operand)
+
+      case it: `+` =>
         implicit val sem = Some(id)
 
         val ios = it.choices.foldLeft(List[Term]())(_ :+ body(_))
@@ -73,17 +76,15 @@ object Program:
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
 
-      case `+`(operand, _*) =>
-        * = body(operand)
-
-      case _: `+` => ??? // ∅ - caught by parser
-
       ///////////////////////////////////////////////////////////// summation //
 
 
       // COMPOSITION ///////////////////////////////////////////////////////////
 
-      case it: `|` if it.components.size > 1 =>
+      case `|`(operand) =>
+        * = body(operand)
+
+      case it: `|` =>
         val ios = it.components.foldLeft(List[Term]())(_ :+ body(_)())
 
         val ** = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -91,11 +92,6 @@ object Program:
         semaphore
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
-
-      case `|`(operand, _*) =>
-        * = body(operand)
-
-      case _: `|` => ??? // impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -124,6 +120,8 @@ object Program:
         semaphore
           .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
           .getOrElse(* ++= **)
+
+      case _: χ => ??? // handled above
 
       ////////////////////////////////////////////////////////////// sequence //
 
@@ -211,6 +209,8 @@ object Program:
 
       case π(λ(Symbol(ch)), λ(Symbol(par)), true, _) =>
         * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil, None)))
+
+      case _: π => ??? // caught by parser
 
       //////////////////////////////////////////////// restriction | prefixes //
 
@@ -326,14 +326,12 @@ object Program:
 
       // TRANSACTION ///////////////////////////////////////////////////////////
 
-      case `[]`(_, it) if it.choices.size != 1 => ??? // zero or more - caught by parser
-
       case `[]`(name, `+`(it)) =>
-        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(name) ++ body(it)))
+        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(name) ++ body(it)()))
+
+      case _: `[]` => ??? // zero or more - caught by parser
 
       /////////////////////////////////////////////////////////// transaction //
-
-      case _ => ???
 
     *
 
