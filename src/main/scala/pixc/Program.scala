@@ -303,8 +303,8 @@ object Program:
       // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(λ(Symbol(identifier)), qual, params*) =>
-        val args_ = params.map {
-          case λ(Symbol(name)) => name
+        val args = params.map {
+          case λ(Symbol(name)) => s"`$name`"
           case λ(value) =>
             value match {
               case it: BigDecimal => s"BigDecimal($it)"
@@ -313,13 +313,11 @@ object Program:
             }
         }
 
-        val args = if args_.isEmpty then "" else args_.mkString("`", "`, `", "`")
-
         if qual.isEmpty
         then
-          * :+= `_ <- *`(s"`$identifier`(`)(`)($args)".parse[Term].get)
+          * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
         else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)($args)".parse[Term].get)
+          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
 
       case _: `(*)` => ??? // impossible by syntax
 
