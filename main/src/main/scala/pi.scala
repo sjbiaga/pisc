@@ -320,8 +320,8 @@ package object Π:
         Deferred[IO, Option[Unit]].flatMap { offerer =>
           IO.uncancelable { poll =>
             `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
-                assert(takers.forall(_._1 eq xa))
+              case it @ ><(takers_, _) if takers_.filter(_._1 eq xa).nonEmpty =>
+                val takers = takers_.filter(_._1 eq xa)
                 val i = random.nextInt(takers.size)
                 val (taker, rest) = takers(i)._2 -> (takers.take(i) ++ takers.drop(i+1))
                 it.copy(takers = rest) -> (taker.complete(name).as(Some(())) <* `1`.release)
@@ -338,8 +338,8 @@ package object Π:
         Deferred[IO, Option[Unit]].flatMap { offerer =>
           IO.uncancelable { poll =>
             `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
-                assert(takers.forall(_._1 eq xa))
+              case it @ ><(takers_, _) if takers_.filter(_._1 eq xa).nonEmpty =>
+                val takers = takers_.filter(_._1 eq xa)
                 val i = random.nextInt(takers.size)
                 val (taker, rest) = takers(i)._2 -> (takers.take(i) ++ takers.drop(i+1))
                 it.copy(takers = rest) -> (taker.complete(name).as(Some(())) <* `1`.release)
@@ -356,8 +356,8 @@ package object Π:
         Deferred[IO, Any].flatMap { taker =>
           IO.uncancelable { poll =>
             `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
-                assert(offerers.forall(_._1 eq xa))
+              case it @ ><(_, offerers_) if offerers_.filter(_._1 eq xa).nonEmpty =>
+                val offerers = offerers_.filter(_._1 eq xa)
                 val i = random.nextInt(offerers.size)
                 val ((name, offerer), rest) = offerers(i)._2 -> (offerers.take(i) ++ offerers.drop(i+1))
                 it.copy(offerers = rest) -> (offerer.complete(Some(())).as(name) <* `1`.release)
@@ -374,8 +374,8 @@ package object Π:
         Deferred[IO, Any].flatMap { taker =>
           IO.uncancelable { poll =>
             `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
-                assert(offerers.forall(_._1 eq xa))
+              case it @ ><(_, offerers_) if offerers_.filter(_._1 eq xa).nonEmpty =>
+                val offerers = offerers_.filter(_._1 eq xa)
                 val i = random.nextInt(offerers.size)
                 val ((name, offerer), rest) = offerers(i)._2 -> (offerers.take(i) ++ offerers.drop(i+1))
                 it.copy(offerers = rest) -> (offerer.complete(Some(())).as(name) <* `1`.release)
