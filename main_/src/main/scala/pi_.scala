@@ -321,7 +321,7 @@ package object Π:
           (_, b2)  <- Deferred[IO, (Unit, CyclicBarrier[IO])].flatMap { offerer =>
                         IO.uncancelable { poll =>
                           `>R`.modify {
-                            case it @ ><(takers_, _) if takers_.filter(_._1 eq xa).nonEmpty =>
+                            case it @ ><(takers_, _, _) if takers_.filter(_._1 eq xa).nonEmpty =>
                               val takers = takers_.filter(_._1 eq xa)
                               val i = random.nextInt(takers.size)
                               val (taker, rest) = takers(i)._2 -> (takers.take(i) ++ takers.drop(i+1))
@@ -334,7 +334,7 @@ package object Π:
                         }
                       }
           _        <- b2.await
-          stop     <- `>R`.modify { it => it -> it.stop }
+          stop     <- `1`.acquire *> `>R`.modify { it => it -> it.stop } <* `1`.release
         yield
           if stop then None else Some(())
 
@@ -345,7 +345,7 @@ package object Π:
           (_, b2)  <- Deferred[IO, (Unit, CyclicBarrier[IO])].flatMap { offerer =>
                         IO.uncancelable { poll =>
                           `>R`.modify {
-                            case it @ ><(takers_, _) if takers_.filter(_._1 eq xa).nonEmpty =>
+                            case it @ ><(takers_, _, _) if takers_.filter(_._1 eq xa).nonEmpty =>
                               val takers = takers_.filter(_._1 eq xa)
                               val i = random.nextInt(takers.size)
                               val (taker, rest) = takers(i)._2 -> (takers.take(i) ++ takers.drop(i+1))
@@ -358,7 +358,7 @@ package object Π:
                         }
                       }
           _        <- b2.await
-          stop     <- `>R`.modify { it => it -> it.stop }
+          stop     <- `1`.acquire *> `>R`.modify { it => it -> it.stop } <* `1`.release
         yield
           if stop then None else Some(())
 
@@ -369,7 +369,7 @@ package object Π:
           (name, b2) <- Deferred[IO, (Any, CyclicBarrier[IO])].flatMap { taker =>
                           IO.uncancelable { poll =>
                             `<R`.modify {
-                              case it @ ><(_, offerers_) if offerers_.filter(_._1 eq xa).nonEmpty =>
+                              case it @ ><(_, offerers_, _) if offerers_.filter(_._1 eq xa).nonEmpty =>
                                 val offerers = offerers_.filter(_._1 eq xa)
                                 val i = random.nextInt(offerers.size)
                                 val ((name, offerer), rest) = offerers(i)._2 -> (offerers.take(i) ++ offerers.drop(i+1))
@@ -392,7 +392,7 @@ package object Π:
           (name, b2) <- Deferred[IO, (Any, CyclicBarrier[IO])].flatMap { taker =>
                           IO.uncancelable { poll =>
                             `<R`.modify {
-                              case it @ ><(_, offerers_) if offerers_.filter(_._1 eq xa).nonEmpty =>
+                              case it @ ><(_, offerers_, _) if offerers_.filter(_._1 eq xa).nonEmpty =>
                                 val offerers = offerers_.filter(_._1 eq xa)
                                 val i = random.nextInt(offerers.size)
                                 val ((name, offerer), rest) = offerers(i)._2 -> (offerers.take(i) ++ offerers.drop(i+1))
