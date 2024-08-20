@@ -101,7 +101,7 @@ object Program:
       case `.`(end, it*) =>
         val ** = it.headOption match
           case Some(χ(name, Some(sum))) =>
-            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(flatten(`|`(`.`(sum), `.`(end, it.tail*))))()
+            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(flatten(`+`(`|`(`.`(sum)), `|`(`.`(sum), `.`(end, it.tail*)))))()
 
             `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ios)) :: Nil
 
@@ -303,7 +303,7 @@ object Program:
       // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(λ(Symbol(identifier)), qual, params*) =>
-        val args = params.map {
+        val args_ = params.map {
           case λ(Symbol(name)) => name
           case λ(value) =>
             value match {
@@ -313,11 +313,13 @@ object Program:
             }
         }
 
+        val args = if args_.isEmpty then "" else args_.mkString("`", "`, `", "`")
+
         if qual.isEmpty
         then
-          * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          * :+= `_ <- *`(s"`$identifier`(`)(`)($args)".parse[Term].get)
         else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)($args)".parse[Term].get)
 
       case _: `(*)` => ??? // impossible by syntax
 

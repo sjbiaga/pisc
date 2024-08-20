@@ -91,7 +91,7 @@ class Calculus extends Pi:
     } |
     ident("transaction") ~ ("["~> choice <~"]") ^^ { // transaction
       case name ~ (sum, free) =>
-        `[]`(name, sum) -> free
+        `[]`(name, sum) -> (free - Symbol(name))
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
