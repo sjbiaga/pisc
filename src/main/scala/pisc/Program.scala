@@ -271,7 +271,7 @@ object Program:
 
       case `(*)`(λ(Symbol(identifier)), qual, params*) =>
         val args = params.map {
-          case λ(Symbol(name)) => name
+          case λ(Symbol(name)) => s"`$name`"
           case λ(value) =>
             value match {
               case it: BigDecimal => s"BigDecimal($it)"
