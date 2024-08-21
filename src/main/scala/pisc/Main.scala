@@ -41,7 +41,6 @@ import dialects.Scala3
 import parser.{ StochasticPi, Calculus }
 import StochasticPi.Actions
 import Calculus.{ `(*)`,  λ }
-import generator.Program
 
 
 object Main:
