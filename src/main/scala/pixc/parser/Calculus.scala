@@ -280,7 +280,13 @@ object Calculus:
         `|`((lhs.components ++ rhs.components)*)
 
       case `.`(end, it*) =>
-        `.`(flatten(end), it*)
+        val ps = it
+          .map {
+            case xa @ χ(_, Some(sum)) =>
+              xa.copy(sum = Some(flatten(sum)))
+            case p => p
+          }
+        `.`(flatten(end), ps*)
 
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))
