@@ -254,25 +254,28 @@ object Calculus:
 
       case `+`(_, `|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
-        val rhs = flatten(`+`(null, it*))
+        val rhs = flatten(`+`(nil, it*))
         val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
         if ps.isEmpty then ∅ else `+`(nil, ps*)
 
       case `+`(_, par, it*) =>
-        val lhs = `+`(null, flatten(par))
-        val rhs = flatten(`+`(null, it*))
+        val lhs = `+`(nil, flatten(par))
+        val rhs = flatten(`+`(nil, it*))
         val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
         if ps.isEmpty then ∅ else `+`(nil, ps*)
 
-      case `|`(`.`(`+`(_, par)), it*) =>
-        val lhs = flatten(par)
+      case `|`(`.`(`+`(_, par*)), it*) =>
+        val lhs = par.map(flatten(_))
+        val rhs = flatten(`|`(it*))
+        `|`((lhs.flatMap(_.components) ++ rhs.components)*)
+
+      case `|`(seq, it*) =>
+        val lhs = `|`(flatten(seq))
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
 
-      case `|`(`.`(end: `&`, ps*), it*) =>
-        val lhs = `|`(`.`(flatten(end), ps*))
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+      case `.`(end, it*) =>
+        `.`(flatten(end), it*)
 
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))

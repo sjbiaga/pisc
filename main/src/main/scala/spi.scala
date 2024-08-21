@@ -144,7 +144,7 @@ package object sΠ:
       ( for
           ref <- Ref.of[IO, ><](><())
         yield
-          f(`()`(ref))
+          f(ref)
       ).flatten
 
 
