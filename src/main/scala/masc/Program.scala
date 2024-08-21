@@ -55,15 +55,13 @@ object Program:
       case `∅` =>
        * = `_ <- IO.unit`
 
-      case it: `|` if it.components.size > 1 =>
+      case `|`(operand) =>
+        * = body(operand)
+
+      case it: `|` =>
         val ios = it.components.foldLeft(List[Term]())(_ :+ body(_))
 
         * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
-
-      case `|`(operand, _*) =>
-        * = body(operand)
-
-      case _: `|` => ??? // impossible by syntax
 
       /////////////////////////////////////////////////////////// composition //
 
