@@ -233,17 +233,17 @@ object Program:
         val uuid = id
         val uuid2 = id
 
-        val `body(μ)()` = body(μ)().head match
-          case it @ Enumerator.Generator(Pat.Wildcard(), _) =>
-            it.copy(pat = Pat.Var(uuid2))
+        val `body(μ)()` = body(μ)() match
+          case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
+            it.copy(pat = Pat.Var(uuid2)) :: tl
 
-        val `!.μ⋯` = `body(μ)()` :: `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
+        val `!.μ⋯` = `body(μ)()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                        Type.ArgClause(Nil),
                                                                        Term.ArgClause(List(\("None")), None)),
                                                        `IO.cede`,
                                                        uuid,
                                                        Nil)
-                                             } :: Nil
+                                             }
 
         val it =
           `for * yield ()`(
