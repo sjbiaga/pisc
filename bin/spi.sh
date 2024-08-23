@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function pi() {
+function spi() {
     local srcs args
     while [ $# -gt 0 ]
     do
@@ -16,15 +16,17 @@ function pi() {
         args="$args $1"
         shift
     done
-    set ../pi.scala ${srcs#?}
+    set ../loop.scala ../spi.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
                   -q -O -nowarn -S 3.5.0-RC7 \
+                  --dep org.scalanlp::breeze:2.1.0 \
+                  --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
 }
 
-function pi_() {
+function spi_() {
     local srcs args
     while [ $# -gt 0 ]
     do
@@ -40,22 +42,25 @@ function pi_() {
         args="$args $1"
         shift
     done
-    set ../pi_.scala ${srcs#?}
+    set ../loop.scala ../spi_.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
                   -q -O -nowarn -S 3.5.0-RC7 \
+                  --dep org.scalanlp::breeze:2.1.0 \
+                  --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
 }
 
-function pio() {
+function spio() {
     while [ $# -gt 0 ]
     do
         { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
-        scalafmt --non-interactive --stdin >| "$1".scala
+        scalafmt --non-interactive --stdin |
+        sed 's|[(]implicit[ ]^[ ][:][ ]String[,][ ][%][ ][:][ ][%][,][ ][/][ ][:][ ][/][)]|(using ^ : String)(using % : %, / : /)|' >| "$1".scala
         shift
     done
 }
 
-export -f pio pi pi_
+export -f spio spi spi_
