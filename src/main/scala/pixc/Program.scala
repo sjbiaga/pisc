@@ -133,11 +133,11 @@ object Program:
 
 
       case τ(Some(Left(enums))) =>
-        * :+= `_ <- *`("τ")
+        * = `_ <- *`("τ")
         * ++= enums
 
       case τ(Some(Right(term))) =>
-        * :+= `_ <- *`("τ")
+        * = `_ <- *`("τ")
         * :+= `_ <- IO { * }`(term)
 
       case τ(_) =>
@@ -247,7 +247,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> par, it))
+        * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> par, it))
         * ++= `!.π⋯`
 
       case `!`(Some(μ), sum) =>
@@ -255,10 +255,10 @@ object Program:
         val uuid2 = id
 
         val `body(μ)()` = body(μ)() match
-          case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: Nil =>
-            it.copy(pat = Pat.Var(uuid2)) :: Nil
-          case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: Nil =>
-            hd :: it.copy(pat = Pat.Var(uuid2)) :: Nil
+          case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
+            it.copy(pat = Pat.Var(uuid2)) :: tl
+          case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
+            hd :: it.copy(pat = Pat.Var(uuid2)) :: tl
 
         val `!.μ⋯` = `body(μ)()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                        Type.ArgClause(Nil),
@@ -278,7 +278,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
+        * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * ++= `!.μ⋯`
 
       case `!`(_, sum) =>
@@ -294,7 +294,7 @@ object Program:
             }
           }
 
-        * :+= `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
+        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * :+= `_ <- *`(uuid)
 
       /////////////////////////////////////////////////////////// replication //
@@ -315,9 +315,9 @@ object Program:
 
         if qual.isEmpty
         then
-          * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          * = `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
         else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          * = `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
 
       case _: `(*)` => ??? // impossible by syntax
 

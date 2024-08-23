@@ -119,11 +119,11 @@ class Calculus extends Pi:
       case ns =>
         ν(ns.map(_._1.asSymbol.name)*) -> (ns.map(_._2).reduce(_ ++ _), Names())
     } |
-    ("start"~>"("~> ident("transaction") <~ ")") ~ ("["~> choice <~"]"<~".") ^^ {
+    "start"~> ("("~> ident("transaction") <~ ")") ~ ("["~> choice <~"]") <~"." ^^ {
       case name ~ (sum, free) =>
         χ(name, Some(sum)) -> (Names() + Symbol(name), free - Symbol(name))
     } |
-    "end"~>"("~> ident("transaction") <~ ")"<~"." ^^ {
+    "end"~> "("~> ident("transaction") <~ ")" <~"." ^^ {
       case name =>
         χ(name, None) -> (Names(), Names() + Symbol(name))
     } |

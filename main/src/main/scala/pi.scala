@@ -125,7 +125,7 @@ package object Π:
         (root, temp, node, tree) <- `][`.modify { it =>
                                                   val key = it.keys.find(_.contains(node)).get
                                                   val tree = it(key)
-                                                  assert(tree.xa.as[`)(`] eq xa.as[`)(`])
+                                                  assert(tree.xa.xct eq xa.xct)
                                                   val root = tree.root
                                                   val temp = it(root)
                                                   it -> (root, temp, key, tree)
@@ -149,7 +149,7 @@ package object Π:
       val key = Set(id)
       for
         lo <- IOLocal[`)(`](id)
-        xa  = `()`(new `)(`(()))
+        xa  = new `)(`(())
         map = Map[`)*(`, `}{`](key -> `}{`(xa, null, Set.empty))
         tr <- Ref.of[IO, Map[`)*(`, `}{`]](map)
       yield
@@ -161,7 +161,7 @@ package object Π:
       * but its release delayed until input/output action.
       */
     def apply(`)(`: IOLocal[`)(`])
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
       for
         _    <- `1`.acquire
         node <- `)(`.get
@@ -170,7 +170,7 @@ package object Π:
                               it -> it(key).xa
                             }
       yield
-        xa
+        xa.xct
 
 
   /**
@@ -179,7 +179,7 @@ package object Π:
   object χ:
 
     def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `()` => IO[Unit]): IO[Unit] = f(`()`(new `)(`(())))
+    def flatMap(f: `()` => IO[Unit]): IO[Unit] = f(new `)(`(()))
 
 
   /**
@@ -205,7 +205,7 @@ package object Π:
       ( for
           ref <- Ref.of[IO, ><](><())
         yield
-          f(`()`(ref))
+          f(ref)
       ).flatten
 
 
@@ -223,7 +223,7 @@ package object Π:
     import _root_.cats.syntax.flatMap._
 
     private def ref = as[>*<]
-    private def xct = as[`)(`]
+    private[Π] def xct = as[`)(`]
 
     def ====(that: `()`) =
       try
@@ -253,7 +253,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(value.name, xa.xct)(code)(ref)
+        r  <- ><(value.name, xa)(code)(ref)
       yield
         r
 
@@ -264,7 +264,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa.xct)(ref).map(`()`)
+        r  <- ><(xa)(ref).map(`()`)
       yield
         r
 
@@ -275,7 +275,7 @@ package object Π:
                 (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa.xct)(code)(ref).map(`()`)
+        r  <- ><(xa)(code)(ref).map(`()`)
       yield
         r
 

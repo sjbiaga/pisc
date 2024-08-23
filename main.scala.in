@@ -38,9 +38,9 @@ object App extends IOApp:
     for
       semaphore  <- Semaphore[IO](1)
       (id, tree) <- Π.`][`()
-      exitcode   <- π.Main(id)(args*)(tree, semaphore).as(ExitCode.Success)
+      _          <- π.Main(id)(args*)(tree, semaphore)
     yield
-      exitcode
+      ExitCode.Success
 
 object π:
 
