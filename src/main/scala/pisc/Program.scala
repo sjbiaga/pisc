@@ -55,12 +55,12 @@ object Program:
         * = `_ <- IO.unit`
 
       case `+`(_, operand) =>
-        * ++= body(operand)
+        * = body(operand)
 
       case it: `+` =>
         val ios = it.choices.foldLeft(List[Term]())(_ :+ body(_))
 
-        * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
 
       ///////////////////////////////////////////////////////////// summation //
 
@@ -73,7 +73,7 @@ object Program:
       case it: `|` =>
         val ios = it.components.foldLeft(List[Term]())(_ :+ body(_))
 
-        * :+= `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
 
       /////////////////////////////////////////////////////////// composition //
 
@@ -93,15 +93,15 @@ object Program:
 
 
       case it @ τ(Some(Left(enums)), r) =>
-        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+        * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
         * ++= enums
 
       case it @ τ(Some(Right(term)), r) =>
-        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+        * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
         * :+= `_ <- IO { * }`(term)
 
       case it @ τ(_, r) =>
-        * :+= `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+        * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
 
 
       case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some(Left(enums))) =>
@@ -241,7 +241,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it))
+        * = `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it))
         * ++= `!.π⋯`
 
       case `!`(Some(μ), sum) =>
@@ -252,7 +252,7 @@ object Program:
           case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
             it.copy(pat = Pat.Var(uuid2)) :: tl
 
-        val `!.μ⋯` = `body(μ)` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("=="),
+        val `!.μ⋯` = `body(μ)` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                      Type.ArgClause(Nil),
                                                                      Term.ArgClause(Lit.Null() :: Nil, None)),
                                                      `IO.cede`,
@@ -270,7 +270,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
+        * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!.μ⋯`
 
       case `!`(_, sum) =>
@@ -288,7 +288,7 @@ object Program:
             }
           )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
+        * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!⋯`
 
       /////////////////////////////////////////////////////////// replication //
@@ -307,7 +307,7 @@ object Program:
             }
         }
 
-        * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
+        * = `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
 
       case _: `(*)` => ??? // impossible by syntax
 

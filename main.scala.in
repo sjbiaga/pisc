@@ -44,7 +44,11 @@ object App extends IOApp:
       yield
         ()
     ).use { _ =>
-      sΠ.`π-enable`(π.`π-main`)(using %) >> π.Main(args*)(using π.`π-uuid`)(using %, /)
+      for
+        _ <- sΠ.`π-enable`(π.`π-main`)(using %)
+        _ <- π.Main(args*)(using π.`π-uuid`)(using %, /)
+      yield
+        ExitCode.Success
     }
 
   override def run(args: List[String]): IO[ExitCode] =

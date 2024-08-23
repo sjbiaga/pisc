@@ -32,7 +32,6 @@ package generator
 import scala.meta._
 import dialects.Scala3
 
-import parser.StochasticPi.Actions
 import parser.Calculus.{ `(*)`, Expr }
 
 
@@ -48,7 +47,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 List(`String*`("args"), `(using % : %, / : /)(implicit ^ : String)`),
+                 `String*`("args") :: `(using ^ : String)(using % : %, / : /)`,
                ) :: Nil,
                `: IO[Unit]`,
                prog
@@ -58,7 +57,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 List(`(…)`(params*), `(using % : %, / : /)(implicit ^ : String)`),
+                 `(…)`(params*) :: `(using ^ : String)(using % : %, / : /)`,
                ) :: Nil,
                `: IO[Unit]`,
                prog
@@ -116,17 +115,18 @@ object Meta:
                     ,None)
 
 
-  val `(using % : %, / : /)(implicit ^ : String)` =
-    Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
+  val `(using ^ : String)(using % : %, / : /)` =
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil,
                                 "^", Some(Type.Name("String")),
-                                None) ::
-                     List("%", "/")
-                       .map { it => Term.Param(Mod.Implicit() :: Nil,
-                                               it,
-                                               Some(Type.Name(it)),
+                                None) :: Nil
+                    ,Some(Mod.Using())) ::
+    Term.ParamClause(List("%", "/")
+                       .map { it => Term.Param(Mod.Using() :: Nil,
+                                               it, Some(Type.Name(it)),
                                                None)
                        }
-                    ,Some(Mod.Implicit()))
+                    ,Some(Mod.Using())) ::
+    Nil
 
 
   def `:`(name: String, clause: String): Option[Type.Apply] =
@@ -198,7 +198,7 @@ object Meta:
 
   private def `π-supervised(*)`(* : Term): Term =
     * match
-      case Term.Select(Term.Name("IO"), Term.Name("unit")) => *
+      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => *
       case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil, None))
 
   def `( *, … ).parMapN { (_, …) => }`(* : Term*): Term =

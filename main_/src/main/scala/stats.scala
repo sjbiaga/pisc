@@ -235,7 +235,7 @@ package object `Π-stats`:
           r(i)._1 -> {
             0 > r.indexWhere(
               {
-                case ((`key1`, _, _), _) | ((_, `key2`, _), _) => true
+                case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
                 case ((key, _, _), _)
                     if {
                       val k = key.substring(key.length/2)

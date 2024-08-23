@@ -112,16 +112,15 @@ package object sΠ:
     else
       IO.unit
 
-
-  private def `π-exclude`(excluded: `Π-Set`[String])
+  private def `π-release`(enabled: `Π-Set`[String])
                          (using % : %): IO[Unit] =
-    %.update(excluded.foldLeft(_) { (m, key) =>
-                                    if m(key) == 1
-                                    then
-                                      m - key
-                                    else
-                                      m + (key -> (m(key).asInstanceOf[Int] - 1))
-                                  }
+    %.update(enabled.foldLeft(_) { (m, key) =>
+                                   if m(key) == 1
+                                   then
+                                     m - key
+                                   else
+                                     m + (key -> (m(key).asInstanceOf[Int] - 1))
+                                 }
     )
 
   private def exclude(key: String)
@@ -129,7 +128,7 @@ package object sΠ:
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
     if `π-elvis`.contains(key)
     then
-      `π-exclude`(`π-elvis`(key))
+      `π-release`(`π-elvis`(key))
     else
       IO.unit
 
@@ -158,7 +157,7 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
+                       ^ : String): IO[java.lang.Double] =
       for
         _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, -)]]

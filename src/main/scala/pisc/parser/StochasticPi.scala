@@ -217,6 +217,7 @@ object StochasticPi extends Calculus:
 
         case `.`(end, ps*) =>
           val (it, enabled) = parse(end)
+
           if Actions(ps*).nonEmpty
           then
             (`.`(it, ps*), Actions(ps*))
@@ -227,22 +228,6 @@ object StochasticPi extends Calculus:
             assert(∅ == it || it.isInstanceOf[`(*)`])
             val ps2 = ps :+ τ
             (`.`(it, ps2*), Actions(ps2*))
-
-        case `!`(Some(μ), sum) =>
-          val (it, _) = parse(sum)
-          (`!`(Some(μ), it), μ.enabled)
-
-        case `!`(_, sum) =>
-          var (it, enabled) = parse(sum)
-
-          if enabled.isEmpty
-          then
-            assert(∅ == it)
-            val ps = τ :: Nil
-            enabled = Actions(ps*)
-            it = `+`(enabled, `|`(`.`(∅, ps*)))
-
-          (`!`(None, it), enabled)
 
         case `?:`(c, t, f) =>
           var (t_t, t_enabled) = parse(t)
@@ -281,6 +266,22 @@ object StochasticPi extends Calculus:
 
           assert((t_enabled & f_enabled).isEmpty)
           (`?:`(c, t_t, f_f), t_enabled ++ f_enabled)
+
+        case `!`(Some(μ), sum) =>
+          val (it, _) = parse(sum)
+          (`!`(Some(μ), it), μ.enabled)
+
+        case `!`(_, sum) =>
+          var (it, enabled) = parse(sum)
+
+          if enabled.isEmpty
+          then
+            assert(∅ == it)
+            val ps = τ :: Nil
+            enabled = Actions(ps*)
+            it = `+`(enabled, `|`(`.`(∅, ps*)))
+
+          (`!`(None, it), enabled)
 
         case it: `(*)` => (it, nil)
 

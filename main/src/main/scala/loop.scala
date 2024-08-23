@@ -71,19 +71,18 @@ package object `Π-loop`:
                        else
                          for
                            nel <- IO.pure(opt.get)
-                           ios  = nel.map { case (key1, key2, delay) =>
-                                            for
-                                              -         <- CyclicBarrier[IO](if key1 == key2 then 2 else 3)
-                                              deferred1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
-                                              deferred2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                              _         <- %.update(_ - key1 - key2)
-                                              _         <- deferred1.complete(Some(delay -> -))
-                                              _         <- deferred2.complete(Some(delay -> -))
-                                              _         <- -.await
-                                            yield
-                                              ()
-                                          }
-                           _   <- ios.parSequence.void
+                           _   <- nel.parTraverse { case (key1, key2, delay) =>
+                                                    for
+                                                      -         <- CyclicBarrier[IO](if key1 == key2 then 2 else 3)
+                                                      deferred1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
+                                                      deferred2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                                      _         <- %.update(_ - key1 - key2)
+                                                      _         <- deferred1.complete(Some(delay -> -))
+                                                      _         <- deferred2.complete(Some(delay -> -))
+                                                      _         <- -.await
+                                                    yield
+                                                      ()
+                                                  }
                          yield
                            ()
               yield
