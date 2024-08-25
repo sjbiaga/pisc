@@ -70,7 +70,7 @@ letter. Both may contain single and double quotes.
 A source file with the "`.pixc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_.
 "τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -127,7 +127,7 @@ replication stops.
 
 And if, for each guarded replication, care is taken of to *stop* each, then the
 entire program exits; unless prevented by non-exiting - self or mutual - recursive
-agent calls or unguarded replication.
+agent invocations or unguarded replication.
 
 Not part of the original π-calculus, an agent (invocation) expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
