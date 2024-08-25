@@ -70,7 +70,7 @@ letter. Both may contain single and double quotes.
 A source file with the "`.pixc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_.
 "τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -143,7 +143,7 @@ Stochastic
 
 The execution of a stochastic π-calculus program is handled in the files:
 `loop.scala`, `stats.scala` and `spi.scala` or `spi_.scala`. The `Main` agent is
-called from the final generated source file wherein `main.scala.in` was `cat`enated.
+invoked from the final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibers are launched in `background` and used as `Resource`s,
 such that terminating the program cancels them. Even when a process is _discarded_,
