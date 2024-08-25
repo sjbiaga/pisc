@@ -62,12 +62,10 @@ class Calculus extends StochasticPi:
 
   def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (Nil, _) ~ None =>
-        `.`(∅) -> Names() // inaction
-      case pre ~ Some((end: `&`, free: Names)) =>
+      case pre ~ Some((end, free)) =>
         `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        `.`(∅, pre._1*) -> pre._2._2
+        `.`(∅, pre._1*) -> pre._2._2 // inaction
     }
 
   def leaf: Parser[(`-`, Names)] = agent() | // invocation
@@ -160,14 +158,12 @@ object Calculus:
   case class `+`(override val enabled: Actions,
                  choices: `|`*) extends AST with State
 
-  object ∅ extends `+`(nil, `|`()):
+  object ∅ extends `+`(nil):
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[`+`]
 
     override def equals(any: Any): Boolean = any match
-      case that: `+`
-          if that.choices.size == 1 =>
-          that.choices.head.components.isEmpty
+      case that: `+` => that.choices.isEmpty
       case _ => false
 
   case class `|`(components: `.`*) extends AnyVal with AST
@@ -255,24 +251,25 @@ object Calculus:
       case `+`(_, `|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(nil, it*))
-        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
-        if ps.isEmpty then ∅ else `+`(nil, ps*)
+        `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
       case `+`(_, par, it*) =>
         val lhs = `+`(nil, flatten(par))
         val rhs = flatten(`+`(nil, it*))
-        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))
-        if ps.isEmpty then ∅ else `+`(nil, ps*)
+        `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
-      case `|`(`.`(`+`(_, par*)), it*) =>
-        val lhs = par.map(flatten(_))
+      case `|`(`.`(`+`(_, par)), it*) =>
+        val lhs = flatten(par)
         val rhs = flatten(`|`(it*))
-        `|`((lhs.flatMap(_.components) ++ rhs.components)*)
+        `|`((lhs.components ++ rhs.components)*)
 
       case `|`(seq, it*) =>
         val lhs = `|`(flatten(seq))
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
+
+      case `.`(`+`(_, `|`(`.`(end, ps*))), it*) =>
+        flatten(`.`(end, (it ++ ps)*))
 
       case `.`(end, it*) =>
         `.`(flatten(end), it*)
