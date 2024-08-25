@@ -57,12 +57,10 @@ class Calculus extends Ambient:
 
   def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
-      case (Nil, _) ~ None =>
-        `.`(∅) -> Names() // void
-      case pre ~ Some((end: `&`, free: Names)) =>
+      case pre ~ Some((end, free)) =>
         `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        `.`(∅, pre._1*) -> pre._2._2
+        `.`(∅, pre._1*) -> pre._2._2 // void
     }
 
   def leaf: Parser[(`-`, Names)] = agent() |
@@ -232,6 +230,9 @@ object Calculus:
         val lhs = `|`(flatten(seq))
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
+
+      case `.`(`|`(`.`(end, ps*)), it*) =>
+        flatten(`.`(end, (it ++ ps)*))
 
       case `.`(end, it*) =>
         `.`(flatten(end), it*)
