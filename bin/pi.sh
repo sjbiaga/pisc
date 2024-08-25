@@ -18,7 +18,7 @@ function pi() {
     done
     set ../pi.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.5.0-RC7 \
+                  -q -O -nowarn -S 3.5.1-RC2 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
@@ -42,7 +42,7 @@ function pi_() {
     done
     set ../pi_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.5.0-RC7 \
+                  -q -O -nowarn -S 3.5.1-RC2 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1

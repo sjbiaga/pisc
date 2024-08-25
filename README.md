@@ -126,7 +126,7 @@ replication stops.
 
 And if, for each guarded replication, care is taken of to *stop* each, then the
 entire program exits; unless prevented by non-exiting - self or mutual - recursive
-agent calls or unguarded replication.
+agent invocations or unguarded replication.
 
 Not part of the original π-calculus, an (agent) invocation expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
