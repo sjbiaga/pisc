@@ -62,12 +62,10 @@ class Calculus extends Pi:
 
   def sequential: Parser[(`.`, Names)] =
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (Nil, _) ~ None =>
-        `.`(∅) -> Names() // inaction
-      case pre ~ Some((end: `&`, free: Names)) =>
+      case pre ~ Some((end, free)) =>
         `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
       case pre ~ _ =>
-        `.`(∅, pre._1*) -> pre._2._2
+        `.`(∅, pre._1*) -> pre._2._2 // inaction
     }
 
   def leaf: Parser[(`-`, Names)] = agent() |
@@ -159,14 +157,12 @@ object Calculus:
 
   case class `+`(choices: `|`*) extends AST
 
-  object ∅ extends `+`(`|`()):
+  object ∅ extends `+`():
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[`+`]
 
     override def equals(any: Any): Boolean = any match
-      case that: `+`
-          if that.choices.size == 1 =>
-          that.choices.head.components.isEmpty
+      case that: `+` => that.choices.isEmpty
       case _ => false
 
   case class `|`(components: `.`*) extends AnyVal with AST
@@ -243,24 +239,25 @@ object Calculus:
       case `+`(`|`(`.`(sum: `+`)), it*) =>
         val lhs = flatten(sum)
         val rhs = flatten(`+`(it*))
-        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))
-        if ps.isEmpty then ∅ else `+`(ps*)
+        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
       case `+`(par, it*) =>
         val lhs = `+`(flatten(par))
         val rhs = flatten(`+`(it*))
-        val ps = (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))
-        if ps.isEmpty then ∅ else `+`(ps*)
+        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-      case `|`(`.`(`+`(par*)), it*) =>
-        val lhs = par.map(flatten(_))
+      case `|`(`.`(`+`(par)), it*) =>
+        val lhs = flatten(par)
         val rhs = flatten(`|`(it*))
-        `|`((lhs.flatMap(_.components) ++ rhs.components)*)
+        `|`((lhs.components ++ rhs.components)*)
 
       case `|`(seq, it*) =>
         val lhs = `|`(flatten(seq))
         val rhs = flatten(`|`(it*))
         `|`((lhs.components ++ rhs.components)*)
+
+      case `.`(`+`(`|`(`.`(end, ps*))), it*) =>
+        flatten(`.`(end, (it ++ ps)*))
 
       case `.`(end, it*) =>
         `.`(flatten(end), it*)

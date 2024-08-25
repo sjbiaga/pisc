@@ -69,7 +69,7 @@ single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_ (with empty parallel).
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum.
 "τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
@@ -99,7 +99,7 @@ This may be used to cease guarded replication with _input_ prefix guard: i.e.,
 if a `null` is received, the (stack-safe, recursive) replication stops.
 
 Note that input/output prefixes and the silent transition are followed by a dot,
-whereas restriction is not; also, inaction, agent call, (mis)match, `if then else`,
+whereas restriction is not; also, inaction, invocation, (mis)match, `if then else`,
 Elvis operator, and replication are "leaves".
 
 Between "τ" and "." in a silent transition, there can be a `Scalameta` term for
@@ -128,7 +128,7 @@ And if, for each guarded replication, care is taken of to *stop* each, then the
 entire program exits; unless prevented by non-exiting - self or mutual - recursive
 agent calls or unguarded replication.
 
-Not part of the original π-calculus, an agent (call) expression - unless
+Not part of the original π-calculus, an (agent) invocation expression - unless
 it is binding in an equation -, may be preceded by a sequence of characters wrapped
 between curly braces: these will be joined using the dot "`.`" character, standing for
 a qualified package identifier. Thus, agents in different translated "`.scala`" files
