@@ -1,0 +1,35 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@given Conversion[`()`, Long] = _.as[Long]
+
+@val max = 13
+
+@val gen = new scala.util.Random
+
+@def random = 3+gen.nextLong(max)
+
+Main = ν(num)                                                     \
+     ( (!.num(n).ν(out) ( Fib(n, out)                             \
+                        | out(fib).                               \
+                          τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                          num</*random*/>.                        \
+                        )                                         \
+       )                                                          \
+     | num</*random*/>.                                           \
+     )                                                            \
+
+Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
+              ν(f)                       \
+              ( Fibonacci(f, n)          \
+              | f(res).out<res>.         \
+              )                          \
+
+Fibonacci(f, n) = if /*'n < 2*/ = True         \
+                  then                         \
+                    f<n>.                      \
+                  else                         \
+                    ν(g)ν(h)                   \
+                    ( Fibonacci(g, /*'n-1*/)   \
+                    | Fibonacci(h, /*'n-2*/)   \
+                    | g(p).h(r).f</*'p+'r*/>.  \
+                    )                          \
