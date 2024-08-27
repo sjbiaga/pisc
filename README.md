@@ -1,25 +1,26 @@
 Polyadic Pi-calculus in SCala aka PISC ala RISC
 ===============================================
 
-The π-calculus maps one to one on Scala for-comprehensions
+The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
 
+Asynchronous [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-async) is a variant.
 [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
 
 After code generation, the π-calculus "processes" could be
-programmatically typed as Scala code using CE `IO`.
+programmatically typed as `Scala` code using `CE` `IO`.
 
 The for-comprehensions vertically put the prefix (after "`for`")
 and the composition/summation (before "`yield`").
 
-Channels for names (`UUID`s) work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
+Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
 Composition: parallel modelled with - `parMapN`.
 
 Summation: non-deterministic choice modelled with - `parMapN` and `Semaphore.tryAcquire`.
 
-[Guarded] Replication: modelled with - `parMapN` and `lazy val` (or `def`).
+[Guarded] Replication: modelled with - `parMapN` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -136,8 +137,8 @@ between curly braces: these will be joined using the dot "`.`" character, standi
 a qualified package identifier. Thus, agents in different translated "`.scala`" files
 can be reused; the lexical category is `qual`.
 
-Unlike the rest of the agents, the `Main` agent has the command line arguments spliced
-as `vararg` parameter(s).
+Unlike the rest of the agents, the `Main` agent has the command line arguments
+spliced as `vararg` parameter(s).
 
 
 Program

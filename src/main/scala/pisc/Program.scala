@@ -177,6 +177,8 @@ object Program:
         }
         * = Enumerator.Generator(`Seq(*) <- …`(par*), Term.Apply(\(ch), Term.ArgClause(Nil, None)))
 
+      case _: π => ??? // caught by parser
+
       //////////////////////////////////////////////// restriction | prefixes //
 
 
@@ -289,8 +291,6 @@ object Program:
       case _: `(*)` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// agent call //
-
-      case _ => ???
 
     *
 

@@ -29,8 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.Set
-import scala.collection.mutable.LinkedHashSet
+import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -46,44 +45,44 @@ class PolyadicPi extends Expression:
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
-        `τ`(Some(it)) -> (Names(), free)
+        τ(Some(it)) -> (Names(), free)
       case _ =>
-        `τ`(None) -> (Names(), Names())
+        τ(None) -> (Names(), Names())
     } |
-    name~opt(arity)~"<"~opt(rep1sep(name, ","))~">" ~ opt( expression ) ^^ { // negative prefix i.e. output
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ opt(arity) ~ ("<"~>opt(rep1sep(name, ","))<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+      case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, _) ~ None ~ _ ~ None ~ _ ~ _ =>
+      case (ch, _) ~ None ~ None ~ _ =>
         throw PrefixArityParsingException(ch)
-      case (ch, _) ~ Some(arity) ~ _ ~ Some(args) ~ _ ~ _ =>
+      case (ch, _) ~ Some(arity) ~ Some(args) ~ _ =>
         throw PrefixArityParsingException2(ch, arity, args.size)
-      case (ch, name) ~ _ ~ _ ~ Some(args) ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ _ ~ Some(args) ~ Some((it, free2)) =>
         π(ch, polarity = false, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ free2)
-      case (ch, name) ~ _ ~ _ ~ Some(args) ~ _ ~ _ =>
+      case (ch, name) ~ _ ~ Some(args) ~ _ =>
         π(ch, polarity = false, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
-      case (ch, name) ~ Some(arity) ~ _ ~ _ ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ Some(arity) ~ _ ~ Some((it, free2)) =>
         π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(Expr(`()(null)`)))*) -> (Names(), name ++ free2)
-      case (ch, name) ~ Some(arity) ~ _ ~ _ ~ _ ~ _ =>
+      case (ch, name) ~ Some(arity) ~ _ ~ _ =>
         π(ch, polarity = false, None, Seq.fill(arity)(λ(Expr(`()(null)`)))*) -> (Names(), name)
     } |
-    name~"("~rep1sep(name, ",")~")" ~ opt( expression ) ^^ { // positive prefix i.e. input
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ ("("~>rep1sep(name, ",")<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+      case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ params ~ _ ~ _ if !params.forall(_._1.isSymbol) =>
+      case _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
-      case (ch, _) ~ _ ~ params ~ _ ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+      case (ch, _) ~ params ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
         throw PrefixUniquenessParsingException(ch.asSymbol.name, params.map(_._1.asSymbol.name)*)
-      case _ ~ _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ _ ~ params ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ params ~ Some((it, free2)) =>
         π(ch, polarity = true, Some(it), params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name ++ free2)
-      case (ch, name) ~ _ ~ params ~ _ ~ _ =>
+      case (ch, name) ~ params ~ _ =>
         π(ch, polarity = true, None, params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
-                                 floatingPointNumber ^^ { it => λ(it) -> Names() } |
-                                 stringLiteral ^^ { it => λ(it) -> Names() } |
+                                 floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
+                                 stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
                                    case (Right(term), free) => λ(Expr(term)) -> free
@@ -109,7 +108,7 @@ object PolyadicPi extends Calculus:
   type Names = Set[Symbol]
 
   object Names:
-    def apply(os: λ*): Names = LinkedHashSet.from(os
+    def apply(os: λ*): Names = Set.from(os
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
