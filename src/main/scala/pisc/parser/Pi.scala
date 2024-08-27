@@ -50,34 +50,34 @@ class Pi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name~"<"~opt(name)~">" ~ opt( expression ) ^^ { // negative prefix i.e. output
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+      case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ _ ~ Some((arg, free)) ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ Some((arg, free)) ~ Some((it, free2)) =>
         π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ free2)
-      case (ch, name) ~ _ ~ Some((arg, free)) ~ _ ~ _ =>
+      case (ch, name) ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
-      case (ch, name) ~ _ ~ _ ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ _ ~ Some((it, free2)) =>
         π(ch, λ(Expr(`()(null)`)), polarity = false, Some(it)) -> (Names(), name ++ free2)
-      case (ch, name) ~ _ ~ _ ~ _ ~ _ =>
+      case (ch, name) ~ _ ~ _ =>
         π(ch, λ(Expr(`()(null)`)), polarity = false, None) -> (Names(), name)
     } |
-    name~"("~name~")" ~ opt( expression ) ^^ { // positive prefix i.e. input
-      case (ch, _) ~ _ ~ _ ~ _ ~ _ if !ch.isSymbol =>
+    name ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+      case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ (par, _) ~ _ ~ _ if !par.isSymbol =>
+      case _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case _ ~ _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ _ ~ (par, bound) ~ _ ~ Some((it, free2)) =>
+      case (ch, name) ~ (par, bound) ~ Some((it, free2)) =>
         π(ch, par, polarity = true, Some(it)) -> (bound, name ++ free2)
-      case (ch, name) ~ _ ~ (par, bound) ~ _ ~ _ =>
+      case (ch, name) ~ (par, bound) ~ _ =>
         π(ch, par, polarity = true, None) -> (bound, name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> LinkedHashSet(Symbol(it)) } |
-                                 floatingPointNumber ^^ { it => λ(it) -> Names() } |
-                                 stringLiteral ^^ { it => λ(it) -> Names() } |
+                                 floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
+                                 stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
                                    case (Right(term), free) => λ(Expr(term)) -> free

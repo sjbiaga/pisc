@@ -125,10 +125,6 @@ object Program:
         * = `_ <- *`("τ")
 
 
-      case π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
-
-      case π(ch, _, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
-
       case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some(Left(enums))) =>
         val code = `for * yield ()`(enums*)
         * = `_ <- *`(Term.Apply(
@@ -191,6 +187,8 @@ object Program:
       case π(λ(Symbol(ch)), λ(Symbol(par)), true, _) =>
         * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil, None)))
 
+      case _: π => ??? // caught by parser
+
       //////////////////////////////////////////////// restriction | prefixes //
 
 
@@ -239,7 +237,7 @@ object Program:
 
         val `!.μ⋯` = `body(μ)()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                        Type.ArgClause(Nil),
-                                                                       Term.ArgClause(List(\("None")), None)),
+                                                                       Term.ArgClause(\("None") :: Nil, None)),
                                                        `IO.cede`,
                                                        uuid,
                                                        Nil)
@@ -299,8 +297,6 @@ object Program:
       case _: `(*)` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// agent call //
-
-      case _ => ???
 
     *
 
