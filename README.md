@@ -10,6 +10,8 @@ Synchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main) is principa
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too. In a
 similar way - somehow combining π-calculus with ambients - is implemented
 [π-calculus with transactions](https://github.com/sjbiaga/pisc/tree/transactions).
+[Stochastic π-calculus with transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions)
+is a combination.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.
