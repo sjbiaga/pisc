@@ -1,0 +1,11 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@val ! : `)(` => IO[`)(`] = IO.pure
+
+Main = ν(w) w [ ν(n, p, m) ( n [ ν(q) m [ out n. in p.  \
+                                        | <q>           \
+                                        ]               \
+                               ]                        \
+                           | p [ open m. (x) /*!*/ . ]  \
+                           )                            \
+              ]
