@@ -144,9 +144,9 @@ object Program:
         * = `_ <- *`("τ")
 
 
-      case π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
-
       case π(ch, _, _, _) if !ch.isSymbol => ??? // not a channel name - caught by parser
+
+      case π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
 
       case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some(Left(enums))) =>
         val code = `for * yield ()`(enums*)
@@ -234,18 +234,13 @@ object Program:
 
         val `!.π⋯` = body(π)() :+ `_ <- *`(s"$uuid($par)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              Term.If(Term.ApplyUnary("!", par),
-                      `IO.cede`,
-                      `( *, … ).parMapN { (_, …) => }`(
-                        `for * yield ()`(body(sum)()*),
-                        `for * yield ()`(`!.π⋯`*)
-                      )
-              )
-            }
-          )
+        val it = Term.If(Term.ApplyUnary("!", par),
+                         `IO.cede`,
+                         `( *, … ).parMapN { (_, …) => }`(
+                           `for * yield ()`(body(sum)()*),
+                           `for * yield ()`(`!.π⋯`*)
+                         )
+                 )
 
         * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> par, it))
         * ++= `!.π⋯`
@@ -257,8 +252,6 @@ object Program:
         val `body(μ)()` = body(μ)() match
           case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
             it.copy(pat = Pat.Var(uuid2)) :: tl
-          case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-            hd :: it.copy(pat = Pat.Var(uuid2)) :: tl
 
         val `!.μ⋯` = `body(μ)()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                        Type.ArgClause(Nil),
@@ -268,15 +261,10 @@ object Program:
                                                        Nil)
                                              }
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)()*),
-                `for * yield ()`(`!.μ⋯`*)
-              )
-            }
-          )
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   `for * yield ()`(body(sum)()*),
+                   `for * yield ()`(`!.μ⋯`*)
+                 )
 
         * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * ++= `!.μ⋯`
@@ -284,15 +272,10 @@ object Program:
       case `!`(_, sum) =>
         val uuid = id
 
-        val it =
-          `for * yield ()` {
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                body(sum)(),
-                `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
-              )
-            }
-          }
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   body(sum)(),
+                   `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
+                 )
 
         * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * :+= `_ <- *`(uuid)
