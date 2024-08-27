@@ -131,15 +131,6 @@ class Calculus extends StochasticPi:
     }
 
   /**
-   * Channel names start with lower case.
-   * @return
-   */
-  override def ident: Parser[String] =
-      "" ~> // handle whitespace
-      rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
-          elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
-
-  /**
    * Agent identifiers start with upper case.
    * @return
    */

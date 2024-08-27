@@ -79,7 +79,7 @@ trait StochasticPi extends Expression:
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
-                                 floatingPointNumber ^^ { λ(_) -> Names() } |
+                                 floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
@@ -98,6 +98,15 @@ trait StochasticPi extends Expression:
                             case (Right(term), free) => Some(Expr(term))
                             case (Left(enums), _) => throw TermParsingException(enums)
                           }
+
+  /**
+   * Channel names start with lower case.
+   * @return
+   */
+  override def ident: Parser[String] =
+      "" ~> // handle whitespace
+      rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
+          elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
   /** A natural number. */
   override def wholeNumber: Parser[String] =
