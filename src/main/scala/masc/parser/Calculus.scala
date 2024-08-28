@@ -29,6 +29,7 @@
 package masc
 package parser
 
+import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.util.parsing.combinator._
 
 import Ambient._
@@ -70,8 +71,8 @@ class Calculus extends Ambient:
       case None ~ (par, free) =>
         `!`(None, par) -> free
     } |
-    name ~ "["~parallel~"]" ^^ { // ambient
-      case (amb, name) ~ _ ~ (par, free) ~ _ =>
+    name ~ ("["~>parallel<~"]") ^^ { // ambient
+      case (amb, name) ~ (par, free) =>
         `[]`(amb, par) -> (name ++ free)
     } |
     ("<"~>caps<~">") ~ opt( expression ) ^^ { // output action
@@ -81,6 +82,10 @@ class Calculus extends Ambient:
         `<>`(Some(it), path*) -> (free ++ free2)
       case (path, free) ~ _ =>
         `<>`(None, path*) -> free
+    } |
+    "go" ~> name ~ ("."~> parallel) ^^ { // objective move
+      case (amb, name) ~ (par, free) =>
+        `go.`(amb, par) -> (name ++ free)
     }
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
@@ -184,6 +189,8 @@ object Calculus:
 
   case class `[]`(amb: String, par: `|`) extends AST
 
+  case class `go.`(amb: String, par: `|`) extends AST
+
   case class `(*)`(identifier: String,
                    qual: List[String],
                    params: String*) extends AST
@@ -247,5 +254,8 @@ object Calculus:
 
       case `[]`(amb, par) =>
         `[]`(amb, flatten(par))
+
+      case `go.`(amb, par) =>
+        `go.`(amb, flatten(par))
 
       case _ => ast

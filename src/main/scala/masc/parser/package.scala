@@ -2,9 +2,9 @@ package masc
 
 package object parser:
 
-  import Calculus.{ ∅, `<>`, `!`, `[]`, `(*)`, Pre, AST }
+  import Calculus.{ ∅, `<>`, `!`, `[]`, `go.`, `(*)`, Pre, AST }
 
-  type `-` = ∅.type | `<>` | `!` | `[]` | `(*)`
+  type `-` = ∅.type | `<>` | `!` | `[]` | `go.` | `(*)`
 
   type `&` = Calculus.`|` | `-`
 

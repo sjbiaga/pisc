@@ -33,7 +33,8 @@ Calculus
 The `Ambient Calculus` process or capability expressions are exactly as in the
 literature, with both ASCII and UTF-8 characters, and slight variations.
 Forcibly, _restriction_ is "considered" a _prefix_, besides input/capability
-actions per se; output action is a _leaf_, like ambient and [guarded] replication.
+actions per se; output action is a _leaf_, like ambient, [guarded] replication,
+and objective move.
 
 The BNF formal grammar for processes is the following.
 
@@ -44,6 +45,7 @@ The BNF formal grammar for processes is the following.
                  | "!" [ "." "(" NAME ")" "." ] PARALLEL
                  | NAME "[" PARALLEL "]"
                  | "<" CAPS ">" [ EXPRESSION ]
+                 | "go" NAME "." PARALLEL
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
@@ -192,6 +194,14 @@ more, (6) the latter (new children) must be reassigned join as new root; lastly,
 merging the children and siblings of node as mutual siblings by concatenating
 the siblings of node to each of node's child's siblings, and concatenating
 the children of node to each of node's sibling's siblings.
+
+- For a "`go`" objective move, the destination ambient name where to put the process
+in, is identified among the _children_ of the current ambient's node, by
+comparison using `eq` (thus, equality of `Java` references, which is fast). A busy
+loop occurs, unless there is exactly one match, when the new `UUID` of the process
+just launched in parallel is added to the `Set` that represents the destination
+ambient node: this node is removed first, then updated in the tree with the joined
+node, which is finally inserted in the tree.
 
 
 Capabilities

@@ -63,11 +63,24 @@ package object Π:
       * Initial ambient unique key.
       */
     def apply(): `)(` = `)(`(UUID.randomUUID)
-
+    /**
+      * Discriminate names from capabilities.
+      */
+    def apply(`)(`: `)(`, next: Option[ζ]): ζ =
+      try
+        `)(`.ζ match
+          case it @ ζ(None, Right(_), None) => // ambient name variable
+            assert(next eq None)
+            it
+          case _ => // variable
+            ζ(None, Left(`)(`), next)
+      catch _ => // ambient name
+        assert(next eq None)
+        ζ(None, Right(`)(`), None)
 
   enum `ζ-Op` { case in, out, open }
 
-  final case class ζ(op: Option[`ζ-Op`], amb: `)(`, next: Option[ζ])
+  final case class ζ(op: Option[`ζ-Op`], amb: Either[`)(`, `)(`], next: Option[ζ])
 
   object ζ:
 
@@ -179,7 +192,9 @@ package object Π:
     def apply(`)(`: IOLocal[`)(`])(caps: ζ)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] = caps match
 
-      case ζ(Some(op), amb, next) => {
+      case ζ(Some(op), Left(_amb), next) => {
+
+        val amb = try _amb.ζ.amb.right.get catch _ => _amb
 
         assert(try { amb.ζ; false } catch _ => true)
 
@@ -192,7 +207,7 @@ package object Π:
               blocked <- `][`.modify { it =>
                                        val key = it.keys.find(_.contains(node)).get
                                        val tree = it(key)._1
-                                       it -> (1 != tree.siblings.count(it(_)._1.amb eq amb))
+                                       it -> !tree.siblings.exists(it(_)._1.amb eq amb)
                                      }
               _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
                          else
@@ -243,7 +258,7 @@ package object Π:
               blocked <- `][`.modify { it =>
                                        val key = it.keys.find(_.contains(root)).get
                                        val tree = it(key)._1
-                                       it -> (1 != tree.children.count(it(_)._1.amb eq amb))
+                                       it -> !tree.children.exists(it(_)._1.amb eq amb)
                                      }
               _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
                          else
@@ -262,8 +277,7 @@ package object Π:
                              jeth                                     <- Ref.of[IO, ><](><(state1.queue ++ state2.queue,
                                                                                            state1.takers ++ state2.takers))
                              join                                      = root ++ node
-                             _                                        <- `][`.update { it => ((it - root) - node)
-                                                                                           + (join -> (temp, jeth)) }
+                             _                                        <- `][`.update { _ - root - node + (join -> (temp, jeth)) }
                              _                                        <- update(temp, root, join)
                              _                                        <- merge(tree, join)
                              _                                        <- `1`.release
@@ -274,9 +288,44 @@ package object Π:
 
       } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
-      case ζ(_, name, next) =>
+      case ζ(Some(_), _, _) => ??? // impossible by syntax
 
-        this(`)(`)(name.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+      case ζ(_, Left(caps), next) =>
+
+        this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+
+      case _ => ???
+
+    def apply(`)(`: IOLocal[`)(`], amb: `)(`)
+             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+      for
+        amb     <- IO { try amb.ζ.amb.right.get catch _ => amb }
+        _       <- `1`.acquire
+        root    <- `)(`.get
+        blocked <- `][`.modify { it =>
+                                 val key = it.keys.find(_.contains(root)).get
+                                 val tree = it(key)._1
+                                 it -> !tree.children.exists(it(_)._1.amb eq amb)
+                               }
+        _       <- if blocked then `1`.release >> IO.cede >> this(`)(`, amb)
+                   else
+                     val uuid = Π.`)(`()
+                     for
+                       _                     <- `)(`.set(uuid)
+                       (node, v @ (tree, _)) <- `][`.modify { it =>
+                                                              val key = it.keys.find(_.contains(root)).get
+                                                              val node = it(key)._1.children.find(it(_)._1.amb eq amb).get
+                                                              it -> (node, it(node))
+                                                            }
+                       _                     <- remove(node, tree)
+                       join                   = node + uuid
+                       _                     <- `][`.update(_ - node + (join -> v))
+                       _                     <- insert(join, tree.root)
+                       _                     <- `1`.release
+                     yield
+                       ()
+      yield
+        ()
 
 
   /**
@@ -301,12 +350,12 @@ package object Π:
 
     def apply(`)(`: IOLocal[`)(`], amb: `)(`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+      val uuid = Π.`)(`()
+      val node = Set(uuid)
       for
-        _        <- IO { assert(try { amb.ζ; false } catch _ => true) }.void
+        amb      <- IO { try amb.ζ.amb.right.get catch _ => amb }
         _        <- `1`.acquire
         root     <- `)(`.get
-        uuid      = Π.`)(`()
-        node      = Set(uuid)
         _        <- `)(`.set(uuid)
         neth     <- Ref.of[IO, ><](><())
         children <- `][`.modify { it =>
