@@ -220,15 +220,21 @@ object Meta:
   def `ζ(op, *, …)`(head: AST, tail: Seq[AST]): Term =
     val next = if tail.isEmpty then \("None")
                else Term.Apply(\("Some"), Term.ArgClause(`ζ(op, *, …)`(tail.head, tail.tail) :: Nil, None))
+
     head match
+
       case ζ(op, amb) =>
         Term.Apply(\("ζ"),
                    Term.ArgClause(
                      Term.Apply(\("Some"),
-                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil, None))
-                     :: \(amb) :: next :: Nil, None))
+                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil, None)) ::
+                     Term.Apply(\("Left"),
+                                Term.ArgClause(\(amb) :: Nil, None)) ::
+                     next :: Nil,
+                     None))
 
       case Λ(name) =>
-        Term.Apply(\("ζ"), Term.ArgClause(\("None") :: \(name) :: next :: Nil, None))
+        Term.Apply(Term.Select("Π", ")("),
+                   Term.ArgClause(\(name) :: next :: Nil, None))
 
       case _ => ??? // neither name nor path - caught by parser

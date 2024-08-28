@@ -1,0 +1,10 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import scala.concurrent.duration._
+
+Main = ν(w) w [ ν(m) ( ( ν(n) go m. <n> )                      \
+                     | m [ τ/*_ <- IO.sleep(1.second)*/. (n).  \
+                           n [ τ/*println("n")*/. ]            \
+                         ]                                     \
+                     )                                         \
+              ]

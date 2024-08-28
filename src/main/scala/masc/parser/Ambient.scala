@@ -29,8 +29,7 @@
 package masc
 package parser
 
-import scala.collection.Set
-import scala.collection.mutable.LinkedHashSet
+import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -56,7 +55,7 @@ class Ambient extends Expression:
     } |
     name ^^ { Λ(_) -> _ }
 
-  def name: Parser[(String, Names)] = ident ^^ { it => it -> LinkedHashSet(it) }
+  def name: Parser[(String, Names)] = ident ^^ { it => it -> Set(it) }
 
   /**
    * Ambient names start with lower case.
@@ -83,7 +82,7 @@ object Ambient extends Calculus:
   type Names = Set[String]
 
   object Names:
-    def apply(): Names = LinkedHashSet()
+    def apply(): Names = Set()
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

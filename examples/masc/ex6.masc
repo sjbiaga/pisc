@@ -1,0 +1,3 @@
+# -*- indent-tabs-mode: nil; -*-
+
+Main = ν(w) w [ ( ν(m) <m> ) | (n). ( ν(m) m [ n [ out m. ] ] | ( <n> | (k). open k. ( τ/*println("m->n")*/. ) ) ) ]
