@@ -29,6 +29,8 @@
 package pixc
 package generator
 
+import scala.annotation.tailrec
+
 import scala.meta._
 import dialects.Scala3
 
@@ -65,40 +67,59 @@ object Meta:
       )
 
 
+  private def `* ==== …`(* : Any, ** : Term): Term =
+    Term.ApplyInfix(s"${*}".parse[Term].get,
+                    \("===="),
+                    Type.ArgClause(Nil),
+                    Term.ArgClause(** :: Nil, None))
+
+  private def `… ==== *`(** : Term, * : Any): Term =
+    Term.ApplyInfix(**,
+                    \("===="),
+                    Type.ArgClause(Nil),
+                    Term.ArgClause(s"${*}".parse[Term].get :: Nil, None))
+
   def ==== : ((Any, Any)) => Term = {
     case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), Expr(y)) => s"$x ==== $y".parse[Term].get
+    case (Symbol(x), Expr(y)) => `* ==== …`(x, y)
     case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Symbol(y)) => `… ==== *`(x, y)
     case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
     case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
     case (x: String, y: String) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), Expr(y)) => s"$x ==== $y".parse[Term].get
-    case (x: BigDecimal, Expr(y)) => s"$x ==== $y".parse[Term].get
-    case (x: Boolean, Expr(y)) => s"$x ==== $y".parse[Term].get
-    case (x: String, Expr(y)) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), y: Boolean) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), y: String) => s"$x ==== $y".parse[Term].get
+    case (Expr(x), Expr(y)) => Term.ApplyInfix(x,
+                                               \("===="),
+                                               Type.ArgClause(Nil),
+                                               Term.ArgClause(y :: Nil, None))
+    case (x: BigDecimal, Expr(y)) => `* ==== …`(x, y)
+    case (x: Boolean, Expr(y)) => `* ==== …`(x, y)
+    case (x: String, Expr(y)) => `* ==== …`(x, y)
+    case (Expr(x), y: BigDecimal) => `… ==== *`(x, y)
+    case (Expr(x), y: Boolean) => `… ==== *`(x, y)
+    case (Expr(x), y: String) => `… ==== *`(x, y)
   }
 
 
-  val rate: Option[Any] => Term = {
-    case Some(w: Long) if w < 0 => s"`∞`(${-w}L)".parse[Term].get
-    case Some(w: Long) if w > 0 => s"`⊤`(${w}L)".parse[Term].get
-    case Some(r: BigDecimal) => s"`ℝ⁺`(BigDecimal($r))".parse[Term].get
-    case Some(Expr(r)) => s"`ℝ⁺`($r)".parse[Term].get
-    case Some(Symbol(r)) => s"`ℝ⁺`($r)".parse[Term].get
-    case _ => s"`⊤`(1L)".parse[Term].get
+  val rate: Any => Term = {
+    case w: Long if w < 0 => Term.Apply(\("∞"), Term.ArgClause(Lit.Long(-w) :: Nil, None))
+    case r: BigDecimal => Term.Apply(\("ℝ⁺"),
+                                     Term.ArgClause(Term.Apply(\("BigDecimal"),
+                                                               Term.ArgClause(Lit.String(r.toString) :: Nil, None)) :: Nil,
+                                                    None))
+    case Expr(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil, None))
+    case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil, None))
+    case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil, None))
   }
 
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
+
+  inline implicit def \\(* : Enumerator): Term = \(*)
 
   implicit def \(* : List[Enumerator]): Term =
     if *.nonEmpty then `for * yield ()`(* *)
@@ -178,6 +199,7 @@ object Meta:
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
 
 
+  @tailrec
   def `for * yield ()`(* : Enumerator*): Term =
     if *.nonEmpty
     then
@@ -291,10 +313,9 @@ object Meta:
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
 
 
-  def `tryAcquire.ifM`(* : String, ** : List[Enumerator]): Term =
+  def `tryAcquire.ifM`(* : String, ** : Term): Term =
     Term.Apply(Term.Select(Term.Select(*, "tryAcquire"), "ifM"),
-               Term.ArgClause(List(`for * yield ()`(** *),
-                                   Term.Select("IO", "cede")))
+               Term.ArgClause(** :: `IO.cede` :: Nil, None)
     )
 
   def `* <- Semaphore[IO](1)`(* : String): Enumerator.Generator =

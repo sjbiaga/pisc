@@ -248,18 +248,13 @@ object Program:
         val `!.π⋯` = body(π) ++
                      `_ <- *`(s"$uuid($par)(`π-uuid`)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              Term.If(Term.ApplyUnary("!", par),
-                      `IO.cede`,
-                      `( *, … ).parMapN { (_, …) => }`(
-                        `for * yield ()`(body(sum)*),
-                        `for * yield ()`(`!.π⋯`*)
-                      )
-              )
-            }
-          )
+        val it = Term.If(Term.ApplyUnary("!", par),
+                         `IO.cede`,
+                         `( *, … ).parMapN { (_, …) => }`(
+                           `for * yield ()`(body(sum)*),
+                           `for * yield ()`(`!.π⋯`*)
+                         )
+                 )
 
         * = `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it))
         * ++= `!.π⋯`
@@ -272,7 +267,7 @@ object Program:
           case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
             it.copy(pat = Pat.Var(uuid2)) :: tl
 
-        val `!.μ⋯` = `body(μ)` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("=="),
+        val `!.μ⋯` = `body(μ)` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                      Type.ArgClause(Nil),
                                                                      Term.ArgClause(Lit.Null() :: Nil, None)),
                                                      `IO.cede`,
@@ -280,15 +275,10 @@ object Program:
                                                      Nil)
                                            }
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)*),
-                `for * yield ()`(`!.μ⋯`*)
-              )
-            }
-          )
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   `for * yield ()`(body(sum)*),
+                   `for * yield ()`(`!.μ⋯`*)
+                 )
 
         * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!.μ⋯`
@@ -298,15 +288,10 @@ object Program:
 
         val `!⋯` = `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)*),
-                `for * yield ()`(`!⋯`*)
-              )
-            }
-          )
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   `for * yield ()`(body(sum)*),
+                   `for * yield ()`(`!⋯`*)
+                 )
 
         * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!⋯`
@@ -349,7 +334,7 @@ object Program:
     val sem = id
 
     val ios1 = `_ <- *`(`π-disable`(xa.uuid, xa.sum.get.enabled)) :: body(xa.sum.get)
-    val ios2 = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(xa.name) ++ ios))
+    val ios2 = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(xa.name) ++ ios)) :: Nil
 
     `* <- Semaphore[IO](1)`(sem) ::
     `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`tryAcquire.ifM`(sem, ios1),
