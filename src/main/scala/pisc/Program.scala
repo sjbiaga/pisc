@@ -228,18 +228,13 @@ object Program:
         val `!.π⋯` = body(π) ++
                      `_ <- *`(s"$uuid($par)(`π-uuid`)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              Term.If(Term.ApplyUnary("!", par),
-                      `IO.cede`,
-                      `( *, … ).parMapN { (_, …) => }`(
-                        `for * yield ()`(body(sum)*),
-                        `for * yield ()`(`!.π⋯`*)
-                      )
-              )
-            }
-          )
+        val it = Term.If(Term.ApplyUnary("!", par),
+                         `IO.cede`,
+                         `( *, … ).parMapN { (_, …) => }`(
+                           `for * yield ()`(body(sum)*),
+                           `for * yield ()`(`!.π⋯`*)
+                         )
+                 )
 
         * = `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it))
         * ++= `!.π⋯`
@@ -260,15 +255,10 @@ object Program:
                                                      Nil)
                                            }
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)*),
-                `for * yield ()`(`!.μ⋯`*)
-              )
-            }
-          )
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   `for * yield ()`(body(sum)*),
+                   `for * yield ()`(`!.μ⋯`*)
+                 )
 
         * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!.μ⋯`
@@ -278,15 +268,10 @@ object Program:
 
         val `!⋯` = `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                `for * yield ()`(body(sum)*),
-                `for * yield ()`(`!⋯`*)
-              )
-            }
-          )
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   `for * yield ()`(body(sum)*),
+                   `for * yield ()`(`!⋯`*)
+                 )
 
         * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it))
         * ++= `!⋯`

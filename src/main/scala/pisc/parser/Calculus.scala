@@ -166,14 +166,14 @@ object Calculus:
   case class ν(names: String*) extends AnyVal with Pre // forcibly
 
   case class τ(code: Option[Either[List[Enumerator], Term]],
-               override val rate: Option[Any])
+               override val rate: Any)
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
 
   case class π(channel: λ,
                name: λ,
                polarity: Boolean,
-               override val rate: Option[Any],
+               override val rate: Any,
                code: Option[Either[List[Enumerator], Term]])
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)

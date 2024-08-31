@@ -49,21 +49,21 @@ trait StochasticPi extends Expression:
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ Some((it, free)) =>
-        τ(Some(it), r) -> (Names(), free)
+        τ(Some(it), r.getOrElse(1L)) -> (Names(), free)
       case _ ~ r ~ _ =>
-        τ(None, r) -> (Names(), Names())
+        τ(None, r.getOrElse(1L)) -> (Names(), Names())
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, free2)) =>
-        π(ch, arg, polarity = false, r, Some(it)) -> (Names(), name ++ free ++ free2)
+        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it)) -> (Names(), name ++ free ++ free2)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = false, r, None) -> (Names(), name ++ free)
+        π(ch, arg, polarity = false, r.getOrElse(1L), None) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r, Some(it)) -> (Names(), name ++ free2)
+        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), Some(it)) -> (Names(), name ++ free2)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r, None) -> (Names(), name)
+        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), None) -> (Names(), name)
     } |
     name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -73,9 +73,9 @@ trait StochasticPi extends Expression:
       case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, r, Some(it)) -> (bound, name ++ free2)
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it)) -> (bound, name ++ free2)
       case (ch, name) ~ r ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, r, None) -> (bound, name)
+        π(ch, par, polarity = true, r.getOrElse(1L), None) -> (bound, name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
@@ -139,7 +139,7 @@ object StochasticPi extends Calculus:
 
 
   trait Act:
-    val rate: Option[Any]
+    val rate: Any
 
 
   trait Key:
@@ -192,7 +192,7 @@ object StochasticPi extends Calculus:
 
   def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
-    def τ = Calculus.τ(None, Some(-Long.MaxValue))
+    def τ = Calculus.τ(None, -Long.MaxValue)
 
     val excluded = Map[String, Actions]()
 
