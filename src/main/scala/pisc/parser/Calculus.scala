@@ -29,6 +29,8 @@
 package pisc
 package parser
 
+import scala.collection.mutable.{ LinkedHashSet => Set }
+
 import scala.util.parsing.combinator._
 
 import PolyadicPi.{ Names, PrefixChannelsParsingException }
