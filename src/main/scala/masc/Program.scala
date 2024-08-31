@@ -118,18 +118,13 @@ object Program:
 
         val `!.(*).⋯` = body(`()`(None, name)) :+ `_ <- *`(s"$uuid($name)".parse[Term].get)
 
-        val it =
-          `for * yield ()`(
-            `_ <- *` {
-              Term.If(Term.ApplyUnary("!", name),
-                      `IO.cede`,
-                      `( *, … ).parMapN { (_, …) => }`(
-                        `for * yield ()`(body(par)*),
-                        `for * yield ()`(`!.(*).⋯`*)
-                      )
-              )
-            }
-          )
+        val it = Term.If(Term.ApplyUnary("!", name),
+                         `IO.cede`,
+                         `( *, … ).parMapN { (_, …) => }`(
+                           `for * yield ()`(body(par)*),
+                           `for * yield ()`(`!.(*).⋯`*)
+                         )
+                 )
 
         * :+= `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it))
         * ++= `!.(*).⋯`
@@ -137,15 +132,10 @@ object Program:
       case `!`(_, par) =>
         val uuid = id
 
-        val it =
-          `for * yield ()` {
-            `_ <- *` {
-              `( *, … ).parMapN { (_, …) => }`(
-                body(par),
-                `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
-              )
-            }
-          }
+        val it = `( *, … ).parMapN { (_, …) => }`(
+                   body(par),
+                   `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
+                 )
 
         * :+= `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
         * :+= `_ <- *`(uuid)
