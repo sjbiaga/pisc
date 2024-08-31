@@ -29,8 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.Set
-import scala.collection.mutable.LinkedHashSet
+import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -75,7 +74,7 @@ class Pi extends Expression:
         π(ch, par, polarity = true, None) -> (bound, name)
     }
 
-  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> LinkedHashSet(Symbol(it)) } |
+  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
                                  floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
@@ -99,7 +98,7 @@ object Pi extends Calculus:
   type Names = Set[Symbol]
 
   object Names:
-    def apply(os: λ*): Names = LinkedHashSet.from(os
+    def apply(os: λ*): Names = Set.from(os
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
