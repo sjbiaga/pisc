@@ -56,6 +56,9 @@ package object Π:
     inline def unary_! : Boolean = value == null
     inline def ζ: ζ = value.asInstanceOf[ζ]
     override def hashCode(): Int = value.##
+    override def equals(any: Any): Boolean = any match
+      case that: `)(` => this.value == that.value
+      case _ => false
     override def toString(): String = if value == null then "null" else value.toString
 
   object `)(`:
@@ -292,7 +295,7 @@ package object Π:
 
       case ζ(_, Left(caps), next) =>
 
-        this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+        IO.unit >> this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
       case _ => ???
 
@@ -383,7 +386,7 @@ package object Π:
         uuid = `)(`()
         root = Set(uuid)
         lo  <- IOLocal[`)(`](uuid)
-        map  = Map[`)*(`, (`}{`, >*<)](root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
+        map  = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
         tr  <- Ref.of[IO, Map[`)*(`, (`}{`, >*<)]](map)
       yield
         (lo, tr)
