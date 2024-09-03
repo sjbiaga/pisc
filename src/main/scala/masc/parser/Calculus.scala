@@ -46,8 +46,6 @@ class Calculus extends Ambient:
       case (bind, bound) ~ _ ~ (par, free)
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier, free &~ bound)
-      case (`(*)`("Main", _, params*), _) ~ _ ~ _ if params.nonEmpty =>
-        throw MainParsingException(params*)
       case (bind, _) ~ _ ~ (par, _) =>
         bind -> flatten(par)
     }
@@ -201,11 +199,8 @@ object Calculus:
 
   import Expression.ParsingException
 
-  sealed class EquationParsingException(msg: String, cause: Throwable = null)
+  class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
-
-  case class MainParsingException(params: Any*)
-      extends EquationParsingException(s"Main has \"formal\" parameters (${params.mkString(", ")}), but it is spliced the command line arguments")
 
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")

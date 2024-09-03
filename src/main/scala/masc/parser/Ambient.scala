@@ -85,6 +85,26 @@ object Ambient extends Calculus:
     def apply(): Names = Set()
 
 
+  // functions
+
+  def ensure(implicit prog: List[Bind]): Unit =
+    import Ensure._
+
+    val i = main
+
+    if i < 0 then throw MainParsingException
+
+    given rec: Set[(String, Int)] = Set()
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
+  def apply(prog: List[Bind]): Unit =
+
+    ensure(prog)
+
+
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
     .foldLeft(List[String]() -> false) {
       case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
