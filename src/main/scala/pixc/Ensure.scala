@@ -105,10 +105,11 @@ object Ensure:
         val k = stack.indexOf(id -> params.size)
         for
           j <- 0 to k
-          if !rec.contains(id -> params.size)
+          i = index2(prog)(stack(j))
+          sign = prog(i)._1.identifier.asSymbol.name -> prog(i)._1.params.size
+          if !rec.contains(sign)
         do
-          val i = index2(prog)(stack(j))
-          rec(id -> params.size) = i+1
+          rec(sign) = i+1
 
       case it @ `(*)`(λ(Symbol(id)), params*) =>
         val i = index2(prog)(id -> params.size)

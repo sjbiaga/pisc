@@ -189,7 +189,7 @@ object StochasticPi extends Calculus:
     case _ => ???
   }
 
-  def ensure(using rec: Map[(String, Int), Int], prog: List[Bind]): Unit =
+  def ensure(using rec: Map[(String, Int), Int])(implicit prog: List[Bind]): Unit =
     import Ensure._
 
     var i = main
@@ -346,11 +346,11 @@ object StochasticPi extends Calculus:
 
         case it: `(*)` => (it, nil)
 
-    implicit val prog: List[Bind] = _prog.map(_ -> parse(_)._1)
+    val prog = _prog.map(_ -> parse(_)._1)
 
     given rec: Map[(String, Int), Int] = Map()
 
-    ensure
+    ensure(prog)
 
     val discarded = Map[String, Actions]()
 

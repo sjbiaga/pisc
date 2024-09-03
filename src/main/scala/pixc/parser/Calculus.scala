@@ -232,7 +232,7 @@ object Calculus:
 
   import Expression.ParsingException
 
-  abstract class EquationParsingException(msg: String, cause: Throwable = null)
+  class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class StartParsingException(id: String, by: String)
