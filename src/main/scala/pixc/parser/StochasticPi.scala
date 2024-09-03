@@ -179,16 +179,50 @@ object StochasticPi extends Calculus:
 
   // functions
 
-  def `(*) => +`(prog: List[Bind]): `(*)` => `+` = {
+  def index(prog: List[Bind]): `(*)` => Int = {
     case `(*)`(λ(Symbol(identifier)), args*) =>
       prog
-        .find {
+        .indexWhere {
           case (`(*)`(λ(Symbol(`identifier`)), params*), _) if params.size == args.size => true
           case _ => false
         }
-        .get
-        ._2
+    case _ => ???
   }
+
+  def ensure(using rec: Map[(String, Int), Int], prog: List[Bind]): Unit =
+    import Ensure._
+
+    var i = main
+
+    if i < 0 then throw MainParsingException
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
+    prog.foreach {
+      case (it @ `(*)`(λ(Symbol(id)), params*), _)
+        if !rec.contains(id -> params.size) =>
+        val i = index(prog)(it)
+        recursive(prog(i)._2)(using id -> params.size :: Nil)
+        if !rec.contains(id -> params.size)
+        then
+          rec(id -> params.size) = -(i+1)
+      case _ =>
+    }
+
+    i = rec("Main" -> 0)
+    if !replication(prog(-i-1)._2)(using "Main" -> 0 :: Nil)
+    then throw StartParsingException("Main", 0, "replication")
+
+    prog.foreach {
+      case (`(*)`(λ(Symbol(id)), params*), _) if rec(id -> params.size) > 0 =>
+        val i = rec(id -> params.size)
+        val sum = prog(i-1)._2
+        if !recursion(sum)(using id -> params.size :: Nil)
+        then throw StartParsingException(id, params.size, "recursion")
+      case _ =>
+    }
 
   def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
@@ -312,7 +346,11 @@ object StochasticPi extends Calculus:
 
         case it: `(*)` => (it, nil)
 
-    val prog = _prog.map(_ -> parse(_)._1)
+    implicit val prog: List[Bind] = _prog.map(_ -> parse(_)._1)
+
+    given rec: Map[(String, Int), Int] = Map()
+
+    ensure
 
     val discarded = Map[String, Actions]()
 
@@ -386,8 +424,11 @@ object StochasticPi extends Calculus:
         split(sum)
         sum.enabled
 
-      case it: `(*)` =>
-        `(*) => +`(prog)(it).enabled
+      case `(*)`(λ(Symbol(id)), params*) =>
+        val i = rec(id -> params.size)
+        prog(i.abs-1)._2.enabled
+
+      case  _: `(*)` => ???
 
     }
 
@@ -435,9 +476,11 @@ object StochasticPi extends Calculus:
               Seq(ps(k).asInstanceOf[State] -> sum)
             case `[]`(_, sum) =>
               Seq(ps(k).asInstanceOf[State] -> sum)
-            case it: `(*)` =>
-              val sum = `(*) => +`(prog)(it)
+            case `(*)`(λ(Symbol(id)), params*) =>
+              val i = rec(id -> params.size)
+              val sum = prog(i.abs-1)._2
               Seq(ps(k).asInstanceOf[State] -> sum)
+            case  _: `(*)` => ???
         }
 
       case `?:`(_, t, f) =>

@@ -58,9 +58,9 @@ package object `Π-loop`:
                        if m.exists(_._2.isInstanceOf[Int])
                        then m -> Map.empty
                        else m -> m
-                         .map(_ -> _.asInstanceOf[+])
-                         .map(_ -> _._2)
-                         .toMap
+                                 .map(_ -> _.asInstanceOf[+])
+                                 .map(_ -> _._2)
+                                 .toMap
             }
       _  <- if it.isEmpty
             then *.acquire                   // ,- parallelism

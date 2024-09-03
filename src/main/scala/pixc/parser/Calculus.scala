@@ -44,8 +44,6 @@ class Calculus extends StochasticPi:
       case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
-      case (`(*)`(λ(Symbol("Main")), _, params*), _) ~ _ ~ _ if params.nonEmpty =>
-        throw MainParsingException(params.map(_.asSymbol.name)*)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> flatten(sum)
     }
@@ -119,11 +117,11 @@ class Calculus extends StochasticPi:
     } |
     "start"~> ("("~> ident("transaction") <~")") ~ opt("@"~>rate) ~ ("["~> choice <~"]") <~"." ^^ {
       case name ~ r ~ (sum, free) =>
-        χ(name, Some(sum), r) -> (Names() + Symbol(name), free - Symbol(name))
+        χ(name, Some(sum), r.getOrElse(1L)) -> (Names() + Symbol(name), free - Symbol(name))
     } |
     "end"~> ("("~> ident("transaction") <~")") ~ opt("@"~>rate) <~"." ^^ {
       case name ~ r =>
-        χ(name, None, r) -> (Names(), Names() + Symbol(name))
+        χ(name, None, r.getOrElse(1L)) -> (Names(), Names() + Symbol(name))
     } |
     `μ.`<~"."
 
@@ -193,7 +191,7 @@ object Calculus:
 
   case class χ(name: String,
                sum: Option[`+`],
-               override val rate: Option[Any])
+               override val rate: Any)
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
 
@@ -234,11 +232,11 @@ object Calculus:
 
   import Expression.ParsingException
 
-  sealed class EquationParsingException(msg: String, cause: Throwable = null)
+  abstract class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class MainParsingException(params: Any*)
-      extends EquationParsingException(s"Main has \"formal\" parameters (${params.mkString(", ")}), but it is spliced the command line arguments")
+  case class StartParsingException(id: String, by: String)
+      extends EquationParsingException(s"$id leads to a start transaction prefix by $by")
 
   case class EquationParamsException(id: String, params: Any*)
       extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
