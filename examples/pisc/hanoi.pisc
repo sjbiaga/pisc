@@ -2,7 +2,7 @@
 
 @given Conversion[`()`, Int] = _.as[Int]
 
-@val ! : String => IO[String] = { _ => IO.pure(null) }
+@val ! : String => IO[String] = { _ => IO.canceled.as("") }
 
 Main = ν(a,b,c)             \
      ( (!.a<"a">.)          \

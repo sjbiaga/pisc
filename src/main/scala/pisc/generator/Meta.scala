@@ -43,7 +43,7 @@ object Meta:
     val identifier = bind.identifier.asSymbol.name
     val params = bind.params.map(_.asSymbol.name)
 
-    if identifier == "Main"
+    if identifier == "Main" && params.isEmpty
     then
       Defn.Def(Nil,
                identifier, `String*`("args"), `: IO[Unit]`,
