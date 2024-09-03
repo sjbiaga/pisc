@@ -413,13 +413,14 @@ package object Π:
     * Supervised [[code]].
     * @param code
     */
-  private def supervised[T](code: IO[T]): IO[T] =
-    ( for
-        fiber <- Supervisor[IO](await = true).use(_.supervise(code))
-        Succeeded(it) <- fiber.join
-      yield
-        it
-    ).flatten
+  private def exec[T](code: => IO[T]): IO[T] =
+    Supervisor[IO](await = true)
+      .use(_.supervise(code))
+      .flatMap(_.join
+                .flatMap
+                { case Succeeded(it) => it
+                  case _ => IO(null.asInstanceOf[T]) }
+              )
 
 
   /**
@@ -540,7 +541,7 @@ package object Π:
             it.copy(takers = rest) -> (taker.complete(wrap).void <* `1`.release)
           case it @ ><(queue, _) =>
             it.copy(queue = queue.enqueue(wrap)) -> `1`.release
-        }.flatten <* supervised(code)
+        }.flatten <* exec(code)
 
       def apply()(`<R`: Ref[IO, ><])
                  (implicit `1`: Semaphore[IO]): IO[`)(`] =
@@ -572,7 +573,7 @@ package object Π:
                 it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanup2)
             }.flatten.flatMap {
               case null => IO.pure(null)
-              case it: T => (code andThen supervised)(it).asInstanceOf[IO[`)(`]]
+              case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
             }
           }
         }
