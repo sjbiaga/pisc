@@ -41,13 +41,14 @@ package object Π:
     * Supervised [[code]].
     * @param code
     */
-  private def supervised[T](code: IO[T]): IO[T] =
-    ( for
-        fiber <- Supervisor[IO](await = true).use(_.supervise(code))
-        Succeeded(it) <- fiber.join
-      yield
-        it
-    ).flatten
+  private def exec[T](code: => IO[T]): IO[T] =
+    Supervisor[IO](await = true)
+      .use(_.supervise(code))
+      .flatMap(_.join
+                .flatMap
+                { case Succeeded(it) => it
+                  case _ => IO(null.asInstanceOf[T]) }
+              )
 
 
   /**
@@ -67,7 +68,7 @@ package object Π:
   /**
     * silent transition
     */
-  val τ = IO.unit
+  val τ: IO[Option[Unit]] = IO(Some(()))
 
 
   /**
@@ -182,7 +183,7 @@ package object Π:
                             case it =>
                               val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                               it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
-                          }.flatten <* supervised(code)
+                          }.flatten <* exec(code)
                         }
                       }
           _        <- b2.await
@@ -225,7 +226,7 @@ package object Π:
                                 it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
                             }.flatten.flatMap {
                               case it @ (null, _) => IO.pure(it)
-                              case (it: T, b2) => (code andThen supervised)(it)
+                              case (it: T, b2) => (code andThen exec)(it)
                                                     .flatTap {
                                                       case null => `<R`.update(_.copy(stop = true))
                                                       case _ => IO.unit
