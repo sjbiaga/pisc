@@ -179,6 +179,19 @@ object StochasticPi extends Calculus:
 
   // functions
 
+  def ensure(implicit prog: List[Bind]): Unit =
+    import Ensure._
+
+    var i = main
+
+    if i < 0 then throw MainParsingException
+
+    given rec: Set[(String, Int)] = Set()
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
   def `(*) => +`(prog: List[Bind]): `(*)` => `+` = {
     case `(*)`(λ(Symbol(identifier)), args*) =>
       prog
@@ -296,6 +309,8 @@ object StochasticPi extends Calculus:
         case it: `(*)` => (it, nil)
 
     val prog = _prog.map(_ -> parse(_)._1)
+
+    ensure(prog)
 
     val discarded = Map[String, Actions]()
 

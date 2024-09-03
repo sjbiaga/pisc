@@ -213,7 +213,7 @@ object Calculus:
 
   import Expression.ParsingException
 
-  sealed class EquationParsingException(msg: String, cause: Throwable = null)
+  class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class MainParsingException(params: Any*)
