@@ -113,6 +113,9 @@ object PolyadicPi extends Calculus:
       .map(_.asSymbol)
     )
 
+
+  // exceptions
+
   import scala.meta.Enumerator
 
   import Expression.ParsingException
@@ -138,6 +141,26 @@ object PolyadicPi extends Calculus:
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+
+  // functions
+
+  def ensure(implicit prog: List[Bind]): Unit =
+    import Ensure._
+
+    val i = main
+
+    if i < 0 then throw MainParsingException
+
+    given rec: Set[(String, Int)] = Set()
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
+  def apply(prog: List[Bind]): Unit =
+
+    ensure(prog)
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
