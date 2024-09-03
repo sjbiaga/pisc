@@ -132,12 +132,14 @@ object Pi extends Calculus:
     case _ => ???
   }
 
-  def ensure(using rec: Map[(String, Int), Int], prog: List[Bind]): Unit =
+  def ensure(implicit prog: List[Bind]): Unit =
     import Ensure._
 
     var i = main
 
     if i < 0 then throw MainParsingException
+
+    given rec: Map[(String, Int), Int] = Map()
 
     recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
 
@@ -167,11 +169,9 @@ object Pi extends Calculus:
       case _ =>
     }
 
-  def apply(implicit prog: List[Bind]): Unit =
+  def apply(prog: List[Bind]): Unit =
 
-    given rec: Map[(String, Int), Int] = Map()
-
-    ensure
+    ensure(prog)
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
