@@ -29,7 +29,7 @@
 package pixc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -103,6 +103,9 @@ object Pi extends Calculus:
       .map(_.asSymbol)
     )
 
+
+  // exceptions
+
   import scala.meta.Enumerator
 
   import Expression.ParsingException
@@ -115,6 +118,60 @@ object Pi extends Calculus:
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+
+  // functions
+
+  def index(prog: List[Bind]): `(*)` => Int = {
+    case `(*)`(λ(Symbol(identifier)), _, args*) =>
+      prog
+        .indexWhere {
+          case (`(*)`(λ(Symbol(`identifier`)), _, params*), _) if params.size == args.size => true
+          case _ => false
+        }
+    case _ => ???
+  }
+
+  def ensure(using rec: Map[(String, Int), Int], prog: List[Bind]): Unit =
+    import Ensure._
+
+    var i = main
+
+    if i < 0 then throw MainParsingException
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
+    prog.foreach {
+      case (it @ `(*)`(λ(Symbol(id)), _, params*), _)
+        if !rec.contains(id -> params.size) =>
+        val i = index(prog)(it)
+        recursive(prog(i)._2)(using id -> params.size :: Nil)
+        if !rec.contains(id -> params.size)
+        then
+          rec(id -> params.size) = -(i+1)
+      case _ =>
+    }
+
+    i = rec("Main" -> 0)
+    if replication(prog(-i-1)._2)(using "Main" -> 0 :: Nil)
+    then throw StartParsingException("Main", 0, "replication")
+
+    prog.foreach {
+      case (`(*)`(λ(Symbol(id)), _, params*), _) if rec(id -> params.size) > 0 =>
+        val i = rec(id -> params.size)
+        val sum = prog(i-1)._2
+        if !recursion(sum)(using id -> params.size :: Nil)
+        then throw StartParsingException(id, params.size, "recursion")
+      case _ =>
+    }
+
+  def apply(implicit prog: List[Bind]): Unit =
+
+    given rec: Map[(String, Int), Int] = Map()
+
+    ensure
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

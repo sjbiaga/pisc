@@ -46,8 +46,6 @@ class Calculus extends Pi:
       case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
-      case (`(*)`(λ(Symbol("Main")), _, params*), _) ~ _ ~ _ if params.nonEmpty =>
-        throw MainParsingException(params.map(_.asSymbol.name)*)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> flatten(sum)
     }
@@ -226,11 +224,11 @@ object Calculus:
 
   import Expression.ParsingException
 
-  sealed class EquationParsingException(msg: String, cause: Throwable = null)
+  abstract class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class MainParsingException(params: Any*)
-      extends EquationParsingException(s"Main has \"formal\" parameters (${params.mkString(", ")}), but it is spliced the command line arguments")
+  case class StartParsingException(id: String, by: String)
+      extends EquationParsingException(s"$id leads to a start transaction prefix by $by")
 
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
