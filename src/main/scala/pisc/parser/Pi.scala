@@ -29,8 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.Set
-import scala.collection.mutable.LinkedHashSet
+import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -75,7 +74,7 @@ class Pi extends Expression:
         π(ch, par, polarity = true, None) -> (bound, name)
     }
 
-  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> LinkedHashSet(Symbol(it)) } |
+  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
                                  floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
@@ -99,10 +98,13 @@ object Pi extends Calculus:
   type Names = Set[Symbol]
 
   object Names:
-    def apply(os: λ*): Names = LinkedHashSet.from(os
+    def apply(os: λ*): Names = Set.from(os
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
+
+
+  // exceptions
 
   import scala.meta.Enumerator
 
@@ -116,6 +118,26 @@ object Pi extends Calculus:
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+
+  // functions
+
+  def ensure(implicit prog: List[Bind]): Unit =
+    import Ensure._
+
+    val i = main
+
+    if i < 0 then throw MainParsingException
+
+    given rec: Set[(String, Int)] = Set()
+
+    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+
+    if rec.contains("Main" -> 0) then throw MainParsingException2
+
+  def apply(prog: List[Bind]): Unit =
+
+    ensure(prog)
 
 
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")

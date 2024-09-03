@@ -29,6 +29,8 @@
 package pisc
 package parser
 
+import scala.collection.mutable.{ LinkedHashSet => Set }
+
 import scala.util.parsing.combinator._
 
 import Pi.{ Names, PrefixParsingException }
@@ -217,7 +219,7 @@ object Calculus:
 
   import Expression.ParsingException
 
-  sealed class EquationParsingException(msg: String, cause: Throwable = null)
+  class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class MainParsingException(params: Any*)
