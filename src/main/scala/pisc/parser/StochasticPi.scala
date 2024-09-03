@@ -188,6 +188,7 @@ object StochasticPi extends Calculus:
         }
         .get
         ._2
+    case _: `(*)` => ???
   }
 
   def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
