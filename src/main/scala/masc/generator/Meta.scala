@@ -41,7 +41,7 @@ import parser.Ambient.{ AST, ζ, Λ }
 object Meta:
 
   def defn(bind: `(*)`, prog: Term): Defn.Def =
-    if bind.identifier == "Main"
+    if bind.identifier == "Main" && bind.params.isEmpty
     then
       Defn.Def(Nil,
                "Main", `String*`("args"), `: IO[Unit]`,
