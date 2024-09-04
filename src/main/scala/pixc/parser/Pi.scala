@@ -157,7 +157,7 @@ object Pi extends Calculus:
     }
 
     i = rec("Main" -> 0)
-    if replication(prog(-i-1)._2)(using "Main" -> 0 :: Nil)
+    if !replication(prog(-i-1)._2)(using "Main" -> 0 :: Nil)
     then throw StartParsingException("Main", 0, "replication")
 
     prog.foreach {

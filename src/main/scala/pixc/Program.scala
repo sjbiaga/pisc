@@ -232,18 +232,18 @@ object Program:
       case `!`(Some(π @ π(_, λ(Symbol(par)), true, _)), sum) =>
         val uuid = id
 
-        val `!.π⋯` = body(π)() :+ `_ <- *`(s"$uuid($par)".parse[Term].get)
+        val `!.π⋯` = body(π)() :+ `_ <- *`(Term.Apply(\(uuid),
+                                                      Term.ArgClause(\(par) :: Nil, None)))
 
         val it = Term.If(Term.ApplyUnary("!", par),
                          `IO.cede`,
                          `( *, … ).parMapN { (_, …) => }`(
-                           `for * yield ()`(body(sum)()*),
-                           `for * yield ()`(`!.π⋯`*)
+                           body(sum)(),
+                           `!.π⋯`
                          )
                  )
 
-        * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> par, it))
-        * ++= `!.π⋯`
+        * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid -> par, it)) :: `!.π⋯`
 
       case `!`(Some(μ), sum) =>
         val uuid = id
@@ -262,23 +262,21 @@ object Program:
                                              }
 
         val it = `( *, … ).parMapN { (_, …) => }`(
-                   `for * yield ()`(body(sum)()*),
-                   `for * yield ()`(`!.μ⋯`*)
+                   body(sum)(),
+                   `!.μ⋯`
                  )
 
-        * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * ++= `!.μ⋯`
+        * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `!.μ⋯`
 
       case `!`(_, sum) =>
         val uuid = id
 
         val it = `( *, … ).parMapN { (_, …) => }`(
                    body(sum)(),
-                   `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
+                   `_ <- IO.unit` :: `_ <- *`(uuid)
                  )
 
-        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * :+= `_ <- *`(uuid)
+        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
 
       /////////////////////////////////////////////////////////// replication //
 
