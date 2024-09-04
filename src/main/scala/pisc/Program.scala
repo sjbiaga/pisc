@@ -199,22 +199,20 @@ object Program:
       case `!`(Some(π @ π(_, true, _, params*)), sum) =>
         val uuid = id
 
-        val par = params.map {
-          case λ(Symbol(name)) => name
-        }
+        val args = params.map(_.asSymbol.name)
 
-        val `!.π⋯` = body(π)() :+ `_ <- *`(s"$uuid(${par.mkString(", ")})".parse[Term].get)
+        val `!.π⋯` = body(π)() :+ `_ <- *`(Term.Apply(\(uuid),
+                                                      Term.ArgClause(args.map(\(_)).toList, None)))
 
-        val it = Term.If(Term.ApplyUnary("!", par.head),
+        val it = Term.If(Term.ApplyUnary("!", args.head),
                          `IO.cede`,
                          `( *, … ).parMapN { (_, …) => }`(
-                           `for * yield ()`(body(sum)()*),
-                           `for * yield ()`(`!.π⋯`*)
+                           body(sum)(),
+                           `!.π⋯`
                          )
                  )
 
-        * :+= `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid, it, par*))
-        * ++= `!.π⋯`
+        * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid, it, args*)) :: `!.π⋯`
 
       case `!`(Some(μ), sum) =>
         val uuid = id
@@ -233,28 +231,26 @@ object Program:
                                              }
 
         val it = `( *, … ).parMapN { (_, …) => }`(
-                   `for * yield ()`(body(sum)()*),
-                   `for * yield ()`(`!.μ⋯`*)
+                   body(sum)(),
+                   `!.μ⋯`
                  )
 
-        * :+= `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * ++= `!.μ⋯`
+        * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `!.μ⋯`
 
       case `!`(_, sum) =>
         val uuid = id
 
         val it = `( *, … ).parMapN { (_, …) => }`(
                    body(sum)(),
-                   `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
+                   `_ <- IO.unit` :: `_ <- *`(uuid)
                  )
 
-        * :+= `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * :+= `_ <- *`(uuid)
+        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
 
       /////////////////////////////////////////////////////////// replication //
 
 
-      // AGENT CALL ////////////////////////////////////////////////////////////
+      // INVOCATION ////////////////////////////////////////////////////////////
 
       case `(*)`(λ(Symbol(identifier)), qual, params*) =>
         val args = params.map {
@@ -275,7 +271,7 @@ object Program:
 
       case _: `(*)` => ??? // impossible by syntax
 
-      //////////////////////////////////////////////////////////// agent call //
+      //////////////////////////////////////////////////////////// invocation //
 
     *
 

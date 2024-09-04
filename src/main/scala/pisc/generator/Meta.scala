@@ -46,11 +46,11 @@ object Meta:
     if identifier == "Main" && params.isEmpty
     then
       Defn.Def(Nil,
-               identifier, `String*`("args"), `: IO[Unit]`,
+               identifier, `String*`("args"), `: IO[Any]`,
                prog)
     else
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: IO[Unit]`,
+               identifier, `(…)`(params*), `: IO[Any]`,
                prog)
 
 
@@ -124,6 +124,7 @@ object Meta:
   def `:`(name: String, clause: String): Option[Type.Apply] =
     Some(Type.Apply(Type.Name(name), Type.ArgClause(Type.Name(clause) :: Nil)))
 
+  val `: IO[Any]` = `:`("IO", "Any")
 
   val `: IO[Unit]` = `:`("IO", "Unit")
 
@@ -181,8 +182,8 @@ object Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit"))) =>
-            Term.ForYield(*.init.toList, Lit.Unit())
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit" | "cede"))) =>
+            `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
