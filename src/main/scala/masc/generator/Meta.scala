@@ -29,6 +29,8 @@
 package masc
 package generator
 
+import scala.annotation.tailrec
+
 import java.util.UUID
 
 import scala.meta._
@@ -131,6 +133,7 @@ object Meta:
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
 
 
+  @tailrec
   def `for * yield ()`(* : Enumerator*): Term =
     if *.nonEmpty
     then
@@ -148,8 +151,8 @@ object Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit"))) =>
-            Term.ForYield(*.init.toList, Lit.Unit())
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit" | "cede"))) =>
+            `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
