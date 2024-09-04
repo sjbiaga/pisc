@@ -51,7 +51,7 @@ object Meta:
                  Type.ParamClause(Nil),
                  `String*`("args") :: `(using ^ : String)(using % : %, / : /)`,
                ) :: Nil,
-               `: IO[Unit]`,
+               `: IO[Any]`,
                prog
       )
     else
@@ -61,7 +61,7 @@ object Meta:
                  Type.ParamClause(Nil),
                  `(…)`(params*) :: `(using ^ : String)(using % : %, / : /)`,
                ) :: Nil,
-               `: IO[Unit]`,
+               `: IO[Any]`,
                prog
       )
 
@@ -118,6 +118,8 @@ object Meta:
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
+  inline implicit def \\(* : Enumerator): Term = \(*)
+
   implicit def \(* : List[Enumerator]): Term =
     if *.nonEmpty then `for * yield ()`(* *)
     else \(`_ <- IO.unit`)
@@ -151,6 +153,7 @@ object Meta:
   def `:`(name: String, clause: String): Option[Type.Apply] =
     Some(Type.Apply(Type.Name(name), Type.ArgClause(Type.Name(clause) :: Nil)))
 
+  val `: IO[Any]` = `:`("IO", "Any")
 
   val `: IO[Unit]` = `:`("IO", "Unit")
 
@@ -200,16 +203,14 @@ object Meta:
         *.head match
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
             `for * yield ()`(it.enums*)
-          case Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), List(Term.Apply(Term.Name("⊤" | "∞" | "ℝ⁺"), _), _)), _)) =>
-            Term.ForYield(*.toList, Lit.Unit())
           case Enumerator.Generator(Pat.Wildcard(), it) =>
             it
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit"))) =>
-            Term.ForYield(*.init.toList, Lit.Unit())
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("cede"|"unit"))) =>
+            `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else

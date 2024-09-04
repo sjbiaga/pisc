@@ -73,7 +73,7 @@ object π:
 
   def `π-uuid` = UUID.randomUUID.toString
 
-  def `π-supervised`(io: => IO[Unit]): IO[Unit] =
+  def `π-supervised`(io: => IO[Any]): IO[Unit] =
     Supervisor[IO](await = true)
       .use(_.supervise(io))
       .flatMap(_.join.flatMap(const(IO.unit)))
