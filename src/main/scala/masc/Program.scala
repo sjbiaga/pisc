@@ -116,29 +116,28 @@ object Program:
       case `!`(Some(name), par) =>
         val uuid = id
 
-        val `!.(*).⋯` = body(`()`(None, name)) :+ `_ <- *`(s"$uuid($name)".parse[Term].get)
+        val `!.(*).⋯` = body(`()`(None, name)) :+ `_ <- *`(Term.Apply(\(uuid),
+                                                                      Term.ArgClause(\(name) :: Nil, None)))
 
         val it = Term.If(Term.ApplyUnary("!", name),
                          `IO.cede`,
                          `( *, … ).parMapN { (_, …) => }`(
-                           `for * yield ()`(body(par)*),
-                           `for * yield ()`(`!.(*).⋯`*)
+                           body(par),
+                           `!.(*).⋯`
                          )
                  )
 
-        * :+= `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it))
-        * ++= `!.(*).⋯`
+        * = `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it)) :: `!.(*).⋯`
 
       case `!`(_, par) =>
         val uuid = id
 
         val it = `( *, … ).parMapN { (_, …) => }`(
                    body(par),
-                   `for * yield ()`(`_ <- IO.unit`, `_ <- *`(uuid))
+                   `_ <- IO.unit` :: `_ <- *`(uuid)
                  )
 
-        * :+= `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it))
-        * :+= `_ <- *`(uuid)
+        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
 
       /////////////////////////////////////////////////////////// replication //
 
