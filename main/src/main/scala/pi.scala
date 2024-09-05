@@ -243,6 +243,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
       for
         xa <- Π.`][`(`)(`)
+        _  <- IO { assert(!value.name.isInstanceOf[`)(`]) }
         r  <- ><(value.name, xa.xct)(ref)
       yield
         r
@@ -254,6 +255,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Option[Unit]] =
       for
         xa <- Π.`][`(`)(`)
+        _  <- IO { assert(!value.name.isInstanceOf[`)(`]) }
         r  <- ><(value.name, xa)(code)(ref)
       yield
         r

@@ -101,9 +101,14 @@ object Program:
       case `.`(end, it*) =>
         val ** = it.headOption match
           case Some(χ(name, Some(sum))) =>
-            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(flatten(`+`(`|`(`.`(sum)), `|`(`.`(sum), `.`(end, it.tail*)))))()
+            implicit val sem = Some(id)
 
-            `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ios)) :: Nil
+            val ios = `* <- χ; _ <- }{()(, *)`(name) ++ body(flatten(`+`(`|`(`.`(sum), `.`(end, it.tail*)))))
+
+            List(
+              `* <- Semaphore[IO](1)`(sem.get),
+              `_ <- *`(`( *, … ).parMapN { (_, …) => }`(body(sum), ios))
+            )
 
           case Some(χ(name, _)) =>
             `_ <- *`(Term.Apply(
