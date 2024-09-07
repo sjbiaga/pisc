@@ -161,38 +161,54 @@ object Calculus:
 
   sealed trait AST extends Any
 
-  case class `|`(components: `.`*) extends AST
+  case class `|`(components: `.`*) extends AST:
+    override def toString: String = components.mkString(" | ")
 
   object ∅ extends `|`():
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[`|`]
+
     override def equals(any: Any): Boolean = any match
       case that: `|` => that.components.size == 0
       case _ => false
 
-  case class `.`(end: `&`, prefixes: Pre*) extends AST
+    override def toString: String = "()"
+
+  case class `.`(end: `&`, prefixes: Pre*) extends AST:
+    override def toString: String =
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[`|`]
+                                                                         then "(" + end + ")" else end)
 
   sealed trait Pre extends Any
 
-  case class ν(names: String*) extends AnyVal with Pre // forcibly
+  case class ν(names: String*) extends AnyVal with Pre: // forcibly
+    override def toString: String = names.mkString("ν(", ", ", ")")
 
-  case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre
+  case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre:
+    override def toString: String = "τ."
 
-  case class `..`(path: Ambient.AST*) extends Pre
+  case class `..`(path: Ambient.AST*) extends Pre:
+    override def toString: String = path.mkString("", ". ", ".")
 
-  case class `()`(code: Option[Term], name: String) extends Pre
+  case class `()`(code: Option[Term], name: String) extends Pre:
+    override def toString: String = s"($name)."
 
-  case class `<>`(code: Option[Term], path: Ambient.AST*) extends AST
+  case class `<>`(code: Option[Term], path: Ambient.AST*) extends AST:
+    override def toString: String = path.mkString("<", ". ", ">")
 
-  case class `!`(guard: Option[String], par: `|`) extends AST
+  case class `!`(guard: Option[String], par: `|`) extends AST:
+    override def toString: String = "!" + guard.map("." + _).getOrElse("") + par
 
-  case class `[]`(amb: String, par: `|`) extends AST
+  case class `[]`(amb: String, par: `|`) extends AST:
+    override def toString: String = amb + (if ∅ == par then " [ ]" else " [ " + par + " ]")
 
-  case class `go.`(amb: String, par: `|`) extends AST
+  case class `go.`(amb: String, par: `|`) extends AST:
+    override def toString: String = "go " + amb + "." + par
 
   case class `(*)`(identifier: String,
                    qual: List[String],
-                   params: String*) extends AST
+                   params: String*) extends AST:
+    override def toString: String = s"$identifier(${params.mkString(", ")})"
 
 
   // exceptions

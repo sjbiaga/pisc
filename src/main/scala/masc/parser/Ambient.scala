@@ -73,11 +73,14 @@ object Ambient extends Calculus:
 
   sealed trait AST extends Any
 
-  case class Λ(name: String) extends AnyVal with AST
+  case class Λ(name: String) extends AnyVal with AST:
+    override def toString: String = name
 
-  case object ε extends AST
+  case object ε extends AST:
+    override def toString: String = "ε"
 
-  case class ζ(op: Op, amb: String) extends AST
+  case class ζ(op: Op, amb: String) extends AST:
+    override def toString: String = s"$op $amb"
 
   type Names = Set[String]
 
