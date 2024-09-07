@@ -158,7 +158,8 @@ object Calculus:
   sealed trait AST extends Any
 
   case class `+`(override val enabled: Actions,
-                 choices: `|`*) extends AST with State
+                 choices: `|`*) extends AST with State:
+    override def toString: String = choices.mkString(" + ")
 
   object ∅ extends `+`(nil):
     override def canEqual(that: Any): Boolean =
@@ -168,18 +169,26 @@ object Calculus:
       case that: `+` => that.choices.isEmpty
       case _ => false
 
-  case class `|`(components: `.`*) extends AnyVal with AST
+    override def toString: String = "()"
 
-  case class `.`(end: `&`, prefixes: Pre*) extends AST
+  case class `|`(components: `.`*) extends AnyVal with AST:
+    override def toString: String = components.mkString(" | ")
+
+  case class `.`(end: `&`, prefixes: Pre*) extends AST:
+    override def toString: String =
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[`+`]
+                                                                         then "(" + end + ")" else end)
 
   sealed trait Pre extends Any
 
-  case class ν(names: String*) extends AnyVal with Pre // forcibly
+  case class ν(names: String*) extends AnyVal with Pre: // forcibly
+    override def toString: String = names.mkString("ν(", ", ", ")")
 
   case class τ(code: Option[Either[List[Enumerator], Term]],
                override val rate: Any)
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
+    override def toString: String = "τ."
 
   case class π(channel: λ,
                name: λ,
@@ -188,14 +197,24 @@ object Calculus:
                code: Option[Either[List[Enumerator], Term]])
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
+    override def toString: String =
+      if polarity
+      then "" + channel + "(" + name + ")."
+      else "" + channel + "<" + name + ">."
 
   case class χ(name: String,
                sum: Option[`+`],
                override val rate: Any)
       extends Pre with Act with State:
     override val enabled: Actions = Actions(this)
+    override def toString: String =
+      if sum.isEmpty
+      then "end(" + name + ")"
+      else "start(" + name + ") [" + sum.get + "]"
 
-  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
+  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST:
+    override def toString: String =
+      "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
 
   case class `(*)`(identifier: λ,
                    params: λ*) extends AST:
@@ -209,23 +228,34 @@ object Calculus:
 
     override def hashCode(): Int = (identifier.asSymbol.name, params.map(_.asSymbol.name)).##
 
-  case class `!`(guard: Option[μ], sum: `+`) extends AST
+    override def toString: String = s"$identifier(${params.mkString(", ")})"
 
-  case class `[]`(name: String, sum: `+`) extends AST
+  case class `!`(guard: Option[μ], sum: `+`) extends AST:
+    override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
+
+  case class `[]`(name: String, sum: `+`) extends AST:
+    override def toString: String = name + (if ∅ == sum then " [ ]" else " [ " + sum + " ]")
 
   case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
-    val kind: String = value match {
+    val kind: String = value match
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
       case _: Expr => "Scalameta Term"
-    }
 
-  case class Expr(term: Term)
+    override def toString: String = value match
+      case it: Symbol => it.name
+      case it: BigDecimal => "" + it
+      case it: Boolean => it.toString.capitalize
+      case it: String => it
+      case it: Expr => "" + it
+
+  case class Expr(term: Term):
+    override def toString: String = "/*" + term + "*/"
 
 
   // exceptions
