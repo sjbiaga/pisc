@@ -44,7 +44,7 @@ import StochasticPi._
 import Calculus._
 
 
-trait StochasticPi extends Expression:
+class StochasticPi extends Expression:
 
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
@@ -130,9 +130,9 @@ object StochasticPi extends Calculus:
   object Actions:
     def apply(ps: Pre*): Actions = Set.from(
       ps
-        .filter(_.isInstanceOf[Act with Key])
+        .filter(_.isInstanceOf[Key])
         .headOption
-        .map(_.asInstanceOf[Act with Key].uuid)
+        .map(_.asInstanceOf[Key].uuid)
     )
 
   def nil = Actions()
@@ -206,13 +206,21 @@ object StochasticPi extends Calculus:
 
   def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
-    def τ = Calculus.τ(None, -Long.MaxValue)
-
     val excluded = Map[String, Actions]()
 
     def parse[T <: AST](ast: T): (T, Actions) =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      inline def τ = Calculus.τ(None, -Long.MaxValue)
+
+      def insert[S](end: `&`, ps: Pre*): (S, Actions) =
+        val ps2 = ps :+ τ
+        `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
+
+      def insert_+(sum: `+`): `+` =
+        val (seq, enabled) = insert[`.`](sum)
+        `+`(enabled, `|`(seq))
 
       ast match
 
@@ -249,62 +257,36 @@ object StochasticPi extends Calculus:
             (`.`(it, ps*), enabled)
           else
             assert(∅ == it || it.isInstanceOf[`(*)`])
-            val ps2 = ps :+ τ
-            (`.`(it, ps2*), Actions(ps2*))
+            insert(it, ps*)
 
-        case `?:`(c, t, f) =>
-          var (t_t, t_enabled) = parse(t)
-          var (f_f, f_enabled) = parse(f)
+        case `?:`(c, _t, _f) =>
+          def _t_f(_sum: `+`): `+` =
+            val (sum, _) = parse(_sum)
 
-          if t_enabled.isEmpty
-          then
-            assert(∅ == t_t)
-            val ps = τ :: Nil
-            t_enabled = Actions(ps*)
-            t_t = `+`(t_enabled, `|`(`.`(∅, ps*)))
+            if sum.enabled.isEmpty
+            || sum.enabled.exists(excluded.contains(_))
+            then
+              insert_+(sum)
+            else
+              sum
 
-          if f_enabled.isEmpty
-          then
-            assert(∅ == f_f)
-            val ps = τ :: Nil
-            f_enabled = Actions(ps*)
-            f_f = `+`(f_enabled, `|`(`.`(∅, ps*)))
+          val (t, f) = _t_f(_t) -> _t_f(_f)
 
-          if t_t.choices.size > 1
-          || t_enabled.exists(excluded.contains(_))
-          then
-            val ps = τ :: Nil
-            t_enabled = Actions(ps*)
-            t_t = `+`(t_enabled, `|`(`.`(t_t, ps*)))
+          t.enabled.foreach(excluded(_) = f.enabled)
+          f.enabled.foreach(excluded(_) = t.enabled)
 
-          if f_f.choices.size > 1
-          || f_enabled.exists(excluded.contains(_))
-          then
-            val ps = τ :: Nil
-            f_enabled = Actions(ps*)
-            f_f = `+`(f_enabled, `|`(`.`(f_f, ps*)))
+          assert(t.enabled.nonEmpty)
+          assert(f.enabled.nonEmpty)
 
-          t_enabled.foreach(excluded(_) = f_enabled)
-          f_enabled.foreach(excluded(_) = t_enabled)
-
-          assert((t_enabled & f_enabled).isEmpty)
-          (`?:`(c, t_t, f_f), t_enabled ++ f_enabled)
+          assert((t.enabled & f.enabled).isEmpty)
+          (`?:`(c, t, f), t.enabled ++ f.enabled)
 
         case `!`(Some(μ), sum) =>
           val (it, _) = parse(sum)
           (`!`(Some(μ), it), μ.enabled)
 
         case `!`(_, sum) =>
-          var (it, enabled) = parse(sum)
-
-          if enabled.isEmpty
-          then
-            assert(∅ == it)
-            val ps = τ :: Nil
-            enabled = Actions(ps*)
-            it = `+`(enabled, `|`(`.`(∅, ps*)))
-
-          (`!`(None, it), enabled)
+          parse(`!`(Some(τ), sum))
 
         case it: `(*)` => (it, nil)
 
@@ -340,7 +322,11 @@ object StochasticPi extends Calculus:
         enabled
 
       case `|`(ss*) =>
-        ss.map(split).foldLeft(nil)(_ ++ _)
+        ss.map(split).reduce(_ ++ _)
+
+      case `.`(_: `(*)`, ps*) =>
+        assert(Actions(ps*).nonEmpty)
+        Actions(ps*)
 
       case `.`(end, ps*) =>
         var enabled = split(end)
@@ -353,9 +339,6 @@ object StochasticPi extends Calculus:
       case `?:`(_, t, f) =>
         split(t)
         split(f)
-
-        assert(t.choices.size == 1)
-        assert(f.choices.size == 1)
 
         t.enabled.foreach { k => assert(!excluded.contains(k)) }
         f.enabled.foreach { k => assert(!excluded.contains(k)) }
@@ -370,12 +353,9 @@ object StochasticPi extends Calculus:
         split(sum)
         μ.enabled
 
-      case `!`(_, sum) =>
-        split(sum)
-        sum.enabled
+      case _: `!` => ??? // caught by 'parse'
 
-      case it: `(*)` =>
-        `(*) => +`(prog)(it).enabled
+      case _: `(*)` => ??? // always "guarded"
 
     }
 
@@ -387,7 +367,7 @@ object StochasticPi extends Calculus:
         ps.map(trans).reduce(_ ++ _)
 
       case `|`(ss*) =>
-        ss.map(trans).foldLeft(Seq.empty)(_ ++ _)
+        ss.map(trans).reduce(_ ++ _)
 
       case `.`(end, ps*) =>
         trans(end) ++
@@ -413,8 +393,7 @@ object StochasticPi extends Calculus:
                  ,ps(k).asInstanceOf[State] -> f)
             case `!`(Some(μ), sum) =>
               Seq(ps(k).asInstanceOf[State] -> μ, μ -> μ, μ -> sum)
-            case `!`(_, sum) =>
-              Seq(ps(k).asInstanceOf[State] -> sum)
+            case _: `!` => ??? // caught by 'parse'
             case it: `(*)` =>
               val sum = `(*) => +`(prog)(it)
               Seq(ps(k).asInstanceOf[State] -> sum)
@@ -435,20 +414,16 @@ object StochasticPi extends Calculus:
     val enabled = Map[String, Actions]()
 
     prog
-      .map {
-        case it @ (_, sum) =>
+      .tapEach {
+        case (_, sum) =>
           split(sum)
-          it
-      }
-      .map {
-        case it @ (_, sum) =>
+
           trans(sum).foreach { (s, t) =>
             if !enabled.contains(s.uuid)
             then
               enabled(s.uuid) = nil
              enabled(s.uuid) ++= t.enabled
           }
-          it
       } -> (discarded, excluded, enabled)
 
 

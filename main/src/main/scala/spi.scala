@@ -83,11 +83,13 @@ package object sΠ:
 
   private def unblock(m: Map[String, Int | +], head: String, tail: `Π-Set`[String])
                      (implicit ^ : String): IO[Unit] =
-    val deferred = m(^ + head).asInstanceOf[+]._1
+    val deferred = if m.contains(^ + head)
+                   then Some(m(^ + head).asInstanceOf[+]._1)
+                   else None
     for
-      _        <- deferred.complete(None)
-      _        <- if tail.isEmpty then IO.unit
-                  else unblock(m, tail.head, tail.tail)
+      _ <- deferred.map(_.complete(None)).getOrElse(IO.unit)
+      _ <- if tail.isEmpty then IO.unit
+           else unblock(m, tail.head, tail.tail)
     yield
       ()
 

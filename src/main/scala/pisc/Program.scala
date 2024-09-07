@@ -209,13 +209,11 @@ object Program:
       // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR ////////////////////////////
 
       case it @ `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
-        val t_* = body(t)
-        val f_* = body(f)
         if mismatch
         then
-          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f_*, t_*))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(f), body(t)))
         else
-          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t_*, f_*))
+          * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), body(t), body(f)))
 
       //////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -261,17 +259,7 @@ object Program:
 
         * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it)) :: `!.μ⋯`
 
-      case `!`(_, sum) =>
-        val uuid = id
-
-        val `!⋯` = `_ <- *`(s"$uuid(`π-uuid`)".parse[Term].get)
-
-        val it = `( *, … ).parMapN { (_, …) => }`(
-                   body(sum),
-                   `!⋯`
-                 )
-
-        * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it)) :: `!⋯`
+      case _ : `!` => ??? // caught by 'parse'
 
       /////////////////////////////////////////////////////////// replication //
 
