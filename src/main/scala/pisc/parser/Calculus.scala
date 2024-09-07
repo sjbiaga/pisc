@@ -46,8 +46,6 @@ class Calculus extends Pi:
       case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
-      case (`(*)`(λ(Symbol("Main")), _, params*), _) ~ _ ~ _ if params.nonEmpty =>
-        throw MainParsingException(params.map(_.asSymbol.name)*)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> flatten(sum)
     }
@@ -70,7 +68,7 @@ class Calculus extends Pi:
         `.`(∅, pre._1*) -> pre._2._2 // inaction
     }
 
-  def leaf: Parser[(`-`, Names)] = agent() |
+  def leaf: Parser[(`-`, Names)] = agent() | // invocation
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         `?:`(cond._1, t._1, ∅) -> (cond._2 ++ t._2)
@@ -83,7 +81,7 @@ class Calculus extends Pi:
       case cond ~ _ ~ t ~ _ ~ f =>
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~> `μ.` <~"." ) ~ choice ^^ { // [guarded] replication
+    "!"~> opt( "."~>`μ.`<~"." ) ~ choice ^^ { // [guarded] replication
       case Some(μ) ~ (sum, free) =>
         `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
       case _ ~ (sum, free) =>
@@ -157,7 +155,8 @@ object Calculus:
 
   sealed trait AST extends Any
 
-  case class `+`(choices: `|`*) extends AST
+  case class `+`(choices: `|`*) extends AST:
+    override def toString: String = choices.mkString(" + ")
 
   object ∅ extends `+`():
     override def canEqual(that: Any): Boolean =
@@ -167,42 +166,65 @@ object Calculus:
       case that: `+` => that.choices.isEmpty
       case _ => false
 
-  case class `|`(components: `.`*) extends AnyVal with AST
+    override def toString: String = "()"
 
-  case class `.`(end: `&`, prefixes: Pre*) extends AST
+  case class `|`(components: `.`*) extends AnyVal with AST:
+    override def toString: String = components.mkString(" | ")
+
+  case class `.`(end: `&`, prefixes: Pre*) extends AST:
+    override def toString: String =
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[`+`]
+                                                                         then "(" + end + ")" else end)
 
   sealed trait Pre extends Any
 
-  case class ν(names: String*) extends AnyVal with Pre // forcibly
+  case class ν(names: String*) extends AnyVal with Pre: // forcibly
+    override def toString: String = names.mkString("ν(", ", ", ")")
 
-  case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre
+  case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre:
+    override def toString: String = "τ."
 
   case class π(channel: λ,
                name: λ,
                polarity: Boolean,
-               code: Option[Either[List[Enumerator], Term]]) extends Pre
+               code: Option[Either[List[Enumerator], Term]]) extends Pre:
+    override def toString: String =
+      if polarity
+      then "" + channel + "(" + name + ")."
+      else "" + channel + "<" + name + ">."
 
-  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST
+  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST:
+    override def toString: String =
+      "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
 
   case class `(*)`(identifier: λ,
                    qual: List[String],
-                   params: λ*) extends AST
+                   params: λ*) extends AST:
+    override def toString: String = s"$identifier(${params.mkString(", ")})"
 
-  case class `!`(guard: Option[μ], sum: `+`) extends AST
+  case class `!`(guard: Option[μ], sum: `+`) extends AST:
+    override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
 
   case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
-    val kind: String = value match {
+    val kind: String = value match
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
       case _: Expr => "Scalameta Term"
-    }
 
-  case class Expr(term: Term)
+    override def toString: String = value match
+      case it: Symbol => it.name
+      case it: BigDecimal => "" + it
+      case it: Boolean => it.toString.capitalize
+      case it: String => it
+      case it: Expr => "" + it
+
+  case class Expr(term: Term):
+    override def toString: String = "/*" + term + "*/"
 
 
   // exceptions
@@ -211,9 +233,6 @@ object Calculus:
 
   class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
-
-  case class MainParsingException(params: Any*)
-      extends EquationParsingException(s"Main has \"formal\" parameters (${params.mkString(", ")}), but it is spliced the command line arguments")
 
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
