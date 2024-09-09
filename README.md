@@ -148,19 +148,20 @@ situation, hence the fiber does not block semantically (so the program would not
 exit any longer).
 
 Silent transitions, input and output prefixes ("actions") are associated with
-an `UUID` (`Universally Unique IDentifier`) by inheriting the trait `Key` via the
-trait `State`. The only other expression that is a `State` is... summation (or choice).
+an `UUID` (`Universally Unique IDentifier`) by inheriting the trait `Act`. The
+only other expression that has `enabled` actions is... summation (or choice),
+by extending `Sum`.
 
-A `State` contains a `Set` of `enabled` actions `(UUIDs`). _Parsing_ the equations
+A state contains a `Set` of `enabled` actions `(UUIDs`). _Parsing_ the equations
 binding agents to process expressions, results in finding the enabled actions
-for all summations - including those corresponding to the bound agents. The `State`
-"transition system" is such that each "precursor" _completed_ action (i.e., that
-is not excluded or discarded) prior to its "expiration", immediately enables other
-"successor" actions, including possibly, again itself.
+for all summations - including those corresponding to the bound agents. States
+constrain that each "precursor" _completed_ action (i.e., that is not excluded
+or discarded) prior to its "expiration", immediately enables other "successor"
+actions, including possibly, again itself.
 
 Unlike π-calculus, where communication occurs unhindered whenever a channel inputs
 and outputs, in stochastic π-calculus actions have rates, and depending on these
-there is a "probabilistic" _election_ which determine which channels are selected for
+there is a "probabilistic" _election_ which determine which channels are elected for
 input/output. Therefore, it is important that there should be a "moment" for this
 election to consider _all_ enabled actions when selecting the pairs to communicate,
 or otherwise - if some enabled actions are provisionally "pending" - none.
@@ -178,72 +179,27 @@ probabilistic choice - the election mentioned above: there is patience for that
 
 Even if many of the same action (i.e., with the same key) are enabled, these are
 distinguished upon completion by a unique `UUID`, either per agent invocation, or
-per replication. And due to the atomicity of updates, the management of the data
-structure for the enabled actions, is coherent among all actions thus "firing"
-in parallel. This makes actions behave as multisets.
+per replication - the scope. And due to the atomicity of updates, the management
+of the data structure for the enabled actions, is coherent among all actions thus
+"firing" in parallel. This makes actions behave as multisets.
 
-Given that a summation is a list of choices, a choice is a list of (parallel)
-compositions, and a composition is a list of (sequential) prefixes ended with
-either a leaf or summation, when parsing the equations for resolving the
-enabled actions, an _invariant_ ensures that (a) for each action there is a
-non-empty set of enabled actions, unless (b) this action is the last in a sequence
-of prefixes ending with inaction.
+The file `StochasticPi.scala` is used to create a _directed multigraph_ with nodes
+the _union_ of action and sum _type_, which at runtime gives rise to a
+_transition system_ with states - multisets of enabled actions -, for the purpose of
+enabling the actions in the successor state, immediately prior to the "expiration"
+of the precursor enabled action. From action to successive action or sum, there is
+an edge, even if there are restrictions in between (picture these latter translation
+in `Scala`).
 
-When violated, the invariant is maintained by inserting immediate τ-actions
-(referred to as _implicit_, in contrast with those that are explicitly occurring)
-with weight equal to `Long.MaxValue` - where appropriate,
-
-- for the case of guarded replication, the guard itself is the enabled action:
-  it enables itself, and other actions (a), unless the replicated process is
-  inaction (b);
-
-- for unguarded replication, the invariant holds (a), unless the replicated
-  process is inaction: in this case, the latter is rewritten as "τ@∞.()" (a);
-
-- likewise for (mis)match: on either branch, the invariant holds (a), unless
-  the ensuing process is inaction: in this case, the latter is rewritten as
-  "τ@∞.()" (a);
-
-- the sole case of a leaf that is not prefixed by an action remains (either
-  inaction or) invocation: in this case, its prefixes are appended "τ@∞." (a).
-
-Sticking to this scheme (of implicit τ-actions), after parsing the equations,
-each composition or choice will have a non-empty set of enabled actions (a).
-If an equation is self-recursive, among the enabled actions of the last (implicit
-or explicit) action some self-recursive invocation is prefixed with, is this last
-action itself.
-
-In the single case of (mis)match, the enabled actions on both branches become the
-enabled actions for this kind of process expression. However, given that while
-the enabled actions on the active branch only will be reached, the (enabled)
-actions on the passive branch must so be _excluded_: but this mutual exclusion must
-occur on behalf of just _one_ of the enabled actions; otherwise, whereas it were
-enabled exactly once, an excluded action could risk being "disabled" more than once.
-
-Here, there are two subtleties. First, if the process on the active branch is a
-summation, then there is not exactly one of the enabled actions on which behalf
-the passive branch must be excluded, while finding them all becomes complicated.
-Second, if there are nested (mis)matches, the one enabled action chosen to exclude
-the passive nesting branch, might belong to the passive nested branch, in which case
-the exclusion of the passive nesting branch never occurs. For these two situations,
-the nested (mis)match is prefixed with "τ@∞." (a).
-
-The file `StochasticPi.scala` is used to create a [non-]deterministic _"transition system"_
-between `State`s for the purpose of enabling the actions in the successor state, immediately
-prior to the "expiration" of the precursor enabled action. From action to successive action,
-there is a transition, even if there are restrictions in between (picture these latter
-translation in `Scala`). And finally, as there always is a last action in a sequence (either
-explicit or implicit), there is a transition from it to either an `end`ing summation or
-replication guard.
-
-But more importantly, upon the expiration of the last action from a sequence of prefixes,
-the enabled actions are enabled _before_ they are next to be "fired" (in parallel) - which
+Upon the expiration of the last action from a sequence of prefixes, the enabled
+actions are enabled _before_ they are next to be "fired" (in parallel) - which
 means blocking for their completion.
 
-The transition system is non-deterministic, because for the case of guarded replication
-there is also one transition from the guard to itself and to the replicated process.
-This means that after expiration of the guard action, the enabled actions are again
-the guard itself and the enabled actions of the process that fires up in parallel.
+The directed multigraph has multiple edges, because for the case of guarded
+replication there is also one edge from the guard to itself (a loop) and to the
+replicated process. This means that after expiration of the guard action, the
+enabled actions are again the guard itself and the enabled actions of the process
+that fires up in parallel.
 
 Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
 _discarded_ actions. Each choice corresponds to a set of enabled actions. The

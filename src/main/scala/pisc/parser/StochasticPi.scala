@@ -130,9 +130,9 @@ object StochasticPi extends Calculus:
   object Actions:
     def apply(ps: Pre*): Actions = Set.from(
       ps
-        .filter(_.isInstanceOf[Key])
+        .filter(_.isInstanceOf[Act])
         .headOption
-        .map(_.asInstanceOf[Key].uuid)
+        .map(_.asInstanceOf[Act].uuid)
     )
 
   def nil = Actions()
@@ -140,12 +140,9 @@ object StochasticPi extends Calculus:
 
   trait Act:
     val rate: Any
+    final lazy val uuid: String = UUID.randomUUID.toString
 
-
-  trait Key:
-    lazy val uuid: String = UUID.randomUUID.toString
-
-  trait State extends Key:
+  trait Sum:
     val enabled: Actions
 
 
@@ -283,7 +280,7 @@ object StochasticPi extends Calculus:
 
         case `!`(Some(μ), sum) =>
           val (it, _) = parse(sum)
-          (`!`(Some(μ), it), μ.enabled)
+          (`!`(Some(μ), it), Actions(μ))
 
         case `!`(_, sum) =>
           parse(`!`(Some(τ), sum))
@@ -351,7 +348,7 @@ object StochasticPi extends Calculus:
 
       case `!`(Some(μ), sum) =>
         split(sum)
-        μ.enabled
+        Actions(μ)
 
       case _: `!` => ??? // caught by 'parse'
 
@@ -359,51 +356,53 @@ object StochasticPi extends Calculus:
 
     }
 
-    lazy val trans: AST => Seq[(State, State)] = {
+    lazy val graph: AST => Seq[(Act, `Act | Sum`)] = {
 
       case `∅` => Nil
 
       case `+`(_, ps*) =>
-        ps.map(trans).reduce(_ ++ _)
+        ps.map(graph).reduce(_ ++ _)
 
       case `|`(ss*) =>
-        ss.map(trans).reduce(_ ++ _)
+        ss.map(graph).reduce(_ ++ _)
 
       case `.`(end, ps*) =>
-        trans(end) ++
+
+        inline given Conversion[(Pre, `Act | Sum`), (Act, `Act | Sum`)] = _.asInstanceOf[Act] -> _
+
+        graph(end) ++
         ( for
             i <- 0 until ps.size
-            if ps(i).isInstanceOf[State]
-            j = ps.drop(i+1).indexWhere(_.isInstanceOf[State])
+            if ps(i).isInstanceOf[Act]
+            j = ps.drop(i+1).indexWhere(_.isInstanceOf[Act])
             if j >= 0
           yield
-            ps(i).asInstanceOf[State] -> ps(i+1+j).asInstanceOf[State]
+            ps(i).asInstanceOf[Act] -> ps(i+1+j).asInstanceOf[Act]
         ) ++
         {
-          val k = ps.lastIndexWhere(_.isInstanceOf[State])
+          val k = ps.lastIndexWhere(_.isInstanceOf[Act])
           if k < 0
           then end match
             case `!`(Some(μ), sum) => Seq(μ -> μ, μ -> sum)
             case _ => Nil
           else end match
             case sum: `+` =>
-              Seq(ps(k).asInstanceOf[State] -> sum)
+              Seq(ps(k) -> sum)
             case `?:`(_, t, f) =>
-              Seq(ps(k).asInstanceOf[State] -> t
-                 ,ps(k).asInstanceOf[State] -> f)
+              Seq(ps(k) -> t, ps(k) -> f)
             case `!`(Some(μ), sum) =>
-              Seq(ps(k).asInstanceOf[State] -> μ, μ -> μ, μ -> sum)
+              Seq(ps(k) -> μ, μ -> μ, μ -> sum)
             case _: `!` => ??? // caught by 'parse'
             case it: `(*)` =>
               val sum = `(*) => +`(prog)(it)
-              Seq(ps(k).asInstanceOf[State] -> sum)
+              Seq(ps(k) -> sum)
         }
 
       case `?:`(_, t, f) =>
-        trans(t) ++ trans(f)
+        graph(t) ++ graph(f)
 
       case `!`(_, sum) =>
-        trans(sum)
+        graph(sum)
 
       case  _: `(*)` => Nil
 
@@ -418,11 +417,15 @@ object StochasticPi extends Calculus:
         case (_, sum) =>
           split(sum)
 
-          trans(sum).foreach { (s, t) =>
+          graph(sum).foreach { (s, t) =>
             if !enabled.contains(s.uuid)
             then
               enabled(s.uuid) = nil
-             enabled(s.uuid) ++= t.enabled
+            t match
+              case it: Act =>
+                enabled(s.uuid) += it.uuid
+              case it: Sum =>
+                enabled(s.uuid) ++= it.enabled
           }
       } -> (discarded, excluded, enabled)
 

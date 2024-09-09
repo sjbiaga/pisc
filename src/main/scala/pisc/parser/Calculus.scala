@@ -31,7 +31,7 @@ package parser
 
 import scala.util.parsing.combinator._
 
-import StochasticPi.{ Act, Actions, nil, Names, State, PrefixParsingException }
+import StochasticPi.{ Act, Actions, nil, Names, PrefixParsingException, Sum }
 import Calculus._
 
 import scala.meta.{ Enumerator, Term }
@@ -146,7 +146,7 @@ object Calculus:
   sealed trait AST extends Any
 
   case class `+`(override val enabled: Actions,
-                 choices: `|`*) extends AST with State:
+                 choices: `|`*) extends AST with Sum:
     override def toString: String = choices.mkString(" + ")
 
   object ∅ extends `+`(nil):
@@ -174,8 +174,7 @@ object Calculus:
 
   case class τ(code: Option[Either[List[Enumerator], Term]],
                override val rate: Any)
-      extends Pre with Act with State:
-    override val enabled: Actions = Actions(this)
+      extends Pre with Act:
     override def toString: String = "τ."
 
   case class π(channel: λ,
@@ -183,8 +182,7 @@ object Calculus:
                polarity: Boolean,
                override val rate: Any,
                code: Option[Either[List[Enumerator], Term]])
-      extends Pre with Act with State:
-    override val enabled: Actions = Actions(this)
+      extends Pre with Act:
     override def toString: String =
       if polarity
       then "" + channel + "(" + name + ")."
