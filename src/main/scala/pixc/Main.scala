@@ -87,7 +87,7 @@ object Main:
         val init = this(
           prog
             .find {
-              case (`(*)`(λ(Symbol("Main"))), _) => true
+              case (`(*)`("Main"), _) => true
               case _ => false
             }
             .get
