@@ -40,7 +40,7 @@ import parser.Calculus.{ `(*)`, Expr }
 object Meta:
 
   def defn(bind: `(*)`, prog: Term): Defn.Def =
-    val identifier = bind.identifier.asSymbol.name
+    val identifier = bind.identifier
     val params = bind.params.map(_.asSymbol.name)
 
     if identifier == "Main" && params.isEmpty
