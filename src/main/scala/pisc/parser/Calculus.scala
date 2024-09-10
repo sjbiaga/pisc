@@ -43,7 +43,7 @@ class Calculus extends StochasticPi:
     agent(true)~"="~choice ^^ {
       case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
+        throw EquationFreeNamesException(bind.identifier, free &~ bound)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> flatten(sum)
     }
@@ -124,9 +124,9 @@ class Calculus extends StochasticPi:
       case id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
       case id ~ Some(params) =>
-        `(*)`(λ(Symbol(id)), params.map(_._1)*) -> params.map(_._2).foldLeft(Names())(_ ++ _)
+        `(*)`(id, params.map(_._1)*) -> params.map(_._2).foldLeft(Names())(_ ++ _)
       case id ~ _ =>
-        `(*)`(λ(Symbol(id))) -> Names()
+        `(*)`(id) -> Names()
     }
 
   /**
@@ -192,18 +192,8 @@ object Calculus:
     override def toString: String =
       "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
 
-  case class `(*)`(identifier: λ,
+  case class `(*)`(identifier: String,
                    params: λ*) extends AST:
-    override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[`(*)`]
-
-    override def equals(any: Any): Boolean = any match
-      case that: `(*)` => this.identifier.asSymbol.name == that.identifier.asSymbol.name
-                       && this.params.map(_.asSymbol.name) == that.params.map(_.asSymbol.name)
-      case _ => false
-
-    override def hashCode(): Int = (identifier.asSymbol.name, params.map(_.asSymbol.name)).##
-
     override def toString: String = s"$identifier(${params.mkString(", ")})"
 
   case class `!`(guard: Option[μ], sum: `+`) extends AST:
