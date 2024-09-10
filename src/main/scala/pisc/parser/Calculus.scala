@@ -45,7 +45,7 @@ class Calculus extends Pi:
     agent(true)~"="~choice ^^ {
       case (bind, bound) ~ _ ~ (sum, free)
         if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(bind.identifier.asSymbol.name, free &~ bound)
+        throw EquationFreeNamesException(bind.identifier, free &~ bound)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> flatten(sum)
     }
@@ -127,9 +127,9 @@ class Calculus extends Pi:
       case _ ~ id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
       case qual ~ id ~ Some(params) =>
-        `(*)`(λ(Symbol(id)), qual, params.map(_._1)*) -> params.map(_._2).foldLeft(Set.empty)(_ ++ _)
+        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).foldLeft(Set.empty)(_ ++ _)
       case qual ~ id ~ _ =>
-        `(*)`(λ(Symbol(id)), qual) -> Names()
+        `(*)`(id, qual) -> Names()
     }
 
   /**
@@ -197,7 +197,7 @@ object Calculus:
     override def toString: String =
       "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
 
-  case class `(*)`(identifier: λ,
+  case class `(*)`(identifier: String,
                    qual: List[String],
                    params: λ*) extends AST:
     override def toString: String = s"$identifier(${params.mkString(", ")})"
