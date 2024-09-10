@@ -28,7 +28,7 @@
 
 package masc
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import parser.Calculus._
 
@@ -40,6 +40,9 @@ object Ensure:
 
   case object MainParsingException2
       extends EquationParsingException("The parameterless Main agent is recursive")
+
+  case class RecRepParsingException(id: String, arity: Int, times: Int)
+      extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
   private def index2(prog: List[Bind]): ((String, Int)) => Int = {
     case (identifier, size) =>
@@ -64,13 +67,17 @@ object Ensure:
     else -1
 
   /**
-    * When an existing invocation is found on the reachability graph,
-    * all definitions up to its definition are marked as recursive.
+    * When an existing invocation is found on the reachability graph:
+    * - all definitions up to its definition are marked as recursive;
+    * - if there is a replication up to its definition, the number of
+    *   recursive replications is incremented.
     */
   def recursive(ast: AST)
                (using stack: List[(String, Int)])
-               (using rec: Set[(String, Int)])
-               (using prog: List[Bind]): Unit =
+               (using rec: Map[(String, Int), Int])
+               (using rep: Map[Int, Int])
+               (using prog: List[Bind])
+               (implicit repl: Int = 0): Unit =
 
     ast match
 
@@ -83,26 +90,34 @@ object Ensure:
         recursive(end)
 
       case `!`(_, par) =>
-        recursive(par)
-
-      case it @ `(*)`(id, _, params*) if stack.contains(id -> params.size) =>
-        val k = stack.indexOf(id -> params.size)
-        for
-          j <- 0 to k
-          i = index2(prog)(stack(j))
-          sign = prog(i)._1.identifier -> prog(i)._1.params.size
-          if !rec.contains(sign)
-        do
-          rec += sign
-
-      case `(*)`(id, _, params*) =>
-        val i = index2(prog)(id -> params.size)
-        recursive(prog(i)._2)(using id -> params.size :: stack)
+        recursive(par)(stack.size)
 
       case `[]`(_, par) =>
         recursive(par)
 
       case `go.`(_, par) =>
         recursive(par)
+
+      case it @ `(*)`(id, _, params*)
+          if stack.contains(id -> params.size) =>
+        val k = stack.lastIndexOf(id -> params.size)
+        for
+          j <- k until stack.size
+          i = index2(prog)(stack(j))
+          sign = prog(i)._1.identifier -> prog(i)._1.params.size
+        do
+          if !rec.contains(sign)
+          then
+            rec(sign) = i
+          if k < repl
+          then
+            if !rep.contains(i)
+            then
+              rep(i) = 0
+            rep(i) += 1
+
+      case `(*)`(id, _, params*) =>
+        val i = index2(prog)(id -> params.size)
+        recursive(prog(i)._2)(using stack :+ id -> params.size)
 
       case _ =>
