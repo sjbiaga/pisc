@@ -288,7 +288,7 @@ object Program:
 
       // INVOCATION ////////////////////////////////////////////////////////////
 
-      case `(*)`(λ(Symbol(identifier)), qual, params*) =>
+      case `(*)`(identifier, qual, params*) =>
         val args = params.map {
           case λ(Symbol(name)) => s"`$name`"
           case λ(value) =>
@@ -304,8 +304,6 @@ object Program:
           * = `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
         else
           * = `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
-
-      case _: `(*)` => ??? // impossible by syntax
 
       //////////////////////////////////////////////////////////// invocation //
 
