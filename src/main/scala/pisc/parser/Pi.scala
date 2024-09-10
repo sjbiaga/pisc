@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -129,11 +129,19 @@ object Pi extends Calculus:
 
     if i < 0 then throw MainParsingException
 
-    given rec: Set[(String, Int)] = Set()
+    given rec: Map[(String, Int), Int] = Map()
+    given rep: Map[Int, Int] = Map()
 
     recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
 
     if rec.contains("Main" -> 0) then throw MainParsingException2
+
+    for
+      (i, n) <- rep
+    do
+      prog(i)._1 match
+        case `(*)`(id, _, params*) =>
+          Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
   def apply(prog: List[Bind]): Unit =
 
