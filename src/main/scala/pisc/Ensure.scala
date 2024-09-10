@@ -28,7 +28,7 @@
 
 package pisc
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import parser.Calculus._
 
@@ -41,11 +41,15 @@ object Ensure:
   case object MainParsingException2
       extends EquationParsingException("The parameterless Main agent is recursive")
 
+  case class RecRepParsingException(id: String, arity: Int, times: Int)
+      extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+
+
   private def index2(prog: List[Bind]): ((String, Int)) => Int = {
     case (identifier, size) =>
       prog
         .indexWhere {
-          case (`(*)`(λ(Symbol(`identifier`)), _, params*), _) if params.size == size => true
+          case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
           case _ => false
         }
   }
@@ -53,24 +57,28 @@ object Ensure:
   def main(using prog: List[Bind]): Int =
     if 1 == prog
       .count {
-        case (`(*)`(λ(Symbol("Main")), _), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     then prog
       .indexWhere {
-        case (`(*)`(λ(Symbol("Main")), _), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     else -1
 
   /**
-    * When an existing invocation is found on the reachability graph,
-    * all definitions up to its definition are marked as recursive.
+    * When an existing invocation is found on the reachability graph:
+    * - all definitions up to its definition are marked as recursive;
+    * - if there is a replication up to its definition, the number of
+    *   recursive replications is incremented.
     */
   def recursive(ast: AST)
                (using stack: List[(String, Int)])
-               (using rec: Set[(String, Int)])
-               (using prog: List[Bind]): Unit =
+               (using rec: Map[(String, Int), Int])
+               (using rep: Map[Int, Int])
+               (using prog: List[Bind])
+               (implicit repl: Int = 0): Unit =
 
     ast match
 
@@ -90,20 +98,26 @@ object Ensure:
         recursive(f)
 
       case `!`(_, sum) =>
-        recursive(sum)
+        recursive(sum)(stack.size)
 
-      case it @ `(*)`(λ(Symbol(id)), _, params*) if stack.contains(id -> params.size) =>
-        val k = stack.indexOf(id -> params.size)
+      case it @ `(*)`(id, _, params*)
+          if stack.contains(id -> params.size) =>
+        val k = stack.lastIndexOf(id -> params.size)
         for
-          j <- 0 to k
+          j <- k until stack.size
           i = index2(prog)(stack(j))
-          sign = prog(i)._1.identifier.asSymbol.name -> prog(i)._1.params.size
-          if !rec.contains(sign)
+          sign = prog(i)._1.identifier -> prog(i)._1.params.size
         do
-          rec += sign
+          if !rec.contains(sign)
+          then
+            rec(sign) = i
+          if k < repl
+          then
+            if !rep.contains(i)
+            then
+              rep(i) = 0
+            rep(i) += 1
 
-      case `(*)`(λ(Symbol(id)), _, params*) =>
+      case `(*)`(id, _, params*) =>
         val i = index2(prog)(id -> params.size)
-        recursive(prog(i)._2)(using id -> params.size :: stack)
-
-      case _ : `(*)` =>
+        recursive(prog(i)._2)(using stack :+ id -> params.size)
