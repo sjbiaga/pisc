@@ -42,7 +42,7 @@ package object `Π-loop`:
 
   type - = CyclicBarrier[IO]
 
-  type + = (Deferred[IO, Option[(Double, -)]], (>*<, Option[Boolean], Rate))
+  type + = (Deferred[IO, Option[(Double, (-, -))]], (>*<, Option[Boolean], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -50,8 +50,66 @@ package object `Π-loop`:
 
   type / = Queue[IO, ((String, String), +)]
 
-  def loop(`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-          (using % : %, * : *): IO[Unit] =
+
+  def `π-enable`(enabled: `Π-Set`[String])
+                (using % : %): IO[Unit] =
+    %.update(enabled.foldLeft(_) { (m, key) =>
+                                   val n = if m.contains(key)
+                                           then m(key).asInstanceOf[Int]
+                                           else 0
+                                   m + (key -> (n + 1))
+                                 }
+    )
+
+  private def ready(key: String)
+                   (using % : %)
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    val (_, spell) = `π-wand`
+    ( if spell.contains(key)
+      then
+        `π-enable`(spell(key))
+      else
+        IO.unit
+    )
+
+
+  private def unblock(m: Map[String, Int | +], head: String, tail: `Π-Set`[String])
+                     (implicit ^ : String): IO[Unit] =
+    val deferred = if m.contains(^ + head)
+                   then Some(m(^ + head).asInstanceOf[+]._1)
+                   else None
+    for
+      _ <- deferred.map(_.complete(None)).getOrElse(IO.unit)
+      _ <- if tail.isEmpty then IO.unit
+           else unblock(m, tail.head, tail.tail)
+    yield
+      ()
+
+  private def `π-discard`(discarded: `Π-Set`[String])
+                         (using % : %)
+                         (implicit ^ : String): IO[Unit] =
+    for
+      m <- %.get
+      _ <- if discarded.isEmpty then IO.unit
+           else unblock(m, discarded.head, discarded.tail)
+      _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
+    yield
+      ()
+
+  private def discard(key: String, scope: String)
+                     (using % : %)
+                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    val (trick, _) = `π-wand`
+    if trick.contains(key)
+    then
+      implicit val ^ : String = scope
+      `π-discard`(trick(key))
+    else
+      IO.unit
+
+
+  def loop(using % : %, * : *)
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
       it <- %.modify { m =>
                        if m.exists(_._2.isInstanceOf[Int])
@@ -61,33 +119,45 @@ package object `Π-loop`:
                                  .map(_ -> _._2)
                                  .toMap
             }
-      _  <- if it.isEmpty
-            then *.acquire                   // ,- parallelism
-            else                             // |
-              for                            // v
-                opt <- IO.pure(|(it)(`π-trick`)(6))
-                _   <- if opt.isEmpty
-                       then IO.cede >> loop(`π-trick`)
-                       else
-                         for
-                           nel <- IO.pure(opt.get)
-                           _   <- nel.parTraverse { case (key1, key2, delay) =>
-                                                    for
-                                                      -         <- CyclicBarrier[IO](if key1 == key2 then 2 else 3)
-                                                      deferred1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
-                                                      deferred2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                                      _         <- %.update(_ - key1 - key2)
-                                                      _         <- deferred1.complete(Some(delay -> -))
-                                                      _         <- deferred2.complete(Some(delay -> -))
-                                                      _         <- -.await
-                                                    yield
-                                                      ()
-                                                  }
-                         yield
-                           ()
+      _  <- if it.isEmpty               // ,- parallelism
+            then *.acquire              // |
+            else                        // v
+              val opt = |(it)(`π-wand`._1)(6)
+              for
+                _ <- if opt.isEmpty
+                     then IO.cede >> loop
+                     else
+                       val nel = opt.get
+                       for
+                         _ <- nel.parTraverse { case (key1, key2, delay) =>
+                                                val k1 = key1.substring(key1.length/2)
+                                                val k2 = key2.substring(key2.length/2)
+                                                val ^  = key1.substring(0, key1.length/2)
+                                                val ^^ = key2.substring(0, key2.length/2)
+                                                for
+                                                  -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                                  -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                                  t1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                                  d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                                  (d1, (ref, _, _)) = t1
+                                                  _  <- discard(k1, ^)
+                                                  _  <- discard(k2, ^^)
+                                                  _  <- %.update(_ - key1 - key2)
+                                                  _  <- d1.complete(Some(delay -> (-, --)))
+                                                  _  <- d2.complete(Some(delay -> (-, --)))
+                                                  _  <- -.await
+                                                  st <- ref.modify { it => it -> it.stop }
+                                                  _  <- if st then IO.unit else ready(k1)
+                                                  _  <- if k1 == k2 then IO.unit else ready(k2)
+                                                  _  <- --.await
+                                                yield
+                                                  ()
+                                              }
+                       yield
+                         ()
               yield
                 ()
-      _  <- IO.cede >> loop(`π-trick`)
+      _  <- IO.cede >> loop
     yield
       ()
 

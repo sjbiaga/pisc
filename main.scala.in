@@ -28,6 +28,8 @@
 
 //package main.scala.in
 
+import _root_.scala.collection.immutable.Map
+
 import _root_.cats.effect.{ IO, IOApp, ExitCode }
 import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
 
@@ -39,21 +41,21 @@ object App extends IOApp:
 
   private def run(args: List[String])(% : %, / : /, * : *): IO[Unit] =
     ( for
-        _ <- loop(π.`π-trick`)(using %, *).background
+        _ <- loop(using %, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- sΠ.`π-enable`(π.`π-main`)(using %)
+        _ <- `π-enable`(π.`π-main`)(using %)
         _ <- π.Main(args*)(using π.`π-uuid`)(using %, /)
       yield
-        ExitCode.Success
+        ()
     }
 
   override def run(args: List[String]): IO[ExitCode] =
     for
-      % <- IO.ref(_root_.scala.collection.immutable.Map[String, Int | +]())
+      % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](1)
       _ <- run(args)(%, /, *)

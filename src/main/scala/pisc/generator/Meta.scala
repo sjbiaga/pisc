@@ -222,21 +222,36 @@ object Meta:
       case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => *
       case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil, None))
 
+  @tailrec
   def `( *, … ).parMapN { (_, …) => }`(* : Term*): Term =
-    Term.Apply(
-      Term.Select(Term.Tuple(*.map(`π-supervised(*)`).toList), "parMapN"),
-      Term.ArgClause(Term.Block(
-                       Term.Function(
-                         Term.ParamClause(
-                           List.fill(*.size)(Term.Param(Nil, Name.Placeholder(), None, None)),
-                           None
-                         ),
-                         Term.Block(Nil)
-                       ) :: Nil
-                     ) :: Nil,
-                     None
-      )
-    )
+    if *.exists {
+      case Term.Apply(Term.Select(Term.Tuple(_), Term.Name("parMapN")), _) => true
+      case _ => false
+    } then
+      `( *, … ).parMapN { (_, …) => }`((
+        *.flatMap {
+          case Term.Apply(Term.Select(Term.Tuple(ls), Term.Name("parMapN")), _) =>
+            ls.map {
+              case it @ Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => it
+              case Term.Apply(Term.Name("π-supervised"), it :: Nil) => it
+            }
+          case it => it :: Nil
+        })*)
+      else
+        Term.Apply(
+              Term.Select(Term.Tuple(*.map(`π-supervised(*)`).toList), "parMapN"),
+              Term.ArgClause(Term.Block(
+                               Term.Function(
+                                 Term.ParamClause(
+                                   List.fill(*.size)(Term.Param(Nil, Name.Placeholder(), None, None)),
+                                   None
+                                 ),
+                                 Term.Block(Nil)
+                               ) :: Nil
+                             ) :: Nil,
+                             None
+              )
+            )
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =

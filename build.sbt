@@ -11,7 +11,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(main, main_)
+  .aggregate(main)
   .settings(
     name := "Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -27,19 +27,6 @@ lazy val root = (project in file("."))
 lazy val main = (project in file("main"))
   .settings(
     name := "main Stochastic π-Calculus2Scala",
-    organization := "sjb.ia.ga",
-    organizationName := "sjbiaga",
-    version := "1.0",
-    maxErrors := 5,
-    scalaVersion := "3.5.1-RC2",
-    crossScalaVersions ++= Seq("2.13.14", "3.5.1-RC2"),
-    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
-  )
-
-lazy val main_ = (project in file("main_"))
-  .settings(
-    name := "main_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",

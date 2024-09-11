@@ -138,8 +138,8 @@ Stochastic
 ----------
 
 The execution of a stochastic π-calculus program is handled in the files:
-`loop.scala`, `stats.scala` and `spi.scala` or `spi_.scala`. The `Main` agent is
-invoked from the final generated source file wherein `main.scala.in` was `cat`enated.
+`loop.scala`, `stats.scala` and `spi.scala`. The `Main` agent is invoked from the
+final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibers are launched in `background` and used as `Resource`s,
 such that terminating the program cancels them. Even when a process is _discarded_,
@@ -230,7 +230,7 @@ are declared as `π-trick`, `π-elvis` and `π-spell`, respectively.
 
 The contention between the enabled actions occurs as follows. First, it "disables"
 the excluded actions associated, if any. Each action in a sequence is a `for`
-generator that calls a method in `spi.scala` (or `spi_.scala`); the key of this
+generator that calls a method in `spi.scala`; the key of this
 action is passed as second argument. The method is within a unique scope (`^`)
 to distinguish between different actions that correspond to the same key (multisets).
 It creates a `Deferred[IO, Option[(Double, -)]]` and offers these together with the
@@ -426,7 +426,7 @@ The `examples` folder *must* have three sub-folders:
        out/
 
 The root project folder contains five files: `loop.scala`, `stats.scala`, `spi.scala`,
-`spi_.scala`, and `main.scala.in`.
+and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
@@ -437,10 +437,6 @@ To get and run the examples, one can `source` the functions from `bin/spi.sh`.
 To run an example, `cd` to `examples` and execute:
 
     ./examples $ spi ex.scala
-
-or - if stopping output prefix replication -, add an underscore:
-
-    ./examples $ spi_ ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 

@@ -34,8 +34,8 @@ package object sΠ:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.Supervisor
 
-  import `Π-loop`._
-  import `Π-magic`._
+  import `Π-loop`.{ -, %, / }
+  import `Π-magic`.{ ><, >*< }
   export `Π-magic`.>*<
   import `Π-stats`.Rate
 
@@ -58,62 +58,6 @@ package object sΠ:
                   case _ => IO(null.asInstanceOf[T]) }
               )
 
-
-  def `π-enable`(enabled: `Π-Set`[String])
-                (using % : %): IO[Unit] =
-    %.update(enabled.foldLeft(_) { (m, key) =>
-                                   val n = if m.contains(key)
-                                           then m(key).asInstanceOf[Int]
-                                           else 0
-                                   m + (key -> (n + 1))
-                                 }
-    )
-
-  private def ready(key: String, - : -)
-                   (using % : %)
-                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    val (_, spell) = `π-wand`
-    ( if spell.contains(key)
-      then
-        `π-enable`(spell(key))
-      else
-        IO.unit
-    ) >> -.await
-
-
-  private def unblock(m: Map[String, Int | +], head: String, tail: `Π-Set`[String])
-                     (implicit ^ : String): IO[Unit] =
-    val deferred = if m.contains(^ + head)
-                   then Some(m(^ + head).asInstanceOf[+]._1)
-                   else None
-    for
-      _ <- deferred.map(_.complete(None)).getOrElse(IO.unit)
-      _ <- if tail.isEmpty then IO.unit
-           else unblock(m, tail.head, tail.tail)
-    yield
-      ()
-
-  private def `π-discard`(discarded: `Π-Set`[String])
-                         (using % : %)
-                         (implicit ^ : String): IO[Unit] =
-    for
-      m <- %.get
-      _ <- if discarded.isEmpty then IO.unit
-           else unblock(m, discarded.head, discarded.tail)
-      _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
-    yield
-      ()
-
-  private def discard(key: String)
-                     (using % : %)
-                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                               ^ : String): IO[Unit] =
-    val (trick, _) = `π-wand`
-    if trick.contains(key)
-    then
-      `π-discard`(trick(key))
-    else
-      IO.unit
 
   private def `π-release`(enabled: `Π-Set`[String])
                          (using % : %): IO[Unit] =
@@ -158,19 +102,19 @@ package object sΠ:
 
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
-             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, -)]]
-        _dummy_ref <- Ref.of[IO, ><](><())
-        _          <- /.offer(^ -> key -> (deferred -> (_dummy_ref, None, rate)))
-        opt        <- deferred.get
-        _          <- if opt eq None then IO.canceled else IO.unit
-        (delay, b) <- IO.pure(opt.get)
-        _          <- discard(key)
-        _          <- ready(key, b)
+        _         <- exclude(key)
+        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        dummy_ref <- Ref.of[IO, ><](><())
+        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref, None, rate)))
+        opt       <- deferred.get
+        _         <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+        (b, b2))  = opt.get
+        _         <- b.await
+        _         <- b2.await
       yield
         delay
 
@@ -196,12 +140,11 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /)
-             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, -)]]
+        deferred <- Deferred[IO, Option[(Double, (-, -))]]
         _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
         delay    <- ><(key, value.name)(deferred)(ref)
       yield
@@ -212,12 +155,11 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String)(code: => IO[Any])
              (using % : %, / : /)
-             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, -)]]
+        deferred <- Deferred[IO, Option[(Double, (-, -))]]
         _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
         delay    <- ><(key, value.name)(code)(deferred)(ref)
       yield
@@ -228,12 +170,11 @@ package object sΠ:
       */
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
-             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
         _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, -)]]
+        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key)(deferred)(ref)
       yield
@@ -244,12 +185,11 @@ package object sΠ:
       */
     def apply[T](rate: Rate)(key: String)(code: T => IO[T])
                 (using % : %, / : /)
-                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
         _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, -)]]
+        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key)(code)(deferred)(ref)
       yield
@@ -293,114 +233,106 @@ package object sΠ:
       inline def apply(): >< = ><(Nil, Nil, false)
 
       def apply(key: String, name: Any)
-               (deferred: Deferred[IO, Option[(Double, -)]])
-               (`>R`: >*<)
-               (using % : %)
-               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                         ^ : String): IO[java.lang.Double] =
+               (deferred: Deferred[IO, Option[(Double, (-, -))]])
+               (`>R`: >*<): IO[java.lang.Double] =
         for
-          opt        <- deferred.get
-          _          <- if opt eq None then IO.canceled else IO.unit
-          (delay, b) <- IO.pure(opt.get)
-          _          <- discard(key)
-          offerer    <- Deferred[IO, Unit]
-          _          <- IO.uncancelable { poll =>
-                          `>R`.modify {
-                            case it @ ><(takers, _, _) if takers.nonEmpty =>
-                              val (taker, rest) = takers.head -> takers.tail
-                              it.copy(takers = rest) -> taker.complete(name).void
-                            case it =>
-                              val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                              it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
-                          }.flatten
-                        }
-          _          <- ready(key, b)
-          stop       <- `>R`.modify { it => it -> it.stop }
+          opt     <- deferred.get
+          _       <- if opt eq None then IO.canceled else IO.unit
+          (delay,
+          (b, b2)) = opt.get
+          offerer <- Deferred[IO, Unit]
+          _       <- IO.uncancelable { poll =>
+                       `>R`.modify {
+                         case it @ ><(takers, _, _) if takers.nonEmpty =>
+                           val (taker, rest) = takers.head -> takers.tail
+                           it.copy(takers = rest) -> taker.complete(name).void
+                         case it =>
+                           val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                           it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
+                       }.flatten
+                     }
+          _       <- b.await
+          stop    <- `>R`.modify { it => it -> it.stop }
+          _       <- b2.await
         yield
           if stop then null else delay
 
       def apply(key: String, name: Any)(code: => IO[Any])
-               (deferred: Deferred[IO, Option[(Double, -)]])
-               (`>R`: >*<)
-               (using % : %)
-               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                         ^ : String): IO[java.lang.Double] =
+               (deferred: Deferred[IO, Option[(Double, (-, -))]])
+               (`>R`: >*<): IO[java.lang.Double] =
         for
-          opt        <- deferred.get
-          _          <- if opt eq None then IO.canceled else IO.unit
-          (delay, b) <- IO.pure(opt.get)
-          _          <- discard(key)
-          offerer    <- Deferred[IO, Unit]
-          _          <- IO.uncancelable { poll =>
-                          `>R`.modify {
-                            case it @ ><(takers, _, _) if takers.nonEmpty =>
-                              val (taker, rest) = takers.head -> takers.tail
-                              it.copy(takers = rest) -> taker.complete(name).void
-                            case it =>
-                              val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                              it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
-                          }.flatten <* exec(code)
-                        }
-          _          <- ready(key, b)
-          stop       <- `>R`.modify { it => it -> it.stop }
+          opt     <- deferred.get
+          _       <- if opt eq None then IO.canceled else IO.unit
+          (delay,
+          (b, b2)) = opt.get
+          offerer <- Deferred[IO, Unit]
+          _       <- IO.uncancelable { poll =>
+                       `>R`.modify {
+                         case it @ ><(takers, _, _) if takers.nonEmpty =>
+                           val (taker, rest) = takers.head -> takers.tail
+                           it.copy(takers = rest) -> taker.complete(name).void
+                         case it =>
+                           val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
+                           it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
+                       }.flatten <* exec(code)
+                     }
+          _       <- b.await
+          stop    <- `>R`.modify { it => it -> it.stop }
+          _       <- b2.await
         yield
           if stop then null else delay
 
       def apply(key: String)
-               (deferred: Deferred[IO, Option[(Double, -)]])
-               (`<R`: >*<)
-               (using % : %)
-               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                         ^ : String): IO[(Any, Double)] =
+               (deferred: Deferred[IO, Option[(Double, (-, -))]])
+               (`<R`: >*<): IO[(Any, Double)] =
         for
-          opt        <- deferred.get
-          _          <- if opt eq None then IO.canceled else IO.unit
-          (delay, b) <- IO.pure(opt.get)
-          _          <- discard(key)
-          taker      <- Deferred[IO, Any]
-          name       <- IO.uncancelable { poll =>
-                          `<R`.modify {
-                            case it @ ><(_, offerers, _) if offerers.nonEmpty =>
-                              val ((name, offerer), rest) = offerers.head -> offerers.tail
-                              it.copy(offerers = rest) -> offerer.complete(()).as(name)
-                            case it =>
-                              val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                              it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
-                          }.flatten
-                        }
-          _          <- ready(key, b)
+          opt     <- deferred.get
+          _       <- if opt eq None then IO.canceled else IO.unit
+          (delay,
+          (b, b2)) = opt.get
+          taker   <- Deferred[IO, Any]
+          name    <- IO.uncancelable { poll =>
+                       `<R`.modify {
+                         case it @ ><(_, offerers, _) if offerers.nonEmpty =>
+                           val ((name, offerer), rest) = offerers.head -> offerers.tail
+                           it.copy(offerers = rest) -> offerer.complete(()).as(name)
+                         case it =>
+                           val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                           it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
+                       }.flatten
+                     }
+          _       <- b.await
+          _       <- b2.await
         yield
           name -> delay
 
       def apply[T](key: String)(code: T => IO[T])
-                  (deferred: Deferred[IO, Option[(Double, -)]])
-                  (`<R`: >*<)
-                  (using % : %)
-                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                            ^ : String): IO[(Any, Double)] =
+                  (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                  (`<R`: >*<): IO[(Any, Double)] =
         for
-          opt        <- deferred.get
-          _          <- if opt eq None then IO.canceled else IO.unit
-          (delay, b) <- IO.pure(opt.get)
-          _          <- discard(key)
-          taker      <- Deferred[IO, Any]
-          name       <- IO.uncancelable { poll =>
-                          `<R`.modify {
-                            case it @ ><(_, offerers, _) if offerers.nonEmpty =>
-                              val ((name, offerer), rest) = offerers.head -> offerers.tail
-                              it.copy(offerers = rest) -> offerer.complete(()).as(name)
-                            case it =>
-                              val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                              it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
-                          }.flatten.flatMap {
-                            case null => IO.pure(null)
-                            case it: T => (code andThen exec)(it)
-                                            .flatTap {
-                                              case null => `<R`.update(_.copy(stop = true))
-                                              case _ => IO.unit
-                                            }
-                          }
-                        }
-          _          <- ready(key, b)
+          opt     <- deferred.get
+          _       <- if opt eq None then IO.canceled else IO.unit
+          (delay,
+          (b, b2)) = opt.get
+          taker   <- Deferred[IO, Any]
+          name    <- IO.uncancelable { poll =>
+                       `<R`.modify {
+                         case it @ ><(_, offerers, _) if offerers.nonEmpty =>
+                           val ((name, offerer), rest) = offerers.head -> offerers.tail
+                           it.copy(offerers = rest) -> offerer.complete(()).as(name)
+                         case it =>
+                           val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
+                           it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
+                       }.flatten.flatMap {
+                         case null => IO.pure(null)
+                         case it: T => (code andThen exec)(it)
+                                         .flatTap {
+                                           case null => `<R`.update(_.copy(stop = true))
+                                           case _ => IO.unit
+                                         }
+                       }
+                     }
+          _       <- b.await
+          _       <- b2.await
         yield
           name -> delay
