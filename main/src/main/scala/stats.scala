@@ -77,24 +77,24 @@ package object `Π-stats`:
                                              // ^^^^^^  ^^^^^^  ^^^^^^
                                              // key1    key1|2  duration
 
-    val mr = HashMap[(String, (>*<, Option[Boolean])), Rate]() // rates
+    val mr = HashMap[(>*<, Option[Boolean]), Rate]() // rates
 
     val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
-        case (k, (n, p, r)) =>
-          mr(k -> (n -> p)) = r
+        case (_, (n, p, r)) =>
+          mr(n -> p) = r
           mls(n -> p) = Nil
       }
 
     mr
       .foreach {
-        case ((_, np), r: ∞) => // immediate
+        case (np, r: ∞) => // immediate
           mls(np) :+= Left(r.weight)
-        case ((_, np), r: `ℝ⁺`) => // timed
+        case (np, r: `ℝ⁺`) => // timed
           mls(np) :+= Right(Left(r.rate))
-        case ((_, np), r: ⊤) => // passive
+        case (np, r: ⊤) => // passive
           mls(np) :+= Right(Right(r.weight))
       }
 
@@ -220,7 +220,11 @@ package object `Π-stats`:
                 else
                   throw CombinedActivitiesException("crossed")
               val delay = delta(rate)
-              r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
+              if polarity2.get
+              then
+                r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
+              else
+                r :+= (key2, key1, if priority == 2 then delay else duration) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 
@@ -228,39 +232,35 @@ package object `Π-stats`:
       ( for
           (((key1, key2, _), _), i) <- r.zipWithIndex
         yield
-          if key1 == key2
-          then
-            r(i)._1 -> true
-          else
-            val k1 = key1.substring(key1.length/2)
-            val k2 = key2.substring(key2.length/2)
-            val ^ = key1.substring(0, key1.length/2)
-            val ^^ = key2.substring(0, key2.length/2)
-            r(i)._1 -> {
-              0 > r.indexWhere(
-                {
-                  case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
-                  case ((key, _, _), _)
-                      if {
-                        val k = key.substring(key.length/2)
-                        `π-trick`.contains(k) && {
-                          val ^^^ = key.substring(0, key.length/2)
-                          `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                        }
-                      } => true
-                  case ((_, key, _), _)
-                      if {
-                        val k = key.substring(key.length/2)
-                        `π-trick`.contains(k) && {
-                          val ^^^ = key.substring(0, key.length/2)
-                          `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                        }
-                      } => true
-                  case _ => false
-                }
-                , i + 1
-              )
-            }
+          val k1 = key1.substring(key1.length/2)
+          val k2 = key2.substring(key2.length/2)
+          val ^ = key1.substring(0, key1.length/2)
+          val ^^ = key2.substring(0, key2.length/2)
+          r(i)._1 -> {
+            0 > r.indexWhere(
+              {
+                case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
+                case ((key, _, _), _)
+                    if {
+                      val k = key.substring(key.length/2)
+                      `π-trick`.contains(k) && {
+                        val ^^^ = key.substring(0, key.length/2)
+                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                      }
+                    } => true
+                case ((_, key, _), _)
+                    if {
+                      val k = key.substring(key.length/2)
+                      `π-trick`.contains(k) && {
+                        val ^^^ = key.substring(0, key.length/2)
+                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                      }
+                    } => true
+                case _ => false
+              }
+              , i + 1
+            )
+          }
       )
       .reverse
       .filter(_._2)

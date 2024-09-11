@@ -298,14 +298,14 @@ object Calculus:
       case `.`(`+`(_, `|`(`.`(end, ps*))), it*) =>
         flatten(`.`(end, (it ++ ps)*))
 
-      case `.`(end, it*) =>
-        val ps = it
+      case `.`(end, _it*) =>
+        val it = _it
           .map {
             case xa @ χ(_, Some(sum), _) =>
               xa.copy(sum = Some(flatten(sum)))
-            case p => p
+            case it => it
           }
-        `.`(flatten(end), ps*)
+        `.`(flatten(end), it*)
 
       case `?:`(cond, t, f) =>
         `?:`(cond, flatten(t), flatten(f))

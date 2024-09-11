@@ -118,7 +118,7 @@ object Ensure:
         do
           if !rec.contains(sign)
           then
-            rec(sign) = i
+            rec(sign) = i+1
           if k < repl
           then
             if !rep.contains(i)

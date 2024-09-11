@@ -317,9 +317,10 @@ object Program:
     val sem = id
 
     val ios1 = `_ <- *`(`π-disable`(xa.uuid, xa.sum.get.enabled)) :: body(xa.sum.get)
-    val ios2 = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(xa.name) ++ ios)) :: Nil
+    val ios2 = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `_ <- }{()(, *)`(xa.name) ++ ios)) :: Nil
 
     `* <- Semaphore[IO](1)`(sem) ::
+    `* <- *`(xa.name -> "χ") ::
     `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`tryAcquire.ifM`(sem, ios1),
                                               `tryAcquire.ifM`(sem, ios2))) :: Nil
 

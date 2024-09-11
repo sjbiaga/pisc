@@ -273,7 +273,13 @@ object StochasticPi extends Calculus:
           }
           (par, enabled)
 
-        case `.`(end, ps*) =>
+        case `.`(end, _ps*) =>
+          val ps = _ps.map {
+            case xa @ χ(_, Some(sum), _) =>
+              xa.copy(sum = Some(parse(sum)._1))
+            case it => it
+          }
+
           val (it, enabled) = parse(end)
 
           if Actions(ps*).nonEmpty
@@ -446,8 +452,7 @@ object StochasticPi extends Calculus:
             case sum: `+` =>
               Seq(ps(k) -> sum)
             case `?:`(_, t, f) =>
-              Seq(ps(k) -> t
-                 ,ps(k) -> f)
+              Seq(ps(k) -> t, ps(k) -> f)
             case `!`(Some(μ), sum) =>
               Seq(ps(k) -> μ, μ -> μ, μ -> sum)
             case _: `!` => ??? // caught by 'parse'
