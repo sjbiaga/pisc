@@ -73,110 +73,105 @@ package object `Π-stats`:
 
   def |(% : Map[String, (>*<, Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (parallelism: Int): Option[NonEmptyList[(String, String, Double)]] =
-                                             // ^^^^^^  ^^^^^^  ^^^^^^
-                                             // key1    key1|2  duration
-
-    val mr = HashMap[(>*<, Option[Boolean]), Rate]() // rates
+       (parallelism: Int, check: Boolean = false): Option[NonEmptyList[(String, String, Double)]] =
+                                                                     // ^^^^^^  ^^^^^^  ^^^^^^
+                                                                     // key1    key1|2  duration
 
     val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
-        case (_, (n, p, r)) =>
-          mr(n -> p) = r
-          mls(n -> p) = Nil
+        case (_, (e, p, _)) =>
+          mls(e -> p) = Nil
       }
 
-    mr
+    %
       .foreach {
-        case (np, r: ∞) => // immediate
-          mls(np) :+= Left(r.weight)
-        case (np, r: `ℝ⁺`) => // timed
-          mls(np) :+= Right(Left(r.rate))
-        case (np, r: ⊤) => // passive
-          mls(np) :+= Right(Right(r.weight))
+        case (_, (e, p, r: ∞)) => // immediate
+          mls(e -> p) :+= Left(r.weight)
+        case (_, (e, p, r: `ℝ⁺`)) => // timed
+          mls(e -> p) :+= Right(Left(r.rate))
+        case (_, (e, p, r: ⊤)) => // passive
+          mls(e -> p) :+= Right(Right(r.weight))
       }
 
     val msrt = HashMap[(>*<, Option[Boolean]), BigDecimal]() // [timed] sums of rates
 
     mls // timed
       .foreach {
-        case (np, ls) =>
+        case (ep, ls) =>
           val rs = ls
             .filter(_.isRight)
             .filter(_.right.get.isLeft)
             .map(_.right.get.left.get)
           if rs.nonEmpty
           then
-            msrt(np) = rs.sum
+            msrt(ep) = rs.sum
       }
 
     val mswi = HashMap[(>*<, Option[Boolean]), Long]() // [immediate] sums of weights
 
     mls // immediate
       .foreach {
-        case (np, ls) =>
+        case (ep, ls) =>
           val ws = ls
             .filter(_.isLeft)
             .map(_.left.get)
           if ws.nonEmpty
           then
-            mswi(np) = ws.sum
+            mswi(ep) = ws.sum
       }
 
     val mswp = HashMap[(>*<, Option[Boolean]), Long]() // [passive] sums of weights
 
     mls // passive
       .foreach {
-        case (np, ls) =>
+        case (ep, ls) =>
           val ws = ls
             .filter(_.isRight)
             .filter(_.right.get.isRight)
             .map(_.right.get.right.get)
           if ws.nonEmpty
           then
-            mswp(np) = ws.sum
+            mswp(ep) = ws.sum
       }
 
-    if (msrt.keySet & mswi.keySet).nonEmpty
-    || (msrt.keySet & mswp.keySet).nonEmpty
-    || (mswi.keySet & mswp.keySet).nonEmpty
+    if check
     then
-      throw CombinedActivitiesException("mixed")
+      val ert = msrt.keySet.map(_._1)
+      val ewi = mswi.keySet.map(_._1)
+      val ewp = mswp.keySet.map(_._1)
 
-    val `0` = Map.from(% // immediate
-      .filter(_._2._3.isInstanceOf[∞])
-      .map { case (k, (n, p, r: ∞)) => k -> (n, p, Double.NaN -> r.weight) }
-    )
-    val `0+` = Map.from(% // timed
-      .filter(_._2._3.isInstanceOf[`ℝ⁺`])
-      .map { case (k, (n, p, r: `ℝ⁺`)) => k -> (n, p, r.rate.toDouble -> 0L) }
-    )
-    val `-1` = Map.from(% // passive
-      .filter(_._2._3.isInstanceOf[⊤])
-      .map { case (k, (n, p, r: ⊤)) => k -> (n, p, Double.NaN -> r.weight) }
-    )
+      if (ert & ewi).nonEmpty
+      || (ert & ewp).nonEmpty
+      || (ewi & ewp).nonEmpty
+      then
+        throw CombinedActivitiesException("mixed")
+
+    val χ = %
+      .map {
+        case (k, (e, p, r: ∞)) => k -> (e, p, Double.NaN -> r.weight) // immediate
+        case (k, (e, p, r: `ℝ⁺`)) => k -> (e, p, r.rate.toDouble -> 0L) // timed
+        case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
+      }.zipWithIndex
 
     var r = List[((String, String, Double), (Int, Double))]()
     //             ^^^^^^  ^^^^^^  ^^^^^^    ^^^  ^^^^^^
     //             key1    key1|2  duration  pri  delay
 
-    val χ = (`0` ++ `0+` ++ `-1`).zipWithIndex
-
     for
-      ((key1, (name1, polarity1, (rate1, weight1))), i) <- χ
+      ((key1, (ether1, polarity1, (rate1, weight1))), i) <- χ
     do
       if polarity1 eq None
       then
         val (rate, (priority, duration)) =
-          if msrt.contains(name1 -> polarity1)
+          if msrt.contains(ether1 -> polarity1)
           then
             BigDecimal(1) * rate1 -> (2 -> Double.PositiveInfinity)
-          else if mswi.contains(name1 -> polarity1)
+          else if mswi.contains(ether1 -> polarity1)
           then
             BigDecimal(1) * weight1 -> (1 -> 0.0)
-          else if mswp.contains(name1 -> polarity1)
+          else if mswp.contains(ether1 -> polarity1)
           then
             BigDecimal(1) * weight1 -> (3 -> Double.NaN)
           else
@@ -186,9 +181,10 @@ package object `Π-stats`:
       else
         val ^ = key1.substring(0, key1.length/2)
         for
-          ((key2, (name2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
+          ((key2, (ether2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
+          if polarity2 ne None
         do
-          if (name1 eq name2) && polarity1.get != polarity2.get
+          if (ether1 eq ether2) && polarity1.get != polarity2.get
           then
             val ^^ = key2.substring(0, key2.length/2)
             if ^ != ^^
@@ -199,26 +195,26 @@ package object `Π-stats`:
             }
             then
               val (rate, (priority, duration)) =
-                if msrt.contains(name1 -> polarity1)
-                && msrt.contains(name2 -> polarity2)
+                if msrt.contains(ether1 -> polarity1)
+                && msrt.contains(ether2 -> polarity2)
                 then
-                  val apr1 = msrt(name1 -> polarity1)
-                  val apr2 = msrt(name2 -> polarity2)
+                  val apr1 = msrt(ether1 -> polarity1)
+                  val apr2 = msrt(ether2 -> polarity2)
                   ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
-                else if mswi.contains(name1 -> polarity1)
-                     && mswi.contains(name2 -> polarity2)
+                else if mswi.contains(ether1 -> polarity1)
+                     && mswi.contains(ether2 -> polarity2)
                 then
-                  val apr1 = mswi(name1 -> polarity1)
-                  val apr2 = mswi(name2 -> polarity2)
+                  val apr1 = mswi(ether1 -> polarity1)
+                  val apr2 = mswi(ether2 -> polarity2)
                   ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (1 -> 0.0)
-                else if mswp.contains(name1 -> polarity1)
-                     && mswp.contains(name2 -> polarity2)
+                else if mswp.contains(ether1 -> polarity1)
+                     && mswp.contains(ether2 -> polarity2)
                 then
-                  val apr1 = mswp(name1 -> polarity1)
-                  val apr2 = mswp(name2 -> polarity2)
+                  val apr1 = mswp(ether1 -> polarity1)
+                  val apr2 = mswp(ether2 -> polarity2)
                   ((BigDecimal(1) * weight1 / apr1) * (BigDecimal(1) * weight2 / apr2) * (apr1 min apr2)) -> (3 -> Double.NaN)
                 else
-                  throw CombinedActivitiesException("crossed")
+                  ???
               val delay = delta(rate)
               if polarity2.get
               then
@@ -262,8 +258,8 @@ package object `Π-stats`:
             )
           }
       )
-      .reverse
       .filter(_._2)
       .map(_._1)
+      .reverse
       .take(parallelism)
     }

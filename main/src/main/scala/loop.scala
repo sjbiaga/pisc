@@ -30,6 +30,7 @@ import _root_.scala.collection.immutable.Map
 
 import _root_.cats.syntax.parallel._
 
+import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Deferred, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
@@ -73,17 +74,11 @@ package object `Π-loop`:
     )
 
 
-  private def unblock(m: Map[String, Int | +], head: String, tail: `Π-Set`[String])
+  private def unblock(m: Map[String, Int | +], k: String)
                      (implicit ^ : String): IO[Unit] =
-    val deferred = if m.contains(^ + head)
-                   then Some(m(^ + head).asInstanceOf[+]._1)
-                   else None
-    for
-      _ <- deferred.map(_.complete(None)).getOrElse(IO.unit)
-      _ <- if tail.isEmpty then IO.unit
-           else unblock(m, tail.head, tail.tail)
-    yield
-      ()
+    if m.contains(^ + k)
+    then m(^ + k).asInstanceOf[+]._1.complete(None).void
+    else IO.unit
 
   private def `π-discard`(discarded: `Π-Set`[String])
                          (using % : %)
@@ -91,7 +86,7 @@ package object `Π-loop`:
     for
       m <- %.get
       _ <- if discarded.isEmpty then IO.unit
-           else unblock(m, discarded.head, discarded.tail)
+           else NonEmptyList.fromList(discarded.toList).get.traverse(unblock(m, _)).void
       _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
     yield
       ()
@@ -122,41 +117,49 @@ package object `Π-loop`:
       _  <- if it.isEmpty               // ,- parallelism
             then *.acquire              // |
             else                        // v
-              val opt = |(it)(`π-wand`._1)(6)
-              for
-                _ <- if opt.isEmpty
-                     then IO.cede >> loop
-                     else
-                       val nel = opt.get
-                       for
-                         _ <- nel.parTraverse { case (key1, key2, delay) =>
-                                                val k1 = key1.substring(key1.length/2)
-                                                val k2 = key2.substring(key2.length/2)
-                                                val ^  = key1.substring(0, key1.length/2)
-                                                val ^^ = key2.substring(0, key2.length/2)
-                                                for
-                                                  -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                                  -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                                  t1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
-                                                  d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                                  (d1, (ref, _, _)) = t1
-                                                  _  <- discard(k1, ^)
-                                                  _  <- discard(k2, ^^)
-                                                  _  <- %.update(_ - key1 - key2)
-                                                  _  <- d1.complete(Some(delay -> (-, --)))
-                                                  _  <- d2.complete(Some(delay -> (-, --)))
-                                                  _  <- -.await
-                                                  st <- ref.modify { it => it -> it.stop }
-                                                  _  <- if st then IO.unit else ready(k1)
-                                                  _  <- if k1 == k2 then IO.unit else ready(k2)
-                                                  _  <- --.await
-                                                yield
-                                                  ()
-                                              }
-                       yield
-                         ()
-              yield
-                ()
+              val opt = |(it)(`π-wand`._1)(9)
+              if opt.isEmpty
+              then
+                val nel = NonEmptyList.fromList(it.map(_._1).toList).get
+                for
+                  _ <- nel.traverse { key =>
+                                      for
+                                        d <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }
+                                        _ <- d.complete(None)
+                                      yield
+                                        ()
+                                    }
+                yield
+                  ()
+              else
+                val nel = opt.get
+                for
+                  _ <- nel.parTraverse { case (key1, key2, delay) =>
+                                         val k1 = key1.substring(key1.length/2)
+                                         val k2 = key2.substring(key2.length/2)
+                                         val ^  = key1.substring(0, key1.length/2)
+                                         val ^^ = key2.substring(0, key2.length/2)
+                                         for
+                                           -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                           -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                           t1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                           d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                           (d1, (ref, _, _)) = t1
+                                           _  <- discard(k1, ^)
+                                           _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
+                                           _  <- %.update(_ - key1 - key2)
+                                           _  <- d1.complete(Some(delay -> (-, --)))
+                                           _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
+                                           _  <- -.await
+                                           st <- ref.modify { it => it -> it.stop }
+                                           _  <- if st then IO.unit else ready(k1)
+                                           _  <- if k1 == k2 then IO.unit else ready(k2)
+                                           _  <- --.await
+                                         yield
+                                           ()
+                                       }
+                yield
+                  ()
       _  <- IO.cede >> loop
     yield
       ()

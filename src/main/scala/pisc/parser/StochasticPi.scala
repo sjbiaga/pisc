@@ -310,10 +310,12 @@ object StochasticPi extends Calculus:
 
       case `+`(enabled, ps*) =>
         val ls = ps.map(split)
+        var ts = ls.take(0)
+        var ds = ls.tail
 
-        ls.zipWithIndex.foreach { (it, i) =>
+        ls.foreach { it =>
           assert(it.nonEmpty)
-          val ks = (ls.take(i) ++ ls.drop(i+1)).reduce(_ ++ _)
+          val ks = (ts ++ ds).reduce(_ ++ _)
           assert((it & ks).isEmpty)
           it.foreach { k =>
             if !discarded.contains(k)
@@ -321,6 +323,8 @@ object StochasticPi extends Calculus:
               discarded(k) = nil
             discarded(k) ++= ks
           }
+          ts :+= it
+          ds = ds.tail
         }
 
         enabled
@@ -394,8 +398,8 @@ object StochasticPi extends Calculus:
               Seq(ps(k) -> sum)
             case `?:`(_, t, f) =>
               Seq(ps(k) -> t, ps(k) -> f)
-            case `!`(Some(μ), sum) =>
-              Seq(ps(k) -> μ, μ -> μ, μ -> sum)
+            case `!`(Some(μ), _) =>
+              Seq(ps(k) -> μ)
             case _: `!` => ??? // caught by 'parse'
             case it: `(*)` =>
               val sum = `(*) => +`(prog)(it)
