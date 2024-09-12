@@ -388,11 +388,8 @@ object StochasticPi extends Calculus:
         ) ++
         {
           val k = ps.lastIndexWhere(_.isInstanceOf[Act])
-          if k < 0
+          if k >= 0
           then end match
-            case `!`(Some(μ), sum) => Seq(μ -> μ, μ -> sum)
-            case _ => Nil
-          else end match
             case sum: `+` =>
               Seq(ps(k) -> sum)
             case `?:`(_, t, f) =>
@@ -403,13 +400,14 @@ object StochasticPi extends Calculus:
             case it: `(*)` =>
               val sum = `(*) => +`(prog)(it)
               Seq(ps(k) -> sum)
+          else Nil
         }
 
       case `?:`(_, t, f) =>
         graph(t) ++ graph(f)
 
-      case `!`(_, sum) =>
-        graph(sum)
+      case `!`(Some(μ), sum) =>
+        graph(sum) ++ Seq(μ -> μ, μ -> sum)
 
       case  _: `(*)` => Nil
 
