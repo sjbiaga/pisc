@@ -351,7 +351,7 @@ object StochasticPi extends Calculus:
       case `+`(enabled, ps*) =>
         val ls = ps.map(split)
         var ts = ls.take(0)
-        var ds = ls.tail
+        var ds = ls.drop(1)
 
         ls.foreach { it =>
           assert(it.nonEmpty)
@@ -364,7 +364,7 @@ object StochasticPi extends Calculus:
             discarded(k) ++= ks
           }
           ts :+= it
-          ds = ds.tail
+          ds = ds.drop(1)
         }
 
         enabled

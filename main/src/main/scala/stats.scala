@@ -153,14 +153,15 @@ package object `Π-stats`:
         case (k, (e, p, r: ∞)) => k -> (e, p, Double.NaN -> r.weight) // immediate
         case (k, (e, p, r: `ℝ⁺`)) => k -> (e, p, r.rate.toDouble -> 0L) // timed
         case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
-      }.zipWithIndex
+      }.toSeq
 
     var r = List[((String, String, Double), (Int, Double))]()
     //             ^^^^^^  ^^^^^^  ^^^^^^    ^^^  ^^^^^^
     //             key1    key1|2  duration  pri  delay
 
     for
-      ((key1, (ether1, polarity1, (rate1, weight1))), i) <- χ
+      i <- 0 until χ.size
+      (key1, (ether1, polarity1, (rate1, weight1))) = χ(i)
     do
       if polarity1 eq None
       then
@@ -181,7 +182,8 @@ package object `Π-stats`:
       else
         val ^ = key1.substring(0, key1.length/2)
         for
-          ((key2, (ether2, polarity2, (rate2, weight2))), _) <- χ.drop(i+1)
+          j <- i+1 until χ.size
+          (key2, (ether2, polarity2, (rate2, weight2))) = χ(j)
           if polarity2 ne None
         do
           if (ether1 eq ether2) && polarity1.get != polarity2.get
