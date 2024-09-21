@@ -47,7 +47,7 @@ class Calculus extends Pi:
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier, free &~ bound)
       case (bind, _) ~ _ ~ (sum, _) =>
-        bind -> flatten(sum)
+        bind -> sum.flatten
     }
 
   def choice: Parser[(`+`, Names)] =
@@ -274,62 +274,64 @@ object Calculus:
 
   // functions
 
-  def flatten[T <: AST](ast: T): T =
+  extension[T <: AST](ast: T)
 
-    inline given Conversion[AST, T] = _.asInstanceOf[T]
+    def flatten: T =
 
-    ast match
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-      case `∅` => ∅
+      ast match
 
-      case `+`(`|`(`.`(sum: `+`)), it*) =>
-        val lhs = flatten(sum)
-        val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+        case `∅` => ∅
 
-      case `+`(par, it*) =>
-        val lhs = `+`(flatten(par))
-        val rhs = flatten(`+`(it*))
-        `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+        case `+`(`|`(`.`(sum: `+`)), it*) =>
+          val lhs = sum.flatten
+          val rhs = `+`(it*).flatten
+          `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-      case `|`(`.`(`+`(par)), it*) =>
-        val lhs = flatten(par)
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+        case `+`(par, it*) =>
+          val lhs = `+`(par.flatten)
+          val rhs = `+`(it*).flatten
+          `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-      case `|`(seq, it*) =>
-        val lhs = `|`(flatten(seq))
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+        case `|`(`.`(`+`(par)), it*) =>
+          val lhs = par.flatten
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components)*)
 
-      case `.`(`+`(`|`(`.`(end, ps*))), it*) =>
-        flatten(`.`(end, (it ++ ps)*))
+        case `|`(seq, it*) =>
+          val lhs = `|`(seq.flatten)
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components)*)
 
-      case `.`(end, it*) =>
-        val ps = it
-          .map {
-            case xa @ χ(_, Some(sum)) =>
-              xa.copy(sum = Some(flatten(sum)))
-            case p => p
-          }
-        `.`(flatten(end), ps*)
+        case `.`(`+`(`|`(`.`(end, ps*))), it*) =>
+          `.`(end, (it ++ ps)*).flatten
 
-      case `?:`(cond, t, f) =>
-        `?:`(cond, flatten(t), flatten(f))
+        case `.`(end, _it*) =>
+          val it = _it
+            .map {
+              case xa @ χ(_, Some(sum)) =>
+                xa.copy(sum = Some(sum.flatten))
+              case it => it
+            }
+          `.`(end.flatten, it*)
 
-      case `!`(None, sum) =>
-        flatten(sum) match
-          case `+`(`|`(`.`(end: `!`))) => end
-          case it => `!`(None, it)
+        case `?:`(cond, t, f) =>
+          `?:`(cond, t.flatten, f.flatten)
 
-      case `!`(μ, sum) =>
-        `!`(μ, flatten(sum))
+        case `!`(None, sum) =>
+          sum.flatten match
+            case `+`(`|`(`.`(end: `!`))) => end
+            case it => `!`(None, it)
 
-      case `[]`(name, sum) =>
-        flatten(sum) match
-          case it @ `+`(_) =>
-            `[]`(name, it)
-          case it =>
-            `[]`(name, `+`(`|`(`.`(it, τ(None)))))
+        case `!`(μ, sum) =>
+          `!`(μ, sum.flatten)
 
-      case _ => ast
+        case `[]`(name, sum) =>
+          sum.flatten match
+            case it @ `+`(_) =>
+              `[]`(name, it)
+            case it =>
+              `[]`(name, `+`(`|`(`.`(it, τ(None)))))
+
+        case _ => ast
