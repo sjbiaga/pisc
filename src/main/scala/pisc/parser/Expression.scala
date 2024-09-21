@@ -54,7 +54,7 @@ class Expression extends JavaTokenParsers:
           case (term, names) => Right(term) -> names
       catch _ =>
         try
-          Expression(("for {" + expr + " } yield ()").parse[Term].get) match
+          Expression(("for { " + expr + " } yield ()").parse[Term].get) match
             case (Term.ForYield(enums, _), names) =>
               Left(enums) -> names
         catch t =>
@@ -68,7 +68,7 @@ object Expression:
       extends RuntimeException(msg, cause)
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
-      extends ParsingException(s"Expression /*$expr*/ is not a valid Scalameta Term or Enumerator", cause)
+      extends ParsingException(s"Expression /*$expr*/ is not a valid Scalameta Term or Enumerator(s)", cause)
 
 
   import scala.Function.const
@@ -209,7 +209,7 @@ object Expression:
         it.copy(args = as) -> asns
 
       case sm.Lit.Symbol(free @ Symbol(name)) =>
-        sm.Pat.Var(sm.Term.Name(name)) -> Set(free)
+        sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -228,9 +228,9 @@ object Expression:
         val (as, asns) = this(args)
         it.copy(args = as) -> asns
 
-      case it @ sm.Term.Name(name) if name.startsWith("'") =>
-        val free = Symbol(name.stripPrefix("'"))
-        sm.Pat.Var(sm.Term.Name(free.name)) -> Set(free)
+      case it @ sm.Term.Name(s"'$name") =>
+        val free = Symbol(name)
+        sm.Term.Name(free.name) -> Set(free)
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -736,8 +736,6 @@ object Expression:
         val (ts, tsns) = Param(tparams)
         val (t, tns) = this(tpe)
         it.copy(tparams = ts, tpe = t) -> (tsns ++ tns)
-
-      case _: sm.Lit => ???
 
       case it @ sm.Type.Macro(body) =>
         val (b, bns) = Term(body)

@@ -45,7 +45,7 @@ class Calculus extends StochasticPi:
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier, free &~ bound)
       case (bind, _) ~ _ ~ (sum, _) =>
-        bind -> flatten(sum)
+        bind -> sum.flatten
     }
 
   def choice: Parser[(`+`, Names)] =
@@ -240,49 +240,51 @@ object Calculus:
 
   // functions
 
-  def flatten[T <: AST](ast: T): T =
+  extension[T <: AST](ast: T)
 
-    inline given Conversion[AST, T] = _.asInstanceOf[T]
+    def flatten: T =
 
-    ast match
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-      case `∅` => ∅
+      ast match
 
-      case `+`(_, `|`(`.`(sum: `+`)), it*) =>
-        val lhs = flatten(sum)
-        val rhs = flatten(`+`(nil, it*))
-        `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
+        case `∅` => ∅
 
-      case `+`(_, par, it*) =>
-        val lhs = `+`(nil, flatten(par))
-        val rhs = flatten(`+`(nil, it*))
-        `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
+        case `+`(_, `|`(`.`(sum: `+`)), it*) =>
+          val lhs = sum.flatten
+          val rhs = `+`(nil, it*).flatten
+          `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
-      case `|`(`.`(`+`(_, par)), it*) =>
-        val lhs = flatten(par)
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+        case `+`(_, par, it*) =>
+          val lhs = `+`(nil, par.flatten)
+          val rhs = `+`(nil, it*).flatten
+          `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
-      case `|`(seq, it*) =>
-        val lhs = `|`(flatten(seq))
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components)*)
+        case `|`(`.`(`+`(_, par)), it*) =>
+          val lhs = par.flatten
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components)*)
 
-      case `.`(`+`(_, `|`(`.`(end, ps*))), it*) =>
-        flatten(`.`(end, (it ++ ps)*))
+        case `|`(seq, it*) =>
+          val lhs = `|`(seq.flatten)
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components)*)
 
-      case `.`(end, it*) =>
-        `.`(flatten(end), it*)
+        case `.`(`+`(_, `|`(`.`(end, ps*))), it*) =>
+          `.`(end, (it ++ ps)*).flatten
 
-      case `?:`(cond, t, f) =>
-        `?:`(cond, flatten(t), flatten(f))
+        case `.`(end, it*) =>
+          `.`(end.flatten, it*)
 
-      case `!`(None, sum) =>
-        flatten(sum) match
-          case `+`(_, `|`(`.`(end: `!`))) => end
-          case it => `!`(None, it)
+        case `?:`(cond, t, f) =>
+          `?:`(cond, t.flatten, f.flatten)
 
-      case `!`(μ, sum) =>
-        `!`(μ, flatten(sum))
+        case `!`(None, sum) =>
+          sum.flatten match
+            case `+`(_, `|`(`.`(end: `!`))) => end
+            case it => `!`(None, it)
 
-      case _ => ast
+        case `!`(μ, sum) =>
+          `!`(μ, sum.flatten)
+
+        case _ => ast
