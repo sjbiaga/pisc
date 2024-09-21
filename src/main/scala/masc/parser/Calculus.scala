@@ -47,7 +47,7 @@ class Calculus extends Ambient:
         if (free &~ bound).nonEmpty =>
         throw EquationFreeNamesException(bind.identifier, free &~ bound)
       case (bind, _) ~ _ ~ (par, _) =>
-        bind -> flatten(par)
+        bind -> par.flatten
     }
 
   def parallel: Parser[(`|`, Names)] =
@@ -232,42 +232,44 @@ object Calculus:
 
   // functions
 
-  def flatten[T <: AST](ast: T): T =
+  extension[T <: AST](ast: T)
 
-    inline given Conversion[AST, T] = _.asInstanceOf[T]
+    def flatten: T =
 
-    ast match
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-      case `∅` => ∅
+      ast match
 
-      case `|`(`.`(par: `|`), it*) =>
-        val lhs = flatten(par)
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
+        case `∅` => ∅
 
-      case `|`(seq, it*) =>
-        val lhs = `|`(flatten(seq))
-        val rhs = flatten(`|`(it*))
-        `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
+        case `|`(`.`(par: `|`), it*) =>
+          val lhs = par.flatten
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
 
-      case `.`(`|`(`.`(end, ps*)), it*) =>
-        flatten(`.`(end, (it ++ ps)*))
+        case `|`(seq, it*) =>
+          val lhs = `|`(seq.flatten)
+          val rhs = `|`(it*).flatten
+          `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
 
-      case `.`(end, it*) =>
-        `.`(flatten(end), it*)
+        case `.`(`|`(`.`(end, ps*)), it*) =>
+          `.`(end, (it ++ ps)*).flatten
 
-      case `!`(None, par) =>
-        flatten(par) match
-          case `|`(`.`(end: `!`)) => end
-          case it => `!`(None, it)
+        case `.`(end, it*) =>
+          `.`(end.flatten, it*)
 
-      case `!`(guard, par) =>
-        `!`(guard, flatten(par))
+        case `!`(None, par) =>
+          par.flatten match
+            case `|`(`.`(end: `!`)) => end
+            case it => `!`(None, it)
 
-      case `[]`(amb, par) =>
-        `[]`(amb, flatten(par))
+        case `!`(guard, par) =>
+          `!`(guard, par.flatten)
 
-      case `go.`(amb, par) =>
-        `go.`(amb, flatten(par))
+        case `[]`(amb, par) =>
+          `[]`(amb, par.flatten)
 
-      case _ => ast
+        case `go.`(amb, par) =>
+          `go.`(amb, par.flatten)
+
+        case _ => ast
