@@ -42,162 +42,164 @@ import generator.Meta._
 object Program:
 
   def apply(bind: List[Bind]): List[String] =
-    bind.map { case (bind, par) => defn(bind, body(par)).toString }
+    bind.map { case (bind, par) => defn(bind, par.generate).toString }
 
 
-  def body(node: `Pre | AST`): List[Enumerator] =
-    var * = List[Enumerator]()
+  extension(node: `Pre | AST`)
 
-    node match
+    def generate: List[Enumerator] =
+      var * = List[Enumerator]()
 
-      // COMPOSITION ///////////////////////////////////////////////////////////
+      node match
 
-      case `∅` =>
-       * = `_ <- IO.unit`
+        // COMPOSITION /////////////////////////////////////////////////////////
 
-      case `|`(operand) =>
-        * = body(operand)
+        case `∅` =>
+          * = `_ <- IO.unit`
 
-      case it: `|` =>
-        val ios = it.components.foldLeft(List[Term]())(_ :+ body(_))
+        case `|`(operand) =>
+          * = operand.generate
 
-        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+        case it: `|` =>
+          val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
-      /////////////////////////////////////////////////////////// composition //
+          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
 
-
-      // SEQUENCE //////////////////////////////////////////////////////////////
-
-      case `.`(end, it*) =>
-        * = (it :+ end).foldLeft(*)(_ ++ body(_))
-
-      ////////////////////////////////////////////////////////////// sequence //
+        ///////////////////////////////////////////////////////// composition //
 
 
-      // RESTRICTION | PREFIXES ////////////////////////////////////////////////
+        // SEQUENCE ////////////////////////////////////////////////////////////
 
-      case ν(names*) =>
-        * = names.map { it => `* <- *`(it -> "ν") }.toList
+        case `.`(end, it*) =>
+          * = (it :+ end).foldLeft(*)(_ ++ _.generate)
 
-
-      case τ(Some(Left(enums))) =>
-        * = `_ <- *`("τ")
-        * ++= enums
-
-      case τ(Some(Right(term))) =>
-        * = `_ <- *`("τ")
-        * :+= `_ <- IO { * }`(term)
-
-      case τ(_) =>
-        * = `_ <- *`("τ")
+        //////////////////////////////////////////////////////////// sequence //
 
 
-      case `..`() =>
+        // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
-      case `..`(path*) =>
-        * = `_ <- *`(Term.Apply(
-                       Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil, None)),
-                       Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
+        case ν(names*) =>
+          * = names.map { it => `* <- *`(it -> "ν") }.toList
 
 
-      case `()`(it, name) =>
-        val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil, None))
-        * = it match
-              case Some(code) =>
-                `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
-              case _ =>
-                `* <- *`(name -> term)
+        case τ(Some(Left(enums))) =>
+          * = `_ <- *`("τ")
+          * ++= enums
 
-      //////////////////////////////////////////////// restriction | prefixes //
+        case τ(Some(Right(term))) =>
+          * = `_ <- *`("τ")
+          * :+= `_ <- IO { * }`(term)
 
-
-      ////// REPLICATION ///////////////////////////////////////////////////////
-
-      case `!`(Some(name), par) =>
-        val uuid = id
-
-        val `!.(*).⋯` = body(`()`(None, name)) :+ `_ <- *`(Term.Apply(\(uuid),
-                                                                      Term.ArgClause(\(name) :: Nil, None)))
-
-        val it = Term.If(Term.ApplyUnary("!", name),
-                         `IO.cede`,
-                         `( *, … ).parMapN { (_, …) => }`(
-                           body(par),
-                           `!.(*).⋯`
-                         )
-                 )
-
-        * = `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it)) :: `!.(*).⋯`
-
-      case `!`(_, par) =>
-        val uuid = id
-
-        val it = `( *, … ).parMapN { (_, …) => }`(
-                   body(par),
-                   `_ <- IO.unit` :: `_ <- *`(uuid)
-                 )
-
-        * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
-
-      /////////////////////////////////////////////////////////// replication //
+        case τ(_) =>
+          * = `_ <- *`("τ")
 
 
-      // AMBIENT ///////////////////////////////////////////////////////////////
+        case `..`() =>
 
-      case `[]`(amb, par) =>
-        val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
-
-        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ body(par)))
-
-      /////////////////////////////////////////////////////////////// ambient //
+        case `..`(path*) =>
+          * = `_ <- *`(Term.Apply(
+                         Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil, None)),
+                         Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
 
 
-      // GO ////////////////////////////////////////////////////////////////////
+        case `()`(it, name) =>
+          val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil, None))
+          * = it match
+                case Some(code) =>
+                  `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                case _ =>
+                  `* <- *`(name -> term)
 
-      case `go.`(amb, par) =>
-        val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
-
-        * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ body(par)))
-
-      //////////////////////////////////////////////////////////////////// go //
-
-
-      // OUTPUT ////////////////////////////////////////////////////////////////
-
-      case `<>`(it) =>
-        val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
-        * = it match
-              case Some(code) =>
-                `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
-              case _ =>
-                `_ <- *`(term)
-
-      case `<>`(it, path*) =>
-        val term = Term.Apply(
-                     Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)),
-                     Term.ArgClause(\(")(") :: Nil, None))
-
-        * = it match
-              case Some(code) =>
-                `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
-              case _ =>
-                `_ <- *`(term)
-
-      //////////////////////////////////////////////////////////////// output //
+        ////////////////////////////////////////////// restriction | prefixes //
 
 
-      // INVOCATION ////////////////////////////////////////////////////////////
+        ////// REPLICATION /////////////////////////////////////////////////////
 
-      case `(*)`(identifier, qual, params*) =>
-        val args = params.map("`" + _ + "`")
-        if qual.isEmpty
-        then
-          * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
-        else
-          * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+        case `!`(Some(name), par) =>
+          val uuid = id
 
-      //////////////////////////////////////////////////////////// invocation //
+          val `!.(*).⋯` = `()`(None, name).generate :+ `_ <- *`(Term.Apply(\(uuid),
+                                                                           Term.ArgClause(\(name) :: Nil, None)))
 
-    *
+          val it = Term.If(Term.ApplyUnary("!", name),
+                           `IO.cede`,
+                           `( *, … ).parMapN { (_, …) => }`(
+                             par.generate,
+                             `!.(*).⋯`
+                           )
+                   )
+
+          * = `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it)) :: `!.(*).⋯`
+
+        case `!`(_, par) =>
+          val uuid = id
+
+          val it = `( *, … ).parMapN { (_, …) => }`(
+                     par.generate,
+                     `_ <- IO.unit` :: `_ <- *`(uuid)
+                   )
+
+          * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
+
+        ///////////////////////////////////////////////////////// replication //
+
+
+        // AMBIENT /////////////////////////////////////////////////////////////
+
+        case `[]`(amb, par) =>
+          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
+
+          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ par.generate))
+
+        ///////////////////////////////////////////////////////////// ambient //
+
+
+        // GO //////////////////////////////////////////////////////////////////
+
+        case `go.`(amb, par) =>
+          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
+
+          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ par.generate))
+
+        ////////////////////////////////////////////////////////////////// go //
+
+
+        // OUTPUT //////////////////////////////////////////////////////////////
+
+        case `<>`(it) =>
+          val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
+          * = it match
+                case Some(code) =>
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                case _ =>
+                  `_ <- *`(term)
+
+        case `<>`(it, path*) =>
+          val term = Term.Apply(
+                       Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)),
+                       Term.ArgClause(\(")(") :: Nil, None))
+
+          * = it match
+                case Some(code) =>
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                case _ =>
+                  `_ <- *`(term)
+
+        ////////////////////////////////////////////////////////////// output //
+
+
+        // INVOCATION //////////////////////////////////////////////////////////
+
+        case `(*)`(identifier, qual, params*) =>
+          val args = params.map("`" + _ + "`")
+          if qual.isEmpty
+          then
+            * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          else
+            * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+
+        ////////////////////////////////////////////////////////// invocation //
+
+      *
 
   def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
