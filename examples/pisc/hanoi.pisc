@@ -21,7 +21,7 @@ Hanoi(a,b,c,n) = ν(w)                                        \
                             catch _ => -1                    \
                           }                                  \
                    */.                                       \
-                 [ /*'n > 0*/ = True ] Hanoi(a,b,c,n,w)      \
+                 Hanoi(a,b,c,n,w)                            \
                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
                  τ/*println(s"#${'w} moves")*/.              \
                )
@@ -31,7 +31,7 @@ Move(from,to,z) = from(x).to(y).                    \
                   τ/*println(s"${'x} -> ${'y}")*/.  \
                                 z</*1*/>.
 
-Hanoi(a,b,c,n,w) = if n = 1                                      \
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
                    then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
                    else ν(x)                                     \
                       ( Hanoi(a,c,b,/*'n-1*/,x)                  \
