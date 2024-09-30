@@ -29,25 +29,50 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
+
+import scala.meta.{ Enumerator, Term }
 
 import scala.util.parsing.combinator._
 
-import Pi.{ Names, PrefixParsingException }
+import Pi.Names
 import Calculus._
 
-import scala.meta.{ Enumerator, Term }
+import scala.util.parsing.combinator.pisc.parser.Extension.rename
 
 
 class Calculus extends Pi:
 
+  def line: Parser[Either[Bind, Define]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
+
   def equation: Parser[Bind] =
     agent(true)~"="~choice ^^ {
-      case (bind, bound) ~ _ ~ (sum, free)
-        if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(bind.identifier, free &~ bound)
+      case (bind, binding) ~ _ ~ (sum, free)
+        if (free &~ binding).nonEmpty =>
+        throw EquationFreeNamesException(bind.identifier, free &~ binding)
       case (bind, _) ~ _ ~ (sum, _) =>
         bind -> sum.flatten
+    }
+
+  def definition: Parser[Define] =
+    encoding ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ~"="~ choice ^^ {
+      case (code, term, binding1) ~ binding2 ~ _bound ~ _ ~ (_sum, _free) =>
+        val sum = _sum.flatten
+        val free = (_free ++ sum.capitals)
+          .filterNot { case Symbol(it) =>
+            it.charAt(0).isUpper &&
+            eqtn.exists { case (`(*)`(`it`, _), _) => true case _ => false }
+          }
+        val binding = binding2
+          .map(binding1 ++ _.map(_._2).reduce(_ ++ _))
+          .getOrElse(binding1)
+        val bound = _bound.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        if (free &~ (binding ++ bound)).nonEmpty
+        then
+          throw DefinitionFreeNamesException(code, free &~ (binding ++ bound))
+        val const = binding2.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        Encoding(code, term, const, bound) -> sum
     }
 
   def choice: Parser[(`+`, Names)] =
@@ -68,7 +93,7 @@ class Calculus extends Pi:
         `.`(∅, pre._1*) -> pre._2._2 // inaction
     }
 
-  def leaf: Parser[(`-`, Names)] = agent() | // invocation
+  def leaf: Parser[(`-`, Names)] =
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         `?:`(cond._1, t._1, ∅) -> (cond._2 ++ t._2)
@@ -82,37 +107,63 @@ class Calculus extends Pi:
         `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> opt( "."~>`μ.`<~"." ) ~ choice ^^ { // [guarded] replication
+      case Some((π(λ(Symbol(ch)), λ(Symbol(par)), true, _), _)) ~ _ if ch == par =>
+        throw GuardParsingException(ch)
       case Some(μ) ~ (sum, free) =>
         `!`(Some(μ._1), sum) -> ((free &~ μ._2._1) ++ μ._2._2)
       case _ ~ (sum, free) =>
         `!`(None, sum) -> free
+    } |
+    IDENT ~ ("{"~>rep1sep(name, ",")<~"}") ^^ { // pointed values
+      case id ~ pointers =>
+        `{}`(id, pointers.map(_._2).reduce(_ ++ _)) -> Names()
+    } |
+    agent() | // invocation
+    expansion
+
+  def expansion: Parser[(`[|]`, Names)] =
+    regexMatch("""\[(\d*)\|""".r) >> { m =>
+      val grp1 = m.group(1)
+      val code = if grp1.isEmpty then 0 else grp1.toInt
+      (expand(defn(code), s"|$grp1]") <~ s"|$grp1]") ~ opt( ("{"~>rep1sep(name, ",")<~"}") )
+    } ^^ {
+      case (it @ `[|]`(Encoding(_, _, const, bound), _, _), free) ~ Some(_pointers) =>
+        val pointers = _pointers.map(_._2).reduce(_ ++ _)
+        val assign = bound.map(_.name) zip pointers.map(_.name)
+        given MutableList[(String, λ)]()
+        it.copy(assign = Some(assign)).rename -> (free ++ const)
+      case (it @ `[|]`(Encoding(_, _, const, _), _, _), free) ~ _ =>
+        it -> (free ++ const)
     }
+
+  def expand(it: Define, end: String): Parser[(`[|]`, Names)] = ???
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
-      val bound = ps.map(_._2._1)
+      val binding = ps.map(_._2._1)
       val free = ps.map(_._2._2)
         .zipWithIndex
         .foldLeft(Names()) { case (r, (ns, i)) =>
           ns.foldLeft(r) {
             case (r, n)
               if {
-                val j = bound.indexWhere(_.contains(n))
+                val j = binding.indexWhere(_.contains(n))
                 j < 0 || i <= j
               } => r + n
             case (r, _) => r
           }
         }
-      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
+      ps.map(_._1) -> (if binding.nonEmpty then binding.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix: Parser[(Pre, (Names, Names))] = `μ.`<~"." |
+  def prefix: Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { // restriction
       case ns if !ns.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(ns.filterNot(_._1.isSymbol).map(_._1)*)
       case ns =>
         ν(ns.map(_._1.asSymbol.name)*) -> (ns.map(_._2).reduce(_ ++ _), Names())
-    }
+    } |
+    `μ.`<~"."
 
   def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
@@ -121,13 +172,13 @@ class Calculus extends Pi:
     }
 
   def agent(binding: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
       case _ ~ id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
       case qual ~ id ~ Some(params) =>
-        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).foldLeft(Set.empty)(_ ++ _)
+        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ id ~ _ =>
         `(*)`(id, qual) -> Names()
     }
@@ -152,6 +203,12 @@ class Calculus extends Pi:
 object Calculus:
 
   type Bind = (`(*)`, `+`)
+
+  type Define = (Encoding, `+`)
+
+  case class Encoding(code: Int, term: Term, const: Names, bound: Names):
+    override def toString: String =
+      if code == 0 then s"[| $term |]" else s"[$code| $term |$code]"
 
   sealed trait AST extends Any
 
@@ -197,13 +254,23 @@ object Calculus:
     override def toString: String =
       "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
 
+  case class `!`(guard: Option[μ], sum: `+`) extends AST:
+    override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
+
+  case class `[|]`(encoding: Encoding,
+                   sum: `+`,
+                   assign: Option[Set[(String, String)]] = None) extends AST:
+    override def toString: String =
+      s"""$encoding${assign.map{_.map(_ + "->" + _).mkString("{", ", ", "}")}.getOrElse("")} = $sum"""
+
+  case class `{}`(identifier: String,
+                  pointers: Names) extends AST:
+    override def toString: String = s"""$identifier{${pointers.map(_.name).mkString(", ")}}"""
+
   case class `(*)`(identifier: String,
                    qual: List[String],
                    params: λ*) extends AST:
     override def toString: String = s"$identifier(${params.mkString(", ")})"
-
-  case class `!`(guard: Option[μ], sum: `+`) extends AST:
-    override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
 
   case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
@@ -230,6 +297,7 @@ object Calculus:
   // exceptions
 
   import Expression.ParsingException
+  import Pi.PrefixParsingException
 
   class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
@@ -243,8 +311,14 @@ object Calculus:
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
 
+  case class DefinitionFreeNamesException(code: Int, free: Names)
+      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code")
+
   case class PrefixChannelsParsingException(names: λ*)
       extends PrefixParsingException(s"${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
+
+  case class GuardParsingException(name: String)
+      extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
 
 
   // functions
@@ -296,4 +370,35 @@ object Calculus:
         case `!`(μ, sum) =>
           `!`(μ, sum.flatten)
 
+        case `[|]`(encoding, sum, assign) =>
+          `[|]`(encoding, sum.flatten, assign)
+
         case _ => ast
+
+    def capitals: Names =
+
+      ast match
+
+        case `∅` => Set.empty
+
+        case `+`(it*) => it.map(_.capitals).reduce(_ ++ _)
+
+        case `|`(it*) => it.map(_.capitals).reduce(_ ++ _)
+
+        case `.`(end, _*) =>
+          end.capitals
+
+        case `?:`(_, t, f) =>
+          t.capitals ++ f.capitals
+
+        case `!`(_, sum) =>
+          sum.capitals
+
+        case `[|]`(_, sum, _) =>
+          sum.capitals
+
+        case `{}`(id, _) => Set(Symbol(id))
+
+        case `(*)`(id, Nil) => Set(Symbol(id))
+
+        case _ => Set.empty

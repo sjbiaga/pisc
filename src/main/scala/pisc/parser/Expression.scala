@@ -31,6 +31,7 @@ package parser
 
 import scala.collection.mutable.{ LinkedHashSet => Set }
 
+import scala.util.matching.Regex
 import scala.util.parsing.combinator._
 
 import Pi.Names
@@ -61,6 +62,18 @@ class Expression extends JavaTokenParsers:
           throw ExpressionParsingException(expr, t)
     }
 
+  def regexMatch(r: Regex): Parser[Regex.Match] = ???
+
+  def encoding: Parser[(Int, Term, Names)] =
+    regexMatch("""\[(\d*)\|(.*?)\|\1\]""".r) ^^ { it =>
+      val code = it.group(1)
+      try
+        Expression(it.group(2).parse[Term].get) match
+          case (term, names) => (if code.isEmpty then 0 else code.toInt, term, names)
+      catch t =>
+        throw ExpressionParsingException(it.group(2), t)
+    }
+
 
 object Expression:
 
@@ -68,7 +81,7 @@ object Expression:
       extends RuntimeException(msg, cause)
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
-      extends ParsingException(s"Expression /*$expr*/ is not a valid Scalameta Term or Enumerator(s)", cause)
+      extends ParsingException(s"Expression $expr is not a valid Scalameta Term or Enumerator(s)", cause)
 
 
   import scala.Function.const
