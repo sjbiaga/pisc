@@ -30,12 +30,16 @@ package pixc
 
 import java.util.UUID
 
+import scala.collection.mutable.{ ListBuffer => MutableList }
+
 import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
+
+import scala.util.parsing.combinator.pixc.parser.Extension.rename
 
 
 object Program:
@@ -104,12 +108,11 @@ object Program:
             case Some(χ(name, Some(sum))) =>
               implicit val sem = Some(id)
 
-              val ios = `* <- χ; _ <- }{()(, *)`(name) ++ `+`(`|`(`.`(sum), `.`(end, it.tail*))).flatten.generate
+              val ios = `_ <- }{()(, *)`(name) ++ `+`(`|`(`.`(sum), `.`(end, it.tail*))).flatten.generate
 
-              List(
-                `* <- Semaphore[IO](1)`(sem.get),
-                `_ <- *`(`( *, … ).parMapN { (_, …) => }`(sum.generate, ios))
-              )
+              `* <- Semaphore[IO](1)`(sem.get) ::
+              `* <- *`(name -> "χ") ::
+              `_ <- *`(`( *, … ).parMapN { (_, …) => }`(sum.generate, ios))
 
             case Some(χ(name, _)) =>
               `_ <- *`(Term.Apply(
@@ -261,7 +264,7 @@ object Program:
 
           val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
                                                                             Type.ArgClause(Nil),
-                                                                            Term.ArgClause(List(\("None")), None)),
+                                                                            Term.ArgClause(\("None") :: Nil, None)),
                                                             `IO.cede`,
                                                             uuid,
                                                             Nil)
@@ -285,6 +288,31 @@ object Program:
           * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
 
         ///////////////////////////////////////////////////////// replication //
+
+
+        // ENCODING ////////////////////////////////////////////////////////////
+
+        case `[|]`(Encoding(_, _, _, bound), _sum, Some(assign)) =>
+          val ** = assign
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+          val sum = ( if bound.size == assign.size
+                      then
+                        _sum
+                      else
+                        given MutableList[(String, λ)]()
+                        `+`(`|`(`.`(_sum, ν(bound.drop(assign.size).map(_.name).toSeq*)))).rename
+                    )
+          * = ** ++ sum.generate()
+
+        case `[|]`(Encoding(_, _, _, bound), sum, _) =>
+          given MutableList[(String, λ)]()
+          * = `+`(`|`(`.`(sum, ν(bound.map(_.name).toSeq*)))).rename.generate()
+
+        case _: `{}` => ???
+
+        //////////////////////////////////////////////////////////// encoding //
 
 
         // INVOCATION //////////////////////////////////////////////////////////
@@ -312,7 +340,7 @@ object Program:
         // TRANSACTION /////////////////////////////////////////////////////////
 
         case `[]`(name, `+`(it)) =>
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(name) ++ it.generate()))
+          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name) ++ it.generate()))
 
         case _: `[]` => ??? // zero or more - caught by parser
 

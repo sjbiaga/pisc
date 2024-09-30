@@ -1,0 +1,13 @@
+# -*- indent-tabs-mode: nil; -*-
+
+[| x \ 'x |]{u} = x<u>.
+
+[1| x λ 'x \ 'M |1]{u} = u(x). u(v). M{v}
+
+[2| 'M $ 'N |2]{u} = ν(v) ( M{v} | ν(x_υ0υ) v<x_υ0υ>. v<u>. x_υ0υ(w). N{w} )
+#                                                                     ^
+#                                                                     \ x_υ0υ must not occur free in N
+
+Main = ν(y) ( [2| [2| [1| λ x \ [| \x |] |1] $ [1| λ x \ [| \x |] |1] |2] $ [| \y |] |2]  \
+            | y(y). τ/*println("y")*/.                                                    \
+            )

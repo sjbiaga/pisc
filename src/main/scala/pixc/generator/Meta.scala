@@ -228,6 +228,9 @@ object Meta:
       )
     )
 
+  def `( * ).parMap1 { (_, …) => }`(* : Term): Term =
+    `( *, … ).parMapN { (_, …) => }`(`IO.cede`, *)
+
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
     Term.If(*, `…`(0), `…`(1), Nil)
@@ -271,6 +274,7 @@ object Meta:
 
 
   def `* <- χ; _ <- }{()(, *)`(name: String): List[Enumerator] =
-    `* <- *`(name -> "χ") ::
-    `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) ::
-    Nil
+    `* <- *`(name -> "χ") :: `_ <- }{()(, *)`(name)
+
+  def `_ <- }{()(, *)`(name: String): List[Enumerator] =
+    `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) :: Nil

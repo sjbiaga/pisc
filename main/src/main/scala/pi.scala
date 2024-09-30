@@ -32,6 +32,8 @@ package object Π:
 
   import _root_.scala.collection.immutable.{ List, Map, Set }
 
+  import _root_.cats.data.NonEmptyList
+
   import _root_.cats.effect.{ Deferred, Ref, IO, IOLocal }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
@@ -94,16 +96,12 @@ package object Π:
                     it + (temp.root -> tree.copy(children = children - root + join))
                   }
 
-    private def merge_(join: `)*(`, tail: Set[`)*(`])
+    private def merge_(join: `)*(`, node: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val tree = it(tail.head)
-                      it + (tail.head -> tree.copy(root = join))
-                    } >> merge_(join, tail.tail)
+      `][`.update { it =>
+                    val tree = it(node)
+                    it + (node -> tree.copy(root = join))
+                  }
 
     private def merge(tree: `}{`, join: `)*(`, node: `)*(`)
                      (implicit `][`: `][`): IO[Unit] =
@@ -113,7 +111,15 @@ package object Π:
                                   it + (join -> temp.copy(children = children - node ++ tree.children))
                                 }
         children <- `][`.modify { it => it -> it(join).children }
-        _        <- merge_(join, children)
+        _        <- if (children.isEmpty)
+                    then
+                      IO.cede
+                    else
+                      NonEmptyList
+                        .fromList(children.toList)
+                        .get
+                        .traverse(merge_(join, _))
+                        .void
       yield
         ()
 

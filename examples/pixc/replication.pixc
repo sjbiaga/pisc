@@ -1,0 +1,11 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import scala.concurrent.duration._
+
+@val gen = new scala.util.Random
+
+@def ms = (10+math.abs(gen.nextInt%10)).milliseconds
+
+Main = ν(x) ( (!x</*i*/>.τ/*println(s"out $i")*/.)  \
+            | (!x(y).τ/*println(s"in $y")*/.)       \
+            )
