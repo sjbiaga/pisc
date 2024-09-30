@@ -38,6 +38,7 @@ import generator.Meta.`()(null)`
 
 import Pi._
 import Calculus._
+import scala.util.parsing.combinator.pisc.parser.Extension
 
 
 class Pi extends Expression:
@@ -68,10 +69,10 @@ class Pi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ free2)
-      case (ch, name) ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, None) -> (bound, name)
+      case (ch, name) ~ (par, binding) ~ Some((it, free2)) =>
+        π(ch, par, polarity = true, Some(it)) -> (binding, name ++ free2)
+      case (ch, name) ~ (par, binding) ~ _ =>
+        π(ch, par, polarity = true, None) -> (binding, name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
@@ -92,8 +93,11 @@ class Pi extends Expression:
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
+  private[parser] var eqtn = List[Bind]()
+  private[parser] val defn = Map[Int, Define]()
 
-object Pi extends Calculus:
+
+object Pi extends Extension:
 
   type Names = Set[Symbol]
 
@@ -132,7 +136,7 @@ object Pi extends Calculus:
     given rec: Map[(String, Int), Int] = Map()
     given rep: Map[Int, Int] = Map()
 
-    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
     if rec.contains("Main" -> 0) then throw MainParsingException2
 
@@ -155,13 +159,19 @@ object Pi extends Calculus:
     }._1
     .filterNot(_.matches("^[ ]*#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map { it =>
+    .flatMap { it =>
       if it.matches("^[ ]*@.*")
       then // Scala
-        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // Pi
-        parseAll(equation, it) match
-          case Success(result, _) => Right(result)
-          case failure: NoSuccess => scala.sys.error(failure.msg)
+        parseAll(line, it) match
+          case Success(Left(equation), _) =>
+            eqtn :+= equation
+            Some(Right(equation))
+          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
+            defn(code) = definition
+            None
+          case failure: NoSuccess =>
+            scala.sys.error(failure.msg)
     }
     .toList

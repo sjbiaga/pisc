@@ -1,0 +1,72 @@
+# -*- indent-tabs-mode: nil; -*-
+
+[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(([w = y]P) | ([w = z]Q))
+
+
+[1| x Nil x |1](nil){x} = x<nil>.
+
+[2| 'L1 Cons 'L2 |2](cons){x} =                     \
+                      ν(y, z) ( x<cons>.x<y>.x<z>.  \
+                              | L1{y}               \
+                              | L2{z}               \
+                              )
+
+
+[4| 'y Copy 'z |4](t, f) = [| y :: t ==> z<t>. || f ==> z<f>. |]
+
+[3| 'x && 'y / 'z |3](t, f) = [| x :: t ==> [4| y Copy z |4] || f ==> z<f>. |]
+
+[10| x False 'x |10](t, f) = x<f>.
+
+[11| x True 'x |11](t, f) = x<t>.
+
+
+Equal(x, y, b, t, f, nil, cons) = [| x :: nil  ==> Null(y, b, t, f, nil, cons)                             \
+                                       || cons ==> x(x1). x(x2). Consequal(x1, x2, y, b, t, f, nil, cons)  \
+                                  |]
+
+Null(y, b, t, f, nil, cons) = [| y :: nil  ==> [11| True b |11]   \
+                                   || cons ==> [10| False b |10]  \
+                              |]
+
+Consequal(x1, x2, y, b, t, f, nil, cons) = [| y :: nil  ==> [10| False b |10]                                             \
+                                                || cons ==> y(y1). y(y2). ν(b1, b2) ( Equal(x1, y1, b1, t, f, nil, cons)  \
+                                                                                    | Equal(x2, y2, b2, t, f, nil, cons)  \
+                                                                                    | [3| b1 && b2 / b |3]                \
+                                                                                    )                                     \
+                                           |]
+
+Nil(nil, x) = [1| Nil |1]{x}
+
+[111| x Nil x |111](nil){x} = [1| Nil |1]{x}
+
+
+Eq(x, nil, cons) = [2| [2|                            \
+                           Nil(nil) Cons [1| Nil |1]  \
+                       |2]                            \
+                       Cons                           \
+                       [111| Nil |111]                \
+                   |2]{x}
+
+Ne(x, nil, cons) = [2| [1| Nil |1]  \
+                       Cons         \
+                       [1| Nil |1]  \
+                   |2]{x}
+
+Main = ν(t, f, nil, cons) ( Main"(t, f, nil, cons) | Main'(t, f, nil, cons) )
+
+Main"(t, f, nil, cons) = ν(x, y, b) ( Eq(x, nil, cons)                  \
+                                    | Eq(y, nil, cons)                  \
+                                    | Equal(x, y, b, t, f, nil, cons)   \
+                                    | [| b :: t ==> τ/*println("T")*/.  \
+                                           || f ==> τ/*println("F")*/.  \
+                                      |]                                \
+                                    )
+
+Main'(t, f, nil, cons) = ν(x, y, b) ( Eq(x, nil, cons)                  \
+                                    | Ne(y, nil, cons)                  \
+                                    | Equal(x, y, b, t, f, nil, cons)   \
+                                    | [| b :: t ==> τ/*println("T")*/.  \
+                                           || f ==> τ/*println("F")*/.  \
+                                      |]                                \
+                                    )

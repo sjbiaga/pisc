@@ -30,12 +30,16 @@ package pisc
 
 import java.util.UUID
 
+import scala.collection.mutable.{ ListBuffer => MutableList }
+
 import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
+
+import scala.util.parsing.combinator.pisc.parser.Extension.rename
 
 
 object Program:
@@ -257,6 +261,35 @@ object Program:
           * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
 
         ///////////////////////////////////////////////////////// replication //
+
+
+        // ENCODING ////////////////////////////////////////////////////////////
+
+        case `[|]`(Encoding(_, _, _, bound), _sum, Some(assign)) =>
+          val ** = assign
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+          val sum = ( if bound.size == assign.size
+                      then
+                        _sum
+                      else
+                        given MutableList[(String, λ)]()
+                        `+`(`|`(`.`(_sum, ν(bound.drop(assign.size).map(Int.MaxValue -> _.name).toSeq*)))).rename
+                    )
+          * = ** ++ sum.generate()
+
+        case `[|]`(Encoding(_, _, _, bound), sum, _) =>
+          if bound.isEmpty
+          then
+            * = sum.generate()
+          else
+            given MutableList[(String, λ)]()
+            * = `+`(`|`(`.`(sum, ν(bound.map(Int.MaxValue -> _.name).toSeq*)))).rename.generate()
+
+        case _: `{}` => ???
+
+        //////////////////////////////////////////////////////////// encoding //
 
 
         // INVOCATION //////////////////////////////////////////////////////////

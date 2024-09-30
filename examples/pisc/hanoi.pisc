@@ -1,5 +1,7 @@
 # -*- indent-tabs-mode: nil; -*-
 
+# ./examples $ pi_ hanoi.scala
+
 @given Conversion[`()`, Int] = _.as[Int]
 
 @val ! : String => IO[String] = { _ => IO.canceled.as("") }
