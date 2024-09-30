@@ -1,0 +1,88 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# spi doobie.scala --dep com.github.javafaker:javafaker:1.0.2  \
+                   --dep org.tpolecat::doobie-hikari:1.0.0-RC6 \
+                   --dep org.tpolecat::doobie-h2:1.0.0-RC6     \
+                   -- 99
+
+@import cats._
+@import cats.effect._
+@import cats.effect.unsafe.implicits.global
+@import com.github.javafaker._
+@import doobie._
+@import doobie.implicits._
+@import doobie.hikari._
+
+
+@val gen = new scala.util.Random
+
+@def act = gen.nextBoolean
+
+
+@type SS = (String, String)
+@type SSB = (String, String, Boolean)
+
+
+@val transactor: Resource[IO, HikariTransactor[IO]] =  \
+  for {                                                \
+    ce <- ExecutionContexts.fixedThreadPool[IO](4);    \
+    xa <- HikariTransactor.newHikariTransactor[IO](    \
+            "org.h2.Driver",                           \
+            "jdbc:h2:mem:aaa;DB_CLOSE_DELAY=-1",       \
+            "sa",                                      \
+            "",                                        \
+            ce                                         \
+          )                                            \
+} yield                                                \
+    xa
+
+@val create =                      \
+  sql"""CREATE TABLE aaa(          \
+          aircraft TEXT NOT NULL,  \
+          airport  TEXT NOT NULL,  \
+          activity BOOL NOT NULL   \
+    )""".update.run
+
+@def insert(c: String, p: String) =                    \
+  sql"""INSERT INTO aaa (aircraft, airport, activity)  \
+        VALUES ($c, $p, $act)                          \
+     """.update.run
+
+@def select =               \
+  sql"""SELECT * FROM aaa   \
+     """.query[SSB].stream
+
+
+@val _ = transactor.use(create.transact[IO]).unsafeRunSync()
+
+@given Conversion[`()`, Int] = _.as[Int]
+
+@val f = Faker()
+
+@def cp = { val fa = f.aviation; fa.aircraft -> fa.airport }
+
+Main = Main(/*args.head.toInt.abs*/)
+
+@val ! : SS => IO[SS] =                 \
+  { case r @ (c, p) =>                  \
+     transactor                         \
+       .use(insert(c, p).transact[IO])  \
+       .as(r)                           \
+  }
+
+Main(k) = ν(aaa)             \
+        ( (!.aaa(cp)/*!*/.)  \
+        | Fake(k, aaa)       \
+        )
+
+Fake(k, aaa) = if k = /*0*/                                                          \
+               then aaa<>/*_ <- transactor                                           \
+                                  .use(select                                        \
+                                         .fold(()) { case (_, (c, p, b)) =>          \
+                                                     var w = "landed on";            \
+                                                     if b then w = "took off from";  \
+                                                     println(s"$c $w $p")            \
+                                                   }                                 \
+                                         .compile.drain.transact[IO]                 \
+                                  )*/.                                               \
+               else aaa</*cp*/>. Fake(/*'k-1*/, aaa)

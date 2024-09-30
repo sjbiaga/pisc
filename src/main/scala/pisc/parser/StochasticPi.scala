@@ -31,7 +31,12 @@ package parser
 
 import java.util.UUID
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  HashMap => Map,
+  ListBuffer => MutableList,
+  LinkedHashSet => Set
+}
+
 import scala.io.Source
 
 import scala.meta.Term
@@ -42,6 +47,8 @@ import generator.Meta.`()(null)`
 
 import StochasticPi._
 import Calculus._
+import scala.util.parsing.combinator.pisc.parser.Extension
+import Extension.rename
 
 
 class StochasticPi extends Expression:
@@ -72,10 +79,10 @@ class StochasticPi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ r ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it)) -> (bound, name ++ free2)
-      case (ch, name) ~ r ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, r.getOrElse(1L), None) -> (bound, name)
+      case (ch, name) ~ r ~ (par, binding) ~ Some((it, free2)) =>
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it)) -> (binding, name ++ free2)
+      case (ch, name) ~ r ~ (par, binding) ~ _ =>
+        π(ch, par, polarity = true, r.getOrElse(1L), None) -> (binding, name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
@@ -122,8 +129,11 @@ class StochasticPi extends Expression:
           throw WholeNumberFormatException("be a Long", t)
     }
 
+  private[parser] var eqtn = List[Bind]()
+  private[parser] val defn = Map[Int, Define]()
 
-object StochasticPi extends Calculus:
+
+object StochasticPi extends Extension:
 
   type Actions = Set[String]
 
@@ -186,7 +196,7 @@ object StochasticPi extends Calculus:
     given rec: Map[(String, Int), Int] = Map()
     given rep: Map[Int, Int] = Map()
 
-    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
     if rec.contains("Main" -> 0) then throw MainParsingException2
 
@@ -290,6 +300,42 @@ object StochasticPi extends Calculus:
         case `!`(_, sum) =>
           `!`(Some(τ), sum).parse
 
+        case `[|]`(encoding @ Encoding(_, _, _, bound), _sum, Some(assign)) =>
+          val sum = ( if bound.size == assign.size
+                      then
+                        _sum
+                      else
+                        given MutableList[(String, λ)]()
+                        `+`(nil, `|`(`.`(_sum, ν(bound.drop(assign.size).map(_.name).toSeq*)))).rename
+                    )
+
+           var (it, _) = sum.parse
+
+          if it.enabled.isEmpty
+          then
+            it = insert_+(it)
+
+          (`[|]`(encoding, it, Some(assign)), it.enabled)
+
+        case `[|]`(encoding @ Encoding(_, _, _, bound), _sum, _) =>
+          given MutableList[(String, λ)]()
+          val sum = ( if bound.isEmpty
+                      then
+                        _sum
+                      else
+                        `+`(nil, `|`(`.`(_sum, ν(bound.map(_.name).toSeq*)))).rename
+                    )
+
+          var (it, _) = sum.parse
+
+          if it.enabled.isEmpty
+          then
+            it = insert_+(it)
+
+          (`[|]`(encoding, it, None), it.enabled)
+
+        case _: `{}` => ???
+
         case it: `(*)` => (it, nil)
 
     def split(using discarded_excluded: (Map[String, Actions], Map[String, Actions])): Actions =
@@ -361,6 +407,12 @@ object StochasticPi extends Calculus:
 
         case _: `!` => ??? // impossible by 'parse'
 
+        case `[|]`(_, sum, _) =>
+          sum.split
+          sum.enabled
+
+        case _: `{}` => ???
+
         case _: `(*)` => ??? // always "guarded"
 
     def graph(implicit prog: List[Bind]): Seq[(Act, `Act | Sum`)] =
@@ -399,6 +451,9 @@ object StochasticPi extends Calculus:
               case `!`(Some(μ), _) =>
                 Seq(ps(k) -> μ)
               case _: `!` => ??? // impossible by 'parse'
+              case `[|]`(_, sum, _) =>
+                Seq(ps(k) -> sum)
+              case _: `{}` => ???
               case it: `(*)` =>
                 val sum = `(*) => +`(prog)(it)
                 Seq(ps(k) -> sum)
@@ -412,6 +467,11 @@ object StochasticPi extends Calculus:
           sum.graph ++ Seq(μ -> μ, μ -> sum)
 
         case _: `!` => ??? // impossible by 'parse'
+
+        case `[|]`(_, sum, _) =>
+          sum.graph
+
+        case _: `{}` => ???
 
         case  _: `(*)` => Nil
 
@@ -454,13 +514,19 @@ object StochasticPi extends Calculus:
     }._1
     .filterNot(_.matches("^[ ]*#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map { it =>
+    .flatMap { it =>
       if it.matches("^[ ]*@.*")
       then // Scala
-        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // SPi
-        parseAll(equation, it) match
-          case Success(result, _) => Right(result)
-          case failure: NoSuccess => scala.sys.error(failure.msg)
+        parseAll(line, it) match
+          case Success(Left(equation), _) =>
+            eqtn :+= equation
+            Some(Right(equation))
+          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
+            defn(code) = definition
+            None
+          case failure: NoSuccess =>
+            scala.sys.error(failure.msg)
     }
     .toList

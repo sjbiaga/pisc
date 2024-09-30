@@ -266,6 +266,23 @@ object Program:
         ///////////////////////////////////////////////////////// replication //
 
 
+        // ENCODING ////////////////////////////////////////////////////////////
+
+        case `[|]`(_, sum, Some(assign)) =>
+          val ** = assign
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+          * = ** ++ sum.generate
+
+        case `[|]`(_, sum, _) =>
+         * = sum.generate
+
+        case _: `{}` => ???
+
+        //////////////////////////////////////////////////////////// encoding //
+
+
         // INVOCATION //////////////////////////////////////////////////////////
 
         case `(*)`(identifier, params*) =>
