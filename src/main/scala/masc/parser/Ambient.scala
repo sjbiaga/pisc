@@ -35,15 +35,14 @@ import scala.io.Source
 import scala.util.parsing.combinator._
 
 import Ambient._
-import Calculus.{ Bind, `(*)` }
-
-import scala.meta.{ Enumerator, Term }
+import Calculus.{ Bind, Define, Encoding, `(*)` }
+import scala.util.parsing.combinator.masc.parser.Extension
 
 
 class Ambient extends Expression:
 
   def caps: Parser[(List[AST], Names)] =
-    repsep(cap, ".") ^^ { cs =>
+    repsep(cap, ",") ^^ { cs =>
       cs.map(_._1).filterNot(_.isInstanceOf[ε.type]) -> cs.map(_._2).foldLeft(Names())(_ ++ _)
     }
 
@@ -66,8 +65,11 @@ class Ambient extends Expression:
       rep1(acceptIf(Character.isLowerCase)("ambient name expected but '" + _ + "' found"),
           elem("ambient name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
+  private[parser] var eqtn = List[Bind]()
+  private[parser] val defn = Map[Int, Define]()
 
-object Ambient extends Calculus:
+
+object Ambient extends Extension:
 
   enum Op { case in, out, open }
 
@@ -100,7 +102,7 @@ object Ambient extends Calculus:
     given rec: Map[(String, Int), Int] = Map()
     given rep: Map[Int, Int] = Map()
 
-    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
     if rec.contains("Main" -> 0) then throw MainParsingException2
 
@@ -123,13 +125,19 @@ object Ambient extends Calculus:
     }._1
     .filterNot(_.matches("^[ ]*#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map { it =>
+    .flatMap { it =>
       if it.matches("^[ ]*@.*")
       then // Scala
-        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
+        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // Ambient
-        parseAll(equation, it) match
-          case Success(result, _) => Right(result)
-          case failure: NoSuccess => scala.sys.error(failure.msg)
+        parseAll(line, it) match
+          case Success(Left(equation), _) =>
+            eqtn :+= equation
+            Some(Right(equation))
+          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
+            defn(code) = definition
+            None
+          case failure: NoSuccess =>
+            scala.sys.error(failure.msg)
     }
     .toList

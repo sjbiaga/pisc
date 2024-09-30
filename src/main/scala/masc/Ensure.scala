@@ -66,58 +66,65 @@ object Ensure:
       }
     else -1
 
-  /**
-    * When an existing invocation is found on the reachability graph:
-    * - all definitions up to its definition are marked as recursive;
-    * - if there is a replication up to its definition, the number of
-    *   recursive replications is incremented.
-    */
-  def recursive(ast: AST)
-               (using stack: List[(String, Int)])
-               (using rec: Map[(String, Int), Int])
-               (using rep: Map[Int, Int])
-               (using prog: List[Bind])
-               (implicit repl: Int = 0): Unit =
+  extension(ast: AST)
 
-    ast match
+    /**
+      * When an existing invocation is found on the reachability graph:
+      * - all definitions up to its definition are marked as recursive;
+      * - if there is a replication up to its definition, the number of
+      *   recursive replications is incremented.
+      */
+    def recursive(using stack: List[(String, Int)])
+                 (using rec: Map[(String, Int), Int])
+                 (using rep: Map[Int, Int])
+                 (using prog: List[Bind])
+                 (implicit repl: Int = 0): Unit =
 
-      case `∅` =>
+      ast match
 
-      case `|`(it*) =>
-       it.foldLeft(())((_, seq) => recursive(seq))
+        case `∅` =>
 
-      case `.`(end, _*) =>
-        recursive(end)
+        case `|`(it*) =>
+         it.foldLeft(())((_, seq) => seq.recursive)
 
-      case `!`(_, par) =>
-        recursive(par)(stack.size)
+        case `.`(end, _*) =>
+          end.recursive
 
-      case `[]`(_, par) =>
-        recursive(par)
+        case `!`(_, par) =>
+          par.recursive(stack.size)
 
-      case `go.`(_, par) =>
-        recursive(par)
+        case `[]`(_, par) =>
+          par.recursive
 
-      case it @ `(*)`(id, _, params*)
-          if stack.contains(id -> params.size) =>
-        val k = stack.lastIndexOf(id -> params.size)
-        for
-          j <- k until stack.size
-          i = index2(prog)(stack(j))
-          sign = prog(i)._1.identifier -> prog(i)._1.params.size
-        do
-          if !rec.contains(sign)
-          then
-            rec(sign) = i
-          if k < repl
-          then
-            if !rep.contains(i)
+        case `go.`(_, par) =>
+          par.recursive
+
+        case `[|]`(_, par, _) =>
+          par.recursive
+
+        case _: `{}` => ???
+
+        case it @ `(*)`(id, _, params*)
+            if stack.contains(id -> params.size) =>
+          val k = stack.lastIndexOf(id -> params.size)
+          for
+            j <- k until stack.size
+            i = index2(prog)(stack(j))
+            sign = prog(i)._1.identifier -> prog(i)._1.params.size
+          do
+            if !rec.contains(sign)
             then
-              rep(i) = 0
-            rep(i) += 1
+              rec(sign) = i+1
+            if k < repl
+            then
+              if !rep.contains(i)
+              then
+                rep(i) = 0
+              rep(i) += 1
 
-      case `(*)`(id, _, params*) =>
-        val i = index2(prog)(id -> params.size)
-        recursive(prog(i)._2)(using stack :+ id -> params.size)
+        case `(*)`(id, _, params*) =>
+          val i = index2(prog)(id -> params.size)
+          val par = prog(i)._2
+          par.recursive(using stack :+ id -> params.size)
 
-      case _ =>
+        case _ =>

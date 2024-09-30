@@ -195,6 +195,9 @@ object Meta:
       )
     )
 
+  def `( * ).parMap1 { (_, …) => }`(* : Term): Term =
+    `( *, … ).parMapN { (_, …) => }`(`IO.cede`, *)
+
 
   def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(\("IO"),

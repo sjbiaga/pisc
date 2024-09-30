@@ -18,7 +18,7 @@ function ma() {
     done
     set ../ma.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.5.1-RC2 \
+                  -q -O -nowarn -S 3.5.2-RC1 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
