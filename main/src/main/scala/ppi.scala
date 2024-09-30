@@ -176,7 +176,7 @@ package object Π:
                 val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
                 it.copy(takers = rest) -> taker.complete(names).as(Some(()))
               case it @ ><(queue, capacity, _, _) if queue.size < capacity =>
-                it.copy(queue = queue.enqueue(names.asInstanceOf[Seq[Any]])) -> IO.pure(Some(()))
+                it.copy(queue = queue.enqueue(names.asInstanceOf[Any])) -> IO.pure(Some(()))
               case it =>
                 val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                 it.copy(offerers = names -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)

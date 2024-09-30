@@ -38,6 +38,7 @@ import generator.Meta.`()(null)`
 
 import PolyadicPi._
 import Calculus._
+import scala.util.parsing.combinator.pisc.parser.Extension
 
 
 class PolyadicPi extends Expression:
@@ -102,8 +103,11 @@ class PolyadicPi extends Expression:
   def arity: Parser[Int] =
     "#"~>"""\d+""".r ^^ { _.toInt }
 
+  private[parser] var eqtn = List[Bind]()
+  private[parser] val defn = Map[Int, Define]()
 
-object PolyadicPi extends Calculus:
+
+object PolyadicPi extends Extension:
 
   type Names = Set[Symbol]
 
@@ -155,7 +159,7 @@ object PolyadicPi extends Calculus:
     given rec: Map[(String, Int), Int] = Map()
     given rep: Map[Int, Int] = Map()
 
-    recursive(prog(i)._2)(using "Main" -> 0 :: Nil)
+    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
     if rec.contains("Main" -> 0) then throw MainParsingException2
 
@@ -178,13 +182,19 @@ object PolyadicPi extends Calculus:
     }._1
     .filterNot(_.matches("^[ ]*#.*")) // commented lines
     .filterNot(_.isBlank) // empty lines
-    .map { it =>
+    .flatMap { it =>
       if it.matches("^[ ]*@.*")
       then // Scala
-        Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2"))
-      else // Pi
-        parseAll(equation, it) match
-          case Success(result, _) => Right(result)
-          case failure: NoSuccess => scala.sys.error(failure.msg)
+        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+      else // PolyadicPi
+        parseAll(line, it) match
+          case Success(Left(equation), _) =>
+            eqtn :+= equation
+            Some(Right(equation))
+          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
+            defn(code) = definition
+            None
+          case failure: NoSuccess =>
+            scala.sys.error(failure.msg)
     }
     .toList
