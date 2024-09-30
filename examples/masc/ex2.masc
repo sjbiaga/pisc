@@ -1,9 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = ν(w) w [ ν(n, p, m) ( n [ m [ (q). q.        \
-                                   | <out n. in p>  \
-                                   ]                \
-                               ]                    \
-                           | p [ open m. ]          \
-                           )                        \
-              ]
+Main = ν(w) w[ ν(n, p, m) ( n[ m[ (q). q.        \
+                                | <out n, in p>  \
+                                ]                \
+                             ]                   \
+                          | p[ open m. ]         \
+                          )                      \
+             ]

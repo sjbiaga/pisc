@@ -30,6 +30,8 @@ package masc
 
 import java.util.UUID
 
+import scala.collection.mutable.{ ListBuffer => MutableList }
+
 import scala.meta._
 import dialects.Scala3
 
@@ -37,6 +39,8 @@ import parser.Ambient._
 import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
+
+import scala.util.parsing.combinator.masc.parser.Extension.rename
 
 
 object Program:
@@ -94,9 +98,9 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case `..`() =>
+        case `,.`() =>
 
-        case `..`(path*) =>
+        case `,.`(path*) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil, None)),
                          Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
@@ -147,9 +151,9 @@ object Program:
         // AMBIENT /////////////////////////////////////////////////////////////
 
         case `[]`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
+          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ par.generate))
+          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(** ++ par.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -157,9 +161,9 @@ object Program:
         // GO //////////////////////////////////////////////////////////////////
 
         case `go.`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None))) :: Nil
+          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, ** ++ par.generate))
+          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(** ++ par.generate))
 
         ////////////////////////////////////////////////////////////////// go //
 
@@ -186,6 +190,31 @@ object Program:
                   `_ <- *`(term)
 
         ////////////////////////////////////////////////////////////// output //
+
+
+        // ENCODING ////////////////////////////////////////////////////////////
+
+        case `[|]`(Encoding(_, _, _, bound), _par, Some(assign)) =>
+          val ** = assign
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+          val par = ( if bound.size == assign.size
+                      then
+                        _par
+                      else
+                        given MutableList[(String, String)]()
+                        `|`(`.`(_par, ν(bound.drop(assign.size).toSeq*))).rename
+                    )
+          * = ** ++ par.generate
+
+        case `[|]`(Encoding(_, _, _, bound), par, _) =>
+          given MutableList[(String, String)]()
+          * = `|`(`.`(par, ν(bound.toSeq*))).rename.generate
+
+        case _: `{}` => ???
+
+        //////////////////////////////////////////////////////////// encoding //
 
 
         // INVOCATION //////////////////////////////////////////////////////////

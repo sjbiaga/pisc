@@ -87,41 +87,45 @@ package object Π:
 
   object ζ:
 
-    private def remove_(node: `)*(`, tail: Set[`)*(`])
+    private def remove_(node: `)*(`, sibling: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree @ `}{`(_, _, _, siblings), heth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(siblings = siblings - node), heth))
-                    } >> remove_(node, tail.tail)
+    `][`.update { it =>
+                  val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
+                  it + (sibling -> (tree.copy(siblings = siblings - node), heth))
+                }
 
     private def remove(node: `)*(`, tree: `}{`)
                       (implicit `][`: `][`): IO[Unit] =
       val `}{`(_, root, _, siblings) = tree
       `][`.update { it =>
-                    val (tree @ `}{`(_, _, children, _), reth) = it(root)
-                    it + (root -> (tree.copy(children = children - node), reth))
-                  } >> remove_(node, siblings)
+                    val (rtree, reth) = it(root)
+                    it + (root -> (rtree.copy(children = siblings), reth))
+                  } >> ( if siblings.isEmpty
+                         then IO.cede
+                         else NonEmptyList
+                                .fromList(siblings.toList)
+                                .get
+                                .traverse(remove_(node, _))
+                                .void
+                       )
 
-    private def insert_(node: `)*(`, tail: Set[`)*(`])
+    private def insert_(node: `)*(`, child: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree @ `}{`(_, _, _, siblings), heth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(siblings = siblings + node), heth))
-                    } >> insert_(node, tail.tail)
+      `][`.update { it =>
+                    val (tree @ `}{`(_, _, _, siblings), heth) = it(child)
+                    it + (child -> (tree.copy(siblings = siblings + node), heth))
+                  }
 
     private def insert(node: `)*(`, root: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
       for
         tree <- `][`.modify { it => it -> it(root)._1 }
-        _    <- insert_(node, tree.children)
+        _    <- if tree.children.isEmpty
+                then IO.cede
+                else NonEmptyList
+                       .fromList(tree.children.toList).get
+                       .traverse(insert_(node, _))
+                       .void
         _    <- `][`.update { it =>
                               val (ntree, neth) = it(node)
                               val (rtree @ `}{`(_, _, children, _), reth) = it(root)
@@ -131,54 +135,70 @@ package object Π:
       yield
         ()
 
-    private def update_(root: `)*(`, join: `)*(`, tail: Set[`)*(`])
+    private def update_(root: `)*(`, join: `)*(`, sibling: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree @ `}{`(_, _, _, siblings), heth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(siblings = siblings - root + join), heth))
-                    } >> update_(root, join, tail.tail)
+      `][`.update { it =>
+                    val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
+                    it + (sibling -> (tree.copy(siblings = siblings - root + join), heth))
+                  }
 
     private def update(temp: `}{`, root: `)*(`, join: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
       `][`.update { it =>
                     val (tree @ `}{`(_, _, children, _), reth) = it(temp.root)
                     it + (temp.root -> (tree.copy(children = children - root + join), reth))
-                  } >> update_(root, join, temp.siblings)
+                  } >> ( if temp.siblings.isEmpty
+                         then IO.cede
+                         else NonEmptyList
+                                .fromList(temp.siblings.toList)
+                                .get
+                                .traverse(update_(root, join, _))
+                                .void
+                       )
 
-    private def merge_(join: `)*(`, tail: Set[`)*(`])
+    private def merge_(join: `)*(`, node: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree, heth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(root = join), heth))
-                    } >> merge_(join, tail.tail)
+      `][`.update { it =>
+                    val (tree, heth) = it(node)
+                    it + (node -> (tree.copy(root = join), heth))
+                  }
 
-    private def merge__(siblings: Set[`)*(`], tail: Set[`)*(`])
+    private def merge__(siblings: Set[`)*(`], node: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree, heth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(siblings = siblings ++ tree.siblings), heth))
-                    } >> merge__(siblings, tail.tail)
+      `][`.update { it =>
+                    val (tree, heth) = it(node)
+                    it + (node -> (tree.copy(siblings = tree.siblings ++ siblings), heth))
+                  }
 
     private def merge(tree: `}{`, join: `)*(`)
                      (implicit `][`: `][`): IO[Unit] =
+      val children = tree.children ++ tree.siblings
       `][`.update { it =>
                     val (temp, jeth) = it(join)
-                    it + (join -> (temp.copy(children = tree.children ++ tree.siblings), jeth))
-                  } >> merge_(join, tree.children ++ tree.siblings)
-                    >> merge__(tree.children, tree.siblings)
-                    >> merge__(tree.siblings, tree.children)
+                    it + (join -> (temp.copy(children = children), jeth))
+                  } >> ( if children.isEmpty
+                         then IO.cede
+                         else NonEmptyList
+                                .fromList(children.toList)
+                                .get
+                                .traverse(merge_(join, _))
+                                .void
+                       )
+                    >> ( if tree.siblings.isEmpty
+                         then IO.cede
+                         else NonEmptyList
+                                .fromList(tree.siblings.toList)
+                                .get
+                                .traverse(merge__(tree.children, _))
+                                .void
+                       )
+                    >> ( if tree.children.isEmpty
+                         then IO.cede
+                         else NonEmptyList
+                                .fromList(tree.children.toList).get
+                                .traverse(merge__(tree.siblings, _))
+                                .void
+                       )
 
     private def ether(lhs: ><, rhs: ><): IO[><] =
       val min = lhs.queue.size min rhs.takers.size
@@ -195,7 +215,7 @@ package object Π:
     def apply(`)(`: IOLocal[`)(`])(caps: ζ)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] = caps match
 
-      case ζ(Some(op), Left(_amb), next) => {
+      case ζ(Some(op), Left(_amb), next) =>
 
         val amb = try _amb.ζ.amb.right.get catch _ => _amb
 
@@ -213,7 +233,7 @@ package object Π:
                                        it -> !tree.siblings.exists(it(_)._1.amb eq amb)
                                      }
               _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else
+                         else {
                            for
                              (node, root, tree) <- `][`.modify { it =>
                                                                  val key = it.keys.find(_.contains(node)).get
@@ -226,6 +246,7 @@ package object Π:
                              _                  <- `1`.release
                            yield
                              ()
+                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
             yield
               ()
 
@@ -239,7 +260,7 @@ package object Π:
                                        it -> (it(tree.root)._1.amb ne amb)
                                      }
               _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else
+                         else {
                            for
                              (node, root, tree) <- `][`.modify { it =>
                                                                  val key = it.keys.find(_.contains(node)).get
@@ -251,6 +272,7 @@ package object Π:
                              _                  <- `1`.release
                            yield
                              ()
+                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
             yield
               ()
 
@@ -264,7 +286,7 @@ package object Π:
                                        it -> !tree.children.exists(it(_)._1.amb eq amb)
                                      }
               _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else
+                         else {
                            for
                              (root, (temp, reth), node, (tree, neth)) <- `][`.modify { it =>
                                                                                        val key = it.keys.find(_.contains(root)).get
@@ -286,10 +308,9 @@ package object Π:
                              _                                        <- `1`.release
                            yield
                              ()
+                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
             yield
               ()
-
-      } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
       case ζ(Some(_), _, _) => ??? // impossible by syntax
 
@@ -299,10 +320,10 @@ package object Π:
 
       case _ => ???
 
-    def apply(`)(`: IOLocal[`)(`], amb: `)(`)
+    def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+      val amb = try _amb.ζ.amb.right.get catch _ => _amb
       for
-        amb     <- IO { try amb.ζ.amb.right.get catch _ => amb }
         _       <- `1`.acquire
         root    <- `)(`.get
         blocked <- `][`.modify { it =>
@@ -340,16 +361,12 @@ package object Π:
                         siblings: Set[`)*(`])
 
   object `}{`:
-    private def apply_(node: `)*(`, tail: Set[`)*(`])
+    private def apply_(node: `)*(`, child: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
-      if tail.isEmpty
-      then
-        IO.cede
-      else
-        `][`.update { it =>
-                      val (tree @ `}{`(_, _, _, siblings), ceth) = it(tail.head)
-                      it + (tail.head -> (tree.copy(siblings = siblings + node), ceth))
-                    } >> apply_(node, tail.tail)
+      `][`.update { it =>
+                    val (tree @ `}{`(_, _, _, siblings), ceth) = it(child)
+                    it + (child -> (tree.copy(siblings = siblings + node), ceth))
+                  }
 
     def apply(`)(`: IOLocal[`)(`], amb: `)(`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
@@ -367,7 +384,15 @@ package object Π:
                                   (it + (node -> (`}{`(amb, key, Set.empty, children), neth))
                                       + (key  -> (tree.copy(children = children + node), reth))) -> children
                                 }
-        _        <- apply_(node, children)
+        _        <- if (children.isEmpty)
+                    then
+                      IO.cede
+                    else
+                      NonEmptyList
+                        .fromList(children.toList)
+                        .get
+                        .traverse(apply_(node, _))
+                        .void
         _        <- `1`.release
       yield
         ()

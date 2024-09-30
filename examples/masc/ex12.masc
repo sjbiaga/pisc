@@ -1,0 +1,63 @@
+# -*- indent-tabs-mode: nil; -*-
+
+[99| 'n ==> 'P || 'm ==> 'Q |99] = ν(p, q, r)                               \
+                                 ( p[ in n, out n. q[ out p, open r. P ] ]  \
+                                 | p[ in m, out m. q[ out p, open r. Q ] ]  \
+                                 | open q. | r[]                            \
+                                 )
+
+[0| x Zero x |0](zero) = zero[]
+
+[1| 'N + i |1](succ, op) = succ[ open op. | N ]
+
+One(zero, succ, op) = [1| [0| Zero |0] + _ |1]
+
+[2| x IfZero 'P Else 'Q |2](zero, succ) = [99| zero ==> P || succ ==> Q |99]
+
+[10| x inczero 'P |10](zero, succ, op) = open zero. ( One(zero, succ, op) | P )
+
+[11| x incsucc 'P |11](succ, op) = ν(p, q)                                                                     \
+                                 ( p[ succ[ open op. ] ] | open q, open p. P                                   \
+                                 | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
+                                 )
+
+[101| x inc 'P |101](zero, succ, op) = [2| IfZero [10| inczero P |10]    \
+                                           Else [11| incsucc P |11] |2]
+
+[110| x dec 'P |110](succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
+
+Main = ν(w) w[ ν(zero, succ, op)     \
+               ν(one, two, three) (  \
+                                  | one[ [0| Zero |0]                                          \
+                                       | [101| inc                                             \
+                                                   [2| IfZero ()                               \
+                                                       Else open succ,                         \
+                                                            open zero. τ/*println("1")*/. |2]  \
+                                                                                               \
+                                         |101]                                                 \
+                                       ]                                                       \
+                                 | two[ [0| Zero |0]                                          \
+                                      | [101| inc                                             \
+                                        [101| inc                                             \
+                                                  [2| IfZero ()                               \
+                                                      Else open succ,                         \
+                                                           open succ,                         \
+                                                           open zero. τ/*println("2")*/. |2]  \
+                                        |101]                                                 \
+                                        |101]                                                 \
+                                      ]                                                       \
+                                 | three[ [0| Zero |0]                                          \
+                                        | [101| inc                                             \
+                                          [101| inc                                             \
+                                          [101| inc                                             \
+                                                    [2| IfZero ()                               \
+                                                        Else open succ,                         \
+                                                             open succ,                         \
+                                                             open succ,                         \
+                                                             open zero. τ/*println("3")*/. |2]  \
+                                          |101]                                                 \
+                                          |101]                                                 \
+                                          |101]                                                 \
+                                        ]                                                       \
+                                 )                                                              \
+             ]

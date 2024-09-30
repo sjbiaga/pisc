@@ -1,3 +1,3 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = ν(w) w [ (n). n. n. n. | ν(m) ( <open m> | m [ m [ m [ ] ] ] ) ]
+Main = ν(w) w[ (n). n, n, n. | ν(m) ( <open m> | m[ m[ m[] ] ] ) ]

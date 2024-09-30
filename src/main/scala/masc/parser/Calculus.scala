@@ -29,24 +29,50 @@
 package masc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
+
+import scala.meta.{ Enumerator, Term }
+
 import scala.util.parsing.combinator._
 
 import Ambient._
 import Calculus._
 
-import scala.meta.{ Enumerator, Term }
+import scala.util.parsing.combinator.masc.parser.Extension.rename
 
 
 class Calculus extends Ambient:
 
+  def line: Parser[Either[Bind, Define]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
+
   def equation: Parser[Bind] =
     agent(true)~"="~parallel ^^ {
-      case (bind, bound) ~ _ ~ (par, free)
-        if (free &~ bound).nonEmpty =>
-        throw EquationFreeNamesException(bind.identifier, free &~ bound)
+      case (bind, binding) ~ _ ~ (par, free)
+        if (free &~ binding).nonEmpty =>
+        throw EquationFreeNamesException(bind.identifier, free &~ binding)
       case (bind, _) ~ _ ~ (par, _) =>
         bind -> par.flatten
+    }
+
+  def definition: Parser[Define] =
+    encoding ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ~"="~ parallel ^^ {
+      case (code, term, binding1) ~ binding2 ~ _bound ~ _ ~ (_par, _free) =>
+        val par = _par.flatten
+        val free = (_free ++ par.capitals)
+          .filterNot { it =>
+            it.charAt(0).isUpper &&
+            eqtn.exists { case (`(*)`(`it`, _), _) => true case _ => false }
+          }
+        val binding = binding2
+          .map(binding1 ++ _.map(_._2).reduce(_ ++ _))
+          .getOrElse(binding1)
+        val bound = _bound.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        if (free &~ (binding ++ bound)).nonEmpty
+        then
+          throw DefinitionFreeNamesException(code, free &~ (binding ++ bound))
+        val const = binding2.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        Encoding(code, term, const, bound) -> par
     }
 
   def parallel: Parser[(`|`, Names)] =
@@ -62,10 +88,10 @@ class Calculus extends Ambient:
         `.`(∅, pre._1*) -> pre._2._2 // void
     }
 
-  def leaf: Parser[(`-`, Names)] = agent() |
+  def leaf: Parser[(`-`, Names)] =
     "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
-      case Some((it, bound)) ~ (par, free) =>
-        `!`(Some(it), par) -> (free &~ bound)
+      case Some((it, binding)) ~ (par, free) =>
+        `!`(Some(it), par) -> (free &~ binding)
       case None ~ (par, free) =>
         `!`(None, par) -> free
     } |
@@ -84,24 +110,47 @@ class Calculus extends Ambient:
     "go" ~> name ~ ("."~> parallel) ^^ { // objective move
       case (amb, name) ~ (par, free) =>
         `go.`(amb, par) -> (name ++ free)
+    } |
+    IDENT ~ ("{"~>rep1sep(name, ",")<~"}") ^^ { // pointed values
+      case id ~ pointers =>
+        `{}`(id, pointers.map(_._2).reduce(_ ++ _)) -> Names()
+    } |
+    agent() | // invocation
+    expansion
+
+  def expansion: Parser[(`[|]`, Names)] =
+    regexMatch("""\[(\d*)\|""".r) >> { m =>
+      val grp1 = m.group(1)
+      val code = if grp1.isEmpty then 0 else grp1.toInt
+      (expand(defn(code), s"|$grp1]") <~ s"|$grp1]") ~ opt( ("{"~>rep1sep(name, ",")<~"}") )
+    } ^^ {
+      case (it @ `[|]`(Encoding(_, _, const, bound), _, _), free) ~ Some(_pointers) =>
+        val pointers = _pointers.map(_._2).reduce(_ ++ _)
+        val assign = bound zip pointers
+        given MutableList[(String, String)]()
+        it.copy(assign = Some(assign)).rename -> (free ++ const)
+      case (it @ `[|]`(Encoding(_, _, const, _), _, _), free) ~ _ =>
+        it -> (free ++ const)
     }
+
+  def expand(it: Define, end: String): Parser[(`[|]`, Names)] = ???
 
   def prefixes: Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
-      val bound = ps.map(_._2._1)
+      val binding = ps.map(_._2._1)
       val free = ps.map(_._2._2)
         .zipWithIndex
         .foldLeft(Names()) { case (r, (ns, i)) =>
           ns.foldLeft(r) {
             case (r, n)
               if {
-                val j = bound.indexWhere(_.contains(n))
+                val j = binding.indexWhere(_.contains(n))
                 j < 0 || i <= j
               } => r + n
             case (r, _) => r
           }
         }
-      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
+      ps.map(_._1) -> (if binding.nonEmpty then binding.reduce(_ ++ _) else Names(), free)
     }
 
   def prefix: Parser[(Pre, (Names, Names))] =
@@ -116,23 +165,23 @@ class Calculus extends Ambient:
     } |
     caps <~ "." ^^ { // capability action
       case (path, free) =>
-      `..`(path*) -> (Names(), free)
+        `,.`(path*) -> (Names(), free)
     } |
     ("("~>name<~")") ~ opt( expression ) <~ "." ^^ { // input action
       case _ ~ Some((Left(enums), _)) =>
         throw TermParsingException(enums)
-      case (name, bound) ~ Some((Right(it), free2)) =>
-        `()`(Some(it), name) -> (bound, free2)
-      case (name, bound) ~ _ =>
-        `()`(None, name) -> (bound, Names())
+      case (name, binding) ~ Some((Right(it), free2)) =>
+        `()`(Some(it), name) -> (binding, free2)
+      case (name, binding) ~ _ =>
+        `()`(None, name) -> (binding, Names())
     }
 
   def agent(binding: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>repsep(name, ",")<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
       case qual ~ id ~ Some(params) =>
-        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).foldLeft(Set.empty)(_ ++ _)
+        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ id ~ _ =>
         `(*)`(id, qual) -> Names()
     }
@@ -157,6 +206,12 @@ class Calculus extends Ambient:
 object Calculus:
 
   type Bind = (`(*)`, `|`)
+
+  type Define = (Encoding, `|`)
+
+  case class Encoding(code: Int, term: Term, const: Names, bound: Names):
+    override def toString: String =
+      if code == 0 then s"[| $term |]" else s"[$code| $term |$code]"
 
   sealed trait AST extends Any
 
@@ -186,14 +241,14 @@ object Calculus:
   case class τ(code: Option[Either[List[Enumerator], Term]]) extends AnyVal with Pre:
     override def toString: String = "τ."
 
-  case class `..`(path: Ambient.AST*) extends Pre:
-    override def toString: String = path.mkString("", ". ", ".")
+  case class `,.`(path: Ambient.AST*) extends Pre:
+    override def toString: String = path.mkString("", ", ", ".")
 
   case class `()`(code: Option[Term], name: String) extends Pre:
     override def toString: String = s"($name)."
 
   case class `<>`(code: Option[Term], path: Ambient.AST*) extends AST:
-    override def toString: String = path.mkString("<", ". ", ">")
+    override def toString: String = path.mkString("<", ", ", ">")
 
   case class `!`(guard: Option[String], par: `|`) extends AST:
     override def toString: String = "!" + guard.map("." + _).getOrElse("") + par
@@ -203,6 +258,16 @@ object Calculus:
 
   case class `go.`(amb: String, par: `|`) extends AST:
     override def toString: String = "go " + amb + "." + par
+
+  case class `[|]`(encoding: Encoding,
+                   par: `|`,
+                   assign: Option[Set[(String, String)]] = None) extends AST:
+    override def toString: String =
+      s"""$encoding${assign.map{_.map(_ + "->" + _).mkString("{", ", ", "}")}.getOrElse("")} = $par"""
+
+  case class `{}`(identifier: String,
+                  pointers: Names) extends AST:
+    override def toString: String = s"""$identifier{${pointers.mkString(", ")}}"""
 
   case class `(*)`(identifier: String,
                    qual: List[String],
@@ -222,6 +287,9 @@ object Calculus:
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
+
+  case class DefinitionFreeNamesException(code: Int, free: Names)
+      extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code")
 
   import scala.meta.Enumerator
 
@@ -271,4 +339,36 @@ object Calculus:
         case `go.`(amb, par) =>
           `go.`(amb, par.flatten)
 
+        case `[|]`(encoding, par, assign) =>
+          `[|]`(encoding, par.flatten, assign)
+
         case _ => ast
+
+    def capitals: Names =
+
+      ast match
+
+        case `∅` => Set.empty
+
+        case `|`(it*) => it.map(_.capitals).reduce(_ ++ _)
+
+        case `.`(end, _*) =>
+          end.capitals
+
+        case `!`(_, par) =>
+          par.capitals
+
+        case `[]`(_, par) =>
+          par.capitals
+
+        case `go.`(_, par) =>
+          par.capitals
+
+        case `[|]`(_, par, _) =>
+          par.capitals
+
+        case `{}`(id, _) => Set(id)
+
+        case `(*)`(id, Nil) => Set(id)
+
+        case _ => Set.empty

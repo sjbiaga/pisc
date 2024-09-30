@@ -38,15 +38,20 @@ and objective move.
 
 The BNF formal grammar for processes is the following.
 
+    LINE       ::= EQUATION | DEFINITION
+    DEFINITION ::= "[" [ NUMBER ] "|" TEMPLATE "|" [ NUMBER ] "]" "=" CHOICE
     EQUATION   ::= AGENT "=" PARALLEL
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
-    LEAF       ::= AGENT
-                 | "!" [ "." "(" NAME ")" "." ] PARALLEL
+    LEAF       ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
                  | NAME "[" PARALLEL "]"
                  | "<" CAPS ">" [ EXPRESSION ]
                  | "go" NAME "." PARALLEL
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
+                 | IDENTIFIER "{" NAMES "}"
+                 | AGENT
+                 | EXPANSION
+    EXPANSION  ::= "[" [ NUMBER ] "|" EXPAND "|" [ NUMBER ] "]"
+    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
@@ -60,7 +65,7 @@ The BNF formal grammar for prefixes is the following.
 
 The BNF formal grammar for capabilities is the following.
 
-    CAPS       ::= CAPABILITY { "." CAPABILITY }
+    CAPS       ::= CAPABILITY { "," CAPABILITY }
     CAPABILITY ::= "ε"
                  | ( "in" | "out" | "open" ) NAME
                  | NAME
