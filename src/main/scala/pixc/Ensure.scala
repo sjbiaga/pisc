@@ -69,176 +69,191 @@ object Ensure:
       }
     else -1
 
-  /**
-    * When an existing invocation is found on the reachability graph:
-    * - all definitions up to its definition are marked as recursive;
-    * - if there is a replication up to its definition, the number of
-    *   recursive replications is incremented.
-    */
-  def recursive(ast: AST)
-               (using stack: List[(String, Int)])
-               (using rec: Map[(String, Int), Int])
-               (using rep: Map[Int, Int])
-               (using prog: List[Bind])
-               (implicit repl: Int = 0): Unit =
+  extension(ast: AST)
 
-    ast match
-
-      case `∅` =>
-
-      case `+`(_, it*) =>
-       it.foldLeft(())((_, par) => recursive(par))
-
-      case `|`(it*) =>
-       it.foldLeft(())((_, seq) => recursive(seq))
-
-      case `.`(end, it*) =>
-        it.foldLeft(recursive(end)) {
-          case (_, χ(_, Some(sum), _)) => recursive(sum)
-          case _ =>
-        }
-
-      case `?:`(_, t, f) =>
-        recursive(t)
-        recursive(f)
-
-      case `!`(_, sum) =>
-        recursive(sum)(stack.size)
-
-      case `[]`(_, sum) =>
-        recursive(sum)
-
-      case it @ `(*)`(id, params*)
-          if stack.contains(id -> params.size) =>
-        val k = stack.lastIndexOf(id -> params.size)
-        for
-          j <- k until stack.size
-          i = index2(prog)(stack(j))
-          sign = prog(i)._1.identifier -> prog(i)._1.params.size
-        do
-          if !rec.contains(sign)
-          then
-            rec(sign) = i+1
-          if k < repl
-          then
-            if !rep.contains(i)
-            then
-              rep(i) = 0
-            rep(i) += 1
-
-      case `(*)`(id, params*) =>
-        val i = index2(prog)(id -> params.size)
-        recursive(prog(i)._2)(using stack :+ id -> params.size)
-
-  /**
-    * Called for "Main".
-    */
-  def replication(ast: AST)
-                 (using stack: List[(String, Int)])
+    /**
+      * When an existing invocation is found on the reachability graph:
+      * - all definitions up to its definition are marked as recursive;
+      * - if there is a replication up to its definition, the number of
+      *   recursive replications is incremented.
+      */
+    def recursive(using stack: List[(String, Int)])
                  (using rec: Map[(String, Int), Int])
+                 (using rep: Map[Int, Int])
                  (using prog: List[Bind])
-                 (implicit repl: Boolean = false): Boolean =
+                 (implicit repl: Int = 0): Unit =
 
-    ast match
+      ast match
 
-      case `∅` => true
+        case `∅` =>
 
-      case `+`(_, it*) =>
-       it.foldLeft(true) {
-         case (false, _) => false
-         case (_, par) => replication(par)
-       }
+        case `+`(_, it*) =>
+         it.foldLeft(())((_, par) => par.recursive)
 
-      case `|`(it*) =>
-       it.foldLeft(true) {
-         case (false, _) => false
-         case (_, seq) => replication(seq)
-       }
+        case `|`(it*) =>
+         it.foldLeft(())((_, seq) => seq.recursive)
 
-      case `.`(end, it*) =>
-        if it
-          .exists {
-            case χ(_, Some(_), _) => true
-            case _ => false
-          } && repl
-        then
-          false
-        else
-          it.foldLeft(replication(end)) {
-            case (false, _) => false
-            case (_, χ(_, Some(sum), _)) => replication(sum)
-            case _ => true
+        case `.`(end, it*) =>
+          it.foldLeft(end.recursive) {
+            case (_, χ(_, Some(sum), _)) => sum.recursive
+            case _ =>
           }
 
-      case `?:`(_, t, f) =>
-        replication(t) && replication(f)
+        case `?:`(_, t, f) =>
+          t.recursive
+          f.recursive
 
-      case `!`(_, sum) =>
-        replication(sum)(true)
+        case `!`(_, sum) =>
+          sum.recursive(stack.size)
 
-      case `[]`(_, sum) =>
-        replication(sum)
+        case `[|]`(_, sum, _) =>
+          sum.recursive
 
-      case `(*)`(id, params*)
-          if stack.contains(id -> params.size) => true
+        case `[]`(_, sum) =>
+          sum.recursive
 
-      case `(*)`(id, params*) =>
-        val i = rec(id -> params.size)
-        val sum = prog(i.abs-1)._2
-        replication(sum)(using id -> params.size :: stack)
+        case _: `{}` => ???
 
-  /**
-    * Called only for recursive agents.
-    */
-  def recursion(ast: AST)
-                (using stack: List[(String, Int)])
-                (using rec: Map[(String, Int), Int])
-                (using prog: List[Bind]): Boolean =
+        case it @ `(*)`(id, params*)
+            if stack.contains(id -> params.size) =>
+          val k = stack.lastIndexOf(id -> params.size)
+          for
+            j <- k until stack.size
+            i = index2(prog)(stack(j))
+            sign = prog(i)._1.identifier -> prog(i)._1.params.size
+          do
+            if !rec.contains(sign)
+            then
+              rec(sign) = i+1
+            if k < repl
+            then
+              if !rep.contains(i)
+              then
+                rep(i) = 0
+              rep(i) += 1
 
-    ast match
+        case `(*)`(id, params*) =>
+          val i = index2(prog)(id -> params.size)
+          val sum = prog(i)._2
+          sum.recursive(using stack :+ id -> params.size)
 
-      case `∅` => true
+    /**
+      * Called for "Main".
+      */
+    def replication(using stack: List[(String, Int)])
+                   (using rec: Map[(String, Int), Int])
+                   (using prog: List[Bind])
+                   (implicit repl: Boolean = false): Boolean =
 
-      case `+`(_, it*) =>
-       it.foldLeft(true) {
-         case (false, _) => false
-         case (_, par) => recursion(par)
-       }
+      ast match
 
-      case `|`(it*) =>
-       it.foldLeft(true) {
-         case (false, _) => false
-         case (_, seq) => recursion(seq)
-       }
+        case `∅` => true
 
-      case `.`(end, it*) =>
-        if it
-          .exists {
-            case χ(_, Some(_), _) => true
-            case _ => false
-          }
-        then
-          false
-        else
-          it.foldLeft(recursion(end)) {
-            case (false, _) => false
-            case (_, χ(_, Some(sum), _)) => recursion(sum)
-            case _ => true
-          }
+        case `+`(_, it*) =>
+         it.foldLeft(true) {
+           case (false, _) => false
+           case (_, par) => par.replication
+         }
 
-      case `?:`(_, t, f) =>
-        recursion(t) && recursion(f)
+        case `|`(it*) =>
+         it.foldLeft(true) {
+           case (false, _) => false
+           case (_, seq) => seq.replication
+         }
 
-      case `!`(_, sum) =>
-        recursion(sum)
+        case `.`(end, it*) =>
+          if it
+            .exists {
+              case χ(_, Some(_), _) => true
+              case _ => false
+            } && repl
+          then
+            false
+          else
+            it.foldLeft(end.replication) {
+              case (false, _) => false
+              case (_, χ(_, Some(sum), _)) => sum.replication
+              case _ => true
+            }
 
-      case `[]`(_, sum) =>
-        recursion(sum)
+        case `?:`(_, t, f) =>
+          t.replication && f.replication
 
-      case `(*)`(id, params*)
-          if stack.contains(id -> params.size) => true
+        case `!`(_, sum) =>
+          sum.replication(true)
 
-      case `(*)`(id, params*) =>
-        val i = rec(id -> params.size)
-        val sum = prog(i.abs-1)._2
-        recursion(sum)(using id -> params.size :: stack)
+        case `[|]`(_, sum, _) =>
+          sum.replication
+
+        case `[]`(_, sum) =>
+          sum.replication
+
+        case _: `{}` => ???
+
+        case `(*)`(id, params*)
+            if stack.contains(id -> params.size) => true
+
+        case `(*)`(id, params*) =>
+          val i = rec(id -> params.size)
+          val sum = prog(i.abs-1)._2
+          sum.replication(using id -> params.size :: stack)
+
+    /**
+      * Called only for recursive agents.
+      */
+    def recursion(using stack: List[(String, Int)])
+                 (using rec: Map[(String, Int), Int])
+                 (using prog: List[Bind]): Boolean =
+
+      ast match
+
+        case `∅` => true
+
+        case `+`(_, it*) =>
+         it.foldLeft(true) {
+           case (false, _) => false
+           case (_, par) => par.recursion
+         }
+
+        case `|`(it*) =>
+         it.foldLeft(true) {
+           case (false, _) => false
+           case (_, seq) => seq.recursion
+         }
+
+        case `.`(end, it*) =>
+          if it
+            .exists {
+              case χ(_, Some(_), _) => true
+              case _ => false
+            }
+          then
+            false
+          else
+            it.foldLeft(end.recursion) {
+              case (false, _) => false
+              case (_, χ(_, Some(sum), _)) => sum.recursion
+              case _ => true
+            }
+
+        case `?:`(_, t, f) =>
+          t.recursion && f.recursion
+
+        case `!`(_, sum) =>
+          sum.recursion
+
+        case `[|]`(_, sum, _) =>
+          sum.recursion
+
+        case `[]`(_, sum) =>
+          sum.recursion
+
+        case _: `{}` => ???
+
+        case `(*)`(id, params*)
+            if stack.contains(id -> params.size) => true
+
+        case `(*)`(id, params*) =>
+          val i = rec(id -> params.size)
+          val sum = prog(i.abs-1)._2
+          sum.recursion(using id -> params.size :: stack)

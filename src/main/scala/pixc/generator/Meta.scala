@@ -262,6 +262,9 @@ object Meta:
               )
             )
 
+  def `( * ).parMap1 { (_, …) => }`(* : Term): Term =
+    `( *, … ).parMapN { (_, …) => }`(`IO.cede`, *)
+
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
     Term.If(*, `…`(0), `…`(1), Nil)

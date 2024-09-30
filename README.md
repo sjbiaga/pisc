@@ -37,17 +37,22 @@ prefixes per se.
 
 The BNF formal grammar for processes is the following.
 
+    LINE       ::= EQUATION | DEFINITION
     EQUATION   ::= AGENT "=" CHOICE
+    DEFINITION ::= "[" [ NUMBER ] "|" TEMPLATE "|" [ NUMBER ] "]" "=" CHOICE
     CHOICE     ::= PARALLEL { "+" PARALLEL }
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    LEAF       ::= AGENT
-                 | "[" NAME ("="|"≠") NAME "]" CHOICE
+    LEAF       ::= "[" NAME ("="|"≠") NAME "]" CHOICE
                  | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                  | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                  | "!" [ "." μ "." ] CHOICE
+                 | IDENTIFIER "{" NAMES "}"
+                 | AGENT
+                 | EXPANSION
                  | trans "[" CHOICE "]"
-    AGENT      ::= IDENTIFIER [ "(" ")" | "(" NAMES ")" ]
+    EXPANSION  ::= "[" [ NUMBER ] "|" EXPAND "|" [ NUMBER ] "]"
+    AGENT      ::= IDENTIFIER [ "(" NAMES ")" ]
 
 
 The BNF formal grammar for prefixes is the following.

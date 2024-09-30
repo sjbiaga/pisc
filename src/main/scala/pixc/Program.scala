@@ -286,6 +286,23 @@ object Program:
         ///////////////////////////////////////////////////////// replication //
 
 
+        // ENCODING ////////////////////////////////////////////////////////////
+
+        case `[|]`(_, sum, Some(assign)) =>
+          val ** = assign
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+          * = ** ++ sum.generate
+
+        case `[|]`(_, sum, _) =>
+         * = sum.generate
+
+        case _: `{}` => ???
+
+        //////////////////////////////////////////////////////////// encoding //
+
+
         // INVOCATION //////////////////////////////////////////////////////////
 
         case `(*)`(identifier, params*) =>
@@ -307,7 +324,7 @@ object Program:
         // TRANSACTION /////////////////////////////////////////////////////////
 
         case `[]`(name, `+`(_, it)) =>
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `* <- χ; _ <- }{()(, *)`(name) ++ it.generate))
+          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name) ++ it.generate))
 
         case _: `[]` => ??? // zero or more - caught by parser
 
@@ -319,12 +336,12 @@ object Program:
     val sem = id
 
     val ios1 = `_ <- *`(`π-disable`(xa.uuid, xa.sum.get.enabled)) :: xa.sum.get.generate
-    val ios2 = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`IO.cede`, `_ <- }{()(, *)`(xa.name) ++ ios)) :: Nil
+    val ios2 = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`_ <- }{()(, *)`(xa.name) ++ ios))
 
     `* <- Semaphore[IO](1)`(sem) ::
     `* <- *`(xa.name -> "χ") ::
     `_ <- *`(`( *, … ).parMapN { (_, …) => }`(`tryAcquire.ifM`(sem, ios1),
-                                              `tryAcquire.ifM`(sem, ios2))) :: Nil
+                                              `tryAcquire.ifM`(sem, ios2)))
 
 
   def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
