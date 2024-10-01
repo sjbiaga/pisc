@@ -57,7 +57,7 @@ class Calculus extends StochasticPi:
 
   def definition: Parser[Define] =
     encoding ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ~"="~ choice ^^ {
-      case (code, term, binding1) ~ binding2 ~ _bound ~ _ ~ (_sum, _free) =>
+      case (term, binding1) ~ binding2 ~ _bound ~ _ ~ (_sum, _free) =>
         val sum = _sum.flatten
         val free = (_free ++ sum.capitals)
           .filterNot { case Symbol(it) =>
@@ -72,6 +72,9 @@ class Calculus extends StochasticPi:
         then
           throw DefinitionFreeNamesException(code, free &~ (binding ++ bound))
         val const = binding2.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        if !binding1.exists(_.name.charAt(0).isUpper)
+        then
+          eqtn :+= `(*)`("Self_" + code, (binding1 ++ const ++ bound).map(λ(_)).toSeq*) -> sum
         Encoding(code, term, const, bound) -> sum
     }
 
@@ -175,9 +178,23 @@ class Calculus extends StochasticPi:
     IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
       case id ~ Some(params) if binding && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
+      case "Self" ~ Some(params) =>
+        self += code
+        `(*)`("Self_" + code, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+      case "Self" ~ _ =>
+        self += code
+        `(*)`("Self_" + code) -> Names()
       case id ~ Some(params) =>
+        id match
+          case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
+            self += n.toInt
+          case _ =>
         `(*)`(id, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case id ~ _ =>
+        id match
+          case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
+            self += n.toInt
+          case _ =>
         `(*)`(id) -> Names()
     }
 
