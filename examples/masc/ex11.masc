@@ -8,13 +8,13 @@
 
 [0| x Zero x |0](zero) = zero[]
 
-[1| 'N + i |1](succ, op) = succ[ open op. | N ]
+[1| 'N + x `1` x |1](succ, op) = succ[ open op. | N ]
 
-One(zero, succ, op) = [1| [0| Zero |0] + _ |1]
+[3| x `1` x |3](zero, succ, op) = [1| [0| Zero |0] + 1 |1]
 
 [2| x IfZero 'P Else 'Q |2](zero, succ) = [99| zero ==> P || succ ==> Q |99]
 
-[10| x inczero 'P |10](zero, succ, op) = open zero. ( One(zero, succ, op) | P )
+[10| x inczero 'P |10](zero, succ, op) = open zero. ( [3| 1 |3] | P )
 
 [11| x incsucc 'P |11](succ, op) = ν(p, q)                                                                     \
                                  ( p[ succ[ open op. ] ] | open q, open p. P                                   \
@@ -26,8 +26,8 @@ One(zero, succ, op) = [1| [0| Zero |0] + _ |1]
 
 [110| x dec 'P |110](succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
 
-Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                                       \
-                                         | z[ [0| Zero |0] | [2| IfZero τ/*println("0")*/. Else () |2] ]         \
-                                         | o[ One(zero, succ, op) | [2| IfZero () Else τ/*println("1")*/. |2] ]  \
-                                         )                                                                       \
+Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                                \
+                                         | z[ [0| Zero |0] | [2| IfZero τ/*println("0")*/. Else () |2] ]  \
+                                         | o[ [3| 1 |3] | [2| IfZero () Else τ/*println("1")*/. |2] ]     \
+                                         )                                                                \
              ]

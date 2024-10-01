@@ -57,7 +57,7 @@ class Calculus extends Ambient:
 
   def definition: Parser[Define] =
     encoding ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ~"="~ parallel ^^ {
-      case (code, term, binding1) ~ binding2 ~ _bound ~ _ ~ (_par, _free) =>
+      case (term, binding1) ~ binding2 ~ _bound ~ _ ~ (_par, _free) =>
         val par = _par.flatten
         val free = (_free ++ par.capitals)
           .filterNot { it =>
@@ -72,6 +72,9 @@ class Calculus extends Ambient:
         then
           throw DefinitionFreeNamesException(code, free &~ (binding ++ bound))
         val const = binding2.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        if !binding1.exists(_.charAt(0).isUpper)
+        then
+          eqtn :+= `(*)`("Self_" + code, Nil, (binding1 ++ const ++ bound).toSeq*) -> par
         Encoding(code, term, const, bound) -> par
     }
 
@@ -180,9 +183,23 @@ class Calculus extends Ambient:
     qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
+      case qual ~ "Self" ~ Some(params) =>
+        self += code
+        `(*)`("Self_" + code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+      case qual ~ "Self" ~ _ =>
+        self += code
+        `(*)`("Self_" + code, qual) -> Names()
       case qual ~ id ~ Some(params) =>
+        id match
+          case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
+            self += n.toInt
+          case _ =>
         `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ id ~ _ =>
+        id match
+          case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
+            self += n.toInt
+          case _ =>
         `(*)`(id, qual) -> Names()
     }
 

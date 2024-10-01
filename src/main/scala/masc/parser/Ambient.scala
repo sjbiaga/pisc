@@ -67,6 +67,7 @@ class Ambient extends Expression:
 
   private[parser] var eqtn = List[Bind]()
   private[parser] val defn = Map[Int, Define]()
+  private[parser] val self = Set[Int]()
 
 
 object Ambient extends Extension:
@@ -118,6 +119,8 @@ object Ambient extends Extension:
     ensure(prog)
 
 
+  private var i: Int = 0
+
   def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
     .foldLeft(List[String]() -> false) {
       case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
@@ -133,11 +136,19 @@ object Ambient extends Extension:
         parseAll(line, it) match
           case Success(Left(equation), _) =>
             eqtn :+= equation
-            Some(Right(equation))
+            val equations = eqtn.slice(i, eqtn.size)
+            i = eqtn.size
+            equations.map(Right(_))
           case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
             defn(code) = definition
-            None
+            Nil
           case failure: NoSuccess =>
             scala.sys.error(failure.msg)
+    }
+    .filter {
+      case Right((`(*)`(s"Self_$n", _, _*), _))
+          if { try { n.toInt; true } catch _ => false } =>
+        self.contains(n.toInt)
+      case _ => true
     }
     .toList
