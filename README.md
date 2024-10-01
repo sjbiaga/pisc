@@ -38,7 +38,7 @@ and objective move.
 The BNF formal grammar for processes is the following.
 
     LINE       ::= EQUATION | DEFINITION
-    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" CHOICE
+    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" PARALLEL
     EQUATION   ::= AGENT "=" PARALLEL
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
