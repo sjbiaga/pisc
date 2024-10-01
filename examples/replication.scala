@@ -32,8 +32,7 @@ import _root_.cats.effect.{IO, IOApp, ExitCode}
 
 object App extends IOApp:
 
-  override def run(args: List[String]): IO[ExitCode] =
-    π.Main(args*).as(ExitCode.Success)
+  override def run(args: List[String]): IO[ExitCode] = π.Main(args*).as(ExitCode.Success)
 
 object π:
 
@@ -49,13 +48,13 @@ object π:
 
   def ms = (10 + math.abs(gen.nextInt % 10)).milliseconds
 
-  def Main(args: String*): IO[Unit] = for {
+  def Main(args: String*): IO[Any] = for {
     c <- IO.ref(0)
     x <- ν
     _ <- (
       for {
-        _bf52d60b_3541_411f_92eb_99a556d9bf14 <- IO {
-          lazy val _bf52d60b_3541_411f_92eb_99a556d9bf14: IO[Unit] = (
+        _1b664c8d_7413_4e89_9fae_b6af8df5c128 <- IO {
+          lazy val _1b664c8d_7413_4e89_9fae_b6af8df5c128: IO[Unit] = (
             for {
               i <- c.get
               _ <- IO.sleep(ms)
@@ -70,16 +69,16 @@ object π:
               _ <- c.update(_ + 1 min 50)
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _bf52d60b_3541_411f_92eb_99a556d9bf14
+              _ <- _1b664c8d_7413_4e89_9fae_b6af8df5c128
             } yield ()
           ).parMapN { (_, _) => }
-          _bf52d60b_3541_411f_92eb_99a556d9bf14
+          _1b664c8d_7413_4e89_9fae_b6af8df5c128
         }
-        _ <- _bf52d60b_3541_411f_92eb_99a556d9bf14
+        _                                     <- _1b664c8d_7413_4e89_9fae_b6af8df5c128
       } yield (),
       for {
-        _691c8465_ab6e_44c2_b1f8_2e6135f78b08 <- IO {
-          lazy val _691c8465_ab6e_44c2_b1f8_2e6135f78b08: IO[Unit] = (
+        _2366970e_ce41_4259_a7c1_d35aa5c0b96c <- IO {
+          lazy val _2366970e_ce41_4259_a7c1_d35aa5c0b96c: IO[Unit] = (
             for {
               _ <- IO.sleep(ms)
               y <- x()
@@ -92,12 +91,12 @@ object π:
               _ <- IO.unit
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _691c8465_ab6e_44c2_b1f8_2e6135f78b08
+              _ <- _2366970e_ce41_4259_a7c1_d35aa5c0b96c
             } yield ()
           ).parMapN { (_, _) => }
-          _691c8465_ab6e_44c2_b1f8_2e6135f78b08
+          _2366970e_ce41_4259_a7c1_d35aa5c0b96c
         }
-        _ <- _691c8465_ab6e_44c2_b1f8_2e6135f78b08
+        _                                     <- _2366970e_ce41_4259_a7c1_d35aa5c0b96c
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()

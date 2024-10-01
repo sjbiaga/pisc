@@ -1,0 +1,45 @@
+# -*- indent-tabs-mode: nil; -*-
+
+[9| x :: 'P |9]{x} = x(y). P{y}
+[99| 'y ==> 'P |99]{x} = [x = y]P
+[999| 'y ==> 'P ||               \
+      'z ==> 'Q ||               \
+      'R                         \
+|999]{x} = if x = y then P       \
+           else if x = z then Q  \
+           else R{x}
+
+[0| x S0 x |0](s0){p}     = ν(w) p<w>. (w<s0>. | Self(s0,p))
+[1| x S1 x |1](s1){x,p}   = ν(w) p<w>. (w<s1>.w<x>. | Self(s1,x,p))
+[2| x S2 x |2](s2){x,y,p} = ν(w) p<w>. (w<s2>.w<x>.w<y>. | Self(s2,x,y,p))
+
+[10| x K0 x |10](k0){p}   = ν(w) p<w>. (w<k0>. | Self(k0,p))
+[11| x K1 x |11](k1){x,p} = ν(w) p<w>. (w<k1>.w<x>. | Self(k1,x,p))
+
+[100| x I0 x |100](i0){p}    = ν(w) p<w>. (w<i0>. | Self(i0,p))
+[101| x I1 x |101](i1){x,p} = ν(w) p<w>. (w<i1>.w<x>. | Self(i1,x,p))
+
+[3| 'x $ 'y / 'p |3](s0, s1, s2, k0, k1, i0, i1) =                                                        \
+  x(w). [9| :: [999| s0 ==> [1| S1 |1]{y,p}                                                               \
+                  || s1 ==> s1(x1). [2| S2 |2]{x1,y,p}                                                    \
+                  || [999| s2 ==> s2(x1).s2(x2). ν(p1, p2) ( Self(x1, y, p1, s0, s1, s2, k0, k1, i0, i1)  \
+                                                           | Self(x2, y, p2, s0, s1, s2, k0, k1, i0, i1)  \
+                                                           | Self(p1, p2, p, s0, s1, s2, k0, k1, i0, i1)  \
+                                                           )                                              \
+                        || k0  ==> [11| K1 |11]{y,p}                                                      \
+                        || [999| k1 ==> k1(x1). [101| I1 |101]{x1,p}                                      \
+                              || i0 ==> [101| I1 |101]{y,p}                                               \
+                              || [99| i1 ==> i1(x1). Self(x1, y, p, s0, s1, s2, k0, k1, i0, i1)           \
+                                 |99]                                                                     \
+                           |999]                                                                          \
+                     |999]                                                                                \
+               |999]                                                                                      \
+        |9]{w}
+
+M(x) =
+
+N(y) =
+
+P(z) =
+
+Main = ν(s0, s1, s2, k0, k1, i0, i1) ν(x, y, z) ( ν(p) ( ν(p1) ( [2| S2 |2]{x,y,p1} | [3| p1 $ z / p |3] ) | M(x) | N(y) | P(z) ) )
