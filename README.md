@@ -39,7 +39,7 @@ and objective move.
 The BNF formal grammar for processes is the following.
 
     LINE       ::= EQUATION | DEFINITION
-    DEFINITION ::= "[" [ NUMBER ] "|" TEMPLATE "|" [ NUMBER ] "]" "=" CHOICE
+    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" CHOICE
     EQUATION   ::= AGENT "=" PARALLEL
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
@@ -50,7 +50,7 @@ The BNF formal grammar for processes is the following.
                  | IDENTIFIER "{" NAMES "}"
                  | AGENT
                  | EXPANSION
-    EXPANSION  ::= "[" [ NUMBER ] "|" EXPAND "|" [ NUMBER ] "]"
+    EXPANSION  ::= "[<NUMBER>|" EXPAND "|<NUMBER>]"
     AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
