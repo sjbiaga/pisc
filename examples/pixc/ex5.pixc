@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(([w = y]P) | ([w = z]Q))
+[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(if w = y then P else [w = z]Q)
 
 [2| 'y Copy 'z |2](t, f) = [| y :: t ==> z<t>. || f ==> z<f>. |]
 

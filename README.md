@@ -39,7 +39,7 @@ The BNF formal grammar for processes is the following.
 
     LINE       ::= EQUATION | DEFINITION
     EQUATION   ::= AGENT "=" CHOICE
-    DEFINITION ::= "[" [ NUMBER ] "|" TEMPLATE "|" [ NUMBER ] "]" "=" CHOICE
+    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" CHOICE
     CHOICE     ::= PARALLEL { "+" PARALLEL }
     PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
@@ -51,7 +51,7 @@ The BNF formal grammar for processes is the following.
                  | AGENT
                  | EXPANSION
                  | trans "[" CHOICE "]"
-    EXPANSION  ::= "[" [ NUMBER ] "|" EXPAND "|" [ NUMBER ] "]"
+    EXPANSION  ::= "[<NUMBER>|" EXPAND "|<NUMBER>]"
     AGENT      ::= IDENTIFIER [ "(" NAMES ")" ]
 
 
