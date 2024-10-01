@@ -64,12 +64,16 @@ class Expression extends JavaTokenParsers:
 
   def regexMatch(r: Regex): Parser[Regex.Match] = ???
 
-  def encoding: Parser[(Int, Term, Names)] =
+  protected[parser] var code: Int = -1
+
+  def encoding: Parser[(Term, Names)] =
     regexMatch("""\[(\d*)\|(.*?)\|\1\]""".r) ^^ { it =>
       val code = it.group(1)
       try
         Expression(it.group(2).parse[Term].get) match
-          case (term, names) => (if code.isEmpty then 0 else code.toInt, term, names)
+          case (term, names) =>
+            Expression.this.code = if code.isEmpty then 0 else code.toInt
+            term -> names
       catch t =>
         throw ExpressionParsingException(it.group(2), t)
     }

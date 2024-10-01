@@ -323,8 +323,9 @@ object Program:
             case λ(value) =>
               value match {
                 case it: BigDecimal => s"BigDecimal($it)"
-                case it: String => s"$it"
-                case Expr(it) => s"$it"
+                case it: Boolean => it.toString
+                case it: String => it.toString
+                case Expr(it) => it.toString
               }
           }
 
