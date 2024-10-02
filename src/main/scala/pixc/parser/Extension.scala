@@ -33,11 +33,7 @@ package parser
 import java.util.regex.Pattern
 import scala.util.matching.Regex
 
-import scala.collection.mutable.{
-  HashMap => Map,
-  ListBuffer => MutableList,
-  LinkedHashSet => Set
-}
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import scala.meta.Term
 
@@ -60,8 +56,7 @@ class Extension extends Calculus:
       val start = handleWhiteSpace(source, offset)
       (r findPrefixMatchOf SubSequence(source, start)) match {
         case Some(matched) =>
-          Success(matched,
-                  in.drop(start + matched.end - offset))
+          Success(matched, in.drop(start + matched.end - offset))
         case None =>
           Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))
       }
@@ -97,9 +92,7 @@ class Extension extends Calculus:
 
                   val r = if end.isRight
                           then (null, null)
-                          else
-                            given MutableList[(String, λ)]()
-                            `[|]`(encoding, sum.bind.rename.asInstanceOf[`+`]) -> free
+                          else `[|]`(encoding, sum.bind.asInstanceOf[`+`]) -> free
                   Success(r, in.drop(start + end.map(_.length).getOrElse(0) - offset))
 
                 case failure: NoSuccess =>
@@ -151,9 +144,7 @@ class Extension extends Calculus:
 
                   val r = if end.isRight
                           then (null, null)
-                          else
-                            given MutableList[(String, λ)]()
-                            `[|]`(encoding, sum.bind.rename.asInstanceOf[`+`]) -> free
+                          else `[|]`(encoding, sum.bind.asInstanceOf[`+`]) -> free
                   Success(r, in.drop(start + n - offset))
 
                 case _ =>
@@ -244,9 +235,7 @@ class Extension extends Calculus:
                   case Some(matched) =>
                     val r = if end.isRight
                             then (null, null)
-                            else
-                              given MutableList[(String, λ)]()
-                              `[|]`(encoding, sum.bind.rename.asInstanceOf[`+`]) -> free
+                            else `[|]`(encoding, sum.bind.asInstanceOf[`+`]) -> free
                     Success(r, in.drop(start + matched.end - offset))
 
                   case _ =>
@@ -311,18 +300,18 @@ object Extension:
         case `?:`(((λ(Symbol(lhs)), λ(Symbol(rhs))), m), t, f) =>
           val lhs2 = if b.contains(lhs) then b(lhs) else λ(Symbol(lhs))
           val rhs2 = if b.contains(rhs) then b(rhs) else λ(Symbol(rhs))
-          `?:`(((lhs2, rhs2), m), t.bind.asInstanceOf[`+`], f.bind.asInstanceOf[`+`])
+          `?:`(((lhs2, rhs2), m), t.bind.asInstanceOf[`+`], f.map(_.bind.asInstanceOf[`+`]))
 
         case `?:`(((λ(Symbol(lhs)), rhs), m), t, f) =>
           val lhs2 = if b.contains(lhs) then b(lhs) else λ(Symbol(lhs))
-          `?:`(((lhs2, rhs), m), t.bind.asInstanceOf[`+`], f.bind.asInstanceOf[`+`])
+          `?:`(((lhs2, rhs), m), t.bind.asInstanceOf[`+`], f.map(_.bind.asInstanceOf[`+`]))
 
         case `?:`(((lhs, λ(Symbol(rhs))), m), t, f) =>
           val rhs2 = if b.contains(rhs) then b(rhs) else λ(Symbol(rhs))
-          `?:`(((lhs, rhs2), m), t.bind.asInstanceOf[`+`], f.bind.asInstanceOf[`+`])
+          `?:`(((lhs, rhs2), m), t.bind.asInstanceOf[`+`], f.map(_.bind.asInstanceOf[`+`]))
 
         case `?:`(cond, t, f) =>
-          `?:`(cond, t.bind.asInstanceOf[`+`], f.bind.asInstanceOf[`+`])
+          `?:`(cond, t.bind.asInstanceOf[`+`], f.map(_.bind.asInstanceOf[`+`]))
 
         case `!`(Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, _)), sum) =>
           val ch2 = if b.contains(ch) then b(ch) else λ(Symbol(ch))
@@ -366,141 +355,3 @@ object Extension:
             }
 
           `(*)`(id, qual, args*)
-
-  extension[T <: AST](ast: T)
-
-    def rename(using r: MutableList[(String, λ)]): T =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case `∅` => ∅
-
-        case `+`(it*) =>
-          `+`(it.map(_.rename)*)
-
-        case `|`(it*) =>
-          `|`(it.map(_.rename)*)
-
-        case `.`(end, _it*) =>
-          val it = _it.map {
-            case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, _) =>
-              val υidυ = par.replaceAll("_υ.*υ", "") + id
-              r.prepend(par -> λ(Symbol(υidυ)))
-              val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
-              val par2 = r.find(_._1 == par).get._2
-              it.copy(channel = ch2, name = par2)
-            case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, _) =>
-              val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
-              val arg2 = r.find(_._1 == arg).map(_._2).getOrElse(λ(Symbol(arg)))
-              it.copy(channel = ch2, name = arg2)
-            case ν(names*) =>
-              names
-                .reverse
-                .foreach { it =>
-                  val υidυ = it.replaceAll("_υ.*υ", "") + id
-                  r.prepend(it -> λ(Symbol(υidυ)))
-                }
-              ν(names.map { it => r.find(_._1 == it).get._2.asSymbol.name }*)
-            case it => it
-          }
-          val seq = `.`(end.rename, it*)
-          it.reverse.foreach {
-            case π(_, _, true, _) =>
-              r.remove(0)
-            case ν(names*) =>
-              r.remove(0, names.size)
-            case _ =>
-          }
-          seq
-
-        case `?:`(((λ(Symbol(lhs)), λ(Symbol(rhs))), m), t, f) =>
-          val lhs2 = r.find(_._1 == lhs).map(_._2).getOrElse(λ(Symbol(lhs)))
-          val rhs2 = r.find(_._1 == rhs).map(_._2).getOrElse(λ(Symbol(rhs)))
-          `?:`(((lhs2, rhs2), m), t.rename, f.rename)
-
-        case `?:`(((λ(Symbol(lhs)), rhs), m), t, f) =>
-          val lhs2 = r.find(_._1 == lhs).map(_._2).getOrElse(λ(Symbol(lhs)))
-          `?:`(((lhs2, rhs), m), t.rename, f.rename)
-
-        case `?:`(((lhs, λ(Symbol(rhs))), m), t, f) =>
-          val rhs2 = r.find(_._1 == rhs).map(_._2).getOrElse(λ(Symbol(rhs)))
-          `?:`(((lhs, rhs2), m), t.rename, f.rename)
-
-        case `?:`(cond, t, f) =>
-          `?:`(cond, t.rename, f.rename)
-
-        case `!`(Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, _)), sum) =>
-          val υidυ = par.replaceAll("_υ.*υ", "") + id
-          r.prepend(par -> λ(Symbol(υidυ)))
-          val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
-          val par2 = r.find(_._1 == par).get._2
-          val rep = `!`(Some(it.copy(channel = ch2, name = par2)), sum.rename)
-          r.remove(0)
-          rep
-
-        case `!`(Some(it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, _)), sum) =>
-          val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
-          val arg2 = r.find(_._1 == arg).map(_._2).getOrElse(λ(Symbol(arg)))
-          `!`(Some(it.copy(channel = ch2, name = arg2)), sum.rename)
-
-        case `!`(guard, sum) =>
-          `!`(guard, sum.rename)
-
-        case `[|]`(encoding, sum, Some(assign)) =>
-          val assign2 = assign
-            .map { case (bound, pointer) =>
-              val pointer2 = r.find(_._1 == pointer).map(_._2.asSymbol.name).getOrElse(pointer)
-              val υidυ = bound.replaceAll("_υ.*υ", "") + id
-              r.prepend(bound -> λ(Symbol(υidυ)))
-              val bound2 = r.find(_._1 == bound).get._2.asSymbol.name
-              bound2 -> pointer2
-            }
-          val encoding2 = encoding.copy(bound = assign2.map(_._1).map(Symbol(_)))
-          val enc = `[|]`(encoding2, sum.rename, Some(assign2))
-          r.remove(0, assign.size)
-          enc
-
-        case `[|]`(encoding, sum, _) =>
-          `[|]`(encoding, sum.rename, None)
-
-        case `[]`(name, sum) =>
-          `[]`(name, sum.rename)
-
-        case _: `{}` => ???
-
-        case `(*)`(id, qual, params*) =>
-          val args = params
-            .map {
-              case λ(Symbol(it)) => r.find(_._1 == it).map(_._2).getOrElse(λ(Symbol(it)))
-              case it => it
-            }
-
-          `(*)`(id, qual, args*)
-
-  private var _id = scala.collection.mutable.Seq('0')
-  private var _ix = 0
-  /**
-    * @return unique identifiers of the form "_υ[0-9a-zA-Z]+υ"
-    */
-  def id: String =
-    var reset = false
-    while _ix >= 0 && _id(_ix) == 'Z'
-    do
-      _id(_ix) = '0'
-      _ix -= 1
-      reset = true
-    if _ix < 0
-    then
-      _id :+= '1'
-    else
-      _id(_ix) match
-        case 'z' =>
-          _id(_ix) = 'A'
-        case '9' =>
-          _id(_ix) = 'a'
-        case it =>
-          _id(_ix) = (it + 1).toChar
-    if reset then _ix = _id.size - 1
-    "_υ" + _id.mkString + "υ"
