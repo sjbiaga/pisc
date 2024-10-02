@@ -33,11 +33,7 @@ package parser
 import java.util.regex.Pattern
 import scala.util.matching.Regex
 
-import scala.collection.mutable.{
-  HashMap => Map,
-  ListBuffer => MutableList,
-  LinkedHashSet => Set
-}
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import scala.meta.Term
 
@@ -60,8 +56,7 @@ class Extension extends Calculus:
       val start = handleWhiteSpace(source, offset)
       (r findPrefixMatchOf SubSequence(source, start)) match {
         case Some(matched) =>
-          Success(matched,
-                  in.drop(start + matched.end - offset))
+          Success(matched, in.drop(start + matched.end - offset))
         case None =>
           Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))
       }
@@ -97,9 +92,7 @@ class Extension extends Calculus:
 
                   val r = if end.isRight
                           then (null, null)
-                          else
-                            given MutableList[(String, String)]()
-                            `[|]`(encoding, par.bind.rename.asInstanceOf[`|`]) -> free
+                          else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
                   Success(r, in.drop(start + end.map(_.length).getOrElse(0) - offset))
 
                 case failure: NoSuccess =>
@@ -151,9 +144,7 @@ class Extension extends Calculus:
 
                   val r = if end.isRight
                           then (null, null)
-                          else
-                            given MutableList[(String, String)]()
-                            `[|]`(encoding, par.bind.rename.asInstanceOf[`|`]) -> free
+                          else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
                   Success(r, in.drop(start + n - offset))
 
                 case _ =>
@@ -244,9 +235,7 @@ class Extension extends Calculus:
                   case Some(matched) =>
                     val r = if end.isRight
                             then (null, null)
-                            else
-                              given MutableList[(String, String)]()
-                              `[|]`(encoding, par.bind.rename.asInstanceOf[`|`]) -> free
+                            else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
                     Success(r, in.drop(start + matched.end - offset))
 
                   case _ =>
@@ -359,104 +348,3 @@ object Extension:
             }
 
           `(*)`(id, qual, args*)
-
-  extension[T <: AST](ast: T)
-
-    def rename(using r: MutableList[(String, String)]): T =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case `∅` => ∅
-
-        case `|`(it*) =>
-          `|`(it.map(_.rename)*)
-
-        case `.`(end, _it*) =>
-          val it = _it.map {
-            case `,.`(_path*) =>
-              val path = _path.map {
-                case Λ(name) => Λ(r.find(_._1 == name).map(_._2).getOrElse(name))
-                case ζ(op, amb) => ζ(op, r.find(_._1 == amb).map(_._2).getOrElse(amb))
-                case it => it
-              }
-              `,.`(path*)
-            case ν(names*) =>
-              names
-                .reverse
-                .foreach { it =>
-                  val υidυ = it.replaceAll("_υ.*υ", "") + id
-                  r.prepend(it -> υidυ)
-                }
-              ν(names.map { it => r.find(_._1 == it).get._2 }*)
-            case it => it
-          }
-          val seq = `.`(end.rename, it*)
-          it.reverse.foreach {
-            case ν(names*) =>
-              r.remove(0, names.size)
-            case _ =>
-          }
-          seq
-
-        case `<>`(it, _path*) =>
-          val path = _path.map {
-            case Λ(name) => Λ(r.find(_._1 == name).map(_._2).getOrElse(name))
-            case ζ(op, amb) => ζ(op, r.find(_._1 == amb).map(_._2).getOrElse(amb))
-            case it => it
-          }
-          `<>`(it, path*)
-
-        case `!`(guard, par) =>
-          `!`(guard, par.rename)
-
-        case `[]`(amb, par) =>
-          if r.exists(_._1 == amb)
-          then
-            `[]`(r.find(_._1 == amb).get._2, par.rename)
-          else
-            `[]`(amb, par.rename)
-
-        case `go.`(amb, par) =>
-          if r.exists(_._1 == amb)
-          then
-            `go.`(r.find(_._1 == amb).get._2, par.rename)
-          else
-            `go.`(amb, par.rename)
-
-        case `[|]`(encoding, par, _) =>
-          `[|]`(encoding, par.rename, None)
-
-        case _: `{}` => ???
-
-        case `(*)`(id, qual, params*) =>
-          val args = params.map { it => r.find(_._1 == it).map(_._2).getOrElse(it) }
-
-          `(*)`(id, qual, args*)
-
-  private var _id = scala.collection.mutable.Seq('0')
-  private var _ix = 0
-  /**
-    * @return unique identifiers of the form "_υ[0-9a-zA-Z]+υ"
-    */
-  def id: String =
-    var reset = false
-    while _ix >= 0 && _id(_ix) == 'Z'
-    do
-      _id(_ix) = '0'
-      _ix -= 1
-      reset = true
-    if _ix < 0
-    then
-      _id :+= '1'
-    else
-      _id(_ix) match
-        case 'z' =>
-          _id(_ix) = 'A'
-        case '9' =>
-          _id(_ix) = 'a'
-        case it =>
-          _id(_ix) = (it + 1).toChar
-    if reset then _ix = _id.size - 1
-    "_υ" + _id.mkString + "υ"

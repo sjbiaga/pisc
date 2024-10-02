@@ -6,25 +6,25 @@
                                  | open q. | r[]                            \
                                  )
 
-[0| x Zero x |0](zero) = zero[]
+[0| s"Zero" |0](zero) = zero[]
 
 [1| 'N + x `1` x |1](succ, op) = succ[ open op. | N ]
 
-[3| x `1` x |3](zero, succ, op) = [1| [0| Zero |0] + 1 |1]
+[3| s"1" |3](zero, succ, op) = [1| [0| Zero |0] + 1 |1]
 
-[2| x IfZero 'P Else 'Q |2](zero, succ) = [99| zero ==> P || succ ==> Q |99]
+[2| s"IfZero ${$P} Else ${$Q}" |2](zero, succ) = [99| zero ==> P || succ ==> Q |99]
 
-[10| x inczero 'P |10](zero, succ, op) = open zero. ( [3| 1 |3] | P )
+[10| s"inczero ${$P}" |10](zero, succ, op) = open zero. ( [3| 1 |3] | P )
 
-[11| x incsucc 'P |11](succ, op) = ν(p, q)                                                                     \
-                                 ( p[ succ[ open op. ] ] | open q, open p. P                                   \
-                                 | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
-                                 )
+[11| s"incsucc ${$P}" |11](succ, op) = ν(p, q)                                                                     \
+                                     ( p[ succ[ open op. ] ] | open q, open p. P                                   \
+                                     | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
+                                     )
 
-[101| x inc 'P |101](zero, succ, op) = [2| IfZero [10| inczero P |10]    \
-                                           Else [11| incsucc P |11] |2]
+[101| s"inc ${$P}" |101](zero, succ, op) = [2| IfZero [10| inczero P |10]    \
+                                               Else [11| incsucc P |11] |2]
 
-[110| x dec 'P |110](succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
+[110| s"dec ${$P}" |110](succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
 
 Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                                \
                                          | z[ [0| Zero |0] | [2| IfZero τ/*println("0")*/. Else () |2] ]  \

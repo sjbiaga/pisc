@@ -66,13 +66,55 @@ class Expression extends JavaTokenParsers:
 
   protected[parser] var code: Int = -1
 
+  private def apply(operators: Seq[String], operands: Seq[Symbol | String])
+                   (using names: Names): List[Term] =
+    operands.headOption match
+      case Some(Symbol(free @ it)) =>
+        names += free
+        operators.headOption match
+          case Some(op) =>
+            Term.ApplyInfix(Term.Name(it),
+                            Term.Name(op.strip),
+                            Type.ArgClause(Nil),
+                            Term.ArgClause(this(operators.tail, operands.tail), None)) :: Nil
+          case _ =>
+            Term.Name(it) :: Nil
+      case Some(it: String) =>
+        operators.headOption match
+          case Some(op) =>
+            Term.ApplyInfix(Term.Name(it),
+                            Term.Name(op.strip),
+                            Type.ArgClause(Nil),
+                            Term.ArgClause(this(operators.tail, operands.tail), None)) :: Nil
+          case _ =>
+            Term.Name(it) :: Nil
+      case _ => Nil
+
   def encoding: Parser[(Term, Names)] =
     regexMatch("""\[(\d*)\|(.*?)\|\1\]""".r) ^^ { it =>
-      val code = it.group(1)
+      code = if it.group(1).isEmpty then 0 else it.group(1).toInt
       try
         Expression(it.group(2).parse[Term].get) match
+          case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
+            var operators = _operators.map { case Lit.String(it) => it }
+            var operands: Seq[Symbol | String] = _operands.map {
+              case Term.Name(it) => Symbol(it)
+              case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
+              case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
+            }
+            if operators.head.isBlank
+            then
+              operators = operators.tail
+            else
+              operands = "x" +: operands
+            if operators.last.isBlank
+            then
+              operators = operators.init
+            else
+              operands = operands :+ "x"
+            given Names()
+            this(operators, operands).head -> given_Names
           case (term, names) =>
-            Expression.this.code = if code.isEmpty then 0 else code.toInt
             term -> names
       catch t =>
         throw ExpressionParsingException(it.group(2), t)
