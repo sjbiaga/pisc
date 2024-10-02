@@ -1,9 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(if w = y then P else [w = z]Q)
+[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(([w = y]P) + ([w = z]Q))
 
 
-[1| x Nil x |1](nil){x} = x<nil>.
+[1| s"Nil" |1](nil){x} = x<nil>.
 
 [2| 'L1 Cons 'L2 |2](cons){x} =                     \
                       ν(y, z) ( x<cons>.x<y>.x<z>.  \
@@ -16,9 +16,9 @@
 
 [3| 'x && 'y / 'z |3](t, f) = [| x :: t ==> [4| y Copy z |4] || f ==> z<f>. |]
 
-[10| x False 'x |10](t, f) = x<f>.
+[10| s"False $x" |10](t, f) = x<f>.
 
-[11| x True 'x |11](t, f) = x<t>.
+[11| s"True $x" |11](t, f) = x<t>.
 
 
 [12| 'y Null 'b |12](t, f, nil, cons) = [| y :: nil  ==> [11| True b |11]   \
@@ -39,7 +39,7 @@
 
 Nil(nil, x) = [1| Nil |1]{x}
 
-[111| x Nil x |111](nil){x} = [1| Nil |1]{x}
+[111| s"Nil" |111](nil){x} = [1| Nil |1]{x}
 
 
 Eq(x, nil, cons) = [2| [2|                            \

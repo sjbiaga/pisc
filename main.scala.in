@@ -48,7 +48,7 @@ object App extends IOApp:
     ).use { _ =>
       for
         _ <- `π-enable`(π.`π-main`)(using %)
-        _ <- π.Main(args*)(using π.`π-uuid`)(using %, /)
+        _ <- π.Main(args*)(using π.`π-uuid`)(using %, /, { () => *.release })
       yield
         ()
     }

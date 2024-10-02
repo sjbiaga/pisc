@@ -210,12 +210,14 @@ object Program:
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
-        case it @ `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+        case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+          * = f.map(_.generate).getOrElse(`_ <- *`(`π-exclude`(t.enabled)))
+
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f.generate, t.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, t.generate))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate, f.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate, *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 

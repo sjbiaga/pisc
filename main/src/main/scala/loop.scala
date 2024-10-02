@@ -40,6 +40,7 @@ import `Π-stats`._
 package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
+  export sΠ.`π-exclude`
 
   type - = CyclicBarrier[IO]
 
@@ -50,6 +51,8 @@ package object `Π-loop`:
   type * = Semaphore[IO]
 
   type / = Queue[IO, ((String, String), +)]
+
+  type \ = () => IO[Unit]
 
 
   def `π-enable`(enabled: `Π-Set`[String])
@@ -170,12 +173,12 @@ package object `Π-loop`:
       ((_, key), it) = h
       _ <- %.update { m =>
                       val ^ = h._1._1
-                      val n = m(key).asInstanceOf[Int]
-                      ( if n == 1
+                      val n = m(key).asInstanceOf[Int] - 1
+                      ( if n == 0
                         then
                           m - key
                         else
-                          m + (key -> (n - 1))
+                          m + (key -> n)
                       ) + (^ + key -> it)
            }
       _ <- *.release

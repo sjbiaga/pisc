@@ -48,7 +48,6 @@ import generator.Meta.`()(null)`
 import StochasticPi._
 import Calculus._
 import scala.util.parsing.combinator.pisc.parser.Extension
-import Extension.rename
 
 
 class StochasticPi extends Expression:
@@ -283,16 +282,16 @@ object StochasticPi extends Extension:
             else
               sum
 
-          val (t, f) = _t_f(_t) -> _t_f(_f)
+          val (t, f) = _t_f(_t) -> _f.map(_t_f(_))
 
-          t.enabled.foreach(excluded(_) = f.enabled)
-          f.enabled.foreach(excluded(_) = t.enabled)
+          f.foreach { sum => t.enabled.foreach(excluded(_) = sum.enabled) }
+          f.foreach(_.enabled.foreach(excluded(_) = t.enabled))
 
           assert(t.enabled.nonEmpty)
-          assert(f.enabled.nonEmpty)
+          assert(f.map(_.enabled.nonEmpty).getOrElse(true))
 
-          assert((t.enabled & f.enabled).isEmpty)
-          (`?:`(c, t, f), t.enabled ++ f.enabled)
+          assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
+          (`?:`(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
         case `!`(Some(μ), sum) =>
           val (it, _) = sum.parse
@@ -389,18 +388,18 @@ object StochasticPi extends Extension:
 
         case `?:`(_, t, f) =>
           t.split
-          f.split
+          f.foreach(_.split)
 
           val (_, excluded) = discarded_excluded
 
           t.enabled.foreach { k => assert(!excluded.contains(k)) }
-          f.enabled.foreach { k => assert(!excluded.contains(k)) }
+          f.foreach(_.enabled.foreach { k => assert(!excluded.contains(k)) })
 
-          t.enabled.headOption.foreach(excluded(_) = f.enabled)
-          f.enabled.headOption.foreach(excluded(_) = t.enabled)
+          f.foreach { sum => t.enabled.headOption.foreach(excluded(_) = sum.enabled) }
+          f.foreach(_.enabled.headOption.foreach(excluded(_) = t.enabled))
 
-          assert((t.enabled & f.enabled).isEmpty)
-          t.enabled ++ f.enabled
+          assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
+          t.enabled ++ f.map(_.enabled).getOrElse(nil)
 
         case `!`(Some(μ), sum) =>
           sum.split
@@ -447,8 +446,10 @@ object StochasticPi extends Extension:
             then end match
               case sum: `+` =>
                 Seq(ps(k) -> sum)
-              case `?:`(_, t, f) =>
+              case `?:`(_, t, Some(f)) =>
                 Seq(ps(k) -> t, ps(k) -> f)
+              case `?:`(_, t, _) =>
+                Seq(ps(k) -> t)
               case `!`(Some(μ), _) =>
                 Seq(ps(k) -> μ)
               case _: `!` => ??? // impossible by 'parse'
@@ -462,7 +463,7 @@ object StochasticPi extends Extension:
           }
 
         case `?:`(_, t, f) =>
-          t.graph ++ f.graph
+          t.graph ++ f.map(_.graph).getOrElse(Nil)
 
         case `!`(Some(μ), sum) =>
           sum.graph ++ Seq(μ -> μ, μ -> sum)

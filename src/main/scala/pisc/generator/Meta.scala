@@ -34,6 +34,7 @@ import scala.annotation.tailrec
 import scala.meta._
 import dialects.Scala3
 
+import parser.StochasticPi.Actions
 import parser.Calculus.{ `(*)`, Expr }
 
 
@@ -49,7 +50,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `String*`("args") :: `(using ^ : String)(using % : %, / : /)`,
+                 `String*`("args") :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
                prog
@@ -59,7 +60,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `(…)`(params*) :: `(using ^ : String)(using % : %, / : /)`,
+                 `(…)`(params*) :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
                prog
@@ -136,12 +137,12 @@ object Meta:
                     ,None)
 
 
-  val `(using ^ : String)(using % : %, / : /)` =
+  val `(using ^ : String)(using % : %, / : /, \\ : \\)` =
     Term.ParamClause(Term.Param(Mod.Using() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) :: Nil
                     ,Some(Mod.Using())) ::
-    Term.ParamClause(List("%", "/")
+    Term.ParamClause(List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,
                                                it, Some(Type.Name(it)),
                                                None)
@@ -316,3 +317,8 @@ object Meta:
 
   val `()(null)`: Term =
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
+
+
+  def `π-exclude`(enabled: Actions): Term =
+    Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList, None))
