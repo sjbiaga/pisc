@@ -38,8 +38,8 @@ package object sΠ:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
 
-  import `Π-loop`.{ -, %, / }
-  import `Π-magic`.{ ><, >*< }
+  import `Π-loop`.{ -, %, /, \ }
+  import `Π-magic`.><
   export `Π-magic`.>*<
   import `Π-stats`.Rate
 
@@ -206,15 +206,19 @@ package object sΠ:
                   case _ => IO(null.asInstanceOf[T]) }
               )
 
+  inline def `π-exclude`(enabled: String*)
+                        (using % : %, \ : \): IO[Unit] =
+    `π-exclude`(Set.from(enabled)) >> \()
 
-  def `π-release`(enabled: `Π-Set`[String])
+  def `π-exclude`(enabled: `Π-Set`[String])
                  (using % : %): IO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>
-                                   if m(key) == 1
+                                   val n = m(key).asInstanceOf[Int] - 1
+                                   if n == 0
                                    then
                                      m - key
                                    else
-                                     m + (key -> (m(key).asInstanceOf[Int] - 1))
+                                     m + (key -> n)
                                  }
     )
 
@@ -223,7 +227,7 @@ package object sΠ:
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
     if `π-elvis`.contains(key)
     then
-      `π-release`(`π-elvis`(key))
+      `π-exclude`(`π-elvis`(key))
     else
       IO.unit
 

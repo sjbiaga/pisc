@@ -50,7 +50,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `String*`("args") ++ `(using ^ : String)(using % : %, / : /)`,
+                 `String*`("args") ++ `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
                prog
@@ -60,7 +60,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `(…)`(params*) ++ `(using ^ : String)(using % : %, / : /)`,
+                 `(…)`(params*) ++ `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
                prog
@@ -143,14 +143,14 @@ object Meta:
     Nil
 
 
-  val `(using ^ : String)(using % : %, / : /)` =
+  val `(using ^ : String)(using % : %, / : /, \\ : \\)` =
     Term.ParamClause(Term.Param(Mod.Using() :: Nil,
                                 "^", Some(Type.Name("String")),
                                 None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(Term.Param(Mod.Using() :: Nil, \("]["), Some(Type.Name("][")), None) ::
                      Term.Param(Mod.Using() :: Nil, \("1"), `:`("Semaphore", "IO"), None) ::
-                     List("%", "/")
+                     List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,
                                                it, Some(Type.Name(it)),
                                                None)
@@ -354,3 +354,7 @@ object Meta:
   def `π-disable`(key: String, enabled: Actions): Term =
     Term.Apply(\("π-disable"),
                Term.ArgClause(Lit.String(key) :: enabled.map(Lit.String(_)).toList, None))
+
+  def `π-exclude`(enabled: Actions): Term =
+    Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList, None))

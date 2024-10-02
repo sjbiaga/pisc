@@ -51,7 +51,7 @@ object App extends IOApp:
                      for
                        (id, tree) <- sΠ.`][`()
                        _          <- `π-enable`(π.`π-main`)(using %)
-                       _          <- π.Main(id)(args*)(using π.`π-uuid`)(using tree, semaphore, %, /)
+                       _          <- π.Main(id)(args*)(using π.`π-uuid`)(using tree, semaphore, %, /, { () => *.release })
                      yield
                        ()
                    }
