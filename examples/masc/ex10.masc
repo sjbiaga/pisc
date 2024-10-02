@@ -6,7 +6,7 @@
                              | open q. | r[]                            \
                              )
 
-[1| x Flag 'n |1] = n[]
+[1| s"Flag $n" |1] = n[]
 
 [2| x If 'tt Then 'P Else x If 'ff Then 'Q |2] = [| tt ==> open tt. P || ff ==> open ff. Q |]
 

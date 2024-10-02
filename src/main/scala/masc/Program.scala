@@ -40,8 +40,6 @@ import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
 
-import scala.util.parsing.combinator.masc.parser.Extension.rename
-
 
 object Program:
 
