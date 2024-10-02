@@ -38,8 +38,6 @@ import scala.util.parsing.combinator._
 import PolyadicPi.Names
 import Calculus._
 
-import scala.util.parsing.combinator.pisc.parser.Extension.rename
-
 
 class Calculus extends PolyadicPi:
 
@@ -99,15 +97,15 @@ class Calculus extends PolyadicPi:
   def leaf: Parser[(`-`, Names)] =
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        `?:`(cond._1, t._1, ∅) -> (cond._2 ++ t._2)
+        `?:`(cond._1, t._1, None) -> (cond._2 ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     test~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond._1, t._1, f._1) -> (cond._2 ++ (t._2 ++ f._2))
+        `?:`(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> opt( "."~>`μ.`<~"." ) ~ choice ^^ { // [guarded] replication
       case Some((π(λ(Symbol(ch)), true, _, par*), _)) ~ _ if par.filter(_.isSymbol).exists(_.asSymbol.name == ch) =>
@@ -136,7 +134,8 @@ class Calculus extends PolyadicPi:
         given MutableList[(String, λ)]()
         it.copy(assign = Some(assign)).rename -> (free ++ const)
       case (it @ `[|]`(Encoding(_, _, const, _), _, _), free) ~ _ =>
-        it -> (free ++ const)
+        given MutableList[(String, λ)]()
+        it.rename -> (free ++ const)
     }
 
   def expand(it: Define, end: String): Parser[(`[|]`, Names)] = ???
@@ -267,9 +266,14 @@ object Calculus:
       then "" + channel + names.mkString("(", ", ", ").")
       else "" + channel + names.mkString("<", ", ", ">.")
 
-  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: `+`) extends AST:
+  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: Option[`+`]) extends AST:
     override def toString: String =
-      "if " + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2 + " " + t + " else " + f
+      val test = "" + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2
+      if f.isEmpty
+      then
+        "[ " + test + " ]" + t
+      else
+        "if " + test + " " + t + " else " + f.get
 
   case class `!`(guard: Option[μ], sum: `+`) extends AST:
     override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
@@ -375,7 +379,7 @@ object Calculus:
           `.`(end.flatten, it*)
 
         case `?:`(cond, t, f) =>
-          `?:`(cond, t.flatten, f.flatten)
+          `?:`(cond, t.flatten, f.map(_.flatten))
 
         case `!`(None, sum) =>
           sum.flatten match
@@ -404,7 +408,7 @@ object Calculus:
           end.capitals
 
         case `?:`(_, t, f) =>
-          t.capitals ++ f.capitals
+          t.capitals ++ f.map(_.capitals).getOrElse(Names())
 
         case `!`(_, sum) =>
           sum.capitals
@@ -417,3 +421,144 @@ object Calculus:
         case `(*)`(id, Nil) => Set(Symbol(id))
 
         case _ => Set.empty
+
+    def rename(using r: MutableList[(String, λ)]): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case `∅` => ∅
+
+        case `+`(it*) =>
+          `+`(it.map(_.rename)*)
+
+        case `|`(it*) =>
+          `|`(it.map(_.rename)*)
+
+        case `.`(end, _it*) =>
+          val it = _it.map {
+            case π(λ(Symbol(ch)), true, code, _names*) =>
+              val names = _names.map { case it @ λ(Symbol(par)) =>
+                val υidυ = par.replaceAll("_υ.*υ", "") + id
+                r.prepend(par -> λ(Symbol(υidυ)))
+                r.find(_._1 == par).get._2
+              }
+              val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
+              π(ch2, true, code, names*)
+            case π(λ(Symbol(ch)), false, code, _names*) =>
+              val names = _names.map { case it @ λ(Symbol(arg)) =>
+                r.find(_._1 == arg).map(_._2).getOrElse(it)
+              }
+              val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
+              π(ch2, false, code, names*)
+            case ν(names*) =>
+              names
+                .reverse
+                .foreach { it =>
+                  val υidυ = it.replaceAll("_υ.*υ", "") + id
+                  r.prepend(it -> λ(Symbol(υidυ)))
+                }
+              ν(names.map { it => r.find(_._1 == it).get._2.asSymbol.name }*)
+            case it => it
+          }
+          val seq = `.`(end.rename, it*)
+          it.reverse.foreach {
+            case π(_, true, _, names*) =>
+              r.remove(0, names.size)
+            case ν(names*) =>
+              r.remove(0, names.size)
+            case _ =>
+          }
+          seq
+
+        case `?:`(((λ(Symbol(lhs)), λ(Symbol(rhs))), m), t, f) =>
+          val lhs2 = r.find(_._1 == lhs).map(_._2).getOrElse(λ(Symbol(lhs)))
+          val rhs2 = r.find(_._1 == rhs).map(_._2).getOrElse(λ(Symbol(rhs)))
+          `?:`(((lhs2, rhs2), m), t.rename, f.map(_.rename))
+
+        case `?:`(((λ(Symbol(lhs)), rhs), m), t, f) =>
+          val lhs2 = r.find(_._1 == lhs).map(_._2).getOrElse(λ(Symbol(lhs)))
+          `?:`(((lhs2, rhs), m), t.rename, f.map(_.rename))
+
+        case `?:`(((lhs, λ(Symbol(rhs))), m), t, f) =>
+          val rhs2 = r.find(_._1 == rhs).map(_._2).getOrElse(λ(Symbol(rhs)))
+          `?:`(((lhs, rhs2), m), t.rename, f.map(_.rename))
+
+        case `?:`(cond, t, f) =>
+          `?:`(cond, t.rename, f.map(_.rename))
+
+        case `!`(Some(it @ π(λ(Symbol(ch)), true, code, _names*)), sum) =>
+          val names = _names.map { case it @ λ(Symbol(par)) =>
+            val υidυ = par.replaceAll("_υ.*υ", "") + id
+            r.prepend(par -> λ(Symbol(υidυ)))
+            r.find(_._1 == par).get._2
+          }
+          val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
+          val rep = `!`(Some(π(ch2, true, code, names*)), sum.rename)
+          r.remove(0, names.size)
+          rep
+
+        case `!`(Some(it @ π(λ(Symbol(ch)), false, code, _names*)), sum) =>
+          val names = _names.map { case it @ λ(Symbol(arg)) =>
+            r.find(_._1 == arg).map(_._2).getOrElse(it)
+          }
+          val ch2 = r.find(_._1 == ch).map(_._2).getOrElse(λ(Symbol(ch)))
+          `!`(Some(π(ch2, false, code, names*)), sum.rename)
+
+        case `!`(guard, sum) =>
+          `!`(guard, sum.rename)
+
+        case `[|]`(encoding, sum, Some(assign)) =>
+          val assign2 = assign
+            .map { case (bound, pointer) =>
+              val pointer2 = r.find(_._1 == pointer).map(_._2.asSymbol.name).getOrElse(pointer)
+              val υidυ = bound.replaceAll("_υ.*υ", "") + id
+              r.prepend(bound -> λ(Symbol(υidυ)))
+              val bound2 = r.find(_._1 == bound).get._2.asSymbol.name
+              bound2 -> pointer2
+            }
+          val encoding2 = encoding.copy(bound = assign2.map(_._1).map(Symbol(_)))
+          val enc = `[|]`(encoding2, sum.rename, Some(assign2))
+          r.remove(0, assign.size)
+          enc
+
+        case `[|]`(encoding, sum, _) =>
+          `[|]`(encoding, sum.rename, None)
+
+        case _: `{}` => ???
+
+        case `(*)`(id, qual, params*) =>
+          val args = params
+            .map {
+              case λ(Symbol(it)) => r.find(_._1 == it).map(_._2).getOrElse(λ(Symbol(it)))
+              case it => it
+            }
+
+          `(*)`(id, qual, args*)
+
+  private var _id = scala.collection.mutable.Seq('0')
+  private var _ix = 0
+  /**
+    * @return unique identifiers of the form "_υ[0-9a-zA-Z]+υ"
+    */
+  def id: String =
+    var reset = false
+    while _ix >= 0 && _id(_ix) == 'Z'
+    do
+      _id(_ix) = '0'
+      _ix -= 1
+      reset = true
+    if _ix < 0
+    then
+      _id :+= '1'
+    else
+      _id(_ix) match
+        case 'z' =>
+          _id(_ix) = 'A'
+        case '9' =>
+          _id(_ix) = 'a'
+        case it =>
+          _id(_ix) = (it + 1).toChar
+    if reset then _ix = _id.size - 1
+    "_υ" + _id.mkString + "υ"
