@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| x Nil x |](nil){x} = x<nil>.
+[| s"Nil" |](nil){x} = x<nil>.
 
 [2| 'L1 Cons 'L2 |2](cons){x} =                      \
                       ν(y, z) ( x<cons>.x<y>.x<z>.   \

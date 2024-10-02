@@ -39,8 +39,6 @@ import parser.Calculus._
 import parser.`Pre | AST`
 import generator.Meta._
 
-import scala.util.parsing.combinator.pisc.parser.Extension.rename
-
 
 object Program:
 
@@ -102,6 +100,15 @@ object Program:
 
 
         // SEQUENCE ////////////////////////////////////////////////////////////
+
+        case `.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)) if semaphore.nonEmpty =>
+          * = `_ <- *.tryAcquire.ifM`(semaphore.get, t.generate())
+
+          if mismatch
+          then
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), Nil, *))
+          else
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, Nil))
 
         case `.`(end, it*) =>
           val ** = (it :+ end).foldLeft(*)(_ ++ _.generate())
@@ -200,11 +207,13 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+          * = f.map(_.generate()).getOrElse(Nil)
+
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f.generate(), t.generate()))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, t.generate()))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate(), f.generate()))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate(), *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
