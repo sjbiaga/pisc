@@ -101,14 +101,19 @@ object Program:
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case `.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)) if semaphore.nonEmpty =>
-          * = `_ <- *.tryAcquire.ifM`(semaphore.get, t.generate())
+        case it @ `.`(`?:`(_, _, None)) if semaphore.nonEmpty =>
+          def cases(sum: `+`): Term =
+            sum match
+              case `+`(`|`(`.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+                if mismatch
+                then
+                  `if * then … else …`(====(lhs -> rhs), Nil, cases(t))
+                else
+                  `if * then … else …`(====(lhs -> rhs), cases(t), Nil)
+              case _ =>
+                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.generate())
 
-          if mismatch
-          then
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), Nil, *))
-          else
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, Nil))
+          * = `_ <- *`(cases(`+`(`|`(it))))
 
         case `.`(end, it*) =>
           val ** = (it :+ end).foldLeft(*)(_ ++ _.generate())
