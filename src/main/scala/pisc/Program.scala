@@ -210,14 +210,26 @@ object Program:
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
-        case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
-          * = f.map(_.generate).getOrElse(`_ <- *`(`π-exclude`(t.enabled)))
-
+        case `?:`(((λ(lhs), λ(rhs)), mismatch), t, Some(f)) =>
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, t.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f.generate, t.generate))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate, *))
+            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate, f.generate))
+
+        case it: `?:` =>
+          def cases(sum: `+`): Term =
+            sum match
+              case `+`(_, `|`(`.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+                if mismatch
+                then
+                  `if * then … else …`(====(lhs -> rhs), `_ <- *`(`π-exclude`(t.enabled)), cases(t))
+                else
+                  `if * then … else …`(====(lhs -> rhs), cases(t), `_ <- *`(`π-exclude`(t.enabled)))
+              case _ =>
+                sum.generate
+
+          * = `_ <- *`(cases(`+`(null, `|`(`.`(it)))))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
