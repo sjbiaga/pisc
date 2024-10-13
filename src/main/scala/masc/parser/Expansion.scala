@@ -40,16 +40,16 @@ import scala.meta.Term
 import _root_.masc.parser.{ Calculus, `&`, `name | process` }
 import _root_.masc.parser.Ambient.{ AST => _, _ }
 import Calculus._
-import Extension._
+import Expansion._
 
 
-class Extension extends Calculus:
+abstract class Expansion extends Calculus:
 
   /**
     * A parser that matches a regex string and returns the Match
     * [[https://stackoverflow.com/questions/1815716/accessing-scala-parser-regular-expression-match-data]]
     */
-  override def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
+  def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
     def apply(in: Input) = {
       val source = in.source
       val offset = in.offset
@@ -63,28 +63,30 @@ class Extension extends Calculus:
     }
   }
 
-  override def expand(defn: Define, end: String): Parser[(`[|]`, Names)] =
-    val (encoding @ Encoding(code, term, _, _), par) = defn
-    new Parser[(`[|]`, Names)] {
-      override def apply(in: Input): ParseResult[(`[|]`, Names)] =
+  def instance(defn: Define, end: String)
+              (using binding2: Names2): Parser[(`⟦⟧`, Names)] =
+    val (encoding @ Encoding(code, Some(term), params, _, _), par) = defn : @unchecked
+    var idx = 0
+    new Parser[(`⟦⟧`, Names)] {
+      override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         def expand(in: Input, end: Either[String, String])
-                  (using bind: Map[String, `name | process`])
-                  (using free: Names): Term => ParseResult[(`[|]`, Names)] = {
+                  (using substitution: Map[String, `name | process`])
+                  (using free: Names): Term => ParseResult[(`⟦⟧`, Names)] =
 
           case Term.Name(rhs) =>
             var source = in.source
             var offset = in.offset
             var start = handleWhiteSpace(source, offset)
 
-            val s = SubSequence(source, start)
+            var s = SubSequence(source, start)
 
-            if ("""\[(\d*)\|""".r findPrefixMatchOf s).nonEmpty
+            if ("""⟦\d*""".r findPrefixMatchOf s).nonEmpty
             then
-              parse(expansion, in) match
+              parse(instantiation, in) match
 
                 case Success((rhs2, free2), in) =>
-                  bind(rhs) = Calculus.`|`(`.`(rhs2))
-                  free ++= free2
+                  substitution(rhs) = rhs2
+                  free ++= free2 -- binding2.map(_._1)
 
                   source = in.source
                   offset = in.offset
@@ -92,7 +94,7 @@ class Extension extends Calculus:
 
                   val r = if end.isRight
                           then (null, null)
-                          else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
+                          else `⟦⟧`(encoding, par.replace.flatten) -> free
                   Success(r, in.drop(start + end.map(_.length).getOrElse(0) - offset))
 
                 case failure: NoSuccess =>
@@ -101,16 +103,29 @@ class Extension extends Calculus:
             else
               ( if s.isEmpty
                 || s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-                || ("""\|(\d*)\]""".r findPrefixMatchOf s).nonEmpty
+                || ("""\d*⟧""".r findPrefixMatchOf s).nonEmpty
                 then Some(null)
                 else
-                  Pattern.quote(end.orElse(end.swap).right.get).r findFirstMatchIn s
+                  val op = end.orElse(end.swap).right.get
+                  val n = op.length
+                  val open = """⟦\d*""".r
+                  val closed = """\d*⟧""".r
+                  val matches = (Pattern.quote(op).r findAllMatchIn s).toList
+                  var i = 0
+                  if matches.nonEmpty
+                  then
+                    s = SubSequence(source, start, matches(i).end - n)
+                    while i < matches.size && (open findAllMatchIn s).size > (closed findAllMatchIn s).size
+                    do
+                      i += 1
+                      s = SubSequence(source, start, matches(i).end - n)
+                  if i < matches.size then Some(matches(i)) else None
               ) match
 
                 case Some(matched) =>
                   var n = ( if matched eq null
                             then
-                              if s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
+                              if !s.isEmpty && s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
                               then 1
                               else 0
                             else matched.end - end.orElse(end.swap).map(_.length).right.get
@@ -121,7 +136,7 @@ class Extension extends Calculus:
                   || result.strip == "_"
                   then
                     n += result.length
-                  else if ("""\|(\d*)\]""".r findPrefixMatchOf s).nonEmpty
+                  else if ("""\d*⟧""".r findPrefixMatchOf s).nonEmpty
                   then
                     {}
                   else
@@ -130,21 +145,31 @@ class Extension extends Calculus:
                     then
                       parseAll(name, result) match
                         case Success((name2, free2), _) =>
-                          bind(rhs) = name2
-                          free ++= free2
+                          encoding.binding(idx) match
+                            case Some(binding) =>
+                              Names2(name2, Some(binding))
+                            case _ =>
+                              binding2.find { case (`name2`, (Right(Some(_)), _)) => true case _ => false } match
+                                case Some((_, (Right(Some(binding)), _))) => substitution(rhs) = binding
+                                case _ => substitution(rhs) = name2
+                              free ++= free2 -- binding2.map(_._1)
+                          idx += 1
+
                         case failure: NoSuccess =>
                           scala.sys.error(failure.msg)
+
                     else
                       parseAll(parallel, result) match
                         case Success((par2, free2), _) =>
-                          bind(rhs) = par2
-                          free ++= free2
+                          substitution(rhs) = par2
+                          free ++= free2 -- binding2.map(_._1)
+
                         case failure: NoSuccess =>
                           scala.sys.error(failure.msg)
 
                   val r = if end.isRight
                           then (null, null)
-                          else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
+                          else `⟦⟧`(encoding, par.replace.flatten) -> free
                   Success(r, in.drop(start + n - offset))
 
                 case _ =>
@@ -158,15 +183,15 @@ class Extension extends Calculus:
             var offset = in.offset
             var start = handleWhiteSpace(source, offset)
 
-            val s = SubSequence(source, start)
+            var s = SubSequence(source, start)
 
-            if ("""\[(\d*)\|""".r findPrefixMatchOf s).nonEmpty
+            if ("""⟦\d*""".r findPrefixMatchOf s).nonEmpty
             then
-              parse(expansion, in) match
+              parse(instantiation, in) match
 
                 case Success((lhs2, free2), in) =>
-                  bind(lhs) = Calculus.`|`(`.`(lhs2))
-                  free ++= free2
+                  substitution(lhs) = lhs2
+                  free ++= free2 -- binding2.map(_._1)
 
                   source = in.source
                   offset = in.offset
@@ -177,7 +202,21 @@ class Extension extends Calculus:
                 case failure: NoSuccess =>
                   scala.sys.error(failure.msg)
 
-            else (Pattern.quote(op).r findFirstMatchIn s) match
+            else {
+              val n = op.length
+              val open = """⟦\d*""".r
+              val closed = """\d*⟧""".r
+              val matches = (Pattern.quote(op).r findAllMatchIn s).toList
+              var i = 0
+              if matches.nonEmpty
+              then
+                s = SubSequence(source, start, matches(i).end - n)
+                while i < matches.size && (open findAllMatchIn s).size > (closed findAllMatchIn s).size
+                do
+                  i += 1
+                  s = SubSequence(source, start, matches(i).end - n)
+              if i < matches.size then Some(matches(i)) else None
+            } match
 
               case Some(matched) =>
                 val result = source.subSequence(start, start + matched.end - op.length).toString
@@ -190,15 +229,25 @@ class Extension extends Calculus:
                 then
                   parseAll(name, result) match
                     case Success((name2, free2), _) =>
-                      bind(lhs) = name2
-                      free ++= free2
+                      encoding.binding(idx) match
+                        case Some(binding) =>
+                          Names2(name2, Some(binding))
+                        case _ =>
+                          binding2.find { case (`name2`, (Right(Some(_)), _)) => true case _ => false } match
+                            case Some((_, (Right(Some(binding)), _))) => substitution(lhs) = binding
+                            case _ => substitution(lhs) = name2
+                          free ++= free2 -- binding2.map(_._1)
+                      idx += 1
+
                     case failure: NoSuccess =>
                       scala.sys.error(failure.msg)
+
                 else
                   parseAll(parallel, result) match
                     case Success((par2, free2), _) =>
-                      bind(lhs) = par2
-                      free ++= free2
+                      substitution(lhs) = par2
+                      free ++= free2 -- binding2.map(_._1)
+
                     case failure: NoSuccess =>
                       scala.sys.error(failure.msg)
 
@@ -235,7 +284,7 @@ class Extension extends Calculus:
                   case Some(matched) =>
                     val r = if end.isRight
                             then (null, null)
-                            else `[|]`(encoding, par.bind.asInstanceOf[`|`]) -> free
+                            else `⟦⟧`(encoding, par.replace.flatten) -> free
                     Success(r, in.drop(start + matched.end - offset))
 
                   case _ =>
@@ -243,108 +292,118 @@ class Extension extends Calculus:
 
               case it => it
 
-          case it => throw ExpansionParsingException(it)
-        }
+          case it => throw InstantiationParsingException(it)
 
         given Map[String, `name | process`]()
         given Names()
 
         expand(in, Left(end))(term)
-    }.named(s"[$code| $term |$code]")
+    }.named(s"⟦$code $term $code⟧")
 
 
-object Extension:
+object Expansion:
 
   // exceptions
 
   import _root_.masc.parser.Expression.ParsingException
 
-  case class ExpansionParsingException(it: Term)
+  case class InstantiationParsingException(it: Term)
       extends ParsingException(s"A (macro-)definition template strictly parses Term.ApplyInfix and not $it terms")
 
 
   // functions
 
-  extension(ast: AST)
+  private def replaced(name: String)
+                      (using substitution: Map[String, `name | process`]): String =
+    substitution.get(name).getOrElse(name).asInstanceOf[String]
 
-    def bind(using b: Map[String, `name | process`])
-            (using free: Names): AST =
 
-      inline given Conversion[`name | process`, String] = _.asInstanceOf[String]
+  extension[T <: AST](ast: T)
+
+    def replace(using substitution: Map[String, `name | process`])
+               (using pointers: List[String] = Nil): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
 
       ast match
 
         case `∅` => ∅
 
         case `|`(it*) =>
-          `|`(it.map(_.bind.asInstanceOf[`.`])*)
+          `|`(it.map(_.replace)*)
 
         case `.`(end, _it*) =>
           val it = _it.map {
-            case `()`(term, name) if b.contains(name) =>
-              free -= name
-              `()`(term, b(name))
+            case `()`(term, name) =>
+              `()`(term, replaced(name))
             case `,.`(_path*) =>
               val path = _path.map {
-                case Λ(name) if b.contains(name) => Λ(b(name))
-                case ζ(op, amb) if b.contains(amb) => ζ(op, b(amb))
+                case Λ(name) => Λ(replaced(name))
+                case ζ(op, amb) => ζ(op, replaced(amb))
                 case it => it
               }
               `,.`(path*)
             case it => it
           }
-          `.`(end.bind.asInstanceOf[`&`], it*)
+          `.`(end.replace, it*)
 
         case `<>`(term, _path*) =>
           val path = _path.map {
-            case Λ(name) if b.contains(name) => Λ(b(name))
-            case ζ(op, amb) if b.contains(amb) => ζ(op, b(amb))
+            case Λ(name) => Λ(replaced(name))
+            case ζ(op, amb) => ζ(op, replaced(amb))
             case it => it
           }
           `<>`(term, path*)
 
-        case `!`(Some(name), par) if b.contains(name) =>
-          free -= name
-          `!`(Some(b(name)), par.bind.asInstanceOf[`|`])
+        case `!`(Some(name), par) =>
+          `!`(Some(replaced(name)), par.replace)
 
-        case `!`(guard, par) =>
-          `!`(guard, par.bind.asInstanceOf[`|`])
+        case it @ `!`(_, par) =>
+          it.copy(par = par.replace)
 
         case `[]`(amb, par) =>
-          if b.contains(amb)
-          then
-            `[]`(b(amb), par.bind.asInstanceOf[`|`])
-          else
-            `[]`(amb, par.bind.asInstanceOf[`|`])
+          `[]`(replaced(amb), par.replace)
 
         case `go.`(amb, par) =>
-          if b.contains(amb)
-          then
-            `go.`(b(amb), par.bind.asInstanceOf[`|`])
-          else
-            `go.`(amb, par.bind.asInstanceOf[`|`])
+          `go.`(replaced(amb), par.replace)
 
-        case `[|]`(encoding, par, assign) =>
-          `[|]`(encoding, par.bind.asInstanceOf[`|`], assign)
+        case it @ `⟦⟧`(_, par, Some(_assign)) if pointers.isEmpty =>
+          val assign = _assign.map(_ -> replaced(_))
+          it.copy(par = par.replace, assign = Some(assign))
 
-        case `{}`(id, pointers) if b.contains(id) =>
-          b(id).asInstanceOf[`|`] match
-            case `|`(`.`(it @ `[|]`(Encoding(_, _, _, bound), _, _))) =>
-              `|`(`.`(it.copy(assign = Some(bound zip pointers))))
-            case `|`(`.`(`(*)`(identifier, qual, params*))) =>
-              `|`(`.`(`(*)`(identifier, qual, (params ++ pointers)*)))
-            case it => it
+        case it @ `⟦⟧`(_, par, _) if pointers.isEmpty =>
+          it.copy(par = par.replace)
+
+        case it @ `⟦⟧`(Encoding(_, _, _, _, bound), _, Some(assign0)) if assign0.size < pointers.size =>
+          val assign1 = bound.drop(assign0.size) zip pointers.drop(assign0.size)
+          val assign = assign0 ++ assign1
+          it.copy(assign = Some(assign))
+
+        case it @ `⟦⟧`(_, _, Some(_)) =>
+          it
+
+        case it @ `⟦⟧`(Encoding(_, _, _, _, bound), _, _) =>
+          val assign = bound zip pointers
+          it.copy(assign = Some(assign))
+
+        case `{}`(id, pointers) if substitution.contains(id) =>
+          val pointers2 = pointers.map(replaced(_))
+          substitution(id).asInstanceOf[`&`].replace(using Map.empty)(using pointers2)
 
         case _: `{}` => ???
 
-        case `(*)`(id, Nil) if b.contains(id) =>
-          b(id).asInstanceOf[`|`]
+        case it @ `(*)`(_, List("π", "this")) =>
+          it
+
+        case `(*)`(id, Nil) if substitution.contains(id) =>
+          substitution(id).asInstanceOf[`&`]
+
+        case `(*)`(id, qual @ List("this"), params*) =>
+          val params2 = params.map(replaced(_))
+
+          `(*)`(id, qual, params2*)
 
         case `(*)`(id, qual, params*) =>
-          val args: Seq[String] = params
-            .map {
-              case it if b.contains(it) => b(it)
-              case it => it
-            }
+          val params2 = params.map(replaced(_))
 
-          `(*)`(id, qual, args*)
+          `(*)`(id, qual, (params2 ++ pointers)*)

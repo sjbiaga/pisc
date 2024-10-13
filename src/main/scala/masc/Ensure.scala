@@ -28,7 +28,7 @@
 
 package masc
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
 
 import parser.Calculus._
 
@@ -99,7 +99,7 @@ object Ensure:
         case `go.`(_, par) =>
           par.recursive
 
-        case `[|]`(_, par, _) =>
+        case `⟦⟧`(_, par, _) =>
           par.recursive
 
         case _: `{}` => ???
