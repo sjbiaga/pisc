@@ -1,5 +1,5 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| 'n be 'm / 'P |] = m[ out n, open n. P ] | in m.
+⟦ 'n be 'm `.` 'P ⟧ = m[ out n, open n. P ] | in m.
 
-Main = ν(w) w[ ν(n, m) n[ [| n be m / ν(k) ( ( go k. τ/*println("P")*/. ) | k[ τ/*println("Q")*/. ] ) |] ] ]
+Main = ν(w) w[ ν(n, m) n[ ⟦ n be m . ν(k) ( ( go k. τ/*println("P")*/. ) | k[ τ/*println("Q")*/. ] ) ⟧ ] ]

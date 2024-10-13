@@ -30,8 +30,6 @@ package masc
 
 import java.util.UUID
 
-import scala.collection.mutable.{ ListBuffer => MutableList }
-
 import scala.meta._
 import dialects.Scala3
 
@@ -84,11 +82,11 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
 
-        case τ(Some(Left(enums))) =>
+        case τ(Some((Left(enums), _))) =>
           * = `_ <- *`("τ")
           * ++= enums
 
-        case τ(Some(Right(term))) =>
+        case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
           * :+= `_ <- IO { * }`(term)
 
@@ -192,23 +190,23 @@ object Program:
 
         // ENCODING ////////////////////////////////////////////////////////////
 
-        case `[|]`(Encoding(_, _, _, bound), _par, Some(assign)) =>
+        case `⟦⟧`(Encoding(_, _, _, _, bound), _par, assign) =>
           val ** = assign
-            .map(Pat.Var(_) -> _)
-            .map(Enumerator.Val(_, _))
-            .toList
-          val par = ( if bound.size == assign.size
+            .map(_.map(Pat.Var(_) -> _)
+                  .map(Enumerator.Val(_, _))
+                  .toList
+            ).getOrElse(Nil)
+
+          val n = assign.map(_.size).getOrElse(0)
+
+          val par = ( if bound.size == n
                       then
                         _par
                       else
-                        given MutableList[(String, String)]()
-                        `|`(`.`(_par, ν(bound.drop(assign.size).toSeq*))).rename
+                        `|`(`.`(_par, ν(bound.drop(n).toSeq*)))
                     )
-          * = ** ++ par.generate
 
-        case `[|]`(Encoding(_, _, _, bound), par, _) =>
-          given MutableList[(String, String)]()
-          * = `|`(`.`(par, ν(bound.toSeq*))).rename.generate
+          * = ** ++ par.generate
 
         case _: `{}` => ???
 
@@ -219,11 +217,12 @@ object Program:
 
         case `(*)`(identifier, qual, params*) =>
           val args = params.map("`" + _ + "`")
-          if qual.isEmpty
-          then
-            * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
-          else
-            * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+
+          qual match
+            case List("π", "this") | List("this") | Nil =>
+              * :+= `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+            case _ =>
+              * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
 
         ////////////////////////////////////////////////////////// invocation //
 

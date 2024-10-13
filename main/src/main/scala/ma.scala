@@ -453,8 +453,8 @@ package object Π:
     */
   object ν:
 
-    def map(f: `)(` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `)(` => IO[Unit]): IO[Unit] = f(`)(`(()))
+    def map[B](f: `)(` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `)(` => IO[B]): IO[B] = f(`)(`(()))
 
 
   /**

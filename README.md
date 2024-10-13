@@ -38,37 +38,37 @@ and objective move.
 
 The BNF formal grammar for processes is the following.
 
-    LINE       ::= EQUATION | DEFINITION
-    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" PARALLEL
-    EQUATION   ::= AGENT "=" PARALLEL
-    PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
-    SEQUENTIAL ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
-    LEAF       ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
-                 | NAME "[" PARALLEL "]"
-                 | "<" CAPS ">" [ EXPRESSION ]
-                 | "go" NAME "." PARALLEL
-                 | IDENTIFIER "{" NAMES "}"
-                 | AGENT
-                 | EXPANSION
-    EXPANSION  ::= "[<NUMBER>|" EXPAND "|<NUMBER>]"
-    AGENT      ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
+    LINE           ::= EQUATION | DEFINITION
+    DEFINITION     ::= "⟦<NUMBER>" [ TEMPLATE ] "<NUMBER>⟧" [ "(" NAMES ")" ] [ "{" NAMES "}" ] "=" PARALLEL
+    EQUATION       ::= AGENT "=" PARALLEL
+    PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
+    SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
+    LEAF           ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
+                     | NAME "[" PARALLEL "]"
+                     | "<" CAPS ">" [ EXPRESSION ]
+                     | "go" NAME "." PARALLEL
+                     | IDENTIFIER "{" NAMES "}"
+                     | AGENT
+                     | INSTANTIATION
+    INSTANTIATION  ::= "⟦<NUMBER>" INSTANCE "<NUMBER>⟧" [ "{" NAMES "}" ]
+    AGENT          ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
-    PREFIXES   ::= { PREFIX }
-    PREFIX     ::= "τ" [ EXPRESSION ] "."
-                 | "ν" "(" NAMES ")"
-                 | CAPS "."
-                 | "(" NAME ")" [ EXPRESSION ] "."
-    NAMES      ::= NAME { "," NAME }
-    EXPRESSION ::= "/*" ... "*/"
+    PREFIXES       ::= { PREFIX }
+    PREFIX         ::= "τ" [ EXPRESSION ] "."
+                     | "ν" "(" NAMES ")"
+                     | CAPS "."
+                     | "(" NAME ")" [ EXPRESSION ] "."
+    NAMES          ::= NAME { "," NAME }
+    EXPRESSION     ::= "/*" ... "*/"
 
 The BNF formal grammar for capabilities is the following.
 
-    CAPS       ::= CAPABILITY { "," CAPABILITY }
-    CAPABILITY ::= "ε"
-                 | ( "in" | "out" | "open" ) NAME
-                 | NAME
+    CAPS           ::= CAPABILITY { "," CAPABILITY }
+    CAPABILITY     ::= "ε"
+                     | ( "in" | "out" | "open" ) NAME
+                     | NAME
 
 Lexically, `ident` is an ambient name - (an identifier) starting with lowercase letter;
 it may contain single and double quotes.
