@@ -29,7 +29,11 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  LinkedHashMap => Map,
+  ListBuffer => MutableList,
+  LinkedHashSet => Set
+}
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -38,10 +42,10 @@ import generator.Meta.`()(null)`
 
 import Pi._
 import Calculus._
-import scala.util.parsing.combinator.pisc.parser.Extension
+import scala.util.parsing.combinator.pisc.parser.Expansion
 
 
-class Pi extends Expression:
+abstract class Pi extends Expression:
 
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
@@ -67,7 +71,7 @@ class Pi extends Expression:
         throw PrefixChannelParsingException(ch)
       case _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ (par, binding) ~ Some((it, free2)) =>
         π(ch, par, polarity = true, Some(it)) -> (binding, name ++ free2)
@@ -80,8 +84,8 @@ class Pi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case (Right(term), free) => λ(Expr(term)) -> free
-                                   case (Left(enums), _) => throw TermParsingException(enums)
+                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
   /**
@@ -93,12 +97,18 @@ class Pi extends Expression:
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  private[parser] var eqtn = List[Bind]()
-  private[parser] val defn = Map[Int, Define]()
-  private[parser] val self = Set[Int]()
+  private[parser] var _werr: Boolean = false
+  private[parser] var eqtn: List[Bind] = null
+  private[parser] var defn: Map[Int, Define] = null
+  private[parser] var self: Set[Int] = null
+  private[parser] var _nest = -1
+  protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
+  private[parser] var _cntr: Map[Int, Long] = null
+  protected final def cntr(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(_cntr(_nest)) }
+  protected final def cntr_(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(-_cntr(_nest)) }
 
 
-object Pi extends Extension:
+object Pi extends Expansion:
 
   type Names = Set[Symbol]
 
@@ -107,6 +117,33 @@ object Pi extends Extension:
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
+    def apply(names: Names): Names = Set.from(names)
+
+  type Names2 = Map[Symbol, (Either[Symbol, Option[Symbol]], Long Either Long)]
+
+  object Names2:
+    def apply(): Names2 = Map()
+    def apply(binding2: Names2): Names2 = Map.from(binding2)
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.map { it =>
+        if _code < 0
+        then
+          this(it, None, hardcoded = true)
+        else
+          this(it, Some(it), hardcoded = true)
+      }
+    def apply(name: Symbol, _binding: Option[Symbol], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      val binding = _binding.map(Some(_)).orElse(Some(None)).toRight(null)
+      binding2.get(name) match
+        case Some((_, Left(k))) if k < 0 =>
+          binding2 += name -> (binding, Right(k))
+        case Some((_, Right(k))) if _code >= 0 && (!hardcoded || k < 0) =>
+           throw UniquenessBindingParsingException(name, hardcoded)
+        case Some((_, Left(_))) =>
+        case _ =>
+          binding2 += name -> (binding, cntr(Right(_)))
 
 
   // exceptions
@@ -115,7 +152,7 @@ object Pi extends Extension:
 
   import Expression.ParsingException
 
-  class PrefixParsingException(msg: String, cause: Throwable = null)
+  abstract class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
@@ -124,8 +161,25 @@ object Pi extends Extension:
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
+  abstract class BindingParsingException(msg: String, cause: Throwable = null)
+      extends ParsingException(msg
+                                 + s" at nesting level #$_nest"
+                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
+
+  case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+
 
   // functions
+
+  def index(prog: List[Bind]): `(*)` => Int = {
+    case `(*)`(identifier, _, args*) =>
+      prog
+        .indexWhere {
+          case (`(*)`(`identifier`, _, params*), _) if params.size == args.size => true
+          case _ => false
+        }
+  }
 
   def ensure(implicit prog: List[Bind]): Unit =
     import Ensure._
@@ -146,6 +200,9 @@ object Pi extends Extension:
     do
       prog(i)._1 match
         case `(*)`(id, _, params*) =>
+          if _werr
+          then
+            throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
   def apply(prog: List[Bind]): Unit =
@@ -153,17 +210,35 @@ object Pi extends Extension:
     ensure(prog)
 
 
-  private var i: Int = 0
+  private var i: Int = -1
+  private var l: (Int, Int) = (-1, -1)
+  def ln = l
 
-  def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
-    .foldLeft(List[String]() -> false) {
-      case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
-      case ((r, true), l) => (r.init :+ r.last.stripSuffix("\\") + l) -> l.endsWith("\\")
+  def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+    _werr = errors
+    eqtn = List()
+    defn = Map()
+    self = Set()
+    _nest = 0
+    _cntr = Map(0 -> 0L)
+    _id = scala.collection.mutable.Seq('0')
+    _ix = 0
+    i = 0
+    l = (0, 0)
+
+    (source.getLines().toList :+ "")
+    .zipWithIndex
+    .foldLeft(List[(String, (Int, Int))]() -> false) {
+      case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+      case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
     }._1
-    .filterNot(_.matches("^[ ]*#.*")) // commented lines
-    .filterNot(_.isBlank) // empty lines
-    .flatMap { it =>
-      if it.matches("^[ ]*@.*")
+    .flatMap { case (it, (m, n)) =>
+      l = (m+1, n+1)
+      if it.matches("^[ ]*#.*") // commented lines
+      || it.isBlank // empty lines
+      then
+        None
+      else if it.matches("^[ ]*@.*")
       then // Scala
         Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // Pi
@@ -173,8 +248,8 @@ object Pi extends Extension:
             val equations = eqtn.slice(i, eqtn.size)
             i = eqtn.size
             equations.map(Right(_))
-          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
-            defn(code) = definition
+          case Success(Right(definition), _) =>
+            defn(_code) = definition
             Nil
           case failure: NoSuccess =>
             scala.sys.error(failure.msg)

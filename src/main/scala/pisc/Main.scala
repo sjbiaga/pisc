@@ -35,6 +35,7 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Pi
+import Pi.ln
 
 
 object Main:
@@ -70,6 +71,11 @@ object Main:
           .mkString("\n\n")
 
         bwr.write(code, 0, code.length)
+      catch t =>
+        val (m, n) = ln
+        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
+        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        throw t
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()

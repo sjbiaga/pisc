@@ -56,8 +56,8 @@ package object Π:
     */
   case class ν(_capacity: Int):
 
-    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `()` => IO[Unit]): IO[Unit] =
+    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
           ref <- Ref.of[IO, ><](><())
         yield
