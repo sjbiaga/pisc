@@ -1,19 +1,19 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| 'x :: 'y ==> 'P || 'z ==> 'Q |] = x(w).(([w = y]P) + ([w = z]Q))
+⟦ 'x `:` 'y `=>` 'P `;` 'z `=>` 'Q ⟧ = x(w).(([w = y]P) + ([w = z]Q))
 
-[2| 'y Copy 'z |2](t, f) = [| y :: t ==> z<t>. || f ==> z<f>. |]
+⟦2 'y Copy 'z 2⟧(t, f) = ⟦ y : t => z<t>. ; f => z<f>. ⟧
 
-[3| 'x && 'y / 'z |3](t, f) = [| x :: t ==> [2| y Copy z |2] || f ==> z<f>. |]
+⟦3 'x `/\\` 'y `->` 'z 3⟧(t, f) = ⟦ x : t => ⟦2 y Copy z 2⟧ ; f => z<f>. ⟧
 
-[10| s"False $x" |10](t, f) = x<f>.
+⟦10 s"False $x" 10⟧(t, f) = x<f>.
 
-[11| s"True $x" |11](t, f) = x<t>.
+⟦11 s"True $x" 11⟧(t, f) = x<t>.
 
-Main = ν(t, f) ν(x, y, z) ( [11| True x |11]                     \
-                          | [10| False y |10]                    \
-                          | [3| x && y / z |3]                   \
-                          | [| z :: t ==> τ/*println("T")*/.     \
-                                 || f ==> τ/*println("F")*/.     \
-                            |]                                   \
+Main = ν(t, f) ν(x, y, z) ( ⟦11 True x 11⟧                 \
+                          | ⟦10 False y 10⟧                \
+                          | ⟦3 x /\ y -> z 3⟧              \
+                          | ⟦ z : t => τ/*println("T")*/.  \
+                                ; f => τ/*println("F")*/.  \
+                            ⟧                              \
                           )
