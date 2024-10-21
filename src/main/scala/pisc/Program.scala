@@ -34,7 +34,6 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
-import parser.`Pre | AST`
 import generator.Meta._
 
 
@@ -44,7 +43,7 @@ object Program:
     prog.map { (bind, sum) => defn(bind, sum.generate).toString }
 
 
-  extension(node: `Pre | AST`)
+  extension(node: Pre | AST)
 
     def generate: List[Enumerator] =
       var * = List[Enumerator]()
@@ -53,13 +52,13 @@ object Program:
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case `∅` =>
+        case ∅ =>
           * = `_ <- IO.unit`
 
-        case `+`(_, operand) =>
+        case +(_, operand) =>
           * = operand.generate
 
-        case it: `+` =>
+        case it: + =>
           val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
 
           * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -69,10 +68,10 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case `|`(operand) =>
+        case ||(operand) =>
           * = operand.generate
 
-        case it: `|` =>
+        case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
           * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -210,17 +209,17 @@ object Program:
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
-        case `?:`(((λ(lhs), λ(rhs)), mismatch), t, Some(f)) =>
+        case ?:(((λ(lhs), λ(rhs)), mismatch), t, Some(f)) =>
           if mismatch
           then
             * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), f.generate, t.generate))
           else
             * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate, f.generate))
 
-        case it: `?:` =>
-          def cases(sum: `+`): Term =
+        case it: ?: =>
+          def cases(sum: +): Term =
             sum match
-              case `+`(_, `|`(`.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+              case +(_, ||(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
                 if mismatch
                 then
                   `if * then … else …`(====(lhs -> rhs), `_ <- *`(`π-exclude`(t.enabled)), cases(t))
@@ -229,14 +228,14 @@ object Program:
               case _ =>
                 sum.generate
 
-          * = `_ <- *`(cases(`+`(null, `|`(`.`(it)))))
+          * = `_ <- *`(cases(`+`(null, ||(`.`(it)))))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case `!`(Some(π @ π(_, λ(Symbol(par)), true, _, _)), sum) =>
+        case !(Some(π @ π(_, λ(Symbol(par)), true, _, _)), sum) =>
           val uuid = id
 
           val `!.π⋯` = π.generate ++
@@ -252,7 +251,7 @@ object Program:
 
           * = `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it)) :: `!.π⋯`
 
-        case `!`(Some(μ), sum) =>
+        case !(Some(μ), sum) =>
           val uuid = id
           val uuid2 = id
 
@@ -275,7 +274,7 @@ object Program:
 
           * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it)) :: `!.μ⋯`
 
-        case _ : `!` => ??? // caught by 'parse'
+        case _ : ! => ??? // caught by 'parse'
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -296,7 +295,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(null, `|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
+                        `+`(null, ||(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate

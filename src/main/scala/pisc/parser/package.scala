@@ -2,18 +2,10 @@ package pisc
 
 package object parser:
 
-  import Calculus.{ `+`, `?:`, `{}`, `(*)`, `!`, `⟦⟧`, π, τ, λ, Pre, AST }
+  import Calculus.{ +, ?:, `{}`, `(*)`, !, `⟦⟧`, π, τ }
 
-  import StochasticPi.{ Act, Sum }
+  type - = ?: | `{}` | `(*)` | ! | `⟦⟧`
 
-  type `-` = `?:` | `{}` | `(*)` | `!` | `⟦⟧`
-
-  type `&` = `+` | `-`
+  type & = + | -
 
   type μ = π | τ
-
-  type `Pre | AST` = Pre | AST
-
-  type `Act | Sum` = Act | Sum
-
-  type `name | process` = λ | AST
