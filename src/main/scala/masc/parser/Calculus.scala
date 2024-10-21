@@ -118,9 +118,9 @@ abstract class Calculus extends Ambient:
         }
     }
 
-  def parallel(using binding2: Names2): Parser[(`|`, Names)] =
+  def parallel(using binding2: Names2): Parser[(||, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      `|`(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+      ||(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
@@ -134,7 +134,7 @@ abstract class Calculus extends Ambient:
           `.`(∅, pre._1*) -> pre._2._2 // void
     }
 
-  def leaf(using binding2: Names2): Parser[(`-`, Names)] =
+  def leaf(using binding2: Names2): Parser[(-, Names)] =
     "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
       case Some((it, binding)) ~ (par, free) =>
         `!`(Some(it), par) -> (free &~ binding)
@@ -149,9 +149,9 @@ abstract class Calculus extends Ambient:
       case _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (path, free) ~ Some(((Right(it), _), free2)) =>
-        `<>`(Some(it), path*) -> (free ++ free2)
+        <>(Some(it), path*) -> (free ++ free2)
       case (path, free) ~ _ =>
-        `<>`(None, path*) -> free
+        <>(None, path*) -> free
     } |
     "go" ~> name ~ ("."~> parallel) ^^ { // objective move
       case (amb, name) ~ (par, free) =>
@@ -284,9 +284,9 @@ abstract class Calculus extends Ambient:
 
 object Calculus:
 
-  type Bind = (`(*)`, `|`)
+  type Bind = (`(*)`, ||)
 
-  type Define = (Encoding, `|`)
+  type Define = (Encoding, ||)
 
   case class Encoding(code: Int,
                       term: Option[Term],
@@ -302,22 +302,22 @@ object Calculus:
 
   sealed trait AST extends Any
 
-  case class `|`(components: `.`*) extends AST:
+  case class ||(components: `.`*) extends AST:
     override def toString: String = components.mkString(" | ")
 
-  object ∅ extends `|`():
+  object ∅ extends ||():
     override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[`|`]
+      that.isInstanceOf[||]
 
     override def equals(any: Any): Boolean = any match
-      case that: `|` => that.components.size == 0
+      case that: || => that.components.size == 0
       case _ => false
 
     override def toString: String = "()"
 
-  case class `.`(end: `&`, prefixes: Pre*) extends AST:
+  case class `.`(end: &, prefixes: Pre*) extends AST:
     override def toString: String =
-      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[`|`]
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[||]
                                                                          then "(" + end + ")" else end)
 
   sealed trait Pre extends Any
@@ -334,20 +334,20 @@ object Calculus:
   case class `()`(code: Option[Term], name: String) extends Pre:
     override def toString: String = s"($name)."
 
-  case class `<>`(code: Option[Term], path: Ambient.AST*) extends AST:
+  case class <>(code: Option[Term], path: Ambient.AST*) extends AST:
     override def toString: String = path.mkString("<", ", ", ">")
 
-  case class `!`(guard: Option[String], par: `|`) extends AST:
+  case class !(guard: Option[String], par: ||) extends AST:
     override def toString: String = "!" + guard.map("." + _).getOrElse("") + par
 
-  case class `[]`(amb: String, par: `|`) extends AST:
+  case class `[]`(amb: String, par: ||) extends AST:
     override def toString: String = amb + (if ∅ == par then " [ ]" else " [ " + par + " ]")
 
-  case class `go.`(amb: String, par: `|`) extends AST:
+  case class `go.`(amb: String, par: ||) extends AST:
     override def toString: String = "go " + amb + "." + par
 
   case class `⟦⟧`(encoding: Encoding,
-                  par: `|`,
+                  par: ||,
                   assign: Option[Set[(String, String)]] = None) extends AST:
     override def toString: String =
       s"""$encoding${assign.map{_.map(_ + "->" + _).mkString("{", ", ", "}")}.getOrElse("")} = $par"""
@@ -445,30 +445,30 @@ object Calculus:
 
       ast match
 
-        case `∅` => ∅
+        case ∅ => ∅
 
-        case `|`(`.`(par: `|`), it*) =>
+        case ||(`.`(par: ||), it*) =>
           val lhs = par.flatten
-          val rhs = `|`(it*).flatten
-          `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
+          val rhs = ||(it*).flatten
+          ||((lhs.components ++ rhs.components).filterNot(∅ == ||(_))*)
 
-        case `|`(seq, it*) =>
-          val lhs = `|`(seq.flatten)
-          val rhs = `|`(it*).flatten
-          `|`((lhs.components ++ rhs.components).filterNot(∅ == `|`(_))*)
+        case ||(seq, it*) =>
+          val lhs = ||(seq.flatten)
+          val rhs = ||(it*).flatten
+          ||((lhs.components ++ rhs.components).filterNot(∅ == ||(_))*)
 
-        case `.`(`|`(`.`(end, ps*)), it*) =>
+        case `.`(||(`.`(end, ps*)), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
           `.`(end.flatten, it*)
 
-        case `!`(None, par) =>
+        case !(None, par) =>
           par.flatten match
-            case `|`(`.`(end: `!`)) => end
+            case ||(`.`(end: !)) => end
             case it => `!`(None, it)
 
-        case `!`(guard, par) =>
+        case !(guard, par) =>
           `!`(guard, par.flatten)
 
         case `[]`(amb, par) =>
@@ -487,14 +487,14 @@ object Calculus:
 
       ast match
 
-        case `∅` => Set.empty
+        case ∅ => Set.empty
 
-        case `|`(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case ||(it*) => it.map(_.capitals).reduce(_ ++ _)
 
         case `.`(end, _*) =>
           end.capitals
 
-        case `!`(_, par) =>
+        case !(_, par) =>
           par.capitals
 
         case `[]`(_, par) =>
@@ -542,10 +542,10 @@ object Calculus:
 
       ast match
 
-        case `∅` => ∅
+        case ∅ => ∅
 
-        case `|`(it*) =>
-          `|`(it.map(rename(_))*)
+        case ||(it*) =>
+          ||(it.map(rename(_))*)
 
         case `.`(end, _it*) =>
           val n = renaming.size
@@ -569,22 +569,22 @@ object Calculus:
           renaming.dropInPlace(renaming.size - n)
           `.`(end2, it*)
 
-        case `<>`(it, _path*) =>
+        case <>(it, _path*) =>
           val path = _path.map {
             case Λ(name) => Λ(renamed(name))
             case ζ(op, amb) => ζ(op, renamed(amb))
             case it => it
           }
-          `<>`(it, path*)
+          <>(it, path*)
 
-        case `!`(Some(name), par) =>
+        case !(Some(name), par) =>
           val n = renaming.size
           given Names = Names(binding)
           val rep = `!`(Some(rebind(name)), rename(par))
           renaming.dropInPlace(renaming.size - n)
           rep
 
-        case `!`(guard, par) =>
+        case !(guard, par) =>
           `!`(guard, rename(par))
 
         case `[]`(amb, par) =>
