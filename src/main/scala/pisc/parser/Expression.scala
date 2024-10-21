@@ -29,16 +29,17 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
+import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator._
 
-import PolyadicPi.Names
-import Expression.ExpressionParsingException
+import PolyadicPi.{ Names, Names2 }
+import Calculus.{ renamed, λ }
+import Expression.{ ExpressionParsingException, Code }
 
 
-class Expression extends JavaTokenParsers:
+abstract class Expression extends JavaTokenParsers:
 
   import scala.meta._
   import scala.meta.dialects.Scala3
@@ -47,24 +48,27 @@ class Expression extends JavaTokenParsers:
     * or [[Enumerator]]s (used for assignment)
     * @return
     */
-  def expression: Parser[(Either[List[Enumerator], Term], Names)] =
+  def expression: Parser[(Code, Names)] =
     """[/][*].*?[*][/]""".r ^^ { it =>
       val expr = it.stripPrefix("/*").stripSuffix("*/")
+      Expression.renaming = None
       try
-        Expression(expr.parse[Term].get) match
-          case (term, names) => Right(term) -> names
+        val orig = expr.parse[Term].get
+        Expression(orig) match
+          case (term, names) => (Right(term), orig) -> names
       catch _ =>
         try
-          Expression(("for { " + expr + " } yield ()").parse[Term].get) match
+          val orig = ("for { " + expr + " } yield ()").parse[Term].get
+          Expression(orig) match
             case (Term.ForYield(enums, _), names) =>
-              Left(enums) -> names
+              (Left(enums), orig) -> names
         catch t =>
           throw ExpressionParsingException(expr, t)
     }
 
-  def regexMatch(r: Regex): Parser[Regex.Match] = ???
+  def regexMatch(r: Regex): Parser[Regex.Match]
 
-  protected[parser] var code: Int = -1
+  private[parser] var _code: Int = -1
 
   private def apply(operators: Seq[String], operands: Seq[Symbol | String])
                    (using names: Names): List[Term] =
@@ -72,6 +76,7 @@ class Expression extends JavaTokenParsers:
       case Some(free @ Symbol(it)) =>
         names += free
         operators.headOption match
+          case Some(op) if op.isBlank => ???
           case Some(op) =>
             Term.ApplyInfix(Term.Name(it),
                             Term.Name(op.strip),
@@ -81,6 +86,7 @@ class Expression extends JavaTokenParsers:
             Term.Name(it) :: Nil
       case Some(it: String) =>
         operators.headOption match
+          case Some(op) if op.isBlank => ???
           case Some(op) =>
             Term.ApplyInfix(Term.Name(it),
                             Term.Name(op.strip),
@@ -88,42 +94,60 @@ class Expression extends JavaTokenParsers:
                             Term.ArgClause(this(operators.tail, operands.tail), None)) :: Nil
           case _ =>
             Term.Name(it) :: Nil
+      case _ if operators.nonEmpty => ???
       case _ => Nil
 
-  def encoding: Parser[(Term, Names)] =
-    regexMatch("""\[(\d*)\|(.*?)\|\1\]""".r) ^^ { it =>
-      code = if it.group(1).isEmpty then 0 else it.group(1).toInt
-      try
-        Expression(it.group(2).parse[Term].get) match
-          case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
-            var operators = _operators.map { case Lit.String(it) => it }
-            var operands: Seq[Symbol | String] = _operands.map {
-              case Term.Name(it) => Symbol(it)
-              case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
-              case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
-            }
-            if operators.head.isBlank
-            then
-              operators = operators.tail
-            else
-              operands = "x" +: operands
-            if operators.last.isBlank
-            then
-              operators = operators.init
-            else
-              operands = operands :+ "x"
-            given Names()
-            this(operators, operands).head -> given_Names
-          case (term, names) =>
-            term -> names
-      catch t =>
-        throw ExpressionParsingException(it.group(2), t)
+  def template: Parser[(Option[Term], Names)] =
+    regexMatch("""⟦(\d*)(.*?)\1⟧""".r) ^^ { it =>
+      _code = if it.group(1).isEmpty then 0 else it.group(1).toInt
+      if it.group(2).isBlank
+      then
+        None -> Names()
+      else
+        Expression.renaming = None
+        try
+          Expression(it.group(2).parse[Term].get) match
+            case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
+              var operators = _operators.map { case Lit.String(it) => it }
+              var operands: Seq[Symbol | String] = _operands.map {
+                case Term.Name(it) => Symbol(it)
+                case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
+                case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
+              }
+              if operators.mkString.isBlank
+              then
+                operands.size match
+                  case 0 =>
+                    None -> Names()
+                  case 1 =>
+                    operands.head match
+                      case free @ Symbol(it) =>
+                        Some(Term.Name(it)) -> Set(free)
+                      case _ => ???
+                  case _ => ???
+              else
+                if operators.head.isBlank
+                then
+                  operators = operators.tail
+                else
+                  operands = "x" +: operands
+                if operators.last.isBlank
+                then
+                  operators = operators.init
+                else
+                  operands = operands :+ "x"
+                given Names()
+                Some(this(operators, operands).head) -> given_Names
+            case (term, names) =>
+              Some(term) -> names
+        catch t =>
+          throw ExpressionParsingException(it.group(2), t)
     }
 
 
 object Expression:
 
-  class ParsingException(msg: String, cause: Throwable = null)
+  abstract class ParsingException(msg: String, cause: Throwable = null)
       extends RuntimeException(msg, cause)
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
@@ -133,6 +157,23 @@ object Expression:
   import scala.Function.const
 
   import scala.{ meta => sm }
+
+
+  type Code = (List[sm.Enumerator] Either sm.Term, sm.Term)
+
+
+  var renaming: Option[(MutableList[(Symbol, λ)], Names2)] = None
+
+  def recode(orig: sm.Term): (Code, Names) =
+    val renaming = this.renaming
+    this.renaming = None
+    this(orig) match
+      case (sm.Term.ForYield(enums, _), names) =>
+        this.renaming = renaming
+        (Left(enums), orig) -> names
+      case (term, names) =>
+        this.renaming = renaming
+        (Right(term), orig) -> names
 
 
   inline def apply(self: sm.Term): (sm.Term, Names) =
@@ -268,7 +309,11 @@ object Expression:
         it.copy(args = as) -> asns
 
       case sm.Lit.Symbol(free @ Symbol(name)) =>
-        sm.Term.Name(name) -> Set(free)
+        renaming match
+          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
+            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
+          case _ =>
+            sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -289,7 +334,11 @@ object Expression:
 
       case it @ sm.Term.Name(s"'$name") =>
         val free = Symbol(name)
-        sm.Term.Name(free.name) -> Set(free)
+        renaming match
+          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
+            sm.Term.Name(s"'${renamed(free).asSymbol.name}") -> Names()
+          case _ =>
+            sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -597,8 +646,12 @@ object Expression:
         val (as, asns) = this(args)
         it.copy(args = as) -> asns
 
-      case it @ sm.Lit.Symbol(free @ Symbol(name)) =>
-         sm.Term.Name(name) -> Set(free)
+      case sm.Lit.Symbol(free @ Symbol(name)) =>
+        renaming match
+          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
+            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
+          case _ =>
+            sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
