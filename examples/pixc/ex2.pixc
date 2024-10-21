@@ -1,3 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = w [ ν(ch) start(t) [ ch(ch). s [ end(s). end(t). ] ]. ch<ch>. ]
+⟦9 9⟧ =
+
+⟦ 'ch DOT 'P ⟧ = ch(x). P
+
+Main = w⟦9 ν(ch) ( start(t) ⟦ ch DOT s⟦9 end(t). 9⟧ ⟧. ch<ch>. \
+                 | t⟦ ch DOT s⟦9 end(t). 9⟧ ⟧                  \
+                 )                                             \
+        9⟧                                                     \

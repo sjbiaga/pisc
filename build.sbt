@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "3.5.2-RC1"
+ThisBuild / scalaVersion := "3.5.2-RC2"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -18,8 +18,8 @@ lazy val root = (project in file("."))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.5.2-RC1",
-    crossScalaVersions ++= Seq("2.13.15", "3.5.2-RC1"),
+    scalaVersion := "3.5.2-RC2",
+    crossScalaVersions ++= Seq("2.13.15", "3.5.2-RC2"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
@@ -31,8 +31,8 @@ lazy val main = (project in file("main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.5.2-RC1",
-    crossScalaVersions ++= Seq("2.13.15", "3.5.2-RC1"),
+    scalaVersion := "3.5.2-RC2",
+    crossScalaVersions ++= Seq("2.13.15", "3.5.2-RC2"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
@@ -44,3 +44,5 @@ unmanagedSources / excludeFilter := "spi*.scala" || "loop.scala" || "stats.scala
 Global / bloopExportJarClassifiers := Some(Set("sources"))
 Global / onChangedBuildSource := ReloadOnSourceChanges
 //Global / onChangedBuildSource := IgnoreSourceChanges
+
+Test / parallelExecution := false

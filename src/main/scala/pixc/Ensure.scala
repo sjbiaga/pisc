@@ -28,7 +28,7 @@
 
 package pixc
 
-import scala.collection.mutable.{ HashMap => Map }
+import scala.collection.mutable.{ LinkedHashMap => Map }
 
 import parser.Calculus._
 
@@ -51,7 +51,7 @@ object Ensure:
     case (identifier, size) =>
       prog
         .indexWhere {
-          case (`(*)`(`identifier`, params*), _) if params.size == size => true
+          case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
           case _ => false
         }
   }
@@ -59,12 +59,12 @@ object Ensure:
   def main(using prog: List[Bind]): Int =
     if 1 == prog
       .count {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     then prog
       .indexWhere {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     else -1
@@ -95,7 +95,7 @@ object Ensure:
 
         case `.`(end, it*) =>
           it.foldLeft(end.recursive) {
-            case (_, χ(_, Some(sum), _)) => sum.recursive
+            case (_, χ(Right(exp), _)) => exp.recursive
             case _ =>
           }
 
@@ -106,15 +106,12 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursive(stack.size)
 
-        case `[|]`(_, sum, _) =>
-          sum.recursive
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.recursive
 
         case _: `{}` => ???
 
-        case it @ `(*)`(id, params*)
+        case it @ `(*)`(id, _, params*)
             if stack.contains(id -> params.size) =>
           val k = stack.lastIndexOf(id -> params.size)
           for
@@ -132,7 +129,7 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, params*) =>
+        case `(*)`(id, _, params*) =>
           val i = index2(prog)(id -> params.size)
           val sum = prog(i)._2
           sum.recursive(using stack :+ id -> params.size)
@@ -162,17 +159,16 @@ object Ensure:
          }
 
         case `.`(end, it*) =>
-          if it
-            .exists {
-              case χ(_, Some(_), _) => true
-              case _ => false
-            } && repl
+          if repl
           then
-            false
+            it.forall {
+              case χ(Right(_), _) => false
+              case _ => true
+            } && end.replication
           else
             it.foldLeft(end.replication) {
               case (false, _) => false
-              case (_, χ(_, Some(sum), _)) => sum.replication
+              case (_, χ(Right(exp), _)) => exp.replication
               case _ => true
             }
 
@@ -182,18 +178,15 @@ object Ensure:
         case `!`(_, sum) =>
           sum.replication(true)
 
-        case `[|]`(_, sum, _) =>
-          sum.replication
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.replication
 
         case _: `{}` => ???
 
-        case `(*)`(id, params*)
+        case `(*)`(id, _, params*)
             if stack.contains(id -> params.size) => true
 
-        case `(*)`(id, params*) =>
+        case `(*)`(id, _, params*) =>
           val i = rec(id -> params.size)
           val sum = prog(i.abs-1)._2
           sum.replication(using id -> params.size :: stack)
@@ -224,17 +217,13 @@ object Ensure:
         case `.`(end, it*) =>
           if it
             .exists {
-              case χ(_, Some(_), _) => true
+              case χ(Right(_), _) => true
               case _ => false
             }
           then
             false
           else
-            it.foldLeft(end.recursion) {
-              case (false, _) => false
-              case (_, χ(_, Some(sum), _)) => sum.recursion
-              case _ => true
-            }
+            end.recursion
 
         case `?:`(_, t, f) =>
           t.recursion && f.map(_.recursion).getOrElse(true)
@@ -242,18 +231,15 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursion
 
-        case `[|]`(_, sum, _) =>
-          sum.recursion
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.recursion
 
         case _: `{}` => ???
 
-        case `(*)`(id, params*)
+        case `(*)`(id, _, params*)
             if stack.contains(id -> params.size) => true
 
-        case `(*)`(id, params*) =>
+        case `(*)`(id, _, params*) =>
           val i = rec(id -> params.size)
           val sum = prog(i.abs-1)._2
           sum.recursion(using id -> params.size :: stack)

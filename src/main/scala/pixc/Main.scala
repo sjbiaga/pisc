@@ -32,14 +32,14 @@ import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.Charset
 import java.nio.file.Paths
 
-import scala.collection.mutable.{ HashMap => Map }
+import scala.collection.{ Map, Set }
 import scala.io.Source
 
 import scala.meta._
 import dialects.Scala3
 
 import parser.{ StochasticPi, Calculus }
-import StochasticPi.Actions
+import StochasticPi.{ Actions, ln }
 import Calculus.{ `(*)`,  λ }
 
 
@@ -67,6 +67,8 @@ object Main:
 
         val (prog, (discarded, excluded, enabled)) = StochasticPi(prog_.map(_._1))
 
+        val congruent = StochasticPi.Χ()
+
         val ps = Program(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
 
@@ -84,10 +86,12 @@ object Main:
         val magic = trick + "\n\n" + spell + "\n\n" + wand + "\n\n"
         val elvis = `if-then-else`("π-elvis", excluded).toString + "\n\n"
 
+        val kong = `King Kong`("π-kong", congruent).toString + "\n\n"
+
         val init = this(
           prog
             .find {
-              case (`(*)`("Main"), _) => true
+              case (`(*)`("Main", _), _) => true
               case _ => false
             }
             .get
@@ -95,7 +99,12 @@ object Main:
             .enabled
         ).toString + "\n\n"
 
-        bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
+        bwr.write(magic + elvis + kong + init + code, 0, magic.length + elvis.length + kong.length + init.length + code.length)
+      catch t =>
+        val (m, n) = ln
+        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
+        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        throw t
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
@@ -145,6 +154,29 @@ object Main:
              Term.Apply(scollimmMap,
                         Term.ArgClause(this(excluded).toList, None)))
 
+  def `King Kong`(name: String, congruent: Map[String, Set[String]]): Defn.Val =
+    Defn.Val(Mod.Implicit() :: Nil,
+             Pat.Var(Term.Name(name)) :: Nil,
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-List"),
+                                                            Type.ArgClause(Type.Name("String") :: Nil)))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this.Χ(congruent).toList, None)))
+
+  private object Χ:
+
+    def apply(self: Map[String, Set[String]]) =
+      for
+        (id, it) <- self
+      yield
+        Term.ApplyInfix(Lit.String(s"$id"),
+                        Term.Name("->"), Type.ArgClause(Nil),
+                        Term.ArgClause(Term.Apply(scollimmList,
+                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                                                 None)
+                                       ) :: Nil, None))
+
   private def apply(self: Map[String, Actions]) =
     for
       (id, it) <- self
@@ -164,6 +196,17 @@ object Main:
                         Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
                                        None)
              ))
+
+  private val scollimmList =
+    Term.Select(
+      Term.Select(
+        Term.Select(
+          Term.Select(
+            Term.Name("_root_"),
+            Term.Name("scala")),
+          Term.Name("collection")),
+        Term.Name("immutable")),
+      Term.Name("List"))
 
   private val scollimmMap =
     Term.Select(

@@ -6,8 +6,8 @@
 
 Main = Fib(-1)
 
-Fib(n) = ν(x) w                                        \
-       [                                               \
+Fib(n) = ν(x)                                          \
+       (                                               \
        ( τ /* _ <- IO { print("n = ") };               \
              'n <- IO.blocking {                       \
                      try                               \
@@ -43,4 +43,4 @@ Fib(n) = ν(x) w                                        \
          then Fib(-1)                                  \
          else ()                                       \
        )                                               \
-       ]                                               \
+       )

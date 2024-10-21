@@ -330,25 +330,17 @@ object Meta:
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
 
 
-  def `tryAcquire.ifM`(* : String, ** : Term): Term =
-    Term.Apply(Term.Select(Term.Select(*, "tryAcquire"), "ifM"),
-               Term.ArgClause(** :: `IO.cede` :: Nil, None)
-    )
-
-  def `* <- Semaphore[IO](1)`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(1) :: Nil, None)
-                         )
-    )
-
-
-  def `* <- χ; _ <- }{()(, *)`(name: String): List[Enumerator] =
-    `* <- *`(name -> "χ") :: `_ <- }{()(, *)`(name)
-
-  def `_ <- }{()(, *)`(name: String): List[Enumerator] =
+  def `* <- χ; _ <- }{()(, *)`(name: String, uuid: String): List[Enumerator] =
+    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(uuid) :: Nil, None))) ::
     `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) :: Nil
+
+  def `* <- }{(*)()()`(name: String, uuid: String): Enumerator =
+    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(uuid) :: Nil, None)),
+                                Term.ArgClause(\(")(") :: Nil, None)))
+
+  def `_ <- }{(*)()()`(name: String): Enumerator =
+    `_ <- *`(Term.Apply(Term.Apply(\("}{"), Term.ArgClause(\(name) :: Nil, None)),
+                        Term.ArgClause(\(")(") :: Nil, None)))
 
 
   def `π-disable`(key: String, enabled: Actions): Term =

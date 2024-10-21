@@ -4,12 +4,15 @@
 
 @val ! : String => IO[String] = { _ => IO.canceled.as("") }
 
-Main = ν(a,b,c) w           \
-     [ (!.a<"a">.)          \
-     | (!.b<"b">.)          \
-     | (!.c<"c">.)          \
-     | Hanoi(a,b,c,/*-1*/)  \
-     ]
+⟦⟧ =
+
+Main = ν(a,b,c)              \
+    w⟦                       \
+     |  (!.a<"a">.)          \
+     |  (!.b<"b">.)          \
+     |  (!.c<"c">.)          \
+     |  Hanoi(a,b,c,/*-1*/)  \
+     ⟧
 
 Hanoi(a,b,c,n) = ν(w)                                        \
                ( τ/* _ <- IO.print("n = ");                  \

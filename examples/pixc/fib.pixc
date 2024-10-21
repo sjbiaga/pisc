@@ -8,16 +8,16 @@
 
 @def random = 3+gen.nextLong(max-2)
 
-Main = ν(num) w                                         \
-     [ (!.num(n).                                       \
-        ν(in) ( Fib(n, in)                              \
-              | in(fib).                                \
-                τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
-                num</*random*/>.                        \
-              )                                         \
-       )                                                \
-     | num</*random*/>.                                 \
-     ]
+Main = ν(num)                                                   \
+     (                                                          \
+     (!.num(n).ν(out) ( Fib(n, out)                             \
+                      | out(fib).                               \
+                        τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                        num</*random*/>.                        \
+                      )                                         \
+     )                                                          \
+     | num</*random*/>.                                         \
+     )
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
               ν(f)                       \

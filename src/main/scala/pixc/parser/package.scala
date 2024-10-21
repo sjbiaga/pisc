@@ -2,10 +2,11 @@ package pixc
 
 package object parser:
 
-  import Calculus.{ `+`, ∅, `?:`, `{}`, `(*)`, `!`, `[|]`, `[]`, λ, π, τ, Pre, AST }
+  import Calculus.{ `+`, `?:`, `{}`, `(*)`, `!`, `⟦⟧`, π, τ, λ, Pre, AST }
+
   import StochasticPi.{ Act, Sum }
 
-  type `-` = ∅.type | `?:` | `{}` | `(*)` | `!` | `[|]` | `[]`
+  type `-` = `?:` | `{}` | `(*)` | `!` | `⟦⟧`
 
   type `&` = `+` | `-`
 
@@ -15,4 +16,6 @@ package object parser:
 
   type `Act | Sum` = Act | Sum
 
-  type `name | process` = λ | `+`
+  type `name | process` = λ | AST
+
+  type `1 | 2` = 1 | 2

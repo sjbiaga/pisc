@@ -48,6 +48,8 @@ package object sΠ:
 
   type `Π-Set`[A] = Set[A]
 
+  type `Π-List`[+A] = List[A]
+
 
   /**
     * Type of keys in [[`][`]].
@@ -55,9 +57,9 @@ package object sΠ:
   type `)*(` = Set[`)(`]
 
   /**
-    * Wraps either transaction names ([[Unit]]) or transaction keys ([[UUID]]).
+    * Wraps either transaction names ([[String]]) or transaction keys ([[UUID]]).
     *
-    * @param value either [[[Unit]] or [[UUID]]
+    * @param value either [[String]] or [[UUID]]
     */
   final class `)(`(private val value: Any):
     override def hashCode: Int = value.##
@@ -79,6 +81,7 @@ package object sΠ:
 
 
   object `}{`:
+
     def apply(`)(`: IOLocal[`)(`], xa: `()`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
       for
@@ -97,57 +100,97 @@ package object sΠ:
       yield
         ()
 
-    private def update(temp: `}{`, root: `)*(`, join: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val tree @ `}{`(_, _, children) = it(temp.root)
-                    it + (temp.root -> tree.copy(children = children - root + join))
-                  }
-
-    private def merge_(join: `)*(`, node: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
+    private def update_(join: `)*(`, node: `)*(`)
+                       (implicit `][`: `][`): IO[Unit] =
       `][`.update { it =>
                     val tree = it(node)
                     it + (node -> tree.copy(root = join))
                   }
 
-    private def merge(tree: `}{`, join: `)*(`, node: `)*(`)
-                     (implicit `][`: `][`): IO[Unit] =
+    private def update(temp: `}{`, node: `)*(`, join: `)*(`)
+                      (implicit `][`: `][`): IO[Unit] =
       for
-        _        <- `][`.update { it =>
-                                  val temp @ `}{`(_, _, children) = it(join)
-                                  it + (join -> temp.copy(children = children - node ++ tree.children))
-                                }
-        children <- `][`.modify { it => it -> it(join).children }
-        _        <- if (children.isEmpty)
-                    then
-                      IO.cede
-                    else
-                      NonEmptyList
-                        .fromList(children.toList)
-                        .get
-                        .traverse(merge_(join, _))
-                        .void
+        _ <- `][`.update { it =>
+                           val root = temp.root
+                           val tree = it(root)
+                           it + (root -> tree.copy(children = tree.children - node + join))
+                         }
+        _ <- if (temp.children.isEmpty)
+             then
+               IO.cede
+             else
+               NonEmptyList
+                 .fromList(temp.children.toList)
+                 .get
+                 .traverse(update_(join, _))
+                 .void
       yield
         ()
+
+    private def merge(tree: `}{`, join: `)*(`, node: `)*(`)
+                     (implicit `][`: `][`): IO[Unit] =
+      `][`.update { it =>
+                    val temp @ `}{`(_, _, children) = it(join)
+                    it + (join -> temp.copy(children = children - node ++ tree.children))
+                  }
+
+    def apply(id: String)(`)(`: IOLocal[`)(`])
+             (implicit `π-kong`: `Π-Map`[String, `Π-List`[String]],
+                       `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
+      for
+        _       <- `1`.acquire
+        root    <- `)(`.get
+        blocked <- `][`.modify { it =>
+                                 val key = it.keys.find(_.contains(root)).get
+                                 val tree = it(key)
+                                 it -> !tree.children.exists { node =>
+                                   val xa = it(node).xa.xct.toString
+                                   `π-kong`(id).contains(xa)
+                                 }
+                               }
+        xa      <- if blocked then `1`.release >> IO.cede >> this(id)(`)(`)
+                   else
+                     val uuid = sΠ.`)(`()
+                     for
+                       _                  <- `)(`.set(uuid)
+                       (node, temp, join) <- `][`.modify { it =>
+                                                           val key = it.keys.find(_.contains(root)).get
+                                                           val tree = it(key)
+                                                           val node = tree.children.find { node =>
+                                                             val xa = it(node).xa.xct.toString
+                                                             `π-kong`(id).contains(xa)
+                                                           }.get
+                                                           val temp = it(node)
+                                                           val join = node + uuid
+                                                           (it - node + (join -> temp)) -> (node, temp, join)
+                                                         }
+                       _                  <- update(temp, node, join)
+                       _                  <- `1`.release
+                     yield
+                       temp.xa
+      yield
+        xa
 
     def apply(xa: `()`)(`)(`: IOLocal[`)(`])
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
       for
         _                        <- `1`.acquire
         node                     <- `)(`.get
-        (root, temp, node, tree) <- `][`.modify { it =>
-                                                  val key = it.keys.find(_.contains(node)).get
-                                                  val tree = it(key)
-                                                  assert(tree.xa.xct eq xa.xct)
+        (root, join, node, tree) <- `][`.modify { it =>
+                                                  var key = it.keys.find(_.contains(node)).get
+                                                  var tree = it(key)
+                                                  while tree.xa.xct ne xa.xct
+                                                  do
+                                                    key = tree.root
+                                                    tree = it(key)
                                                   val root = tree.root
                                                   val temp = it(root)
-                                                  it -> (root, temp, key, tree)
+                                                  val join = root ++ key
+                                                  (it - root - key + (join -> temp)) -> (root, join, key, tree)
                                                 }
-        join                      = root ++ node
-        _                        <- `][`.update(_ - root - node + (join -> temp))
-        _                        <- update(temp, root, join)
         _                        <- merge(tree, join, node)
+        temp                     <- `][`.modify { it => it -> it(join) }
+        _                        <- update(temp, root, join)
         _                        <- `1`.release
       yield
         ()
@@ -158,6 +201,7 @@ package object sΠ:
   type `][` = Ref[IO, Map[`)*(`, `}{`]]
 
   object `][`:
+
     def apply(): IO[(IOLocal[`)(`], `][`)] =
       val id  = `)(`()
       val key = Set(id)
@@ -187,10 +231,10 @@ package object sΠ:
   /**
     * transaction
     */
-  object χ:
+  case class χ(uuid: String):
 
-    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `()` => IO[Unit]): IO[Unit] = f(new `)(`(()))
+    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `()` => IO[B]): IO[B] = f(new `)(`(uuid))
 
 
   /**
@@ -237,8 +281,8 @@ package object sΠ:
     */
   object ν:
 
-    def map(f: `()` => Unit): IO[Unit] = flatMap(f andThen IO.pure)
-    def flatMap(f: `()` => IO[Unit]): IO[Unit] =
+    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
           ref <- Ref.of[IO, ><](><())
         yield
