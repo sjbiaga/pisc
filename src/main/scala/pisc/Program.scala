@@ -34,7 +34,6 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
-import parser.`Pre | AST`
 import generator.Meta._
 
 
@@ -44,7 +43,7 @@ object Program:
     bind.map { case (bind, sum) => defn(bind, sum.generate).toString }
 
 
-  extension(node: `Pre | AST`)
+  extension(node: Pre | AST)
 
     def generate(implicit semaphore: Option[String] = None): List[Enumerator] =
       var * = List[Enumerator]()
@@ -53,17 +52,17 @@ object Program:
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case `∅` =>
+        case ∅ =>
           val ** = `_ <- IO.unit`
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
             .getOrElse(* ++= **)
 
-        case `+`(operand) =>
+        case +(operand) =>
           * = operand.generate
 
-        case it: `+` =>
+        case it: + =>
           implicit val sem = Some(id)
 
           val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
@@ -82,10 +81,10 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case `|`(operand) =>
+        case ||(operand) =>
           * = operand.generate
 
-        case it: `|` =>
+        case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate())
 
           val ** = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -99,10 +98,10 @@ object Program:
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case it @ `.`(`?:`(_, _, None)) if semaphore.nonEmpty =>
-          def cases(sum: `+`): Term =
+        case it @ `.`(?:(_, _, None)) if semaphore.nonEmpty =>
+          def cases(sum: +): Term =
             sum match
-              case `+`(`|`(`.`(`?:`(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+              case +(||(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
                 if mismatch
                 then
                   `if * then … else …`(====(lhs -> rhs), Nil, cases(t))
@@ -111,7 +110,7 @@ object Program:
               case _ =>
                 `_ <- *.tryAcquire.ifM`(semaphore.get, sum.generate())
 
-          * = `_ <- *`(cases(`+`(`|`(it))))
+          * = `_ <- *`(cases(`+`(||(it))))
 
         case `.`(end, it*) =>
           val ** = (it :+ end).foldLeft(*)(_ ++ _.generate())
@@ -199,7 +198,7 @@ object Program:
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
-        case `?:`(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+        case ?:(((λ(lhs), λ(rhs)), mismatch), t, f) =>
           * = f.map(_.generate()).getOrElse(Nil)
 
           if mismatch
@@ -231,7 +230,7 @@ object Program:
 
           * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid, it, args*)) :: `!.π⋯`
 
-        case `!`(Some(μ), sum) =>
+        case !(Some(μ), sum) =>
           val uuid = id
           val uuid2 = id
 
@@ -254,7 +253,7 @@ object Program:
 
           * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `!.μ⋯`
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           val uuid = id
 
           val it = `( *, … ).parMapN { (_, …) => }`(
@@ -283,7 +282,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(`|`(`.`(_sum, ν(bound.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
+                        `+`(`||`(`.`(_sum, ν(bound.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate()

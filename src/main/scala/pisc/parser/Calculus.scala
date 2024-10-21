@@ -88,9 +88,9 @@ abstract class Calculus extends PolyadicPi:
             given renaming: MutableList[(Symbol, λ)] = MutableList()
             val bound2 = bound
               .map { it =>
-                val υidυ = it.name.replaceAll("_υ.*υ", "") + id
-                renaming.prepend(it -> λ(Symbol(υidυ)))
-                Symbol(υidυ)
+                val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
+                renaming.prepend(it -> λ(υidυ))
+                υidυ
               }
             given Names = Names()
             Expression.renaming = Some((renaming, given_Names2))
@@ -120,14 +120,14 @@ abstract class Calculus extends PolyadicPi:
         }
     }
 
-  def choice(using Names2): Parser[(`+`, Names)] =
+  def choice(using Names2): Parser[(+, Names)] =
     rep1sep(parallel, "+") ^^ { ps =>
       `+`(ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel(using Names2): Parser[(`|`, Names)] =
+  def parallel(using Names2): Parser[(||, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      `|`(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+      ||(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
@@ -144,15 +144,15 @@ abstract class Calculus extends PolyadicPi:
   def leaf(using Names2): Parser[(`-`, Names)] =
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        `?:`(cond._1, t._1, None) -> (cond._2 ++ t._2)
+        ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
     } |
     "if"~test~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     test~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
-        `?:`(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> opt( "."~>`μ.`<~"." ) >> { // [guarded] replication
       case Some(π @ (π(λ(ch: Symbol), true, _, _par*), _)) =>
@@ -312,9 +312,9 @@ abstract class Calculus extends PolyadicPi:
 
 object Calculus:
 
-  type Bind = (`(*)`, `+`)
+  type Bind = (`(*)`, +)
 
-  type Define = (Encoding, `+`)
+  type Define = (Encoding, +)
 
   case class Encoding(code: Int,
                       term: Option[Term],
@@ -330,25 +330,25 @@ object Calculus:
 
   sealed trait AST extends Any
 
-  case class `+`(choices: `|`*) extends AST:
+  case class +(choices: || *) extends AST:
     override def toString: String = choices.mkString(" + ")
 
-  object ∅ extends `+`():
+  object ∅ extends +():
     override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[`+`]
+      that.isInstanceOf[+]
 
     override def equals(any: Any): Boolean = any match
-      case that: `+` => that.choices.isEmpty
+      case that: + => that.choices.isEmpty
       case _ => false
 
     override def toString: String = "()"
 
-  case class `|`(components: `.`*) extends AnyVal with AST:
+  case class ||(components: `.`*) extends AnyVal with AST:
     override def toString: String = components.mkString(" | ")
 
-  case class `.`(end: `&`, prefixes: Pre*) extends AST:
+  case class `.`(end: &, prefixes: Pre*) extends AST:
     override def toString: String =
-      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[`+`]
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[+]
                                                                          then "(" + end + ")" else end)
 
   sealed trait Pre extends Any
@@ -365,7 +365,7 @@ object Calculus:
       then "" + channel + names.mkString("(", ", ", ").")
       else "" + channel + names.mkString("<", ", ", ">.")
 
-  case class `?:`(cond: ((λ, λ), Boolean), t: `+`, f: Option[`+`]) extends AST:
+  case class ?:(cond: ((λ, λ), Boolean), t: +, f: Option[+]) extends AST:
     override def toString: String =
       val test = "" + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2
       if f.isEmpty
@@ -374,11 +374,11 @@ object Calculus:
       else
         "if " + test + " " + t + " else " + f.get
 
-  case class `!`(guard: Option[μ], sum: `+`) extends AST:
+  case class !(guard: Option[μ], sum: +) extends AST:
     override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
 
   case class `⟦⟧`(encoding: Encoding,
-                  sum: `+`,
+                  sum: +,
                   assign: Option[Set[(Symbol, Symbol)]] = None) extends AST:
     override def toString: String =
       s"""$encoding${assign.map{_.map(_.name + " = " + _.name).mkString("{", ", ", "}")}.getOrElse("")} = $sum"""
@@ -506,43 +506,43 @@ object Calculus:
 
       ast match
 
-        case `∅` => ∅
+        case ∅ => ∅
 
-        case `+`(`|`(`.`(sum: `+`)), it*) =>
+        case +(||(`.`(sum: +)), it*) =>
           val lhs = sum.flatten
           val rhs = `+`(it*).flatten
           `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-        case `+`(par, it*) =>
+        case +(par, it*) =>
           val lhs = `+`(par.flatten)
           val rhs = `+`(it*).flatten
           `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-        case `|`(`.`(`+`(par)), it*) =>
+        case ||(`.`(+(par)), it*) =>
           val lhs = par.flatten
-          val rhs = `|`(it*).flatten
-          `|`((lhs.components ++ rhs.components)*)
+          val rhs = ||(it*).flatten
+          ||((lhs.components ++ rhs.components)*)
 
-        case `|`(seq, it*) =>
-          val lhs = `|`(seq.flatten)
-          val rhs = `|`(it*).flatten
-          `|`((lhs.components ++ rhs.components)*)
+        case ||(seq, it*) =>
+          val lhs = ||(seq.flatten)
+          val rhs = ||(it*).flatten
+          ||((lhs.components ++ rhs.components)*)
 
-        case `.`(`+`(`|`(`.`(end, ps*))), it*) =>
+        case `.`(+(||(`.`(end, ps*))), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
           `.`(end.flatten, it*)
 
-        case `?:`(cond, t, f) =>
-          `?:`(cond, t.flatten, f.map(_.flatten))
+        case ?:(cond, t, f) =>
+          ?:(cond, t.flatten, f.map(_.flatten))
 
-        case `!`(None, sum) =>
+        case !(None, sum) =>
           sum.flatten match
-            case `+`(`|`(`.`(end: `!`))) => end
+            case +(||(`.`(end: !))) => end
             case it => `!`(None, it)
 
-        case `!`(μ, sum) =>
+        case !(μ, sum) =>
           `!`(μ, sum.flatten)
 
         case it @ `⟦⟧`(_, sum, _) =>
@@ -555,19 +555,19 @@ object Calculus:
 
       ast match
 
-        case `∅` => Set.empty
+        case ∅ => Set.empty
 
-        case `+`(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case +(it*) => it.map(_.capitals).reduce(_ ++ _)
 
-        case `|`(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case ||(it*) => it.map(_.capitals).reduce(_ ++ _)
 
         case `.`(end, _*) =>
           end.capitals
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.capitals ++ f.map(_.capitals).getOrElse(Names())
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           sum.capitals
 
         case `⟦⟧`(_, sum, _) =>
@@ -609,13 +609,13 @@ object Calculus:
 
       ast match
 
-        case `∅` => ∅
+        case ∅ => ∅
 
-        case `+`(it*) =>
+        case +(it*) =>
           `+`(it.map(rename(_))*)
 
-        case `|`(it*) =>
-          `|`(it.map(rename(_))*)
+        case ||(it*) =>
+          ||(it.map(rename(_))*)
 
         case `.`(end, _it*) =>
           val n = renaming.size
@@ -645,19 +645,19 @@ object Calculus:
           renaming.dropInPlace(renaming.size - n)
           seq
 
-        case `?:`(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
-          `?:`(((renamed(lhs), renamed(rhs)), m), rename(t), f.map(rename(_)))
+        case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
+          ?:(((renamed(lhs), renamed(rhs)), m), rename(t), f.map(rename(_)))
 
-        case `?:`(((λ(lhs: Symbol), rhs), m), t, f) =>
-          `?:`(((renamed(lhs), rhs), m), rename(t), f.map(rename(_)))
+        case ?:(((λ(lhs: Symbol), rhs), m), t, f) =>
+          ?:(((renamed(lhs), rhs), m), rename(t), f.map(rename(_)))
 
-        case `?:`(((lhs, λ(rhs: Symbol)), m), t, f) =>
-          `?:`(((lhs, renamed(rhs)), m), rename(t), f.map(rename(_)))
+        case ?:(((lhs, λ(rhs: Symbol)), m), t, f) =>
+          ?:(((lhs, renamed(rhs)), m), rename(t), f.map(rename(_)))
 
-        case `?:`(cond, t, f) =>
-          `?:`(cond, rename(t), f.map(rename(_)))
+        case ?:(cond, t, f) =>
+          ?:(cond, rename(t), f.map(rename(_)))
 
-        case `!`(Some(π(λ(ch: Symbol), true, code, _names*)), sum) =>
+        case !(Some(π(λ(ch: Symbol), true, code, _names*)), sum) =>
           given Option[Code] = code
           val n = renaming.size
           given Names = Names(binding)
@@ -668,7 +668,7 @@ object Calculus:
           renaming.dropInPlace(renaming.size - n)
           `!`(Some(it), rename(sum))
 
-        case `!`(Some(π(λ(ch: Symbol), false, code, _names*)), sum) =>
+        case !(Some(π(λ(ch: Symbol), false, code, _names*)), sum) =>
           given Option[Code] = code
           val names = _names.map {
             case λ(arg: Symbol) => renamed(arg)
@@ -676,7 +676,7 @@ object Calculus:
           }
           `!`(Some(π(renamed(ch), false, recoded(free), names*)), rename(sum))
 
-        case `!`(guard, sum) =>
+        case !(guard, sum) =>
           `!`(guard, rename(sum))
 
         case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, bound), sum, assign) =>
@@ -685,18 +685,17 @@ object Calculus:
             .map(
               _.map { (variable, pointer) =>
                 val pointer2 = renamed(pointer).asSymbol
-                val υidυ = variable.name.replaceAll("_υ.*υ", "") + id
-                renaming.prepend(variable -> λ(Symbol(υidυ)))
-                val variable2 = renamed(variable).asSymbol
-                variable2 -> pointer2
+                val υidυ = Symbol(variable.name.replaceAll("_υ.*υ", "") + id)
+                renaming.prepend(variable -> λ(υidυ))
+                υidυ -> pointer2
               }
             )
           var bound2 = bound
             .drop(assign.map(_.size).getOrElse(0))
             .map { it =>
-              val υidυ = it.name.replaceAll("_υ.*υ", "") + id
-              renaming.prepend(it -> λ(Symbol(υidυ)))
-              renamed(it).asSymbol
+              val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
+              renaming.prepend(it -> λ(υidυ))
+              υidυ
             }
           bound2 = assign2.map(_.map(_._1)).getOrElse(Names()) ++ bound2
           val encoding2 = encoding.copy(bound = bound2)

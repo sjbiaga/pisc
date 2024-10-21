@@ -83,22 +83,22 @@ object Ensure:
 
       ast match
 
-        case `∅` =>
+        case ∅ =>
 
-        case `+`(it*) =>
+        case +(it*) =>
          it.foldLeft(())((_, par) => par.recursive)
 
-        case `|`(it*) =>
+        case ||(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
 
         case `.`(end, _*) =>
           end.recursive
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.recursive
           f.foreach(_.recursive)
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           sum.recursive(stack.size)
 
         case `⟦⟧`(_, sum, _) =>
