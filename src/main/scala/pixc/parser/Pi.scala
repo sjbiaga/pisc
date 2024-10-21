@@ -240,10 +240,10 @@ object Pi extends Expansion:
 
   object Χ:
 
-    private def apply(it: Symbol, _1_2: `1 | 2`)(using (Names2, Names2)): Either[`1 | 2`, Long Either Long] =
+    private def apply(it: Symbol, _1_2: 1 | 2)(using (Names2, Names2)): Either[1 | 2, Long Either Long] =
       val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
-      binding2.find { case (_, (Right(`it`), _)) => true case _ => false } match
-        case Some(it) => Right(it._2._2)
+      binding2.find { case (_, (Right(Some(`it`)), _)) => true case _ => false } match
+        case Some((_, it)) => Right(it._2)
         case _ if binding2.contains(it) => Right(binding2(it)._2)
         case _ => Left(_1_2)
 
@@ -276,13 +276,13 @@ object Pi extends Expansion:
     def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
                  (using (Names2, Names2)): ((AST, AST)) => Boolean = {
 
-      case (lhs: `+`, rhs: `+`) =>
+      case (lhs: +, rhs: +) =>
         (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
           case (false, _) => false
           case (_, it) => congruent(it)
         }
 
-      case (lhs: `|`, rhs: `|`) =>
+      case (lhs: ||, rhs: ||) =>
         (lhs.components zip rhs.components).foldLeft(lhs.components.size == rhs.components.size) {
           case (false, _) => false
           case (_, it) => congruent(it)
@@ -328,11 +328,11 @@ object Pi extends Expansion:
         else
           false
 
-      case (`?:`(((λ(_: Expr), _), _), _, _), _) | (`?:`(((_, λ(_: Expr)), _), _, _), _) |
-           (_, `?:`(((λ(_: Expr), _), _), _, _)) | (_, `?:`(((_, λ(_: Expr)), _), _, _)) => false
+      case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
+           (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
 
-      case (`?:`(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
-           ,`?:`(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
+      case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
+           ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
           if equal(llhs, rlhs) && equal(lrhs, rrhs)
           || equal(llhs, rrhs) && equal(lrhs, rlhs) =>
         if lm == rm
@@ -341,8 +341,8 @@ object Pi extends Expansion:
         else
           congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
 
-      case (`?:`(((λ(llhs), λ(lrhs)), lm), lt, lf)
-           ,`?:`(((λ(rlhs), λ(rrhs)), rm), rt, rf))
+      case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
+           ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
           if llhs == rlhs && lrhs == rrhs
           || llhs == rrhs && lrhs == rlhs =>
         if lm == rm
@@ -351,19 +351,19 @@ object Pi extends Expansion:
         else
           congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
 
-      case (`!`(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
-           ,`!`(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
+      case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
+           ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
         val (ln, rn) = mark
         equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-      case (`!`(Some(π(_, λ(_: Expr), false, _)), _), _)
-         | (_, `!`(Some(π(_, λ(_: Expr), false, _)), _)) => false
+      case (!(Some(π(_, λ(_: Expr), false, _)), _), _)
+         | (_, !(Some(π(_, λ(_: Expr), false, _)), _)) => false
 
-      case (`!`(Some(π(λ(lch: Symbol), λ(larg), false, _)), lsum)
-           ,`!`(Some(π(λ(rch: Symbol), λ(rarg), false, _)), rsum)) =>
+      case (!(Some(π(λ(lch: Symbol), λ(larg), false, _)), lsum)
+           ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _)), rsum)) =>
         equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
 
-      case (`!`(_, lsum), `!`(_, rsum)) => congruent(lsum -> rsum)
+      case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
       case (`⟦⟧`(Encoding(lcode, _, _, lconst, lbound), lsum, _, lname, lassign)
            ,`⟦⟧`(Encoding(rcode, _, _, rconst, rbound), rsum, _, rname, rassign))

@@ -85,12 +85,12 @@ object Ensure:
 
       ast match
 
-        case `∅` =>
+        case ∅ =>
 
-        case `+`(it*) =>
+        case +(it*) =>
          it.foldLeft(())((_, par) => par.recursive)
 
-        case `|`(it*) =>
+        case ||(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
 
         case `.`(end, it*) =>
@@ -99,11 +99,11 @@ object Ensure:
             case _ =>
           }
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.recursive
           f.foreach(_.recursive)
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           sum.recursive(stack.size)
 
         case `⟦⟧`(_, sum, _, _, _) =>
@@ -144,15 +144,15 @@ object Ensure:
 
       ast match
 
-        case `∅` => true
+        case ∅ => true
 
-        case `+`(it*) =>
+        case +(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, par) => par.replication
          }
 
-        case `|`(it*) =>
+        case ||(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, seq) => seq.replication
@@ -172,10 +172,10 @@ object Ensure:
               case _ => true
             }
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.replication && f.map(_.replication).getOrElse(true)
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           sum.replication(true)
 
         case `⟦⟧`(_, sum, _, _, _) =>
@@ -200,15 +200,15 @@ object Ensure:
 
       ast match
 
-        case `∅` => true
+        case ∅ => true
 
-        case `+`(it*) =>
+        case +(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, par) => par.recursion
          }
 
-        case `|`(it*) =>
+        case ||(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, seq) => seq.recursion
@@ -225,10 +225,10 @@ object Ensure:
           else
             end.recursion
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.recursion && f.map(_.recursion).getOrElse(true)
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           sum.recursion
 
         case `⟦⟧`(_, sum, _, _, _) =>
