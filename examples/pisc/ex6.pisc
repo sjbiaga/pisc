@@ -1,13 +1,13 @@
 # -*- indent-tabs-mode: nil; -*-
 
-[| s"\ $x" |]{u} = x<u>.
+⟦ 'x ⟧{u} = x<u>.
 
-[1| s"λ $x \ ${$M}" |1]{u} = u(x). u(v). M{v}
+⟦1 s"λ $x . ${$M}" 1⟧{u} = u(x). u(v). M{v}
 
-[2| 'M $ 'N |2]{u} = ν(v) ( M{v} | ν(x_υ0υ) v<x_υ0υ>. v<u>. x_υ0υ(w). N{w} )
-#                                                                     ^
-#                                                                     \ x_υ0υ must not occur free in N
+⟦2 'M $ 'N 2⟧{u} = ν(v) ( M{v} | ν(x) v<x>. v<u>. x(w). N{w} )
 
-Main = ν(y) ( [2| [2| [1| λ x \ [| \x |] |1] $ [1| λ x \ [| \x |] |1] |2] $ [| \y |] |2]  \
-            | y(y). τ/*println("y")*/.                                                    \
+⟦3 s"Id" 3⟧{u} = ⟦1 λ z . ⟦ z ⟧ 1⟧{u}
+
+Main = ν(y) ( ⟦2 ⟦2 ⟦3 Id 3⟧ $ ⟦3 Id 3⟧ 2⟧ $ ⟦ y ⟧ 2⟧{y}  \
+            | y(y). τ/*println("y")*/.                      \
             )

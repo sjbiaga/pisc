@@ -30,8 +30,6 @@ package pisc
 
 import java.util.UUID
 
-import scala.collection.mutable.{ ListBuffer => MutableList }
-
 import scala.meta._
 import dialects.Scala3
 
@@ -130,11 +128,11 @@ object Program:
         case ν(names*) =>
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
-        case τ(Some(Left(enums))) =>
+        case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
           * ++= enums
 
-        case τ(Some(Right(term))) =>
+        case τ(Some((Right(term), _))) =>
           * :+= `_ <- *`("τ")
           * :+= `_ <- IO { * }`(term)
 
@@ -142,7 +140,7 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), false, Some(Left(enums)), args*) =>
+        case π(λ(Symbol(ch)), false, Some((Left(enums), _)), args*) =>
           val code = `for * yield ()`(enums*)
           val arg = args.map {
             case λ(Symbol(name)) => \(name)
@@ -155,7 +153,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), false, Some(Right(term)), args*) =>
+        case π(λ(Symbol(ch)), false, Some((Right(term), _)), args*) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           val arg = args.map {
             case λ(Symbol(name)) => \(name)
@@ -177,9 +175,9 @@ object Program:
 
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg, None)))
 
-        case π(_, true, Some(Left(_)), _*) => ??? // Scalameta Enumerator - caught by parser
+        case π(_, true, Some((Left(_), _)), _*) => ??? // Scalameta Enumerator - caught by parser
 
-        case π(λ(Symbol(ch)), true, Some(Right(code)), params*) =>
+        case π(λ(Symbol(ch)), true, Some((Right(code), _)), params*) =>
           val par = params.map {
             case λ(Symbol(name)) => name
           }
@@ -271,27 +269,24 @@ object Program:
 
         // ENCODING ////////////////////////////////////////////////////////////
 
-        case `[|]`(Encoding(_, _, _, bound), _sum, Some(assign)) =>
+        case `⟦⟧`(Encoding(_, _, _, _, bound), _sum, assign) =>
           val ** = assign
-            .map(Pat.Var(_) -> _)
-            .map(Enumerator.Val(_, _))
-            .toList
-          val sum = ( if bound.size == assign.size
+            .map { _.map(_.name -> _.name)
+                    .map(Pat.Var(_) -> _)
+                    .map(Enumerator.Val(_, _))
+                    .toList
+            }.getOrElse(Nil)
+
+          val n = assign.map(_.size).getOrElse(0)
+
+          val sum = ( if bound.size == n
                       then
                         _sum
                       else
-                        given MutableList[(String, λ)]()
-                        `+`(`|`(`.`(_sum, ν(bound.drop(assign.size).map(_.name).toSeq*)))).rename
+                        `+`(`|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
                     )
-          * = ** ++ sum.generate()
 
-        case `[|]`(Encoding(_, _, _, bound), sum, _) =>
-          if bound.isEmpty
-          then
-            * = sum.generate()
-          else
-            given MutableList[(String, λ)]()
-            * = `+`(`|`(`.`(sum, ν(bound.map(_.name).toSeq*)))).rename.generate()
+          * = ** ++ sum.generate()
 
         case _: `{}` => ???
 
@@ -312,11 +307,11 @@ object Program:
               }
           }
 
-          if qual.isEmpty
-          then
-            * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})".parse[Term].get)
-          else
-            * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})".parse[Term].get)
+          qual match
+            case List("π", "this") | List("this") | Nil =>
+              * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})".parse[Term].get)
+            case _ =>
+              * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})".parse[Term].get)
 
         ////////////////////////////////////////////////////////// invocation //
 

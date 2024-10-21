@@ -28,7 +28,7 @@
 
 package pisc
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
 
 import parser.Calculus._
 
@@ -101,8 +101,10 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursive(stack.size)
 
-        case `[|]`(_, sum, _) =>
+        case `⟦⟧`(_, sum, _) =>
           sum.recursive
+
+        case _: `{}` => ???
 
         case it @ `(*)`(id, _, params*)
             if stack.contains(id -> params.size) =>
@@ -122,8 +124,7 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case _: `{}` => ???
-
         case `(*)`(id, _, params*) =>
           val i = index2(prog)(id -> params.size)
-          prog(i)._2.recursive(using stack :+ id -> params.size)
+          val sum = prog(i)._2
+          sum.recursive(using stack :+ id -> params.size)
