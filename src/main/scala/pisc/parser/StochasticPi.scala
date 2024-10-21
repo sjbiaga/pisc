@@ -36,10 +36,7 @@ import scala.collection.mutable.{
   ListBuffer => MutableList,
   LinkedHashSet => Set
 }
-
 import scala.io.Source
-
-import scala.meta.Term
 
 import scala.util.parsing.combinator._
 
@@ -47,10 +44,10 @@ import generator.Meta.`()(null)`
 
 import StochasticPi._
 import Calculus._
-import scala.util.parsing.combinator.pisc.parser.Extension
+import scala.util.parsing.combinator.pisc.parser.Expansion
 
 
-class StochasticPi extends Expression:
+abstract class StochasticPi extends Expression:
 
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
@@ -76,7 +73,7 @@ class StochasticPi extends Expression:
         throw PrefixChannelParsingException(ch)
       case _ ~ _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case _ ~ _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, binding) ~ Some((it, free2)) =>
         π(ch, par, polarity = true, r.getOrElse(1L), Some(it)) -> (binding, name ++ free2)
@@ -89,8 +86,8 @@ class StochasticPi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case (Right(term), free) => λ(Expr(term)) -> free
-                                   case (Left(enums), _) => throw TermParsingException(enums)
+                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
   def rate: Parser[Any] = "("~>rate<~")" |
@@ -101,8 +98,8 @@ class StochasticPi extends Expression:
                           floatingPointNumber ^^ { BigDecimal.apply } |
                           super.ident ^^ { Symbol.apply } |
                           expression ^^ {
-                            case (Right(term), free) => Some(Expr(term))
-                            case (Left(enums), _) => throw TermParsingException(enums)
+                            case ((Right(term), _), free) => Some(Expr(term))
+                            case ((Left(enums), _), _) => throw TermParsingException(enums)
                           }
 
   /**
@@ -128,12 +125,18 @@ class StochasticPi extends Expression:
           throw WholeNumberFormatException("be a Long", t)
     }
 
-  private[parser] var eqtn = List[Bind]()
-  private[parser] val defn = Map[Int, Define]()
-  private[parser] val self = Set[Int]()
+  private[parser] var _werr: Boolean = false
+  private[parser] var eqtn: List[Bind] = null
+  private[parser] var defn: Map[Int, Define] = null
+  private[parser] var self: Set[Int] = null
+  private[parser] var _nest = -1
+  protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
+  private[parser] var _cntr: Map[Int, Long] = null
+  protected final def cntr(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(_cntr(_nest)) }
+  protected final def cntr_(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(-_cntr(_nest)) }
 
 
-object StochasticPi extends Extension:
+object StochasticPi extends Expansion:
 
   type Actions = Set[String]
 
@@ -163,6 +166,33 @@ object StochasticPi extends Extension:
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
+    def apply(names: Names): Names = Set.from(names)
+
+  type Names2 = Map[Symbol, (Either[Symbol, Option[Symbol]], Long Either Long)]
+
+  object Names2:
+    def apply(): Names2 = Map()
+    def apply(binding2: Names2): Names2 = Map.from(binding2)
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.map { it =>
+        if _code < 0
+        then
+          this(it, None, hardcoded = true)
+        else
+          this(it, Some(it), hardcoded = true)
+      }
+    def apply(name: Symbol, _binding: Option[Symbol], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      val binding = _binding.map(Some(_)).orElse(Some(None)).toRight(null)
+      binding2.get(name) match
+        case Some((_, Left(k))) if k < 0 =>
+          binding2 += name -> (binding, Right(k))
+        case Some((_, Right(k))) if _code >= 0 && (!hardcoded || k < 0) =>
+           throw UniquenessBindingParsingException(name, hardcoded)
+        case Some((_, Left(_))) =>
+        case _ =>
+          binding2 += name -> (binding, cntr(Right(_)))
 
 
   // exceptions
@@ -171,7 +201,7 @@ object StochasticPi extends Extension:
 
   import Expression.ParsingException
 
-  class PrefixParsingException(msg: String, cause: Throwable = null)
+  abstract class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class WholeNumberFormatException(msg: String, cause: Throwable = null)
@@ -182,6 +212,14 @@ object StochasticPi extends Extension:
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+  abstract class BindingParsingException(msg: String, cause: Throwable = null)
+      extends ParsingException(msg
+                                 + s" at nesting level #$_nest"
+                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
+
+  case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
 
 
   // functions
@@ -204,14 +242,17 @@ object StochasticPi extends Extension:
       (i, n) <- rep
     do
       prog(i)._1 match
-        case `(*)`(id, params*) =>
+        case `(*)`(id, _, params*) =>
+          if _werr
+          then
+            throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
   def `(*) => +`(prog: List[Bind]): `(*)` => `+` = {
-    case `(*)`(identifier, args*) =>
+    case `(*)`(identifier, _, args*) =>
       prog
         .find {
-          case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
+          case (`(*)`(`identifier`, _, params*), _) if params.size == args.size => true
           case _ => false
         }
         .get
@@ -300,13 +341,14 @@ object StochasticPi extends Extension:
         case `!`(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `[|]`(encoding @ Encoding(_, _, _, bound), _sum, Some(assign)) =>
-          val sum = ( if bound.size == assign.size
+        case `⟦⟧`(encoding @ Encoding(_, _, _, _, bound), _sum, assign) =>
+          val n = assign.map(_.size).getOrElse(0)
+
+          val sum = ( if bound.size == n
                       then
                         _sum
                       else
-                        given MutableList[(String, λ)]()
-                        `+`(nil, `|`(`.`(_sum, ν(bound.drop(assign.size).map(_.name).toSeq*)))).rename
+                        `+`(nil, `|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
                     )
 
            var (it, _) = sum.parse
@@ -315,24 +357,7 @@ object StochasticPi extends Extension:
           then
             it = insert_+(it)
 
-          (`[|]`(encoding, it, Some(assign)), it.enabled)
-
-        case `[|]`(encoding @ Encoding(_, _, _, bound), _sum, _) =>
-          given MutableList[(String, λ)]()
-          val sum = ( if bound.isEmpty
-                      then
-                        _sum
-                      else
-                        `+`(nil, `|`(`.`(_sum, ν(bound.map(_.name).toSeq*)))).rename
-                    )
-
-          var (it, _) = sum.parse
-
-          if it.enabled.isEmpty
-          then
-            it = insert_+(it)
-
-          (`[|]`(encoding, it, None), it.enabled)
+          (`⟦⟧`(encoding, it, assign), it.enabled)
 
         case _: `{}` => ???
 
@@ -407,7 +432,7 @@ object StochasticPi extends Extension:
 
         case _: `!` => ??? // impossible by 'parse'
 
-        case `[|]`(_, sum, _) =>
+        case `⟦⟧`(_, sum, _) =>
           sum.split
           sum.enabled
 
@@ -453,7 +478,7 @@ object StochasticPi extends Extension:
               case `!`(Some(μ), _) =>
                 Seq(ps(k) -> μ)
               case _: `!` => ??? // impossible by 'parse'
-              case `[|]`(_, sum, _) =>
+              case `⟦⟧`(_, sum, _) =>
                 Seq(ps(k) -> sum)
               case _: `{}` => ???
               case it: `(*)` =>
@@ -470,12 +495,12 @@ object StochasticPi extends Extension:
 
         case _: `!` => ??? // impossible by 'parse'
 
-        case `[|]`(_, sum, _) =>
+        case `⟦⟧`(_, sum, _) =>
           sum.graph
 
         case _: `{}` => ???
 
-        case  _: `(*)` => Nil
+        case _: `(*)` => Nil
 
   def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
@@ -509,17 +534,35 @@ object StochasticPi extends Extension:
       } -> (discarded, excluded, enabled)
 
 
-  private var i: Int = 0
+  private var i: Int = -1
+  private var l: (Int, Int) = (-1, -1)
+  def ln = l
 
-  def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
-    .foldLeft(List[String]() -> false) {
-      case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
-      case ((r, true), l) => (r.init :+ r.last.stripSuffix("\\") + l) -> l.endsWith("\\")
+  def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+    _werr = errors
+    eqtn = List()
+    defn = Map()
+    self = Set()
+    _nest = 0
+    _cntr = Map(0 -> 0L)
+    _id = scala.collection.mutable.Seq('0')
+    _ix = 0
+    i = 0
+    l = (0, 0)
+
+    (source.getLines().toList :+ "")
+    .zipWithIndex
+    .foldLeft(List[(String, (Int, Int))]() -> false) {
+      case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+      case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
     }._1
-    .filterNot(_.matches("^[ ]*#.*")) // commented lines
-    .filterNot(_.isBlank) // empty lines
-    .flatMap { it =>
-      if it.matches("^[ ]*@.*")
+    .flatMap { case (it, (m, n)) =>
+      l = (m+1, n+1)
+      if it.matches("^[ ]*#.*") // commented lines
+      || it.isBlank // empty lines
+      then
+        None
+      else if it.matches("^[ ]*@.*")
       then // Scala
         Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // SPi
@@ -529,14 +572,14 @@ object StochasticPi extends Extension:
             val equations = eqtn.slice(i, eqtn.size)
             i = eqtn.size
             equations.map(Right(_))
-          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
-            defn(code) = definition
+          case Success(Right(definition), _) =>
+            defn(_code) = definition
             Nil
           case failure: NoSuccess =>
             scala.sys.error(failure.msg)
     }
     .filter {
-      case Right((`(*)`(s"Self_$n", _*), _))
+      case Right((`(*)`(s"Self_$n", _, _*), _))
           if { try { n.toInt; true } catch _ => false } =>
         self.contains(n.toInt)
       case _ => true

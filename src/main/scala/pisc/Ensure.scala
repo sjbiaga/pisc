@@ -28,7 +28,7 @@
 
 package pisc
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map }
 
 import parser.Calculus._
 
@@ -44,11 +44,12 @@ object Ensure:
   case class RecRepParsingException(id: String, arity: Int, times: Int)
       extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
+
   private def index2(prog: List[Bind]): ((String, Int)) => Int = {
     case (identifier, size) =>
       prog
         .indexWhere {
-          case (`(*)`(`identifier`, params*), _) if params.size == size => true
+          case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
           case _ => false
         }
   }
@@ -56,12 +57,12 @@ object Ensure:
   def main(using prog: List[Bind]): Int =
     if 1 == prog
       .count {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     then prog
       .indexWhere {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main", _), _) => true
         case _ => false
       }
     else -1
@@ -100,12 +101,12 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursive(stack.size)
 
-        case `[|]`(_, sum, _) =>
+        case `⟦⟧`(_, sum, _) =>
           sum.recursive
 
         case _: `{}` => ???
- 
-        case it @ `(*)`(id, params*)
+
+        case it @ `(*)`(id, _, params*)
             if stack.contains(id -> params.size) =>
           val k = stack.lastIndexOf(id -> params.size)
           for
@@ -123,7 +124,7 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, params*) =>
+        case `(*)`(id, _, params*) =>
           val i = index2(prog)(id -> params.size)
           val sum = prog(i)._2
           sum.recursive(using stack :+ id -> params.size)

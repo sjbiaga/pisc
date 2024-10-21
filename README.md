@@ -37,32 +37,32 @@ prefixes per se.
 
 The BNF formal grammar for processes is the following.
 
-    LINE       ::= EQUATION | DEFINITION
-    EQUATION   ::= AGENT "=" CHOICE
-    DEFINITION ::= "[<NUMBER>|" TEMPLATE "|<NUMBER>]" "=" CHOICE
-    CHOICE     ::= PARALLEL { "+" PARALLEL }
-    PARALLEL   ::= SEQUENTIAL { "|" SEQUENTIAL }
-    SEQUENTIAL ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
-    LEAF       ::= "[" NAME ("="|"≠") NAME "]" CHOICE
-                 | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
-                 | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                 | "!" [ "." μ "." ] CHOICE
-                 | IDENTIFIER "{" NAMES "}"
-                 | AGENT
-                 | EXPANSION
-    EXPANSION  ::= "[<NUMBER>|" EXPAND "|<NUMBER>]"
-    AGENT      ::= IDENTIFIER [ "(" NAMES ")" ]
+    LINE           ::= EQUATION | DEFINITION
+    EQUATION       ::= AGENT "=" CHOICE
+    DEFINITION     ::= "⟦<NUMBER>" [ TEMPLATE ] "<NUMBER>⟧" [ "(" NAMES ")" ] [ "{" NAMES "}" ] "=" CHOICE
+    CHOICE         ::= PARALLEL { "+" PARALLEL }
+    PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
+    SEQUENTIAL     ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
+    LEAF           ::= "[" NAME ("="|"≠") NAME "]" CHOICE
+                     | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
+                     | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
+                     | "!" [ "." μ "." ] CHOICE
+                     | IDENTIFIER "{" NAMES "}"
+                     | AGENT
+                     | INSTANTIATION
+    INSTANTIATION  ::= "⟦<NUMBER>" INSTANCE "<NUMBER>⟧" [ "{" NAMES "}" ]
+    AGENT          ::= [ "{π}{this}" | "{this}" ] IDENTIFIER [ "(" NAMES ")" ]
 
 The BNF formal grammar for prefixes is the following.
 
-    PREFIXES   ::= { PREFIX }
-    PREFIX     ::= μ "."
-                 | "ν" "(" NAMES ")"
-    μ          ::= "τ" [ @ RATE ] [ EXPRESSION ]
-                 | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
-                 | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
-    NAMES      :: NAME { "," NAME }
-    EXPRESSION ::= "/*" ... "*/"
+    PREFIXES       ::= { PREFIX }
+    PREFIX         ::= μ "."
+                     | "ν" "(" NAMES ")"
+    μ              ::= "τ" [ @ RATE ] [ EXPRESSION ]
+                     | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
+                     | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
+    NAMES          ::= NAME { "," NAME }
+    EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain

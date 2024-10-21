@@ -39,7 +39,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.{ StochasticPi, Calculus }
-import StochasticPi.Actions
+import StochasticPi.{ Actions, ln }
 import Calculus.{ `(*)`,  λ }
 
 
@@ -87,7 +87,7 @@ object Main:
         val init = this(
           prog
             .find {
-              case (`(*)`("Main"), _) => true
+              case (`(*)`("Main", _), _) => true
               case _ => false
             }
             .get
@@ -96,6 +96,11 @@ object Main:
         ).toString + "\n\n"
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
+      catch t =>
+        val (m, n) = ln
+        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
+        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        throw t
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()

@@ -94,11 +94,11 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
 
-        case it @ τ(Some(Left(enums)), r) =>
+        case it @ τ(Some((Left(enums)), _), r) =>
           * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
           * ++= enums
 
-        case it @ τ(Some(Right(term)), r) =>
+        case it @ τ(Some((Right(term)), _), r) =>
           * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
           * :+= `_ <- IO { * }`(term)
 
@@ -106,7 +106,7 @@ object Program:
           * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
 
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some(Left(enums))) =>
+        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -116,7 +116,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some(Right(term))) =>
+        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some((Right(term)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -132,7 +132,7 @@ object Program:
                          Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some(Left(enums))) =>
+        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -142,7 +142,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some(Right(term2))) =>
+        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some((Right(term2)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term2))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -158,7 +158,7 @@ object Program:
                          Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some(Left(enums))) =>
+        case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -168,7 +168,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some(Right(term))) =>
+        case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some((Right(term)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -184,9 +184,9 @@ object Program:
                          Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
                        ))
 
-        case π(_, _, true, _, Some(Left(_))) => ??? // Scalameta Enumerator - caught by parser
+        case π(_, _, true, _, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r, Some(Right(code))) =>
+        case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r, Some((Right(code), _))) =>
           * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                    Term.Apply(
                                      Term.Apply(
@@ -282,15 +282,24 @@ object Program:
 
         // ENCODING ////////////////////////////////////////////////////////////
 
-        case `[|]`(_, sum, Some(assign)) =>
+        case `⟦⟧`(Encoding(_, _, _, _, bound), _sum, assign) =>
           val ** = assign
-            .map(Pat.Var(_) -> _)
-            .map(Enumerator.Val(_, _))
-            .toList
-          * = ** ++ sum.generate
+            .map { _.map(_.name -> _.name)
+                    .map(Pat.Var(_) -> _)
+                    .map(Enumerator.Val(_, _))
+                    .toList
+            }.getOrElse(Nil)
 
-        case `[|]`(_, sum, _) =>
-         * = sum.generate
+          val n = assign.map(_.size).getOrElse(0)
+
+          val sum = ( if bound.size == n
+                      then
+                        _sum
+                      else
+                        `+`(null, `|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
+                    )
+
+          * = ** ++ sum.generate
 
         case _: `{}` => ???
 
@@ -299,7 +308,7 @@ object Program:
 
         // INVOCATION //////////////////////////////////////////////////////////
 
-        case `(*)`(identifier, params*) =>
+        case `(*)`(identifier, _, params*) =>
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
             case λ(value) =>
