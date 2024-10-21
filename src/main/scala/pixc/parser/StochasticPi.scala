@@ -293,19 +293,19 @@ object StochasticPi extends Expansion:
 
       inline def τ = Calculus.τ(None, -Long.MaxValue)
 
-      def insert[S](end: `&`, ps: Pre*): (S, Actions) =
+      def insert[S](end: &, ps: Pre*): (S, Actions) =
         val ps2 = ps :+ τ
         `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
 
-      def insert_+(sum: `+`): `+` =
+      def insert_+(sum: +): + =
         val (seq, enabled) = insert[`.`](sum)
-        `+`(enabled, `|`(seq))
+        `+`(enabled, ||(seq))
 
       ast match
 
-        case `∅` => (∅, nil)
+        case ∅ => (∅, nil)
 
-        case it: `+` =>
+        case it: + =>
           val sum = it.choices.foldLeft(`+`(nil)) {
             case (sum, par) =>
               val (par2, enabled2) = par.parse
@@ -315,13 +315,13 @@ object StochasticPi extends Expansion:
           }
           (sum, sum.enabled)
 
-        case it: `|` =>
-          val (par, enabled) = it.components.foldLeft((`|`(), nil)) {
+        case it: || =>
+          val (par, enabled) = it.components.foldLeft((||(), nil)) {
             case ((par, enabled), seq) =>
               val (seq2, enabled2) = seq.parse
               assert(enabled2.nonEmpty)
               assert((enabled & enabled2).isEmpty)
-              (`|`((par.components :+ seq2)*), enabled ++ enabled2)
+              (||((par.components :+ seq2)*), enabled ++ enabled2)
           }
           (par, enabled)
 
@@ -344,8 +344,8 @@ object StochasticPi extends Expansion:
             assert(∅ == it || it.isInstanceOf[`(*)`])
             insert(it, ps*)
 
-        case `?:`(c, _t, _f) =>
-          def _t_f(_sum: `+`): `+` =
+        case ?:(c, _t, _f) =>
+          def _t_f(_sum: +): + =
             val (sum, _) = _sum.parse
 
             if sum.enabled.isEmpty
@@ -364,13 +364,13 @@ object StochasticPi extends Expansion:
           assert(f.map(_.enabled.nonEmpty).getOrElse(true))
 
           assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
-          (`?:`(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
+          (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-        case `!`(Some(μ), sum) =>
+        case !(Some(μ), sum) =>
           val (it, _) = sum.parse
           (`!`(Some(μ), it), Actions(μ))
 
-        case `!`(_, sum) =>
+        case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
         case `⟦⟧`(encoding @ Encoding(_, _, _, _, bound), _sum, uuid, name, assign) =>
@@ -380,7 +380,7 @@ object StochasticPi extends Expansion:
                       then
                         _sum
                       else
-                        `+`(nil, `|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
+                        `+`(nil, ||(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
                     )
 
            var (it, _) = sum.parse
@@ -399,13 +399,13 @@ object StochasticPi extends Expansion:
 
       ast match
 
-        case `∅` => nil
+        case ∅ => nil
 
-        case `+`(enabled, par) =>
+        case +(enabled, par) =>
           par.split
           enabled
 
-        case `+`(enabled, ps*) =>
+        case +(enabled, ps*) =>
           val ls = ps.map(_.split)
           var ts = ls.take(0)
           var ds = ls.drop(1)
@@ -428,7 +428,7 @@ object StochasticPi extends Expansion:
 
           enabled
 
-        case `|`(ss*) =>
+        case ||(ss*) =>
           ss.map(_.split).reduce(_ ++ _)
 
         case `.`(_: `(*)`, ps*) =>
@@ -449,7 +449,7 @@ object StochasticPi extends Expansion:
 
           enabled
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.split
           f.foreach(_.split)
 
@@ -464,11 +464,11 @@ object StochasticPi extends Expansion:
           assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
           t.enabled ++ f.map(_.enabled).getOrElse(nil)
 
-        case `!`(Some(μ), sum) =>
+        case !(Some(μ), sum) =>
           sum.split
           Actions(μ)
 
-        case _: `!` => ??? // impossible by 'parse'
+        case _: ! => ??? // impossible by 'parse'
 
         case `⟦⟧`(_, sum, _, _, _) =>
           sum.split
@@ -479,21 +479,21 @@ object StochasticPi extends Expansion:
         case _: `(*)` => ??? // always "guarded"
 
     def graph(using rec: Map[(String, Int), Int])
-             (implicit prog: List[Bind]): Seq[(Act, `Act | Sum`)] =
+             (implicit prog: List[Bind]): Seq[(Act, Act | Sum)] =
 
       ast match
 
-        case `∅` => Nil
+        case ∅ => Nil
 
-        case `+`(_, ps*) =>
+        case +(_, ps*) =>
           ps.map(_.graph).reduce(_ ++ _)
 
-        case `|`(ss*) =>
+        case ||(ss*) =>
           ss.map(_.graph).reduce(_ ++ _)
 
         case `.`(end, ps*) =>
 
-          inline given Conversion[(Pre, `Act | Sum`), (Act, `Act | Sum`)] = _.asInstanceOf[Act] -> _
+          inline given Conversion[(Pre, Act | Sum), (Act, Act | Sum)] = _.asInstanceOf[Act] -> _
 
           end.graph ++
           ps.flatMap {
@@ -512,15 +512,15 @@ object StochasticPi extends Expansion:
             val k = ps.lastIndexWhere(_.isInstanceOf[Act])
             if k >= 0
             then end match
-              case sum: `+` =>
+              case sum: + =>
                 Seq(ps(k) -> sum)
-              case `?:`(_, t, Some(f)) =>
+              case ?:(_, t, Some(f)) =>
                 Seq(ps(k) -> t, ps(k) -> f)
-              case `?:`(_, t, _) =>
+              case ?:(_, t, _) =>
                 Seq(ps(k) -> t)
-              case `!`(Some(μ), _) =>
+              case !(Some(μ), _) =>
                 Seq(ps(k) -> μ)
-              case _: `!` => ??? // impossible by 'parse'
+              case _: ! => ??? // impossible by 'parse'
               case `⟦⟧`(_, sum, _, _, _) =>
                 Seq(ps(k) -> sum)
               case _: `{}` => ???
@@ -531,13 +531,13 @@ object StochasticPi extends Expansion:
             else Nil
           }
 
-        case `?:`(_, t, f) =>
+        case ?:(_, t, f) =>
           t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-        case `!`(Some(μ), sum) =>
+        case !(Some(μ), sum) =>
           sum.graph ++ Seq(μ -> μ, μ -> sum)
 
-        case _: `!` => ??? // impossible by 'parse'
+        case _: ! => ??? // impossible by 'parse'
 
         case `⟦⟧`(_, sum, _, _, _) =>
           sum.graph
@@ -582,9 +582,9 @@ object StochasticPi extends Expansion:
 
   object Χ:
 
-    private def apply(it: Symbol, _1_2: `1 | 2`)(using (Names2, Names2)): Either[`1 | 2`, Long Either Long] =
+    private def apply(it: Symbol, _1_2: 1 | 2)(using (Names2, Names2)): Either[1 | 2, Long Either Long] =
       val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
-      binding2.find { case (_, (Right(`it`), _)) => true case _ => false } match
+      binding2.find { case (_, (Right(Some(`it`)), _)) => true case _ => false } match
         case Some(it) => Right(it._2._2)
         case _ if binding2.contains(it) => Right(binding2(it)._2)
         case _ => Left(_1_2)
@@ -618,13 +618,13 @@ object StochasticPi extends Expansion:
     def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
                  (using (Names2, Names2)): ((AST, AST)) => Boolean = {
 
-      case (lhs: `+`, rhs: `+`) =>
+      case (lhs: +, rhs: +) =>
         (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
           case (false, _) => false
           case (_, it) => congruent(it)
         }
 
-      case (lhs: `|`, rhs: `|`) =>
+      case (lhs: ||, rhs: ||) =>
         (lhs.components zip rhs.components).foldLeft(lhs.components.size == rhs.components.size) {
           case (false, _) => false
           case (_, it) => congruent(it)
@@ -670,11 +670,11 @@ object StochasticPi extends Expansion:
         else
           false
 
-      case (`?:`(((λ(_: Expr), _), _), _, _), _) | (`?:`(((_, λ(_: Expr)), _), _, _), _) |
-           (_, `?:`(((λ(_: Expr), _), _), _, _)) | (_, `?:`(((_, λ(_: Expr)), _), _, _)) => false
+      case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
+           (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
 
-      case (`?:`(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
-           ,`?:`(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
+      case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
+           ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
           if equal(llhs, rlhs) && equal(lrhs, rrhs)
           || equal(llhs, rrhs) && equal(lrhs, rlhs) =>
         if lm == rm
@@ -683,8 +683,8 @@ object StochasticPi extends Expansion:
         else
           congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
 
-      case (`?:`(((λ(llhs), λ(lrhs)), lm), lt, lf)
-           ,`?:`(((λ(rlhs), λ(rrhs)), rm), rt, rf))
+      case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
+           ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
           if llhs == rlhs && lrhs == rrhs
           || llhs == rrhs && lrhs == rlhs =>
         if lm == rm
@@ -693,19 +693,19 @@ object StochasticPi extends Expansion:
         else
           congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
 
-      case (`!`(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)), lsum)
-           ,`!`(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _)), rsum)) =>
+      case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)), lsum)
+           ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _)), rsum)) =>
         val (ln, rn) = mark
         equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-      case (`!`(Some(π(_, λ(_: Expr), false, _, _)), _), _)
-         | (_, `!`(Some(π(_, λ(_: Expr), false, _, _)), _)) => false
+      case (!(Some(π(_, λ(_: Expr), false, _, _)), _), _)
+         | (_, !(Some(π(_, λ(_: Expr), false, _, _)), _)) => false
 
-      case (`!`(Some(π(λ(lch: Symbol), λ(larg), false, _, _)), lsum)
-           ,`!`(Some(π(λ(rch: Symbol), λ(rarg), false, _, _)), rsum)) =>
+      case (!(Some(π(λ(lch: Symbol), λ(larg), false, _, _)), lsum)
+           ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _, _)), rsum)) =>
         equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
 
-      case (`!`(_, lsum), `!`(_, rsum)) => congruent(lsum -> rsum)
+      case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
       case (`⟦⟧`(Encoding(lcode, _, _, lconst, lbound), lsum, _, lname, lassign)
            ,`⟦⟧`(Encoding(rcode, _, _, rconst, rbound), rsum, _, rname, rassign))
