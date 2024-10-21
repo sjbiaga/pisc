@@ -82,15 +82,15 @@ object Ensure:
 
       ast match
 
-        case `∅` =>
+        case ∅ =>
 
-        case `|`(it*) =>
+        case ||(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
 
         case `.`(end, _*) =>
           end.recursive
 
-        case `!`(_, par) =>
+        case !(_, par) =>
           par.recursive(stack.size)
 
         case `[]`(_, par) =>

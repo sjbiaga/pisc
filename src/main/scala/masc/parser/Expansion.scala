@@ -37,7 +37,7 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import scala.meta.Term
 
-import _root_.masc.parser.{ Calculus, `&`, `name | process` }
+import _root_.masc.parser.{ Calculus, & }
 import _root_.masc.parser.Ambient.{ AST => _, _ }
 import Calculus._
 import Expansion._
@@ -70,7 +70,7 @@ abstract class Expansion extends Calculus:
     new Parser[(`⟦⟧`, Names)] {
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         def expand(in: Input, end: Either[String, String])
-                  (using substitution: Map[String, `name | process`])
+                  (using substitution: Map[String, String | AST])
                   (using free: Names): Term => ParseResult[(`⟦⟧`, Names)] =
 
           case Term.Name(rhs) =>
@@ -294,7 +294,7 @@ abstract class Expansion extends Calculus:
 
           case it => throw InstantiationParsingException(it)
 
-        given Map[String, `name | process`]()
+        given Map[String, String | AST]()
         given Names()
 
         expand(in, Left(end))(term)
@@ -314,23 +314,23 @@ object Expansion:
   // functions
 
   private def replaced(name: String)
-                      (using substitution: Map[String, `name | process`]): String =
+                      (using substitution: Map[String, String | AST]): String =
     substitution.get(name).getOrElse(name).asInstanceOf[String]
 
 
   extension[T <: AST](ast: T)
 
-    def replace(using substitution: Map[String, `name | process`])
+    def replace(using substitution: Map[String, String | AST])
                (using pointers: List[String] = Nil): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
       ast match
 
-        case `∅` => ∅
+        case ∅ => ∅
 
-        case `|`(it*) =>
-          `|`(it.map(_.replace)*)
+        case ||(it*) =>
+          ||(it.map(_.replace)*)
 
         case `.`(end, _it*) =>
           val it = _it.map {
@@ -347,18 +347,18 @@ object Expansion:
           }
           `.`(end.replace, it*)
 
-        case `<>`(term, _path*) =>
+        case <>(term, _path*) =>
           val path = _path.map {
             case Λ(name) => Λ(replaced(name))
             case ζ(op, amb) => ζ(op, replaced(amb))
             case it => it
           }
-          `<>`(term, path*)
+          <>(term, path*)
 
-        case `!`(Some(name), par) =>
+        case !(Some(name), par) =>
           `!`(Some(replaced(name)), par.replace)
 
-        case it @ `!`(_, par) =>
+        case it @ !(_, par) =>
           it.copy(par = par.replace)
 
         case `[]`(amb, par) =>
@@ -388,7 +388,7 @@ object Expansion:
 
         case `{}`(id, pointers) if substitution.contains(id) =>
           val pointers2 = pointers.map(replaced(_))
-          substitution(id).asInstanceOf[`&`].replace(using Map.empty)(using pointers2)
+          substitution(id).asInstanceOf[&].replace(using Map.empty)(using pointers2)
 
         case _: `{}` => ???
 
@@ -396,7 +396,7 @@ object Expansion:
           it
 
         case `(*)`(id, Nil) if substitution.contains(id) =>
-          substitution(id).asInstanceOf[`&`]
+          substitution(id).asInstanceOf[&]
 
         case `(*)`(id, qual @ List("this"), params*) =>
           val params2 = params.map(replaced(_))

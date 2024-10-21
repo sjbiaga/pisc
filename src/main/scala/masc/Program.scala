@@ -33,9 +33,8 @@ import java.util.UUID
 import scala.meta._
 import dialects.Scala3
 
-import parser.Ambient._
+import parser.Ambient.{ AST => _, _ }
 import parser.Calculus._
-import parser.`Pre | AST`
 import generator.Meta._
 
 
@@ -45,7 +44,7 @@ object Program:
     bind.map { case (bind, par) => defn(bind, par.generate).toString }
 
 
-  extension(node: `Pre | AST`)
+  extension(node: Pre | AST)
 
     def generate: List[Enumerator] =
       var * = List[Enumerator]()
@@ -54,13 +53,13 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case `∅` =>
+        case ∅ =>
           * = `_ <- IO.unit`
 
-        case `|`(operand) =>
+        case ||(operand) =>
           * = operand.generate
 
-        case it: `|` =>
+        case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
           * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
@@ -115,7 +114,7 @@ object Program:
 
         ////// REPLICATION /////////////////////////////////////////////////////
 
-        case `!`(Some(name), par) =>
+        case !(Some(name), par) =>
           val uuid = id
 
           val `!.(*).⋯` = `()`(None, name).generate :+ `_ <- *`(Term.Apply(\(uuid),
@@ -131,7 +130,7 @@ object Program:
 
           * = `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it)) :: `!.(*).⋯`
 
-        case `!`(_, par) =>
+        case !(_, par) =>
           val uuid = id
 
           val it = `( *, … ).parMapN { (_, …) => }`(
@@ -166,7 +165,7 @@ object Program:
 
         // OUTPUT //////////////////////////////////////////////////////////////
 
-        case `<>`(it) =>
+        case <>(it) =>
           val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
           * = it match
                 case Some(code) =>
@@ -174,7 +173,7 @@ object Program:
                 case _ =>
                   `_ <- *`(term)
 
-        case `<>`(it, path*) =>
+        case <>(it, path*) =>
           val term = Term.Apply(
                        Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)),
                        Term.ArgClause(\(")(") :: Nil, None))
@@ -203,7 +202,7 @@ object Program:
                       then
                         _par
                       else
-                        `|`(`.`(_par, ν(bound.drop(n).toSeq*)))
+                        ||(`.`(_par, ν(bound.drop(n).toSeq*)))
                     )
 
           * = ** ++ par.generate
