@@ -2,9 +2,9 @@ package pixc
 
 package object parser:
 
-  import Calculus.{ `+`, ∅, `?:`, `{}`, `(*)`, `!`, `[|]`, `[]`, π, τ, λ, Pre, AST }
+  import Calculus.{ `+`, `?:`, `{}`, `(*)`, `!`, `⟦⟧`, π, τ, λ, Pre, AST }
 
-  type `-` = ∅.type | `?:` | `{}` | `(*)` | `!` | `[|]` | `[]`
+  type `-` = `?:` | `{}` | `(*)` | `!` | `⟦⟧`
 
   type `&` = `+` | `-`
 
@@ -12,4 +12,6 @@ package object parser:
 
   type `Pre | AST` = Pre | AST
 
-  type `name | process` = λ | `+`
+  type `name | process` = λ | AST
+
+  type `1 | 2` = 1 | 2

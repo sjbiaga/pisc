@@ -32,9 +32,14 @@ import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.Charset
 import java.nio.file.Paths
 
+import scala.collection.{ Map, Set }
 import scala.io.Source
 
+import scala.meta._
+import dialects.Scala3
+
 import parser.Pi
+import Pi.ln
 
 
 object Main:
@@ -59,6 +64,10 @@ object Main:
 
         Pi(prog.map(_._1))
 
+        val congruent = Pi.Χ()
+
+        val kong = `King Kong`("π-kong", congruent).toString + "\n\n"
+
         val ps = Program(prog.map(_._1))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
@@ -69,9 +78,59 @@ object Main:
           .map(_._1)
           .mkString("\n\n")
 
-        bwr.write(code, 0, code.length)
+        bwr.write(kong + code, 0, kong.length + code.length)
+      catch t =>
+        val (m, n) = ln
+        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
+        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        throw t
       finally
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
         if source ne null then source.close()
     }
+
+  def `King Kong`(name: String, congruent: Map[String, Set[String]]): Defn.Val =
+    Defn.Val(Mod.Implicit() :: Nil,
+             Pat.Var(Term.Name(name)) :: Nil,
+             Some(Type.Apply(Type.Name("Π-Map"),
+                             Type.ArgClause(List(Type.Name("String"),
+                                                 Type.Apply(Type.Name("Π-List"),
+                                                            Type.ArgClause(Type.Name("String") :: Nil)))))),
+             Term.Apply(scollimmMap,
+                        Term.ArgClause(this.Χ(congruent).toList, None)))
+
+  private object Χ:
+
+    def apply(self: Map[String, Set[String]]) =
+        for
+          (id, it) <- self
+        yield
+          Term.ApplyInfix(Lit.String(s"$id"),
+                          Term.Name("->"), Type.ArgClause(Nil),
+                          Term.ArgClause(Term.Apply(scollimmList,
+                                                    Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                                                   None)
+                                         ) :: Nil, None))
+
+  private val scollimmMap =
+    Term.Select(
+      Term.Select(
+        Term.Select(
+          Term.Select(
+            Term.Name("_root_"),
+            Term.Name("scala")),
+          Term.Name("collection")),
+        Term.Name("immutable")),
+      Term.Name("Map"))
+
+  private val scollimmList =
+    Term.Select(
+      Term.Select(
+        Term.Select(
+          Term.Select(
+            Term.Name("_root_"),
+            Term.Name("scala")),
+          Term.Name("collection")),
+        Term.Name("immutable")),
+      Term.Name("List"))

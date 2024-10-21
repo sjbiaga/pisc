@@ -1,3 +1,5 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = w [ ν(ch) t [ ch(ch). s [ end(s). end(t). ] | ch<ch>. ] ]
+⟦⟧ =
+
+Main = w⟦ ν(ch) t⟦ ch(ch). start(s) ⟦ end(s). end(t). ⟧ . | ch<ch>. ⟧ ⟧

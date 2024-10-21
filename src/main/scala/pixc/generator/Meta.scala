@@ -273,8 +273,14 @@ object Meta:
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
 
 
-  def `* <- χ; _ <- }{()(, *)`(name: String): List[Enumerator] =
-    `* <- *`(name -> "χ") :: `_ <- }{()(, *)`(name)
-
-  def `_ <- }{()(, *)`(name: String): List[Enumerator] =
+  def `* <- χ; _ <- }{()(, *)`(name: String, uuid: String): List[Enumerator] =
+    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(uuid) :: Nil, None))) ::
     `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) :: Nil
+
+  def `* <- }{(*)()()`(name: String, uuid: String): Enumerator =
+    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(uuid) :: Nil, None)),
+                                Term.ArgClause(\(")(") :: Nil, None)))
+
+  def `_ <- }{(*)()()`(name: String): Enumerator =
+    `_ <- *`(Term.Apply(Term.Apply(\("}{"), Term.ArgClause(\(name) :: Nil, None)),
+                        Term.ArgClause(\(")(") :: Nil, None)))

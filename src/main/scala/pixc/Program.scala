@@ -30,8 +30,6 @@ package pixc
 
 import java.util.UUID
 
-import scala.collection.mutable.{ ListBuffer => MutableList }
-
 import scala.meta._
 import dialects.Scala3
 
@@ -116,27 +114,23 @@ object Program:
           * = `_ <- *`(cases(`+`(`|`(it))))
 
         case `.`(end, it*) =>
-          val ** = it.headOption match
-            case Some(χ(name, Some(sum))) =>
-              implicit val sem = Some(id)
-
-              val ios = `_ <- }{()(, *)`(name) ++ `+`(`|`(`.`(sum), `.`(end, it.tail*))).flatten.generate
-
-              `* <- Semaphore[IO](1)`(sem.get) ::
-              `* <- *`(name -> "χ") ::
-              `_ <- *`(`( *, … ).parMapN { (_, …) => }`(sum.generate, ios))
-
-            case Some(χ(name, _)) =>
-              `_ <- *`(Term.Apply(
-                         Term.Apply(\("}{"), Term.ArgClause(\(name) :: Nil, None)),
-                         Term.ArgClause(\(")(") :: Nil, None)
-                       )) :: `.`(end, it.tail*).generate()
-
-            case Some(_) =>
-              it.head.generate() ++ `.`(end, it.tail*).generate()
-
-            case _ =>
+          val ** =
+            if it.isEmpty
+            then
               end.generate()
+
+            else
+              val ios = `.`(end, it.tail*).generate()
+
+              it.head match
+                case χ(Right(`⟦⟧`(_, _, uuid, Symbol(name), _))) =>
+                  `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- }{(*)()()`(name, uuid) :: ios)) :: Nil
+
+                case χ(Left(Symbol(name))) =>
+                  `_ <- }{(*)()()`(name) :: ios
+
+                case _ =>
+                  it.head.generate() ++ ios
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
@@ -153,11 +147,11 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
 
-        case τ(Some(Left(enums))) =>
+        case τ(Some((Left(enums), _))) =>
           * = `_ <- *`("τ")
           * ++= enums
 
-        case τ(Some(Right(term))) =>
+        case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
           * :+= `_ <- IO { * }`(term)
 
@@ -169,14 +163,14 @@ object Program:
 
         case π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
 
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some(Left(enums))) =>
+        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some(Right(term))) =>
+        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Right(term), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)),
@@ -186,14 +180,14 @@ object Program:
         case π(λ(Symbol(ch)), λ(Symbol(arg)), false, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)))
 
-        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some(Left(enums))) =>
+        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(term :: \(")(") :: Nil, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some(Right(term2))) =>
+        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some((Right(term2), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term2))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(term :: \(")(") :: Nil, None)),
@@ -203,14 +197,14 @@ object Program:
         case π(λ(Symbol(ch)), λ(Expr(term)), false, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(term :: \(")(") :: Nil, None)))
 
-        case π(λ(Symbol(ch)), λ(arg), false, Some(Left(enums))) =>
+        case π(λ(Symbol(ch)), λ(arg), false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"$arg".parse[Term].get :: \(")(") :: Nil, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(arg), false, Some(Right(term))) =>
+        case π(λ(Symbol(ch)), λ(arg), false, Some((Right(term), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"$arg".parse[Term].get :: \(")(") :: Nil, None)),
@@ -220,9 +214,9 @@ object Program:
         case π(λ(Symbol(ch)), λ(arg), false, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(s"$arg".parse[Term].get :: \(")(") :: Nil, None)))
 
-        case π(_, _, true, Some(Left(_))) => ??? // Scalameta Enumerator - caught by parser
+        case π(_, _, true, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
 
-        case π(λ(Symbol(ch)), λ(Symbol(par)), true, Some(Right(code))) =>
+        case π(λ(Symbol(ch)), λ(Symbol(par)), true, Some((Right(code), _))) =>
           * = `* <- *`(par -> Term.Apply(
                                 Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil, None)),
                                 Term.ArgClause(code::Nil, None)
@@ -250,7 +244,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        ////// REPLICATION /////////////////////////////////////////////////////
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case `!`(Some(π @ π(_, λ(Symbol(par)), true, _)), sum) =>
           val uuid = id
@@ -306,23 +300,34 @@ object Program:
 
         // ENCODING ////////////////////////////////////////////////////////////
 
-        case `[|]`(Encoding(_, _, _, bound), _sum, Some(assign)) =>
+        case `⟦⟧`(_, sum, uuid, Symbol(name), assign) =>
           val ** = assign
-            .map(Pat.Var(_) -> _)
-            .map(Enumerator.Val(_, _))
-            .toList
-          val sum = ( if bound.size == assign.size
+            .map { _.map(_.name -> _.name)
+                    .map(Pat.Var(_) -> _)
+                    .map(Enumerator.Val(_, _))
+                    .toList
+            }.getOrElse(Nil)
+
+          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name, uuid) ++ sum.generate()))
+
+        case `⟦⟧`(Encoding(_, _, _, _, bound), _sum, _, _, assign) =>
+          val ** = assign
+            .map { _.map(_.name -> _.name)
+                    .map(Pat.Var(_) -> _)
+                    .map(Enumerator.Val(_, _))
+                    .toList
+            }.getOrElse(Nil)
+
+          val n = assign.map(_.size).getOrElse(0)
+
+          val sum = ( if bound.size == n
                       then
                         _sum
                       else
-                        given MutableList[(String, λ)]()
-                        `+`(`|`(`.`(_sum, ν(bound.drop(assign.size).map(_.name).toSeq*)))).rename
+                        `+`(`|`(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
                     )
-          * = ** ++ sum.generate()
 
-        case `[|]`(Encoding(_, _, _, bound), sum, _) =>
-          given MutableList[(String, λ)]()
-          * = `+`(`|`(`.`(sum, ν(bound.map(_.name).toSeq*)))).rename.generate()
+          * = ** ++ sum.generate()
 
         case _: `{}` => ???
 
@@ -343,23 +348,13 @@ object Program:
               }
           }
 
-          if qual.isEmpty
-          then
-            * = `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
-          else
-            * = `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+          qual match
+            case List("π", "this") | List("this") | Nil =>
+              * = `_ <- *`(s"`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
+            case _ =>
+              * = `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(`)(`)(${args.mkString(", ")})".parse[Term].get)
 
         ////////////////////////////////////////////////////////// invocation //
-
-
-        // TRANSACTION /////////////////////////////////////////////////////////
-
-        case `[]`(name, `+`(it)) =>
-          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name) ++ it.generate()))
-
-        case _: `[]` => ??? // zero or more - caught by parser
-
-        ///////////////////////////////////////////////////////// transaction //
 
       *
 

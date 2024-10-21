@@ -28,7 +28,7 @@
 
 package pixc
 
-import scala.collection.mutable.{ HashMap => Map }
+import scala.collection.mutable.{ LinkedHashMap => Map }
 
 import parser.Calculus._
 
@@ -95,7 +95,7 @@ object Ensure:
 
         case `.`(end, it*) =>
           it.foldLeft(end.recursive) {
-            case (_, χ(_, Some(sum))) => sum.recursive
+            case (_, χ(Right(exp))) => exp.recursive
             case _ =>
           }
 
@@ -106,10 +106,7 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursive(stack.size)
 
-        case `[|]`(_, sum, _) =>
-          sum.recursive
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.recursive
 
         case _: `{}` => ???
@@ -162,17 +159,16 @@ object Ensure:
          }
 
         case `.`(end, it*) =>
-          if it
-            .exists {
-              case χ(_, Some(_)) => true
-              case _ => false
-            } && repl
+          if repl
           then
-            false
+            it.forall {
+              case χ(Right(_)) => false
+              case _ => true
+            } && end.replication
           else
             it.foldLeft(end.replication) {
               case (false, _) => false
-              case (_, χ(_, Some(sum))) => sum.replication
+              case (_, χ(Right(exp))) => exp.replication
               case _ => true
             }
 
@@ -182,10 +178,7 @@ object Ensure:
         case `!`(_, sum) =>
           sum.replication(true)
 
-        case `[|]`(_, sum, _) =>
-          sum.replication
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.replication
 
         case _: `{}` => ???
@@ -224,17 +217,13 @@ object Ensure:
         case `.`(end, it*) =>
           if it
             .exists {
-              case χ(_, Some(_)) => true
+              case χ(Right(_)) => true
               case _ => false
             }
           then
             false
           else
-            it.foldLeft(end.recursion) {
-              case (false, _) => false
-              case (_, χ(_, Some(sum))) => sum.recursion
-              case _ => true
-            }
+            end.recursion
 
         case `?:`(_, t, f) =>
           t.recursion && f.map(_.recursion).getOrElse(true)
@@ -242,10 +231,7 @@ object Ensure:
         case `!`(_, sum) =>
           sum.recursion
 
-        case `[|]`(_, sum, _) =>
-          sum.recursion
-
-        case `[]`(_, sum) =>
+        case `⟦⟧`(_, sum, _, _, _) =>
           sum.recursion
 
         case _: `{}` => ???

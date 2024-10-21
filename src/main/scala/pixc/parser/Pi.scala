@@ -29,7 +29,11 @@
 package pixc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  LinkedHashMap => Map,
+  ListBuffer => MutableList,
+  LinkedHashSet => Set
+}
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -38,10 +42,10 @@ import generator.Meta.`()(null)`
 
 import Pi._
 import Calculus._
-import scala.util.parsing.combinator.pixc.parser.Extension
+import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
-class Pi extends Expression:
+abstract class Pi extends Expression:
 
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
@@ -67,7 +71,7 @@ class Pi extends Expression:
         throw PrefixChannelParsingException(ch)
       case _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case _ ~ _ ~ Some((Left(enums), _)) =>
+      case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ (par, binding) ~ Some((it, free2)) =>
         π(ch, par, polarity = true, Some(it)) -> (binding, name ++ free2)
@@ -80,8 +84,8 @@ class Pi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case (Right(term), free) => λ(Expr(term)) -> free
-                                   case (Left(enums), _) => throw TermParsingException(enums)
+                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
   /**
@@ -93,12 +97,19 @@ class Pi extends Expression:
       rep1(acceptIf(Character.isLowerCase)(s"$what name expected but '" + _ + "' found"),
           elem(s"$what name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  private[parser] var eqtn = List[Bind]()
-  private[parser] val defn = Map[Int, Define]()
-  private[parser] val self = Set[Int]()
+  private[parser] var _werr: Boolean = false
+  private[parser] var eqtn: List[Bind] = null
+  private[parser] var defn: Map[Int, Define] = null
+  private[parser] var self: Set[Int] = null
+  private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
+  private[parser] var _nest = -1
+  protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
+  private[parser] var _cntr: Map[Int, Long] = null
+  protected final def cntr(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(_cntr(_nest)) }
+  protected final def cntr_(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(-_cntr(_nest)) }
 
 
-object Pi extends Extension:
+object Pi extends Expansion:
 
   type Names = Set[Symbol]
 
@@ -107,6 +118,33 @@ object Pi extends Extension:
       .filter(_.isSymbol)
       .map(_.asSymbol)
     )
+    def apply(names: Names): Names = Set.from(names)
+
+  type Names2 = Map[Symbol, (Either[Symbol, Option[Symbol]], Long Either Long)]
+
+  object Names2:
+    def apply(): Names2 = Map()
+    def apply(binding2: Names2): Names2 = Map.from(binding2)
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.map { it =>
+        if _code < 0
+        then
+          this(it, None, hardcoded = true)
+        else
+          this(it, Some(it), hardcoded = true)
+      }
+    def apply(name: Symbol, _binding: Option[Symbol], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      val binding = _binding.map(Some(_)).orElse(Some(None)).toRight(null)
+      binding2.get(name) match
+        case Some((_, Left(k))) if k < 0 =>
+          binding2 += name -> (binding, Right(k))
+        case Some((_, Right(k))) if _code >= 0 && (!hardcoded || k < 0) =>
+           throw UniquenessBindingParsingException(name, hardcoded)
+        case Some((_, Left(_))) =>
+        case _ =>
+          binding2 += name -> (binding, cntr(Right(_)))
 
 
   // exceptions
@@ -115,7 +153,7 @@ object Pi extends Extension:
 
   import Expression.ParsingException
 
-  class PrefixParsingException(msg: String, cause: Throwable = null)
+  abstract class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
@@ -123,6 +161,14 @@ object Pi extends Extension:
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+  abstract class BindingParsingException(msg: String, cause: Throwable = null)
+      extends ParsingException(msg
+                                 + s" at nesting level #$_nest"
+                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
+
+  case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
 
 
   // functions
@@ -169,6 +215,9 @@ object Pi extends Extension:
     do
       prog(i)._1 match
         case `(*)`(id, _, params*) =>
+          if _werr
+          then
+            throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
     i = rec("Main" -> 0)
@@ -189,17 +238,235 @@ object Pi extends Extension:
     ensure(prog)
 
 
-  private var i: Int = 0
+  object Χ:
 
-  def apply(source: Source): List[Either[String, Bind]] = (source.getLines().toList :+ "")
-    .foldLeft(List[String]() -> false) {
-      case ((r, false), l) => (r :+ l) -> l.endsWith("\\")
-      case ((r, true), l) => (r.init :+ r.last.stripSuffix("\\") + l) -> l.endsWith("\\")
+    private def apply(it: Symbol, _1_2: `1 | 2`)(using (Names2, Names2)): Either[`1 | 2`, Long Either Long] =
+      val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
+      binding2.find { case (_, (Right(`it`), _)) => true case _ => false } match
+        case Some(it) => Right(it._2._2)
+        case _ if binding2.contains(it) => Right(binding2(it)._2)
+        case _ => Left(_1_2)
+
+    private def equal(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                     (using (Names2, Names2))
+                     (lhs: Symbol, rhs: Symbol): Boolean =
+     val (i, j) = binding._1.indexOf(lhs) -> binding._2.indexOf(rhs)
+     i >= 0 && j >= 0 && i == j ||
+     i < 0 && j < 0 &&
+     this(lhs, 1) == this(rhs, 2)
+
+    private def equal2(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                      (using (Names2, Names2))
+                      (lhs: Symbol, rhs: Symbol): Boolean =
+      val _1 = this(lhs, 1)
+      val _2 = this(rhs, 2)
+      _1 == _2 || _1.isLeft && _2.isLeft && {
+        binding._1.prepend(lhs); binding._2.prepend(rhs)
+        true
+     }
+
+    private inline def mark(using binding: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
+      binding._1.size -> binding._2.size
+
+    private inline def backtrack(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                                (ln: Int, rn: Int): Boolean =
+      binding._1.dropInPlace(binding._1.size - ln); binding._2.dropInPlace(binding._2.size - rn)
+      true
+
+    def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                 (using (Names2, Names2)): ((AST, AST)) => Boolean = {
+
+      case (lhs: `+`, rhs: `+`) =>
+        (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
+          case (false, _) => false
+          case (_, it) => congruent(it)
+        }
+
+      case (lhs: `|`, rhs: `|`) =>
+        (lhs.components zip rhs.components).foldLeft(lhs.components.size == rhs.components.size) {
+          case (false, _) => false
+          case (_, it) => congruent(it)
+        }
+
+      case (`.`(lhs, _lit*), `.`(rhs, _rit*)) =>
+        val lit = _lit.filterNot { case _: τ => true case _ => false }
+        val rit = _rit.filterNot { case _: τ => true case _ => false }
+        val (ln, rn) = mark
+        if lit.size == rit.size
+        && (lit zip rit).foldLeft(true) {
+          case (false, _) => false
+          case (_, (ν(lnames*)
+                   ,ν(rnames*))) =>
+            lnames
+              .map(Symbol(_))
+              .foreach(binding._1.prepend(_))
+            rnames
+              .map(Symbol(_))
+              .foreach(binding._2.prepend(_))
+            true
+          case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _)
+                   ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _))) =>
+            equal(lch, rch) && equal2(lpar, rpar)
+          case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _)
+                   ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _))) =>
+            equal(lch, rch) && equal(larg, rarg)
+          case (_, (π(_, λ(_: Expr), false, _), _))
+             | (_, (_, π(_, λ(_: Expr), false, _))) => false
+          case (_, (π(λ(lch: Symbol), λ(larg), false, _)
+                   ,π(λ(rch: Symbol), λ(rarg), false, _))) =>
+            equal(lch, rch) && larg == rarg
+          case (_, (χ(Right(lexp))
+                   ,χ(Right(rexp)))) =>
+            equal2(lexp.trans, rexp.trans) && congruent(lexp -> rexp)
+          case (_, (χ(Left(ltrans))
+                   ,χ(Left(rtrans)))) =>
+            ltrans == rtrans
+          case _ => false
+        }
+        then
+          congruent(lhs -> rhs) && backtrack(ln, rn)
+        else
+          false
+
+      case (`?:`(((λ(_: Expr), _), _), _, _), _) | (`?:`(((_, λ(_: Expr)), _), _, _), _) |
+           (_, `?:`(((λ(_: Expr), _), _), _, _)) | (_, `?:`(((_, λ(_: Expr)), _), _, _)) => false
+
+      case (`?:`(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
+           ,`?:`(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
+          if equal(llhs, rlhs) && equal(lrhs, rrhs)
+          || equal(llhs, rrhs) && equal(lrhs, rlhs) =>
+        if lm == rm
+        then
+          congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
+        else
+          congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+
+      case (`?:`(((λ(llhs), λ(lrhs)), lm), lt, lf)
+           ,`?:`(((λ(rlhs), λ(rrhs)), rm), rt, rf))
+          if llhs == rlhs && lrhs == rrhs
+          || llhs == rrhs && lrhs == rlhs =>
+        if lm == rm
+        then
+          congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
+        else
+          congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+
+      case (`!`(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
+           ,`!`(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
+        val (ln, rn) = mark
+        equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
+
+      case (`!`(Some(π(_, λ(_: Expr), false, _)), _), _)
+         | (_, `!`(Some(π(_, λ(_: Expr), false, _)), _)) => false
+
+      case (`!`(Some(π(λ(lch: Symbol), λ(larg), false, _)), lsum)
+           ,`!`(Some(π(λ(rch: Symbol), λ(rarg), false, _)), rsum)) =>
+        equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
+
+      case (`!`(_, lsum), `!`(_, rsum)) => congruent(lsum -> rsum)
+
+      case (`⟦⟧`(Encoding(lcode, _, _, lconst, lbound), lsum, _, lname, lassign)
+           ,`⟦⟧`(Encoding(rcode, _, _, rconst, rbound), rsum, _, rname, rassign))
+          if lcode == rcode
+          && lname == rname
+          && lconst == rconst
+          && lassign.map(_.size).getOrElse(0) == lbound.size
+          && rassign.map(_.size).getOrElse(0) == rbound.size
+          && lbound.size == rbound.size =>
+        val (ln, rn) = mark
+        (lconst ++ lbound).foreach(binding._1.prepend(_))
+        (rconst ++ rbound).foreach(binding._2.prepend(_))
+        (lassign zip rassign)
+          .map(_ zip _)
+          .map(
+            _.foldLeft(true) {
+              case (false, _) => false
+              case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
+                binding._1.prepend(lvariable); binding._2.prepend(rvariable)
+                equal(lpointer, rpointer)
+            }
+          ).getOrElse(true)
+        && congruent(lsum -> rsum) && backtrack(ln, rn)
+
+      case (_: `{}`, _) | (_, _: `{}`) => ???
+
+      case (`(*)`(lid, lqual, largs*)
+           ,`(*)`(rid, rqual, rargs*))
+          if lid == rid
+          && lqual == rqual
+          && largs.size == rargs.size =>
+        (largs zip rargs).foldLeft(true) {
+          case (false, _) => false
+          case (_, (λ(larg: Symbol), λ(rarg: Symbol))) => equal(larg, rarg)
+          case (_, (λ(_: Expr), _)) | (_, (_, λ(_: Expr))) => false
+          case (_, (λ(larg), λ(rarg))) => larg == rarg
+        }
+
+      case _ => false
+
+    }
+
+    def apply(): scala.collection.Map[String, scala.collection.Set[String]] =
+
+      val expansions = xctn.mapValues(_.filter(_._1.isLeft).map(_.left.get -> _)).filter(_._2.nonEmpty)
+      val transactions = xctn.mapValues(_.filter(_._1.isRight).map(_.right.get -> _)).filter(_._2.nonEmpty)
+
+      transactions.keySet.flatMap { it =>
+        transactions
+          .filterKeys(_ == it)
+          .values
+          .flatten
+          .map(_._1.exp.uuid -> Set.empty)
+      }
+        .toMap
+      ++
+      (expansions.keySet & transactions.keySet).flatMap { it =>
+        for
+          (exp, binding2_exp) <- expansions.filterKeys(_ == it).values.flatten
+          (xct, binding2_xct) <- transactions.filterKeys(_ == it).values.flatten
+          given (MutableList[Symbol]
+                ,MutableList[Symbol]) = MutableList[Symbol]()
+                                     -> MutableList[Symbol]()
+          given (Names2, Names2) = binding2_exp -> binding2_xct
+          if congruent(exp -> xct.exp)
+        yield
+          xct.exp.uuid -> exp.uuid
+      }
+        .groupBy(_._1)
+        .mapValues(_.map(_._2))
+        .toMap
+
+
+  private var i: Int = -1
+  private var l: (Int, Int) = (-1, -1)
+  def ln = l
+
+  def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+    _werr = errors
+    eqtn = List()
+    defn = Map()
+    self = Set()
+    xctn = Map()
+    _nest = 0
+    _cntr = Map(0 -> 0L)
+    _id = scala.collection.mutable.Seq('0')
+    _ix = 0
+    i = 0
+    l = (0, 0)
+
+    (source.getLines().toList :+ "")
+    .zipWithIndex
+    .foldLeft(List[(String, (Int, Int))]() -> false) {
+      case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+      case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
     }._1
-    .filterNot(_.matches("^[ ]*#.*")) // commented lines
-    .filterNot(_.isBlank) // empty lines
-    .flatMap { it =>
-      if it.matches("^[ ]*@.*")
+    .flatMap { case (it, (m, n)) =>
+      l = (m+1, n+1)
+      if it.matches("^[ ]*#.*") // commented lines
+      || it.isBlank // empty lines
+      then
+        None
+      else if it.matches("^[ ]*@.*")
       then // Scala
         Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // Pi
@@ -209,8 +476,8 @@ object Pi extends Extension:
             val equations = eqtn.slice(i, eqtn.size)
             i = eqtn.size
             equations.map(Right(_))
-          case Success(Right(definition @ (Encoding(code, _, _, _), _)), _) =>
-            defn(code) = definition
+          case Success(Right(definition), _) =>
+            defn(_code) = definition
             Nil
           case failure: NoSuccess =>
             scala.sys.error(failure.msg)
