@@ -1,33 +1,33 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦99 'n `=>` 'P + 'm `=>` 'Q 99⟧ = ν(p, q, r)                               \
+⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                               \
                                 ( p[ in n, out n. q[ out p, open r. P ] ]  \
                                 | p[ in m, out m. q[ out p, open r. Q ] ]  \
                                 | open q. | r[]                            \
                                 )
 
-⟦0 s"Zero" 0⟧(zero) = zero[]
+⟦ t"Zero" ⟧(zero) = zero[]
 
-⟦1 'N + x `1` x 1⟧(succ, op) = succ[ open op. | N ]
+⟦ 'N + x `1` x ⟧(succ, op) = succ[ open op. | N ]
 
-⟦3 s"1" 3⟧(zero, succ, op) = ⟦1 ⟦0 Zero 0⟧ + 1 1⟧
+⟦ t"1" ⟧(zero, succ, op) = ⟦ ⟦ Zero ⟧ + 1 ⟧
 
-⟦2 s"IfZero ${$P} Else ${$Q}" 2⟧(zero, succ) = ⟦99 zero => P + succ => Q 99⟧
+⟦ t"IfZero ${$P} Else ${$Q}" ⟧(zero, succ) = ⟦ zero => P + succ => Q ⟧
 
-⟦10 s"inczero ${$P}" 10⟧(zero, succ, op) = open zero. ( ⟦3 1 3⟧ | P )
+⟦ t"inczero ${$P}" ⟧(zero, succ, op) = open zero. ( ⟦ 1 ⟧ | P )
 
-⟦11 s"incsucc ${$P}" 11⟧(succ, op) = ν(p, q)                                                                     \
-                                   ( p[ succ[ open op. ] ] | open q, open p. P                                   \
-                                   | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
-                                   )
+⟦ t"incsucc ${$P}" ⟧(succ, op) = ν(p, q)                                                                     \
+                               ( p[ succ[ open op. ] ] | open q, open p. P                                   \
+                               | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
+                               )
 
-⟦101 s"inc ${$P}" 101⟧(zero, succ, op) = ⟦2 IfZero ⟦10 inczero P 10⟧   \
-                                            Else ⟦11 incsucc P 11⟧ 2⟧
+⟦ t"inc ${$P}" ⟧(zero, succ, op) = ⟦ IfZero ⟦ inczero P ⟧   \
+                                     Else ⟦ incsucc P ⟧ ⟧
 
-⟦110 s"dec ${$P}" 110⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
+⟦ t"dec ${$P}" ⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
 
-Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                            \
-                                         | z[ ⟦0 Zero 0⟧ | ⟦2 IfZero τ/*println("0")*/. Else () 2⟧ ]  \
-                                         | o[ ⟦3 1 3⟧ | ⟦2 IfZero () Else τ/*println("1")*/. 2⟧ ]     \
-                                         )                                                            \
+Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                        \
+                                         | z[ ⟦ Zero ⟧ | ⟦ IfZero τ/*println("0")*/. Else () ⟧ ]  \
+                                         | o[ ⟦ 1 ⟧ | ⟦ IfZero () Else τ/*println("1")*/. ⟧ ]     \
+                                         )                                                        \
              ]

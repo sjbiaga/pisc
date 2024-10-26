@@ -39,19 +39,22 @@ and objective move.
 The BNF formal grammar for processes is the following.
 
     LINE           ::= EQUATION | DEFINITION
-    DEFINITION     ::= "⟦<NUMBER>" [ TEMPLATE ] "<NUMBER>⟧" [ "(" NAMES ")" ] [ "{" NAMES "}" ] "=" PARALLEL
-    EQUATION       ::= AGENT "=" PARALLEL
+    EQUATION       ::= INVOCATION "=" PARALLEL
+    DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" PARALLEL
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
     LEAF           ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
                      | NAME "[" PARALLEL "]"
                      | "<" CAPS ">" [ EXPRESSION ]
                      | "go" NAME "." PARALLEL
-                     | IDENTIFIER "{" NAMES "}"
-                     | AGENT
+                     | IDENTIFIER POINTERS
+                     | INVOCATION
                      | INSTANTIATION
-    INSTANTIATION  ::= "⟦<NUMBER>" INSTANCE "<NUMBER>⟧" [ "{" NAMES "}" ]
-    AGENT          ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
+    INSTANTIATION  ::= "⟦<CODE>" INSTANCE "<CODE>⟧" [ POINTERS ]
+    INVOCATION     ::= [ QUAL ] IDENTIFIER PARAMS
+    PARAMS         ::= [ "(" NAMES ")" ]
+    POINTERS       ::= "{" NAMES "}"
+    NAMES          ::= NAME { "," NAME }
 
 The BNF formal grammar for prefixes is the following.
 
@@ -60,7 +63,6 @@ The BNF formal grammar for prefixes is the following.
                      | "ν" "(" NAMES ")"
                      | CAPS "."
                      | "(" NAME ")" [ EXPRESSION ] "."
-    NAMES          ::= NAME { "," NAME }
     EXPRESSION     ::= "/*" ... "*/"
 
 The BNF formal grammar for capabilities is the following.

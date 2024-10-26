@@ -6,11 +6,11 @@
                             | open q. | r[]                            \
                             )
 
-⟦1 s"Flag $n" 1⟧ = n[]
+⟦ t"Flag $n" ⟧ = n[]
 
-⟦2 x If 'tt Then 'P Else x If 'ff Then 'Q 2⟧ = ⟦ tt => open tt. P + ff => open ff. Q ⟧
+⟦ x If 'tt Then 'P Else x If 'ff Then 'Q ⟧ = ⟦ tt => open tt. P + ff => open ff. Q ⟧
 
-Main = ν(w) w[ ν(n, m) ( ⟦1 Flag n 1⟧                                                            \
-                       | ⟦2 If n Then τ/*println("OK")*/. Else If m Then τ/*println("KO")*/. 2⟧  \
-                       )                                                                         \
+Main = ν(w) w[ ν(n, m) ( ⟦ Flag n ⟧                                                            \
+                       | ⟦ If n Then τ/*println("OK")*/. Else If m Then τ/*println("KO")*/. ⟧  \
+                       )                                                                       \
              ]

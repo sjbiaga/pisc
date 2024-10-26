@@ -187,9 +187,9 @@ object Program:
         ////////////////////////////////////////////////////////////// output //
 
 
-        // ENCODING ////////////////////////////////////////////////////////////
+        // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, bound), _par, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, variables), _par, assign) =>
           val ** = assign
             .map(_.map(Pat.Var(_) -> _)
                   .map(Enumerator.Val(_, _))
@@ -198,18 +198,18 @@ object Program:
 
           val n = assign.map(_.size).getOrElse(0)
 
-          val par = ( if bound.size == n
+          val par = ( if variables.size == n
                       then
                         _par
                       else
-                        ||(`.`(_par, ν(bound.drop(n).toSeq*)))
+                        ||(`.`(_par, ν(variables.drop(n).toSeq*)))
                     )
 
           * = ** ++ par.generate
 
         case _: `{}` => ???
 
-        //////////////////////////////////////////////////////////// encoding //
+        /////////////////////////////////////////////////////// instantiation //
 
 
         // INVOCATION //////////////////////////////////////////////////////////
