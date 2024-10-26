@@ -46,10 +46,10 @@ abstract class Calculus extends Ambient:
     equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   def equation: Parser[Bind] =
-    agent(true)<~"=" >> {
+    invocation(true)<~"=" >> {
       case (bind, _binding) =>
         _code = -1
-        given Names2 = Names2() ++ _binding.map(_ -> (Right(None), cntr(Left(_))))
+        given Names2 = Names2() ++ _binding.map(_ -> Occurrence(None, pos()))
         parallel ^^ {
           case (par, free) =>
             val binding = Names() ++ given_Names2.keys
@@ -62,22 +62,19 @@ abstract class Calculus extends Ambient:
 
   def definition: Parser[Define] =
     template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) <~"=" >> {
-      case (term, parameters) ~ _const ~ _bound =>
-        if defn.contains(_code)
-        then
-          throw DefinitionUniquenessException(_code)
-        val const = _const.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
-        val bound = _bound.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
-        if (parameters & const).nonEmpty
-        || (parameters & bound).nonEmpty
-        || (bound & const).nonEmpty
+      case (term, parameters) ~ _constants ~ _variables =>
+        val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        val variables = _variables.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        if (parameters & constants).nonEmpty
+        || (variables & parameters).nonEmpty
+        || (constants & variables).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        val binding = parameters ++ const ++ bound
+        val binding = parameters ++ constants ++ variables
         given Names2 = Names2() ++
                        binding
                          .filterNot(_.charAt(0).isUpper)
-                         .map { it => it -> (Right(None), (if parameters.contains(it) then cntr_ else cntr)(Left(_))) }
+                         .map { it => it -> Occurrence(None, (if parameters.contains(it) then pos_() else pos())) }
         parallel ^^ {
           case (_par, _free) =>
             val par = _par.flatten
@@ -85,36 +82,33 @@ abstract class Calculus extends Ambient:
             if (free &~ binding).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ binding)
-            given renaming: MutableList[(String, String)] = MutableList()
-            val bound2 = bound
+            given refresh: MutableList[(String, String)] = MutableList()
+            val variables2 = variables
               .map { it =>
                 val υidυ = it.replaceAll("_υ.*υ", "") + id
-                renaming.prepend(it -> υidυ)
+                refresh.prepend(it -> υidυ)
                 υidυ
               }
+            Expression.renaming = Some((refresh, given_Names2))
             given Names = Names()
             val par2 = par.rename(Set.empty, definition = true)
             val parameters2 = parameters.filterNot(_.charAt(0).isUpper).toList
             if parameters.size == parameters2.size
             then
-              val binding = parameters ++ const ++ bound2
+              val binding = parameters ++ constants ++ variables2
               eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par2
-            val binding2 = given_Names2.filter(_._2._2.getOrElse(0L) < 0)
+            val binding2 = given_Names2.filter(_._2.isBinding < 0)
             val paramsMap =
-              parameters2
-                .map(_ -> None)
-                .toMap
+              parameters2.map(_ -> None).toMap
               ++
-              binding2
-                .toList
-                .map(_ -> _._1.match { case Left(υidυ) => Some(υidυ) case Right(binding) => binding })
+              binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
             val params = paramsMap.toList
               .sortBy { (it, _) =>
-                binding2.find { case (_, (Right(Some(`it`)), _)) => true case _ => false } match
+                binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
                   case Some((it, _)) => parameters2.indexOf(it)
                   case _ => parameters2.indexOf(it)
               }
-            Encoding(_code, term, params.map(_._2), const, bound2) -> par2
+            Encoding(_code, term, params.map(_._2), constants, variables2) -> par2
         }
     }
 
@@ -126,7 +120,7 @@ abstract class Calculus extends Ambient:
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
     given Names2 = Names2(binding2)
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ { `pre ~ opt` =>
-      binding2 ++= given_Names2.filter(_._2._2.isRight)
+      binding2 ++= given_Names2.filter(_._2.isBinding < 0)
       `pre ~ opt` match
         case pre ~ Some((end, free)) =>
           `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
@@ -161,7 +155,7 @@ abstract class Calculus extends Ambient:
       case id ~ pointers =>
         `{}`(id, pointers.map(_._1)) -> pointers.map(_._2).reduce(_ ++ _)
     } |
-    agent() | // invocation
+    invocation() |
     instantiation
 
   def instantiation(using binding2: Names2): Parser[(`⟦⟧`, Names)] =
@@ -169,32 +163,43 @@ abstract class Calculus extends Ambient:
     regexMatch("""⟦(\d*)""".r) >> { m =>
       nest(true)
       val grp1 = m.group(1)
-      val code = if grp1.isEmpty then 0 else grp1.toInt
-      defn(code) match
-        case it @ (Encoding(_, Some(_), _, _, _), _) =>
-          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
-            case exp ~ pointers =>
-              exp -> pointers
-          }
-        case (encoding, _) =>
+      val code = if grp1.isEmpty
+                 then
+                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head._1.term.isEmpty }
+                   if def1.size == 1
+                   then def1.head._2.head._1.code
+                   else -1
+                 else
+                   grp1.toInt
+      defn.get(code) match {
+        case Some(it) => it
+        case _ if grp1.nonEmpty => throw NoDefinitionException(grp1.toInt)
+        case _ => defn.values.reduce(_ ++ _).filterNot(_._1.term.isEmpty)
+      } match
+        case (encoding @ Encoding(_, None, _, _, _), _) :: Nil =>
           (parallel <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
             case (par, free) ~ pointers =>
               (`⟦⟧`(encoding, par) -> free) -> pointers
           }
+        case it =>
+          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
+            case exp ~ pointers =>
+              exp -> pointers
+          }
     } ^^ {
-      case ((it @ `⟦⟧`(Encoding(_, _, _, const, bound), _, _), free), _pointers) =>
+      case ((it @ `⟦⟧`(Encoding(_, _, _, constants, variables), _, _), free), _pointers) =>
         nest(false)
-        binding2 ++= given_Names2.filter(_._2._2.isRight)
+        binding2 ++= given_Names2.filter(_._2.isBinding < 0)
         given MutableList[(String, String)]()
         val pointers = _pointers.map(_.map(_._1).map(renamed(_))).getOrElse(Nil)
-        val _assign = bound zip pointers
+        val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_String_String, given_Names2))
         given Names = Names()
-        it.copy(assign = assign).rename(free) -> (free ++ const)
+        it.copy(assign = assign).rename(free) -> (free ++ constants)
     }
 
-  def instance(it: Define, end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+  def instance(defs: List[Define], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
 
   def prefixes(using binding2: Names2): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
@@ -241,7 +246,7 @@ abstract class Calculus extends Ambient:
           `()`(None, name) -> (binding, Names())
     }
 
-  def agent(binding: Boolean = false): Parser[(`(*)`, Names)] =
+  def invocation(binding: Boolean = false): Parser[(`(*)`, Names)] =
     qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
       case qual ~ id ~ _ if binding && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
@@ -290,15 +295,15 @@ object Calculus:
 
   case class Encoding(code: Int,
                       term: Option[Term],
-                      binding: List[Option[String]], // original binding
-                      const: Names,
-                      bound: Names):
+                      shadows: List[Option[String]],
+                      constants: Names,
+                      variables: Names):
     override def toString: String =
       ( term match
           case Some(term) => if code == 0 then s"⟦ $term ⟧" else s"⟦$code $term $code⟧"
           case _ => if code == 0 then s"⟦ ⟧" else s"⟦$code $code⟧"
-      ) ++ (if const.isEmpty then "" else const.mkString("(", ", ", ")"))
-        ++ (if bound.isEmpty then "" else bound.mkString("{", ", ", "}"))
+      ) ++ (if constants.isEmpty then "" else constants.mkString("(", ", ", ")"))
+        ++ (if variables.isEmpty then "" else variables.mkString("{", ", ", "}"))
 
   sealed trait AST extends Any
 
@@ -379,11 +384,11 @@ object Calculus:
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
 
-  case class DefinitionUniquenessException(code: Int)
-      extends EquationParsingException(s"The encoding $code has already been given a definition")
+  case class NoDefinitionException(code: Int)
+      extends ParsingException(s"No definition for encoding $code")
 
   case class DefinitionParametersException(code: Int)
-      extends EquationParsingException(s"The parameters, constants and pointers must all be different in the left hand side of encoding $code")
+      extends EquationParsingException(s"The parameters, constants, and variables must all be different in the left hand side of encoding $code")
 
   case class DefinitionFreeNamesException(code: Int, free: Names)
       extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code")
@@ -400,28 +405,16 @@ object Calculus:
   // functions
 
   def renamed(it: String)
-             (using renaming: MutableList[(String, String)])
+             (using refresh: MutableList[(String, String)])
              (using binding2: Names2): String =
-    renaming.find(_._1 == it) match
+    refresh.find(_._1 == it) match
       case Some((_, r)) => r
-      case _ if binding2.exists { case (`it`, (Left(_), _)) | (_, (Right(Some(`it`)), _)) => true case _ => false } =>
-        binding2.find { case (`it`, (Left(_), _)) => true case _ => false } match
-          case Some((_, (Left(υidυ), _))) => υidυ
+      case _ if binding2.exists { case (`it`, Rebind(_)) | (_, Shadow(`it`)) => true case _ => false } =>
+        binding2.find { case (`it`, Rebind(_)) => true case _ => false } match
+          case Some((_, Rebind(υidυ))) => υidυ
           case _ => it
       case _ if binding2.contains(it) => it
       case _ => throw NoBindingParsingException(it)
-
-  def aliased(it: String)
-             (using renaming: MutableList[(String, String)])
-             (using binding2: Names2): Option[String] =
-    renaming.find(_._2 == it) match
-      case Some((r, _)) => Some(r)
-      case _ if binding2.exists { case (`it`, (Left(_), _)) | (_, (Right(Some(`it`)), _)) => true case _ => false } =>
-        binding2.find { case (`it`, (Left(_), _)) => true case _ => false } match
-          case Some((_, (Left(υidυ), _))) => Some(υidυ)
-          case _ => Some(it)
-      case _ if binding2.contains(it) => Some(it)
-      case _ => None
 
   def recoded(free: Names)
              (using code: Option[Code])
@@ -430,8 +423,7 @@ object Calculus:
              (using binding: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
-      var (code2, names) = Expression.recode(term)
-      names = names.map(aliased(_)).filter(_.nonEmpty).map(_.get)
+      val (code2, names) = Expression.recode(term)
       free ++= names.filterNot(binding.contains(_))
       code2
     }
@@ -515,26 +507,18 @@ object Calculus:
 
     def rename(free: Names, definition: Boolean = false)
               (using binding2: Names2)
-              (using renaming: MutableList[(String, String)])
+              (using refresh: MutableList[(String, String)])
               (using binding: Names): T =
 
       def rebind(it: String)(using binding: Names): String =
-        binding2.find { case (_, (Right(Some(`it`)), _)) => true case _ => false } match
-          case Some((name, (_, Right(k)))) if definition && k < 0 =>
-            val υidυ = it.replaceAll("_υ.*υ", "") + id
-            binding2 += name -> (Right(Some(it)), Right(k))
-            binding2 += it -> (Left(υidυ), Right(k))
-            binding += υidυ
-            υidυ
+        val υidυ = String(it.replaceAll("_υ.*υ", "") + id)
+        binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+          case Some((_, occurrence)) if definition && occurrence.isBinding < 0 =>
+            binding2 += it -> Occurrence(υidυ, occurrence.position)
           case _ =>
-            if definition || binding2.get(it).map(_._2.isLeft).getOrElse(true)
-            then
-              val υidυ = it.replaceAll("_υ.*υ", "") + id
-              renaming.prepend(it -> υidυ)
-              binding += it
-              υidυ
-            else
-              renamed(it)
+            refresh.prepend(it -> υidυ)
+        binding += υidυ
+        υidυ
 
       inline def rename[S <: AST](ast: S)(using Names): S = ast.rename(free, definition)
 
@@ -548,7 +532,7 @@ object Calculus:
           ||(it.map(rename(_))*)
 
         case `.`(end, _it*) =>
-          val n = renaming.size
+          val n = refresh.size
           given Names = Names(binding)
           val it = _it.map {
             case it @ τ(given Option[Code]) =>
@@ -566,7 +550,7 @@ object Calculus:
               ν(names.map(rebind(_))*)
           }
           val end2 = rename(end)
-          renaming.dropInPlace(renaming.size - n)
+          refresh.dropInPlace(refresh.size - n)
           `.`(end2, it*)
 
         case <>(it, _path*) =>
@@ -578,10 +562,10 @@ object Calculus:
           <>(it, path*)
 
         case !(Some(name), par) =>
-          val n = renaming.size
+          val n = refresh.size
           given Names = Names(binding)
           val rep = `!`(Some(rebind(name)), rename(par))
-          renaming.dropInPlace(renaming.size - n)
+          refresh.dropInPlace(refresh.size - n)
           rep
 
         case !(guard, par) =>
@@ -593,29 +577,29 @@ object Calculus:
         case `go.`(amb, par) =>
           `go.`(renamed(amb), rename(par))
 
-        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, bound), par, assign) =>
-          val n = renaming.size
+        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, variables), par, assign) =>
+          val n = refresh.size
           val assign2 = assign
             .map(
               _.map { (variable, pointer) =>
                 val pointer2 = renamed(pointer)
                 val υidυ = variable.replaceAll("_υ.*υ", "") + id
-                renaming.prepend(variable -> υidυ)
+                refresh.prepend(variable -> υidυ)
                 val variable2 = renamed(variable)
                 variable2 -> pointer2
               }
             )
-          var bound2 = bound
+          var variables2 = variables
             .drop(assign.map(_.size).getOrElse(0))
             .map { it =>
               val υidυ = it.replaceAll("_υ.*υ", "") + id
-              renaming.prepend(it -> υidυ)
+              refresh.prepend(it -> υidυ)
               renamed(it)
             }
-          bound2 = assign2.map(_.map(_._1)).getOrElse(Names()) ++ bound2
-          val encoding2 = encoding.copy(bound = bound2)
+          variables2 = assign2.map(_.map(_._1)).getOrElse(Names()) ++ variables2
+          val encoding2 = encoding.copy(variables = variables2)
           val par2 = rename(par)
-          renaming.dropInPlace(renaming.size - n)
+          refresh.dropInPlace(refresh.size - n)
           it.copy(encoding = encoding2, par = par2, assign = assign2)
 
         case it @ `{}`(_, pointers) =>
