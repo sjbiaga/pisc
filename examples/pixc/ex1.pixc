@@ -1,3 +1,5 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = w [ ν(ch) t [ ch(ch). s [ end(s). end(t). ] | ch<ch>. ] ]
+Main = ν(x)ν(y)(x<y>. | x(z).(([y=z]()) | (([x = y][y = x][y ≠ z]τ/*println(1)*/.) + ([x = y][y = z]τ/*println(2)*/.) + ([y ≠ z][x = y]τ/*println(3)*/.) + ([y = z]τ/*println(4)*/.)) ))
+
+# Main = w [ ν(ch) t [ ch(ch). s [ end(s). end(t). ] | ch<ch>. ] ]

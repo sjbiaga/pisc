@@ -2,12 +2,12 @@
 
 ⟦ 'x `:` 'y `=>` 'P `;` 'z `=>` 'Q ⟧ = x(w).(([w = y]P) + ([w = z]Q))
 
-⟦2 'y Copy 'z 2⟧(t, f) = ⟦ y : t => z<t>. ; f => z<f>. ⟧
+⟦ 'y Copy 'z ⟧(t, f) = ⟦ y : t => z<t>. ; f => z<f>. ⟧
 
-⟦11 s"True $x" 11⟧(t, f) = x<t>.
+⟦ t"True $x" ⟧(t, f) = x<t>.
 
-Main = ν(t, f) ν(x, y) ( ⟦11 True x 11⟧                 \
-                       | ⟦2 x Copy y 2⟧                 \
+Main = ν(t, f) ν(x, y) ( ⟦ True x ⟧                     \
+                       | ⟦ x Copy y ⟧                   \
                        | ⟦ y : t => τ/*println("T")*/.  \
                              ; f => τ/*println("F")*/.  \
                          ⟧                              \

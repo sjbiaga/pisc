@@ -1,10 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦9 9⟧ =
+⟦⟧ =
 
-⟦ 'ch DOT 'P ⟧ = ch(x). P
+⟦1 'ch DOT 'P 1⟧ = ch(x). P
 
-Main = w⟦9 ν(ch) ( start(t) ⟦ ch DOT s⟦9 end(t). 9⟧ ⟧. ch<ch>. \
-                 | t⟦ ch DOT s⟦9 end(t). 9⟧ ⟧                  \
-                 )                                             \
-        9⟧                                                     \
+Main = w⟦ ν(ch) ( start(t) ⟦1 ch DOT s⟦ end(t). ⟧ 1⟧. ch<ch>. \
+                | t⟦1 ch DOT s⟦ end(t). ⟧ 1⟧                  \
+                )                                             \
+        ⟧                                                     \

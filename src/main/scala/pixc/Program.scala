@@ -299,7 +299,7 @@ object Program:
         ///////////////////////////////////////////////////////// replication //
 
 
-        // ENCODING ////////////////////////////////////////////////////////////
+        // INSTANTIATION ///////////////////////////////////////////////////////
 
         case `⟦⟧`(_, sum, uuid, Symbol(name), assign) =>
           val ** = assign
@@ -311,7 +311,7 @@ object Program:
 
           * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name, uuid) ++ sum.generate))
 
-        case `⟦⟧`(Encoding(_, _, _, _, bound), _sum, _, _, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, variables), _sum, _, _, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -321,18 +321,18 @@ object Program:
 
           val n = assign.map(_.size).getOrElse(0)
 
-          val sum = ( if bound.size == n
+          val sum = ( if variables.size == n
                       then
                         _sum
                       else
-                        `+`(null, ||(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
+                        `+`(null, ||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate
 
         case _: `{}` => ???
 
-        //////////////////////////////////////////////////////////// encoding //
+        /////////////////////////////////////////////////////// instantiation //
 
 
         // INVOCATION //////////////////////////////////////////////////////////
