@@ -1,18 +1,11 @@
-Asynchronous Polyadic Pi-calculus in SCala aka PISC ala RISC
-============================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[Unit]` monad.
 
-Synchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main) is principal.
-Asynchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main-async) is also supported.
+Asynchronous [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-async) is a variant.
 [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
-Synchronous [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic) is also principal.
-[Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too. In a
-similar way - somehow combining π-calculus with ambients - is implemented
-[π-calculus with transactions](https://github.com/sjbiaga/pisc/tree/transactions).
-[Stochastic π-calculus with transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions)
-is a combination.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.
@@ -45,8 +38,8 @@ prefixes per se.
 The BNF formal grammar for processes is the following.
 
     LINE           ::= EQUATION | DEFINITION
-    EQUATION       ::= AGENT "=" CHOICE
-    DEFINITION     ::= "⟦<NUMBER>" [ TEMPLATE ] "<NUMBER>⟧" [ "(" NAMES ")" ] [ "{" NAMES "}" ] "=" CHOICE
+    EQUATION       ::= INVOCATION "=" CHOICE
+    DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" CHOICE
     CHOICE         ::= PARALLEL { "+" PARALLEL }
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
@@ -54,22 +47,24 @@ The BNF formal grammar for processes is the following.
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                      | "!" [ "." μ "." ] CHOICE
-                     | IDENTIFIER "{" NAMES "}"
-                     | AGENT
+                     | IDENTIFIER POINTERS
+                     | INVOCATION
                      | INSTANTIATION
-    INSTANTIATION  ::= "⟦<NUMBER>" INSTANCE "<NUMBER>⟧"
-    AGENT          ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
+    INSTANTIATION  ::= "⟦<CODE>" INSTANCE "<CODE>⟧" [ POINTERS ]
+    INVOCATION     ::= [ QUAL ] IDENTIFIER PARAMS
+    PARAMS         ::= [ "(" NAMES ")" ]
+    POINTERS       ::= "{" NAMES "}"
+    NAMES          ::= NAME { "," NAME }
 
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES       ::= { PREFIX }
-    PREFIX         ::= "ν" "(" NAME [ "#" CAPACITY ] { "," NAME [ "#" CAPACITY ] } ")"
+    PREFIX         ::= "ν" "(" NAMES ")"
                      | μ "."
     μ              ::= "τ" [ EXPRESSION ]
                      | NAME "<" NAMES ">" [ EXPRESSION ]
                      | NAME ARITY "<" ">" [ EXPRESSION ]
                      | NAME "(" NAMES ")" [ EXPRESSION ]
-    NAMES          ::= NAME { "," NAME }
     ARITY          ::= "#" NATURAL_NUMBER
     EXPRESSION     ::= "/*" ... "*/"
 
@@ -80,9 +75,8 @@ single and double quotes.
 A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
-with the UTF-8 character "ν". `CAPACITY` is a number defaulting to `Int.MaxValue` to set
-the capacity of the asynchronous queue on the new channel. "()" is _inaction_ or
-the _empty sum_. "τ" is the _silent transition_.
+with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_.
+"τ" is the _silent transition_.
 
 Lines starting with a hash `#` character are (line) comments. Blank lines are ignored.
 Lines starting with an `@` character are intermixed as `Scala` code. Lines ending with
@@ -160,7 +154,7 @@ Program
 A new name - will be available in the Scala scope:
 
     for
-      x <- ν(Int.MaxValue)
+      x <- ν
       .
       .
       .
@@ -172,7 +166,7 @@ The inaction - `IO.Unit`.
 A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 
     for
-      x <- ν(Int.MaxValue)
+      x <- ν
       _ <- x(BigDecimal(5))
       y <- x()
       _ <- τ
@@ -187,7 +181,7 @@ A long prefix path - "`ν(x).x<5>.x(y).τ.x(z).z<y>.`":
 One can intercalate "`println`"s:
 
     for
-      x <- ν(Int.MaxValue)
+      x <- ν
       _ <- IO.println(s"new x=$x")
       _ <- x(5)
       _ <- IO.println("output x(5)")

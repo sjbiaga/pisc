@@ -54,7 +54,7 @@ package object Π:
   /**
     * restriction aka new name
     */
-  case class ν(_capacity: Int):
+  object ν:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =

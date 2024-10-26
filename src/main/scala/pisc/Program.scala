@@ -125,7 +125,7 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { (c, n) => `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Lit.Int(c) :: Nil, None))) }.toList
+          * = names.map { it => `* <- *`(it -> "ν") }.toList
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
@@ -266,9 +266,9 @@ object Program:
         ///////////////////////////////////////////////////////// replication //
 
 
-        // ENCODING ////////////////////////////////////////////////////////////
+        // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, bound), _sum, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, variables), _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -278,18 +278,18 @@ object Program:
 
           val n = assign.map(_.size).getOrElse(0)
 
-          val sum = ( if bound.size == n
+          val sum = ( if variables.size == n
                       then
                         _sum
                       else
-                        `+`(`||`(`.`(_sum, ν(bound.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
+                        `+`(||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate()
 
         case _: `{}` => ???
 
-        //////////////////////////////////////////////////////////// encoding //
+        /////////////////////////////////////////////////////// instantiation //
 
 
         // INVOCATION //////////////////////////////////////////////////////////

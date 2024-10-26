@@ -109,13 +109,29 @@ abstract class PolyadicPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, Define] = null
+  private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
   private[parser] var _cntr: Map[Int, Long] = null
-  protected final def cntr(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(_cntr(_nest)) }
-  protected final def cntr_(f: Long => Long Either Long) = { _cntr(_nest) += 1; f(-_cntr(_nest)) }
+  protected final def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
+  protected final def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
+
+  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
+    val nest = _nest
+    val cntr = Map.from(_cntr)
+    val id = scala.collection.mutable.Seq.from(_id)
+    val ix = _ix
+    r match
+      case Success(it, in) => Some(it -> in)
+      case failure: NoSuccess if fail =>
+        scala.sys.error(failure.msg)
+      case _ =>
+       _ix = ix
+       _id = id
+       _cntr = cntr
+       _nest = nest
+       None
 
 
 object PolyadicPi extends Expansion:
@@ -129,31 +145,43 @@ object PolyadicPi extends Expansion:
     )
     def apply(names: Names): Names = Set.from(names)
 
-  type Names2 = Map[Symbol, (Either[Symbol, Option[Symbol]], Long Either Long)]
+  final case class Position(counter: Long, binding: Boolean)
+
+  final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
+    val isBinding = if !position.binding then 0 else math.signum(position.counter)
+
+  object Rebind:
+    def unapply(self: Occurrence): Option[Symbol] =
+      self.shadow match
+        case it: Symbol => Some(it)
+        case _ => None
+
+  object Shadow:
+    def unapply(self: Occurrence): Option[Symbol] =
+      self.shadow match
+        case it @ Some(_) => it
+        case _ => None
+
+  type Names2 = Map[Symbol, Occurrence]
 
   object Names2:
     def apply(): Names2 = Map()
     def apply(binding2: Names2): Names2 = Map.from(binding2)
     def apply(names: Names)
              (using Names2): Unit =
-      names.map { it =>
-        if _code < 0
-        then
-          this(it, None, hardcoded = true)
-        else
-          this(it, Some(it), hardcoded = true)
-      }
-    def apply(name: Symbol, _binding: Option[Symbol], hardcoded: Boolean = false)
+      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
+    def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using binding2: Names2): Unit =
-      val binding = _binding.map(Some(_)).orElse(Some(None)).toRight(null)
       binding2.get(name) match
-        case Some((_, Left(k))) if k < 0 =>
-          binding2 += name -> (binding, Right(k))
-        case Some((_, Right(k))) if _code >= 0 && (!hardcoded || k < 0) =>
+        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
            throw UniquenessBindingParsingException(name, hardcoded)
-        case Some((_, Left(_))) =>
+        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
+           throw NonParameterBindingParsingException(name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
-          binding2 += name -> (binding, cntr(Right(_)))
+          binding2 += name -> Occurrence(shadow, pos(true))
 
 
   // exceptions
@@ -191,6 +219,9 @@ object PolyadicPi extends Expansion:
 
   case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
       extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+
+  case class NonParameterBindingParsingException(name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
 
 
   // functions
@@ -263,7 +294,8 @@ object PolyadicPi extends Expansion:
             i = eqtn.size
             equations.map(Right(_))
           case Success(Right(definition), _) =>
-            defn(_code) = definition
+            if !defn.contains(_code) then defn(_code) = Nil
+            defn(_code) ::= definition
             Nil
           case failure: NoSuccess =>
             scala.sys.error(failure.msg)
