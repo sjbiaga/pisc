@@ -18,7 +18,7 @@ function pi() {
     done
     set ../pi.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.5.2-RC2 \
+                  -q -O -nowarn -S 3.6.1 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
@@ -42,7 +42,7 @@ function pi_() {
     done
     set ../pi_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.5.2-RC2 \
+                  -q -O -nowarn -S 3.6.1 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
@@ -53,7 +53,7 @@ function pio() {
     do
         { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
-        scalafmt --non-interactive --stdin >| "$1".scala
+        scalafmt --quiet --non-interactive --stdin >| "$1".scala
         shift
     done
 }

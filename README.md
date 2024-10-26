@@ -44,8 +44,8 @@ prefixes per se.
 The BNF formal grammar for processes is the following.
 
     LINE           ::= EQUATION | DEFINITION
-    EQUATION       ::= AGENT "=" CHOICE
-    DEFINITION     ::= "⟦<NUMBER>" [ TEMPLATE ] "<NUMBER>⟧" [ "(" NAMES ")" ] [ "{" NAMES "}" ] "=" CHOICE
+    EQUATION       ::= INVOCATION "=" CHOICE
+    DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" CHOICE
     CHOICE         ::= PARALLEL { "+" PARALLEL }
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
@@ -53,11 +53,14 @@ The BNF formal grammar for processes is the following.
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                      | "!" [ "." μ "." ] CHOICE
-                     | IDENTIFIER "{" NAMES "}"
-                     | AGENT
+                     | IDENTIFIER POINTERS
+                     | INVOCATION
                      | INSTANTIATION
-    INSTANTIATION  ::= "⟦<NUMBER>" INSTANCE "<NUMBER>⟧"
-    AGENT          ::= [ QUAL ] IDENTIFIER [ "(" NAMES ")" ]
+    INSTANTIATION  ::= "⟦<CODE>" INSTANCE "<CODE>⟧" [ POINTERS ]
+    INVOCATION     ::= [ QUAL ] IDENTIFIER PARAMS
+    PARAMS         ::= [ "(" NAMES ")" ]
+    POINTERS       ::= "{" NAMES "}"
+    NAMES          ::= NAME { "," NAME }
 
 The BNF formal grammar for prefixes is the following.
 
@@ -67,7 +70,6 @@ The BNF formal grammar for prefixes is the following.
     μ              ::= "τ" [ EXPRESSION ]
                      | NAME "<" [ NAME ] ">" [ EXPRESSION ]
                      | NAME "(" NAME ")" [ EXPRESSION ]
-    NAMES          ::= NAME { "," NAME }
     EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;

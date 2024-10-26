@@ -36,7 +36,7 @@ import scala.util.parsing.combinator._
 
 import Pi.{ Names, Names2 }
 import Calculus.{ renamed, λ }
-import Expression.{ ExpressionParsingException, Code }
+import Expression._
 
 
 abstract class Expression extends JavaTokenParsers:
@@ -69,6 +69,25 @@ abstract class Expression extends JavaTokenParsers:
   def regexMatch(r: Regex): Parser[Regex.Match]
 
   private[parser] var _code: Int = -1
+
+  private def apply(using params: MutableList[String])
+                   (using names: Names): Term => Unit = {
+    case Term.Name(rhs)
+        if names.contains(Symbol(rhs)) && params.contains(rhs) =>
+      throw TemplateParameterParsingException(rhs)
+    case Term.Name(rhs) =>
+      if names.contains(Symbol(rhs)) then params += rhs
+    case Term.ApplyInfix(Term.Name(lhs), _, _, _)
+        if names.contains(Symbol(lhs)) && params.contains(lhs) =>
+      throw TemplateParameterParsingException(lhs)
+    case Term.ApplyInfix(Term.Name(lhs), _, _, List(rhs)) =>
+      if names.contains(Symbol(lhs)) then params += lhs
+      this(rhs)
+    case Term.ApplyInfix(lhs: Term.ApplyInfix, _, _, List(rhs)) =>
+      this(lhs)
+      this(rhs)
+    case it => throw TemplateParsingException(it)
+  }
 
   private def apply(operators: Seq[String], operands: Seq[Symbol | String])
                    (using names: Names): List[Term] =
@@ -130,16 +149,21 @@ abstract class Expression extends JavaTokenParsers:
                 then
                   operators = operators.tail
                 else
-                  operands = "x" +: operands
+                  operands = "_" +: operands
                 if operators.last.isBlank
                 then
                   operators = operators.init
                 else
-                  operands = operands :+ "x"
+                  operands = operands :+ "_"
                 given Names()
-                Some(this(operators, operands).head) -> given_Names
-            case (term, names) =>
-              Some(term) -> names
+                val term = this(operators, operands).head
+                given MutableList[String]()
+                this(term)
+                Some(term) -> given_Names
+            case (term, given Names) =>
+              given MutableList[String]()
+              this(term)
+              Some(term) -> given_Names
         catch t =>
           throw ExpressionParsingException(it.group(2), t)
     }
@@ -147,16 +171,22 @@ abstract class Expression extends JavaTokenParsers:
 
 object Expression:
 
+  import scala.Function.const
+
+  import scala.{ meta => sm }
+
+
   abstract class ParsingException(msg: String, cause: Throwable = null)
       extends RuntimeException(msg, cause)
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
       extends ParsingException(s"Expression $expr is not a valid Scalameta Term or Enumerator(s)", cause)
 
+  case class TemplateParsingException(it: sm.Term)
+      extends ParsingException(s"An encoding template strictly parses Term.ApplyInfix and not $it terms")
 
-  import scala.Function.const
-
-  import scala.{ meta => sm }
+  case class TemplateParameterParsingException(name: String)
+      extends ParsingException(s"An encoding template parameter ($name) occurs more than once")
 
 
   type Code = (List[sm.Enumerator] Either sm.Term, sm.Term)
@@ -167,12 +197,12 @@ object Expression:
   def recode(orig: sm.Term): (Code, Names) =
     val renaming = this.renaming
     this.renaming = None
-    this(orig) match
+    val code = this(orig)
+    this.renaming = renaming
+    code match
       case (sm.Term.ForYield(enums, _), names) =>
-        this.renaming = renaming
         (Left(enums), orig) -> names
       case (term, names) =>
-        this.renaming = renaming
         (Right(term), orig) -> names
 
 
