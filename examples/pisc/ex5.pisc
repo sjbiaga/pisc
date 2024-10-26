@@ -3,63 +3,60 @@
 ⟦ 'x `:` 'y `=>` 'P `;` 'z `=>` 'Q ⟧ = x(w).(([w = y]P) + ([w = z]Q))
 
 
-⟦1 s"Nil" 1⟧(nil){x} = x<nil>.
+⟦ t"Nil" ⟧(nil){x} = x<nil>.
 
-⟦2 'L1 Cons 'L2 2⟧(cons){x} =                     \
+⟦ 'L1 Cons 'L2 ⟧(cons){x} =                       \
                     ν(y, z) ( x<cons>.x<y>.x<z>.  \
                             | L1{y}               \
                             | L2{z}               \
                             )
 
 
-⟦4 'y Copy 'z 4⟧(t, f) = ⟦ y : t => z<t>. ; f => z<f>. ⟧
+⟦ 'y Copy 'z ⟧(t, f) = ⟦ y : t => z<t>. ; f => z<f>. ⟧
 
-⟦3 'x `/\\` 'y `->` 'z 3⟧(t, f) = ⟦ x : t => ⟦4 y Copy z 4⟧ ; f => z<f>. ⟧
+⟦ 'x `/\\` 'y `->` 'z ⟧(t, f) = ⟦ x : t => ⟦ y Copy z ⟧ ; f => z<f>. ⟧
 
-⟦10 s"False $x" 10⟧(f) = x<f>.
+⟦ t"False $x" ⟧(f) = x<f>.
 
-⟦11 s"True $x" 11⟧(t) = x<t>.
-
-
-⟦12 'y Null 'b 12⟧(t, f, nil, cons) = ⟦ y : nil  => ⟦11 True b 11⟧   \
-                                          ; cons => ⟦10 False b 10⟧  \
-                                      ⟧
-
-⟦13 'x `=` 'y `->` 'b 13⟧(t, f, nil, cons) = ⟦ x : nil  => ⟦12 y Null b 12⟧                                      \
-                                                 ; cons => x(x1). x(x2). Self_14(y, x1, x2, b, t, f, nil, cons)  \
-                                             ⟧
-
-⟦14 'y `:` 'x1 `;` 'x2 `->` 'b 14⟧(t, f, nil, cons) = ⟦ y : nil  => ⟦10 False b 10⟧                                  \
-                                                          ; cons => y(y1). y(y2). ν(b1, b2) ( ⟦13 x1 = y1 -> b1 13⟧  \
-                                                                                            | ⟦13 x2 = y2 -> b2 13⟧  \
-                                                                                            | ⟦3 b1 /\ b2 -> b 3⟧    \
-                                                                                            )                        \
-                                                      ⟧
+⟦ t"True $x" ⟧(t) = x<t>.
 
 
-Nil(nil, x) = ⟦1 Nil 1⟧{x}
+⟦ 'y Null 'b ⟧(t, f, nil, cons) = ⟦ y : nil  => ⟦ True b ⟧   \
+                                      ; cons => ⟦ False b ⟧  \
+                                  ⟧
 
-⟦111 s"Nil" 111⟧(nil){x} = ⟦1 Nil 1⟧{x}
+⟦ 'x `=` 'y `->` 'b ⟧(t, f, nil, cons) = ⟦ x : nil  => ⟦ y Null b ⟧                                         \
+                                             ; cons => x(x1). x(x2). Self_1(y, x1, x2, b, t, f, nil, cons)  \
+                                         ⟧
+
+⟦1 'y `:` 'x1 `;` 'x2 `->` 'b 1⟧(t, f, nil, cons) = ⟦ y : nil  => ⟦ False b ⟧                                  \
+                                                        ; cons => y(y1). y(y2). ν(b1, b2) ( ⟦ x1 = y1 -> b1 ⟧  \
+                                                                                          | ⟦ x2 = y2 -> b2 ⟧  \
+                                                                                          | ⟦ b1 /\ b2 -> b ⟧  \
+                                                                                          )                    \
+                                                    ⟧
 
 
-P(x, nil, cons) = ⟦2 ⟦2                          \
-                        Nil(nil) Cons ⟦1 Nil 1⟧  \
-                     2⟧                          \
-                     Cons                        \
-                     ⟦111 Nil 111⟧               \
-                  2⟧{x}
+Nil(nil, x) = ⟦ Nil ⟧{x}
 
-Q(x, nil, cons) = ⟦2 ⟦1 Nil 1⟧  \
-                     Cons       \
-                     ⟦1 Nil 1⟧  \
-                  2⟧{x}
+⟦ t"NIL" ⟧(nil){x} = ⟦ Nil ⟧{x}
+
+
+P(x, nil, cons) = ⟦ ⟦                        \
+                      Nil(nil) Cons ⟦ Nil ⟧  \
+                    ⟧                        \
+                    Cons                     \
+                    ⟦ NIL ⟧                  \
+                  ⟧{x}
+
+Q(x, nil, cons) = ⟦ ⟦ Nil ⟧ Cons ⟦ Nil ⟧ ⟧{x}
 
 
 Main = ν(t, f, nil, cons) ( Main"(t, f, nil, cons) | Main'(t, f, nil, cons) )
 
 Main"(t, f, nil, cons) = ν(x, y, b) ( P(x, nil, cons)                \
                                     | P(y, nil, cons)                \
-                                    | ⟦13 x = y -> b 13⟧             \
+                                    | ⟦ x = y -> b ⟧                 \
                                     | ⟦ b : t => τ/*println("T")*/.  \
                                           ; f => τ/*println("F")*/.  \
                                       ⟧                              \
@@ -67,7 +64,7 @@ Main"(t, f, nil, cons) = ν(x, y, b) ( P(x, nil, cons)                \
 
 Main'(t, f, nil, cons) = ν(x, y, b) ( P(x, nil, cons)                \
                                     | Q(y, nil, cons)                \
-                                    | ⟦13 x = y -> b 13⟧             \
+                                    | ⟦ x = y -> b ⟧                 \
                                     | ⟦ b : t => τ/*println("T")*/.  \
                                           ; f => τ/*println("F")*/.  \
                                       ⟧                              \
