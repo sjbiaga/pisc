@@ -127,7 +127,7 @@ abstract class StochasticPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Define]] = null
+  private[parser] var defn: Map[Int, List[Encoding]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
   private[parser] var _nest = -1
@@ -216,9 +216,9 @@ object StochasticPi extends Expansion:
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
           binding2 += name -> Occurrence(shadow, it.copy(binding = true))
         case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-           throw UniquenessBindingParsingException(name, hardcoded)
+          throw UniquenessBindingParsingException(name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-           throw NonParameterBindingParsingException(name, hardcoded)
+          throw NonParameterBindingParsingException(name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
           binding2 += name -> Occurrence(shadow, pos(true))
@@ -404,14 +404,14 @@ object StochasticPi extends Expansion:
         case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `⟦⟧`(encoding @ Encoding(_, _, _, _, bound), _sum, uuid, name, assign) =>
+        case `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), _sum, uuid, name, assign) =>
           val n = assign.map(_.size).getOrElse(0)
 
-          val sum = ( if bound.size == n
+          val sum = ( if variables.size == n
                       then
                         _sum
                       else
-                        `+`(nil, ||(`.`(_sum, ν(bound.drop(n).map(_.name).toSeq*))))
+                        `+`(nil, ||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
                     )
 
            var (it, _) = sum.parse
@@ -739,17 +739,17 @@ object StochasticPi extends Expansion:
 
       case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
-      case (`⟦⟧`(Encoding(lcode, _, _, lconst, lbound), lsum, _, lname, lassign)
-           ,`⟦⟧`(Encoding(rcode, _, _, rconst, rbound), rsum, _, rname, rassign))
+      case (`⟦⟧`(Encoding(lcode, _, _, _, lconstants, lvariables), lsum, _, lname, lassign)
+           ,`⟦⟧`(Encoding(rcode, _, _, _, rconstants, rvariables), rsum, _, rname, rassign))
           if lcode == rcode
           && lname == rname
-          && lconst == rconst
-          && lassign.map(_.size).getOrElse(0) == lbound.size
-          && rassign.map(_.size).getOrElse(0) == rbound.size
-          && lbound.size == rbound.size =>
+          && lconstants == rconstants
+          && lassign.map(_.size).getOrElse(0) == lvariables.size
+          && rassign.map(_.size).getOrElse(0) == rvariables.size
+          && lvariables.size == rvariables.size =>
         val (ln, rn) = mark
-        (lconst ++ lbound).foreach(binding._1.prepend(_))
-        (rconst ++ rbound).foreach(binding._2.prepend(_))
+        (lconstants ++ lvariables).foreach(binding._1.prepend(_))
+        (rconstants ++ rvariables).foreach(binding._2.prepend(_))
         (lassign zip rassign)
           .map(_ zip _)
           .map(
