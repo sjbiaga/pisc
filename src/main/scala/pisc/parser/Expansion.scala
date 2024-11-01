@@ -63,7 +63,7 @@ abstract class Expansion extends Calculus:
     }
   }
 
-  def instance(defs: List[Define], end: String)
+  def instance(defs: List[Encoding], end: String)
               (using Names2): Parser[(`⟦⟧`, Names)] =
     var idx = -1
 
@@ -72,9 +72,9 @@ abstract class Expansion extends Calculus:
       private def expand(in: Input, end: Either[String, String])
                         (using binding2: Names2)
                         (using substitution: Map[String, λ | AST])
-                        (using free: Names): ((Define, Term)) => ParseResult[Unit] =
+                        (using free: Names): (((Encoding, +), Term)) => ParseResult[(Encoding, +)] =
 
-        case ((encoding, sum), Term.Name(rhs)) =>
+        case (it @ (encoding, sum), Term.Name(rhs)) =>
           var source = in.source
           var offset = in.offset
           var start = handleWhiteSpace(source, offset)
@@ -100,7 +100,7 @@ abstract class Expansion extends Calculus:
                   offset = in.offset
                   start = handleWhiteSpace(source, offset)
 
-                  Success((), in.drop(start + end.map(_.length).getOrElse(0) - offset))
+                  Success(it, in.drop(start + end.map(_.length).getOrElse(0) - offset))
 
                 case it =>
                   Failure("instantiation expected", it.next)
@@ -135,7 +135,7 @@ abstract class Expansion extends Calculus:
                         )
                 val result = source.subSequence(start, start + n).toString
 
-                var fail: Option[ParseResult[Unit]] = None
+                var fail: Option[ParseResult[(Encoding, +)]] = None
 
                 if result.isBlank
                 || result.strip == "_"
@@ -175,7 +175,7 @@ abstract class Expansion extends Calculus:
                 fail match
                   case Some(it) => it
                   case _ =>
-                    Success((), in.drop(start + n - offset))
+                    Success(it, in.drop(start + n - offset))
 
               case _ =>
                 val found = if start == source.length
@@ -231,7 +231,7 @@ abstract class Expansion extends Calculus:
             case Some(matched) =>
               val result = source.subSequence(start, start + matched.end - op.length).toString
 
-              var fail: Option[ParseResult[Unit]] = None
+              var fail: Option[ParseResult[(Encoding, +)]] = None
 
               if result.isBlank
               || result.strip == "_"
@@ -299,7 +299,7 @@ abstract class Expansion extends Calculus:
               (Pattern.quote(end.orElse(end.swap).right.get).r findPrefixMatchOf s) match
 
                 case Some(matched) =>
-                  Success((), in.drop(start + matched.end - offset))
+                  Success(it, in.drop(start + matched.end - offset))
 
                 case _ if placeholder =>
                   Failure(s"${end.orElse(end.swap).right.get} expected", in)
@@ -314,13 +314,12 @@ abstract class Expansion extends Calculus:
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         val binding2 = summon[Names2]
 
-        var r: Option[(Define, (Map[String, λ | AST], Names), Input)] = None
+        var r: Option[((Encoding, +), (Map[String, λ | AST], (Names, Names2)), Input)] = None
 
         var ls = defs
         while ls.nonEmpty
         do
-          val it = ls.head
-          val term = it._1.term.get
+          val Encoding(code, Some(term), Some(defn), _, _, _) = ls.head : @unchecked
           ls = ls.tail
 
           given Map[String, λ | AST]()
@@ -328,16 +327,18 @@ abstract class Expansion extends Calculus:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Left(end))(it -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Left(end))(defn(code, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
-            case Some((_, in)) => r = Some((it, given_Map_String_| -> given_Names, in))
+            case Some((it, in)) => r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
             case _ =>
 
         r match
-          case Some(((encoding, sum), (given Map[String, λ | AST], free), in)) =>
+          case Some(((encoding, sum), (given Map[String, λ | AST], (free, given Names2)), in)) =>
+            binding2 ++= given_Names2.filter(_._2.isBinding < 0)
             Success(`⟦⟧`(encoding, sum.replace.flatten) -> free, in)
           case _ => throw UndefinedParsingException
-    }.named(s"""⟦${if defs.size == 1 then defs.head._1.code.toString else ""}⟧""")
+
+    }.named(s"""⟦${if defs.size == 1 then defs.head.code.toString else ""}⟧""")
 
 
 object Expansion:
@@ -419,7 +420,7 @@ object Expansion:
           val assign = _assign.map(_.map(_ -> replaced(_).asSymbol))
           it.copy(sum = sum.replace, assign = assign)
 
-        case it @ `⟦⟧`(Encoding(_, _, _, _, variables), _, assign0) =>
+        case it @ `⟦⟧`(Encoding(_, _, _, _, _, variables), _, assign0) =>
           val n = assign0.map(_.size).getOrElse(0)
           val assign1 = variables.drop(n) zip pointers.drop(n)
           val assign = assign0.map(_ ++ assign1).getOrElse(assign1)
