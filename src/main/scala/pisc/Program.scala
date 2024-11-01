@@ -281,7 +281,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, variables), _sum, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)

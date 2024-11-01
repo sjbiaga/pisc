@@ -42,7 +42,7 @@ import Calculus._
 
 abstract class Calculus extends StochasticPi:
 
-  def line: Parser[Either[Bind, Define]] =
+  def line: Parser[Either[Bind, Encoding]] =
     equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   def equation: Parser[Bind] =
@@ -60,11 +60,11 @@ abstract class Calculus extends StochasticPi:
         }
     }
 
-  def definition: Parser[Define] =
-    template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) <~"=" >> {
+  def definition: Parser[Encoding] =
+    template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( pointers ) <~"=" >> {
       case (term, parameters) ~ _constants ~ _variables =>
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
-        val variables = _variables.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        val variables = _variables.map(_._2).getOrElse(Names())
         if (parameters & constants).nonEmpty
         || (variables & parameters).nonEmpty
         || (constants & variables).nonEmpty
@@ -82,33 +82,11 @@ abstract class Calculus extends StochasticPi:
             if (free &~ binding).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ binding)
-            given refresh: MutableList[(Symbol, λ)] = MutableList()
-            val variables2 = variables
-              .map { it =>
-                val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
-                refresh.prepend(it -> λ(υidυ))
-                υidυ
-              }
-            Expression.renaming = Some((refresh, given_Names2))
-            given Names = Names()
-            val sum2 = sum.rename(Set.empty, definition = true)
-            val parameters2 = parameters.filterNot(_.name.charAt(0).isUpper).toList
-            if parameters.size == parameters2.size
+            if parameters.size == parameters.filterNot(_.name.charAt(0).isUpper).size
             then
-              val binding = parameters ++ constants ++ variables2
-              eqtn :+= `(*)`("Self_" + _code, Nil, binding.map(λ(_)).toSeq*) -> sum2
-            val binding2 = given_Names2.filter(_._2.isBinding < 0)
-            val paramsMap =
-              parameters2.map(_ -> None).toMap
-              ++
-              binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
-            val params = paramsMap.toList
-              .sortBy { (it, _) =>
-                binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-                  case Some((it, _)) => parameters2.indexOf(it)
-                  case _ => parameters2.indexOf(it)
-              }
-            Encoding(_code, term, params.map(_._2), constants, variables2) -> sum2
+              eqtn :+= `(*)`("Self_" + _code, Nil, binding.map(λ(_)).toSeq*) -> sum
+            val defn = Definition(parameters, constants, variables, given_Names2, sum)
+            Encoding(_code, term, Some(defn), Nil, constants, variables)
         }
     }
 
@@ -171,9 +149,9 @@ abstract class Calculus extends StochasticPi:
             `!`(None, sum) -> free
         }
     } |
-    IDENT ~ ("{"~>rep1sep(name, ",")<~"}") ^^ { // pointed values
-      case id ~ pointers =>
-        `{}`(id, pointers.map(_._1.asSymbol)) -> pointers.map(_._2).reduce(_ ++ _)
+    IDENT ~ pointers ^^ {
+      case id ~ ps =>
+        `{}`(id, ps._1) -> ps._2
     } |
     invocation() |
     instantiation
@@ -185,33 +163,33 @@ abstract class Calculus extends StochasticPi:
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
                  then
-                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head._1.term.isEmpty }
+                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head.term.isEmpty }
                    if def1.size == 1
-                   then def1.head._2.head._1.code
+                   then def1.head._2.head.code
                    else -1
                  else
                    grp1.toInt
       defn.get(code) match {
         case Some(it) => it
         case _ if grp1.nonEmpty => throw NoDefinitionException(grp1.toInt)
-        case _ => defn.values.reduce(_ ++ _).filterNot(_._1.term.isEmpty)
+        case _ => defn.values.reduce(_ ++ _).filterNot(_.term.isEmpty)
       } match
-        case (encoding @ Encoding(_, None, _, _, _), _) :: Nil =>
-          (choice <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
-            case (sum, free) ~ pointers =>
-              (`⟦⟧`(encoding, sum) -> free) -> pointers
+        case (encoding @ Encoding(_, None, _, _, _, _)) :: Nil =>
+          (choice <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
+            case (sum, free) ~ ps =>
+              (`⟦⟧`(encoding, sum) -> free) -> ps
           }
         case it =>
-          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
-            case exp ~ pointers =>
-              exp -> pointers
+          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
+            case exp ~ ps =>
+              exp -> ps
           }
     } ^^ {
-      case ((it @ `⟦⟧`(Encoding(_, _, _, constants, variables), _, _), free), _pointers) =>
+      case ((it @ `⟦⟧`(Encoding(_, _, _, _, constants, variables), _, _), free), _pointers) =>
         nest(false)
         binding2 ++= given_Names2.filter(_._2.isBinding < 0)
         given MutableList[(Symbol, λ)]()
-        val pointers = _pointers.map(_.map(_._1.asSymbol).map(renamed(_).asSymbol)).getOrElse(Nil)
+        val pointers = _pointers.map(_._1.map(renamed(_).asSymbol)).getOrElse(Nil)
         val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_Symbol_λ, given_Names2))
@@ -219,7 +197,15 @@ abstract class Calculus extends StochasticPi:
         it.copy(assign = assign).rename(free) -> (free ++ constants)
     }
 
-  def instance(defn: List[Define], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+  def instance(defs: List[Encoding], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+
+  def pointers: Parser[(List[Symbol], Names)] =
+    "{"~>rep1sep(name, ",")<~"}" ^^ {
+      case ps if !ps.forall(_._1.isSymbol) =>
+        throw PointersParsingException(ps.filterNot(_._1.isSymbol).map(_._1)*)
+      case ps =>
+        ps.map(_._1.asSymbol) -> ps.map(_._2).reduce(_ ++ _)
+    }
 
   def prefixes(using Names2): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
@@ -312,10 +298,40 @@ object Calculus:
 
   type Bind = (`(*)`, +)
 
-  type Define = (Encoding, +)
+  case class Definition(parameters: Names,
+                        constants: Names,
+                        variables: Names,
+                        binding2: Names2,
+                        sum: +):
+    def apply(code: Int, term: Term): (Encoding, +) =
+      given refresh: MutableList[(Symbol, λ)] = MutableList()
+      val variables2 = variables
+        .map { it =>
+          val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
+          refresh.prepend(it -> λ(υidυ))
+          υidυ
+        }
+      given Names2 = Names2(this.binding2)
+      Expression.renaming = Some((refresh, given_Names2))
+      given Names = Names()
+      val sum2 = sum.rename(Set.empty, definition = true)
+      val parameters2 = parameters.filterNot(_.name.charAt(0).isUpper).toList
+      val binding2 = given_Names2.filter(_._2.isBinding < 0)
+      val paramsMap =
+        parameters2.map(_ -> None).toMap
+        ++
+        binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
+      val params = paramsMap.toList
+        .sortBy { (it, _) =>
+          binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+            case Some((it, _)) => parameters2.indexOf(it)
+            case _ => parameters2.indexOf(it)
+        }
+      Encoding(code, Some(term), None, params.map(_._2), constants, variables2) -> sum2
 
   case class Encoding(code: Int,
                       term: Option[Term],
+                      definition: Option[Definition],
                       shadows: List[Option[Symbol]],
                       constants: Names,
                       variables: Names):
@@ -439,13 +455,13 @@ object Calculus:
       extends ParsingException(msg, cause)
 
   case class EquationQualifierException(id: String)
-      extends EquationParsingException(s"The qualifier {this} is present in the left hand side of $id")
+      extends EquationParsingException(s"A qualifier is present in the left hand side of $id")
 
   case class EquationParamsException(id: String, params: Any*)
-      extends EquationParsingException(s"The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id")
+      extends EquationParsingException(s"""The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
 
   case class EquationFreeNamesException(id: String, free: Names)
-      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
+      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
 
   case class NoDefinitionException(code: Int)
       extends ParsingException(s"No definition for encoding $code")
@@ -454,10 +470,13 @@ object Calculus:
       extends EquationParsingException(s"The parameters, constants, and variables must all be different in the left hand side of encoding $code")
 
   case class DefinitionFreeNamesException(code: Int, free: Names)
-      extends EquationParsingException(s"The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code")
+      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code""")
 
   case class PrefixChannelsParsingException(names: λ*)
-      extends PrefixParsingException(s"${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
+      extends PrefixParsingException(s"""${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}""")
+
+  class PointersParsingException(names: λ*)
+      extends PrefixChannelsParsingException(names*)
 
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
@@ -656,7 +675,7 @@ object Calculus:
         case !(guard, sum) =>
           `!`(guard, rename(sum))
 
-        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, variables), sum, assign) =>
+        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), sum, assign) =>
           val n = refresh.size
           val assign2 = assign
             .map(

@@ -127,7 +127,7 @@ abstract class StochasticPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Define]] = null
+  private[parser] var defn: Map[Int, List[Encoding]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
@@ -215,9 +215,9 @@ object StochasticPi extends Expansion:
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
           binding2 += name -> Occurrence(shadow, it.copy(binding = true))
         case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-           throw UniquenessBindingParsingException(name, hardcoded)
+          throw UniquenessBindingParsingException(name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-           throw NonParameterBindingParsingException(name, hardcoded)
+          throw NonParameterBindingParsingException(name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
           binding2 += name -> Occurrence(shadow, pos(true))
@@ -372,7 +372,7 @@ object StochasticPi extends Expansion:
         case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `⟦⟧`(encoding @ Encoding(_, _, _, _, variables), _sum, assign) =>
+        case `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), _sum, assign) =>
           val n = assign.map(_.size).getOrElse(0)
 
           val sum = ( if variables.size == n
