@@ -125,7 +125,7 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { it => `* <- *`(it -> "ν") }.toList
+          * = names.map { (c, n) => `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Lit.Int(c) :: Nil, None))) }.toList
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
@@ -268,7 +268,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, variables), _sum, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -282,7 +282,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                        `+`(`||`(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate()

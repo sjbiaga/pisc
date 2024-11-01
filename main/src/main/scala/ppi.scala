@@ -28,7 +28,7 @@
 
 package object Π:
 
-  import _root_.scala.collection.immutable.List
+  import _root_.scala.collection.immutable.{ List, Queue }
 
   import _root_.cats.effect.{ Deferred, Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
@@ -54,12 +54,12 @@ package object Π:
   /**
     * restriction aka new name
     */
-  object ν:
+  case class ν(capacity: Int):
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
-          ref <- Ref.of[IO, ><](><())
+          ref <- Ref.of[IO, ><](><(capacity))
         yield
           f(ref)
       ).flatten
@@ -135,14 +135,16 @@ package object Π:
      * limitations under the License.
      */
 
-    final case class ><(takers: List[Deferred[IO, Seq[Any]]],
+    final case class ><(queue: Queue[Any],
+                        capacity: Int,
+                        takers: List[Deferred[IO, Seq[Any]]],
                         offerers: List[(Seq[Any], Deferred[IO, Option[Unit]])])
 
     type >*< = Ref[IO, ><]
 
     object >< :
 
-      inline def apply(): >< = ><(Nil, Nil)
+      inline def apply(capacity: Int): >< = ><(Queue.empty, capacity, Nil, Nil)
 
       import _root_.scala.util.Random
 
@@ -152,10 +154,12 @@ package object Π:
         Deferred[IO, Option[Unit]].flatMap { offerer =>
           IO.uncancelable { poll =>
             `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
+              case it @ ><(_, _, takers, _) if takers.nonEmpty =>
                 val i = random.nextInt(takers.size)
                 val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
                 it.copy(takers = rest) -> taker.complete(names).as(Some(()))
+              case it @ ><(queue, capacity, _, _) if queue.size < capacity =>
+                it.copy(queue = queue.enqueue(names.asInstanceOf[Any])) -> IO.pure(Some(()))
               case it =>
                 val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                 it.copy(offerers = names -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
@@ -167,10 +171,12 @@ package object Π:
         Deferred[IO, Option[Unit]].flatMap { offerer =>
           IO.uncancelable { poll =>
             `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
+              case it @ ><(_, _, takers, _) if takers.nonEmpty =>
                 val i = random.nextInt(takers.size)
                 val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
                 it.copy(takers = rest) -> taker.complete(names).as(Some(()))
+              case it @ ><(queue, capacity, _, _) if queue.size < capacity =>
+                it.copy(queue = queue.enqueue(names.asInstanceOf[Any])) -> IO.pure(Some(()))
               case it =>
                 val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
                 it.copy(offerers = names -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
@@ -182,7 +188,15 @@ package object Π:
         Deferred[IO, Seq[Any]].flatMap { taker =>
           IO.uncancelable { poll =>
             `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
+              case it @ ><(queue, _, _, Nil) if queue.nonEmpty =>
+                val (names, tail) = queue.dequeue
+                it.copy(queue = tail) -> IO.pure(names.asInstanceOf[Seq[Any]])
+              case it @ ><(queue, _, _, offerers) if queue.nonEmpty =>
+                val (names, tail) = queue.dequeue
+                val i = random.nextInt(offerers.size)
+                val ((move, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
+                it.copy(queue = tail.enqueue(move.asInstanceOf[Any])) -> offerer.complete(Some(())).as(names.asInstanceOf[Seq[Any]])
+              case it @ ><(_, _, _, offerers) if offerers.nonEmpty =>
                 val i = random.nextInt(offerers.size)
                 val ((names, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
                 it.copy(offerers = rest) -> offerer.complete(Some(())).as(names)
@@ -197,7 +211,15 @@ package object Π:
         Deferred[IO, Seq[Any]].flatMap { taker =>
           IO.uncancelable { poll =>
             `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
+              case it @ ><(queue, _, _, Nil) if queue.nonEmpty =>
+                val (names, tail) = queue.dequeue
+                it.copy(queue = tail) -> IO.pure(names.asInstanceOf[Seq[Any]])
+              case it @ ><(queue, _, _, offerers) if queue.nonEmpty =>
+                val (names, tail) = queue.dequeue
+                val i = random.nextInt(offerers.size)
+                val ((move, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
+                it.copy(queue = tail.enqueue(move.asInstanceOf[Any])) -> offerer.complete(Some(())).as(names.asInstanceOf[Seq[Any]])
+              case it @ ><(_, _, _, offerers) if offerers.nonEmpty =>
                 val i = random.nextInt(offerers.size)
                 val ((names, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
                 it.copy(offerers = rest) -> offerer.complete(Some(())).as(names)
