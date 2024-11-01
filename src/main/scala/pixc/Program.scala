@@ -309,7 +309,7 @@ object Program:
 
           * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name, uuid) ++ sum.generate()))
 
-        case `⟦⟧`(Encoding(_, _, _, _, variables), _sum, _, _, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _sum, _, _, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
