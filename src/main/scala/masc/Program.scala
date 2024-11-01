@@ -189,7 +189,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, variables), _par, assign) =>
+        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _par, assign) =>
           val ** = assign
             .map(_.map(Pat.Var(_) -> _)
                   .map(Enumerator.Val(_, _))

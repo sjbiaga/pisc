@@ -42,7 +42,7 @@ import Calculus._
 
 abstract class Calculus extends Ambient:
 
-  def line: Parser[Either[Bind, Define]] =
+  def line: Parser[Either[Bind, Encoding]] =
     equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   def equation: Parser[Bind] =
@@ -60,11 +60,11 @@ abstract class Calculus extends Ambient:
         }
     }
 
-  def definition: Parser[Define] =
-    template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( "{"~>rep1sep(name, ",")<~"}" ) <~"=" >> {
+  def definition: Parser[Encoding] =
+    template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( pointers ) <~"=" >> {
       case (term, parameters) ~ _constants ~ _variables =>
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
-        val variables = _variables.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
+        val variables = _variables.map(_._2).getOrElse(Names())
         if (parameters & constants).nonEmpty
         || (variables & parameters).nonEmpty
         || (constants & variables).nonEmpty
@@ -82,33 +82,11 @@ abstract class Calculus extends Ambient:
             if (free &~ binding).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ binding)
-            given refresh: MutableList[(String, String)] = MutableList()
-            val variables2 = variables
-              .map { it =>
-                val υidυ = it.replaceAll("_υ.*υ", "") + id
-                refresh.prepend(it -> υidυ)
-                υidυ
-              }
-            Expression.renaming = Some((refresh, given_Names2))
-            given Names = Names()
-            val par2 = par.rename(Set.empty, definition = true)
-            val parameters2 = parameters.filterNot(_.charAt(0).isUpper).toList
-            if parameters.size == parameters2.size
+            if parameters.size == parameters.filterNot(_.charAt(0).isUpper).size
             then
-              val binding = parameters ++ constants ++ variables2
-              eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par2
-            val binding2 = given_Names2.filter(_._2.isBinding < 0)
-            val paramsMap =
-              parameters2.map(_ -> None).toMap
-              ++
-              binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
-            val params = paramsMap.toList
-              .sortBy { (it, _) =>
-                binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-                  case Some((it, _)) => parameters2.indexOf(it)
-                  case _ => parameters2.indexOf(it)
-              }
-            Encoding(_code, term, params.map(_._2), constants, variables2) -> par2
+              eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par
+            val defn = Definition(parameters, constants, variables, given_Names2, par)
+            Encoding(_code, term, Some(defn), Nil, constants, variables)
         }
     }
 
@@ -151,9 +129,9 @@ abstract class Calculus extends Ambient:
       case (amb, name) ~ (par, free) =>
         `go.`(amb, par) -> (name ++ free)
     } |
-    IDENT ~ ("{"~>rep1sep(name, ",")<~"}") ^^ { // pointed values
-      case id ~ pointers =>
-        `{}`(id, pointers.map(_._1)) -> pointers.map(_._2).reduce(_ ++ _)
+    IDENT ~ pointers ^^ {
+      case id ~ ps =>
+        `{}`(id, ps._1) -> ps._2
     } |
     invocation() |
     instantiation
@@ -165,33 +143,33 @@ abstract class Calculus extends Ambient:
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
                  then
-                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head._1.term.isEmpty }
+                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head.term.isEmpty }
                    if def1.size == 1
-                   then def1.head._2.head._1.code
+                   then def1.head._2.head.code
                    else -1
                  else
                    grp1.toInt
       defn.get(code) match {
         case Some(it) => it
         case _ if grp1.nonEmpty => throw NoDefinitionException(grp1.toInt)
-        case _ => defn.values.reduce(_ ++ _).filterNot(_._1.term.isEmpty)
+        case _ => defn.values.reduce(_ ++ _).filterNot(_.term.isEmpty)
       } match
-        case (encoding @ Encoding(_, None, _, _, _), _) :: Nil =>
-          (parallel <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
-            case (par, free) ~ pointers =>
-              (`⟦⟧`(encoding, par) -> free) -> pointers
+        case (encoding @ Encoding(_, None, _, _, _, _)) :: Nil =>
+          (parallel <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
+            case (par, free) ~ ps =>
+              (`⟦⟧`(encoding, par) -> free) -> ps
           }
         case it =>
-          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( "{"~>rep1sep(name, ",")<~"}" ) ^^ {
-            case exp ~ pointers =>
-              exp -> pointers
+          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
+            case exp ~ ps =>
+              exp -> ps
           }
     } ^^ {
-      case ((it @ `⟦⟧`(Encoding(_, _, _, constants, variables), _, _), free), _pointers) =>
+      case ((it @ `⟦⟧`(Encoding(_, _, _, _, constants, variables), _, _), free), _pointers) =>
         nest(false)
         binding2 ++= given_Names2.filter(_._2.isBinding < 0)
         given MutableList[(String, String)]()
-        val pointers = _pointers.map(_.map(_._1).map(renamed(_))).getOrElse(Nil)
+        val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
         val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_String_String, given_Names2))
@@ -199,7 +177,12 @@ abstract class Calculus extends Ambient:
         it.copy(assign = assign).rename(free) -> (free ++ constants)
     }
 
-  def instance(defs: List[Define], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+  def instance(defs: List[Encoding], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+
+  def pointers: Parser[(List[String], Names)] =
+    "{"~>rep1sep(name, ",")<~"}" ^^ { ps =>
+        ps.map(_._1) -> ps.map(_._2).reduce(_ ++ _)
+    }
 
   def prefixes(using binding2: Names2): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
@@ -291,10 +274,40 @@ object Calculus:
 
   type Bind = (`(*)`, ||)
 
-  type Define = (Encoding, ||)
+  case class Definition(parameters: Names,
+                        constants: Names,
+                        variables: Names,
+                        binding2: Names2,
+                        par: ||):
+    def apply(code: Int, term: Term): (Encoding, ||) =
+      given refresh: MutableList[(String, String)] = MutableList()
+      val variables2 = variables
+        .map { it =>
+          val υidυ = it.replaceAll("_υ.*υ", "") + id
+          refresh.prepend(it -> υidυ)
+          υidυ
+        }
+      given Names2 = Names2(this.binding2)
+      Expression.renaming = Some((refresh, given_Names2))
+      given Names = Names()
+      val par2 = par.rename(Set.empty, definition = true)
+      val parameters2 = parameters.filterNot(_.charAt(0).isUpper).toList
+      val binding2 = given_Names2.filter(_._2.isBinding < 0)
+      val paramsMap =
+        parameters2.map(_ -> None).toMap
+        ++
+        binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
+      val params = paramsMap.toList
+        .sortBy { (it, _) =>
+          binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+            case Some((it, _)) => parameters2.indexOf(it)
+            case _ => parameters2.indexOf(it)
+        }
+      Encoding(code, Some(term), None, params.map(_._2), constants, variables2) -> par2
 
   case class Encoding(code: Int,
                       term: Option[Term],
+                      definition: Option[Definition],
                       shadows: List[Option[String]],
                       constants: Names,
                       variables: Names):
@@ -379,10 +392,10 @@ object Calculus:
       extends ParsingException(msg, cause)
 
   case class EquationQualifiedException(id: String, qual: List[String])
-      extends EquationParsingException(s"A qualified package ${qual.mkString(".")} is present in the left hand side of $id")
+      extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $id""")
 
   case class EquationFreeNamesException(id: String, free: Names)
-      extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id")
+      extends EquationParsingException(s"""The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
 
   case class NoDefinitionException(code: Int)
       extends ParsingException(s"No definition for encoding $code")
@@ -391,7 +404,7 @@ object Calculus:
       extends EquationParsingException(s"The parameters, constants, and variables must all be different in the left hand side of encoding $code")
 
   case class DefinitionFreeNamesException(code: Int, free: Names)
-      extends EquationParsingException(s"The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code")
+      extends EquationParsingException(s"""The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code""")
 
   import scala.meta.Enumerator
 
@@ -577,7 +590,7 @@ object Calculus:
         case `go.`(amb, par) =>
           `go.`(renamed(amb), rename(par))
 
-        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, variables), par, assign) =>
+        case it @ `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), par, assign) =>
           val n = refresh.size
           val assign2 = assign
             .map(
