@@ -45,14 +45,13 @@ object Ensure:
       extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
 
-  private def index2(prog: List[Bind]): ((String, Int)) => Int = {
+  private def index2(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
       prog
         .indexWhere {
           case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
           case _ => false
         }
-  }
 
   def main(using prog: List[Bind]): Int =
     if 1 == prog

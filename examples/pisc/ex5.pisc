@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ 'x `:` 'y `=>` 'P `;` 'z `=>` 'Q ⟧ = x(w).(([w = y]P) + ([w = z]Q))
+⟦ 'x `:` 'y `=>` 'P `;` 'z `=>` 'Q ⟧ = x(w).(([w = y]P{}) + ([w = z]Q{}))
 
 
 ⟦ t"Nil" ⟧(nil){x} = x<nil>.
@@ -42,7 +42,7 @@ Nil(nil, x) = ⟦ Nil ⟧{x}
 
 
 P(x, nil, cons) = ⟦ ⟦                        \
-                      Nil(nil) Cons ⟦ Nil ⟧  \
+                      Nil{nil} Cons ⟦ Nil ⟧  \
                     ⟧                        \
                     Cons                     \
                     ⟦ NIL ⟧                  \
