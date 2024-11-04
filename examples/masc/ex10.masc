@@ -1,14 +1,14 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                               \
-                            ( p[ in n, out n. q[ out p, open r. P ] ]  \
-                            | p[ in m, out m. q[ out p, open r. Q ] ]  \
-                            | open q. | r[]                            \
+⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                                 \
+                            ( p[ in n, out n. q[ out p, open r. P{} ] ]  \
+                            | p[ in m, out m. q[ out p, open r. Q{} ] ]  \
+                            | open q. | r[]                              \
                             )
 
 ⟦ t"Flag $n" ⟧ = n[]
 
-⟦ x If 'tt Then 'P Else x If 'ff Then 'Q ⟧ = ⟦ tt => open tt. P + ff => open ff. Q ⟧
+⟦ _ If 'tt Then 'P Else _ If 'ff Then 'Q ⟧ = ⟦ tt => open tt. P{} + ff => open ff. Q{} ⟧
 
 Main = ν(w) w[ ν(n, m) ( ⟦ Flag n ⟧                                                            \
                        | ⟦ If n Then τ/*println("OK")*/. Else If m Then τ/*println("KO")*/. ⟧  \

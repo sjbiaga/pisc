@@ -58,9 +58,7 @@ object Main:
         val bind = Ambient(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
 
-        Ambient(prog.map(_._1))
-
-        val ps = Program(prog.map(_._1))
+        val ps = Program(Ambient(prog.map(_._1)))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.filter(_._1.isLeft).map { it => it._1.left.get -> it._2 }

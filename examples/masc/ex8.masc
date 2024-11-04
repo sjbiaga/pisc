@@ -1,9 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                               \
-                            ( p[ in n, out n. q[ out p, open r. P ] ]  \
-                            | p[ in m, out m. q[ out p, open r. Q ] ]  \
-                            | open q. | r[]                            \
+⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                                 \
+                            ( p[ in n, out n. q[ out p, open r. P{} ] ]  \
+                            | p[ in m, out m. q[ out p, open r. Q{} ] ]  \
+                            | open q. | r[]                              \
                             )
 
 Main = ν(w) w[ ν(n, m) ( ⟦ n => τ/*println("P")*/. + m => τ/*println("Q")*/. ⟧ | n[] ) ]

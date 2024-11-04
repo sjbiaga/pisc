@@ -122,13 +122,15 @@ object Ambient extends Expansion:
   final case class Occurrence(shadow: String | Option[String], position: Position):
     val isBinding = if !position.binding then 0 else math.signum(position.counter)
 
-  object Rebind:
+  object Binder:
+    def apply(self: Occurrence, υidυ: String) = Occurrence(υidυ, self.position)
     def unapply(self: Occurrence): Option[String] =
       self.shadow match
         case it: String => Some(it)
         case _ => None
 
   object Shadow:
+    def apply(self: Occurrence, υidυ: String) = self.copy(shadow = Some(υidυ))
     def unapply(self: Occurrence): Option[String] =
       self.shadow match
         case it @ Some(_) => it
@@ -174,7 +176,35 @@ object Ambient extends Expansion:
 
   // functions
 
-  def ensure(implicit prog: List[Bind]): Unit =
+  extension[T <: Calculus.AST](ast: T)
+
+    def shallow: T =
+
+      inline given Conversion[Calculus.AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅ => ∅
+
+        case ||(it*) =>
+          ||(it.map(_.shallow)*)
+
+        case `.`(end, it*) =>
+          `.`(end.shallow, it*)
+
+        case it @ !(_, par) =>
+          it.copy(par = par.shallow)
+
+        case it @ `⟦⟧`(_, par, _) =>
+          it.copy(par = par.shallow)
+
+        case `{}`(id, pointers) =>
+          `(*)`(id, Nil, pointers*)
+
+        case it =>
+          it
+
+  def ensure(using prog: List[Bind]): Unit =
     import Ensure._
 
     val i = main
@@ -198,9 +228,10 @@ object Ambient extends Expansion:
             throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
-  def apply(prog: List[Bind]): Unit =
-
-    ensure(prog)
+  def apply(prog: List[Bind]): List[Bind] =
+    given List[Bind] = prog.map(_ -> _.shallow)
+    ensure
+    given_List_Bind
 
 
   private var i: Int = -1
