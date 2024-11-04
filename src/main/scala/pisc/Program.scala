@@ -315,10 +315,10 @@ object Program:
           }
 
           qual match
-            case List("π", "this") | List("this") | Nil =>
-              * :+= `_ <- *`(s"`$identifier`(${args.mkString(", ")})".parse[Term].get)
+            case Nil =>
+              * :+= `_ <- *`(s"""`$identifier`(${args.mkString(", ")})""".parse[Term].get)
             case _ =>
-              * :+= `_ <- *`(s"${qual.mkString(".")}.`π`.`$identifier`(${args.mkString(", ")})".parse[Term].get)
+              * :+= `_ <- *`(s"""${qual.mkString(".")}.π.`$identifier`(${args.mkString(", ")})""".parse[Term].get)
 
         ////////////////////////////////////////////////////////// invocation //
 
