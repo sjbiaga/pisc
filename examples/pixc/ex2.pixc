@@ -2,7 +2,7 @@
 
 ⟦⟧ =
 
-⟦1 'ch DOT 'P 1⟧ = ch(x). P
+⟦1 'ch DOT 'P 1⟧ = ch(x). P{}
 
 Main = w⟦ ν(ch) ( start(t) ⟦1 ch DOT s⟦ end(t). ⟧ 1⟧. ch<ch>. \
                 | t⟦1 ch DOT s⟦ end(t). ⟧ 1⟧                  \

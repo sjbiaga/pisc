@@ -47,14 +47,13 @@ object Ensure:
   case class StartParsingException(id: String, arity: Int, by: String)
       extends EquationParsingException(s"$id#$arity leads to a start transaction prefix by $by")
 
-  private def index2(prog: List[Bind]): ((String, Int)) => Int = {
+  private def index2(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
       prog
         .indexWhere {
           case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
           case _ => false
         }
-  }
 
   def main(using prog: List[Bind]): Int =
     if 1 == prog
