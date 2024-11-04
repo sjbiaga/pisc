@@ -190,13 +190,15 @@ object StochasticPi extends Expansion:
   final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
     val isBinding = if !position.binding then 0 else math.signum(position.counter)
 
-  object Rebind:
+  object Binder:
+    def apply(self: Occurrence, υidυ: Symbol) = Occurrence(υidυ, self.position)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)
         case _ => None
 
   object Shadow:
+    def apply(self: Occurrence, υidυ: Symbol) = self.copy(shadow = Some(υidυ))
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it @ Some(_) => it
@@ -256,17 +258,52 @@ object StochasticPi extends Expansion:
 
   // functions
 
+  extension[T <: AST](ast: T)
+
+    def shallow: T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅ => ∅
+
+        case +(_, it*) =>
+          `+`(nil, it.map(_.shallow)*)
+
+        case ||(it*) =>
+          ||(it.map(_.shallow)*)
+
+        case `.`(end, it*) =>
+          `.`(end.shallow, it*)
+
+        case ?:(cond, t, f) =>
+          ?:(cond, t.shallow, f.map(_.shallow))
+
+        case it @ !(_, sum) =>
+          it.copy(sum = sum.shallow)
+
+        case it @ `⟦⟧`(_, sum, _, _, _) =>
+          it.copy(sum = sum.shallow)
+
+        case `{}`(id, pointers) =>
+          `(*)`(id, pointers.map(λ(_))*)
+
+        case it =>
+          it
+
+
   def index(prog: List[Bind]): `(*)` => Int = {
-    case `(*)`(identifier, _, args*) =>
+    case `(*)`(identifier, args*) =>
       prog
         .indexWhere {
-          case (`(*)`(`identifier`, _, params*), _) if params.size == args.size => true
+          case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
           case _ => false
         }
   }
 
   def ensure(using rec: Map[(String, Int), Int])
-            (implicit prog: List[Bind]): Unit =
+            (using prog: List[Bind]): Unit =
     import Ensure._
 
     var i = main
@@ -280,10 +317,10 @@ object StochasticPi extends Expansion:
     if rec.contains("Main" -> 0) then throw MainParsingException2
 
     prog.foreach {
-      case (it @ `(*)`("Main", _), _) =>
+      case (it @ `(*)`("Main"), _) =>
         val i = index(prog)(it)
         rec("Main" -> 0) = -(i+1)
-      case (it @ `(*)`(id, _, params*), _) if !rec.contains(id -> params.size) =>
+      case (it @ `(*)`(id, params*), _) if !rec.contains(id -> params.size) =>
         val i = index(prog)(it)
         val sum = prog(i)._2
         sum.recursive(using id -> params.size :: Nil)
@@ -297,7 +334,7 @@ object StochasticPi extends Expansion:
       (i, n) <- rep
     do
       prog(i)._1 match
-        case `(*)`(id, _, params*) =>
+        case `(*)`(id, params*) =>
           if _werr
           then
             throw RecRepParsingException(id, params.size, n)
@@ -308,7 +345,7 @@ object StochasticPi extends Expansion:
     then throw StartParsingException("Main", 0, "replication")
 
     prog.foreach {
-      case (`(*)`(id, _, params*), _) if rec(id -> params.size) > 0 =>
+      case (`(*)`(id, params*), _) if rec(id -> params.size) > 0 =>
         val i = rec(id -> params.size)
         val sum = prog(i-1)._2
         if !sum.recursion(using id -> params.size :: Nil)
@@ -510,7 +547,7 @@ object StochasticPi extends Expansion:
         case _: `(*)` => ??? // always "guarded"
 
     def graph(using rec: Map[(String, Int), Int])
-             (implicit prog: List[Bind]): Seq[(Act, Act | Sum)] =
+             (using prog: List[Bind]): Seq[(Act, Act | Sum)] =
 
       ast match
 
@@ -555,7 +592,7 @@ object StochasticPi extends Expansion:
               case `⟦⟧`(_, sum, _, _, _) =>
                 Seq(ps(k) -> sum)
               case _: `{}` => ???
-              case `(*)`(id, _, params*) =>
+              case `(*)`(id, params*) =>
                 val i = rec(id -> params.size)
                 val sum = prog(i.abs-1)._2
                 Seq(ps(k) -> sum)
@@ -577,11 +614,11 @@ object StochasticPi extends Expansion:
 
         case _: `(*)` => Nil
 
-  def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
     given excluded: Map[String, Actions] = Map()
 
-    implicit val prog: List[Bind] = _prog.map(_ -> _.parse._1)
+    given List[Bind] = prog.map(_ -> _.shallow.parse._1)
 
     given rec: Map[(String, Int), Int] = Map()
 
@@ -593,7 +630,7 @@ object StochasticPi extends Expansion:
 
     val enabled = Map[String, Actions]()
 
-    prog
+    given_List_Bind
       .tapEach {
         case (_, sum) =>
           sum.split(using discarded -> excluded)
@@ -764,10 +801,9 @@ object StochasticPi extends Expansion:
 
       case (_: `{}`, _) | (_, _: `{}`) => ???
 
-      case (`(*)`(lid, lqual, largs*)
-           ,`(*)`(rid, rqual, rargs*))
+      case (`(*)`(lid, largs*)
+           ,`(*)`(rid, rargs*))
           if lid == rid
-          && lqual == rqual
           && largs.size == rargs.size =>
         (largs zip rargs).foldLeft(true) {
           case (false, _) => false
@@ -858,7 +894,7 @@ object StochasticPi extends Expansion:
             scala.sys.error(failure.msg)
     }
     .filter {
-      case Right((`(*)`(s"Self_$n", _, _*), _))
+      case Right((`(*)`(s"Self_$n", _*), _))
           if { try { n.toInt; true } catch _ => false } =>
         self.contains(n.toInt)
       case _ => true

@@ -79,7 +79,7 @@ object Meta:
                     Type.ArgClause(Nil),
                     Term.ArgClause(s"${*}".parse[Term].get :: Nil, None))
 
-  def ==== : ((Any, Any)) => Term = {
+  val ==== : ((Any, Any)) => Term =
     case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
@@ -102,7 +102,6 @@ object Meta:
     case (Expr(x), y: BigDecimal) => `… ==== *`(x, y)
     case (Expr(x), y: Boolean) => `… ==== *`(x, y)
     case (Expr(x), y: String) => `… ==== *`(x, y)
-  }
 
 
   val rate: Any => Term = {

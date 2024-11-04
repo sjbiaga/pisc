@@ -337,7 +337,7 @@ object Program:
 
         // INVOCATION //////////////////////////////////////////////////////////
 
-        case `(*)`(identifier, _, params*) =>
+        case `(*)`(identifier, params*) =>
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
             case λ(value) =>
