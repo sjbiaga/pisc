@@ -2,11 +2,11 @@
 
 ⟦ 'x ⟧{u} = x<u>.
 
-⟦ s"λ $x . ${$M}" ⟧{u} = u(x). u(v). M{v}
+⟦ t"λ $x . ${$M}" ⟧{u} = u(x). u(v). M{v}
 
 ⟦ 'M $ 'N ⟧{u} = ν(v) ( M{v} | ν(x) v<x>. v<u>. x(w). N{w} )
 
-⟦ s"Id" ⟧{u} = ⟦ λ z . ⟦ z ⟧ ⟧{u}
+⟦ t"Id" ⟧{u} = ⟦ λ z . ⟦ z ⟧ ⟧{u}
 
 Main = ν(y) ( ⟦ ⟦ ⟦ Id ⟧ $ ⟦ Id ⟧ ⟧ $ ⟦ y ⟧ ⟧{y}  \
             | y(y). τ/*println("y")*/.            \

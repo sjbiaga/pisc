@@ -149,13 +149,15 @@ object Pi extends Expansion:
   final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
     val isBinding = if !position.binding then 0 else math.signum(position.counter)
 
-  object Rebind:
+  object Binder:
+    def apply(self: Occurrence, υidυ: Symbol) = Occurrence(υidυ, self.position)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)
         case _ => None
 
   object Shadow:
+    def apply(self: Occurrence, υidυ: Symbol) = self.copy(shadow = Some(υidυ))
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it @ Some(_) => it
@@ -212,16 +214,41 @@ object Pi extends Expansion:
 
   // functions
 
-  def index(prog: List[Bind]): `(*)` => Int = {
-    case `(*)`(identifier, _, args*) =>
-      prog
-        .indexWhere {
-          case (`(*)`(`identifier`, _, params*), _) if params.size == args.size => true
-          case _ => false
-        }
-  }
+  extension[T <: AST](ast: T)
 
-  def ensure(implicit prog: List[Bind]): Unit =
+    def shallow: T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅ => ∅
+
+        case +(it*) =>
+          `+`(it.map(_.shallow)*)
+
+        case ||(it*) =>
+          ||(it.map(_.shallow)*)
+
+        case `.`(end, it*) =>
+          `.`(end.shallow, it*)
+
+        case ?:(cond, t, f) =>
+          ?:(cond, t.shallow, f.map(_.shallow))
+
+        case it @ !(_, sum) =>
+          it.copy(sum = sum.shallow)
+
+        case it @ `⟦⟧`(_, sum, _) =>
+          it.copy(sum = sum.shallow)
+
+        case `{}`(id, pointers) =>
+          `(*)`(id, Nil, pointers.map(λ(_))*)
+
+        case it =>
+          it
+
+  def ensure(using prog: List[Bind]): Unit =
     import Ensure._
 
     val i = main
@@ -245,9 +272,10 @@ object Pi extends Expansion:
             throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
-  def apply(prog: List[Bind]): Unit =
-
-    ensure(prog)
+  def apply(prog: List[Bind]): List[Bind] =
+    given List[Bind] = prog.map(_ -> _.shallow)
+    ensure
+    given_List_Bind
 
 
   private var i: Int = -1
