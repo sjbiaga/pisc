@@ -63,6 +63,9 @@ abstract class Expansion extends Calculus:
     }
   }
 
+  private val open = """⟦\d*""".r
+  private val closed = """\d*⟧""".r
+
   def instance(defs: List[Encoding], end: String)
               (using Names2): Parser[(`⟦⟧`, Names)] =
     var idx = -1
@@ -74,17 +77,19 @@ abstract class Expansion extends Calculus:
                         (using substitution: Map[String, λ | AST])
                         (using free: Names): (((Encoding, +), Term)) => ParseResult[(Encoding, +)] =
 
-        case (it @ (encoding, sum), Term.Name(rhs)) =>
+        case (it @ (encoding, _), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
+          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
+
           var source = in.source
           var offset = in.offset
           var start = handleWhiteSpace(source, offset)
 
           var s = SubSequence(source, start)
 
-          if ("""⟦\d*""".r findPrefixMatchOf s).nonEmpty
+          if (open findPrefixMatchOf s).nonEmpty
           then
 
-            if rhs.charAt(0).isLower || rhs.charAt(0) == '_'
+            if rhs.charAt(0).isLower || rhs == "_"
             then
               Failure("name expected not instantiation", in)
 
@@ -92,8 +97,8 @@ abstract class Expansion extends Calculus:
 
               parse(instantiation, in) match
 
-                case Success((rhs2, free2), in) =>
-                  substitution(rhs) = rhs2
+                case Success((exp, free2), in) =>
+                  substitution(rhs) = exp
                   free ++= free2 -- binding2.map(_._1)
 
                   source = in.source
@@ -108,13 +113,11 @@ abstract class Expansion extends Calculus:
           else
             ( if s.isEmpty
               || s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-              || ("""\d*⟧""".r findPrefixMatchOf s).nonEmpty
+              || (closed findPrefixMatchOf s).nonEmpty
               then Some(null)
               else
                 val op = end.orElse(end.swap).right.get
                 val n = op.length
-                val open = """⟦\d*""".r
-                val closed = """\d*⟧""".r
                 val matches = (Pattern.quote(op).r findAllMatchIn s).toList
                 var i = 0
                 while i < matches.size
@@ -140,25 +143,29 @@ abstract class Expansion extends Calculus:
                 if result.isBlank
                 || result.strip == "_"
                 then
-                  n += result.length
-                else if ("""\d*⟧""".r findPrefixMatchOf s).nonEmpty
+                  if matched eq null
+                  then
+                    n += result.length
+                  else
+                    n += end.map(_.length).getOrElse(0)
+                else if (closed findPrefixMatchOf s).nonEmpty
                 then
                   {}
                 else
                   n += end.map(_.length).getOrElse(0)
 
-                  if rhs.charAt(0).isLower || rhs.charAt(0) == '_'
+                  if rhs.charAt(0).isLower || rhs == "_"
                   then
 
                     parseAll(name, result) match
-                      case Success((λ(name2: Symbol), free2), _) =>
+                      case Success((λ(name: Symbol), free2), _) =>
                         encoding.shadows(idx) match
                           case shadow @ Some(_) =>
-                            Names2(name2, shadow)
+                            Names2(name, shadow)
                           case _ =>
-                            binding2.find { case (`name2`, Shadow(_)) => true case _ => false } match
+                            binding2.find { case (`name`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(it))) => substitution(rhs) = λ(it)
-                              case _ => substitution(rhs) = λ(name2)
+                              case _ => substitution(rhs) = λ(name)
                             free ++= free2 -- binding2.map(_._1)
                         idx += 1
 
@@ -166,8 +173,8 @@ abstract class Expansion extends Calculus:
 
                   else
                     parseAll(choice, result) match
-                      case Success((sum2, free2), _) =>
-                        substitution(rhs) = sum2
+                      case Success((sum, free2), _) =>
+                        substitution(rhs) = sum
                         free ++= free2 -- binding2.map(_._1)
 
                       case it => fail = Some(Failure("choice expected", it.next))
@@ -183,17 +190,19 @@ abstract class Expansion extends Calculus:
                             else "'"+source.charAt(start)+"'"
                 Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset))
 
-        case (it @ (encoding, sum), Term.ApplyInfix(Term.Name(lhs), Term.Name(op), _, List(rhs))) =>
+        case (it @ (encoding, _), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), Term.Name(op), _, List(rhs))) =>
+          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
+
           var source = in.source
           var offset = in.offset
           var start = handleWhiteSpace(source, offset)
 
           var s = SubSequence(source, start)
 
-          if ("""⟦\d*""".r findPrefixMatchOf s).nonEmpty
+          if (open findPrefixMatchOf s).nonEmpty
           then
 
-            if lhs.charAt(0).isLower || lhs.charAt(0) == '_'
+            if lhs.charAt(0).isLower || lhs == "_"
             then
               Failure("name expected not instantiation", in)
 
@@ -201,8 +210,8 @@ abstract class Expansion extends Calculus:
 
               parse(instantiation, in) match
 
-                case Success((lhs2, free2), in) =>
-                  substitution(lhs) = lhs2
+                case Success((exp, free2), in) =>
+                  substitution(lhs) = exp
                   free ++= free2 -- binding2.map(_._1)
 
                   source = in.source
@@ -216,8 +225,6 @@ abstract class Expansion extends Calculus:
 
           else {
             val n = op.length
-            val open = """⟦\d*""".r
-            val closed = """\d*⟧""".r
             val matches = (Pattern.quote(op).r findAllMatchIn s).toList
             var i = 0
             while i < matches.size
@@ -237,17 +244,17 @@ abstract class Expansion extends Calculus:
               || result.strip == "_"
               then
                 {}
-              else if lhs.charAt(0).isLower || lhs.charAt(0) == '_'
+              else if lhs.charAt(0).isLower || lhs == "_"
               then
                 parseAll(name, result) match
-                  case Success((λ(name2: Symbol), free2), _) =>
+                  case Success((λ(name: Symbol), free2), _) =>
                     encoding.shadows(idx) match
                       case shadow @ Some(_) =>
-                        Names2(name2, shadow)
+                        Names2(name, shadow)
                       case _ =>
-                        binding2.find { case (`name2`, Shadow(_)) => true case _ => false } match
+                        binding2.find { case (`name`, Shadow(_)) => true case _ => false } match
                           case Some((_, Shadow(it))) => substitution(lhs) = λ(it)
-                          case _ => substitution(lhs) = λ(name2)
+                          case _ => substitution(lhs) = λ(name)
                         free ++= free2 -- binding2.map(_._1)
                     idx += 1
 
@@ -255,8 +262,8 @@ abstract class Expansion extends Calculus:
 
               else
                 parseAll(choice, result) match
-                  case Success((sum2, free2), _) =>
-                    substitution(lhs) = sum2
+                  case Success((sum, free2), _) =>
+                    substitution(lhs) = sum
                     free ++= free2 -- binding2.map(_._1)
 
                   case it => fail = Some(Failure("choice expected", it.next))
@@ -272,7 +279,7 @@ abstract class Expansion extends Calculus:
                           else "'"+source.charAt(start)+"'"
               Failure("operator '"+op+"' expected but "+found+" found", in.drop(start - offset))
 
-        case (it @ (encoding, sum), Term.ApplyInfix(lhs: Term.ApplyInfix, Term.Name(op), _, List(rhs))) =>
+        case (it @ (encoding, _), Term.ApplyInfix(lhs: Term.ApplyInfix, Term.Name(op), _, List(rhs))) =>
           expand(in, Right(op))(it -> lhs) match
 
             case Success(_, _in) =>
@@ -308,6 +315,9 @@ abstract class Expansion extends Calculus:
                   expand(in, end)(it -> rhs)
 
             case it => it
+
+        case (it, Term.AnonymousFunction(body)) =>
+          expand(in, end)(it -> body)
 
         case _ => ??? /* caught by template */
 
@@ -433,26 +443,11 @@ object Expansion:
         case `{}`(id, pointers0) =>
           `{}`(id, pointers0 ++ pointers)
 
-        case it @ `(*)`(_, List("π", "this")) =>
-          it
-
-        case `(*)`(id, Nil) if substitution.contains(id) =>
-          substitution(id).asInstanceOf[&]
-
-        case `(*)`(id, qual @ List("this"), params*) =>
+        case `(*)`(id, params*) =>
           val params2 = params
             .map {
               case λ(it: Symbol) => replaced(it)
               case it => it
             }
 
-          `(*)`(id, qual, params2*)
-
-        case `(*)`(id, qual, params*) =>
-          val params2 = params
-            .map {
-              case λ(it: Symbol) => replaced(it)
-              case it => it
-            }
-
-          `(*)`(id, qual, (params2 ++ pointers.map(λ(_)))*)
+          `(*)`(id, params2*)

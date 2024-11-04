@@ -189,13 +189,15 @@ object StochasticPi extends Expansion:
   final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
     val isBinding = if !position.binding then 0 else math.signum(position.counter)
 
-  object Rebind:
+  object Binder:
+    def apply(self: Occurrence, υidυ: Symbol) = Occurrence(υidυ, self.position)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)
         case _ => None
 
   object Shadow:
+    def apply(self: Occurrence, υidυ: Symbol) = self.copy(shadow = Some(υidυ))
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it @ Some(_) => it
@@ -255,6 +257,40 @@ object StochasticPi extends Expansion:
 
   // functions
 
+  extension[T <: AST](ast: T)
+
+    def shallow: T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅ => ∅
+
+        case +(_, it*) =>
+          `+`(nil, it.map(_.shallow)*)
+
+        case ||(it*) =>
+          ||(it.map(_.shallow)*)
+
+        case `.`(end, it*) =>
+          `.`(end.shallow, it*)
+
+        case ?:(cond, t, f) =>
+          ?:(cond, t.shallow, f.map(_.shallow))
+
+        case it @ !(_, sum) =>
+          it.copy(sum = sum.shallow)
+
+        case it @ `⟦⟧`(_, sum, _) =>
+          it.copy(sum = sum.shallow)
+
+        case `{}`(id, pointers) =>
+          `(*)`(id, pointers.map(λ(_))*)
+
+        case it =>
+          it
+
   def ensure(implicit prog: List[Bind]): Unit =
     import Ensure._
 
@@ -273,17 +309,17 @@ object StochasticPi extends Expansion:
       (i, n) <- rep
     do
       prog(i)._1 match
-        case `(*)`(id, _, params*) =>
+        case `(*)`(id, params*) =>
           if _werr
           then
             throw RecRepParsingException(id, params.size, n)
           Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
   def `(*) => +`(prog: List[Bind]): `(*)` => + = {
-    case `(*)`(identifier, _, args*) =>
+    case `(*)`(identifier, args*) =>
       prog
         .find {
-          case (`(*)`(`identifier`, _, params*), _) if params.size == args.size => true
+          case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
           case _ => false
         }
         .get
@@ -471,7 +507,7 @@ object StochasticPi extends Expansion:
 
         case _: `(*)` => ??? // always "guarded"
 
-    def graph(implicit prog: List[Bind]): Seq[(Act, Act | Sum)] =
+    def graph(using prog: List[Bind]): Seq[(Act, Act | Sum)] =
 
       ast match
 
@@ -533,11 +569,11 @@ object StochasticPi extends Expansion:
 
         case _: `(*)` => Nil
 
-  def apply(_prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
     given excluded: Map[String, Actions] = Map()
 
-    implicit val prog: List[Bind] = _prog.map(_ -> _.parse._1)
+    given List[Bind] = prog.map(_ -> _.shallow.parse._1)
 
     ensure
 
@@ -547,7 +583,7 @@ object StochasticPi extends Expansion:
 
     val enabled = Map[String, Actions]()
 
-    prog
+    given_List_Bind
       .tapEach {
         case (_, sum) =>
           sum.split(using discarded -> excluded)
@@ -611,7 +647,7 @@ object StochasticPi extends Expansion:
             scala.sys.error(failure.msg)
     }
     .filter {
-      case Right((`(*)`(s"Self_$n", _, _*), _))
+      case Right((`(*)`(s"Self_$n", _*), _))
           if { try { n.toInt; true } catch _ => false } =>
         self.contains(n.toInt)
       case _ => true

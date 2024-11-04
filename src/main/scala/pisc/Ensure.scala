@@ -45,24 +45,23 @@ object Ensure:
       extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
 
-  private def index2(prog: List[Bind]): ((String, Int)) => Int = {
+  private def index2(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
       prog
         .indexWhere {
-          case (`(*)`(`identifier`, _, params*), _) if params.size == size => true
+          case (`(*)`(`identifier`, params*), _) if params.size == size => true
           case _ => false
         }
-  }
 
   def main(using prog: List[Bind]): Int =
     if 1 == prog
       .count {
-        case (`(*)`("Main", _), _) => true
+        case (`(*)`("Main"), _) => true
         case _ => false
       }
     then prog
       .indexWhere {
-        case (`(*)`("Main", _), _) => true
+        case (`(*)`("Main"), _) => true
         case _ => false
       }
     else -1
@@ -106,7 +105,7 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case it @ `(*)`(id, _, params*)
+        case it @ `(*)`(id, params*)
             if stack.contains(id -> params.size) =>
           val k = stack.lastIndexOf(id -> params.size)
           for
@@ -124,7 +123,7 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, _, params*) =>
+        case `(*)`(id, params*) =>
           val i = index2(prog)(id -> params.size)
           val sum = prog(i)._2
           sum.recursive(using stack :+ id -> params.size)

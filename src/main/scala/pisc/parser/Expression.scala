@@ -71,23 +71,19 @@ abstract class Expression extends JavaTokenParsers:
   private[parser] var _code: Int = -1
 
   private def apply(using params: MutableList[String])
-                   (using names: Names): Term => Unit = {
+                   (using names: Names): Term => Unit =
+    case Term.Placeholder() =>
     case Term.Name(rhs)
         if names.contains(Symbol(rhs)) && params.contains(rhs) =>
       throw TemplateParameterParsingException(rhs)
     case Term.Name(rhs) =>
       if names.contains(Symbol(rhs)) then params += rhs
-    case Term.ApplyInfix(Term.Name(lhs), _, _, _)
-        if names.contains(Symbol(lhs)) && params.contains(lhs) =>
-      throw TemplateParameterParsingException(lhs)
-    case Term.ApplyInfix(Term.Name(lhs), _, _, List(rhs)) =>
-      if names.contains(Symbol(lhs)) then params += lhs
-      this(rhs)
-    case Term.ApplyInfix(lhs: Term.ApplyInfix, _, _, List(rhs)) =>
+    case Term.ApplyInfix(lhs, _, _, List(rhs)) =>
       this(lhs)
       this(rhs)
+    case Term.AnonymousFunction(body) =>
+      this(body)
     case it => throw TemplateParsingException(it)
-  }
 
   private def apply(operators: Seq[String], operands: Seq[Symbol | String])
                    (using names: Names): List[Term] =
