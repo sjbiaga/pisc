@@ -62,15 +62,16 @@ abstract class Calculus extends PolyadicPi:
 
   def definition: Parser[Encoding] =
     template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( pointers ) <~"=" >> {
-      case (term, parameters) ~ _constants ~ _variables =>
+      case (term, _parameters) ~ _constants ~ _variables =>
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
         val variables = _variables.map(_._2).getOrElse(Names())
+        val parameters = _parameters.filterNot(_.name.charAt(0).isUpper)
         if (parameters & constants).nonEmpty
         || (variables & parameters).nonEmpty
         || (constants & variables).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        val binding = parameters ++ constants ++ variables
+        val binding = _parameters ++ constants ++ variables
         given Names2 = Names2() ++
                        binding
                          .filterNot(_.name.charAt(0).isUpper)
@@ -82,10 +83,10 @@ abstract class Calculus extends PolyadicPi:
             if (free &~ binding).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ binding)
-            if parameters.size == parameters.filterNot(_.name.charAt(0).isUpper).size
+            if parameters.size == _parameters.size
             then
               eqtn :+= `(*)`("Self_" + _code, Nil, binding.map(λ(_)).toSeq*) -> sum
-            val defn = Definition(parameters, constants, variables, given_Names2, sum)
+            val defn = Definition(parameters.toList, constants, variables, given_Names2, sum)
             Encoding(_code, term, Some(defn), Nil, constants, variables)
         }
     }
@@ -153,6 +154,10 @@ abstract class Calculus extends PolyadicPi:
       case id ~ ps =>
         `{}`(id, ps._1) -> ps._2
     } |
+    IDENT <~"{"<~"}" ^^ {
+      case id =>
+        `{}`(id, Nil) -> Names()
+    } |
     invocation() |
     instantiation
 
@@ -185,16 +190,17 @@ abstract class Calculus extends PolyadicPi:
               exp -> ps
           }
     } ^^ {
-      case ((it @ `⟦⟧`(Encoding(_, _, _, _, constants, variables), _, _), free), _pointers) =>
+      case ((exp @ `⟦⟧`(Encoding(_, _, _, _, constants, variables), _, _), free), _pointers) =>
         nest(false)
-        binding2 ++= given_Names2.filter(_._2.isBinding < 0)
         given MutableList[(Symbol, λ)]()
         val pointers = _pointers.map(_._1.map(renamed(_).asSymbol)).getOrElse(Nil)
         val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_Symbol_λ, given_Names2))
         given Names = Names()
-        it.copy(assign = assign).rename(free) -> (free ++ constants)
+        val exp2 = exp.copy(assign = assign).rename(free)
+        binding2 ++= given_Names2.filter(_._2.isBinding < 0)
+        exp2 -> (free ++ constants)
     }
 
   def instance(defs: List[Encoding], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
@@ -291,9 +297,11 @@ abstract class Calculus extends PolyadicPi:
 
 object Calculus:
 
+  import scala.annotation.tailrec
+
   type Bind = (`(*)`, +)
 
-  case class Definition(parameters: Names,
+  case class Definition(parameters: List[Symbol],
                         constants: Names,
                         variables: Names,
                         binding2: Names2,
@@ -310,19 +318,21 @@ object Calculus:
       Expression.renaming = Some((refresh, given_Names2))
       given Names = Names()
       val sum2 = sum.rename(Set.empty, definition = true)
-      val parameters2 = parameters.filterNot(_.name.charAt(0).isUpper).toList
       val binding2 = given_Names2.filter(_._2.isBinding < 0)
-      val paramsMap =
-        parameters2.map(_ -> None).toMap
+      val shadows = (
+        parameters.map(_ -> None).toMap
         ++
-        binding2.collect { case (shadow, Rebind(it)) => shadow -> Some(it) }
-      val params = paramsMap.toList
-        .sortBy { (it, _) =>
-          binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-            case Some((it, _)) => parameters2.indexOf(it)
-            case _ => parameters2.indexOf(it)
+        binding2.collect {
+          case (it, Binder(υidυ)) => (
+            binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+              case Some((it, _)) => it
+              case _ => it
+          ) -> Some(υidυ)
         }
-      Encoding(code, Some(term), None, params.map(_._2), constants, variables2) -> sum2
+      ) .toList
+        .sortBy { (it, _) => parameters.indexOf(it) }
+        .map(_._2)
+      Encoding(code, Some(term), None, shadows, constants, variables2) -> sum2
 
   case class Encoding(code: Int,
                       term: Option[Term],
@@ -472,17 +482,32 @@ object Calculus:
 
   // functions
 
+  @tailrec
+  def shadow(it: Symbol)
+            (using binding2: Names2): Option[Occurrence] =
+    if binding2.contains(it)
+    then
+      binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
+        case Some((_, occurrence @ Shadow(`it`))) => Some(occurrence)
+        case Some((_, Shadow(it))) => shadow(it)
+        case _ => None
+    else
+      binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+        case Some((_, occurrence)) => Some(occurrence)
+        case _ => None
+
   def renamed(it: Symbol)
              (using refresh: MutableList[(Symbol, λ)])
              (using binding2: Names2): λ =
     refresh.find(_._1 == it) match
       case Some((_, r)) => r
-      case _ if binding2.exists { case (`it`, Rebind(_)) | (_, Shadow(`it`)) => true case _ => false } =>
-        binding2.find { case (`it`, Rebind(_)) => true case _ => false } match
-          case Some((_, Rebind(υidυ))) => λ(υidυ)
-          case _ => λ(it)
-      case _ if binding2.contains(it) => λ(it)
-      case _ => throw NoBindingParsingException(it.name)
+      case _ =>
+        binding2.find { case (`it`, Binder(_)) => true case _ => false } match
+          case Some((_, Binder(υidυ))) => λ(υidυ)
+          case _ => shadow(it) match
+            case Some(Shadow(it)) => λ(it)
+            case _ if binding2.contains(it) => λ(it)
+            case _ => throw NoBindingParsingException(it.name)
 
   def recoded(free: Names)
              (using code: Option[Code])
@@ -495,6 +520,20 @@ object Calculus:
       free ++= names.filterNot(binding.contains(_))
       code2
     }
+
+  private def _removed(it: Symbol)
+                      (using binding2: Names2): Option[Either[Symbol, Symbol]] =
+    var name: Option[Either[Symbol, Symbol]] = None
+    binding2.filterInPlace {
+      case (`it`, Shadow(`it`)) => name = Some(Left(it)); false
+      case (it, Shadow(`it`)) => name = Some(Right(it)); false
+      case _ => true
+    }
+    name.map(_.flatMap(_removed(_).orElse(name).get))
+
+  inline def removed(it: Symbol)
+                    (using binding2: Names2): Symbol =
+    _removed(it).get.fold(identity, identity)
 
 
   extension[T <: AST](ast: T)
@@ -554,7 +593,7 @@ object Calculus:
 
       ast match
 
-        case ∅ => Set.empty
+        case ∅ => Names()
 
         case +(it*) => it.map(_.capitals).reduce(_ ++ _)
 
@@ -574,9 +613,7 @@ object Calculus:
 
         case `{}`(id, _) => Set(Symbol(id))
 
-        case `(*)`(id, Nil) => Set(Symbol(id))
-
-        case _ => Set.empty
+        case _ => Names()
 
 
     def rename(free: Names, definition: Boolean = false)
@@ -584,11 +621,15 @@ object Calculus:
               (using refresh: MutableList[(Symbol, λ)])
               (using binding: Names): T =
 
-      def rebind(it: Symbol)(using binding: Names): λ =
+      def rebind(it: Symbol)
+                (using binding: Names): λ =
         val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
         binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
           case Some((_, occurrence)) if definition && occurrence.isBinding < 0 =>
-            binding2 += it -> Occurrence(υidυ, occurrence.position)
+            binding2 += removed(it) -> Shadow(occurrence, it)
+            binding2 += it -> Binder(occurrence, υidυ)
+          case Some((_, occurrence)) =>
+            binding2 += it -> Shadow(occurrence, υidυ)
           case _ =>
             refresh.prepend(it -> λ(υidυ))
         binding += υidυ
@@ -675,10 +716,9 @@ object Calculus:
           val assign2 = assign
             .map(
               _.map { (variable, pointer) =>
-                val pointer2 = renamed(pointer).asSymbol
                 val υidυ = Symbol(variable.name.replaceAll("_υ.*υ", "") + id)
                 refresh.prepend(variable -> λ(υidυ))
-                υidυ -> pointer2
+                υidυ -> renamed(pointer).asSymbol
               }
             )
           var variables2 = variables
