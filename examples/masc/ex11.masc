@@ -1,30 +1,30 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                               \
-                                ( p[ in n, out n. q[ out p, open r. P ] ]  \
-                                | p[ in m, out m. q[ out p, open r. Q ] ]  \
-                                | open q. | r[]                            \
-                                )
+⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                                 \
+                            ( p[ in n, out n. q[ out p, open r. P{} ] ]  \
+                            | p[ in m, out m. q[ out p, open r. Q{} ] ]  \
+                            | open q. | r[]                              \
+                            )
 
 ⟦ t"Zero" ⟧(zero) = zero[]
 
-⟦ 'N + x `1` x ⟧(succ, op) = succ[ open op. | N ]
+⟦ 'N + _ `1` _ ⟧(succ, op) = succ[ open op. | N{} ]
 
 ⟦ t"1" ⟧(zero, succ, op) = ⟦ ⟦ Zero ⟧ + 1 ⟧
 
-⟦ t"IfZero ${$P} Else ${$Q}" ⟧(zero, succ) = ⟦ zero => P + succ => Q ⟧
+⟦ t"IfZero ${$P} Else ${$Q}" ⟧(zero, succ) = ⟦ zero => P{} + succ => Q{} ⟧
 
-⟦ t"inczero ${$P}" ⟧(zero, succ, op) = open zero. ( ⟦ 1 ⟧ | P )
+⟦ t"inczero ${$P}" ⟧(zero, succ, op) = open zero. ( ⟦ 1 ⟧ | P{} )
 
 ⟦ t"incsucc ${$P}" ⟧(succ, op) = ν(p, q)                                                                     \
-                               ( p[ succ[ open op. ] ] | open q, open p. P                                   \
+                               ( p[ succ[ open op. ] ] | open q, open p. P{}                                 \
                                | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
                                )
 
-⟦ t"inc ${$P}" ⟧(zero, succ, op) = ⟦ IfZero ⟦ inczero P ⟧   \
-                                     Else ⟦ incsucc P ⟧ ⟧
+⟦ t"inc ${$P}" ⟧(zero, succ, op) = ⟦ IfZero ⟦ inczero P{} ⟧  \
+                                     Else ⟦ incsucc P{} ⟧ ⟧
 
-⟦ t"dec ${$P}" ⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P )
+⟦ t"dec ${$P}" ⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P{} )
 
 Main = ν(w) w[ ν(zero, succ, op) ν(z, o) (                                                        \
                                          | z[ ⟦ Zero ⟧ | ⟦ IfZero τ/*println("0")*/. Else () ⟧ ]  \
