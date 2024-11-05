@@ -195,6 +195,12 @@ object Ambient extends Expansion:
         case it @ !(_, par) =>
           it.copy(par = par.shallow)
 
+        case it @ `[]`(_, par) =>
+          it.copy(par = par.shallow)
+
+        case it @ `go.`(_, par) =>
+          it.copy(par = par.shallow)
+
         case it @ `⟦⟧`(_, par, _) =>
           it.copy(par = par.shallow)
 

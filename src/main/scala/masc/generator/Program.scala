@@ -27,6 +27,7 @@
  */
 
 package masc
+package generator
 
 import java.util.UUID
 
@@ -35,7 +36,7 @@ import dialects.Scala3
 
 import parser.Ambient.{ AST => _, _ }
 import parser.Calculus._
-import generator.Meta._
+import Meta._
 
 
 object Program:
