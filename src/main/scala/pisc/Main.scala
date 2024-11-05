@@ -41,6 +41,7 @@ import dialects.Scala3
 import parser.{ StochasticPi, Calculus }
 import StochasticPi.{ Actions, ln }
 import Calculus.{ `(*)`,  λ }
+import generator.Program
 
 
 object Main:
@@ -63,14 +64,14 @@ object Main:
         val bs = StochasticPi(source)
 
         val bind = bs.zipWithIndex
-        val prog_ = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
+        val prog_ = bind.filter(_._1.isRight).map(_.right.get -> _)
 
         val (prog, (discarded, excluded, enabled)) = StochasticPi(prog_.map(_._1))
 
         val ps = Program(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map { it => it._1.left.get -> it._2 }
+        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
           .sortBy(_._2)
