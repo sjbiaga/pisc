@@ -40,6 +40,7 @@ import dialects.Scala3
 
 import parser.Pi
 import Pi.ln
+import generator.Program
 
 
 object Main:
@@ -60,7 +61,7 @@ object Main:
         bwr = BufferedWriter(fwr)
 
         val bind = Pi(source).zipWithIndex
-        val prog = bind.filter(_._1.isRight).map { it => it._1.right.get -> it._2 }
+        val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
         val congruent = Pi.Χ()
 
@@ -69,7 +70,7 @@ object Main:
         val ps = Program(Pi(prog.map(_._1)))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map { it => it._1.left.get -> it._2 }
+        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
           .sortBy(_._2)
