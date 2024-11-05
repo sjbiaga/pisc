@@ -27,6 +27,7 @@
  */
 
 package pisc
+package generator
 
 import java.util.UUID
 
@@ -34,7 +35,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
-import generator.Meta._
+import Meta._
 
 
 object Program:

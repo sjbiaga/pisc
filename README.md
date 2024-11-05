@@ -53,7 +53,7 @@ The BNF formal grammar for processes is the following.
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                      | "!" [ "." μ "." ] CHOICE
-                     | IDENTIFIER POINTERS
+                     | IDENTIFIER ( POINTERS | "{" "}" )
                      | INVOCATION
                      | INSTANTIATION
     INSTANTIATION  ::= "⟦<CODE>" INSTANCE "<CODE>⟧" [ POINTERS ]
