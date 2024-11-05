@@ -376,7 +376,7 @@ object Expansion:
   extension[T <: AST](ast: T)
 
     def replace(using substitution: Map[String, λ | AST])
-               (using pointers: List[Symbol] = Nil): T =
+               (using pointers: Option[List[Symbol]] = None): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -437,16 +437,16 @@ object Expansion:
 
         case it @ `⟦⟧`(Encoding(_, _, _, _, _, variables), _, assign0) =>
           val n = assign0.map(_.size).getOrElse(0)
-          val assign1 = variables.drop(n) zip pointers.drop(n)
+          val assign1 = variables.drop(n) zip pointers.get.drop(n)
           val assign = assign0.map(_ ++ assign1).getOrElse(assign1)
           it.copy(assign = Some(assign))
 
         case `{}`(id, pointers) if substitution.contains(id) =>
           val pointers2 = pointers.map(replaced(_).asSymbol)
-          substitution(id).asInstanceOf[&].replace(using Map.empty)(using pointers2)
+          substitution(id).asInstanceOf[&].replace(using Map.empty)(using Some(pointers2))
 
         case `{}`(id, pointers0) =>
-          `{}`(id, pointers0 ++ pointers)
+          `{}`(id, pointers0 ++ pointers.get)
 
         case `(*)`(id, qual, params*) =>
           val params2 = params
