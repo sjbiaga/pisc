@@ -44,6 +44,7 @@ import generator.Meta.`()(null)`
 
 import StochasticPi._
 import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
@@ -127,7 +128,7 @@ abstract class StochasticPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Encoding]] = null
+  private[parser] var defn: Map[Int, List[Definition]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
   private[parser] var _nest = -1
@@ -175,6 +176,9 @@ object StochasticPi extends Expansion:
   trait Sum:
     val enabled: Actions
 
+
+  def line: Parser[Either[Bind, Definition]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
 
@@ -286,8 +290,8 @@ object StochasticPi extends Expansion:
         case it @ `⟦⟧`(_, sum, _, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers) =>
-          `(*)`(id, pointers.map(λ(_))*)
+        case `{}`(id, pointers, true, params*) =>
+          `(*)`(id, (params ++ pointers.map(λ(_)))*)
 
         case it =>
           it
@@ -441,7 +445,7 @@ object StochasticPi extends Expansion:
         case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), _sum, uuid, name, assign) =>
+        case `⟦⟧`(definition @ Definition(_, _, _, _, _, variables, _), _sum, uuid, name, assign) =>
           val n = assign.map(_.size).getOrElse(0)
 
           val sum = ( if variables.size == n
@@ -457,7 +461,7 @@ object StochasticPi extends Expansion:
           then
             it = insert_+(it)
 
-          (`⟦⟧`(encoding, it, uuid, name, assign), it.enabled)
+          (`⟦⟧`(definition, it, uuid, name, assign), it.enabled)
 
         case _: `{}` => ???
 
@@ -776,8 +780,8 @@ object StochasticPi extends Expansion:
 
       case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
-      case (`⟦⟧`(Encoding(lcode, _, _, _, lconstants, lvariables), lsum, _, lname, lassign)
-           ,`⟦⟧`(Encoding(rcode, _, _, _, rconstants, rvariables), rsum, _, rname, rassign))
+      case (`⟦⟧`(Definition(lcode, _, _, _, lconstants, lvariables, _), lsum, _, lname, lassign)
+           ,`⟦⟧`(Definition(rcode, _, _, _, rconstants, rvariables, _), rsum, _, rname, rassign))
           if lcode == rcode
           && lname == rname
           && lconstants == rconstants

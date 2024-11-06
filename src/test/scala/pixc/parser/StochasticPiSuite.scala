@@ -35,6 +35,7 @@ import munit.FunSuite
 
 import StochasticPi._
 import Calculus._
+import Encoding._
 import StochasticPiSuite._
 
 class StochasticPiSuite extends FunSuite:

@@ -32,10 +32,12 @@ package parser
 import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
 
 import scala.util.matching.Regex
+
 import scala.util.parsing.combinator._
 
 import StochasticPi.{ Names, Names2 }
-import Calculus.{ renamed, λ }
+import Calculus.λ
+import Encoding.renamed
 import Expression._
 
 

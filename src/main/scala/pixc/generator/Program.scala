@@ -35,6 +35,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
+import parser.Encoding.Definition
 import Meta._
 
 
@@ -302,17 +303,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, sum, uuid, Symbol(name), assign) =>
-          val ** = assign
-            .map { _.map(_.name -> _.name)
-                    .map(Pat.Var(_) -> _)
-                    .map(Enumerator.Val(_, _))
-                    .toList
-            }.getOrElse(Nil)
-
-          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(name, uuid) ++ sum.generate))
-
-        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _sum, _, _, assign) =>
+        case `⟦⟧`(Definition(_, _, _, _, _, variables, _), _sum, uuid, name, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -330,6 +321,11 @@ object Program:
                     )
 
           * = ** ++ sum.generate
+
+          name match
+            case Symbol(it) =>
+              * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(it, uuid) ++ *))
+            case _ =>
 
         case _: `{}` => ???
 
