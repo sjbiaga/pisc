@@ -35,6 +35,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
+import parser.Encoding.Definition
 import Meta._
 
 
@@ -277,7 +278,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Encoding(_, _, _, _, _, variables), _sum, assign) =>
+        case `⟦⟧`(Definition(_, _, _, _, _, variables, _), _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -291,7 +292,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(`||`(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
+                        `+`(||(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate()
