@@ -44,6 +44,7 @@ import generator.Meta.`()(null)`
 
 import StochasticPi._
 import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pisc.parser.Expansion
 
 
@@ -127,7 +128,7 @@ abstract class StochasticPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Encoding]] = null
+  private[parser] var defn: Map[Int, List[Definition]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
@@ -174,6 +175,9 @@ object StochasticPi extends Expansion:
   trait Sum:
     val enabled: Actions
 
+
+  def line: Parser[Either[Bind, Definition]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
 
@@ -285,8 +289,8 @@ object StochasticPi extends Expansion:
         case it @ `⟦⟧`(_, sum, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers) =>
-          `(*)`(id, pointers.map(λ(_))*)
+        case `{}`(id, pointers, true, params*) =>
+          `(*)`(id, (params ++ pointers.map(λ(_)))*)
 
         case it =>
           it
@@ -408,7 +412,7 @@ object StochasticPi extends Expansion:
         case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `⟦⟧`(encoding @ Encoding(_, _, _, _, _, variables), _sum, assign) =>
+        case `⟦⟧`(definition @ Definition(_, _, _, _, _, variables, _), _sum, assign) =>
           val n = assign.map(_.size).getOrElse(0)
 
           val sum = ( if variables.size == n
@@ -424,7 +428,7 @@ object StochasticPi extends Expansion:
           then
             it = insert_+(it)
 
-          (`⟦⟧`(encoding, it, assign), it.enabled)
+          (`⟦⟧`(definition, it, assign), it.enabled)
 
         case _: `{}` => ???
 
