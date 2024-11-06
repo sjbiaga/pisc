@@ -35,6 +35,7 @@ import munit.FunSuite
 
 import Pi._
 import Calculus._
+import Encoding._
 import PiSuite._
 
 class PiSuite extends FunSuite:

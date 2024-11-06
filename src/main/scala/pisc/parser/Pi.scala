@@ -42,6 +42,7 @@ import generator.Meta.`()(null)`
 
 import Pi._
 import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pisc.parser.Expansion
 
 
@@ -99,7 +100,7 @@ abstract class Pi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Encoding]] = null
+  private[parser] var defn: Map[Int, List[Definition]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
@@ -125,6 +126,9 @@ abstract class Pi extends Expression:
 
 
 object Pi extends Expansion:
+
+  def line: Parser[Either[Bind, Definition]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
 
@@ -233,8 +237,8 @@ object Pi extends Expansion:
         case it @ `⟦⟧`(_, sum, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers) =>
-          `(*)`(id, Nil, pointers.map(λ(_))*)
+        case `{}`(id, pointers, true, params*) =>
+          `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
 
         case it =>
           it
