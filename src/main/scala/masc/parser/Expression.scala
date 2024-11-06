@@ -32,10 +32,11 @@ package parser
 import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
 
 import scala.util.matching.Regex
+
 import scala.util.parsing.combinator._
 
 import Ambient.{ Names, Names2 }
-import Calculus.renamed
+import Encoding.renamed
 import Expression._
 
 

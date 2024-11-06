@@ -35,6 +35,7 @@ import munit.FunSuite
 
 import Ambient._
 import Calculus._
+import Encoding._
 import AmbientSuite._
 
 class AmbientSuite extends FunSuite:
