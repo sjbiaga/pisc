@@ -47,9 +47,10 @@ The BNF formal grammar for processes is the following.
                      | NAME "[" PARALLEL "]"
                      | "<" CAPS ">" [ EXPRESSION ]
                      | "go" NAME "." PARALLEL
-                     | IDENTIFIER ( POINTERS | "{" "}" )
+                     | CAPITAL
                      | INVOCATION
                      | INSTANTIATION
+    CAPITAL        ::= IDENTIFIER [ "(" [ NAMES ] ")" ] ( POINTERS | "{" "}" )
     INSTANTIATION  ::= "⟦<CODE>" INSTANCE "<CODE>⟧" [ POINTERS ]
     INVOCATION     ::= [ QUAL ] IDENTIFIER PARAMS
     PARAMS         ::= [ "(" NAMES ")" ]

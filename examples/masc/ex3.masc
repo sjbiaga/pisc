@@ -3,7 +3,7 @@
 Repl =      ! . (n) . n, n, n .
 #           ^ ^^^^^^^
 # __________| |_____|
-# replication  guard 
+# replication  guard
 
 Stop(m) = m[ <> ]
 #            ^^
