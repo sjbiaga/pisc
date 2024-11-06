@@ -42,6 +42,7 @@ import generator.Meta.`()(null)`
 
 import Pi._
 import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
@@ -99,7 +100,7 @@ abstract class Pi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Encoding]] = null
+  private[parser] var defn: Map[Int, List[Definition]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
   private[parser] var _nest = -1
@@ -126,6 +127,9 @@ abstract class Pi extends Expression:
 
 
 object Pi extends Expansion:
+
+  def line: Parser[Either[Bind, Definition]] =
+    equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
 
@@ -234,8 +238,8 @@ object Pi extends Expansion:
         case it @ `⟦⟧`(_, sum, _, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers) =>
-          `(*)`(id, Nil, pointers.map(λ(_))*)
+        case `{}`(id, pointers, true, params*) =>
+          `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
 
         case it =>
           it
@@ -434,8 +438,8 @@ object Pi extends Expansion:
 
       case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
-      case (`⟦⟧`(Encoding(lcode, _, _, _, lconstants, lvariables), lsum, _, lname, lassign)
-           ,`⟦⟧`(Encoding(rcode, _, _, _, rconstants, rvariables), rsum, _, rname, rassign))
+      case (`⟦⟧`(Definition(lcode, _, _, _, lconstants, lvariables, _), lsum, _, lname, lassign)
+           ,`⟦⟧`(Definition(rcode, _, _, _, rconstants, rvariables, _), rsum, _, rname, rassign))
           if lcode == rcode
           && lname == rname
           && lconstants == rconstants
