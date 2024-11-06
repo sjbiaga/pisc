@@ -35,6 +35,7 @@ import munit.FunSuite
 
 import PolyadicPi._
 import Calculus._
+import Encoding._
 import PolyadicPiSuite._
 
 class PolyadicPiSuite extends FunSuite:

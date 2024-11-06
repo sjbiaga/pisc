@@ -41,11 +41,11 @@ Nil(nil, x) = ⟦ Nil ⟧{x}
 ⟦ t"NIL" ⟧(nil){x} = ⟦ Nil ⟧{x}
 
 
-P(x, nil, cons) = ⟦ ⟦                        \
-                      Nil{nil} Cons ⟦ Nil ⟧  \
-                    ⟧                        \
-                    Cons                     \
-                    ⟦ NIL ⟧                  \
+P(x, nil, cons) = ⟦ ⟦                          \
+                      Nil(){nil} Cons ⟦ Nil ⟧  \
+                    ⟧                          \
+                    Cons                       \
+                    ⟦ NIL ⟧                    \
                   ⟧{x}
 
 Q(x, nil, cons) = ⟦ ⟦ Nil ⟧ Cons ⟦ Nil ⟧ ⟧{x}
