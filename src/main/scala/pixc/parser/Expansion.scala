@@ -442,7 +442,7 @@ object Expansion:
         case !(Some(it @ π(λ(ch: Symbol), _, false, given Option[Code], _)), sum) =>
           `!`(Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
 
-        case !(Some(it @ τ(given Option[Code])), sum) =>
+        case !(Some(it @ τ(given Option[Code], _)), sum) =>
           `!`(Some(it.copy(code = recoded)), sum.replace)
 
         case it @ !(_, sum) =>
