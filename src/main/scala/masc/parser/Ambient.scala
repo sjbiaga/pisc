@@ -29,11 +29,7 @@
 package masc
 package parser
 
-import scala.collection.mutable.{
-  LinkedHashMap => Map,
-  ListBuffer => MutableList,
-  LinkedHashSet => Set
-}
+import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
 import scala.util.parsing.combinator._
@@ -72,29 +68,25 @@ abstract class Ambient extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Definition]] = null
+  private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
   private[parser] var _cntr: Map[Int, Long] = null
-  protected final def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  protected final def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
-    val id = scala.collection.mutable.Seq.from(_id)
-    val ix = _ix
-    r match
-      case Success(it, in) => Some(it -> in)
-      case failure: NoSuccess if fail =>
-        scala.sys.error(failure.msg)
-      case _ =>
-       _ix = ix
-       _id = id
-       _cntr = cntr
-       _nest = nest
-       None
+    _id.save {
+      r match
+        case Success(it, in) => Some(it -> in)
+        case failure: NoSuccess if fail =>
+          scala.sys.error(failure.msg)
+        case _ =>
+         _cntr = cntr
+         _nest = nest
+         None
+    }
 
 
 object Ambient extends Expansion:
@@ -112,7 +104,7 @@ object Ambient extends Expansion:
   case class ζ(op: Op, amb: String) extends AST:
     override def toString: String = s"$op $amb"
 
-  def line: Parser[Either[Bind, Definition]] =
+  def line: Parser[Either[Bind, Define]] =
     equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[String]
@@ -121,64 +113,11 @@ object Ambient extends Expansion:
     def apply(): Names = Set()
     def apply(names: Names): Names = Set.from(names)
 
-  final case class Position(counter: Long, binding: Boolean)
-
-  final case class Occurrence(shadow: String | Option[String], position: Position):
-    val isBinding = if !position.binding then 0 else math.signum(position.counter)
-
-  object Binder:
-    def apply(self: Occurrence, υidυ: String) = Occurrence(υidυ, self.position)
-    def unapply(self: Occurrence): Option[String] =
-      self.shadow match
-        case it: String => Some(it)
-        case _ => None
-
-  object Shadow:
-    def apply(self: Occurrence, υidυ: String) = self.copy(shadow = Some(υidυ))
-    def unapply(self: Occurrence): Option[String] =
-      self.shadow match
-        case it @ Some(_) => it
-        case _ => None
-
-  type Names2 = Map[String, Occurrence]
-
-  object Names2:
-    def apply(): Names2 = Map()
-    def apply(binding2: Names2): Names2 = Map.from(binding2)
-    def apply(names: Names)
-             (using Names2): Unit =
-      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
-    def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
-        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-          throw UniquenessBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-          throw NonParameterBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) =>
-        case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
-
-
-  // exceptions
-
-  import Expression.ParsingException
-
-  abstract class BindingParsingException(msg: String, cause: Throwable = null)
-      extends ParsingException(msg
-                                 + s" at nesting level #$_nest"
-                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
-
-  case class UniquenessBindingParsingException(name: String, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
-
-  case class NonParameterBindingParsingException(name: String, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
-
 
   // functions
+
+  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
+  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   extension[T <: Calculus.AST](ast: T)
 
@@ -205,7 +144,7 @@ object Ambient extends Expansion:
         case it @ `go.`(_, par) =>
           it.copy(par = par.shallow)
 
-        case it @ `⟦⟧`(_, par, _) =>
+        case it @ `⟦⟧`(_, _, par, _) =>
           it.copy(par = par.shallow)
 
         case `{}`(id, pointers, true, params*) =>
@@ -215,7 +154,7 @@ object Ambient extends Expansion:
           it
 
   def ensure(using prog: List[Bind]): Unit =
-    import Ensure._
+    import helper.Ensure._
 
     val i = main
 
@@ -255,8 +194,7 @@ object Ambient extends Expansion:
     self = Set()
     _nest = 0
     _cntr = Map(0 -> 0L)
-    _id = scala.collection.mutable.Seq('0')
-    _ix = 0
+    _id = new helper.υidυ
     i = 0
     l = (0, 0)
 

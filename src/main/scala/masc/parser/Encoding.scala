@@ -29,7 +29,11 @@
 package masc
 package parser
 
-import scala.collection.mutable.{ ListBuffer => MutableList, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  LinkedHashMap => Map,
+  ListBuffer => MutableList,
+  LinkedHashSet => Set
+}
 
 import scala.meta.Term
 
@@ -39,11 +43,12 @@ import Expression.Code
 import Ambient.{ AST => _, _ }
 import Calculus._
 import Encoding._
+import scala.util.parsing.combinator.masc.parser.Expansion.replace
 
 
 abstract class Encoding extends Calculus:
 
-  def definition: Parser[Definition] =
+  def definition: Parser[Define] =
     template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( pointers ) <~"=" >> {
       case (term, _parameters) ~ _constants ~ _variables =>
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
@@ -70,7 +75,7 @@ abstract class Encoding extends Calculus:
             then
               eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par
             val `macro` = Macro(parameters.toList, constants, variables, given_Names2, par)
-            Definition(_code, term, Some(`macro`), Nil, constants, variables, par)
+            `macro` -> Definition(_code, term, constants, variables, par)
         }
     }
 
@@ -81,21 +86,23 @@ abstract class Encoding extends Calculus:
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
                  then
-                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head.term.isEmpty }
+                   val def1 = defn.filter { (_, it) => it.size == 1 && it.head._2.term.isEmpty }
                    if def1.size == 1
-                   then def1.head._2.head.code
+                   then def1.head._2.head._2.code
                    else -1
                  else
                    grp1.toInt
       defn.get(code) match {
         case Some(it) => it
-        case _ if grp1.nonEmpty => throw NoDefinitionException(grp1.toInt)
-        case _ => defn.values.reduce(_ ++ _).filterNot(_.term.isEmpty)
+        case _ if grp1.nonEmpty || defn.isEmpty =>
+          throw NoDefinitionException(code max 0)
+        case _ =>
+          defn.values.reduce(_ ++ _).filterNot(_._2.term.isEmpty)
       } match
-        case (definition @ Definition(_, None, _, _, _, _, _)) :: Nil =>
+        case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
           (parallel <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
             case (par, free) ~ ps =>
-              (`⟦⟧`(definition, par) -> free) -> ps
+              (`⟦⟧`(definition, definition.variables, par) -> free) -> ps
           }
         case it =>
           (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
@@ -103,20 +110,21 @@ abstract class Encoding extends Calculus:
               exp -> ps
           }
     } ^^ {
-      case ((exp @ `⟦⟧`(Definition(_, _, _, _, constants, variables, _), _, _), free), _pointers) =>
+      case ((exp @ `⟦⟧`(Definition(_, _, constants, _, _), variables, _, _), free), _pointers) =>
         nest(false)
         given MutableList[(String, String)]()
         val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
         val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_String_String, given_Names2))
+        Expression.replacing = None
         given Names = Names()
         val exp2 = exp.copy(assign = assign).rename(free)
         binding2 ++= given_Names2.filter(_._2.isBinding < 0)
         exp2 -> (free ++ constants)
     }
 
-  def instance(defs: List[Definition], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+  def instance(defs: List[Define], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
 
   private def pointers: Parser[(List[String], Names)] =
     "{"~>rep1sep(name, ",")<~"}" ^^ { ps =>
@@ -145,14 +153,16 @@ abstract class Encoding extends Calculus:
 
 object Encoding:
 
-  import scala.annotation.tailrec
+  type Define = (Macro, Definition)
+
+  type Fresh = (Definition, List[Option[String]])
 
   case class Macro(parameters: List[String],
                    constants: Names,
                    variables: Names,
                    binding2: Names2,
                    par: ||):
-    def apply(code: Int, term: Term): Definition =
+    def apply(code: Int, term: Term): Fresh =
       given refresh: MutableList[(String, String)] = MutableList()
       val variables2 = variables
         .map { it =>
@@ -162,6 +172,7 @@ object Encoding:
         }
       given Names2 = Names2(this.binding2)
       Expression.renaming = Some((refresh, given_Names2))
+      Expression.replacing = None
       given Names = Names()
       val par2 = par.rename(Set.empty, definition = true)
       val binding2 = given_Names2.filter(_._2.isBinding < 0)
@@ -178,28 +189,72 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      Definition(code, Some(term), None, shadows, constants, variables2, par2)
+      Definition(code, Some(term), constants, variables2, par2) -> shadows
 
   case class Definition(code: Int,
                         term: Option[Term],
-                        `macro`: Option[Macro],
-                        shadows: List[Option[String]],
                         constants: Names,
                         variables: Names,
                         par: ||):
-    override def toString: String =
-      ( term match
-          case Some(term) => if code == 0 then s"⟦ $term ⟧" else s"⟦$code $term $code⟧"
-          case _ => if code == 0 then s"⟦ ⟧" else s"⟦$code $code⟧"
-      ) + (if constants.isEmpty then "" else constants.mkString("(", ", ", ")"))
-        + (if variables.isEmpty then "" else variables.mkString("{", ", ", "}"))
-        + " = " + par
+    inline def apply()(using Map[String, String | AST]): `⟦⟧` =
+      `⟦⟧`(this, variables, par.replace.flatten)
+
+    override def toString: String = Definition(code, term)
+      + (if constants.isEmpty then "" else constants.mkString("(", ", ", ")"))
+      + (if variables.isEmpty then "" else variables.mkString("{", ", ", "}"))
+      + " = " + par
+
+  object Definition:
+
+    def apply(code: Int, term: Option[Term]): String =
+      term match
+        case Some(term) => if code == 0 then s"⟦ $term ⟧" else s"⟦$code $term $code⟧"
+        case _ => if code == 0 then s"⟦ ⟧" else s"⟦$code $code⟧"
+
+  final case class Position(counter: Long, binding: Boolean)
+
+  final case class Occurrence(shadow: String | Option[String], position: Position):
+    val isBinding = if !position.binding then 0 else math.signum(position.counter)
+
+  object Binder:
+    def apply(self: Occurrence, υidυ: String) = Occurrence(υidυ, self.position)
+    def unapply(self: Occurrence): Option[String] =
+      self.shadow match
+        case it: String => Some(it)
+        case _ => None
+
+  object Shadow:
+    def apply(self: Occurrence, υidυ: String) = self.copy(shadow = Some(υidυ))
+    def unapply(self: Occurrence): Option[String] =
+      self.shadow match
+        case it @ Some(_) => it
+        case _ => None
+
+  type Names2 = Map[String, Occurrence]
+
+  object Names2:
+    def apply(): Names2 = Map()
+    def apply(binding2: Names2): Names2 = Map.from(binding2)
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
+    def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      binding2.get(name) match
+        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+          throw UniquenessBindingParsingException(name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
+          throw NonParameterBindingParsingException(name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) =>
+        case _ =>
+          binding2 += name -> Occurrence(shadow, pos(true))
 
 
   // exceptions
 
   import Expression.ParsingException
-  import Ambient.BindingParsingException
 
   case class NoDefinitionException(code: Int)
       extends ParsingException(s"No definition for encoding $code")
@@ -210,15 +265,28 @@ object Encoding:
   case class DefinitionFreeNamesException(code: Int, free: Names)
       extends EquationParsingException(s"""The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code""")
 
+  abstract class BindingParsingException(msg: String, cause: Throwable = null)
+      extends ParsingException(msg
+                                 + s" at nesting level #$_nest"
+                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
+
   case class NoBindingParsingException(name: String)
       extends BindingParsingException(s"No binding for $name")
+
+  case class UniquenessBindingParsingException(name: String, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+
+  case class NonParameterBindingParsingException(name: String, hardcoded: Boolean)
+      extends BindingParsingException(s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
 
 
   // functions
 
+  import scala.annotation.tailrec
+
   @tailrec
-  def shadow(it: String)
-            (using binding2: Names2): Option[Occurrence] =
+  private def shadow(it: String)
+                    (using binding2: Names2): Option[Occurrence] =
     if binding2.contains(it)
     then
       binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
@@ -243,11 +311,11 @@ object Encoding:
             case _ if binding2.contains(it) => it
             case _ => throw NoBindingParsingException(it)
 
-  def recoded(free: Names)
-             (using code: Option[Code])
-             (using MutableList[(String, String)])
-             (using Names2)
-             (using binding: Names): Option[Code] =
+  private def recoded(free: Names)
+                     (using code: Option[Code])
+                     (using MutableList[(String, String)])
+                     (using Names2)
+                     (using binding: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
       val (code2, names) = Expression.recode(term)
@@ -293,7 +361,7 @@ object Encoding:
         case `go.`(_, par) =>
           par.capitals
 
-        case `⟦⟧`(_, par, _) =>
+        case `⟦⟧`(_, _, par, _) =>
           par.capitals
 
         case `{}`(id, _, false) => Set(id)
@@ -377,7 +445,7 @@ object Encoding:
         case `go.`(amb, par) =>
           `go.`(renamed(amb), rename(par))
 
-        case it @ `⟦⟧`(definition @ Definition(_, _, _, _, _, variables, _), par, assign) =>
+        case it @ `⟦⟧`(_, variables, par, assign) =>
           val n = refresh.size
           val assign2 = assign
             .map(
@@ -395,10 +463,9 @@ object Encoding:
               υidυ
             }
           variables2 = assign2.map(_.map(_._1)).getOrElse(Names()) ++ variables2
-          val definition2 = definition.copy(variables = variables2)
           val par2 = rename(par)
           refresh.dropInPlace(refresh.size - n)
-          it.copy(definition = definition2, par = par2, assign = assign2)
+          it.copy(variables = variables2, par = par2, assign = assign2)
 
         case `{}`(id, pointers, agent, params*) =>
           val pointers2 = pointers.map(renamed(_))
@@ -415,28 +482,6 @@ object Encoding:
 
           `(*)`(id, qual, params2*)
 
-  private[parser] var _id: scala.collection.mutable.Seq[Char] = null
-  private[parser] var _ix: Int = -1
-  /**
-    * @return unique identifier of the form "_υ[0-9a-zA-Z]+υ"
-    */
-  def id: String =
-    var reset = false
-    while _ix >= 0 && _id(_ix) == 'Z'
-    do
-      _id(_ix) = '0'
-      _ix -= 1
-      reset = true
-    if _ix < 0
-    then
-      _id :+= '1'
-    else
-      _id(_ix) match
-        case 'z' =>
-          _id(_ix) = 'A'
-        case '9' =>
-          _id(_ix) = 'a'
-        case it =>
-          _id(_ix) = (it + 1).toChar
-    if reset then _ix = _id.size - 1
-    "_υ" + _id.mkString + "υ"
+  private[parser] var _id: helper.υidυ = null
+
+  def id = _id()
