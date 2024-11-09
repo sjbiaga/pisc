@@ -262,10 +262,21 @@ object Calculus:
     override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
 
   case class `⟦⟧`(definition: Definition,
+                  variables: Names,
                   sum: +,
                   assign: Option[Set[(Symbol, Symbol)]] = None) extends AST:
     override def toString: String =
-      s"""$definition${assign.map{_.map(_.name + " = " + _.name).mkString("{", ", ", "}")}.getOrElse("")} = $sum"""
+      val vars = ( if variables.nonEmpty
+                   then
+                     variables.map {
+                       case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
+                         s"${it.name} = ${assign.get.find(_._1 == it).get._2.name}"
+                       case it => it.name
+                     }.mkString("{", ", ", "}")
+                   else
+                     ""
+                 )
+      s"""${Definition(definition.code, definition.term)}$vars = $sum"""
 
   case class `{}`(identifier: String,
                   pointers: List[Symbol],
@@ -381,7 +392,7 @@ object Calculus:
         case it @ !(_, sum) =>
           it.copy(sum = sum.flatten)
 
-        case it @ `⟦⟧`(_, sum, _) =>
+        case it @ `⟦⟧`(_, _, sum, _) =>
           it.copy(sum = sum.flatten)
 
         case _ => ast

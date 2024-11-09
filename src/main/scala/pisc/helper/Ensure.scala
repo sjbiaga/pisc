@@ -27,8 +27,9 @@
  */
 
 package pisc
+package helper
 
-import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{ HashMap => Map }
 
 import parser.Calculus._
 
@@ -100,7 +101,7 @@ object Ensure:
         case !(_, sum) =>
           sum.recursive(stack.size)
 
-        case `⟦⟧`(_, sum, _) =>
+        case `⟦⟧`(_, _, sum, _) =>
           sum.recursive
 
         case _: `{}` => ???
