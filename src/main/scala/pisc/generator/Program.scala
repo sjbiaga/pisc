@@ -29,20 +29,18 @@
 package pisc
 package generator
 
-import java.util.UUID
-
 import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
-import parser.Encoding.Definition
 import Meta._
 
 
 object Program:
 
   def apply(prog: List[Bind]): List[String] =
-    prog.map { (bind, sum) => defn(bind, sum.generate).toString }
+    _id = new helper.υidυ
+    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
 
 
   extension(node: Pre | AST)
@@ -96,15 +94,15 @@ object Program:
 
 
         case it @ τ(Some((Left(enums)), _), r) =>
-          * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+          * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
           * ++= enums
 
         case it @ τ(Some((Right(term)), _), r) =>
-          * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+          * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
           * :+= `_ <- IO { * }`(term)
 
         case it @ τ(_, r) =>
-          * = `_ <- *`(s"""τ(${rate(r)})("${it.uuid}")""".parse[Term].get)
+          * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
 
 
         case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some((Left(enums)), _)) =>
@@ -112,7 +110,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -122,7 +120,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -130,7 +128,7 @@ object Program:
         case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply( \(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get :: \(arg) :: Nil, None)),
-                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                        ))
 
         case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some((Left(enums)), _)) =>
@@ -138,7 +136,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -148,7 +146,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -156,7 +154,7 @@ object Program:
         case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
-                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                        ))
 
         case it @ π(λ(Symbol(ch)), λ(arg), false, r, Some((Left(enums)), _)) =>
@@ -164,7 +162,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -174,7 +172,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                           Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                           Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                          ),
                          Term.ArgClause(code::Nil, None)
                        ))
@@ -182,7 +180,7 @@ object Program:
         case it @ π(λ(Symbol(ch)), λ(arg), false, r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::s"$arg".parse[Term].get::Nil, None)),
-                         Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                         Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                        ))
 
         case π(_, _, true, _, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
@@ -192,7 +190,7 @@ object Program:
                                    Term.Apply(
                                      Term.Apply(
                                        Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::Nil, None)),
-                                       Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                                       Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                                      ),
                                      Term.ArgClause(code::Nil, None)
                                    ))
@@ -201,7 +199,7 @@ object Program:
           * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                    Term.Apply(
                                      Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::Nil, None)),
-                                     Term.ArgClause(s""""${it.uuid}"""".parse[Term].get::Nil, None)
+                                     Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                                    ))
 
         case _: π => ??? // caught by parser
@@ -238,10 +236,10 @@ object Program:
         // REPLICATION /////////////////////////////////////////////////////////
 
         case !(Some(π @ π(_, λ(Symbol(par)), true, _, _)), sum) =>
-          val uuid = id
+          val υidυ = id
 
           val `!.π⋯` = π.generate ++
-                       `_ <- *`(s"$uuid($par)(`π-uuid`)".parse[Term].get)
+                       `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
@@ -251,21 +249,21 @@ object Program:
                            )
                    )
 
-          * = `* <- *`(uuid -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(uuid -> par, it)) :: `!.π⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
-          val uuid = id
-          val uuid2 = id
+          val υidυ = id
+          val υidυ2 = id
 
           val `μ.generate` = μ.generate match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              it.copy(pat = Pat.Var(uuid2)) :: tl
+              it.copy(pat = Pat.Var(υidυ2)) :: tl
 
-          val `!.μ⋯` = `μ.generate` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
+          val `!.μ⋯` = `μ.generate` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
                                                                           Type.ArgClause(Nil),
                                                                           Term.ArgClause(Lit.Null() :: Nil, None)),
                                                           `IO.cede`,
-                                                          s"$uuid(`π-uuid`)".parse[Term].get,
+                                                          s"$υidυ(`π-uuid`)".parse[Term].get,
                                                           Nil)
                                                 }
 
@@ -274,7 +272,7 @@ object Program:
                      `!.μ⋯`
                    )
 
-          * = `* <- *`(uuid -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(uuid, it)) :: `!.μ⋯`
+          * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
@@ -283,7 +281,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, _, _, variables, _), _sum, assign) =>
+        case `⟦⟧`(_, variables, _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -327,4 +325,6 @@ object Program:
 
       *
 
-  def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
+  private[generator] var _id = new helper.υidυ
+
+  def id = _id()

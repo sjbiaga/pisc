@@ -40,22 +40,19 @@ import parser.Calculus.{ `(*)`, Expr }
 
 object Meta:
 
-  def defn(bind: `(*)`, prog: Term): Defn.Def =
-    val identifier = bind.identifier
-    val params = bind.params.map(_.asSymbol.name)
-
-    if identifier == "Main" && params.isEmpty
-    then
+  def defn(body: Term): `(*)` => Defn.Def =
+    case `(*)`("Main") =>
       Defn.Def(Nil,
-               identifier,
+               "Main",
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
                  `String*`("args") :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
-               prog
+               body
       )
-    else
+    case `(*)`(identifier, _params*) =>
+      val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
                identifier,
                Member.ParamClauseGroup(
@@ -63,7 +60,7 @@ object Meta:
                  `(…)`(params*) :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
                ) :: Nil,
                `: IO[Any]`,
-               prog
+               body
       )
 
 
