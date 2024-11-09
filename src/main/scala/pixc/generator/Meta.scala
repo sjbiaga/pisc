@@ -39,19 +39,16 @@ import parser.Calculus.{ `(*)`, Expr }
 
 object Meta:
 
-  def defn(bind: `(*)`, prog: Term): Defn.Def =
-    val identifier = bind.identifier
-    val params = bind.params.map(_.asSymbol.name)
-
-    if identifier == "Main" && params.isEmpty
-    then
+  def defn(body: Term): `(*)` => Defn.Def =
+    case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               identifier, `String*`("args"), `: IO[Any]`,
-               prog)
-    else
+               "Main", `String*`("args"), `: IO[Any]`,
+               body)
+    case `(*)`(identifier, _, _params*) =>
+      val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
                identifier, `(…)`(params*), `: IO[Any]`,
-               prog)
+               body)
 
 
   private def `* ==== …`(* : Any, ** : Term): Term =
@@ -272,12 +269,12 @@ object Meta:
     Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
 
 
-  def `* <- χ; _ <- }{()(, *)`(name: String, uuid: String): List[Enumerator] =
-    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(uuid) :: Nil, None))) ::
+  def `* <- χ; _ <- }{()(, *)`(name: String, υidυ: String): List[Enumerator] =
+    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(υidυ) :: Nil, None))) ::
     `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) :: Nil
 
-  def `* <- }{(*)()()`(name: String, uuid: String): Enumerator =
-    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(uuid) :: Nil, None)),
+  def `* <- }{(*)()()`(name: String, υidυ: String): Enumerator =
+    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(υidυ) :: Nil, None)),
                                 Term.ArgClause(\(")(") :: Nil, None)))
 
   def `_ <- }{(*)()()`(name: String): Enumerator =
