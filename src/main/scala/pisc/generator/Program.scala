@@ -29,20 +29,18 @@
 package pisc
 package generator
 
-import java.util.UUID
-
 import scala.meta._
 import dialects.Scala3
 
 import parser.Calculus._
-import parser.Encoding.Definition
 import Meta._
 
 
 object Program:
 
-  def apply(bind: List[Bind]): List[String] =
-    bind.map { case (bind, sum) => defn(bind, sum.generate).toString }
+  def apply(prog: List[Bind]): List[String] =
+    _id = new helper.υidυ
+    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
 
 
   extension(node: Pre | AST)
@@ -215,11 +213,11 @@ object Program:
         ////// REPLICATION /////////////////////////////////////////////////////
 
         case `!`(Some(π @ π(_, true, _, params*)), sum) =>
-          val uuid = id
+          val υidυ = id
 
           val args = params.map(_.asSymbol.name)
 
-          val `!.π⋯` = π.generate() :+ `_ <- *`(Term.Apply(\(uuid),
+          val `!.π⋯` = π.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
                                                            Term.ArgClause(args.map(\(_)).toList, None)))
 
           val it = Term.If(Term.ApplyUnary("!", args.head),
@@ -230,21 +228,21 @@ object Program:
                            )
                    )
 
-          * = `* <- *`(uuid -> `IO { def *(*: ()): IO[Unit] = …; * }`(uuid, it, args*)) :: `!.π⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Unit] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
-          val uuid = id
-          val uuid2 = id
+          val υidυ = id
+          val υidυ2 = id
 
           val `μ.generate()` = μ.generate() match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              it.copy(pat = Pat.Var(uuid2)) :: tl
+              it.copy(pat = Pat.Var(υidυ2)) :: tl
 
-          val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(uuid2), \("eq"),
+          val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
                                                                             Type.ArgClause(Nil),
                                                                             Term.ArgClause(\("None") :: Nil, None)),
                                                             `IO.cede`,
-                                                            uuid,
+                                                            υidυ,
                                                             Nil)
                                                   }
 
@@ -253,24 +251,24 @@ object Program:
                      `!.μ⋯`
                    )
 
-          * = `* <- *`(uuid -> `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `!.μ⋯`
+          * = `* <- *`(υidυ -> `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `!.μ⋯`
 
         case !(_, sum) =>
-          val uuid = id
+          val υidυ = id
 
           val it = `( *, … ).parMapN { (_, …) => }`(
                      sum.generate(),
-                     `_ <- IO.unit` :: `_ <- *`(uuid)
+                     `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
 
-          * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
+          * = `* <- *`(υidυ, `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
 
         ///////////////////////////////////////////////////////// replication //
 
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, _, _, variables, _), _sum, assign) =>
+        case `⟦⟧`(_, variables, _sum, assign) =>
           val ** = assign
             .map { _.map(_.name -> _.name)
                     .map(Pat.Var(_) -> _)
@@ -318,4 +316,7 @@ object Program:
 
       *
 
-  def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
+
+  private[generator] var _id: helper.υidυ = null
+
+  def id = _id()

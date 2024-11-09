@@ -37,6 +37,8 @@ import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
 
 import scala.meta.Term
 
+import _root_.pisc.parser.Expression
+import Expression.Code
 import _root_.pisc.parser.{ Encoding, & }
 import _root_.pisc.parser.PolyadicPi._
 import _root_.pisc.parser.Calculus._
@@ -67,7 +69,7 @@ abstract class Expansion extends Encoding:
   private val open = """⟦\d*""".r
   private val closed = """\d*⟧""".r
 
-  def instance(defs: List[Definition], end: String)
+  def instance(defs: List[Define], end: String)
               (using Names2): Parser[(`⟦⟧`, Names)] =
     var idx = -1
 
@@ -76,9 +78,9 @@ abstract class Expansion extends Encoding:
       private def expand(in: Input, end: Either[String, String])
                         (using binding2: Names2)
                         (using substitution: Map[String, λ | AST])
-                        (using free: Names): ((Definition, Term)) => ParseResult[Definition] =
+                        (using free: Names): ((Fresh, Term)) => ParseResult[Fresh] =
 
-        case (definition, _rhs @ (Term.Name(_) | Term.Placeholder())) =>
+        case (it @ (_, shadows), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
 
           var source = in.source
@@ -106,7 +108,7 @@ abstract class Expansion extends Encoding:
                   offset = in.offset
                   start = handleWhiteSpace(source, offset)
 
-                  Success(definition, in.drop(start + end.map(_.length).getOrElse(0) - offset))
+                  Success(it, in.drop(start + end.map(_.length).getOrElse(0) - offset))
 
                 case it =>
                   Failure("instantiation expected", it.next)
@@ -139,7 +141,7 @@ abstract class Expansion extends Encoding:
                         )
                 val result = source.subSequence(start, start + n).toString
 
-                var fail: Option[ParseResult[Definition]] = None
+                var fail: Option[ParseResult[Fresh]] = None
 
                 if result.isBlank
                 || result.strip == "_"
@@ -159,14 +161,14 @@ abstract class Expansion extends Encoding:
                   then
 
                     parseAll(name, result) match
-                      case Success((λ(name: Symbol), free2), _) =>
-                        definition.shadows(idx) match
+                      case Success((λ(it: Symbol), free2), _) =>
+                        shadows(idx) match
                           case shadow @ Some(_) =>
-                            Names2(name, shadow)
+                            Names2(it, shadow)
                           case _ =>
-                            binding2.find { case (`name`, Shadow(_)) => true case _ => false } match
+                            binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(it))) => substitution(rhs) = λ(it)
-                              case _ => substitution(rhs) = λ(name)
+                              case _ => substitution(rhs) = λ(it)
                             free ++= free2 -- binding2.map(_._1)
                         idx += 1
 
@@ -183,7 +185,7 @@ abstract class Expansion extends Encoding:
                 fail match
                   case Some(it) => it
                   case _ =>
-                    Success(definition, in.drop(start + n - offset))
+                    Success(it, in.drop(start + n - offset))
 
               case _ =>
                 val found = if start == source.length
@@ -191,7 +193,7 @@ abstract class Expansion extends Encoding:
                             else "'"+source.charAt(start)+"'"
                 Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset))
 
-        case (definition, Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), Term.Name(op), _, List(rhs))) =>
+        case (it @ (_, shadows), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), Term.Name(op), _, List(rhs))) =>
           val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
 
           var source = in.source
@@ -219,7 +221,7 @@ abstract class Expansion extends Encoding:
                   offset = in.offset
                   start = handleWhiteSpace(source, offset)
 
-                  expand(in.drop(start + op.length - offset), end)(definition -> rhs)
+                  expand(in.drop(start + op.length - offset), end)(it -> rhs)
 
                 case it =>
                   Failure("instantiation expected", it.next)
@@ -239,7 +241,7 @@ abstract class Expansion extends Encoding:
             case Some(matched) =>
               val result = source.subSequence(start, start + matched.end - op.length).toString
 
-              var fail: Option[ParseResult[Definition]] = None
+              var fail: Option[ParseResult[Fresh]] = None
 
               if result.isBlank
               || result.strip == "_"
@@ -248,14 +250,14 @@ abstract class Expansion extends Encoding:
               else if lhs.charAt(0).isLower || lhs == "_"
               then
                 parseAll(name, result) match
-                  case Success((λ(name: Symbol), free2), _) =>
-                    definition.shadows(idx) match
+                  case Success((λ(it: Symbol), free2), _) =>
+                    shadows(idx) match
                       case shadow @ Some(_) =>
-                        Names2(name, shadow)
+                        Names2(it, shadow)
                       case _ =>
-                        binding2.find { case (`name`, Shadow(_)) => true case _ => false } match
+                        binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                           case Some((_, Shadow(it))) => substitution(lhs) = λ(it)
-                          case _ => substitution(lhs) = λ(name)
+                          case _ => substitution(lhs) = λ(it)
                         free ++= free2 -- binding2.map(_._1)
                     idx += 1
 
@@ -272,7 +274,7 @@ abstract class Expansion extends Encoding:
               fail match
                 case Some(it) => it
                 case _ =>
-                  expand(in.drop(start + matched.end - offset), end)(definition -> rhs)
+                  expand(in.drop(start + matched.end - offset), end)(it -> rhs)
 
             case _ =>
               val found = if start == source.length
@@ -280,8 +282,8 @@ abstract class Expansion extends Encoding:
                           else "'"+source.charAt(start)+"'"
               Failure("operator '"+op+"' expected but "+found+" found", in.drop(start - offset))
 
-        case (definition, Term.ApplyInfix(lhs: Term.ApplyInfix, Term.Name(op), _, List(rhs))) =>
-          expand(in, Right(op))(definition -> lhs) match
+        case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, Term.Name(op), _, List(rhs))) =>
+          expand(in, Right(op))(it -> lhs) match
 
             case Success(_, _in) =>
               var in = _in
@@ -307,30 +309,30 @@ abstract class Expansion extends Encoding:
               (Pattern.quote(end.orElse(end.swap).right.get).r findPrefixMatchOf s) match
 
                 case Some(matched) =>
-                  Success(definition, in.drop(start + matched.end - offset))
+                  Success(it, in.drop(start + matched.end - offset))
 
                 case _ if placeholder =>
                   Failure(s"${end.orElse(end.swap).right.get} expected", in)
 
                 case _ =>
-                  expand(in, end)(definition -> rhs)
+                  expand(in, end)(it -> rhs)
 
             case it => it
 
-        case (definition, Term.AnonymousFunction(body)) =>
-          expand(in, end)(definition -> body)
+        case (it, Term.AnonymousFunction(body)) =>
+          expand(in, end)(it -> body)
 
         case _ => ??? /* caught by template */
 
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         val binding2 = summon[Names2]
 
-        var r: Option[(Definition, (Map[String, λ | AST], (Names, Names2)), Input)] = None
+        var r: Option[(Fresh, (Map[String, λ | AST], (Names, Names2)), Input)] = None
 
         var ls = defs
         while ls.nonEmpty
         do
-          val Definition(code, Some(term), Some(_macro), _, _, _, _) = ls.head : @unchecked
+          val (_macro, Definition(code, Some(term), _, _, _)) = ls.head : @unchecked
           ls = ls.tail
 
           given Map[String, λ | AST]()
@@ -344,12 +346,14 @@ abstract class Expansion extends Encoding:
             case _ =>
 
         r match
-          case Some((definition, (given Map[String, λ | AST], (free, given Names2)), in)) =>
+          case Some(((definition, _), (given Map[String, λ | AST], (free, given Names2)), in)) =>
             binding2 ++= given_Names2.filter(_._2.isBinding < 0)
-            Success(`⟦⟧`(definition, definition.sum.replace.flatten) -> free, in)
+            Expression.renaming = None
+            Expression.replacing = Some(given_Map_String_|)
+            Success(definition() -> free, in)
           case _ => throw UndefinedParsingException
 
-    }.named(s"""⟦${if defs.size == 1 then defs.head.code.toString else ""}⟧""")
+    }.named(s"""⟦${if defs.size == 1 then defs.head._2.code.toString else ""}⟧""")
 
 
 object Expansion:
@@ -367,11 +371,20 @@ object Expansion:
 
   // functions
 
-  private def replaced(name: Symbol)
-                      (using substitution: Map[String, λ | AST]): λ =
+  def replaced(name: Symbol)
+              (using substitution: Map[String, λ | AST]): λ =
     substitution.get(name.name) match
       case Some(it: λ) => it
       case _ => λ(name)
+
+  private def recoded(using code: Option[Code]): Option[Code] =
+    code.map { (_, orig) =>
+      Expression(orig)._1 match
+        case Term.ForYield(enums, _) =>
+          (Left(enums), orig)
+        case term =>
+          (Right(term), orig)
+    }
 
 
   extension[T <: AST](ast: T)
@@ -394,14 +407,16 @@ object Expansion:
         case `.`(end, _it*) =>
           val it = _it.map {
             case π(λ(ch: Symbol), true, code, _names*) =>
+              given Option[Code] = code
               val names = _names.map(_.asSymbol).map(replaced(_))
-              π(replaced(ch), true, code, names*)
+              π(replaced(ch), true, recoded, names*)
             case π(λ(ch: Symbol), false, code, _names*) =>
+              given Option[Code] = code
               val names = _names.map {
                 case λ(arg: Symbol) => replaced(arg)
                 case it => it
               }
-              π(replaced(ch), false, code, names*)
+              π(replaced(ch), false, recoded, names*)
             case it => it
           }
           `.`(end.replace, it*)
@@ -419,26 +434,31 @@ object Expansion:
           ?:(cond, t.replace, f.map(_.replace))
 
         case !(Some(π(λ(ch: Symbol), true, code, _names*)), sum) =>
+          given Option[Code] = code
           val names = _names.map(_.asSymbol).map(replaced(_))
-          `!`(Some(π(replaced(ch), true, code, names*)), sum.replace)
+          `!`(Some(π(replaced(ch), true, recoded, names*)), sum.replace)
 
         case !(Some(π(λ(ch: Symbol), false, code, _names*)), sum) =>
+          given Option[Code] = code
           val names = _names.map {
             case λ(arg: Symbol) => replaced(arg)
             case it => it
           }
-          `!`(Some(π(replaced(ch), false, code, names*)), sum.replace)
+          `!`(Some(π(replaced(ch), false, recoded, names*)), sum.replace)
+
+        case !(Some(it @ τ(given Option[Code])), sum) =>
+          `!`(Some(it.copy(code = recoded)), sum.replace)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.replace)
 
-        case it @ `⟦⟧`(_, sum, _assign) if pointers.isEmpty =>
+        case it @ `⟦⟧`(_, _, sum, _assign) if pointers.isEmpty =>
           val assign = _assign.map(_.map(_ -> replaced(_).asSymbol))
           it.copy(sum = sum.replace, assign = assign)
 
-        case it @ `⟦⟧`(Definition(_, _, _, _, _, variables, _), _, assign0) =>
+        case it @ `⟦⟧`(_, variables, _, assign0) =>
           val n = assign0.map(_.size).getOrElse(0)
-          val assign1 = variables.drop(n) zip pointers.get.drop(n)
+          val assign1 = variables.drop(n) zip pointers.get
           val assign = assign0.map(_ ++ assign1).getOrElse(assign1)
           it.copy(assign = Some(assign))
 
@@ -458,6 +478,8 @@ object Expansion:
             }
 
           `{}`(id, pointers2 ++ pointers.getOrElse(Nil), true, params2*)
+
+        case _: `{}` => ???
 
         case `(*)`(id, qual, params*) =>
           val params2 = params

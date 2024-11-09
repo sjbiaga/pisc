@@ -39,19 +39,16 @@ import parser.Calculus.{ `(*)`, Expr }
 
 object Meta:
 
-  def defn(bind: `(*)`, prog: Term): Defn.Def =
-    val identifier = bind.identifier
-    val params = bind.params.map(_.asSymbol.name)
-
-    if identifier == "Main" && params.isEmpty
-    then
+  def defn(body: Term): `(*)` => Defn.Def =
+    case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               identifier, `String*`("args"), `: IO[Any]`,
-               prog)
-    else
+               "Main", `String*`("args"), `: IO[Any]`,
+               body)
+    case `(*)`(identifier, _, _params*) =>
+      val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
                identifier, `(…)`(params*), `: IO[Any]`,
-               prog)
+               body)
 
 
   private def `* ==== …`(* : Any, ** : Term): Term =
