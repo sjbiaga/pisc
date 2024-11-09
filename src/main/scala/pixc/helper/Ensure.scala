@@ -27,6 +27,7 @@
  */
 
 package pixc
+package helper
 
 import scala.collection.mutable.{ LinkedHashMap => Map }
 
@@ -105,7 +106,7 @@ object Ensure:
         case !(_, sum) =>
           sum.recursive(stack.size)
 
-        case `⟦⟧`(_, sum, _, _, _) =>
+        case `⟦⟧`(_, _, sum, _, _, _) =>
           sum.recursive
 
         case _: `{}` => ???
@@ -177,7 +178,7 @@ object Ensure:
         case !(_, sum) =>
           sum.replication(true)
 
-        case `⟦⟧`(_, sum, _, _, _) =>
+        case `⟦⟧`(_, _, sum, _, _, _) =>
           sum.replication
 
         case _: `{}` => ???
@@ -230,7 +231,7 @@ object Ensure:
         case !(_, sum) =>
           sum.recursion
 
-        case `⟦⟧`(_, sum, _, _, _) =>
+        case `⟦⟧`(_, _, sum, _, _, _) =>
           sum.recursion
 
         case _: `{}` => ???

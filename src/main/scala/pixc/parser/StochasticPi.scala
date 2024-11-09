@@ -29,8 +29,6 @@
 package pixc
 package parser
 
-import java.util.UUID
-
 import scala.collection.mutable.{
   LinkedHashMap => Map,
   ListBuffer => MutableList,
@@ -43,8 +41,8 @@ import scala.util.parsing.combinator._
 import generator.Meta.`()(null)`
 
 import StochasticPi._
-import Calculus._
-import Encoding._
+import Calculus.{ id => _, _ }
+import Encoding.{ id => _, _ }
 import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
@@ -128,30 +126,30 @@ abstract class StochasticPi extends Expression:
 
   private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
-  private[parser] var defn: Map[Int, List[Definition]] = null
+  private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
   private[parser] var _nest = -1
   protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
   private[parser] var _cntr: Map[Int, Long] = null
-  protected final def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  protected final def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
-    val id = scala.collection.mutable.Seq.from(_id)
-    val ix = _ix
-    r match
-      case Success(it, in) => Some(it -> in)
-      case failure: NoSuccess if fail =>
-        scala.sys.error(failure.msg)
-      case _ =>
-       _ix = ix
-       _id = id
-       _cntr = cntr
-       _nest = nest
-       None
+    _id.save {
+      sπ_id.save {
+        χ_id.save {
+          r match
+            case Success(it, in) => Some(it -> in)
+            case failure: NoSuccess if fail =>
+              scala.sys.error(failure.msg)
+            case _ =>
+             _cntr = cntr
+             _nest = nest
+             None
+        }
+      }
+    }
 
 
 object StochasticPi extends Expansion:
@@ -163,7 +161,7 @@ object StochasticPi extends Expansion:
       ps
         .filter(_.isInstanceOf[Act])
         .headOption
-        .map(_.asInstanceOf[Act].uuid)
+        .map(_.asInstanceOf[Act].υidυ)
     )
 
   def nil = Actions()
@@ -171,13 +169,13 @@ object StochasticPi extends Expansion:
 
   trait Act:
     val rate: Any
-    final lazy val uuid: String = UUID.randomUUID.toString
+    final lazy val υidυ: String = id
 
   trait Sum:
     val enabled: Actions
 
 
-  def line: Parser[Either[Bind, Definition]] =
+  def line: Parser[Either[Bind, Define]] =
     equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
@@ -188,46 +186,6 @@ object StochasticPi extends Expansion:
       .map(_.asSymbol)
     )
     def apply(names: Names): Names = Set.from(names)
-
-  final case class Position(counter: Long, binding: Boolean)
-
-  final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
-    val isBinding = if !position.binding then 0 else math.signum(position.counter)
-
-  object Binder:
-    def apply(self: Occurrence, υidυ: Symbol) = Occurrence(υidυ, self.position)
-    def unapply(self: Occurrence): Option[Symbol] =
-      self.shadow match
-        case it: Symbol => Some(it)
-        case _ => None
-
-  object Shadow:
-    def apply(self: Occurrence, υidυ: Symbol) = self.copy(shadow = Some(υidυ))
-    def unapply(self: Occurrence): Option[Symbol] =
-      self.shadow match
-        case it @ Some(_) => it
-        case _ => None
-
-  type Names2 = Map[Symbol, Occurrence]
-
-  object Names2:
-    def apply(): Names2 = Map()
-    def apply(binding2: Names2): Names2 = Map.from(binding2)
-    def apply(names: Names)
-             (using Names2): Unit =
-      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
-    def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
-        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-          throw UniquenessBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-          throw NonParameterBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) =>
-        case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
 
 
   // exceptions
@@ -248,19 +206,11 @@ object StochasticPi extends Expansion:
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
-  abstract class BindingParsingException(msg: String, cause: Throwable = null)
-      extends ParsingException(msg
-                                 + s" at nesting level #$_nest"
-                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
-
-  case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
-
-  case class NonParameterBindingParsingException(name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
-
 
   // functions
+
+  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
+  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   extension[T <: AST](ast: T)
 
@@ -287,7 +237,7 @@ object StochasticPi extends Expansion:
         case it @ !(_, sum) =>
           it.copy(sum = sum.shallow)
 
-        case it @ `⟦⟧`(_, sum, _, _, _) =>
+        case it @ `⟦⟧`(_, _, sum, _, _, _) =>
           it.copy(sum = sum.shallow)
 
         case `{}`(id, pointers, true, params*) =>
@@ -308,7 +258,7 @@ object StochasticPi extends Expansion:
 
   def ensure(using rec: Map[(String, Int), Int])
             (using prog: List[Bind]): Unit =
-    import Ensure._
+    import helper.Ensure._
 
     var i = main
 
@@ -445,7 +395,7 @@ object StochasticPi extends Expansion:
         case !(_, sum) =>
           `!`(Some(τ), sum).parse
 
-        case `⟦⟧`(definition @ Definition(_, _, _, _, _, variables, _), _sum, uuid, name, assign) =>
+        case `⟦⟧`(definition, variables, _sum, υidυ, name, assign) =>
           val n = assign.map(_.size).getOrElse(0)
 
           val sum = ( if variables.size == n
@@ -461,7 +411,7 @@ object StochasticPi extends Expansion:
           then
             it = insert_+(it)
 
-          (`⟦⟧`(definition, it, uuid, name, assign), it.enabled)
+          (`⟦⟧`(definition, variables, it, υidυ, name, assign), it.enabled)
 
         case _: `{}` => ???
 
@@ -542,7 +492,7 @@ object StochasticPi extends Expansion:
 
         case _: ! => ??? // impossible by 'parse'
 
-        case `⟦⟧`(_, sum, _, _, _) =>
+        case `⟦⟧`(_, _, sum, _, _, _) =>
           sum.split
           sum.enabled
 
@@ -593,7 +543,7 @@ object StochasticPi extends Expansion:
               case !(Some(μ), _) =>
                 Seq(ps(k) -> μ)
               case _: ! => ??? // impossible by 'parse'
-              case `⟦⟧`(_, sum, _, _, _) =>
+              case `⟦⟧`(_, _, sum, _, _, _) =>
                 Seq(ps(k) -> sum)
               case _: `{}` => ???
               case `(*)`(id, params*) =>
@@ -611,7 +561,7 @@ object StochasticPi extends Expansion:
 
         case _: ! => ??? // impossible by 'parse'
 
-        case `⟦⟧`(_, sum, _, _, _) =>
+        case `⟦⟧`(_, _, sum, _, _, _) =>
           sum.graph
 
         case _: `{}` => ???
@@ -640,14 +590,14 @@ object StochasticPi extends Expansion:
           sum.split(using discarded -> excluded)
 
           sum.graph.foreach { (s, t) =>
-            if !enabled.contains(s.uuid)
+            if !enabled.contains(s.υidυ)
             then
-              enabled(s.uuid) = nil
+              enabled(s.υidυ) = nil
             t match
               case it: Act =>
-                enabled(s.uuid) += it.uuid
+                enabled(s.υidυ) += it.υidυ
               case it: Sum =>
-                enabled(s.uuid) ++= it.enabled
+                enabled(s.υidυ) ++= it.enabled
           }
       } -> (discarded, excluded, enabled)
 
@@ -780,8 +730,8 @@ object StochasticPi extends Expansion:
 
       case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
 
-      case (`⟦⟧`(Definition(lcode, _, _, _, lconstants, lvariables, _), lsum, _, lname, lassign)
-           ,`⟦⟧`(Definition(rcode, _, _, _, rconstants, rvariables, _), rsum, _, rname, rassign))
+      case (`⟦⟧`(Definition(lcode, _, lconstants, lvariables, _), _, lsum, _, lname, lassign)
+           ,`⟦⟧`(Definition(rcode, _, rconstants, rvariables, _), _, rsum, _, rname, rassign))
           if lcode == rcode
           && lname == rname
           && lconstants == rconstants
@@ -830,7 +780,7 @@ object StochasticPi extends Expansion:
           .filterKeys(_ == it)
           .values
           .flatten
-          .map(_._1.exp.uuid -> Set.empty)
+          .map(_._1.exp.υidυ -> Set.empty)
       }
         .toMap
       ++
@@ -844,7 +794,7 @@ object StochasticPi extends Expansion:
           given (Names2, Names2) = binding2_exp -> binding2_xct
           if congruent(exp -> xct.exp)
         yield
-          xct.exp.uuid -> exp.uuid
+          xct.exp.υidυ -> exp.υidυ
       }
         .groupBy(_._1)
         .mapValues(_.map(_._2))
@@ -863,8 +813,9 @@ object StochasticPi extends Expansion:
     xctn = Map()
     _nest = 0
     _cntr = Map(0 -> 0L)
-    _id = scala.collection.mutable.Seq('0')
-    _ix = 0
+    _id = new helper.υidυ
+    sπ_id = new helper.υidυ
+    χ_id = new helper.υidυ
     i = 0
     l = (0, 0)
 
@@ -904,3 +855,8 @@ object StochasticPi extends Expansion:
       case _ => true
     }
     .toList
+
+
+  private[parser] var sπ_id: helper.υidυ = null
+
+  def id = sπ_id()

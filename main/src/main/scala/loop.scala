@@ -150,10 +150,10 @@ package object `Π-loop`:
                 for
                   _ <- `1`.acquire
                   _ <- nel.parTraverse { case (key1, key2, delay) =>
-                                         val k1 = key1.substring(key1.length/2)
-                                         val k2 = key2.substring(key2.length/2)
-                                         val ^  = key1.substring(0, key1.length/2)
-                                         val ^^ = key2.substring(0, key2.length/2)
+                                         val k1 = key1.substring(36)
+                                         val k2 = key2.substring(36)
+                                         val ^  = key1.substring(0, 36)
+                                         val ^^ = key2.substring(0, 36)
                                          for
                                            -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                            -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)

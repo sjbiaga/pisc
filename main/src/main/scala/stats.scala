@@ -180,7 +180,7 @@ package object `Π-stats`:
         val delay = delta(rate)
         r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay)
       else
-        val ^ = key1.substring(0, key1.length/2)
+        val ^ = key1.substring(0, 36)
         for
           j <- i+1 until χ.size
           (key2, (ether2, polarity2, (rate2, weight2))) = χ(j)
@@ -188,11 +188,11 @@ package object `Π-stats`:
         do
           if (ether1 eq ether2) && polarity1.get != polarity2.get
           then
-            val ^^ = key2.substring(0, key2.length/2)
+            val ^^ = key2.substring(0, 36)
             if ^ != ^^
             || {
-              val k1 = key1.substring(key1.length/2)
-              val k2 = key2.substring(key2.length/2)
+              val k1 = key1.substring(36)
+              val k2 = key2.substring(36)
               !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
             }
             then
@@ -230,27 +230,27 @@ package object `Π-stats`:
       ( for
           (((key1, key2, _), _), i) <- r.zipWithIndex
         yield
-          val k1 = key1.substring(key1.length/2)
-          val k2 = key2.substring(key2.length/2)
-          val ^ = key1.substring(0, key1.length/2)
-          val ^^ = key2.substring(0, key2.length/2)
+          val k1 = key1.substring(36)
+          val k2 = key2.substring(36)
+          val ^ = key1.substring(0, 36)
+          val ^^ = key2.substring(0, 36)
           r(i)._1 -> {
             0 > r.indexWhere(
               {
                 case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
                 case ((key, _, _), _)
                     if {
-                      val k = key.substring(key.length/2)
+                      val k = key.substring(36)
                       `π-trick`.contains(k) && {
-                        val ^^^ = key.substring(0, key.length/2)
+                        val ^^^ = key.substring(0, 36)
                         `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
                       }
                     } => true
                 case ((_, key, _), _)
                     if {
-                      val k = key.substring(key.length/2)
+                      val k = key.substring(36)
                       `π-trick`.contains(k) && {
-                        val ^^^ = key.substring(0, key.length/2)
+                        val ^^^ = key.substring(0, 36)
                         `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
                       }
                     } => true
