@@ -31,8 +31,6 @@ package generator
 
 import scala.annotation.tailrec
 
-import java.util.UUID
-
 import scala.meta._
 import dialects.Scala3
 
@@ -42,16 +40,15 @@ import parser.Ambient.{ AST, ζ, Λ }
 
 object Meta:
 
-  def defn(bind: `(*)`, prog: Term): Defn.Def =
-    if bind.identifier == "Main" && bind.params.isEmpty
-    then
+  def defn(body: Term): `(*)` => Defn.Def =
+    case `(*)`("Main", _) =>
       Defn.Def(Nil,
                "Main", `String*`("args"), `: IO[Unit]`,
-               prog)
-    else
+               body)
+    case `(*)`(identifier, _, params*) =>
       Defn.Def(Nil,
-               bind.identifier, `(…)`(bind.params*), `: IO[Unit]`,
-               prog)
+               identifier, `(…)`(params*), `: IO[Unit]`,
+               body)
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 

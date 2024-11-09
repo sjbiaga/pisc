@@ -245,10 +245,21 @@ object Calculus:
     override def toString: String = "go " + amb + "." + par
 
   case class `⟦⟧`(definition: Definition,
+                  variables: Names,
                   par: ||,
                   assign: Option[Set[(String, String)]] = None) extends AST:
     override def toString: String =
-      s"""$definition${assign.map{_.map(_ + " = " + _).mkString("{", ", ", "}")}.getOrElse("")} = $par"""
+      val vars = ( if variables.nonEmpty
+                   then
+                     variables.map {
+                       case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
+                         s"$it = ${assign.get.find(_._1 == it).get._2}"
+                       case it => it
+                     }.mkString("{", ", ", "}")
+                   else
+                     ""
+                 )
+      s"""${Definition(definition.code, definition.term)}$vars = $par"""
 
   case class `{}`(identifier: String,
                   pointers: List[String],
@@ -328,7 +339,7 @@ object Calculus:
         case `go.`(amb, par) =>
           `go.`(amb, par.flatten)
 
-        case it @ `⟦⟧`(_, par, _) =>
+        case it @ `⟦⟧`(_, _, par, _) =>
           it.copy(par = par.flatten)
 
         case _ => ast

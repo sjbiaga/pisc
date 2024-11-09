@@ -29,21 +29,19 @@
 package masc
 package generator
 
-import java.util.UUID
-
 import scala.meta._
 import dialects.Scala3
 
 import parser.Ambient.{ AST => _, _ }
 import parser.Calculus._
-import parser.Encoding.Definition
 import Meta._
 
 
 object Program:
 
-  def apply(bind: List[Bind]): List[String] =
-    bind.map { case (bind, par) => defn(bind, par.generate).toString }
+  def apply(prog: List[Bind]): List[String] =
+    _id = new helper.υidυ
+    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
 
 
   extension(node: Pre | AST)
@@ -117,9 +115,9 @@ object Program:
         ////// REPLICATION /////////////////////////////////////////////////////
 
         case !(Some(name), par) =>
-          val uuid = id
+          val υidυ = id
 
-          val `!.(*).⋯` = `()`(None, name).generate :+ `_ <- *`(Term.Apply(\(uuid),
+          val `!.(*).⋯` = `()`(None, name).generate :+ `_ <- *`(Term.Apply(\(υidυ),
                                                                            Term.ArgClause(\(name) :: Nil, None)))
 
           val it = Term.If(Term.ApplyUnary("!", name),
@@ -130,17 +128,17 @@ object Program:
                            )
                    )
 
-          * = `* <- *`(uuid -> `IO { def *(*: )(): IO[Unit] = …; * }`(uuid -> name, it)) :: `!.(*).⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Unit] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
 
         case !(_, par) =>
-          val uuid = id
+          val υidυ = id
 
           val it = `( *, … ).parMapN { (_, …) => }`(
                      par.generate,
-                     `_ <- IO.unit` :: `_ <- *`(uuid)
+                     `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
 
-          * = `* <- *`(uuid, `IO { lazy val *: IO[Unit] = …; * }`(uuid, it)) :: `_ <- *`(uuid)
+          * = `* <- *`(υidυ, `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -191,7 +189,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, _, _, variables, _), _par, assign) =>
+        case `⟦⟧`(_, variables, _par, assign) =>
           val ** = assign
             .map(_.map(Pat.Var(_) -> _)
                   .map(Enumerator.Val(_, _))
@@ -229,4 +227,7 @@ object Program:
 
       *
 
-  def id = "_" + UUID.randomUUID.toString.replaceAll("-", "_")
+
+  private[generator] var _id: helper.υidυ = null
+
+  def id = _id()
