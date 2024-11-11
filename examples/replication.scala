@@ -37,8 +37,8 @@ object App extends IOApp:
 
 object π:
 
-  import _root_.cats.effect.syntax.all._
   import _root_.cats.syntax.all._
+  import _root_.cats.effect.syntax.all._
   import _root_.cats.effect.std.Semaphore
 
   import Π._
@@ -54,8 +54,8 @@ object π:
     x <- ν(2147483647)
     _ <- (
       for {
-        _69999ae9_6f8d_47a8_add4_e0d5140fd033 <- IO {
-          lazy val _69999ae9_6f8d_47a8_add4_e0d5140fd033: IO[Unit] = (
+        _υ1υ <- IO {
+          lazy val _υ1υ: IO[Unit] = (
             for {
               i <- c.get
               _ <- IO.sleep(ms)
@@ -70,16 +70,16 @@ object π:
               _ <- c.update(_ + 1 min 50)
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _69999ae9_6f8d_47a8_add4_e0d5140fd033
+              _ <- _υ1υ
             } yield ()
           ).parMapN { (_, _) => }
-          _69999ae9_6f8d_47a8_add4_e0d5140fd033
+          _υ1υ
         }
-        _ <- _69999ae9_6f8d_47a8_add4_e0d5140fd033
+        _    <- _υ1υ
       } yield (),
       for {
-        _5f724e49_38e2_410b_9c70_b545f3a59b83 <- IO {
-          lazy val _5f724e49_38e2_410b_9c70_b545f3a59b83: IO[Unit] = (
+        _υ2υ <- IO {
+          lazy val _υ2υ: IO[Unit] = (
             for {
               _ <- IO.sleep(ms)
               y <- x()
@@ -92,12 +92,12 @@ object π:
               _ <- IO.unit
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _5f724e49_38e2_410b_9c70_b545f3a59b83
+              _ <- _υ2υ
             } yield ()
           ).parMapN { (_, _) => }
-          _5f724e49_38e2_410b_9c70_b545f3a59b83
+          _υ2υ
         }
-        _ <- _5f724e49_38e2_410b_9c70_b545f3a59b83
+        _    <- _υ2υ
       } yield ()
     ).parMapN { (_, _) => }
   } yield ()
