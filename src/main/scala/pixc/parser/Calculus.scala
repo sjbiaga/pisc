@@ -330,12 +330,7 @@ object Calculus:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
-    type Kind = value.type match
-      case Symbol => Symbol
-      case BigDecimal => BigDecimal
-      case Boolean => Boolean
-      case String => String
-      case Expr => Expr
+    type Kind = value.type
 
     val kind: String = value match
       case _: Symbol => "channel name"
