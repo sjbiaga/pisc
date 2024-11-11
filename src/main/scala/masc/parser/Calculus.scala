@@ -31,7 +31,7 @@ package parser
 
 import scala.collection.mutable.{ LinkedHashSet => Set }
 
-import scala.meta.{ Enumerator, Term }
+import scala.meta.Term
 
 import scala.util.parsing.combinator._
 
@@ -89,7 +89,7 @@ abstract class Calculus extends Ambient:
     ("<"~>caps<~">") ~ opt( expression ) ^^ { // output action
       case _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (path, free) ~ Some(((Right(it), _), free2)) =>
+      case (path, free) ~ Some((it @ (Right(_), _), free2)) =>
         <>(Some(it), path*) -> (free ++ free2)
       case (path, free) ~ _ =>
         <>(None, path*) -> free
@@ -145,10 +145,10 @@ abstract class Calculus extends Ambient:
       opt match
         case Some(((Left(enums), _), _)) =>
           throw TermParsingException(enums)
-        case Some(((Right(it), _), free)) =>
-          `()`(Some(it), name) -> (binding, free)
+        case Some((it @ (Right(_), _), free)) =>
+          `()`(name, Some(it)) -> (binding, free)
         case _ =>
-          `()`(None, name) -> (binding, Names())
+          `()`(name, None) -> (binding, Names())
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
@@ -229,10 +229,10 @@ object Calculus:
   case class `,.`(path: Ambient.AST*) extends Pre:
     override def toString: String = path.mkString("", ", ", ".")
 
-  case class `()`(code: Option[Term], name: String) extends Pre:
+  case class `()`(name: String, code: Option[Code]) extends Pre:
     override def toString: String = s"($name)."
 
-  case class <>(code: Option[Term], path: Ambient.AST*) extends AST:
+  case class <>(code: Option[Code], path: Ambient.AST*) extends AST:
     override def toString: String = path.mkString("<", ", ", ">")
 
   case class !(guard: Option[String], par: ||) extends AST:
@@ -338,8 +338,5 @@ object Calculus:
 
         case `go.`(amb, par) =>
           `go.`(amb, par.flatten)
-
-        case it @ `⟦⟧`(_, _, par, _) =>
-          it.copy(par = par.flatten)
 
         case _ => ast

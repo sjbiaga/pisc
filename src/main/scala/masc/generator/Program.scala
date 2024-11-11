@@ -101,10 +101,10 @@ object Program:
                          Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
 
 
-        case `()`(it, name) =>
+        case `()`(name, it) =>
           val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil, None))
           * = it match
-                case Some(code) =>
+                case Some((Right(code), _)) =>
                   `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
                 case _ =>
                   `* <- *`(name -> term)
@@ -117,7 +117,7 @@ object Program:
         case !(Some(name), par) =>
           val υidυ = id
 
-          val `!.(*).⋯` = `()`(None, name).generate :+ `_ <- *`(Term.Apply(\(υidυ),
+          val `!.(*).⋯` = `()`(name, None).generate :+ `_ <- *`(Term.Apply(\(υidυ),
                                                                            Term.ArgClause(\(name) :: Nil, None)))
 
           val it = Term.If(Term.ApplyUnary("!", name),
@@ -168,7 +168,7 @@ object Program:
         case <>(it) =>
           val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
           * = it match
-                case Some(code) =>
+                case Some((Right(code), _)) =>
                   `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
                 case _ =>
                   `_ <- *`(term)
@@ -179,7 +179,7 @@ object Program:
                        Term.ArgClause(\(")(") :: Nil, None))
 
           * = it match
-                case Some(code) =>
+                case Some((Right(code), _)) =>
                   `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
                 case _ =>
                   `_ <- *`(term)

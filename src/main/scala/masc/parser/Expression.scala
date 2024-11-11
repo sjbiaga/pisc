@@ -42,7 +42,7 @@ import scala.util.parsing.combinator._
 import Ambient.Names
 import Calculus.AST
 import Encoding.{ renamed, Names2 }
-import scala.util.parsing.combinator.masc.parser.Expansion.replaced
+import scala.util.parsing.combinator.masc.parser.Expansion.{ replaced, updated }
 import Expression._
 
 
@@ -60,6 +60,7 @@ abstract class Expression extends JavaTokenParsers:
       val expr = it.stripPrefix("/*").stripSuffix("*/")
       Expression.renaming = None
       Expression.replacing = None
+      Expression.updating = None
       try
         val orig = expr.parse[Term].get
         Expression(orig) match
@@ -130,6 +131,7 @@ abstract class Expression extends JavaTokenParsers:
       else
         Expression.renaming = None
         Expression.replacing = None
+        Expression.updating = None
         try
           Expression(it.group(2).parse[Term].get) match
             case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
@@ -200,13 +202,17 @@ object Expression:
 
   var renaming: Option[(MutableList[(String, String)], Names2)] = None
   var replacing: Option[Map[String, String | AST]] = None
+  var updating: Option[Names2] = None
 
   def recode(orig: sm.Term): (Code, Names) =
     val renaming = this.renaming
     val replacing = this.replacing
+    val updating = this.updating
     this.renaming = None
     this.replacing = None
+    this.updating = None
     val code = this(orig)
+    this.updating = updating
     this.replacing = replacing
     this.renaming = renaming
     code match
@@ -355,9 +361,13 @@ object Expression:
           case _ =>
             replacing match
               case Some(given Map[String, String | AST]) =>
-                sm.Lit.Symbol(Symbol(replaced(free))) -> Names()
+                sm.Lit.Symbol(Symbol(replaced(name))) -> Names()
               case _ =>
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Lit.Symbol(Symbol(updated(name))) -> Names()
+                  case _ =>
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -380,12 +390,17 @@ object Expression:
         renaming match
           case Some((given MutableList[(String, String)], given Names2)) =>
             sm.Term.Name(s"'${renamed(name)}") -> Names()
+          case _ =>
             replacing match
               case Some(given Map[String, String | AST]) =>
                 sm.Term.Name(s"'${replaced(name)}") -> Names()
               case _ =>
-                val free = name
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Term.Name(s"'${updated(name)}") -> Names()
+                  case _ =>
+                    val free = name
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -700,9 +715,13 @@ object Expression:
           case _ =>
             replacing match
               case Some(given Map[String, String | AST]) =>
-                sm.Term.Name(s"'${replaced(free)}") -> Names()
+                sm.Lit.Symbol(Symbol(replaced(free))) -> Names()
               case _ =>
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Term.Name(s"'${updated(free)}") -> Names()
+                  case _ =>
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
