@@ -102,7 +102,7 @@ abstract class Encoding extends Calculus:
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
           (choice <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
             case (sum, free) ~ ps =>
-              (`⟦⟧`(definition, definition.variables, sum) -> free) -> ps
+              (`⟦⟧`(definition, definition.variables, sum.flatten) -> free) -> ps
           }
         case it =>
           (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
@@ -118,9 +118,10 @@ abstract class Encoding extends Calculus:
         val assign = if _assign.isEmpty then None else Some(_assign)
         Expression.renaming = Some((given_MutableList_Symbol_λ, given_Names2))
         Expression.replacing = None
+        Expression.updating = None
         given Names = Names()
         val exp2 = exp.copy(assign = assign).rename(free)
-        binding2 ++= given_Names2.filter(_._2.isBinding < 0)
+        binding2 ++= purged
         exp2 -> (free ++ constants)
     }
 
@@ -176,19 +177,13 @@ object Encoding:
       given Names2 = Names2(this.binding2)
       Expression.renaming = Some((refresh, given_Names2))
       Expression.replacing = None
+      Expression.updating = None
       given Names = Names()
       val sum2 = sum.rename(Set.empty, definition = true)
-      val binding2 = given_Names2.filter(_._2.isBinding < 0)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
-        binding2.collect {
-          case (it, Binder(υidυ)) => (
-            binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-              case Some((it, _)) => it
-              case _ => it
-          ) -> Some(υidυ)
-        }
+        purged.collect { case (it, Binder(υidυ)) => it -> Some(υidυ) }
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
@@ -220,14 +215,14 @@ object Encoding:
     val isBinding = if !position.binding then 0 else math.signum(position.counter)
 
   object Binder:
-    def apply(self: Occurrence, υidυ: Symbol) = Occurrence(υidυ, self.position)
+    def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)
         case _ => None
 
   object Shadow:
-    def apply(self: Occurrence, υidυ: Symbol) = self.copy(shadow = Some(υidυ))
+    def apply(self: Occurrence)(υidυ: Symbol) = self.copy(shadow = Some(υidυ))
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it @ Some(_) => it
@@ -290,32 +285,19 @@ object Encoding:
 
   import scala.annotation.tailrec
 
-  @tailrec
-  private def shadow(it: Symbol)
-                    (using binding2: Names2): Option[Occurrence] =
-    if binding2.contains(it)
-    then
-      binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
-        case Some((_, occurrence @ Shadow(`it`))) => Some(occurrence)
-        case Some((_, Shadow(it))) => shadow(it)
-        case _ => None
-    else
-      binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-        case Some((_, occurrence)) => Some(occurrence)
-        case _ => None
-
   def renamed(it: Symbol)
              (using refresh: MutableList[(Symbol, λ)])
              (using binding2: Names2): λ =
     refresh.find(_._1 == it) match
       case Some((_, r)) => r
       case _ =>
-        binding2.find { case (`it`, Binder(_)) => true case _ => false } match
-          case Some((_, Binder(υidυ))) => λ(υidυ)
-          case _ => shadow(it) match
-            case Some(Shadow(it)) => λ(it)
-            case _ if binding2.contains(it) => λ(it)
-            case _ => throw NoBindingParsingException(it.name)
+        binding2.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
+          case Some((_, Binder(it))) => λ(it)
+          case Some((_, Shadow(it))) => λ(it)
+          case _ =>
+            binding2.find { case (`it`, _) | (_, Shadow(`it`)) => true case _ => false } match
+              case Some(_) => λ(it)
+              case _ => throw NoBindingParsingException(it.name)
 
   private def recoded(free: Names)
                      (using code: Option[Code])
@@ -329,19 +311,23 @@ object Encoding:
       code2
     }
 
-  private def _removed(it: Symbol)
-                      (using binding2: Names2): Option[Either[Symbol, Symbol]] =
-    var name: Option[Either[Symbol, Symbol]] = None
-    binding2.filterInPlace {
-      case (`it`, Shadow(`it`)) => name = Some(Left(it)); false
-      case (it, Shadow(`it`)) => name = Some(Right(it)); false
-      case _ => true
+  private def purged(using binding2: Names2): Names2 =
+    binding2.map {
+      case (name, Shadow(it)) =>
+        binding2.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
+          case Some((_, occurrence)) =>
+            Some(name -> (it -> occurrence))
+          case _ =>
+            None
+      case _ =>
+        None
+    }.foreach {
+      case Some((name, (it, occurrence))) =>
+        binding2 -= it
+        binding2 += name -> occurrence
+      case _ =>
     }
-    name.map(_.flatMap(_removed(_).orElse(name).get))
-
-  inline def removed(it: Symbol)
-                    (using binding2: Names2): Symbol =
-    _removed(it).get.fold(identity, identity)
+    binding2.filter(_._2.isBinding < 0)
 
 
   extension[T <: AST](ast: T)
@@ -383,10 +369,9 @@ object Encoding:
         val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
         binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
           case Some((_, occurrence)) if definition && occurrence.isBinding < 0 =>
-            binding2 += removed(it) -> Shadow(occurrence, it)
-            binding2 += it -> Binder(occurrence, υidυ)
+            binding2 += it -> Binder(occurrence)(υidυ)
           case Some((_, occurrence)) =>
-            binding2 += it -> Shadow(occurrence, υidυ)
+            binding2 += it -> Shadow(occurrence)(υidυ)
           case _ =>
             refresh.prepend(it -> λ(υidυ))
         binding += υidυ
@@ -410,6 +395,9 @@ object Encoding:
           val n = refresh.size
           given Names = Names(binding)
           val it = _it.map {
+            case ν(_names*) =>
+              val names = _names.map(Symbol(_)).map(rebind(_))
+              ν(names.map(_.asSymbol.name)*)
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded(free))
             case π(λ(ch: Symbol), true, code, _names*) =>
@@ -425,9 +413,6 @@ object Encoding:
                 case it => it
               }
               π(ch2, false, recoded(free), names*)
-            case ν(_names*) =>
-              val names = _names.map(Symbol(_)).map(rebind(_))
-              ν(names.map(_.asSymbol.name)*)
             case it => it
           }
           val end2 = rename(end)
@@ -445,6 +430,9 @@ object Encoding:
 
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
+
+        case !(Some(it @ τ(given Option[Code])), sum) =>
+          `!`(Some(it.copy(code = recoded(free))), rename(sum))
 
         case !(Some(π(λ(ch: Symbol), true, code, _names*)), sum) =>
           given Option[Code] = code
