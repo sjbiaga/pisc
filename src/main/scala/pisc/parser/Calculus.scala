@@ -232,8 +232,8 @@ object Calculus:
   case class ν(names: String*) extends AnyVal with Pre: // forcibly
     override def toString: String = names.mkString("ν(", ", ", ")")
 
-  case class τ(code: Option[Code],
-               override val rate: Any)
+  case class τ(override val rate: Any,
+               code: Option[Code])
       extends Pre with Act:
     override def toString: String = "τ."
 
@@ -296,12 +296,7 @@ object Calculus:
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
     def asSymbol: Symbol = value.asInstanceOf[Symbol]
 
-    type Kind = value.type match
-      case Symbol => Symbol
-      case BigDecimal => BigDecimal
-      case Boolean => Boolean
-      case String => String
-      case Expr => Expr
+    type Kind = value.type
 
     val kind: String = value match
       case _: Symbol => "channel name"

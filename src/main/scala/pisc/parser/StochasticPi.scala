@@ -51,9 +51,9 @@ abstract class StochasticPi extends Expression:
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ Some((it, free)) =>
-        τ(Some(it), r.getOrElse(1L)) -> (Names(), free)
+        τ(r.getOrElse(1L), Some(it)) -> (Names(), free)
       case _ ~ r ~ _ =>
-        τ(None, r.getOrElse(1L)) -> (Names(), Names())
+        τ(r.getOrElse(1L), None) -> (Names(), Names())
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
@@ -284,7 +284,7 @@ object StochasticPi extends Expansion:
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-      inline def τ = Calculus.τ(None, -Long.MaxValue)
+      inline def τ = Calculus.τ(-Long.MaxValue, None)
 
       def insert[S](end: &, ps: Pre*): (S, Actions) =
         val ps2 = ps :+ τ

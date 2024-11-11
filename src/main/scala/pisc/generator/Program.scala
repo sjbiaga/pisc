@@ -93,15 +93,15 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
 
-        case it @ τ(Some((Left(enums)), _), r) =>
+        case it @ τ(r, Some((Left(enums)), _)) =>
           * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
           * ++= enums
 
-        case it @ τ(Some((Right(term)), _), r) =>
+        case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
           * :+= `_ <- IO { * }`(term)
 
-        case it @ τ(_, r) =>
+        case it @ τ(r, _) =>
           * = `_ <- *`(s"""τ(${rate(r)})("${it.υidυ}")""".parse[Term].get)
 
 
