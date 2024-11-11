@@ -42,7 +42,7 @@ import scala.util.parsing.combinator._
 import Pi.Names
 import Calculus.{ λ, AST }
 import Encoding.{ renamed, Names2 }
-import scala.util.parsing.combinator.pisc.parser.Expansion.replaced
+import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated }
 import Expression._
 
 
@@ -60,6 +60,7 @@ abstract class Expression extends JavaTokenParsers:
       val expr = it.stripPrefix("/*").stripSuffix("*/")
       Expression.renaming = None
       Expression.replacing = None
+      Expression.updating = None
       try
         val orig = expr.parse[Term].get
         Expression(orig) match
@@ -129,6 +130,7 @@ abstract class Expression extends JavaTokenParsers:
       else
         Expression.renaming = None
         Expression.replacing = None
+        Expression.updating = None
         try
           Expression(it.group(2).parse[Term].get) match
             case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
@@ -199,13 +201,17 @@ object Expression:
 
   var renaming: Option[(MutableList[(Symbol, λ)], Names2)] = None
   var replacing: Option[Map[String, λ | AST]] = None
+  var updating: Option[Names2] = None
 
   def recode(orig: sm.Term): (Code, Names) =
     val renaming = this.renaming
     val replacing = this.replacing
+    val updating = this.updating
     this.renaming = None
     this.replacing = None
+    this.updating = None
     val code = this(orig)
+    this.updating = updating
     this.replacing = replacing
     this.renaming = renaming
     code match
@@ -356,7 +362,11 @@ object Expression:
               case Some(given Map[String, λ | AST]) =>
                 sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
               case _ =>
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+                  case _ =>
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -385,7 +395,11 @@ object Expression:
               case Some(given Map[String, λ | AST]) =>
                 sm.Term.Name(s"'${replaced(free).asSymbol.name}") -> Names()
               case _ =>
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Term.Name(s"'${updated(free).asSymbol.name}") -> Names()
+                  case _ =>
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -702,7 +716,11 @@ object Expression:
               case Some(given Map[String, λ | AST]) =>
                 sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
               case _ =>
-                sm.Term.Name(name) -> Set(free)
+                updating match
+                  case Some(given Names2) =>
+                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+                  case _ =>
+                    sm.Term.Name(name) -> Set(free)
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
