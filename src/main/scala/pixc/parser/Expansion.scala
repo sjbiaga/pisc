@@ -75,12 +75,12 @@ abstract class Expansion extends Encoding:
 
     new Parser[(`⟦⟧`, Names)] {
 
-      private def expand(in: Input, end: Either[String, String])
+      private def expand(in: Input, ts: Seq[Term], end: Either[String, String])
                         (using binding2: Names2)
                         (using substitution: Map[String, λ | AST])
-                        (using free: Names): ((Fresh, Term)) => ParseResult[Fresh] =
+                        (using free: Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
-        case (it @ (_, shadows), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
+        case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
 
           var source = in.source
@@ -89,29 +89,59 @@ abstract class Expansion extends Encoding:
 
           var s = SubSequence(source, start)
 
+          val _ts = ts :+ _rhs
+          val key = path -> (_ts.mkString -> end) -> start
+
           if (open findPrefixMatchOf s).nonEmpty
           then
 
             if rhs.charAt(0).isLower || rhs == "_"
             then
-              Failure("name expected not instantiation", in)
+              Failure("instantiation expected not name", in) -> Nil
 
             else
+              var in2: Input = null
 
-              parse(instantiation, in) match
+              var fail: Option[ParseResult[Fresh]] = None
 
-                case Success((exp, free2), in) =>
+              _cache.get(key) match
+
+                case Some((exp: `⟦⟧`, it, free2, given Names2, in)) =>
+                  binding2 ++= binders
+
                   substitution(rhs) = exp
                   free ++= free2 -- binding2.map(_._1)
 
-                  source = in.source
-                  offset = in.offset
-                  start = handleWhiteSpace(source, offset)
+                  paste(it)
 
-                  Success(it, in.drop(start + end.map(_.length).getOrElse(0) - offset))
+                  in2 = in
 
-                case it =>
-                  Failure("instantiation expected", it.next)
+                case _ =>
+
+                  given Names2 = Names2(binding2)
+                  parse(instantiation, in) match
+
+                    case Success((exp, free2), in) =>
+                      binding2 ++= binders
+
+                      substitution(rhs) = exp
+                      free ++= free2 -- binding2.map(_._1)
+
+                      source = in.source
+                      offset = in.offset
+                      start = handleWhiteSpace(source, offset)
+
+                      in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
+
+                      _cache(key) = (exp, copy, free2, given_Names2, in2)
+
+                    case it =>
+                      fail = Some(Failure("instantiation expected", it.next))
+
+              fail match
+                case Some(it) => it -> Nil
+                case _ =>
+                  Success(it, in2) -> ts
 
           else
             ( if s.isEmpty
@@ -139,7 +169,9 @@ abstract class Expansion extends Encoding:
                             else 0
                           else matched.end - end.orElse(end.swap).map(_.length).right.get
                         )
-                val result = source.subSequence(start, start + n).toString
+                val result = SubSequence(source, start, n).toString
+
+                var in2: Input = null
 
                 var fail: Option[ParseResult[Fresh]] = None
 
@@ -161,6 +193,7 @@ abstract class Expansion extends Encoding:
                   then
 
                     parseAll(name, result) match
+
                       case Success((λ(it: Symbol), free2), _) =>
                         shadows(idx) match
                           case shadow @ Some(_) =>
@@ -172,32 +205,58 @@ abstract class Expansion extends Encoding:
                             free ++= free2 -- binding2.map(_._1)
                         idx += 1
 
-                      case it => fail = Some(Failure("name expected", it.next))
+                      case it =>
+                        fail = Some(Failure("name expected", it.next))
 
                   else
-                    given Names2 = Names2(binding2)
-                    parseAll(choice, result) match
-                      case Success((sum, free2), _) =>
-                        Expression.renaming = None
-                        Expression.replacing = None
-                        given Names2 = Names2(binding2)
-                        substitution(rhs) = sum.flatten.update
+
+                    _cache.get(key) match
+
+                      case Some((sum: +, it, free2, given Names2, in)) =>
+                        binding2 ++= binders
+
+                        substitution(rhs) = sum
                         free ++= free2 -- binding2.map(_._1)
 
-                      case it => fail = Some(Failure("choice expected", it.next))
+                        paste(it)
+
+                        in2 = in
+
+                      case _ =>
+
+                        given Names2 = Names2(binding2)
+                        parseAll(choice, result) match
+
+                          case Success((sum, free2), _) =>
+                            binding2 ++= binders
+
+                            Expression.renaming = None
+                            Expression.replacing = None
+                            val sum2 = sum.flatten.update(using Names2(binding2))
+
+                            substitution(rhs) = sum2
+                            free ++= free2 -- binding2.map(_._1)
+
+                            in2 = in.drop(start + n - offset)
+
+                            _cache(key) = (sum2, copy, free2, given_Names2, in2)
+
+                          case it =>
+                            fail = Some(Failure("choice expected", it.next))
 
                 fail match
-                  case Some(it) => it
+                  case Some(it) => it -> Nil
                   case _ =>
-                    Success(it, in.drop(start + n - offset))
+                    if in2 eq null then in2 = in.drop(start + n - offset)
+                    Success(it, in2) -> ts
 
               case _ =>
                 val found = if start == source.length
                             then "end of source"
                             else "'"+source.charAt(start)+"'"
-                Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset))
+                Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset)) -> Nil
 
-        case (it @ (_, shadows), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), Term.Name(op), _, List(rhs))) =>
+        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _op @ Term.Name(op), _, List(rhs))) =>
           val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
 
           var source = in.source
@@ -206,29 +265,59 @@ abstract class Expansion extends Encoding:
 
           var s = SubSequence(source, start)
 
+          val _ts = ts :+ _lhs :+ _op
+          val key = path -> (_ts.mkString -> end) -> start
+
           if (open findPrefixMatchOf s).nonEmpty
           then
 
             if lhs.charAt(0).isLower || lhs == "_"
             then
-              Failure("name expected not instantiation", in)
+              Failure("instantiation expected not name", in) -> Nil
 
             else
+              var in2: Input = null
 
-              parse(instantiation, in) match
+              var fail: Option[ParseResult[Fresh]] = None
 
-                case Success((exp, free2), in) =>
+              _cache.get(key) match
+
+                case Some((exp: `⟦⟧`, it, free2, given Names2, in)) =>
+                  binding2 ++= binders
+
                   substitution(lhs) = exp
                   free ++= free2 -- binding2.map(_._1)
 
-                  source = in.source
-                  offset = in.offset
-                  start = handleWhiteSpace(source, offset)
+                  paste(it)
 
-                  expand(in.drop(start + op.length - offset), end)(it -> rhs)
+                  in2 = in
 
-                case it =>
-                  Failure("instantiation expected", it.next)
+                case _ =>
+
+                  given Names2 = Names2(binding2)
+                  parse(instantiation, in) match
+
+                    case Success((exp, free2), in) =>
+                      binding2 ++= binders
+
+                      substitution(lhs) = exp
+                      free ++= free2 -- binding2.map(_._1)
+
+                      source = in.source
+                      offset = in.offset
+                      start = handleWhiteSpace(source, offset)
+
+                      in2 = in.drop(start + op.length - offset)
+
+                      _cache(key) = (exp, copy, free2, given_Names2, in2)
+
+                    case it =>
+                      fail = Some(Failure("instantiation expected", it.next))
+
+              fail match
+                case Some(it) => it -> Nil
+                case _ =>
+                  expand(in2, _ts, end)(it -> rhs)
 
           else {
             val n = op.length
@@ -243,7 +332,9 @@ abstract class Expansion extends Encoding:
           } match
 
             case Some(matched) =>
-              val result = source.subSequence(start, start + matched.end - op.length).toString
+              val result = SubSequence(source, start, matched.end - op.length).toString
+
+              var in2: Input = null
 
               var fail: Option[ParseResult[Fresh]] = None
 
@@ -253,7 +344,9 @@ abstract class Expansion extends Encoding:
                 {}
               else if lhs.charAt(0).isLower || lhs == "_"
               then
+
                 parseAll(name, result) match
+
                   case Success((λ(it: Symbol), free2), _) =>
                     shadows(idx) match
                       case shadow @ Some(_) =>
@@ -265,70 +358,66 @@ abstract class Expansion extends Encoding:
                         free ++= free2 -- binding2.map(_._1)
                     idx += 1
 
-                  case it => fail = Some(Failure("name expected", it.next))
+                  case it =>
+                    fail = Some(Failure("name expected", it.next))
 
               else
-                given Names2 = Names2(binding2)
-                parseAll(choice, result) match
-                  case Success((sum, free2), _) =>
-                    Expression.renaming = None
-                    Expression.replacing = None
-                    given Names2 = Names2(binding2)
-                    substitution(lhs) = sum.flatten.update
+
+                _cache.get(key) match
+
+                  case Some((sum: +, it, free2, given Names2, in)) =>
+                    binding2 ++= binders
+
+                    substitution(lhs) = sum
                     free ++= free2 -- binding2.map(_._1)
 
-                  case it => fail = Some(Failure("choice expected", it.next))
+                    paste(it)
+
+                    in2 = in
+
+                  case _ =>
+
+                    given Names2 = Names2(binding2)
+                    parseAll(choice, result) match
+
+                      case Success((sum, free2), _) =>
+                        binding2 ++= binders
+
+                        Expression.renaming = None
+                        Expression.replacing = None
+                        val sum2 = sum.flatten.update(using Names2(binding2))
+
+                        substitution(lhs) = sum2
+                        free ++= free2 -- binding2.map(_._1)
+
+                        in2 = in.drop(start + matched.end - offset)
+
+                        _cache(key) = (sum2, copy, free2, given_Names2, in2)
+
+                      case it =>
+                        fail = Some(Failure("choice expected", it.next))
 
               fail match
-                case Some(it) => it
+                case Some(it) => it -> Nil
                 case _ =>
-                  expand(in.drop(start + matched.end - offset), end)(it -> rhs)
+                  if in2 eq null then in2 = in.drop(start + matched.end - offset)
+                  expand(in2, _ts, end)(it -> rhs)
 
             case _ =>
               val found = if start == source.length
                           then "end of source"
                           else "'"+source.charAt(start)+"'"
-              Failure("operator '"+op+"' expected but "+found+" found", in.drop(start - offset))
+              Failure("operator '"+op+"' expected but "+found+" found", in.drop(start - offset)) -> Nil
 
-        case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, Term.Name(op), _, List(rhs))) =>
-          expand(in, Right(op))(it -> lhs) match
-
-            case Success(_, _in) =>
-              var in = _in
-              var source = in.source
-              var offset = in.offset
-              var start = handleWhiteSpace(source, offset)
-
-              var s = SubSequence(source, start)
-
-              var placeholder = false
-
-              if s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-              then
-                in = in.drop(start + 1 - offset)
-                source = in.source
-                offset = in.offset
-                start = handleWhiteSpace(source, offset)
-
-                s = SubSequence(source, start)
-
-                placeholder = true
-
-              (Pattern.quote(end.orElse(end.swap).right.get).r findPrefixMatchOf s) match
-
-                case Some(matched) =>
-                  Success(it, in.drop(start + matched.end - offset))
-
-                case _ if placeholder =>
-                  Failure(s"${end.orElse(end.swap).right.get} expected", in)
-
-                case _ =>
-                  expand(in, end)(it -> rhs)
-
+        case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, _op @ Term.Name(op), _, List(rhs))) =>
+          expand(in, ts, Right(op))(it -> lhs) match
+            case (Success(_, in), ts) =>
+              val _ts = ts :+ _op
+              expand(in, _ts, end)(it -> rhs)
             case it => it
 
         case (it, Term.AnonymousFunction(body)) =>
-          expand(in, end)(it -> body)
+          expand(in, ts, end)(it -> body)
 
         case _ => ??? /* caught by template */
 
@@ -348,18 +437,19 @@ abstract class Expansion extends Encoding:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Left(end))(_macro(code, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
-            case Some((it, in)) => r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
+            case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
+              r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
             case _ =>
 
         r match
+
           case Some(((definition, _), (given Map[String, λ | AST], (free, given Names2)), in)) =>
-            binding2 ++= given_Names2.filter(_._2.isBinding < 0)
-            Expression.renaming = None
-            Expression.updating = None
-            Expression.replacing = Some(given_Map_String_|)
+            binding2 ++= binders
+
             Success(definition() -> free, in)
+
           case _ => throw UndefinedParsingException
 
     }.named(s"""⟦${if defs.size == 1 then defs.head._2.code.toString else ""}⟧""")
