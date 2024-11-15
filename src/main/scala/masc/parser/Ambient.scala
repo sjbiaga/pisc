@@ -71,16 +71,28 @@ abstract class Ambient extends Expression:
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var _nest = -1
-  protected final def nest(b: Boolean) = { _nest += (if b then 1 else -1); if b then _cntr(_nest) = 0L }
+  private[parser] var _nth: Map[Int, Long] = null
+  protected final def nest(b: Boolean) =
+    _nth(_nest) += 1
+    _nest += (if b then 1 else -1)
+    if b
+    then
+      _nth(_nest) = 0L
+      _cntr(_nest) = 0L
+    else
+      _nth -= _nest+1
+      _cntr -= _nest +1
   private[parser] var _cntr: Map[Int, Long] = null
 
-  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
+  protected final def path = (0 until _nest).map(_nth(_))
+
+  protected final def save[T](r: => (ParseResult[T], Any), fail: Boolean): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
     _id.save {
       r match
-        case Success(it, in) => Some(it -> in)
-        case failure: NoSuccess if fail =>
+        case (Success(it, in), _) => Some(it -> in)
+        case (failure: NoSuccess, _) if fail =>
           scala.sys.error(failure.msg)
         case _ =>
          _cntr = cntr
@@ -193,7 +205,6 @@ object Ambient extends Expansion:
     defn = Map()
     self = Set()
     _nest = 0
-    _cntr = Map(0 -> 0L)
     _id = new helper.υidυ
     i = 0
     l = (0, 0)
@@ -214,6 +225,8 @@ object Ambient extends Expansion:
       then // Scala
         Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
       else // Ambient
+        _cntr = Map(0 -> 0L)
+        _nth = Map(0 -> 0L)
         parseAll(line, it) match
           case Success(Left(equation), _) =>
             eqtn :+= equation
