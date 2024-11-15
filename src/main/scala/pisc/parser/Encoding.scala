@@ -74,7 +74,7 @@ abstract class Encoding extends Calculus:
             if parameters.size == _parameters.size
             then
               eqtn :+= `(*)`("Self_" + _code, binding.map(λ(_)).toSeq*) -> sum
-            val `macro` = Macro(parameters.toList, constants, variables, given_Names2, sum)
+            val `macro` = Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, sum)
             `macro` -> Definition(_code, term, constants, variables, sum)
         }
     }
@@ -82,6 +82,7 @@ abstract class Encoding extends Calculus:
   def instantiation(using binding2: Names2): Parser[(`⟦⟧`, Names)] =
     given Names2 = Names2(binding2)
     regexMatch("""⟦(\d*)""".r) >> { m =>
+      if _nest == 0 then _cache.clear
       nest(true)
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
@@ -125,7 +126,8 @@ abstract class Encoding extends Calculus:
         exp2 -> (free ++ constants)
     }
 
-  def instance(defs: List[Define], end: String)(using Names2): Parser[(`⟦⟧`, Names)]
+  def instance(defs: List[Define], end: String)
+              (using Names2): Parser[(`⟦⟧`, Names)]
 
   private def pointers: Parser[(List[Symbol], Names)] =
     "{"~>rep1sep(name, ",")<~"}" ^^ {
@@ -154,14 +156,21 @@ abstract class Encoding extends Calculus:
         `{}`(id, Nil, true) -> Names()
     }
 
+  protected val _cache = Map[CacheKey, CacheValue]()
+
 
 object Encoding:
 
   type Define = (Macro, Definition)
 
-  type Fresh = (Definition, List[Option[Symbol]])
+  type Fresh = (Definition, (Int, List[Option[Symbol]]))
+
+  private type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
+
+  private type CacheValue = (`⟦⟧` | +, (Any, Any), Names, Names2, Input)
 
   case class Macro(parameters: List[Symbol],
+                   arity: Int,
                    constants: Names,
                    variables: Names,
                    binding2: Names2,
@@ -187,14 +196,18 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      Definition(code, Some(term), constants, variables2, sum2) -> shadows
+      val `def` = Definition(code, Some(term), constants, variables2, sum2)
+      `def` -> (arity - shadows.count(_.nonEmpty) -> shadows)
 
   case class Definition(code: Int,
                         term: Option[Term],
                         constants: Names,
                         variables: Names,
                         sum: +):
-    inline def apply()(using Map[String, λ | AST]): `⟦⟧` =
+    inline def apply()(using substitution: Map[String, λ | AST]): `⟦⟧` =
+      Expression.renaming = None
+      Expression.updating = None
+      Expression.replacing = Some(substitution)
       `⟦⟧`(this, variables, sum.replace.flatten)
 
     override def toString: String = Definition(code, term)
@@ -283,8 +296,6 @@ object Encoding:
 
   // functions
 
-  import scala.annotation.tailrec
-
   def renamed(it: Symbol)
              (using refresh: MutableList[(Symbol, λ)])
              (using binding2: Names2): λ =
@@ -327,6 +338,9 @@ object Encoding:
         binding2 += name -> occurrence
       case _ =>
     }
+    binders
+
+  inline def binders(using binding2: Names2): Names2 =
     binding2.filter(_._2.isBinding < 0)
 
 
@@ -491,3 +505,10 @@ object Encoding:
   private[parser] var _id: helper.υidυ = null
 
   def id = _id()
+
+  def copy: (Any, Any) =
+    _id.copy -> sπ_id.copy
+
+  def paste(it: (Any, Any)) =
+    _id.paste(it._1)
+    sπ_id.paste(it._2)
