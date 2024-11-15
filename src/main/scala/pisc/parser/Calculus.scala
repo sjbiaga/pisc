@@ -72,7 +72,7 @@ abstract class Calculus extends PolyadicPi:
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
     given Names2 = Names2(binding2)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ { `pre ~ opt` =>
-      binding2 ++= given_Names2.filter(_._2.isBinding < 0)
+      binding2 ++= binders
       `pre ~ opt` match
         case pre ~ Some((end, free)) =>
           `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
