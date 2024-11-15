@@ -61,12 +61,18 @@ final class υidυ:
     if reset then ix = id.size - 1
     "_υ" + id.mkString + "υ"
 
+  def copy: Any =
+    ix -> Seq.from(id)
+
+  def paste(it: Any): Unit =
+    val (ix, id) = it.asInstanceOf[(Int, Seq[Char])]
+    this.ix = ix
+    this.id = id
+
   def save[T](e: => Option[T]): Option[T] =
-    val id = Seq.from(this.id)
-    val ix = this.ix
+    val it = copy
     e match
       case it @ Some(_) => it
       case _ =>
-        this.ix = ix
-        this.id = id
+        paste(it)
         None
