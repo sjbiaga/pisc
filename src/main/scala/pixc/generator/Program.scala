@@ -61,7 +61,7 @@ object Program:
         case it: + =>
           val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -74,7 +74,7 @@ object Program:
         case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -93,7 +93,7 @@ object Program:
               it.head match
                 case xa @ χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _)), r) =>
                   `_ <- *`(s"""τ(${rate(r)})("${xa.υidυ}")""".parse[Term].get) ::
-                  `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
+                  `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
 
                 case xa @ χ(Left(Symbol(name)), r) =>
                   `_ <- *`(s"""τ(${rate(r)})("${xa.υidυ}")""".parse[Term].get) ::
@@ -263,13 +263,13 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
-                           `( *, … ).parMapN { (_, …) => }`(
+                           `NonEmptyList( *, … ).parTraverse(identity)`(
                              sum.generate,
                              `!.π⋯`
                            )
                    )
 
-          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
           val υidυ = id
@@ -287,12 +287,12 @@ object Program:
                                                        Nil)
                                              }
 
-          val it = `( *, … ).parMapN { (_, …) => }`(
+          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
                      sum.generate,
                      `!.μ⋯`
                    )
 
-          * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
+          * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
@@ -322,7 +322,7 @@ object Program:
 
           name match
             case Symbol(it) =>
-              * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(`* <- χ; _ <- }{()(, *)`(it, υidυ) ++ *))
+              * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(`* <- χ; _ <- }{()(, *)`(it, υidυ) ++ *))
             case _ =>
 
         case _: `{}` => ???
