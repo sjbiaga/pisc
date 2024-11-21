@@ -2,7 +2,7 @@ Asynchronous Polyadic Pi-calculus in SCala aka PISC ala RISC
 ============================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
-"inside" the Cats Effect's `IO[Unit]` monad.
+"inside" the Cats Effect's `IO[_]` monad.
 
 Synchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main) is principal.
 Asynchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main-async) is also supported.
@@ -23,11 +23,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `parMapN`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
 
-Summation: non-deterministic choice modelled with - `parMapN` and `Semaphore.tryAcquire`.
+Summation: non-deterministic choice modelled with - `parTraverse` and `Semaphore.tryAcquire.ifM`.
 
-[Guarded] Replication: modelled with - `parMapN` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -252,18 +252,22 @@ named `_<uuid>` to translate lazily `! P` as:
 
     for
       _<uuid> <- IO {
-        lazy val _<uuid>: IO[Unit] =
-          (
-            .  // P
-            .
-            .
-          ,
-            for
-              _ <- IO.unit
-              _ <- _<uuid>
-            yield
-              ()
-          ).parMapN { (_, _) => }
+        lazy val _<uuid>: IO[Any] =
+          NonEmptyList
+            .fromListUnsafe(
+              πList(
+                .  // P
+                .
+                .
+              ,
+                for
+                  _ <- IO.unit
+                  _ <- _<uuid>
+                yield
+                  ()
+              )
+            )
+            .parTraverse(identity)
         _<uuid>
       }
       _ <- _<uuid>

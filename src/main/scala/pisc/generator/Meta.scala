@@ -122,8 +122,6 @@ object Meta:
 
   val `: IO[Any]` = `:`("IO", "Any")
 
-  val `: IO[Unit]` = `:`("IO", "Unit")
-
 
   def `* <- …`(* : String*): Pat =
     if *.size == 0
@@ -201,28 +199,15 @@ object Meta:
     )
 
 
-  def `( *, … ).parMapN { (_, …) => }`(* : Term*): Term =
-    Term.Apply(
-      Term.Select(Term.Tuple(*.toList), "parMapN"),
-      Term.ArgClause(Term.Block(
-                       Term.Function(
-                         Term.ParamClause(
-                           List.fill(*.size)(Term.Param(Nil, Name.Placeholder(), None, None)),
-                           None
-                         ),
-                         Term.Block(Nil)
-                       ) :: Nil
-                     ) :: Nil,
-                     None
-      )
-    )
+  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
+    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparTraverse")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
     Term.If(*, `…`(0), `…`(1), Nil)
 
 
-  def `IO { def *(*: ()): IO[Unit] = …; * }`(* : String, `…`: Term, ** : String*): Term =
+  def `IO { def *(*: ()): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
@@ -234,7 +219,7 @@ object Meta:
                                                                                        Some(Type.Name("()")),
                                                                                        None)).toList,
                                                                      None) :: Nil) :: Nil,
-                            `: IO[Unit]`,
+                            `: IO[Any]`,
                              `…`
                    ) :: \(*) :: Nil
                  ) :: Nil
@@ -242,12 +227,12 @@ object Meta:
                )
     )
 
-  def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term): Term =
+  def `IO { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
-                                         `: IO[Unit]`,
+                                         `: IO[Any]`,
                                          `…`
                                 ) :: \(*) :: Nil
                               ) :: Nil,
