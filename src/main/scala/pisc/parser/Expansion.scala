@@ -666,8 +666,7 @@ object Expansion:
           ?:(cond, t.update, f.map(_.update))
 
         case !(Some(it @ τ(given Option[Code])), sum) =>
-          given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
+          Expression.updating = Some(binding2)
           `!`(Some(it.copy(code = recoded)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(par: Symbol), true, given Option[Code])), sum) =>
@@ -678,13 +677,11 @@ object Expansion:
           `!`(Some(it.copy(channel = ch2, code = recoded)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), false, given Option[Code])), sum) =>
-          given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
+          Expression.updating = Some(binding2)
           `!`(Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), _, false, given Option[Code])), sum) =>
-          given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
+          Expression.updating = Some(binding2)
           `!`(Some(it.copy(channel = updated(ch), code = recoded)), sum.update)
 
         case it @ !(_, sum) =>

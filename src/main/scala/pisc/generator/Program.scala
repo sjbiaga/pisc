@@ -69,7 +69,7 @@ object Program:
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
-            `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+            `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
           )
 
           semaphore
@@ -87,7 +87,7 @@ object Program:
         case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate())
 
-          val ** = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          val ** = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
@@ -230,13 +230,13 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
-                           `( *, … ).parMapN { (_, …) => }`(
+                           `NonEmptyList( *, … ).parTraverse(identity)`(
                              sum.generate(),
                              `!.π⋯`
                            )
                    )
 
-          * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Unit] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
           val υidυ = id
@@ -254,22 +254,22 @@ object Program:
                                                             Nil)
                                                   }
 
-          val it = `( *, … ).parMapN { (_, …) => }`(
+          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
                      sum.generate(),
                      `!.μ⋯`
                    )
 
-          * = `* <- *`(υidυ -> `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `!.μ⋯`
+          * = `* <- *`(υidυ -> `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.μ⋯`
 
         case !(_, sum) =>
           val υidυ = id
 
-          val it = `( *, … ).parMapN { (_, …) => }`(
+          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
                      sum.generate(),
                      `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
 
-          * = `* <- *`(υidυ, `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
+          * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
 
         ///////////////////////////////////////////////////////// replication //
 
