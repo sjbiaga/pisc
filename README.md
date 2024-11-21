@@ -2,7 +2,7 @@ Stochastic Pi-calculus in SCala aka PISC ala RISC
 =================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
-"inside" the Cats Effect's `IO[Unit]` monad.
+"inside" the Cats Effect's `IO[_]` monad.
 
 The stochastic branch adds rates to actions in comparison with
 the [π-calculus](https://github.com/sjbiaga/pisc/tree/main).
@@ -16,11 +16,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`, which can be at most one.
 
-Composition: parallel modelled with - `parMapN`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
 
-Summation: *probabilistic* choice modelled with - `parMapN`.
+Summation: *probabilistic* choice modelled with - `parTraverse`.
 
-[Guarded] Replication: modelled with - `parMapN` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -246,7 +246,7 @@ action `rate` associated with the key, or enqueues a quadruple in the `/` `Queue
 That does not mean the rate will be used, because the action may be _discarded_.
 Then, it blocks semantically on the `Deferred.get` method. If discarded, it will
 be `canceled`, but the cancellation will not outlive the `Supervisor`'s lifecycle
-which the fiber `use`s for this purpose in a parameter to a (nested) `parMapN`.
+which the fiber `use`s for this purpose in a parameter to a (nested) `parTraverse`.
 
 A background fiber blocks on (`take`ing or) dequeuing this `Queue`. It then updates
 the `%` map of all enabled actions by merely mapping the string `^ + key` (where `^`
@@ -398,18 +398,22 @@ named "`_<uuid>`" to translate lazily `! . π . P` as:
 
     for
       _<uuid> <- IO {
-        lazy val _<uuid>: String => IO[Unit] = { implicit ^ =>
-          (
-            .  // P
-            .
-            .
-          ,
-            for
-              π
-              _ <- _<uuid>(`π-uuid`)
-            yield
-              ()
-          ).parMapN { (_, _) => }
+        lazy val _<uuid>: String => IO[Any] = { implicit ^ =>
+          NonEmptyList
+            .fromListUnsafe(
+              πList(
+                .  // P
+                .
+                .
+              ,
+                for
+                  π
+                  _ <- _<uuid>(`π-uuid`)
+                yield
+                  ()
+              )
+            )
+            .parTraverse(identity)
         }
         <uuid>
       }

@@ -68,8 +68,14 @@ object π:
   import _root_.java.util.UUID
   import _root_.scala.Function.const
 
+  import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.cats.syntax.all._
   import _root_.cats.effect.syntax.all._
+
+  extension (self: πLs[IO[?]])
+    private[π] inline def πparTraverse =
+      import _root_.cats.data.NonEmptyList.{ fromListUnsafe => πfLsU }
+      πfLsU(self).parTraverse(identity)
 
   import sΠ._
 

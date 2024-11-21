@@ -61,7 +61,7 @@ object Program:
         case it: + =>
           val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -74,7 +74,7 @@ object Program:
         case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -243,13 +243,13 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
-                           `( *, … ).parMapN { (_, …) => }`(
+                           `NonEmptyList( *, … ).parTraverse(identity)`(
                              sum.generate,
                              `!.π⋯`
                            )
                    )
 
-          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
           val υidυ = id
@@ -267,12 +267,12 @@ object Program:
                                                           Nil)
                                                 }
 
-          val it = `( *, … ).parMapN { (_, …) => }`(
+          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
                      sum.generate,
                      `!.μ⋯`
                    )
 
-          * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
+          * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 

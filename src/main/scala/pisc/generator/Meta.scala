@@ -152,8 +152,6 @@ object Meta:
 
   val `: IO[Any]` = `:`("IO", "Any")
 
-  val `: IO[Unit]` = `:`("IO", "Unit")
-
 
   def `* <- …`(* : String*): Pat =
     if *.size == 0
@@ -220,14 +218,14 @@ object Meta:
       case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil, None))
 
   @tailrec
-  def `( *, … ).parMapN { (_, …) => }`(* : Term*): Term =
+  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
     if *.exists {
-      case Term.Apply(Term.Select(Term.Tuple(_), Term.Name("parMapN")), _) => true
+      case Term.Select(Term.Apply(Term.Name("πLs"), _), Term.Name("πparTraverse")) => true
       case _ => false
     } then
-      `( *, … ).parMapN { (_, …) => }`((
+      `NonEmptyList( *, … ).parTraverse(identity)`((
         *.flatMap {
-          case Term.Apply(Term.Select(Term.Tuple(ls), Term.Name("parMapN")), _) =>
+          case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparTraverse")) =>
             ls.map {
               case it @ Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => it
               case Term.Apply(Term.Name("π-supervised"), it :: Nil) => it
@@ -235,34 +233,21 @@ object Meta:
           case it => it :: Nil
         })*)
       else
-        Term.Apply(
-              Term.Select(Term.Tuple(*.map(`π-supervised(*)`).toList), "parMapN"),
-              Term.ArgClause(Term.Block(
-                               Term.Function(
-                                 Term.ParamClause(
-                                   List.fill(*.size)(Term.Param(Nil, Name.Placeholder(), None, None)),
-                                   None
-                                 ),
-                                 Term.Block(Nil)
-                               ) :: Nil
-                             ) :: Nil,
-                             None
-              )
-            )
+        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(`π-supervised(*)`).toList)), "πparTraverse")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
     Term.If(*, `…`(0), `…`(1), Nil)
 
 
-  val `: String => IO[Unit]` =
+  val `: String => IO[Any]` =
     Some(Type.Function(
            Type.FuncParamClause(Type.Name("String") :: Nil),
            Type.Apply(Type.Name("IO"),
                       Type.ArgClause(Type.Name("Unit") :: Nil))))
 
 
-  def `IO { def *(*: ()): String => IO[Unit] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
+  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
@@ -273,7 +258,7 @@ object Meta:
                                                                                 *._2,
                                                                                 Some(Type.Name("()")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: String => IO[Unit]`,
+                            `: String => IO[Any]`,
                             Term.Block(
                               Term.Function(
                                 Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
@@ -289,13 +274,13 @@ object Meta:
     )
 
 
-  def `IO { lazy val *: String => IO[Unit] = { implicit ^ => … } * }`(* : String, `…`: Term): Term =
+  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(* : String, `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
                    Defn.Val(Mod.Lazy() :: Nil,
                             `* <- …`(*) :: Nil,
-                            `: String => IO[Unit]`,
+                            `: String => IO[Any]`,
                             Term.Block(
                               Term.Function(
                                 Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
