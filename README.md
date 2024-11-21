@@ -2,7 +2,7 @@ Asynchronous Calculus of Mobile Ambients in SCala
 =================================================
 
 The `Ambient Calculus` maps one to one on `Scala` for-comprehensions
-"inside" the Cats Effect's `IO[Unit]` monad.
+"inside" the Cats Effect's `IO[_]` monad.
 
 Synchronous [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is principal.
 Unlike [π-calculus](https://github.com/sjbiaga/pisc/tree/main) with its variants
@@ -17,11 +17,11 @@ programmatically typed as `Scala` code using `CE` `IO`.
 Communications in ambients work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `parMapN`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
 
-Ambient: singly parallelized with - `parMapN` and `IOLocal`.
+Ambient: singly parallelized with - `parTraverse` and `IOLocal`.
 
-[Guarded] Replication: modelled with - `parMapN` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -97,7 +97,7 @@ unambiguously parsed.
 
 When an ambient is "launched" with the `NAME "[" PARALLEL "]"` syntax, a new `UUID`
 will be associated with it, as the common value of all `IOLocal`s corresponding to
-the fibers created in parallel by `parMapN`. The `NAME` must have been previously
+the fibers created in parallel by `parTraverse`. The `NAME` must have been previously
 introduced using "ν" - an ambient name.
 
 Not part of the original `Ambient Calculus`, an agent (invocation) expression - unless
@@ -118,7 +118,7 @@ that is found in these terms is considered a _free_ name.
 Ambients
 --------
 
-Recall that using `parMapN` in `CE` resorts to fibers. There isn't really any
+Recall that using `parTraverse` in `CE` resorts to fibers. There isn't really any
 distinction between fibers ran in parallel, so not between ambients, were it not
 for the possibility to have per-fiber copies of the same `IOLocal`. And so, in
 fact, ambients are not differentiated at runtime (running in parallel) except
@@ -280,18 +280,22 @@ named `_<uuid>` to translate lazily `! P` as:
 
     for
       _<uuid> <- IO {
-        lazy val _<uuid>: IO[Unit] =
-          (
-            .  // P
-            .
-            .
-          ,
-            for
-              _ <- IO.unit
-              _ <- _<uuid>
-            yield
-              ()
-          ).parMapN { (_, _) => }
+        lazy val _<uuid>: IO[Any] =
+          NonEmptyList
+            .fromListUnsafe(
+              πList(
+                .  // P
+                .
+                .
+              ,
+                for
+                  _ <- IO.unit
+                  _ <- _<uuid>
+                yield
+                  ()
+              )
+            )
+            .parTraverse(identity)
         _<uuid>
       }
       _ <- _<uuid>

@@ -256,7 +256,7 @@ abstract class Expansion extends Encoding:
                             else "'"+source.charAt(start)+"'"
                 Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset)) -> Nil
 
-        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), Term.Name(op), _, List(rhs))) =>
+        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _op @ Term.Name(op), _, List(rhs))) =>
           val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
 
           var source = in.source
@@ -643,6 +643,12 @@ object Expansion:
             case it => it
           }
           <>(code, path*)
+
+        case it @ !(Some(name), par) =>
+          given Names2 = Names2(binding2)
+          Expression.updating = Some(given_Names2)
+          given_Names2 -= name
+          it.copy(par = par.update)
 
         case it @ !(_, par) =>
           it.copy(par = par.update)
