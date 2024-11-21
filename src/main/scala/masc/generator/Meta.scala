@@ -43,11 +43,11 @@ object Meta:
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: IO[Unit]`,
+               "Main", `String*`("args"), `: IO[Any]`,
                body)
     case `(*)`(identifier, _, params*) =>
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: IO[Unit]`,
+               identifier, `(…)`(params*), `: IO[Any]`,
                body)
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
@@ -92,7 +92,7 @@ object Meta:
     Some(Type.Apply(Type.Name(name), Type.ArgClause(Type.Name(clause) :: Nil)))
 
 
-  val `: IO[Unit]` = `:`("IO", "Unit")
+  val `: IO[Any]` = `:`("IO", "Any")
 
 
   def `* <- …`(* : String*): Pat =
@@ -156,7 +156,11 @@ object Meta:
       `for * yield ()`(`_ <- IO.unit`)
 
 
-  def `IO { def *(*: )(): IO[Unit] = …; * }`(* : (String, String), `…`: Term): Term =
+  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
+    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparTraverse")
+
+
+  def `IO { def *(*: )(): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
@@ -167,7 +171,7 @@ object Meta:
                                                                                 *._2,
                                                                                 Some(Type.Name(")(")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: IO[Unit]`,
+                            `: IO[Any]`,
                              `…`
                    ) :: \(*._1) :: Nil
                  ) :: Nil
@@ -176,32 +180,12 @@ object Meta:
     )
 
 
-  def `( *, … ).parMapN { (_, …) => }`(* : Term*): Term =
-    Term.Apply(
-      Term.Select(Term.Tuple(*.toList), "parMapN"),
-      Term.ArgClause(Term.Block(
-                       Term.Function(
-                         Term.ParamClause(
-                           List.fill(*.size)(Term.Param(Nil, Name.Placeholder(), None, None)),
-                           None
-                         ),
-                         Term.Block(Nil)
-                       ) :: Nil
-                     ) :: Nil,
-                     None
-      )
-    )
-
-  def `( * ).parMap1 { (_, …) => }`(* : Term): Term =
-    `( *, … ).parMapN { (_, …) => }`(`IO.cede`, *)
-
-
-  def `IO { lazy val *: IO[Unit] = …; * }`(* : String, `…`: Term): Term =
+  def `IO { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
-                                         `: IO[Unit]`,
+                                         `: IO[Any]`,
                                          `…`
                                 ) :: \(*) :: Nil
                               ) :: Nil,

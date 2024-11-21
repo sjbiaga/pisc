@@ -62,7 +62,7 @@ object Program:
         case it: || =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
-          * = `_ <- *`(`( *, … ).parMapN { (_, …) => }`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -122,23 +122,23 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", name),
                            `IO.cede`,
-                           `( *, … ).parMapN { (_, …) => }`(
+                           `NonEmptyList( *, … ).parTraverse(identity)`(
                              par.generate,
                              `!.(*).⋯`
                            )
                    )
 
-          * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Unit] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+          * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
 
         case !(_, par) =>
           val υidυ = id
 
-          val it = `( *, … ).parMapN { (_, …) => }`(
+          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
                      par.generate,
                      `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
 
-          * = `* <- *`(υidυ, `IO { lazy val *: IO[Unit] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
+          * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -148,7 +148,7 @@ object Program:
         case `[]`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(** ++ par.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -158,7 +158,7 @@ object Program:
         case `go.`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`( * ).parMap1 { (_, …) => }`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(** ++ par.generate))
 
         ////////////////////////////////////////////////////////////////// go //
 

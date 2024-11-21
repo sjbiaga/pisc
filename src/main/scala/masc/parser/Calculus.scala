@@ -236,7 +236,7 @@ object Calculus:
     override def toString: String = path.mkString("<", ", ", ">")
 
   case class !(guard: Option[String], par: ||) extends AST:
-    override def toString: String = "!" + guard.map("." + _).getOrElse("") + par
+    override def toString: String = "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 
   case class `[]`(amb: String, par: ||) extends AST:
     override def toString: String = amb + (if ∅ == par then " [ ]" else " [ " + par + " ]")
