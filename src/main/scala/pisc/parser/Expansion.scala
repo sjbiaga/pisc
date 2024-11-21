@@ -677,8 +677,7 @@ object Expansion:
           ?:(cond, t.update, f.map(_.update))
 
         case !(Some(it @ τ(given Option[Code])), sum) =>
-          given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
+          Expression.updating = Some(binding2)
           `!`(Some(it.copy(code = recoded)), sum.update)
 
         case !(Some(π(λ(ch: Symbol), true, code, names*)), sum) =>
@@ -691,8 +690,7 @@ object Expansion:
 
         case !(Some(π(λ(ch: Symbol), false, code, _names*)), sum) =>
           given Option[Code] = code
-          given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
+          Expression.updating = Some(binding2)
           val names = _names.map {
             case λ(arg: Symbol) => updated(arg)
             case it => it

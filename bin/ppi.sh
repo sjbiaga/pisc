@@ -18,7 +18,7 @@ function ppi() {
     done
     set ../ppi.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.6.1 \
+                  -q -O -nowarn -S 3.6.2-RC1 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
@@ -42,7 +42,7 @@ function ppi_() {
     done
     set ../ppi_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.6.1 \
+                  -q -O -nowarn -S 3.6.2-RC1 \
                   --dep org.typelevel::cats-effect:3.6-0142603 \
                   ${args#?} \
                   2>&1
