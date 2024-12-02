@@ -88,7 +88,7 @@ object Ensure:
         case +(it*) =>
          it.foldLeft(())((_, par) => par.recursive)
 
-        case ||(it*) =>
+        case ∥(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
 
         case `.`(end, _*) =>

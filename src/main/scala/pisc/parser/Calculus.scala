@@ -33,8 +33,6 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.Term
 
-import scala.util.parsing.combinator._
-
 import Expression.Code
 import Pi._
 import Calculus._
@@ -64,9 +62,9 @@ abstract class Calculus extends Pi:
       `+`(ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel(using Names2): Parser[(||, Names)] =
+  def parallel(using Names2): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      ||(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+      ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
@@ -102,7 +100,7 @@ abstract class Calculus extends Pi:
             throw GuardParsingException(ch.name)
           Console.err.println("Warning! " + GuardParsingException(ch.name).getMessage + ".")
         val binding = π._2._1
-        Names2(binding)
+        Names2Occurrence(binding)
         choice ^^ {
           case (sum, free) =>
             `!`(Some(π._1), sum) -> ((free &~ binding) ++ π._2._2)
@@ -150,12 +148,12 @@ abstract class Calculus extends Pi:
         throw PrefixChannelsParsingException(ns.filterNot(_._1.isSymbol).map(_._1)*)
       case ns =>
         val binding = ns.map(_._2).reduce(_ ++ _)
-        Names2(binding)
+        Names2Occurrence(binding)
         ν(ns.map(_._1.asSymbol.name)*) -> (binding, Names())
     } |
     `μ.`<~"." ^^ {
       case it @ (_, (binding, _)) =>
-        Names2(binding)
+        Names2Occurrence(binding)
         it
     }
 
@@ -212,9 +210,27 @@ object Calculus:
 
   type Bind = (`(*)`, +)
 
+  export Pre._
+
+  enum Pre:
+
+    case ν(names: String*) // forcibly
+
+    case τ(code: Option[Code])
+
+    case π(channel: λ, name: λ, polarity: Boolean, code: Option[Code])
+
+    override def toString: String = this match
+      case ν(names*) => names.mkString("ν(", ", ", ")")
+      case π(channel, name, polarity, _) =>
+        if polarity
+        then "" + channel + "(" + name + ")."
+        else "" + channel + "<" + name + ">."
+      case _ => "τ."
+
   sealed trait AST extends Any
 
-  case class +(choices: || *) extends AST:
+  case class +(choices: ∥ *) extends AST:
     override def toString: String = choices.mkString(" + ")
 
   object ∅ extends +():
@@ -227,27 +243,13 @@ object Calculus:
 
     override def toString: String = "()"
 
-  case class ||(components: `.`*) extends AnyVal with AST:
+  case class ∥(components: `.`*) extends AnyVal with AST:
     override def toString: String = components.mkString(" | ")
 
   case class `.`(end: &, prefixes: Pre*) extends AST:
     override def toString: String =
       prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[+]
                                                                          then "(" + end + ")" else end)
-
-  sealed trait Pre extends Any
-
-  case class ν(names: String*) extends AnyVal with Pre: // forcibly
-    override def toString: String = names.mkString("ν(", ", ", ")")
-
-  case class τ(code: Option[Code]) extends AnyVal with Pre:
-    override def toString: String = "τ."
-
-  case class π(channel: λ, name: λ, polarity: Boolean, code: Option[Code]) extends Pre:
-    override def toString: String =
-      if polarity
-      then "" + channel + "(" + name + ")."
-      else "" + channel + "<" + name + ">."
 
   case class ?:(cond: ((λ, λ), Boolean), t: +, f: Option[+]) extends AST:
     override def toString: String =
@@ -353,7 +355,7 @@ object Calculus:
 
         case ∅ => ∅
 
-        case +(||(`.`(sum: +)), it*) =>
+        case +(∥(`.`(sum: +)), it*) =>
           val lhs = sum.flatten
           val rhs = `+`(it*).flatten
           `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
@@ -363,17 +365,17 @@ object Calculus:
           val rhs = `+`(it*).flatten
           `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
 
-        case ||(`.`(+(par)), it*) =>
+        case ∥(`.`(+(par)), it*) =>
           val lhs = par.flatten
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components)*)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components)*)
 
-        case ||(seq, it*) =>
-          val lhs = ||(seq.flatten)
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components)*)
+        case ∥(seq, it*) =>
+          val lhs = ∥(seq.flatten)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components)*)
 
-        case `.`(+(||(`.`(end, ps*))), it*) =>
+        case `.`(+(∥(`.`(end, ps*))), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
@@ -384,7 +386,7 @@ object Calculus:
 
         case !(None, sum) =>
           sum.flatten match
-            case +(||(`.`(end: !))) => end
+            case +(∥(`.`(end: !))) => end
             case it => `!`(None, it)
 
         case it @ !(_, sum) =>
