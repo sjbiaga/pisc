@@ -38,14 +38,10 @@ import Meta._
 
 object Program:
 
-  def apply(prog: List[Bind]): List[String] =
-    _id = new helper.υidυ
-    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
-
-
   extension(node: Pre | AST)
 
-    def generate(implicit semaphore: Option[String] = None): List[Enumerator] =
+    def generate(using id: => String)
+                (implicit semaphore: Option[String] = None): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -81,10 +77,10 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ||(operand) =>
+        case ∥(operand) =>
           * = operand.generate
 
-        case it: || =>
+        case it: ∥ =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate())
 
           val ** = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
@@ -101,7 +97,7 @@ object Program:
         case it @ `.`(?:(_, _, None)) if semaphore.nonEmpty =>
           def cases(sum: +): Term =
             sum match
-              case +(||(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+              case +(∥(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
                 if mismatch
                 then
                   `if * then … else …`(====(lhs -> rhs), Nil, cases(t))
@@ -110,7 +106,7 @@ object Program:
               case _ =>
                 `_ <- *.tryAcquire.ifM`(semaphore.get, sum.generate())
 
-          * = `_ <- *`(cases(`+`(||(it))))
+          * = `_ <- *`(cases(`+`(∥(it))))
 
         case `.`(end, it*) =>
           val ** = (it :+ end).foldLeft(*)(_ ++ _.generate())
@@ -290,7 +286,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(||(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
+                        `+`(∥(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate()
@@ -306,12 +302,11 @@ object Program:
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
             case λ(value) =>
-              value match {
+              value match
                 case it: BigDecimal => s"BigDecimal($it)"
                 case it: Boolean => it.toString
                 case it: String => it.toString
                 case Expr(it) => it.toString
-              }
           }
 
           qual match
@@ -325,6 +320,9 @@ object Program:
       *
 
 
-  private[generator] var _id: helper.υidυ = null
+  final class Main:
 
-  def id = _id()
+    def apply(prog: List[Bind]): List[String] =
+      val id = new helper.υidυ
+      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)
+
