@@ -39,7 +39,6 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.Pi
-import Pi.ln
 import generator.Program
 
 
@@ -55,19 +54,21 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
+      val pi = Pi.Main()
+
       try
         source = Source.fromFile(s"$examples/pixc/$in")
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bind = Pi(source).zipWithIndex
+        val bind = pi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val congruent = Pi.Χ()
+        val congruent = pi.Χ()
 
         val kong = `King Kong`("π-kong", congruent).toString + "\n\n"
 
-        val ps = Program(Pi(prog.map(_._1)))
+        val ps = Program.Main()(pi(prog.map(_._1)))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
@@ -79,7 +80,7 @@ object Main:
 
         bwr.write(kong + code, 0, kong.length + code.length)
       catch t =>
-        val (m, n) = ln
+        val (m, n) = pi.ln
         val l = if m == n then s"line #$n" else s"lines #$m-#$n"
         Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
         throw t
