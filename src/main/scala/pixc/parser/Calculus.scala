@@ -33,8 +33,6 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.Term
 
-import scala.util.parsing.combinator._
-
 import Expression.Code
 import StochasticPi._
 import Calculus._
@@ -64,9 +62,9 @@ abstract class Calculus extends StochasticPi:
       `+`(nil, ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel(using Names2): Parser[(||, Names)] =
+  def parallel(using Names2): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      ||(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+      ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
@@ -102,7 +100,7 @@ abstract class Calculus extends StochasticPi:
             throw GuardParsingException(ch.name)
           Console.err.println("Warning! " + GuardParsingException(ch.name).getMessage + ".")
         val binding = π._2._1
-        Names2(binding)
+        Names2Occurrence(binding)
         choice ^^ {
           case (sum, free) =>
             `!`(Some(π._1), sum) -> ((free &~ binding) ++ π._2._2)
@@ -153,18 +151,18 @@ abstract class Calculus extends StochasticPi:
         throw PrefixChannelsParsingException(ns.filterNot(_._1.isSymbol).map(_._1)*)
       case ns =>
         val binding = ns.map(_._2).reduce(_ ++ _)
-        Names2(binding)
+        Names2Occurrence(binding)
         ν(ns.map(_._1.asSymbol.name)*) -> (binding, Names())
     } |
     "start"~> ("("~> ident("transaction") <~ ")") ~ opt("@"~>rate) >> {
       case name ~ r =>
       val trans = Symbol(name)
       val binding = Names() + trans
-      Names2(binding)
+      Names2Occurrence(binding)
       instantiation <~"." ^^ {
         case (exp, free) =>
           val code = exp.definition.code
-          val it = χ(Right(exp.copy(trans = trans)), r.getOrElse(1L))
+          val it: χ = χ(Right(exp.copy(trans = trans)), r.getOrElse(1L))(sπ_id())
           if !xctn.contains(trans -> code)
           then
             xctn(trans -> code) = Nil
@@ -175,11 +173,12 @@ abstract class Calculus extends StochasticPi:
     "end"~> ("("~> ident("transaction") <~ ")") ~ opt("@"~>rate) <~"." ^^ {
       case name ~ r =>
         val trans = Symbol(name)
-        χ(Left(trans), r.getOrElse(1L)) -> (Names(), Names() + trans)
+        val it = χ(Left(trans), r.getOrElse(1L))(sπ_id())
+        it -> (Names(), Names() + trans)
     } |
     `μ.`<~"." ^^ {
       case it @ (_, (binding, _)) =>
-        Names2(binding)
+        Names2Occurrence(binding)
         it
     }
 
@@ -227,10 +226,45 @@ object Calculus:
 
   type Bind = (`(*)`, +)
 
+  export Pre._
+
+  enum Pre:
+
+    case ν(names: String*) // forcibly
+
+    case τ(override val rate: Any,
+           code: Option[Code])(id: => String)
+        extends Pre with Act(() => id)
+
+    case π(channel: λ,
+           name: λ,
+           polarity: Boolean,
+           override val rate: Any,
+           code: Option[Code])(id: => String)
+        extends Pre with Act(() => id)
+
+    case χ(dir: Either[Symbol, `⟦⟧`],
+           override val rate: Any)(id: => String)
+        extends Pre with Act(() => id)
+
+    override def toString: String = this match
+      case ν(names*) => names.mkString("ν(", ", ", ")")
+      case π(channel, name, polarity, _, _) =>
+        if polarity
+        then "" + channel + "(" + name + ")."
+        else "" + channel + "<" + name + ">."
+      case χ(dir, _) =>
+        dir match
+          case Right(exp) => "start(" + exp.trans.name + ") " + exp
+          case Left(trans) => "end(" + trans.name + ")"
+      case _ => "τ."
+
+  extension (xa: χ) def exp: `⟦⟧` = xa.dir.right.get
+
   sealed trait AST extends Any
 
   case class +(override val enabled: Actions,
-               choices: || *) extends AST with Sum:
+               choices: ∥ *) extends AST with Sum:
     override def toString: String = choices.mkString(" + ")
 
   object ∅ extends +(nil):
@@ -243,43 +277,13 @@ object Calculus:
 
     override def toString: String = "()"
 
-  case class ||(components: `.`*) extends AnyVal with AST:
+  case class ∥(components: `.`*) extends AnyVal with AST:
     override def toString: String = components.mkString(" | ")
 
   case class `.`(end: &, prefixes: Pre*) extends AST:
     override def toString: String =
       prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[+]
                                                                          then "(" + end + ")" else end)
-
-  sealed trait Pre extends Any
-
-  case class ν(names: String*) extends AnyVal with Pre: // forcibly
-    override def toString: String = names.mkString("ν(", ", ", ")")
-
-  case class τ(override val rate: Any,
-               code: Option[Code])
-      extends Pre with Act:
-    override def toString: String = "τ."
-
-  case class π(channel: λ,
-               name: λ,
-               polarity: Boolean,
-               override val rate: Any,
-               code: Option[Code])
-      extends Pre with Act:
-    override def toString: String =
-      if polarity
-      then "" + channel + "(" + name + ")."
-      else "" + channel + "<" + name + ">."
-
-  case class χ(dir: Either[Symbol, `⟦⟧`],
-               override val rate: Any)
-      extends Pre with Act:
-    final def exp = dir.right.get
-     override def toString: String =
-      dir match
-        case Right(exp) => "start(" + exp.trans.name + ") " + exp
-        case Left(Symbol(name)) => "end(" + name + ")"
 
   case class ?:(cond: ((λ, λ), Boolean), t: +, f: Option[+]) extends AST:
     override def toString: String =
@@ -296,7 +300,7 @@ object Calculus:
   case class `⟦⟧`(definition: Definition,
                   variables: Names,
                   sum: +,
-                  υidυ: String = id,
+                  υidυ: String,
                   trans: Symbol = null,
                   assign: Option[Set[(Symbol, Symbol)]] = None) extends AST:
     override def toString: String =
@@ -384,7 +388,7 @@ object Calculus:
 
         case ∅ => ∅
 
-        case +(_, ||(`.`(sum: +)), it*) =>
+        case +(_, ∥(`.`(sum: +)), it*) =>
           val lhs = sum.flatten
           val rhs = `+`(nil, it*).flatten
           `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
@@ -394,24 +398,24 @@ object Calculus:
           val rhs = `+`(nil, it*).flatten
           `+`(nil, (lhs.choices ++ rhs.choices).filterNot(∅ == `+`(nil, _))*)
 
-        case ||(`.`(+(_, par)), it*) =>
+        case ∥(`.`(+(_, par)), it*) =>
           val lhs = par.flatten
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components)*)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components)*)
 
-        case ||(seq, it*) =>
-          val lhs = ||(seq.flatten)
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components)*)
+        case ∥(seq, it*) =>
+          val lhs = ∥(seq.flatten)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components)*)
 
-        case `.`(+(_, ||(`.`(end, ps*))), it*) =>
+        case `.`(+(_, ∥(`.`(end, ps*))), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, _it*) =>
           val it = _it
             .map {
               case xa @ χ(Right(exp), _) =>
-                xa.copy(dir = Right(exp.flatten))
+                xa.copy(dir = Right(exp.flatten))(xa.id)
               case it => it
             }
           `.`(end.flatten, it*)
@@ -421,7 +425,7 @@ object Calculus:
 
         case !(None, sum) =>
           sum.flatten match
-            case +(_, ||(`.`(end: !))) => end
+            case +(_, ∥(`.`(end: !))) => end
             case it => `!`(None, it)
 
         case it @ !(_, sum) =>
@@ -431,8 +435,3 @@ object Calculus:
           it.copy(sum = sum.flatten)
 
         case _ => ast
-
-
-  private[parser] var χ_id: helper.υidυ = null
-
-  def id = χ_id()

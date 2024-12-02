@@ -39,7 +39,7 @@ import scala.meta._
 import dialects.Scala3
 
 import parser.{ StochasticPi, Calculus }
-import StochasticPi.{ Actions, ln }
+import StochasticPi.Actions
 import Calculus.{ `(*)`,  λ }
 import generator.Program
 
@@ -56,21 +56,23 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
+      val spi = StochasticPi.Main()
+
       try
         source = Source.fromFile(s"$examples/pixc/$in")
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bs = StochasticPi(source)
+        val bs = spi(source)
 
         val bind = bs.zipWithIndex
         val prog_ = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val (prog, (discarded, excluded, enabled)) = StochasticPi(prog_.map(_._1))
+        val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
-        val congruent = StochasticPi.Χ()
+        val congruent = spi.Χ()
 
-        val ps = Program(prog)
+        val ps = Program.Main()(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
@@ -89,7 +91,7 @@ object Main:
 
         val kong = `King Kong`("π-kong", congruent).toString + "\n\n"
 
-        val init = this(
+        val init = this.Π(
           prog
             .find {
               case (`(*)`("Main"), _) => true
@@ -102,7 +104,7 @@ object Main:
 
         bwr.write(magic + elvis + kong + init + code, 0, magic.length + elvis.length + kong.length + init.length + code.length)
       catch t =>
-        val (m, n) = ln
+        val (m, n) = spi.ln
         val l = if m == n then s"line #$n" else s"lines #$m-#$n"
         Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
         throw t
@@ -133,7 +135,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this(discarded).toList, None)))
+                        Term.ArgClause(this.Π(discarded).toList, None)))
 
   def `spell, magic spell`(name: String, enabled: Map[String, Actions]): Defn.Val =
     Defn.Val(Nil,
@@ -143,7 +145,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this(enabled).toList, None)))
+                        Term.ArgClause(this.Π(enabled).toList, None)))
 
   def `if-then-else`(name: String, excluded: Map[String, Actions]): Defn.Val =
     Defn.Val(Mod.Implicit() :: Nil,
@@ -153,7 +155,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this(excluded).toList, None)))
+                        Term.ArgClause(this.Π(excluded).toList, None)))
 
   def `King Kong`(name: String, congruent: Map[String, Set[String]]): Defn.Val =
     Defn.Val(Mod.Implicit() :: Nil,
@@ -178,25 +180,27 @@ object Main:
                                                                  None)
                                        ) :: Nil, None))
 
-  private def apply(self: Map[String, Actions]) =
-    for
-      (id, it) <- self
-    yield
-      Term.ApplyInfix(Lit.String(s"$id"),
-                      Term.Name("->"), Type.ArgClause(Nil),
-                      Term.ArgClause(Term.Apply(scollimmSet,
-                                                Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                                               None)
-                                     ) :: Nil, None))
+  private object Π:
 
-  private def apply(it: Actions): Defn.Val =
-    Defn.Val(Nil,
-             Pat.Var(Term.Name("π-main")) :: Nil,
-             None,
-             Term.Apply(scollimmSet,
-                        Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                       None)
-             ))
+    def apply(self: Map[String, Actions]) =
+      for
+        (id, it) <- self
+      yield
+        Term.ApplyInfix(Lit.String(s"$id"),
+                        Term.Name("->"), Type.ArgClause(Nil),
+                        Term.ArgClause(Term.Apply(scollimmSet,
+                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                                                 None)
+                                       ) :: Nil, None))
+
+    def apply(it: Actions): Defn.Val =
+      Defn.Val(Nil,
+               Pat.Var(Term.Name("π-main")) :: Nil,
+               None,
+               Term.Apply(scollimmSet,
+                          Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
+                                         None)
+               ))
 
   private val scollimmList =
     Term.Select(

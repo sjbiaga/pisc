@@ -36,13 +36,11 @@ import scala.collection.mutable.{
 }
 import scala.io.Source
 
-import scala.util.parsing.combinator._
-
 import generator.Meta.`()(null)`
 
 import StochasticPi._
-import Calculus.{ id => _, _ }
-import Encoding.{ id => _, _ }
+import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
@@ -51,21 +49,21 @@ abstract class StochasticPi extends Expression:
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ Some((it, free)) =>
-        τ(r.getOrElse(1L), Some(it)) -> (Names(), free)
+        τ(r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), free)
       case _ ~ r ~ _ =>
-        τ(r.getOrElse(1L), None) -> (Names(), Names())
+        τ(r.getOrElse(1L), None)(sπ_id()) -> (Names(), Names())
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, free2)) =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it)) -> (Names(), name ++ free ++ free2)
+        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free ++ free2)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), None) -> (Names(), name ++ free)
+        π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), Some(it)) -> (Names(), name ++ free2)
+        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), None) -> (Names(), name)
+        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
     } |
     name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -75,9 +73,9 @@ abstract class StochasticPi extends Expression:
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, binding) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it)) -> (binding, name ++ free2)
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (binding, name ++ free2)
       case (ch, name) ~ r ~ (par, binding) ~ _ =>
-        π(ch, par, polarity = true, r.getOrElse(1L), None) -> (binding, name)
+        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id()) -> (binding, name)
     }
 
   def name: Parser[(λ, Names)] = ident("channel") ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
@@ -129,7 +127,7 @@ abstract class StochasticPi extends Expression:
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
-  private[parser] var _nest = -1
+  protected var _nest = -1
   private[parser] var _nth: Map[Int, Long] = null
   protected final def nest(b: Boolean) =
     _nth(_nest) += 1
@@ -143,7 +141,26 @@ abstract class StochasticPi extends Expression:
       _cntr -= _nest +1
   private[parser] var _cntr: Map[Int, Long] = null
 
+  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
+  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
+
   protected final def path = (0 until _nest).map(_nth(_))
+
+  private[parser] var _id: helper.υidυ = null
+
+  protected var sπ_id: helper.υidυ = null
+
+  protected var χ_id: helper.υidυ = null
+
+  protected def id = _id()
+
+  protected def copy: ((Any, Any), Any) =
+    _id.copy -> sπ_id.copy -> χ_id.copy
+
+  protected def paste(it: ((Any, Any), Any)) =
+    _id.paste(it._1._1)
+    sπ_id.paste(it._1._2)
+    χ_id.paste(it._2)
 
   protected final def save[T](r: => (ParseResult[T], Any), fail: Boolean): Option[(T, Input)] =
     val nest = _nest
@@ -163,8 +180,25 @@ abstract class StochasticPi extends Expression:
       }
     }
 
+  protected object Names2Occurrence:
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
+    def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      binding2.get(name) match
+        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
+          throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) =>
+        case _ =>
+          binding2 += name -> Occurrence(shadow, pos(true))
 
-object StochasticPi extends Expansion:
+
+object StochasticPi:
 
   type Actions = Set[String]
 
@@ -179,16 +213,14 @@ object StochasticPi extends Expansion:
   def nil = Actions()
 
 
-  trait Act:
+  trait Act(fun: () => String):
     val rate: Any
+    final def id = fun()
     final lazy val υidυ: String = id
 
   trait Sum:
     val enabled: Actions
 
-
-  def line: Parser[Either[Bind, Define]] =
-    equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
   type Names = Set[Symbol]
 
@@ -221,9 +253,6 @@ object StochasticPi extends Expansion:
 
   // functions
 
-  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
-
   extension[T <: AST](ast: T)
 
     def shallow: T =
@@ -237,8 +266,8 @@ object StochasticPi extends Expansion:
         case +(_, it*) =>
           `+`(nil, it.map(_.shallow)*)
 
-        case ||(it*) =>
-          ||(it.map(_.shallow)*)
+        case ∥(it*) =>
+          ∥(it.map(_.shallow)*)
 
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
@@ -259,617 +288,617 @@ object StochasticPi extends Expansion:
           it
 
 
-  def index(prog: List[Bind]): `(*)` => Int = {
-    case `(*)`(identifier, args*) =>
-      prog
-        .indexWhere {
-          case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
-          case _ => false
-        }
-  }
+  final class Main extends Expansion:
 
-  def ensure(using rec: Map[(String, Int), Int])
-            (using prog: List[Bind]): Unit =
-    import helper.Ensure._
+    def line: Parser[Either[Bind, Define]] =
+      equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
-    var i = main
-
-    if i < 0 then throw MainParsingException
-
-    given rep: Map[Int, Int] = Map()
-
-    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
-
-    if rec.contains("Main" -> 0) then throw MainParsingException2
-
-    prog.foreach {
-      case (it @ `(*)`("Main"), _) =>
-        val i = index(prog)(it)
-        rec("Main" -> 0) = -(i+1)
-      case (it @ `(*)`(id, params*), _) if !rec.contains(id -> params.size) =>
-        val i = index(prog)(it)
-        val sum = prog(i)._2
-        sum.recursive(using id -> params.size :: Nil)
-        if !rec.contains(id -> params.size)
-        then
-          rec(id -> params.size) = -(i+1)
-      case _ =>
+    private def index(prog: List[Bind]): `(*)` => Int = {
+      case `(*)`(identifier, args*) =>
+        prog
+          .indexWhere {
+            case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
+            case _ => false
+          }
     }
 
-    for
-      (i, n) <- rep
-    do
-      prog(i)._1 match
-        case `(*)`(id, params*) =>
-          if _werr
+    private def ensure(using rec: Map[(String, Int), Int])
+              (using prog: List[Bind]): Unit =
+      import helper.Ensure._
+
+      var i = main
+
+      if i < 0 then throw MainParsingException
+
+      given rep: Map[Int, Int] = Map()
+
+      prog(i)._2.recursive(using "Main" -> 0 :: Nil)
+
+      if rec.contains("Main" -> 0) then throw MainParsingException2
+
+      prog.foreach {
+        case (it @ `(*)`("Main"), _) =>
+          val i = index(prog)(it)
+          rec("Main" -> 0) = -(i+1)
+        case (it @ `(*)`(id, params*), _) if !rec.contains(id -> params.size) =>
+          val i = index(prog)(it)
+          val sum = prog(i)._2
+          sum.recursive(using id -> params.size :: Nil)
+          if !rec.contains(id -> params.size)
           then
-            throw RecRepParsingException(id, params.size, n)
-          Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
+            rec(id -> params.size) = -(i+1)
+        case _ =>
+      }
 
-    i = rec("Main" -> 0)
-    if !prog(-i-1)._2.replication(using "Main" -> 0 :: Nil)
-    then throw StartParsingException("Main", 0, "replication")
-
-    prog.foreach {
-      case (`(*)`(id, params*), _) if rec(id -> params.size) > 0 =>
-        val i = rec(id -> params.size)
-        val sum = prog(i-1)._2
-        if !sum.recursion(using id -> params.size :: Nil)
-        then throw StartParsingException(id, params.size, "recursion")
-      case _ =>
-    }
-
-  extension[T <: AST](ast: T)
-
-    def parse(using excluded: Map[String, Actions]): (T, Actions) =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      inline def τ = Calculus.τ(-Long.MaxValue, None)
-
-      def insert[S](end: &, ps: Pre*): (S, Actions) =
-        val ps2 = ps :+ τ
-        `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
-
-      def insert_+(sum: +): + =
-        val (seq, enabled) = insert[`.`](sum)
-        `+`(enabled, ||(seq))
-
-      ast match
-
-        case ∅ => (∅, nil)
-
-        case it: + =>
-          val sum = it.choices.foldLeft(`+`(nil)) {
-            case (sum, par) =>
-              val (par2, enabled2) = par.parse
-              assert(enabled2.nonEmpty)
-              assert((sum.enabled & enabled2).isEmpty)
-              (`+`(sum.enabled ++ enabled2, (sum.choices :+ par2)*))
-          }
-          (sum, sum.enabled)
-
-        case it: || =>
-          val (par, enabled) = it.components.foldLeft((||(), nil)) {
-            case ((par, enabled), seq) =>
-              val (seq2, enabled2) = seq.parse
-              assert(enabled2.nonEmpty)
-              assert((enabled & enabled2).isEmpty)
-              (||((par.components :+ seq2)*), enabled ++ enabled2)
-          }
-          (par, enabled)
-
-        case `.`(end, _ps*) =>
-          val ps = _ps.map {
-            case xa @ χ(Right(exp), _) =>
-              xa.copy(dir = Right(exp.parse._1))
-            case it => it
-          }
-
-          val (it, enabled) = end.parse
-
-          if Actions(ps*).nonEmpty
-          then
-            (`.`(it, ps*), Actions(ps*))
-          else if enabled.nonEmpty
-          then
-            (`.`(it, ps*), enabled)
-          else
-            assert(∅ == it || it.isInstanceOf[`(*)`])
-            insert(it, ps*)
-
-        case ?:(c, _t, _f) =>
-          def _t_f(_sum: +): + =
-            val (sum, _) = _sum.parse
-
-            if sum.enabled.isEmpty
-            || sum.enabled.exists(excluded.contains(_))
+      for
+        (i, n) <- rep
+      do
+        prog(i)._1 match
+          case `(*)`(id, params*) =>
+            if _werr
             then
-              insert_+(sum)
+              throw RecRepParsingException(id, params.size, n)
+            Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
+
+      i = rec("Main" -> 0)
+      if !prog(-i-1)._2.replication(using "Main" -> 0 :: Nil)
+      then throw StartParsingException("Main", 0, "replication")
+
+      prog.foreach {
+        case (`(*)`(id, params*), _) if rec(id -> params.size) > 0 =>
+          val i = rec(id -> params.size)
+          val sum = prog(i-1)._2
+          if !sum.recursion(using id -> params.size :: Nil)
+          then throw StartParsingException(id, params.size, "recursion")
+        case _ =>
+      }
+
+    extension[T <: AST](ast: T)
+
+      def parse(using excluded: Map[String, Actions]): (T, Actions) =
+
+        inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id())
+
+        def insert[S](end: &, ps: Pre*): (S, Actions) =
+          val ps2 = ps :+ τ
+          `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
+
+        def insert_+(sum: +): + =
+          val (seq, enabled) = insert[`.`](sum)
+          `+`(enabled, ∥(seq))
+
+        ast match
+
+          case ∅ => (∅, nil)
+
+          case it: + =>
+            val sum = it.choices.foldLeft(`+`(nil)) {
+              case (sum, par) =>
+                val (par2, enabled2) = par.parse
+                assert(enabled2.nonEmpty)
+                assert((sum.enabled & enabled2).isEmpty)
+                (`+`(sum.enabled ++ enabled2, (sum.choices :+ par2)*))
+            }
+            (sum, sum.enabled)
+
+          case it: ∥ =>
+            val (par, enabled) = it.components.foldLeft((∥(), nil)) {
+              case ((par, enabled), seq) =>
+                val (seq2, enabled2) = seq.parse
+                assert(enabled2.nonEmpty)
+                assert((enabled & enabled2).isEmpty)
+                (∥((par.components :+ seq2)*), enabled ++ enabled2)
+            }
+            (par, enabled)
+
+          case `.`(end, _ps*) =>
+            val ps = _ps.map {
+              case xa @ χ(Right(exp), _) =>
+                xa.copy(dir = Right(exp.parse._1))(xa.id)
+              case it => it
+            }
+
+            val (it, enabled) = end.parse
+
+            if Actions(ps*).nonEmpty
+            then
+              (`.`(it, ps*), Actions(ps*))
+            else if enabled.nonEmpty
+            then
+              (`.`(it, ps*), enabled)
             else
-              sum
+              assert(∅ == it || it.isInstanceOf[`(*)`])
+              insert(it, ps*)
 
-          val (t, f) = _t_f(_t) -> _f.map(_t_f(_))
+          case ?:(c, _t, _f) =>
+            def _t_f(_sum: +): + =
+              val (sum, _) = _sum.parse
 
-          f.foreach { sum => t.enabled.foreach(excluded(_) = sum.enabled) }
-          f.foreach(_.enabled.foreach(excluded(_) = t.enabled))
-
-          assert(t.enabled.nonEmpty)
-          assert(f.map(_.enabled.nonEmpty).getOrElse(true))
-
-          assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
-          (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
-
-        case !(Some(μ), sum) =>
-          val (it, _) = sum.parse
-          (`!`(Some(μ), it), Actions(μ))
-
-        case !(_, sum) =>
-          `!`(Some(τ), sum).parse
-
-        case `⟦⟧`(definition, variables, _sum, υidυ, name, assign) =>
-          val n = assign.map(_.size).getOrElse(0)
-
-          val sum = ( if variables.size == n
-                      then
-                        _sum
-                      else
-                        `+`(nil, ||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-                    )
-
-           var (it, _) = sum.parse
-
-          if it.enabled.isEmpty
-          then
-            it = insert_+(it)
-
-          (`⟦⟧`(definition, variables, it, υidυ, name, assign), it.enabled)
-
-        case _: `{}` => ???
-
-        case it: `(*)` => (it, nil)
-
-    def split(using discarded_excluded: (Map[String, Actions], Map[String, Actions])): Actions =
-
-      ast match
-
-        case ∅ => nil
-
-        case +(enabled, par) =>
-          par.split
-          enabled
-
-        case +(enabled, ps*) =>
-          val ls = ps.map(_.split)
-          var ts = ls.take(0)
-          var ds = ls.drop(1)
-
-          val (discarded, _) = discarded_excluded
-
-          ls.foreach { it =>
-            assert(it.nonEmpty)
-            val ks = (ts ++ ds).reduce(_ ++ _)
-            assert((it & ks).isEmpty)
-            it.foreach { k =>
-              if !discarded.contains(k)
+              if sum.enabled.isEmpty
+              || sum.enabled.exists(excluded.contains(_))
               then
-                discarded(k) = nil
-              discarded(k) ++= ks
-            }
-            ts :+= it
-            ds = ds.drop(1)
-          }
+                insert_+(sum)
+              else
+                sum
 
-          enabled
+            val (t, f) = _t_f(_t) -> _f.map(_t_f(_))
 
-        case ||(ss*) =>
-          ss.map(_.split).reduce(_ ++ _)
+            f.foreach { sum => t.enabled.foreach(excluded(_) = sum.enabled) }
+            f.foreach(_.enabled.foreach(excluded(_) = t.enabled))
 
-        case `.`(_: `(*)`, ps*) =>
-          assert(Actions(ps*).nonEmpty)
-          Actions(ps*)
+            assert(t.enabled.nonEmpty)
+            assert(f.map(_.enabled.nonEmpty).getOrElse(true))
 
-        case `.`(end, ps*) =>
-          var enabled = end.split
+            assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
+            (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          ps.foreach {
-            case χ(Right(exp), _) =>
-              exp.split
-            case _ =>
-          }
+          case !(Some(μ), sum) =>
+            val (it, _) = sum.parse
+            (`!`(Some(μ), it), Actions(μ))
 
-          if Actions(ps*).nonEmpty then
-            enabled = Actions(ps*)
+          case !(_, sum) =>
+            `!`(Some(τ), sum).parse
 
-          enabled
+          case `⟦⟧`(definition, variables, _sum, υidυ, name, assign) =>
+            val n = assign.map(_.size).getOrElse(0)
 
-        case ?:(_, t, f) =>
-          t.split
-          f.foreach(_.split)
+            val sum = ( if variables.size == n
+                        then
+                          _sum
+                        else
+                          `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                      )
 
-          val (_, excluded) = discarded_excluded
+            var (it, _) = sum.parse
 
-          t.enabled.foreach { k => assert(!excluded.contains(k)) }
-          f.foreach(_.enabled.foreach { k => assert(!excluded.contains(k)) })
-
-          f.foreach { sum => t.enabled.headOption.foreach(excluded(_) = sum.enabled) }
-          f.foreach(_.enabled.headOption.foreach(excluded(_) = t.enabled))
-
-          assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
-          t.enabled ++ f.map(_.enabled).getOrElse(nil)
-
-        case !(Some(μ), sum) =>
-          sum.split
-          Actions(μ)
-
-        case _: ! => ??? // impossible by 'parse'
-
-        case `⟦⟧`(_, _, sum, _, _, _) =>
-          sum.split
-          sum.enabled
-
-        case _: `{}` => ???
-
-        case _: `(*)` => ??? // always "guarded"
-
-    def graph(using rec: Map[(String, Int), Int])
-             (using prog: List[Bind]): Seq[(Act, Act | Sum)] =
-
-      ast match
-
-        case ∅ => Nil
-
-        case +(_, ps*) =>
-          ps.map(_.graph).reduce(_ ++ _)
-
-        case ||(ss*) =>
-          ss.map(_.graph).reduce(_ ++ _)
-
-        case `.`(end, ps*) =>
-
-          inline given Conversion[(Pre, Act | Sum), (Act, Act | Sum)] = _.asInstanceOf[Act] -> _
-
-          end.graph ++
-          ps.flatMap {
-            case χ(Right(exp), _) => exp.graph
-            case _ => Nil
-          } ++
-          ( for
-              i <- 0 until ps.size
-              if ps(i).isInstanceOf[Act]
-              j = ps.drop(i+1).indexWhere(_.isInstanceOf[Act])
-              if j >= 0
-            yield
-              ps(i).asInstanceOf[Act] -> ps(i+1+j).asInstanceOf[Act]
-          ) ++
-          {
-            val k = ps.lastIndexWhere(_.isInstanceOf[Act])
-            if k >= 0
-            then end match
-              case sum: + =>
-                Seq(ps(k) -> sum)
-              case ?:(_, t, Some(f)) =>
-                Seq(ps(k) -> t, ps(k) -> f)
-              case ?:(_, t, _) =>
-                Seq(ps(k) -> t)
-              case !(Some(μ), _) =>
-                Seq(ps(k) -> μ)
-              case _: ! => ??? // impossible by 'parse'
-              case `⟦⟧`(_, _, sum, _, _, _) =>
-                Seq(ps(k) -> sum)
-              case _: `{}` => ???
-              case `(*)`(id, params*) =>
-                val i = rec(id -> params.size)
-                val sum = prog(i.abs-1)._2
-                Seq(ps(k) -> sum)
-            else Nil
-          }
-
-        case ?:(_, t, f) =>
-          t.graph ++ f.map(_.graph).getOrElse(Nil)
-
-        case !(Some(μ), sum) =>
-          sum.graph ++ Seq(μ -> μ, μ -> sum)
-
-        case _: ! => ??? // impossible by 'parse'
-
-        case `⟦⟧`(_, _, sum, _, _, _) =>
-          sum.graph
-
-        case _: `{}` => ???
-
-        case _: `(*)` => Nil
-
-  def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
-
-    given excluded: Map[String, Actions] = Map()
-
-    given List[Bind] = prog.map(_ -> _.shallow.parse._1)
-
-    given rec: Map[(String, Int), Int] = Map()
-
-    ensure
-
-    val discarded = Map[String, Actions]()
-
-    excluded.clear
-
-    val enabled = Map[String, Actions]()
-
-    given_List_Bind
-      .tapEach {
-        case (_, sum) =>
-          sum.split(using discarded -> excluded)
-
-          sum.graph.foreach { (s, t) =>
-            if !enabled.contains(s.υidυ)
+            if it.enabled.isEmpty
             then
-              enabled(s.υidυ) = nil
-            t match
-              case it: Act =>
-                enabled(s.υidυ) += it.υidυ
-              case it: Sum =>
-                enabled(s.υidυ) ++= it.enabled
-          }
-      } -> (discarded, excluded, enabled)
+              it = insert_+(it)
 
+            (`⟦⟧`(definition, variables, it, υidυ, name, assign), it.enabled)
 
-  object Χ:
+          case _: `{}` => ???
 
-    private def apply(it: Symbol, _1_2: 1 | 2)(using (Names2, Names2)): Either[1 | 2, Position] =
-      val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
-      binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-        case Some((_, it)) => Right(it.position)
-        case _ => binding2.get(it) match
-          case Some(it) => Right(it.position)
-          case _ => Left(_1_2)
+          case it: `(*)` => (it, nil)
 
-    private def equal(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                     (using (Names2, Names2))
-                     (lhs: Symbol, rhs: Symbol): Boolean =
-     val (i, j) = binding._1.indexOf(lhs) -> binding._2.indexOf(rhs)
-     i >= 0 && j >= 0 && i == j ||
-     i < 0 && j < 0 &&
-     this(lhs, 1) == this(rhs, 2)
+      def split(using discarded_excluded: (Map[String, Actions], Map[String, Actions])): Actions =
 
-    private def equal2(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                      (using (Names2, Names2))
-                      (lhs: Symbol, rhs: Symbol): Boolean =
-      val _1 = this(lhs, 1)
-      val _2 = this(rhs, 2)
-      _1 == _2 || _1.isLeft && _2.isLeft && {
-        binding._1.prepend(lhs); binding._2.prepend(rhs)
-        true
-     }
+        ast match
 
-    private inline def mark(using binding: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
-      binding._1.size -> binding._2.size
+          case ∅ => nil
 
-    private inline def backtrack(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                                (ln: Int, rn: Int): Boolean =
-      binding._1.dropInPlace(binding._1.size - ln); binding._2.dropInPlace(binding._2.size - rn)
-      true
+          case +(enabled, par) =>
+            par.split
+            enabled
 
-    def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                 (using (Names2, Names2)): ((AST, AST)) => Boolean = {
+          case +(enabled, ps*) =>
+            val ls = ps.map(_.split)
+            var ts = ls.take(0)
+            var ds = ls.drop(1)
 
-      case (lhs: +, rhs: +) =>
-        (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
-          case (false, _) => false
-          case (_, it) => congruent(it)
-        }
+            val (discarded, _) = discarded_excluded
 
-      case (lhs: ||, rhs: ||) =>
-        (lhs.components zip rhs.components).foldLeft(lhs.components.size == rhs.components.size) {
-          case (false, _) => false
-          case (_, it) => congruent(it)
-        }
-
-      case (`.`(lhs, _lit*), `.`(rhs, _rit*)) =>
-        val lit = _lit.filterNot { case _: τ => true case _ => false }
-        val rit = _rit.filterNot { case _: τ => true case _ => false }
-        val (ln, rn) = mark
-        if lit.size == rit.size
-        && (lit zip rit).foldLeft(true) {
-          case (false, _) => false
-          case (_, (ν(lnames*)
-                   ,ν(rnames*))) =>
-            lnames
-              .map(Symbol(_))
-              .foreach(binding._1.prepend(_))
-            rnames
-              .map(Symbol(_))
-              .foreach(binding._2.prepend(_))
-            true
-          case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)
-                   ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _))) =>
-            equal(lch, rch) && equal2(lpar, rpar)
-          case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _, _)
-                   ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _, _))) =>
-            equal(lch, rch) && equal(larg, rarg)
-          case (_, (π(_, λ(_: Expr), false, _, _), _))
-             | (_, (_, π(_, λ(_: Expr), false, _, _))) => false
-          case (_, (π(λ(lch: Symbol), λ(larg), false, _, _)
-                   ,π(λ(rch: Symbol), λ(rarg), false, _, _))) =>
-            equal(lch, rch) && larg == rarg
-          case (_, (χ(Right(lexp), _)
-                   ,χ(Right(rexp), _))) =>
-            equal2(lexp.trans, rexp.trans) && congruent(lexp -> rexp)
-          case (_, (χ(Left(ltrans), _)
-                   ,χ(Left(rtrans), _))) =>
-            ltrans == rtrans
-          case _ => false
-        }
-        then
-          congruent(lhs -> rhs) && backtrack(ln, rn)
-        else
-          false
-
-      case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
-           (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
-
-      case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
-           ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
-          if equal(llhs, rlhs) && equal(lrhs, rrhs)
-          || equal(llhs, rrhs) && equal(lrhs, rlhs) =>
-        if lm == rm
-        then
-          congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
-        else
-          congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
-
-      case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
-           ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
-          if llhs == rlhs && lrhs == rrhs
-          || llhs == rrhs && lrhs == rlhs =>
-        if lm == rm
-        then
-          congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
-        else
-          congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
-
-      case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)), lsum)
-           ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _)), rsum)) =>
-        val (ln, rn) = mark
-        equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
-
-      case (!(Some(π(_, λ(_: Expr), false, _, _)), _), _)
-         | (_, !(Some(π(_, λ(_: Expr), false, _, _)), _)) => false
-
-      case (!(Some(π(λ(lch: Symbol), λ(larg), false, _, _)), lsum)
-           ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _, _)), rsum)) =>
-        equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
-
-      case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
-
-      case (`⟦⟧`(Definition(lcode, _, lconstants, lvariables, _), _, lsum, _, lname, lassign)
-           ,`⟦⟧`(Definition(rcode, _, rconstants, rvariables, _), _, rsum, _, rname, rassign))
-          if lcode == rcode
-          && lname == rname
-          && lconstants == rconstants
-          && lassign.map(_.size).getOrElse(0) == lvariables.size
-          && rassign.map(_.size).getOrElse(0) == rvariables.size
-          && lvariables.size == rvariables.size =>
-        val (ln, rn) = mark
-        (lconstants ++ lvariables).foreach(binding._1.prepend(_))
-        (rconstants ++ rvariables).foreach(binding._2.prepend(_))
-        (lassign zip rassign)
-          .map(_ zip _)
-          .map(
-            _.foldLeft(true) {
-              case (false, _) => false
-              case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
-                binding._1.prepend(lvariable); binding._2.prepend(rvariable)
-                equal(lpointer, rpointer)
+            ls.foreach { it =>
+              assert(it.nonEmpty)
+              val ks = (ts ++ ds).reduce(_ ++ _)
+              assert((it & ks).isEmpty)
+              it.foreach { k =>
+                if !discarded.contains(k)
+                then
+                  discarded(k) = nil
+                discarded(k) ++= ks
+              }
+              ts :+= it
+              ds = ds.drop(1)
             }
-          ).getOrElse(true)
-        && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-      case (_: `{}`, _) | (_, _: `{}`) => ???
+            enabled
 
-      case (`(*)`(lid, largs*)
-           ,`(*)`(rid, rargs*))
-          if lid == rid
-          && largs.size == rargs.size =>
-        (largs zip rargs).foldLeft(true) {
-          case (false, _) => false
-          case (_, (λ(larg: Symbol), λ(rarg: Symbol))) => equal(larg, rarg)
-          case (_, (λ(_: Expr), _)) | (_, (_, λ(_: Expr))) => false
-          case (_, (λ(larg), λ(rarg))) => larg == rarg
+          case ∥(ss*) =>
+            ss.map(_.split).reduce(_ ++ _)
+
+          case `.`(_: `(*)`, ps*) =>
+            assert(Actions(ps*).nonEmpty)
+            Actions(ps*)
+
+          case `.`(end, ps*) =>
+            var enabled = end.split
+
+            ps.foreach {
+              case χ(Right(exp), _) =>
+                exp.split
+              case _ =>
+            }
+
+            if Actions(ps*).nonEmpty then
+              enabled = Actions(ps*)
+
+            enabled
+
+          case ?:(_, t, f) =>
+            t.split
+            f.foreach(_.split)
+
+            val (_, excluded) = discarded_excluded
+
+            t.enabled.foreach { k => assert(!excluded.contains(k)) }
+            f.foreach(_.enabled.foreach { k => assert(!excluded.contains(k)) })
+
+            f.foreach { sum => t.enabled.headOption.foreach(excluded(_) = sum.enabled) }
+            f.foreach(_.enabled.headOption.foreach(excluded(_) = t.enabled))
+
+            assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
+            t.enabled ++ f.map(_.enabled).getOrElse(nil)
+
+          case !(Some(μ), sum) =>
+            sum.split
+            Actions(μ)
+
+          case _: ! => ??? // impossible by 'parse'
+
+          case `⟦⟧`(_, _, sum, _, _, _) =>
+            sum.split
+            sum.enabled
+
+          case _: `{}` => ???
+
+          case _: `(*)` => ??? // always "guarded"
+
+      def graph(using rec: Map[(String, Int), Int])
+               (using prog: List[Bind]): Seq[(Act, Act | Sum)] =
+
+        ast match
+
+          case ∅ => Nil
+
+          case +(_, ps*) =>
+            ps.map(_.graph).reduce(_ ++ _)
+
+          case ∥(ss*) =>
+            ss.map(_.graph).reduce(_ ++ _)
+
+          case `.`(end, ps*) =>
+
+            inline given Conversion[(Pre, Act | Sum), (Act, Act | Sum)] = _.asInstanceOf[Act] -> _
+
+            end.graph ++
+            ps.flatMap {
+              case χ(Right(exp), _) => exp.graph
+              case _ => Nil
+            } ++
+            ( for
+                i <- 0 until ps.size
+                if ps(i).isInstanceOf[Act]
+                j = ps.drop(i+1).indexWhere(_.isInstanceOf[Act])
+                if j >= 0
+              yield
+                ps(i).asInstanceOf[Act] -> ps(i+1+j).asInstanceOf[Act]
+            ) ++
+            {
+              val k = ps.lastIndexWhere(_.isInstanceOf[Act])
+              if k >= 0
+              then end match
+                case sum: + =>
+                  Seq(ps(k) -> sum)
+                case ?:(_, t, Some(f)) =>
+                  Seq(ps(k) -> t, ps(k) -> f)
+                case ?:(_, t, _) =>
+                  Seq(ps(k) -> t)
+                case !(Some(μ), _) =>
+                  Seq(ps(k) -> μ)
+                case _: ! => ??? // impossible by 'parse'
+                case `⟦⟧`(_, _, sum, _, _, _) =>
+                  Seq(ps(k) -> sum)
+                case _: `{}` => ???
+                case `(*)`(id, params*) =>
+                  val i = rec(id -> params.size)
+                  val sum = prog(i.abs-1)._2
+                  Seq(ps(k) -> sum)
+              else Nil
+            }
+
+          case ?:(_, t, f) =>
+            t.graph ++ f.map(_.graph).getOrElse(Nil)
+
+          case !(Some(μ), sum) =>
+            sum.graph ++ Seq(μ -> μ, μ -> sum)
+
+          case _: ! => ??? // impossible by 'parse'
+
+          case `⟦⟧`(_, _, sum, _, _, _) =>
+            sum.graph
+
+          case _: `{}` => ???
+
+          case _: `(*)` => Nil
+
+    def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+
+      given excluded: Map[String, Actions] = Map()
+
+      given List[Bind] = prog.map(_ -> _.shallow.parse._1)
+
+      given rec: Map[(String, Int), Int] = Map()
+
+      ensure
+
+      val discarded = Map[String, Actions]()
+
+      excluded.clear
+
+      val enabled = Map[String, Actions]()
+
+      given_List_Bind
+        .tapEach {
+          case (_, sum) =>
+            sum.split(using discarded -> excluded)
+
+            sum.graph.foreach { (s, t) =>
+              if !enabled.contains(s.υidυ)
+              then
+                enabled(s.υidυ) = nil
+              t match
+                case it: Act =>
+                  enabled(s.υidυ) += it.υidυ
+                case it: Sum =>
+                  enabled(s.υidυ) ++= it.enabled
+            }
+        } -> (discarded, excluded, enabled)
+
+
+    object Χ:
+
+      private def apply(it: Symbol, _1_2: 1 | 2)(using (Names2, Names2)): Either[1 | 2, Position] =
+        val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
+        binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+          case Some((_, it)) => Right(it.position)
+          case _ => binding2.get(it) match
+            case Some(it) => Right(it.position)
+            case _ => Left(_1_2)
+
+      private def equal(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                       (using (Names2, Names2))
+                       (lhs: Symbol, rhs: Symbol): Boolean =
+       val (i, j) = binding._1.indexOf(lhs) -> binding._2.indexOf(rhs)
+       i >= 0 && j >= 0 && i == j ||
+       i < 0 && j < 0 &&
+       this(lhs, 1) == this(rhs, 2)
+
+      private def equal2(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                        (using (Names2, Names2))
+                        (lhs: Symbol, rhs: Symbol): Boolean =
+        val _1 = this(lhs, 1)
+        val _2 = this(rhs, 2)
+        _1 == _2 || _1.isLeft && _2.isLeft && {
+          binding._1.prepend(lhs); binding._2.prepend(rhs)
+          true
+       }
+
+      private inline def mark(using binding: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
+        binding._1.size -> binding._2.size
+
+      private inline def backtrack(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                                  (ln: Int, rn: Int): Boolean =
+        binding._1.dropInPlace(binding._1.size - ln); binding._2.dropInPlace(binding._2.size - rn)
+        true
+
+      def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
+                   (using (Names2, Names2)): ((AST, AST)) => Boolean = {
+
+        case (lhs: +, rhs: +) =>
+          (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
+            case (false, _) => false
+            case (_, it) => congruent(it)
+          }
+
+        case (lhs: ∥, rhs: ∥) =>
+          (lhs.components zip rhs.components).foldLeft(lhs.components.size == rhs.components.size) {
+            case (false, _) => false
+            case (_, it) => congruent(it)
+          }
+
+        case (`.`(lhs, _lit*), `.`(rhs, _rit*)) =>
+          val lit = _lit.filterNot { case _: τ => true case _ => false }
+          val rit = _rit.filterNot { case _: τ => true case _ => false }
+          val (ln, rn) = mark
+          if lit.size == rit.size
+          && (lit zip rit).foldLeft(true) {
+            case (false, _) => false
+            case (_, (ν(lnames*)
+                     ,ν(rnames*))) =>
+              lnames
+                .map(Symbol(_))
+                .foreach(binding._1.prepend(_))
+              rnames
+                .map(Symbol(_))
+                .foreach(binding._2.prepend(_))
+              true
+            case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)
+                     ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _))) =>
+              equal(lch, rch) && equal2(lpar, rpar)
+            case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _, _)
+                     ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _, _))) =>
+              equal(lch, rch) && equal(larg, rarg)
+            case (_, (π(_, λ(_: Expr), false, _, _), _))
+               | (_, (_, π(_, λ(_: Expr), false, _, _))) => false
+            case (_, (π(λ(lch: Symbol), λ(larg), false, _, _)
+                     ,π(λ(rch: Symbol), λ(rarg), false, _, _))) =>
+              equal(lch, rch) && larg == rarg
+            case (_, (χ(Right(lexp), _)
+                     ,χ(Right(rexp), _))) =>
+              equal2(lexp.trans, rexp.trans) && congruent(lexp -> rexp)
+            case (_, (χ(Left(ltrans), _)
+                     ,χ(Left(rtrans), _))) =>
+              ltrans == rtrans
+            case _ => false
+          }
+          then
+            congruent(lhs -> rhs) && backtrack(ln, rn)
+          else
+            false
+
+        case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
+             (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
+
+        case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
+             ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
+            if equal(llhs, rlhs) && equal(lrhs, rrhs)
+            || equal(llhs, rrhs) && equal(lrhs, rlhs) =>
+          if lm == rm
+          then
+            congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
+          else
+            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+
+        case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
+             ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
+            if llhs == rlhs && lrhs == rrhs
+            || llhs == rrhs && lrhs == rlhs =>
+          if lm == rm
+          then
+            congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
+          else
+            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+
+        case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)), lsum)
+             ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _)), rsum)) =>
+          val (ln, rn) = mark
+          equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
+
+        case (!(Some(π(_, λ(_: Expr), false, _, _)), _), _)
+           | (_, !(Some(π(_, λ(_: Expr), false, _, _)), _)) => false
+
+        case (!(Some(π(λ(lch: Symbol), λ(larg), false, _, _)), lsum)
+             ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _, _)), rsum)) =>
+          equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
+
+        case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
+
+        case (`⟦⟧`(Definition(lcode, _, lconstants, lvariables, _), _, lsum, _, lname, lassign)
+             ,`⟦⟧`(Definition(rcode, _, rconstants, rvariables, _), _, rsum, _, rname, rassign))
+            if lcode == rcode
+            && lname == rname
+            && lconstants == rconstants
+            && lassign.map(_.size).getOrElse(0) == lvariables.size
+            && rassign.map(_.size).getOrElse(0) == rvariables.size
+            && lvariables.size == rvariables.size =>
+          val (ln, rn) = mark
+          (lconstants ++ lvariables).foreach(binding._1.prepend(_))
+          (rconstants ++ rvariables).foreach(binding._2.prepend(_))
+          (lassign zip rassign)
+            .map(_ zip _)
+            .map(
+              _.foldLeft(true) {
+                case (false, _) => false
+                case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
+                  binding._1.prepend(lvariable); binding._2.prepend(rvariable)
+                  equal(lpointer, rpointer)
+              }
+            ).getOrElse(true)
+          && congruent(lsum -> rsum) && backtrack(ln, rn)
+
+        case (_: `{}`, _) | (_, _: `{}`) => ???
+
+        case (`(*)`(lid, largs*)
+             ,`(*)`(rid, rargs*))
+            if lid == rid
+            && largs.size == rargs.size =>
+          (largs zip rargs).foldLeft(true) {
+            case (false, _) => false
+            case (_, (λ(larg: Symbol), λ(rarg: Symbol))) => equal(larg, rarg)
+            case (_, (λ(_: Expr), _)) | (_, (_, λ(_: Expr))) => false
+            case (_, (λ(larg), λ(rarg))) => larg == rarg
+          }
+
+        case _ => false
+
+      }
+
+      def apply(): scala.collection.Map[String, scala.collection.Set[String]] =
+
+        val expansions = xctn.mapValues(_.filter(_._1.isLeft).map(_.left.get -> _)).filter(_._2.nonEmpty)
+        val transactions = xctn.mapValues(_.filter(_._1.isRight).map(_.right.get -> _)).filter(_._2.nonEmpty)
+
+        transactions.keySet.flatMap { it =>
+          transactions
+            .filterKeys(_ == it)
+            .values
+            .flatten
+            .map(_._1.exp.υidυ -> Set.empty)
         }
+          .toMap
+        ++
+        (expansions.keySet & transactions.keySet).flatMap { it =>
+          for
+            (exp, binding2_exp) <- expansions.filterKeys(_ == it).values.flatten
+            (xct, binding2_xct) <- transactions.filterKeys(_ == it).values.flatten
+            given (MutableList[Symbol]
+                  ,MutableList[Symbol]) = MutableList[Symbol]()
+                                       -> MutableList[Symbol]()
+            given (Names2, Names2) = binding2_exp -> binding2_xct
+            if congruent(exp -> xct.exp)
+          yield
+            xct.exp.υidυ -> exp.υidυ
+        }
+          .groupBy(_._1)
+          .mapValues(_.map(_._2))
+          .toMap
 
-      case _ => false
 
-    }
+    private var i: Int = -1
+    private var l: (Int, Int) = (-1, -1)
+    def ln = l
 
-    def apply(): scala.collection.Map[String, scala.collection.Set[String]] =
+    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+      _werr = errors
+      eqtn = List()
+      defn = Map()
+      self = Set()
+      xctn = Map()
+      _nest = 0
+      _id = new helper.υidυ
+      sπ_id = new helper.υidυ
+      χ_id = new helper.υidυ
+      i = 0
+      l = (0, 0)
 
-      val expansions = xctn.mapValues(_.filter(_._1.isLeft).map(_.left.get -> _)).filter(_._2.nonEmpty)
-      val transactions = xctn.mapValues(_.filter(_._1.isRight).map(_.right.get -> _)).filter(_._2.nonEmpty)
-
-      transactions.keySet.flatMap { it =>
-        transactions
-          .filterKeys(_ == it)
-          .values
-          .flatten
-          .map(_._1.exp.υidυ -> Set.empty)
+      (source.getLines().toList :+ "")
+      .zipWithIndex
+      .foldLeft(List[(String, (Int, Int))]() -> false) {
+        case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+        case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+      }._1
+      .flatMap { case (it, (m, n)) =>
+        l = (m+1, n+1)
+        if it.matches("^[ ]*#.*") // commented lines
+        || it.isBlank // empty lines
+        then
+          None
+        else if it.matches("^[ ]*@.*")
+        then // Scala
+          Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+        else // SPi
+          _cntr = Map(0 -> 0L)
+          _nth = Map(0 -> 0L)
+          parseAll(line, it) match
+            case Success(Left(equation), _) =>
+              eqtn :+= equation
+              val equations = eqtn.slice(i, eqtn.size)
+              i = eqtn.size
+              equations.map(Right(_))
+            case Success(Right(definition), _) =>
+              if !defn.contains(_code) then defn(_code) = Nil
+              defn(_code) ::= definition
+              Nil
+            case failure: NoSuccess =>
+              scala.sys.error(failure.msg)
       }
-        .toMap
-      ++
-      (expansions.keySet & transactions.keySet).flatMap { it =>
-        for
-          (exp, binding2_exp) <- expansions.filterKeys(_ == it).values.flatten
-          (xct, binding2_xct) <- transactions.filterKeys(_ == it).values.flatten
-          given (MutableList[Symbol]
-                ,MutableList[Symbol]) = MutableList[Symbol]()
-                                     -> MutableList[Symbol]()
-          given (Names2, Names2) = binding2_exp -> binding2_xct
-          if congruent(exp -> xct.exp)
-        yield
-          xct.exp.υidυ -> exp.υidυ
+      .filter {
+        case Right((`(*)`(s"Self_$n", _*), _))
+            if { try { n.toInt; true } catch _ => false } =>
+          self.contains(n.toInt)
+        case _ => true
       }
-        .groupBy(_._1)
-        .mapValues(_.map(_._2))
-        .toMap
-
-
-  private var i: Int = -1
-  private var l: (Int, Int) = (-1, -1)
-  def ln = l
-
-  def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-    _werr = errors
-    eqtn = List()
-    defn = Map()
-    self = Set()
-    xctn = Map()
-    _nest = 0
-    _id = new helper.υidυ
-    sπ_id = new helper.υidυ
-    χ_id = new helper.υidυ
-    i = 0
-    l = (0, 0)
-
-    (source.getLines().toList :+ "")
-    .zipWithIndex
-    .foldLeft(List[(String, (Int, Int))]() -> false) {
-      case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-      case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
-    }._1
-    .flatMap { case (it, (m, n)) =>
-      l = (m+1, n+1)
-      if it.matches("^[ ]*#.*") // commented lines
-      || it.isBlank // empty lines
-      then
-        None
-      else if it.matches("^[ ]*@.*")
-      then // Scala
-        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-      else // SPi
-        _cntr = Map(0 -> 0L)
-        _nth = Map(0 -> 0L)
-        parseAll(line, it) match
-          case Success(Left(equation), _) =>
-            eqtn :+= equation
-            val equations = eqtn.slice(i, eqtn.size)
-            i = eqtn.size
-            equations.map(Right(_))
-          case Success(Right(definition), _) =>
-            if !defn.contains(_code) then defn(_code) = Nil
-            defn(_code) ::= definition
-            Nil
-          case failure: NoSuccess =>
-            scala.sys.error(failure.msg)
-    }
-    .filter {
-      case Right((`(*)`(s"Self_$n", _*), _))
-          if { try { n.toInt; true } catch _ => false } =>
-        self.contains(n.toInt)
-      case _ => true
-    }
-    .toList
-
-
-  private[parser] var sπ_id: helper.υidυ = null
-
-  def id = sπ_id()
+      .toList

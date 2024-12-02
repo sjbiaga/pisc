@@ -90,7 +90,7 @@ object Ensure:
         case +(_, it*) =>
          it.foldLeft(())((_, par) => par.recursive)
 
-        case ||(it*) =>
+        case ∥(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
 
         case `.`(end, it*) =>
@@ -152,7 +152,7 @@ object Ensure:
            case (_, par) => par.replication
          }
 
-        case ||(it*) =>
+        case ∥(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, seq) => seq.replication
@@ -208,7 +208,7 @@ object Ensure:
            case (_, par) => par.recursion
          }
 
-        case ||(it*) =>
+        case ∥(it*) =>
          it.foldLeft(true) {
            case (false, _) => false
            case (_, seq) => seq.recursion

@@ -37,7 +37,7 @@ import scala.collection.mutable.{
 
 import scala.util.matching.Regex
 
-import scala.util.parsing.combinator._
+import scala.util.parsing.combinator.JavaTokenParsers
 
 import StochasticPi.Names
 import Calculus.{ λ, AST }
@@ -77,7 +77,7 @@ abstract class Expression extends JavaTokenParsers:
 
   def regexMatch(r: Regex): Parser[Regex.Match]
 
-  private[parser] var _code: Int = -1
+  protected var _code: Int = -1
 
   private def apply(using params: MutableList[String])
                    (using names: Names): Term => Unit =
