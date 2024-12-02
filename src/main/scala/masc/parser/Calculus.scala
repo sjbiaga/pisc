@@ -33,8 +33,6 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.Term
 
-import scala.util.parsing.combinator._
-
 import Expression.Code
 import Ambient._
 import Calculus._
@@ -59,9 +57,9 @@ abstract class Calculus extends Ambient:
         }
     }
 
-  def parallel(using binding2: Names2): Parser[(||, Names)] =
+  def parallel(using binding2: Names2): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
-      ||(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+      ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
   def sequential(using binding2: Names2): Parser[(`.`, Names)] =
@@ -127,7 +125,7 @@ abstract class Calculus extends Ambient:
   def prefix(using binding2: Names2): Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { ns => // restriction
       val binding = ns.map(_._2).reduce(_ ++ _)
-      Names2(binding)
+      Names2Occurrence(binding)
       ν(ns.map(_._1)*) -> (binding, Names())
     } |
     "τ" ~> opt( expression ) <~ "." ^^ { // silent transition
@@ -141,7 +139,7 @@ abstract class Calculus extends Ambient:
         `,.`(path*) -> (Names(), free)
     } |
     ("("~>name<~")") ~ opt( expression ) <~ "." ^^ { case (name, binding) ~ opt => // input action
-      Names2(binding)
+      Names2Occurrence(binding)
       opt match
         case Some(((Left(enums), _), _)) =>
           throw TermParsingException(enums)
@@ -194,59 +192,61 @@ abstract class Calculus extends Ambient:
 
 object Calculus:
 
-  import scala.annotation.tailrec
+  type Bind = (`(*)`, ∥)
 
-  type Bind = (`(*)`, ||)
+  export Pre._
+
+  enum Pre:
+
+    case ν(names: String*) // forcibly
+
+    case τ(code: Option[Code])
+
+    case `,.`(path: Ambient.AST*)
+
+    case `()`(name: String, code: Option[Code])
+
+    override def toString: String = this match
+      case ν(names*) => names.mkString("ν(", ", ", ")")
+      case `,.`(path*) => path.mkString("", ", ", ".")
+      case `()`(name, _) => s"($name)."
+      case _ => "τ."
 
   sealed trait AST extends Any
 
-  case class ||(components: `.`*) extends AST:
+  case class ∥(components: `.`*) extends AST:
     override def toString: String = components.mkString(" | ")
 
-  object ∅ extends ||():
+  object ∅ extends ∥():
     override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[||]
+      that.isInstanceOf[∥]
 
     override def equals(any: Any): Boolean = any match
-      case that: || => that.components.size == 0
+      case that: ∥ => that.components.size == 0
       case _ => false
 
     override def toString: String = "()"
 
   case class `.`(end: &, prefixes: Pre*) extends AST:
     override def toString: String =
-      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[||]
+      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[∥]
                                                                          then "(" + end + ")" else end)
-
-  sealed trait Pre extends Any
-
-  case class ν(names: String*) extends AnyVal with Pre: // forcibly
-    override def toString: String = names.mkString("ν(", ", ", ")")
-
-  case class τ(code: Option[Code]) extends AnyVal with Pre:
-    override def toString: String = "τ."
-
-  case class `,.`(path: Ambient.AST*) extends Pre:
-    override def toString: String = path.mkString("", ", ", ".")
-
-  case class `()`(name: String, code: Option[Code]) extends Pre:
-    override def toString: String = s"($name)."
 
   case class <>(code: Option[Code], path: Ambient.AST*) extends AST:
     override def toString: String = path.mkString("<", ", ", ">")
 
-  case class !(guard: Option[String], par: ||) extends AST:
+  case class !(guard: Option[String], par: ∥) extends AST:
     override def toString: String = "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 
-  case class `[]`(amb: String, par: ||) extends AST:
+  case class `[]`(amb: String, par: ∥) extends AST:
     override def toString: String = amb + (if ∅ == par then " [ ]" else " [ " + par + " ]")
 
-  case class `go.`(amb: String, par: ||) extends AST:
+  case class `go.`(amb: String, par: ∥) extends AST:
     override def toString: String = "go " + amb + "." + par
 
   case class `⟦⟧`(definition: Definition,
                   variables: Names,
-                  par: ||,
+                  par: ∥,
                   assign: Option[Set[(String, String)]] = None) extends AST:
     override def toString: String =
       val vars = ( if variables.nonEmpty
@@ -309,17 +309,17 @@ object Calculus:
 
         case ∅ => ∅
 
-        case ||(`.`(par: ||), it*) =>
+        case ∥(`.`(par: ∥), it*) =>
           val lhs = par.flatten
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components).filterNot(∅ == ||(_))*)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components).filterNot(∅ == ∥(_))*)
 
-        case ||(seq, it*) =>
-          val lhs = ||(seq.flatten)
-          val rhs = ||(it*).flatten
-          ||((lhs.components ++ rhs.components).filterNot(∅ == ||(_))*)
+        case ∥(seq, it*) =>
+          val lhs = ∥(seq.flatten)
+          val rhs = ∥(it*).flatten
+          ∥((lhs.components ++ rhs.components).filterNot(∅ == ∥(_))*)
 
-        case `.`(||(`.`(end, ps*)), it*) =>
+        case `.`(∥(`.`(end, ps*)), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
@@ -327,7 +327,7 @@ object Calculus:
 
         case !(None, par) =>
           par.flatten match
-            case ||(`.`(end: !)) => end
+            case ∥(`.`(end: !)) => end
             case it => `!`(None, it)
 
         case it @ !(_, par) =>
