@@ -197,7 +197,7 @@ abstract class Expansion extends Encoding:
                       case Success((λ(it: Symbol), free2), _) =>
                         shadows(idx) match
                           case shadow @ Some(_) =>
-                            Names2(it, shadow)
+                            Names2Occurrence(it, shadow)
                           case _ =>
                             binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(it))) => substitution(rhs) = λ(it)
@@ -350,7 +350,7 @@ abstract class Expansion extends Encoding:
                   case Success((λ(it: Symbol), free2), _) =>
                     shadows(idx) match
                       case shadow @ Some(_) =>
-                        Names2(it, shadow)
+                        Names2Occurrence(it, shadow)
                       case _ =>
                         binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                           case Some((_, Shadow(it))) => substitution(lhs) = λ(it)
@@ -437,7 +437,7 @@ abstract class Expansion extends Encoding:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Nil, Left(end))(_macro(code, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, id, _code, _nest, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
               r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
@@ -505,19 +505,19 @@ object Expansion:
         case +(_, it*) =>
           `+`(nil, it.map(_.replace)*)
 
-        case ||(it*) =>
-          ||(it.map(_.replace)*)
+        case ∥(it*) =>
+          ∥(it.map(_.replace)*)
 
         case `.`(end, _it*) =>
           val it = _it.map {
             case it @ τ(_, given Option[Code]) =>
-              it.copy(code = recoded)
+              it.copy(code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), _, true, _, given Option[Code]) =>
-              it.copy(channel = replaced(ch), code = recoded)
+              it.copy(channel = replaced(ch), code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), false, _, given Option[Code]) =>
-              it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)
+              it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), _, false, _, given Option[Code]) =>
-              it.copy(channel = replaced(ch), code = recoded)
+              it.copy(channel = replaced(ch), code = recoded)(it.id)
             case it => it
           }
           `.`(end.replace, it*)
@@ -535,16 +535,16 @@ object Expansion:
           ?:(cond, t.replace, f.map(_.replace))
 
         case !(Some(it @ τ(_, given Option[Code])), sum) =>
-          `!`(Some(it.copy(code = recoded)), sum.replace)
+          `!`(Some(it.copy(code = recoded)(it.id)), sum.replace)
 
         case !(Some(it @ π(λ(ch: Symbol), _, true, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+          `!`(Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), false, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)), sum.replace)
+          `!`(Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)(it.id)), sum.replace)
 
         case !(Some(it @ π(λ(ch: Symbol), _, false, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+          `!`(Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.replace)
@@ -594,8 +594,8 @@ object Expansion:
         case +(_, it*) =>
           `+`(nil, it.map(_.concatenate)*)
 
-        case ||(it*) =>
-          ||(it.map(_.concatenate)*)
+        case ∥(it*) =>
+          ∥(it.map(_.concatenate)*)
 
         case `.`(end, it*) =>
           `.`(end.concatenate, it*)
@@ -629,8 +629,8 @@ object Expansion:
         case +(_, it*) =>
           `+`(nil, it.map(_.update)*)
 
-        case ||(it*) =>
-          ||(it.map(_.update)*)
+        case ∥(it*) =>
+          ∥(it.map(_.update)*)
 
         case `.`(end, _it*) =>
           given Names2 = Names2(binding2)
@@ -640,15 +640,15 @@ object Expansion:
               given_Names2 --= names.map(Symbol(_))
               it
             case it @ τ(_, given Option[Code]) =>
-              it.copy(code = recoded)
+              it.copy(code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), true, _, given Option[Code]) =>
               val ch2 = updated(ch)
               given_Names2 -= par
-              it.copy(channel = ch2, code = recoded)
+              it.copy(channel = ch2, code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), false, _, given Option[Code]) =>
-              it.copy(channel = updated(ch), name = updated(arg), code = recoded)
+              it.copy(channel = updated(ch), name = updated(arg), code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), _, false, _, given Option[Code]) =>
-              it.copy(channel = updated(ch), code = recoded)
+              it.copy(channel = updated(ch), code = recoded)(it.id)
             case it => it
           }
           `.`(end.update, it*)
@@ -667,22 +667,22 @@ object Expansion:
 
         case !(Some(it @ τ(_, given Option[Code])), sum) =>
           Expression.updating = Some(binding2)
-          `!`(Some(it.copy(code = recoded)), sum.update)
+          `!`(Some(it.copy(code = recoded)(it.id)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(par: Symbol), true, _, given Option[Code])), sum) =>
           given Names2 = Names2(binding2)
           Expression.updating = Some(given_Names2)
           val ch2 = updated(ch)
           given_Names2 -= par
-          `!`(Some(it.copy(channel = ch2, code = recoded)), sum.update)
+          `!`(Some(it.copy(channel = ch2, code = recoded)(it.id)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), false, _, given Option[Code])), sum) =>
           Expression.updating = Some(binding2)
-          `!`(Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)), sum.update)
+          `!`(Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)(it.id)), sum.update)
 
         case !(Some(it @ π(λ(ch: Symbol), _, false, _, given Option[Code])), sum) =>
           Expression.updating = Some(binding2)
-          `!`(Some(it.copy(channel = updated(ch), code = recoded)), sum.update)
+          `!`(Some(it.copy(channel = updated(ch), code = recoded)(it.id)), sum.update)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.update)

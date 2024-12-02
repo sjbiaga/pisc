@@ -38,14 +38,9 @@ import Meta._
 
 object Program:
 
-  def apply(prog: List[Bind]): List[String] =
-    _id = new helper.υidυ
-    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
-
-
   extension(node: Pre | AST)
 
-    def generate: List[Enumerator] =
+    def generate(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -68,10 +63,10 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ||(operand) =>
+        case ∥(operand) =>
           * = operand.generate
 
-        case it: || =>
+        case it: ∥ =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
           * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
@@ -219,7 +214,7 @@ object Program:
         case it: ?: =>
           def cases(sum: +): Term =
             sum match
-              case +(_, ||(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+              case +(_, ∥(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
                 if mismatch
                 then
                   `if * then … else …`(====(lhs -> rhs), `_ <- *`(`π-exclude`(t.enabled)), cases(t))
@@ -228,7 +223,7 @@ object Program:
               case _ =>
                 sum.generate
 
-          * = `_ <- *`(cases(`+`(null, ||(`.`(it)))))
+          * = `_ <- *`(cases(`+`(null, ∥(`.`(it)))))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -295,7 +290,7 @@ object Program:
                       then
                         _sum
                       else
-                        `+`(null, ||(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                        `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
                     )
 
           * = ** ++ sum.generate
@@ -311,12 +306,11 @@ object Program:
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
             case λ(value) =>
-              value match {
+              value match
                 case it: BigDecimal => s"BigDecimal($it)"
                 case it: Boolean => it.toString
                 case it: String => it.toString
                 case Expr(it) => it.toString
-              }
           }
 
           * = `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)
@@ -325,6 +319,9 @@ object Program:
 
       *
 
-  private[generator] var _id = new helper.υidυ
 
-  def id = _id()
+  final class Main:
+
+    def apply(prog: List[Bind]): List[String] =
+      val id = new helper.υidυ
+      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)
