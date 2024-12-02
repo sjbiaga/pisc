@@ -37,8 +37,6 @@ import scala.collection.mutable.{
 
 import scala.meta.{ Enumerator, Term }
 
-import scala.util.parsing.combinator._
-
 import Expression.Code
 import PolyadicPi._
 import Calculus._
@@ -121,7 +119,12 @@ abstract class Encoding extends Calculus:
         Expression.replacing = None
         Expression.updating = None
         given Names = Names()
-        val exp2 = exp.copy(assign = assign).rename(free)
+        val exp2 =
+          try
+            exp.copy(assign = assign).rename(id, free)
+          catch
+            case NoBPEx(name) => throw NoBindingParsingException(_code, _nest, name)
+            case it => throw it
         binding2 ++= purged
         exp2 -> (free ++ constants)
     }
@@ -167,7 +170,7 @@ object Encoding:
 
   private type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
 
-  private type CacheValue = (`⟦⟧` | +, Any, Names, Names2, Input)
+  private type CacheValue = (`⟦⟧` | +, Any, Names, Names2, Encoding#Input)
 
   case class Macro(parameters: List[Symbol],
                    arity: Int,
@@ -175,7 +178,7 @@ object Encoding:
                    variables: Names,
                    binding2: Names2,
                    sum: +):
-    def apply(code: Int, term: Term): Fresh =
+    def apply(code: Int, id: => String, _code: Int, _nest: Int, term: Term): Fresh =
       given refresh: MutableList[(Symbol, λ)] = MutableList()
       val variables2 = variables
         .map { it =>
@@ -188,7 +191,12 @@ object Encoding:
       Expression.replacing = None
       Expression.updating = None
       given Names = Names()
-      val sum2 = sum.rename(Set.empty, definition = true)
+      val sum2 =
+        try
+          sum.rename(id, Set.empty, definition = true)
+        catch
+          case NoBPEx(name) => throw NoBindingParsingException(_code, _nest, name)
+          case it => throw it
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -246,21 +254,6 @@ object Encoding:
   object Names2:
     def apply(): Names2 = Map()
     def apply(binding2: Names2): Names2 = Map.from(binding2)
-    def apply(names: Names)
-             (using Names2): Unit =
-      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
-    def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
-        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-          throw UniquenessBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-          throw NonParameterBindingParsingException(name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) =>
-        case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
 
 
   // exceptions
@@ -279,19 +272,21 @@ object Encoding:
   case class DefinitionFreeNamesException(code: Int, free: Names)
       extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code""")
 
-  abstract class BindingParsingException(msg: String, cause: Throwable = null)
+  abstract class BindingParsingException(code: Int, nest: Int, msg: String, cause: Throwable = null)
       extends ParsingException(msg
-                                 + s" at nesting level #$_nest"
-                                 + (if _code >= 0 then s" in the right hand side of encoding $_code" else ""), cause)
+                                 + s" at nesting level #$nest"
+                                 + (if code >= 0 then s" in the right hand side of encoding $code" else ""), cause)
 
-  case class NoBindingParsingException(name: String)
-      extends BindingParsingException(s"No binding for $name")
+  case class NoBindingParsingException(code: Int, nest: Int, name: String)
+      extends BindingParsingException(code, nest, s"No binding for $name")
 
-  case class UniquenessBindingParsingException(name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+  private case class NoBPEx(name: String) extends Throwable
 
-  case class NonParameterBindingParsingException(name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
+  case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+
+  case class NonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
 
 
   // functions
@@ -308,7 +303,7 @@ object Encoding:
           case _ =>
             binding2.find { case (`it`, _) | (_, Shadow(`it`)) => true case _ => false } match
               case Some(_) => λ(it)
-              case _ => throw NoBindingParsingException(it.name)
+              case _ => throw NoBPEx(it.name)
 
   private def recoded(free: Names)
                      (using code: Option[Code])
@@ -354,7 +349,7 @@ object Encoding:
 
         case +(it*) => it.map(_.capitals).reduce(_ ++ _)
 
-        case ||(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case ∥(it*) => it.map(_.capitals).reduce(_ ++ _)
 
         case `.`(end, _*) =>
           end.capitals
@@ -373,7 +368,7 @@ object Encoding:
         case _ => Names()
 
 
-    def rename(free: Names, definition: Boolean = false)
+    def rename(id: => String, free: Names, definition: Boolean = false)
               (using binding2: Names2)
               (using refresh: MutableList[(Symbol, λ)])
               (using binding: Names): T =
@@ -391,7 +386,7 @@ object Encoding:
         binding += υidυ
         λ(υidυ)
 
-      inline def rename[S <: AST](ast: S)(using Names): S = ast.rename(free, definition)
+      inline def rename[S <: AST](ast: S)(using Names): S = ast.rename(id, free, definition)
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -402,8 +397,8 @@ object Encoding:
         case +(it*) =>
           `+`(it.map(rename(_))*)
 
-        case ||(it*) =>
-          ||(it.map(rename(_))*)
+        case ∥(it*) =>
+          ∥(it.map(rename(_))*)
 
         case `.`(end, _it*) =>
           val n = refresh.size
@@ -454,7 +449,7 @@ object Encoding:
           given Names = Names(binding)
           val ch2 = renamed(ch)
           val names = _names.map(_.asSymbol).map(rebind(_))
-          val it = π(ch2, true, recoded(free), names*)
+          val it: π = π(ch2, true, recoded(free), names*)
           val sum2 = rename(sum)
           refresh.dropInPlace(refresh.size - n)
           `!`(Some(it), rename(sum))
@@ -510,11 +505,3 @@ object Encoding:
             }
 
           `(*)`(id, qual, params2*)
-
-  private[parser] var _id: helper.υidυ = null
-
-  def id = _id()
-
-  def copy: Any = _id.copy
-
-  def paste(it: Any) = _id.paste(it)

@@ -35,7 +35,6 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.PolyadicPi
-import PolyadicPi.ln
 import generator.Program
 
 
@@ -51,15 +50,17 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
+      val ppi = PolyadicPi.Main()
+
       try
         source = Source.fromFile(s"$examples/pisc/$in")
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bind = PolyadicPi(source).zipWithIndex
+        val bind = ppi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program(PolyadicPi(prog.map(_._1)))
+        val ps = Program.Main()(ppi(prog.map(_._1)))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
@@ -71,7 +72,7 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        val (m, n) = ln
+        val (m, n) = ppi.ln
         val l = if m == n then s"line #$n" else s"lines #$m-#$n"
         Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
         throw t
