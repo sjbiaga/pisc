@@ -43,7 +43,7 @@ class AmbientSuite extends FunSuite:
   test("agent-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #0") {
-      Ambient {
+      Main() {
         source("""
                ⟦⟧ =
                P(u) = (x). (x). ( (v). ⟦ z. ⟧ )
@@ -56,7 +56,7 @@ class AmbientSuite extends FunSuite:
   test("encoding-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #0 in the right hand side of encoding 1") {
-      Ambient {
+      Main() {
         source("""
                ⟦⟧ =
                ⟦1 t"X" 1⟧ = ⟦ z. ⟧
@@ -69,7 +69,7 @@ class AmbientSuite extends FunSuite:
   test("encoding-uniqueness-hardcoded-binding") {
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, but is duplicated at nesting level #0 in the right hand side of encoding 1") {
-      Ambient {
+      Main() {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = (x). (x). M{u}
                """)
@@ -81,7 +81,7 @@ class AmbientSuite extends FunSuite:
   test("encoding-uniqueness-encoded-binding") {
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (z) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #1 in the right hand side of encoding 3") {
-      Ambient {
+      Main() {
         source("""
                ⟦ 'x ⟧{u} = x[ <u> ]
                ⟦2 t"λ $x,$y . ${$M}" 2⟧{u} = u[ (x). (y). M{y} ]
@@ -95,7 +95,7 @@ class AmbientSuite extends FunSuite:
   test("encoding-non-parameter-hardcoded-binding") {
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (u) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 1") {
-      Ambient {
+      Main() {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = (u). (x). M{x}
                """)
@@ -107,7 +107,7 @@ class AmbientSuite extends FunSuite:
   test("encoding-non-parameter-encoded-binding") {
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
-      Ambient {
+      Main() {
         source("""
                ⟦ 'x ⟧{u} = x[ <u> ]
                ⟦2 t"λ $x,$y . ${$M}" 2⟧{u} = u[ (x). (y). M{y} ]

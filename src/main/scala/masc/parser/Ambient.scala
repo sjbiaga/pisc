@@ -32,8 +32,6 @@ package parser
 import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
-import scala.util.parsing.combinator._
-
 import Ambient._
 import Calculus.{ AST => _, _ }
 import Encoding._
@@ -70,7 +68,7 @@ abstract class Ambient extends Expression:
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
-  private[parser] var _nest = -1
+  protected var _nest = -1
   private[parser] var _nth: Map[Int, Long] = null
   protected final def nest(b: Boolean) =
     _nth(_nest) += 1
@@ -83,6 +81,9 @@ abstract class Ambient extends Expression:
       _nth -= _nest+1
       _cntr -= _nest +1
   private[parser] var _cntr: Map[Int, Long] = null
+
+  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
+  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   protected final def path = (0 until _nest).map(_nth(_))
 
@@ -100,24 +101,42 @@ abstract class Ambient extends Expression:
          None
     }
 
+  protected object Names2Occurrence:
+    def apply(names: Names)
+             (using Names2): Unit =
+      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
+    def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
+             (using binding2: Names2): Unit =
+      binding2.get(name) match
+        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
+          throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(_, false))) =>
+        case _ =>
+          binding2 += name -> Occurrence(shadow, pos(true))
 
-object Ambient extends Expansion:
+
+object Ambient:
 
   enum Op { case in, out, open }
 
-  sealed trait AST extends Any
+  export AST._
 
-  case class Λ(name: String) extends AnyVal with AST:
-    override def toString: String = name
+  enum AST:
 
-  case object ε extends AST:
-    override def toString: String = "ε"
+    case Λ(name: String)
 
-  case class ζ(op: Op, amb: String) extends AST:
-    override def toString: String = s"$op $amb"
+    case ε
 
-  def line: Parser[Either[Bind, Define]] =
-    equation ^^ { Left(_) } | definition ^^ { Right(_) }
+    case ζ(op: Op, amb: String)
+
+    override def toString: String = this match
+      case Λ(name) => name
+      case ζ(op, amb) => s"$op $amb"
+      case _ => "ε"
 
   type Names = Set[String]
 
@@ -127,9 +146,6 @@ object Ambient extends Expansion:
 
 
   // functions
-
-  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
 
   extension[T <: Calculus.AST](ast: T)
 
@@ -141,8 +157,8 @@ object Ambient extends Expansion:
 
         case ∅ => ∅
 
-        case ||(it*) =>
-          ||(it.map(_.shallow)*)
+        case ∥(it*) =>
+          ∥(it.map(_.shallow)*)
 
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
@@ -165,85 +181,90 @@ object Ambient extends Expansion:
         case it =>
           it
 
-  def ensure(using prog: List[Bind]): Unit =
-    import helper.Ensure._
 
-    val i = main
+  final class Main extends Expansion:
 
-    if i < 0 then throw MainParsingException
+    def line: Parser[Either[Bind, Define]] =
+      equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
-    given rec: Map[(String, Int), Int] = Map()
-    given rep: Map[Int, Int] = Map()
+    private def ensure(using prog: List[Bind]): Unit =
+      import helper.Ensure._
 
-    prog(i)._2.recursive(using "Main" -> 0 :: Nil)
+      val i = main
 
-    if rec.contains("Main" -> 0) then throw MainParsingException2
+      if i < 0 then throw MainParsingException
 
-    for
-      (i, n) <- rep
-    do
-      prog(i)._1 match
-        case `(*)`(id, _, params*) =>
-          if _werr
-          then
-            throw RecRepParsingException(id, params.size, n)
-          Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
+      given rec: Map[(String, Int), Int] = Map()
+      given rep: Map[Int, Int] = Map()
 
-  def apply(prog: List[Bind]): List[Bind] =
-    given List[Bind] = prog.map(_ -> _.shallow)
-    ensure
-    given_List_Bind
+      prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
+      if rec.contains("Main" -> 0) then throw MainParsingException2
 
-  private var i: Int = -1
-  private var l: (Int, Int) = (-1, -1)
-  def ln = l
+      for
+        (i, n) <- rep
+      do
+        prog(i)._1 match
+          case `(*)`(id, _, params*) =>
+            if _werr
+            then
+              throw RecRepParsingException(id, params.size, n)
+            Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
 
-  def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-    _werr = errors
-    eqtn = List()
-    defn = Map()
-    self = Set()
-    _nest = 0
-    _id = new helper.υidυ
-    i = 0
-    l = (0, 0)
+    def apply(prog: List[Bind]): List[Bind] =
+      given List[Bind] = prog.map(_ -> _.shallow)
+      ensure
+      given_List_Bind
 
-    (source.getLines().toList :+ "")
-    .zipWithIndex
-    .foldLeft(List[(String, (Int, Int))]() -> false) {
-      case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-      case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
-    }._1
-    .flatMap { case (it, (m, n)) =>
-      l = (m+1, n+1)
-      if it.matches("^[ ]*#.*") // commented lines
-      || it.isBlank // empty lines
-      then
-        None
-      else if it.matches("^[ ]*@.*")
-      then // Scala
-        Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-      else // Ambient
-        _cntr = Map(0 -> 0L)
-        _nth = Map(0 -> 0L)
-        parseAll(line, it) match
-          case Success(Left(equation), _) =>
-            eqtn :+= equation
-            val equations = eqtn.slice(i, eqtn.size)
-            i = eqtn.size
-            equations.map(Right(_))
-          case Success(Right(definition), _) =>
-            if !defn.contains(_code) then defn(_code) = Nil
-            defn(_code) ::= definition
-            Nil
-          case failure: NoSuccess =>
-            scala.sys.error(failure.msg)
-    }
-    .filter {
-      case Right((`(*)`(s"Self_$n", _, _*), _))
-          if { try { n.toInt; true } catch _ => false } =>
-        self.contains(n.toInt)
-      case _ => true
-    }
-    .toList
+    private var i: Int = -1
+    private var l: (Int, Int) = (-1, -1)
+    def ln = l
+
+    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+      _werr = errors
+      eqtn = List()
+      defn = Map()
+      self = Set()
+      _nest = 0
+      _id = new helper.υidυ
+      i = 0
+      l = (0, 0)
+
+      (source.getLines().toList :+ "")
+      .zipWithIndex
+      .foldLeft(List[(String, (Int, Int))]() -> false) {
+        case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+        case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+      }._1
+      .flatMap { case (it, (m, n)) =>
+        l = (m+1, n+1)
+        if it.matches("^[ ]*#.*") // commented lines
+        || it.isBlank // empty lines
+        then
+          None
+        else if it.matches("^[ ]*@.*")
+        then // Scala
+          Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+        else // Ambient
+          _cntr = Map(0 -> 0L)
+          _nth = Map(0 -> 0L)
+          parseAll(line, it) match
+            case Success(Left(equation), _) =>
+              eqtn :+= equation
+              val equations = eqtn.slice(i, eqtn.size)
+              i = eqtn.size
+              equations.map(Right(_))
+            case Success(Right(definition), _) =>
+              if !defn.contains(_code) then defn(_code) = Nil
+              defn(_code) ::= definition
+              Nil
+            case failure: NoSuccess =>
+              scala.sys.error(failure.msg)
+      }
+      .filter {
+        case Right((`(*)`(s"Self_$n", _, _*), _))
+            if { try { n.toInt; true } catch _ => false } =>
+          self.contains(n.toInt)
+        case _ => true
+      }
+      .toList

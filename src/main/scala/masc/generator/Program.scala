@@ -39,14 +39,9 @@ import Meta._
 
 object Program:
 
-  def apply(prog: List[Bind]): List[String] =
-    _id = new helper.υidυ
-    prog.map(_ -> _.generate).map(_.swap).map(defn(_)(_).toString)
-
-
   extension(node: Pre | AST)
 
-    def generate: List[Enumerator] =
+    def generate(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -56,10 +51,10 @@ object Program:
         case ∅ =>
           * = `_ <- IO.unit`
 
-        case ||(operand) =>
+        case ∥(operand) =>
           * = operand.generate
 
-        case it: || =>
+        case it: ∥ =>
           val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
 
           * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
@@ -202,7 +197,7 @@ object Program:
                       then
                         _par
                       else
-                        ||(`.`(_par, ν(variables.drop(n).toSeq*)))
+                        ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
                     )
 
           * = ** ++ par.generate
@@ -228,6 +223,8 @@ object Program:
       *
 
 
-  private[generator] var _id: helper.υidυ = null
+  final class Main:
 
-  def id = _id()
+    def apply(prog: List[Bind]): List[String] =
+      val id = new helper.υidυ
+      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)

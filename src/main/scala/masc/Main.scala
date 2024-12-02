@@ -35,7 +35,6 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Ambient
-import Ambient.ln
 import generator.Program
 
 
@@ -51,15 +50,17 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
+      val ma = Ambient.Main()
+
       try
         source = Source.fromFile(s"$examples/masc/$in")
         fwr = FileWriter(out, Charset.forName("UTF-8"))
         bwr = BufferedWriter(fwr)
 
-        val bind = Ambient(source).zipWithIndex
+        val bind = ma(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program(Ambient(prog.map(_._1)))
+        val ps = Program.Main()(ma(prog.map(_._1)))
         val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
@@ -71,7 +72,7 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        val (m, n) = ln
+        val (m, n) = ma.ln
         val l = if m == n then s"line #$n" else s"lines #$m-#$n"
         Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
         throw t

@@ -197,7 +197,7 @@ abstract class Expansion extends Encoding:
                       case Success((it, free2), _) =>
                         shadows(idx) match
                           case shadow @ Some(_) =>
-                            Names2(it, shadow)
+                            Names2Occurrence(it, shadow)
                           case _ =>
                             binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(it))) => substitution(rhs) = it
@@ -212,7 +212,7 @@ abstract class Expansion extends Encoding:
 
                     _cache.get(key) match
 
-                      case Some((par: ||, it, free2, given Names2, in)) =>
+                      case Some((par: ∥, it, free2, given Names2, in)) =>
                         binding2 ++= binders
 
                         substitution(rhs) = par
@@ -350,7 +350,7 @@ abstract class Expansion extends Encoding:
                   case Success((it, free2), _) =>
                     shadows(idx) match
                       case shadow @ Some(_) =>
-                        Names2(it, shadow)
+                        Names2Occurrence(it, shadow)
                       case _ =>
                         binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
                           case Some((_, Shadow(it))) => substitution(lhs) = it
@@ -365,7 +365,7 @@ abstract class Expansion extends Encoding:
 
                 _cache.get(key) match
 
-                  case Some((par: ||, it, free2, given Names2, in)) =>
+                  case Some((par: ∥, it, free2, given Names2, in)) =>
                     binding2 ++= binders
 
                     substitution(lhs) = par
@@ -437,7 +437,7 @@ abstract class Expansion extends Encoding:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Nil, Left(end))(_macro(code, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, _code, _nest, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
               r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
@@ -502,8 +502,8 @@ object Expansion:
 
         case ∅ => ∅
 
-        case ||(it*) =>
-          ||(it.map(_.replace)*)
+        case ∥(it*) =>
+          ∥(it.map(_.replace)*)
 
         case `.`(end, _it*) =>
           val it = _it.map {
@@ -574,8 +574,8 @@ object Expansion:
 
         case ∅ => ∅
 
-        case ||(it*) =>
-          ||(it.map(_.concatenate)*)
+        case ∥(it*) =>
+          ∥(it.map(_.concatenate)*)
 
         case `.`(end, it*) =>
           `.`(end.concatenate, it*)
@@ -610,8 +610,8 @@ object Expansion:
 
         case ∅ => ∅
 
-        case ||(it*) =>
-          ||(it.map(_.update)*)
+        case ∥(it*) =>
+          ∥(it.map(_.update)*)
 
         case `.`(end, _it*) =>
           given Names2 = Names2(binding2)
