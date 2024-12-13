@@ -38,6 +38,7 @@ import Calculus._
 import Encoding._
 import PiSuite._
 
+
 class PiSuite extends FunSuite:
 
   test("agent-no-binding") {
