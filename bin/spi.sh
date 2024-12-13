@@ -18,10 +18,10 @@ function spi() {
     done
     set ../loop.scala ../spi.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.6.2-RC3 \
+                  -q -O -nowarn -S 3.6.3-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.6-0142603 \
+                  --dep org.typelevel::cats-effect:3.6-28f8f29 \
                   ${args#?} \
                   2>&1
 }

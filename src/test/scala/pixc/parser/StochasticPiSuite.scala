@@ -38,6 +38,7 @@ import Calculus._
 import Encoding._
 import StochasticPiSuite._
 
+
 class StochasticPiSuite extends FunSuite:
 
   test("agent-no-binding") {
