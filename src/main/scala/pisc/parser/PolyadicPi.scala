@@ -190,7 +190,7 @@ object PolyadicPi:
       extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
 
   case class PrefixChannelsParsingException(names: λ*)
-      extends PrefixParsingException(s"${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
+      extends PrefixParsingException(s"${names.mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
 
 
   case class PrefixUniquenessParsingException(name: String, ps: String*)

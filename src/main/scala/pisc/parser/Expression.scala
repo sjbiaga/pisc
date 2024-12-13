@@ -58,9 +58,6 @@ abstract class Expression extends JavaTokenParsers:
   def expression: Parser[(Code, Names)] =
     """[/][*].*?[*][/]""".r ^^ { it =>
       val expr = it.stripPrefix("/*").stripSuffix("*/")
-      Expression.renaming = None
-      Expression.replacing = None
-      Expression.updating = None
       try
         val orig = expr.parse[Term].get
         Expression(orig) match
@@ -128,9 +125,6 @@ abstract class Expression extends JavaTokenParsers:
       then
         None -> Names()
       else
-        Expression.renaming = None
-        Expression.replacing = None
-        Expression.updating = None
         try
           Expression(it.group(2).parse[Term].get) match
             case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
@@ -199,29 +193,19 @@ object Expression:
   type Code = (List[sm.Enumerator] Either sm.Term, sm.Term)
 
 
-  var renaming: Option[(MutableList[(Symbol, λ)], Names2)] = None
-  var replacing: Option[Map[String, λ | AST]] = None
-  var updating: Option[Names2] = None
-
   def recode(orig: sm.Term): (Code, Names) =
-    val renaming = this.renaming
-    val replacing = this.replacing
-    val updating = this.updating
-    this.renaming = None
-    this.replacing = None
-    this.updating = None
-    val code = this(orig)
-    this.updating = updating
-    this.replacing = replacing
-    this.renaming = renaming
-    code match
+    this(orig) match
       case (sm.Term.ForYield(enums, _), names) =>
         (Left(enums), orig) -> names
       case (term, names) =>
         (Right(term), orig) -> names
 
 
-  inline def apply(self: sm.Term): (sm.Term, Names) =
+  inline def apply(self: sm.Term)
+                  (using refresh: MutableList[(Symbol, λ)] = null)
+                  (using replacing: Map[String, λ | AST] = null)
+                  (using updating: Names2 = null): (sm.Term, Names) =
+    given (MutableList[(Symbol, λ)], Names2) = if refresh eq null then null else refresh -> updating
     Term(self)
 
 
@@ -235,13 +219,19 @@ object Expression:
 
   object Case:
 
-    def apply(self: List[sm.Case]): (List[sm.Case], Names) =
+    def apply(self: List[sm.Case])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Case], Names) =
       val (cs: List[sm.Case], csns) = UnzipReduce(self.map(CaseTree(_)))
       cs -> csns
 
   object CaseTree:
 
-    def apply(self: sm.CaseTree): (sm.CaseTree, Names) = self match
+    def apply(self: sm.CaseTree)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.CaseTree, Names) = self match
 
       case it @ sm.Case(pat, cond, body) =>
         val (p, pns) = Pat(pat)
@@ -257,7 +247,10 @@ object Expression:
 
   object Ctor:
 
-    def apply(self: sm.Ctor): (sm.Ctor, Names) = self match
+    def apply(self: sm.Ctor)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Ctor, Names) = self match
 
       case it @ sm.Ctor.Primary(mods, _, paramss) =>
         val (ms, msns) = Stat.Mod(mods)
@@ -276,10 +269,16 @@ object Expression:
 
   object Enumerator:
 
-    def apply(self: List[sm.Enumerator]): (List[sm.Enumerator], Names) =
+    def apply(self: List[sm.Enumerator])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Enumerator], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Enumerator): (sm.Enumerator, Names) = self match
+    def apply(self: sm.Enumerator)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Enumerator, Names) = self match
 
       case it @ sm.Enumerator.Generator(pat, rhs) =>
         val (p, pns) = Pat(pat)
@@ -305,10 +304,16 @@ object Expression:
 
   object Init:
 
-    def apply(self: List[sm.Init]): (List[sm.Init], Names) =
+    def apply(self: List[sm.Init])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Init], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Init): (sm.Init, Names) = self match
+    def apply(self: sm.Init)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Init, Names) = self match
 
       case it @ sm.Init(tpe, _, argss) =>
         val (t, tns) = Type(tpe)
@@ -320,10 +325,16 @@ object Expression:
 
   object Pat:
 
-    def apply(self: List[sm.Pat]): (List[sm.Pat], Names) =
+    def apply(self: List[sm.Pat])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Pat], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Pat): (sm.Pat, Names) = self match
+    def apply(self: sm.Pat)
+             (using renaming: (MutableList[(Symbol, λ)], Names2))
+             (using replacing: Map[String, λ | AST])
+             (using updating: Names2): (sm.Pat, Names) = self match
 
       case it @ sm.Pat.Alternative(lhs, rhs) =>
         val (l, lns) = this(lhs)
@@ -355,18 +366,18 @@ object Expression:
 
       case sm.Lit.Symbol(free @ Symbol(name)) =>
         renaming match
-          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
-            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
-          case _ =>
+          case null =>
             replacing match
-              case Some(given Map[String, λ | AST]) =>
-                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
-              case _ =>
+              case null =>
                 updating match
-                  case Some(given Names2) =>
-                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
-                  case _ =>
+                  case null =>
                     sm.Term.Name(name) -> Set(free)
+                  case given Names2 =>
+                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+              case given Map[String, λ | AST] =>
+                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
+          case (given MutableList[(Symbol, λ)], given Names2) =>
+            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -388,18 +399,18 @@ object Expression:
       case it @ sm.Term.Name(s"'$name") =>
         val free = Symbol(name)
         renaming match
-          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
-            sm.Term.Name(s"'${renamed(free).asSymbol.name}") -> Names()
-          case _ =>
+          case null =>
             replacing match
-              case Some(given Map[String, λ | AST]) =>
-                sm.Term.Name(s"'${replaced(free).asSymbol.name}") -> Names()
-              case _ =>
+              case null =>
                 updating match
-                  case Some(given Names2) =>
-                    sm.Term.Name(s"'${updated(free).asSymbol.name}") -> Names()
-                  case _ =>
+                  case null =>
                     sm.Term.Name(name) -> Set(free)
+                  case given Names2 =>
+                    sm.Term.Name(s"'${updated(free).asSymbol.name}") -> Names()
+              case given Map[String, λ | AST] =>
+                sm.Term.Name(s"'${replaced(free).asSymbol.name}") -> Names()
+          case (given MutableList[(Symbol, λ)], given Names2) =>
+            sm.Term.Name(s"'${renamed(free).asSymbol.name}") -> Names()
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -413,7 +424,10 @@ object Expression:
 
   object Ref:
 
-    def apply(self: sm.Ref): (sm.Ref, Names) = self match
+    def apply(self: sm.Ref)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Ref, Names) = self match
 
       case it: sm.Init =>
         Init(it)
@@ -428,10 +442,16 @@ object Expression:
 
   object Stat:
 
-    def apply(self: List[sm.Stat]): (List[sm.Stat], Names) =
+    def apply(self: List[sm.Stat])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Stat], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Stat): (sm.Stat, Names) = self match
+    def apply(self: sm.Stat)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Stat, Names) = self match
 
       case it: sm.Term =>
         Term(it)
@@ -450,7 +470,10 @@ object Expression:
 
     object Decl:
 
-      def apply(self: sm.Decl): (sm.Decl, Names) = self match
+      def apply(self: sm.Decl)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Decl, Names) = self match
 
         case it @ sm.Decl.Def(mods, _, tparams, paramss, decltpe) =>
           val (ms, msns) = Mod(mods)
@@ -487,7 +510,10 @@ object Expression:
 
     object Defn:
 
-      def apply(self: sm.Defn): (sm.Defn, Names) = self match
+      def apply(self: sm.Defn)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Defn, Names) = self match
 
         case it @ sm.Defn.Class(mods, _, tparams, ctor, templ) =>
           val (ms, msns) = Mod(mods)
@@ -588,10 +614,16 @@ object Expression:
 
     object Mod:
 
-      def apply(self: List[sm.Mod]): (List[sm.Mod], Names) =
+      def apply(self: List[sm.Mod])
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (List[sm.Mod], Names) =
         UnzipReduce(self.map(this(_)))
 
-      def apply(self: sm.Mod): (sm.Mod, Names) = self match
+      def apply(self: sm.Mod)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Mod, Names) = self match
 
         case it @ sm.Mod.Annot(init) =>
           val (i, ins) = Init(init)
@@ -605,7 +637,10 @@ object Expression:
 
   object Template:
 
-    def apply(self: sm.Template): (sm.Template, Names) = self match
+    def apply(self: sm.Template)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Template, Names) = self match
 
       case it @ sm.Template(early, inits, self @ sm.Self(_, decltpe), stats) =>
         val (es, esns) = Stat(early)
@@ -619,10 +654,16 @@ object Expression:
 
     val `null -> Nil` = null.asInstanceOf[sm.Term] -> Names()
 
-    def apply(self: List[sm.Term]): (List[sm.Term], Names) =
+    def apply(self: List[sm.Term])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Term], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Term): (sm.Term, Names) = self match
+    def apply(self: sm.Term)
+             (using renaming: (MutableList[(Symbol, λ)], Names2))
+             (using replacing: Map[String, λ | AST])
+             (using updating: Names2): (sm.Term, Names) = self match
 
       case it @ sm.Term.Annotate(expr, annots) =>
         val (e, ens) = this(expr)
@@ -709,18 +750,18 @@ object Expression:
 
       case sm.Lit.Symbol(free @ Symbol(name)) =>
         renaming match
-          case Some((given MutableList[(Symbol, λ)], given Names2)) =>
-            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
-          case _ =>
+          case null =>
             replacing match
-              case Some(given Map[String, λ | AST]) =>
-                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
-              case _ =>
+              case null =>
                 updating match
-                  case Some(given Names2) =>
-                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
-                  case _ =>
+                  case null =>
                     sm.Term.Name(name) -> Set(free)
+                  case given Names2 =>
+                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+              case given Map[String, λ | AST] =>
+                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
+          case (given MutableList[(Symbol, λ)], given Names2) =>
+            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
@@ -806,10 +847,16 @@ object Expression:
 
     object Param:
 
-      def apply(self: List[List[sm.Term.Param]]): (List[List[sm.Term.Param]], Names) =
+      def apply(self: List[List[sm.Term.Param]])
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (List[List[sm.Term.Param]], Names) =
         UnzipReduce(self.map { ls => UnzipReduce(ls.map(this(_))) })
 
-      def apply(self: sm.Term.Param): (sm.Term.Param, Names) = self match
+      def apply(self: sm.Term.Param)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Term.Param, Names) = self match
 
         case it @ sm.Term.Param(mods, _, decltpe, default) =>
           val (ms, msns) = Stat.Mod(mods)
@@ -822,7 +869,10 @@ object Expression:
 
     object Ref:
 
-      def apply(self: sm.Term.Ref): (sm.Term.Ref, Names) = self match
+      def apply(self: sm.Term.Ref)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Term.Ref, Names) = self match
 
         case it @ sm.Term.Select(qual, _) =>
           val (q, qns) = Term(qual)
@@ -840,17 +890,26 @@ object Expression:
 
     val `null -> Nil` = null.asInstanceOf[sm.Type] -> Names()
 
-    def apply(self: sm.Type.Bounds): (sm.Type.Bounds, Names) = self match
+    def apply(self: sm.Type.Bounds)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Type.Bounds, Names) = self match
 
       case it @ sm.Type.Bounds(lo, hi) =>
         val Some((l, lns)) = lo.map(this(_)).orElse(Some(`null -> Nil`))
         val Some((h, hns)) = hi.map(this(_)).orElse(Some(`null -> Nil`))
         it.copy(lo = lo.map(const(l)), hi = hi.map(const(h))) -> (lns ++ hns)
 
-    def apply(self: List[sm.Type]): (List[sm.Type], Names) =
+    def apply(self: List[sm.Type])
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (List[sm.Type], Names) =
       UnzipReduce(self.map(this(_)))
 
-    def apply(self: sm.Type): (sm.Type, Names) = self match
+    def apply(self: sm.Type)
+             (using (MutableList[(Symbol, λ)], Names2))
+             (using Map[String, λ | AST])
+             (using Names2): (sm.Type, Names) = self match
 
       case it @ sm.Type.And(lhs, rhs) =>
         val (l, lns) = this(lhs)
@@ -975,10 +1034,16 @@ object Expression:
 
     object Param:
 
-      def apply(self: List[sm.Type.Param]): (List[sm.Type.Param], Names) =
+      def apply(self: List[sm.Type.Param])
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (List[sm.Type.Param], Names) =
         UnzipReduce(self.map(this(_)))
 
-      def apply(self: sm.Type.Param): (sm.Type.Param, Names) = self match
+      def apply(self: sm.Type.Param)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Type.Param, Names) = self match
 
         case it @ sm.Type.Param(mods, _, tparams, tbounds, vbounds, cbounds) =>
           val (ms, msns) = Stat.Mod(mods)
@@ -993,7 +1058,10 @@ object Expression:
 
     object Ref:
 
-      def apply(self: sm.Type.Ref): (sm.Type.Ref, Names) = self match
+      def apply(self: sm.Type.Ref)
+               (using (MutableList[(Symbol, λ)], Names2))
+               (using Map[String, λ | AST])
+               (using Names2): (sm.Type.Ref, Names) = self match
 
         case it @ sm.Type.Project(qual, _) =>
           val (q, qns) = Type(qual)
