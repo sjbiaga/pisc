@@ -38,6 +38,7 @@ import Calculus._
 import Encoding._
 import PolyadicPiSuite._
 
+
 class PolyadicPiSuite extends FunSuite:
 
   test("agent-no-binding") {

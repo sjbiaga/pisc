@@ -168,7 +168,7 @@ abstract class Calculus extends PolyadicPi:
       case qual ~ id ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
       case _ ~ id ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
-        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
+        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1)*)
       case qual ~ "Self" ~ Some(params) =>
         self += _code
         `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
@@ -213,7 +213,8 @@ abstract class Calculus extends PolyadicPi:
    * @return
    */
   def qual: Parser[List[String]] =
-    rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+    rep(qual_r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+  final private val qual_r = "[{][^}]*[}]".r
 
 
 object Calculus:
@@ -247,8 +248,10 @@ object Calculus:
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[+]
 
+    @annotation.tailrec
     override def equals(any: Any): Boolean = any match
-      case that: + => that.choices.isEmpty
+      case +() => true
+      case +(∥(`.`(sum: +))) => equals(sum)
       case _ => false
 
     override def toString: String = "()"
@@ -340,8 +343,8 @@ object Calculus:
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $id""")
 
-  case class EquationParamsException(id: String, params: Any*)
-      extends EquationParsingException(s"""The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
+  case class EquationParamsException(id: String, params: λ*)
+      extends EquationParsingException(s"""The "formal" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
