@@ -79,15 +79,15 @@ abstract class Calculus extends Pi:
     }
 
   def leaf(using Names2): Parser[(`-`, Names)] =
-    "["~test~"]"~choice ^^ { // (mis)match
+    "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
     } |
-    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    test~"?"~choice~":"~choice ^^ { // Elvis operator
+    condition~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
@@ -157,7 +157,7 @@ abstract class Calculus extends Pi:
         it
     }
 
-  def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
+  def condition: Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
         (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
@@ -168,7 +168,7 @@ abstract class Calculus extends Pi:
       case qual ~ id ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(id, qual)
       case _ ~ id ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
-        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1.value)*)
+        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1)*)
       case qual ~ "Self" ~ Some(params) =>
         self += _code
         `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
@@ -203,7 +203,8 @@ abstract class Calculus extends Pi:
    * @return
    */
   def qual: Parser[List[String]] =
-    rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+    rep(qual_r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+  final private val qual_r = "[{][^}]*[}]".r
 
 
 object Calculus:
@@ -237,8 +238,10 @@ object Calculus:
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[+]
 
+    @annotation.tailrec
     override def equals(any: Any): Boolean = any match
-      case that: + => that.choices.isEmpty
+      case +() => true
+      case +(∥(`.`(sum: +))) => equals(sum)
       case _ => false
 
     override def toString: String = "()"
@@ -330,14 +333,14 @@ object Calculus:
   case class EquationQualifiedException(id: String, qual: List[String])
       extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $id""")
 
-  case class EquationParamsException(id: String, params: Any*)
-      extends EquationParsingException(s"""The \"formal\" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
+  case class EquationParamsException(id: String, params: λ*)
+      extends EquationParsingException(s"""The "formal" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
 
   case class EquationFreeNamesException(id: String, free: Names)
       extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
 
   case class PrefixChannelsParsingException(names: λ*)
-      extends PrefixParsingException(s"""${names.map(_.value).mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}""")
+      extends PrefixParsingException(s"""${names.mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}""")
 
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
