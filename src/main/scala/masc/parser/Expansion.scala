@@ -230,8 +230,6 @@ abstract class Expansion extends Encoding:
                           case Success((par, free2), _) =>
                             binding2 ++= binders
 
-                            Expression.renaming = None
-                            Expression.replacing = None
                             val par2 = par.flatten.update(using Names2(binding2))
 
                             substitution(rhs) = par2
@@ -383,8 +381,6 @@ abstract class Expansion extends Encoding:
                       case Success((par, free2), _) =>
                         binding2 ++= binders
 
-                        Expression.renaming = None
-                        Expression.replacing = None
                         val par2 = par.flatten.update(using Names2(binding2))
 
                         substitution(lhs) = par2
@@ -482,7 +478,9 @@ object Expansion:
       case Some((_, Shadow(it))) => it
       case _ => name
 
-  private def recoded(using code: Option[Code]): Option[Code] =
+  private def recoded(using code: Option[Code])
+                     (using substitution: Map[String, String | AST] = null)
+                     (using updating: Names2 = null): Option[Code] =
     code.map { (_, orig) =>
       Expression(orig)._1 match
         case term @ Term.ForYield(enums, _) =>
@@ -522,8 +520,7 @@ object Expansion:
           }
           `.`(end.replace, it*)
 
-        case <>(code, _path*) =>
-          given Option[Code] = code
+        case <>(given Option[Code], _path*) =>
           val path = _path.map {
             case Λ(name) => Λ(replaced(name))
             case ζ(op, amb) => ζ(op, replaced(amb))
@@ -615,7 +612,6 @@ object Expansion:
 
         case `.`(end, _it*) =>
           given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
           val it = _it.map {
             case it @ ν(names*) =>
               given_Names2 --= names
@@ -635,18 +631,16 @@ object Expansion:
           }
           `.`(end.update, it*)
 
-        case <>(code, _path*) =>
-          given Option[Code] = code
+        case <>(given Option[Code], _path*) =>
           val path = _path.map {
             case Λ(name) => Λ(updated(name))
             case ζ(op, amb) => ζ(op, updated(amb))
             case it => it
           }
-          <>(code, path*)
+          <>(recoded, path*)
 
         case it @ !(Some(name), par) =>
           given Names2 = Names2(binding2)
-          Expression.updating = Some(given_Names2)
           given_Names2 -= name
           it.copy(par = par.update)
 
