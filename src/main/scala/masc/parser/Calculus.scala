@@ -187,7 +187,8 @@ abstract class Calculus extends Ambient:
    * @return
    */
   def qual: Parser[List[String]] =
-    rep("""[{][^}]*[}]""".r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+    rep(qual_r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
+  final private val qual_r = "[{][^}]*[}]".r
 
 
 object Calculus:
@@ -221,8 +222,10 @@ object Calculus:
     override def canEqual(that: Any): Boolean =
       that.isInstanceOf[∥]
 
+    @annotation.tailrec
     override def equals(any: Any): Boolean = any match
-      case that: ∥ => that.components.size == 0
+      case ∥() => true
+      case ∥(`.`(par: ∥)) => equals(par)
       case _ => false
 
     override def toString: String = "()"

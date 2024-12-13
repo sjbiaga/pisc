@@ -38,6 +38,7 @@ import Calculus._
 import Encoding._
 import AmbientSuite._
 
+
 class AmbientSuite extends FunSuite:
 
   test("agent-no-binding") {
