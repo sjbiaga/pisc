@@ -115,15 +115,12 @@ abstract class Encoding extends Calculus:
         val pointers = _pointers.map(_._1.map(renamed(_).asSymbol)).getOrElse(Nil)
         val _assign = variables zip pointers
         val assign = if _assign.isEmpty then None else Some(_assign)
-        Expression.renaming = Some((given_MutableList_Symbol_λ, given_Names2))
-        Expression.replacing = None
-        Expression.updating = None
-        given Names = Names()
+        given Names()
         val exp2 =
           try
             exp.copy(assign = assign).rename(id, free)
           catch
-            case NoBPEx(name) => throw NoBindingParsingException(_code, _nest, name)
+            case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
             case it => throw it
         binding2 ++= purged
         exp2 -> (free ++ constants)
@@ -132,7 +129,7 @@ abstract class Encoding extends Calculus:
   def instance(defs: List[Define], end: String)
               (using Names2): Parser[(`⟦⟧`, Names)]
 
-  private def pointers: Parser[(List[Symbol], Names)] =
+  def pointers: Parser[(List[Symbol], Names)] =
     "{"~>rep1sep(name, ",")<~"}" ^^ {
       case ps if !ps.forall(_._1.isSymbol) =>
         throw PointersParsingException(ps.filterNot(_._1.isSymbol).map(_._1)*)
@@ -159,7 +156,7 @@ abstract class Encoding extends Calculus:
         `{}`(id, Nil, true) -> Names()
     }
 
-  protected val _cache = Map[CacheKey, CacheValue]()
+  protected final val _cache = Map[CacheKey, CacheValue]()
 
 
 object Encoding:
@@ -186,16 +183,13 @@ object Encoding:
           refresh.prepend(it -> λ(υidυ))
           υidυ
         }
-      given Names2 = Names2(this.binding2)
-      Expression.renaming = Some((refresh, given_Names2))
-      Expression.replacing = None
-      Expression.updating = None
-      given Names = Names()
+      given Names2 = Names2(binding2)
+      given Names()
       val sum2 =
         try
           sum.rename(id, Set.empty, definition = true)
         catch
-          case NoBPEx(name) => throw NoBindingParsingException(_code, _nest, name)
+          case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
           case it => throw it
       val shadows = (
         parameters.map(_ -> None).toMap
@@ -212,10 +206,7 @@ object Encoding:
                         constants: Names,
                         variables: Names,
                         sum: +):
-    inline def apply()(using substitution: Map[String, λ | AST]): `⟦⟧` =
-      Expression.renaming = None
-      Expression.updating = None
-      Expression.replacing = Some(substitution)
+    inline def apply()(using Map[String, λ | AST]): `⟦⟧` =
       `⟦⟧`(this, variables, sum.replace.flatten)
 
     override def toString: String = Definition(code, term)
@@ -280,7 +271,7 @@ object Encoding:
   case class NoBindingParsingException(code: Int, nest: Int, name: String)
       extends BindingParsingException(code, nest, s"No binding for $name")
 
-  private case class NoBPEx(name: String) extends Throwable
+  private class NoBPEx(name: String) extends Throwable(name)
 
   case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
@@ -305,11 +296,11 @@ object Encoding:
               case Some(_) => λ(it)
               case _ => throw NoBPEx(it.name)
 
-  private def recoded(free: Names)
-                     (using code: Option[Code])
-                     (using MutableList[(Symbol, λ)])
-                     (using Names2)
-                     (using binding: Names): Option[Code] =
+  def recoded(free: Names)
+             (using code: Option[Code])
+             (using MutableList[(Symbol, λ)])
+             (using Names2)
+             (using binding: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
       val (code2, names) = Expression.recode(term)
@@ -317,7 +308,7 @@ object Encoding:
       code2
     }
 
-  private def purged(using binding2: Names2): Names2 =
+  def purged(using binding2: Names2): Names2 =
     binding2.map {
       case (name, Shadow(it)) =>
         binding2.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
