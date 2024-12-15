@@ -87,6 +87,14 @@ abstract class Ambient extends Expression:
 
   protected final def path = (0 until _nest).map(_nth(_))
 
+  private[parser] var _id: helper.υidυ = null
+
+  protected def id = _id()
+
+  protected def copy: Any = _id.copy
+
+  protected def paste(it: Any) = _id.paste(it)
+
   protected final def save[T](r: => (ParseResult[T], Any), fail: Boolean): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)

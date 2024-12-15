@@ -433,7 +433,7 @@ abstract class Expansion extends Encoding:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Nil, Left(end))(_macro(code, _code, _nest, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, id, _code, _nest, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
               r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
