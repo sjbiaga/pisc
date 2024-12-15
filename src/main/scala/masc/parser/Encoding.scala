@@ -72,8 +72,9 @@ abstract class Encoding extends Calculus:
             if parameters.size == _parameters.size
             then
               eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par
-            val `macro` = Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, par)
-            `macro` -> Definition(_code, term, constants, variables, par)
+            Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, par)
+            ->
+            Definition(_code, term, constants, variables, par)
         }
     }
 
@@ -182,12 +183,7 @@ object Encoding:
         }
       given Names2 = Names2(binding2)
       given Names()
-      val par2 =
-        try
-          par.rename(id, Set.empty, definition = true)
-        catch
-          case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
-          case it => throw it
+      val par2 = par.rename(id, Set.empty, definition = true)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -195,8 +191,9 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      val `def` = Definition(code, Some(term), constants, variables2, par2)
-      `def` -> (arity - shadows.count(_.nonEmpty) -> shadows)
+      Definition(code, Some(term), constants, variables2, par2)
+      ->
+      (arity - shadows.count(_.nonEmpty) -> shadows)
 
   case class Definition(code: Int,
                         term: Option[Term],
@@ -453,11 +450,7 @@ object Encoding:
 
         case `{}`(id, pointers, agent, params*) =>
           val pointers2 = pointers.map(renamed(_))
-          val params2 = params
-            .map {
-              case it => renamed(it)
-              case it => it
-            }
+          val params2 = params.map(renamed(_))
 
           `{}`(id, pointers = pointers2, agent, params2*)
 
