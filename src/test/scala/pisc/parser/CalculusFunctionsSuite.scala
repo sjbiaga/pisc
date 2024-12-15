@@ -34,6 +34,7 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import munit.FunSuite
 
 import Calculus._
+import CalculusParserSuite._
 import CalculusFunctionsSuite._
 import CalculusFunctionsSuite.given
 
@@ -74,14 +75,13 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - via parser - ( P + Q ) + R -> P + Q + R") {
 
-    val `13` = new CalculusFunctionsParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = ( P + Q ) + R") match
           case Success((_, +(∥(`.`(`(*)`("P", _))), ∥(`.`(`(*)`("Q", _))), ∥(`.`(`(*)`("R", _))))), _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -89,14 +89,13 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - via parser - ( P | Q ) | R -> P | Q | R") {
 
-    val `13` = new CalculusFunctionsParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = ( P | Q ) | R") match
           case Success((_, +(∥(`.`(`(*)`("P", _)), `.`(`(*)`("Q", _)), `.`(`(*)`("R", _))))), _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -104,14 +103,13 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - via parser - τ. ( τ.P ) -> τ.τ.P") {
 
-    val `13` = new CalculusFunctionsParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = τ. ( τ.P )") match
           case Success((_, +(∥(`.`(`(*)`("P", _), τ(_), τ(_))))), _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -119,14 +117,13 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - via parser - !!P -> !P") {
 
-    val `13` = new CalculusFunctionsParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = !!P") match
           case Success((_, +(∥(`.`(!(_, +(∥(`.`(`(*)`("P", _))))))))), _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -134,27 +131,6 @@ class CalculusFunctionsSuite extends FunSuite:
 
 
 object CalculusFunctionsSuite:
-
-  import scala.util.matching.Regex
-
-  import Pi.Names
-  import Encoding.Names2
-
-  abstract class CalculusFunctionsParserTest extends Calculus:
-    def regexMatch(_r: Regex): Parser[Regex.Match] = ???
-    def instantiation(using Names2): Parser[(`⟦⟧`, Names)] =
-      new Parser[(`⟦⟧`, Names)]:
-        override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
-          Failure(null, _in)
-    def capital: Parser[(`{}`, Names)] =
-      new Parser[(`{}`, Names)]:
-        override def apply(_in: Input): ParseResult[(`{}`, Names)] =
-          Failure(null, _in)
-
-    _nest = 0
-    _cntr = Map(0 -> 0L)
-
-    def test: Unit
 
   val τ_ = τ(None)
 

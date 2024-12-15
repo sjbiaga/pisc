@@ -43,14 +43,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("pointers - with empty braces") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(pointers, "{}") match
           case Failure(_, _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -58,10 +57,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("pointers - with non-names") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(pointers, """{True, "string", m, n}""")
-    }
 
     interceptMessage[PointersParsingException]("""True, "string" are not channel names but True False, string literal""") {
       `13`.test
@@ -71,14 +69,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("pointers - with only names") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(pointers, "{m, n}") match
           case Success((List(Symbol("m"), Symbol("n")), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -86,14 +83,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("leaf - capital - empty braces") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P{}") match
           case Success((`{}`("P", Nil, false), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -101,14 +97,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("leaf - capital - agent with parameters and with pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(True){n}") match
           case Success((`{}`("P", List(Symbol("n")), true, λ(true)), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -116,14 +111,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("leaf - capital - agent without parameters and with pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(){n}") match
           case Success((`{}`("P", List(Symbol("n")), true), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -131,14 +125,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("leaf - capital - agent with parameters and with empty braces") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(True){}") match
           case Success((`{}`("P", Nil, true, λ(true)), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -146,14 +139,13 @@ class EncodingParserSuite extends FunSuite:
 
   test("leaf - capital - agent without parameters and with empty braces") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(){}") match
           case Success((`{}`("P", Nil, true), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -161,7 +153,7 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - without parameters without constants without pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦⟧ =") match
           case Success((Macro(Nil, 0, cs1, vs1, b2, ∅), Definition(0, _, cs2, vs2, ∅)), _) =>
@@ -172,7 +164,6 @@ class EncodingParserSuite extends FunSuite:
             assertEquals(vs1, vs2)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -180,7 +171,7 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with parameters without constants without pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
           case Success((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b2, ∅), Definition(0, _, cs2, vs2, ∅)), _) =>
@@ -193,7 +184,6 @@ class EncodingParserSuite extends FunSuite:
             assertEquals(vs1, vs2)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -201,7 +191,7 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - without parameters with constants without pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(nil, cons) =") match
           case Success((Macro(Nil, 0, cs1, vs1, b2, ∅), Definition(0, _, cs2, vs2, ∅)), _) =>
@@ -214,7 +204,6 @@ class EncodingParserSuite extends FunSuite:
             assertEquals(vs1, vs2)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -222,7 +211,7 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - without parameters without constants with pointers") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} =") match
           case Success((Macro(Nil, 0, cs1, vs1, b2, ∅), Definition(0, _, cs2, vs2, ∅)), _) =>
@@ -233,7 +222,6 @@ class EncodingParserSuite extends FunSuite:
             assertEquals(vs1, vs2)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -241,10 +229,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with parameters with constants without pointers - non-empty intersection") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧(x) =")
-    }
 
     interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
       `13`.test
@@ -254,10 +241,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with parameters without constants with pointers - non-empty intersection") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{x} =")
-    }
 
     interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
       `13`.test
@@ -267,10 +253,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - without parameters with constants with pointers - non-empty intersection") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(x){x} =")
-    }
 
     interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
       `13`.test
@@ -280,10 +265,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with free capitals") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = P{}")
-    }
 
     interceptMessage[DefinitionFreeNamesException]("The free names (P) in the right hand side are not formal parameters of the left hand side of encoding 0") {
       `13`.test
@@ -293,10 +277,9 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with free names") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = ch<x>.")
-    }
 
     interceptMessage[DefinitionFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of encoding 0") {
       `13`.test
@@ -306,7 +289,7 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with parameters - Self check positive") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
           case Success(_, _) =>
@@ -317,7 +300,6 @@ class EncodingParserSuite extends FunSuite:
                 assert(false)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -325,19 +307,18 @@ class EncodingParserSuite extends FunSuite:
 
   test("definition - with parameters - Self check negative") {
 
-    val `13` = new EncodingParserTest {
+    val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'P ⟧ =") match
           case Success(_, _) =>
             assert(eqtn.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
   }
- 
+
 
 object EncodingParserSuite:
 

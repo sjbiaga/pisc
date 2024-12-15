@@ -43,29 +43,27 @@ class CalculusParserSuite extends FunSuite:
 
   test("qual - repeated") {
 
-    val pi = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(qual, "{path}{to}{package}") match
           case Success(List("path", "to", "package"), _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
-    pi.test
+    `13`.test
 
   }
 
   test("IDENT - start with uppercase") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(IDENT, "P") match
           case Success("P", _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -73,14 +71,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("IDENT - not start with uppercase") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(IDENT, "_P") match
           case Failure("agent identifier expected but '_' found", _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -88,14 +85,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("IDENT - with quotes") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(IDENT, "P\"'") match
           case Success("P\"'", _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -103,14 +99,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("IDENT - with not IDENTIFIER") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(IDENT, "P/") match
           case Failure("agent identifier part expected", _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -118,10 +113,9 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - equation with qualifier") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(true), "{path}{to}{package}P")
-    }
 
     interceptMessage[EquationQualifiedException]("A qualified package path.to.package is present in the left hand side of P") {
       `13`.test
@@ -131,10 +125,9 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - equation with non-symbol parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(true), "P(True, \"string\", m, n)")
-    }
 
     interceptMessage[EquationParamsException]("""The "formal" parameters (True, "string") are not names in the left hand side of P""") {
       `13`.test
@@ -144,7 +137,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - Self with parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "Self(m, n)") match
           case Success((`(*)`("Self_0", _, λ(Symbol("m")), λ(Symbol("n"))), free), _) =>
@@ -153,7 +146,6 @@ class CalculusParserSuite extends FunSuite:
             assert(false)
       _code = 0
       self = Set()
-    }
 
     `13`.test
 
@@ -161,7 +153,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - Self without parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "Self") match
           case Success((`(*)`("Self_0", _), free), _) =>
@@ -170,7 +162,6 @@ class CalculusParserSuite extends FunSuite:
             assert(false)
       _code = 0
       self = Set()
-    }
 
     `13`.test
 
@@ -178,7 +169,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - Self with code and with parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "Self_2(m, n)") match
           case Success((`(*)`("Self_2", _, λ(Symbol("m")), λ(Symbol("n"))), free), _) =>
@@ -186,7 +177,6 @@ class CalculusParserSuite extends FunSuite:
           case _ =>
             assert(false)
       self = Set()
-    }
 
     `13`.test
 
@@ -194,7 +184,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - Self with code and without parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "Self_0") match
           case Success((`(*)`("Self_0", _), free), _) =>
@@ -202,7 +192,6 @@ class CalculusParserSuite extends FunSuite:
           case _ =>
             assert(false)
       self = Set()
-    }
 
     `13`.test
 
@@ -210,14 +199,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - identifier with parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "P(m, n)") match
           case Success((`(*)`("P", _, λ(Symbol("m")), λ(Symbol("n"))), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -225,14 +213,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - identifier without parameters") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "P") match
           case Success((`(*)`("P", _), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -240,14 +227,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("invocation - identifier with empty parentheses") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(invocation(), "P()") match
           case Failure(_, _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -255,14 +241,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("condition - match names") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(condition, "(( m = n ))") match
           case Success((((λ(Symbol("m")), λ(Symbol("n"))), false), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -270,14 +255,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("condition - match values") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(condition, "(( True = False ))") match
           case Success((((λ(true), λ(false)), false), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -285,14 +269,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("condition - mismatch names") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(condition, "(( m ≠ n ))") match
           case Success((((λ(Symbol("m")), λ(Symbol("n"))), true), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -300,14 +283,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("condition - mismatch values") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(condition, "(( True ≠ False ))") match
           case Success((((λ(true), λ(false)), true), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -315,14 +297,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - restriction with empty parentheses") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(prefix(using Names2()), "ν()") match
           case Failure(_, _) =>
             assert(true)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -330,10 +311,9 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - restriction with non-names") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(prefix(using Names2()), "ν(True, \"string\", m, n)")
-    }
 
     interceptMessage[PrefixChannelsParsingException]("""True, "string" are not channel names but True False, string literal""") {
       `13`.test
@@ -343,7 +323,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - restriction without binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(prefix(using Names2()), "ν(m, n)") match
           case Success((ν("m", "n"), (binding, free)), _) =>
@@ -351,7 +331,6 @@ class CalculusParserSuite extends FunSuite:
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -359,7 +338,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - restriction with binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(prefix, "ν(m)") match
@@ -372,14 +351,14 @@ class CalculusParserSuite extends FunSuite:
           case _ =>
             assert(false)
       _code = -1
-    }
+
     `13`.test
 
   }
 
   test("prefix - μ. - input without binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(prefix(using Names2()), "ch(n).") match
           case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (binding, free)), _) =>
@@ -387,7 +366,6 @@ class CalculusParserSuite extends FunSuite:
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -395,7 +373,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - μ. - input with binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(prefix, "ch(n).") match
@@ -409,7 +387,6 @@ class CalculusParserSuite extends FunSuite:
                 assert(false)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -417,7 +394,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("prefix - μ. - output") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(prefix, "ch<n>.") match
@@ -427,14 +404,13 @@ class CalculusParserSuite extends FunSuite:
             assert(binding2.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
   }
   test("leaf - conditional - match") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "[m = n]") match
@@ -443,7 +419,6 @@ class CalculusParserSuite extends FunSuite:
             assert(binding2.isEmpty)
           case it =>
             assert(false)
-    }
 
     `13`.test
 
@@ -451,7 +426,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - conditional - if-then-else") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "if True ≠ False then else") match
@@ -460,7 +435,6 @@ class CalculusParserSuite extends FunSuite:
             assert(binding2.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -468,7 +442,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - conditional - elvis operator") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "False ≠ True ? :") match
@@ -477,7 +451,6 @@ class CalculusParserSuite extends FunSuite:
             assert(binding2.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -485,14 +458,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - unguarded") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!") match
           case Success((!(None, ∅), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -500,11 +472,10 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - input guard - subject and object identical") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.ch(ch).")
       _werr = true
-    }
 
     interceptMessage[GuardParsingException]("ch is both the channel name and the binding parameter name in an input guard") {
       `13`.test
@@ -514,14 +485,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - input guard - without binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.ch(n).") match
           case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -529,7 +499,7 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - input guard - with binding2 check") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "!.ch(n).") match
@@ -542,7 +512,6 @@ class CalculusParserSuite extends FunSuite:
                 assert(false)
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -550,14 +519,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - output guard") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.ch<n>/*println('m)*/.") match
           case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_))), ∅), free), _) =>
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -565,14 +533,13 @@ class CalculusParserSuite extends FunSuite:
 
   test("leaf - replication - silent prefix guard") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.τ/*println('n)*/.") match
           case Success((!(Some(τ(Some(_))), ∅), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)
-    }
 
     `13`.test
 
@@ -580,10 +547,9 @@ class CalculusParserSuite extends FunSuite:
 
   test("equation - free names - one") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "P(m) = ch<>.")
-    }
 
     interceptMessage[EquationFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of P") {
       `13`.test
@@ -593,10 +559,9 @@ class CalculusParserSuite extends FunSuite:
 
   test("equation - free names - one of two") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "P(m, n) = ch<n>.")
-    }
 
     interceptMessage[EquationFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of P") {
       `13`.test
@@ -606,17 +571,16 @@ class CalculusParserSuite extends FunSuite:
 
   test("equation - free names - one of one") {
 
-    val `13` = new CalculusParserTest {
+    val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "P(m) = ν(n) ch<n>.")
-    }
 
     interceptMessage[EquationFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of P") {
       `13`.test
     }
 
   }
- 
+
 
 object CalculusParserSuite:
 

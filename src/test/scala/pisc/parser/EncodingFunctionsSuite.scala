@@ -33,6 +33,7 @@ import scala.collection.mutable.{ LinkedHashMap => Map2, ListBuffer => MutableLi
 
 import munit.FunSuite
 
+import Expression.Code
 import Pi._
 import Calculus._
 import Encoding._
@@ -100,6 +101,93 @@ class EncodingFunctionsSuite extends FunSuite:
     given MutableList[(Symbol, λ)]()
     given Names2 = Names2() + (Symbol("x_υ1υ") -> Occurrence(Some(Symbol("x_υ2υ")), Position(-1, true)))
     assertEquals(renamed(Symbol("x_υ2υ")), λ(Symbol("x_υ2υ")))
+
+  }
+
+  test("recoded - no code") {
+
+    given Option[Code] = None
+    given MutableList[(Symbol, λ)]()
+    given Names2()
+    given Names()
+    assertEquals(recoded(Names()), None)
+
+  }
+
+  test("recoded - via refresh - without binding") {
+
+    import scala.meta._
+    import dialects.Scala3
+
+    val term = "println('x)".parse[Term].get
+
+    given Option[Code] = Some(Right(null) -> term)
+    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given Names2()
+    given Names()
+    val free = Names()
+
+    recoded(free) match
+      case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
+                ->
+                Term.Apply(Term.Name("println"), Lit.Symbol(Symbol("x_υ1υ")) :: Nil)) =>
+        free.headOption match
+          case Some(Symbol("x_υ1υ")) =>
+            assert(true)
+          case _ =>
+            assert(false)
+      case _ =>
+        assert(false)
+
+  }
+
+  test("recoded - via refresh - with binding") {
+
+    import scala.meta._
+    import dialects.Scala3
+
+    val term = "println('x)".parse[Term].get
+
+    given Option[Code] = Some(Right(null) -> term)
+    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given Names2()
+    given Names = Names() + Symbol("x_υ1υ")
+    val free = Names()
+
+    recoded(free) match
+      case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
+                ->
+                Term.Apply(Term.Name("println"), Lit.Symbol(Symbol("x_υ1υ")) :: Nil)) =>
+        assert(free.isEmpty)
+      case _ =>
+        assert(false)
+
+  }
+
+  test("recoded - via refresh or binding2") {
+
+    import scala.meta.{ Position => _, _ }
+    import dialects.Scala3
+
+    val term = "println('x + 'y)".parse[Term].get
+
+    given Option[Code] = Some(Right(null) -> term)
+    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given Names2 = Names2() + (Symbol("y") -> Occurrence(Some(Symbol("y_υ2υ")), Position(-1, true)))
+    given Names = Names() + Symbol("y_υ2υ")
+    val free = Names()
+
+    recoded(free) match
+      case Some(Right(Term.Apply(Term.Name("println"), Term.ApplyInfix(Term.Name("x_υ1υ"), Term.Name("+"), _, Term.Name("y_υ2υ") :: Nil) :: Nil))
+                ->
+                Term.Apply(Term.Name("println"), Term.ApplyInfix(Lit.Symbol(Symbol("x_υ1υ")), Term.Name("+"), _, Lit.Symbol(Symbol("y_υ2υ")) :: Nil) :: Nil)) =>
+        free.headOption match
+          case Some(Symbol("x_υ1υ")) =>
+            assert(true)
+          case _ =>
+            assert(false)
+      case _ =>
+        assert(false)
 
   }
 
@@ -352,6 +440,139 @@ class EncodingFunctionsSuite extends FunSuite:
         assert(binding2.isEmpty)
       case _ =>
         assert(false)
+
+  }
+
+  test("rename - by restriction - via refresh") {
+
+    val `13` = `+`(∥(`.`(?:(((λ(Symbol("x")), λ(Symbol("y"))), false),
+                            `+`(∥(`.`(`!`(Some(π(λ(Symbol("x")), λ(Symbol("y")), false, None)), ∅)))),
+                            Some(`+`(∥(`.`(`(*)`("P", Nil, λ(Symbol("x")), λ(Symbol("y")))))))),
+                            ν("x", "y"))))
+
+    val id = new helper.υidυ
+    given MutableList[(Symbol, λ)]()
+    given binding2: Names2()
+    given Names()
+
+    `13`.rename(id(), Names()) match
+      case +(∥(`.`(?:(((λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ"))), false),
+                      +(∥(`.`(!(Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), false, None)), ∅)))),
+                      Some(+(∥(`.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
+                   ν("x_υ1υ", "y_υ2υ")))) =>
+        assert(binding2.isEmpty)
+      case _ =>
+        assert(false)
+
+  }
+
+  test("rename - Macro.apply - with shadow - by restriction - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'x `1` 'y ⟧ = ν(y) x<y>.") match
+          case Success((it @ Macro(_, 2, _, _, binding2, _), _), _) =>
+            binding2.get(Symbol("y")) match
+              case Some(Shadow(Symbol("y"))) =>
+                val id = new helper.υidυ
+                it(0, id(), 1, 0, null) match
+                  case (Definition(_, _, _, _,
+                                   +(∥(`.`(∅, ν("y_υ1υ"), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), false, None))))),
+                        1 -> List(None, Some(Symbol("y_υ1υ")))) =>
+                    assert(true)
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - Macro.apply - with shadow - by input prefix - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'x `1` 'y ⟧ = x(y).") match
+          case Success((it @ Macro(_, 2, _, _, binding2, _), _), _) =>
+            binding2.get(Symbol("y")) match
+              case Some(Shadow(Symbol("y"))) =>
+                val id = new helper.υidυ
+                it(0, id(), 1, 0, null) match
+                  case (Definition(_, _, _, _,
+                                   +(∥(`.`(∅, π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), true, None))))),
+                        1 -> List(None, Some(Symbol("y_υ1υ")))) =>
+                    assert(true)
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - Macro.apply - with shadows - by restriction and input prefix - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'x `1` 'y ⟧ = ν(x) x(y).") match
+          case Success((it @ Macro(_, 2, _, _, binding2, _), _), _) =>
+            binding2.get(Symbol("x")) -> binding2.get(Symbol("y")) match
+              case Some(Shadow(Symbol("x"))) -> Some(Shadow(Symbol("y"))) =>
+                val id = new helper.υidυ
+                it(0, id(), 1, 0, null) match
+                  case (Definition(_, _, _, _,
+                                   +(∥(`.`(∅, ν("x_υ1υ"), π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), true, None))))),
+                        0 -> List(Some(Symbol("x_υ1υ")), Some(Symbol("y_υ2υ")))) =>
+                    assert(true)
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - Macro.apply - with variables - via refresh - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, """⟦ t"1" ⟧{z} =""") match
+          case Success((it @ Macro(_, 0, _, _, binding2, _), _), _) =>
+            binding2.get(Symbol("z")) match
+              case Some(Occurrence(None, _)) =>
+                val id = new helper.υidυ
+                it(0, id(), 1, 0, null) match
+                  case (Definition(_, _, _, vs, ∅), 0 -> Nil) =>
+                    vs.headOption match
+                      case Some(Symbol("z_υ1υ")) =>
+                        assert(true)
+                      case _ =>
+                        assert(false)
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
 
   }
 
