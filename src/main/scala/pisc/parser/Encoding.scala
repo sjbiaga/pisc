@@ -72,8 +72,9 @@ abstract class Encoding extends Calculus:
             if parameters.size == _parameters.size
             then
               eqtn :+= `(*)`("Self_" + _code, Nil, binding.map(λ(_)).toSeq*) -> sum
-            val `macro` = Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, sum)
-            `macro` -> Definition(_code, term, constants, variables, sum)
+            Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, sum)
+            ->
+            Definition(_code, term, constants, variables, sum)
         }
     }
 
@@ -185,12 +186,7 @@ object Encoding:
         }
       given Names2 = Names2(binding2)
       given Names()
-      val sum2 =
-        try
-          sum.rename(id, Set.empty, definition = true)
-        catch
-          case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
-          case it => throw it
+      val sum2 = sum.rename(id, Set.empty, definition = true)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -198,8 +194,9 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      val `def` = Definition(code, Some(term), constants, variables2, sum2)
-      `def` -> (arity - shadows.count(_.nonEmpty) -> shadows)
+      Definition(code, Some(term), constants, variables2, sum2)
+      ->
+      (arity - shadows.count(_.nonEmpty) -> shadows)
 
   case class Definition(code: Int,
                         term: Option[Term],
