@@ -66,9 +66,6 @@ abstract class Expansion extends Encoding:
     }
   }
 
-  private val open = """⟦\d*""".r
-  private val closed = """\d*⟧""".r
-
   def instance(defs: List[Define], end: String)
               (using Names2): Parser[(`⟦⟧`, Names)] =
     var idx = -1
@@ -92,7 +89,7 @@ abstract class Expansion extends Encoding:
           val _ts = ts :+ _rhs
           val key = path -> (_ts.mkString -> end) -> start
 
-          if (open findPrefixMatchOf s).nonEmpty
+          if (open_r findPrefixMatchOf s).nonEmpty
           then
 
             if rhs.charAt(0).isLower || rhs == "_"
@@ -146,7 +143,7 @@ abstract class Expansion extends Encoding:
           else
             ( if s.isEmpty
               || s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-              || (closed findPrefixMatchOf s).nonEmpty
+              || (closed_r findPrefixMatchOf s).nonEmpty
               then Some(null)
               else
                 val op = end.orElse(end.swap).right.get
@@ -155,7 +152,7 @@ abstract class Expansion extends Encoding:
                 var i = 0
                 while i < matches.size
                 && { s = SubSequence(source, start, matches(i).end - n); true }
-                && (open findAllMatchIn s).size > (closed findAllMatchIn s).size
+                && (open_r findAllMatchIn s).size > (closed_r findAllMatchIn s).size
                 do
                   i += 1
                 if i < matches.size then Some(matches(i)) else None
@@ -183,7 +180,7 @@ abstract class Expansion extends Encoding:
                     n += result.length
                   else
                     n += end.map(_.length).getOrElse(0)
-                else if (closed findPrefixMatchOf s).nonEmpty
+                else if (closed_r findPrefixMatchOf s).nonEmpty
                 then
                   {}
                 else
@@ -266,7 +263,7 @@ abstract class Expansion extends Encoding:
           val _ts = ts :+ _lhs :+ _op
           val key = path -> (_ts.mkString -> end) -> start
 
-          if (open findPrefixMatchOf s).nonEmpty
+          if (open_r findPrefixMatchOf s).nonEmpty
           then
 
             if lhs.charAt(0).isLower || lhs == "_"
@@ -323,7 +320,7 @@ abstract class Expansion extends Encoding:
             var i = 0
             while i < matches.size
             && { s = SubSequence(source, start, matches(i).end - n); true }
-            && (open findAllMatchIn s).size > (closed findAllMatchIn s).size
+            && (open_r findAllMatchIn s).size > (closed_r findAllMatchIn s).size
             do
               i += 1
             if i < matches.size then Some(matches(i)) else None
@@ -433,7 +430,7 @@ abstract class Expansion extends Encoding:
           given Names2 = Names2(binding2)
           idx = 0
 
-          save(expand(in, Nil, Left(end))(_macro(code, id, _code, _nest, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
               r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
@@ -452,6 +449,9 @@ abstract class Expansion extends Encoding:
 
 
 object Expansion:
+
+  private val open_r = """⟦\d*""".r
+  private val closed_r = """\d*⟧""".r
 
   // exceptions
 
