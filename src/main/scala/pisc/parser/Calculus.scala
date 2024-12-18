@@ -214,7 +214,6 @@ abstract class Calculus extends PolyadicPi:
    */
   def qual: Parser[List[String]] =
     rep(qual_r) ^^ { _.map(_.stripPrefix("{").stripSuffix("}")) }
-  final private val qual_r = "[{][^}]*[}]".r
 
 
 object Calculus:
@@ -308,6 +307,8 @@ object Calculus:
       if params.isEmpty
       then identifier
       else s"$identifier(${params.mkString(", ")})"
+
+  private val qual_r = "[{][^}]*[}]".r
 
   case class λ(value: Any):
     val isSymbol: Boolean = value.isInstanceOf[Symbol]
