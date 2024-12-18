@@ -137,7 +137,7 @@ abstract class StochasticPi extends Expression:
       _cntr(_nest) = 0L
     else
       _nth -= _nest+1
-      _cntr -= _nest +1
+      _cntr -= _nest+1
   private[parser] var _cntr: Map[Int, Long] = null
 
   private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
@@ -149,12 +149,12 @@ abstract class StochasticPi extends Expression:
 
   protected var sπ_id: helper.υidυ = null
 
-  protected def id = _id()
+  protected final def id = _id()
 
-  protected def copy: (Any, Any) =
+  protected final def copy: (Any, Any) =
     _id.copy -> sπ_id.copy
 
-  protected def paste(it: (Any, Any)) =
+  protected final def paste(it: (Any, Any)) =
     _id.paste(it._1)
     sπ_id.paste(it._2)
 
