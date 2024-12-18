@@ -113,18 +113,17 @@ abstract class Encoding extends Calculus:
       case ((exp @ `⟦⟧`(Definition(_, _, constants, _, _), variables, _, _), free), _pointers) =>
         nest(false)
         given MutableList[(String, String)]()
-        val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
-        val _assign = variables zip pointers
-        val assign = if _assign.isEmpty then None else Some(_assign)
-        given Names()
-        val exp2 =
-          try
-            exp.copy(assign = assign).rename(id, free)
-          catch
-            case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
-            case it => throw it
-        binding2 ++= purged
-        exp2 -> (free ++ constants)
+        try
+          val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
+          val _assign = variables zip pointers
+          val assign = if _assign.isEmpty then None else Some(_assign)
+          given Names()
+          val exp2 = exp.copy(assign = assign).rename(id, free)
+          binding2 ++= purged
+          exp2 -> (free ++ constants)
+        catch
+          case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
+          case it => throw it
     }
 
   def instance(defs: List[Define], end: String)
@@ -173,7 +172,7 @@ object Encoding:
                    variables: Names,
                    binding2: Names2,
                    par: ∥):
-    def apply(code: Int, id: => String, _code: Int, _nest: Int, term: Term): Fresh =
+    def apply(code: Int, id: => String, term: Term): Fresh =
       given refresh: MutableList[(String, String)] = MutableList()
       val variables2 = variables
         .map { it =>
