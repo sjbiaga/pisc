@@ -116,7 +116,7 @@ abstract class Pi extends Expression:
       _cntr(_nest) = 0L
     else
       _nth -= _nest+1
-      _cntr -= _nest +1
+      _cntr -= _nest+1
   private[parser] var _cntr: Map[Int, Long] = null
 
   private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
@@ -126,11 +126,11 @@ abstract class Pi extends Expression:
 
   private[parser] var _id: helper.υidυ = null
 
-  protected def id = _id()
+  protected final def id = _id()
 
-  protected def copy: Any = _id.copy
+  protected final def copy: Any = _id.copy
 
-  protected def paste(it: Any) = _id.paste(it)
+  protected final def paste(it: Any) = _id.paste(it)
 
   protected final def save[T](r: => (ParseResult[T], Any), fail: Boolean): Option[(T, Input)] =
     val nest = _nest
