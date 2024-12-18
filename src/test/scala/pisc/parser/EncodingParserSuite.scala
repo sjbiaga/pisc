@@ -47,7 +47,6 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(pointers, "{}") match
           case Failure(_, _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -295,7 +294,6 @@ class EncodingParserSuite extends FunSuite:
           case Success(_, _) =>
             eqtn.headOption match
               case Some((`(*)`("Self_0", Nil, λ(Symbol("x")), λ(Symbol("y"))), ∅)) =>
-                assert(true)
               case _ =>
                 assert(false)
           case _ =>

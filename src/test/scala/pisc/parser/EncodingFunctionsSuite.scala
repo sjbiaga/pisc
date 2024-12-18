@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashMap => Map2, ListBuffer => MutableList }
+import scala.collection.mutable.{ LinkedHashMap => Map, ListBuffer => MutableList }
 
 import munit.FunSuite
 
@@ -133,7 +133,6 @@ class EncodingFunctionsSuite extends FunSuite:
                 Term.Apply(Term.Name("println"), Lit.Symbol(Symbol("x_υ1υ")) :: Nil)) =>
         free.headOption match
           case Some(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -183,7 +182,6 @@ class EncodingFunctionsSuite extends FunSuite:
                 Term.Apply(Term.Name("println"), Term.ApplyInfix(Lit.Symbol(Symbol("x_υ1υ")), Term.Name("+"), _, Lit.Symbol(Symbol("y_υ2υ")) :: Nil) :: Nil)) =>
         free.headOption match
           case Some(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -203,7 +201,6 @@ class EncodingFunctionsSuite extends FunSuite:
 
     binding2.head match
       case (Symbol("x_υ1υ"), Shadow(Symbol("x_υ3υ"))) =>
-        assert(true)
       case _ =>
         assert(false)
 
@@ -221,7 +218,6 @@ class EncodingFunctionsSuite extends FunSuite:
 
     binding2.head match
       case (Symbol("x_υ1υ"), Binder(Symbol("x_υ3υ"))) =>
-        assert(true)
       case _ =>
         assert(false)
 
@@ -238,7 +234,6 @@ class EncodingFunctionsSuite extends FunSuite:
 
     binding2.head match
       case (Symbol("x_υ1υ"), Shadow(Symbol("x_υ2υ"))) =>
-        assert(true)
       case _ =>
         assert(false)
 
@@ -257,11 +252,10 @@ class EncodingFunctionsSuite extends FunSuite:
 
     binding2.head match
       case (Symbol("x_υ1υ"), Shadow(Symbol("x_υ2υ"))) =>
-        binding2.tail.head match
-          case (Symbol("y_υ3υ"), Binder(Symbol("y_υ4υ"))) =>
-            assert(true)
-          case _ =>
-            assert(false)
+      case _ =>
+        assert(false)
+    binding2.tail.head match
+      case (Symbol("y_υ3υ"), Binder(Symbol("y_υ4υ"))) =>
       case _ =>
         assert(false)
 
@@ -273,12 +267,11 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
-    given binding2: Names2 = Names2()
+    given Names2()
     given Names()
 
     `13`.rename(id(), Names()) match
       case `.`(∅, π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
-        assert(binding2.isEmpty)
       case _ =>
         assert(false)
 
@@ -299,7 +292,6 @@ class EncodingFunctionsSuite extends FunSuite:
         assert(binding2.size == 1)
         binding2.head match
           case Symbol("x") -> Shadow(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -322,7 +314,6 @@ class EncodingFunctionsSuite extends FunSuite:
         assert(binding2.size == 1)
         binding2.head match
           case Symbol("x") -> Shadow(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -345,7 +336,6 @@ class EncodingFunctionsSuite extends FunSuite:
         assert(binding2.size == 2)
         binding2.tail.head match
           case Symbol("x_υ0υ") -> Shadow(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -368,7 +358,6 @@ class EncodingFunctionsSuite extends FunSuite:
         assert(binding2.size == 2)
         binding2.tail.head match
           case Symbol("x_υ0υ") -> Binder(Symbol("x_υ1υ")) =>
-            assert(true)
           case _ =>
             assert(false)
       case _ =>
@@ -390,10 +379,9 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val id = new helper.υidυ
 
-    `13`(0, id(), 1, 0, null) match
+    `13`(0, id(), null) match
       case (Definition(0, Some(_), _, _, +(∥(`.`(∅, π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)))))
            ,(1, List(Some(Symbol("x_υ1υ")), None))) =>
-        assert(true)
       case _ =>
         assert(false)
 
@@ -413,10 +401,9 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val id = new helper.υidυ
 
-    `13`(0, id(), 1, 0, null) match
+    `13`(0, id(), null) match
       case (Definition(0, Some(_), _, _, +(∥(`.`(∅, π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)))))
            ,(2, List(None, None))) =>
-        assert(true)
       case _ =>
         assert(false)
 
@@ -430,14 +417,13 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)]()
-    given binding2: Names2()
+    given Names2()
     given Names()
 
     `13`.rename(id(), Names()) match
       case +(∥(`.`(?:(((λ(true), λ(false)), false),
                       +(∥(`.`(!(None, ∅), ν("x_υ1υ")))),
                       Some(+(∥(`.`(`(*)`("P", Nil))))))))) =>
-        assert(binding2.isEmpty)
       case _ =>
         assert(false)
 
@@ -452,7 +438,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)]()
-    given binding2: Names2()
+    given Names2()
     given Names()
 
     `13`.rename(id(), Names()) match
@@ -460,9 +446,76 @@ class EncodingFunctionsSuite extends FunSuite:
                       +(∥(`.`(!(Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), false, None)), ∅)))),
                       Some(+(∥(`.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
                    ν("x_υ1υ", "y_υ2υ")))) =>
-        assert(binding2.isEmpty)
       case _ =>
         assert(false)
+
+  }
+
+  test("rename - by Definition.apply - via refresh - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'x `1` 'y ⟧{z} =") match
+          case Success((_, definition @ Definition(_, _, _, _, ∅)), _) =>
+            given Map[String, λ | AST]()
+            val `13` = definition()
+
+            val id = new helper.υidυ
+            given MutableList[(Symbol, λ)]()
+            given Names2()
+            given Names()
+
+            `13`.rename(id(), Names()) match
+              case `⟦⟧`(_, vs, ∅, None) =>
+                vs.headOption match
+                  case Some(Symbol("z_υ1υ")) =>
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - by Definition.apply - via refresh and binding2 - using parser") {
+
+    import EncodingParserSuite._
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'x `1` 'y ⟧{z} = ν(x) z(y). y<x>.") match
+          case Success((it, definition @ Definition(_, _, _, _, +(∥(`.`(∅,
+                                                                        ν("x"),
+                                                                        π(λ(Symbol("z")), λ(Symbol("y")), true, None),
+                                                                        π(λ(Symbol("y")), λ(Symbol("x")), false, None)))))), _) =>
+            given Map[String, λ | AST]()
+            val `13` = definition()
+
+            val id = new helper.υidυ
+            given MutableList[(Symbol, λ)]()
+            given Names2 = Names2(it.binding2)
+            given Names()
+
+            `13`.rename(id(), Names()) match
+              case `⟦⟧`(_, vs, +(∥(`.`(∅,
+                                       ν("x_υ2υ"),
+                                       π(λ(Symbol("z_υ1υ")), λ(Symbol("y_υ3υ")), true, None),
+                                       π(λ(Symbol("y_υ3υ")), λ(Symbol("x_υ2υ")), false, None)))), None) =>
+                vs.headOption match
+                  case Some(Symbol("z_υ1υ")) =>
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
 
   }
 
@@ -477,11 +530,10 @@ class EncodingFunctionsSuite extends FunSuite:
             binding2.get(Symbol("y")) match
               case Some(Shadow(Symbol("y"))) =>
                 val id = new helper.υidυ
-                it(0, id(), 1, 0, null) match
+                it(0, id(), null) match
                   case (Definition(_, _, _, _,
                                    +(∥(`.`(∅, ν("y_υ1υ"), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), false, None))))),
                         1 -> List(None, Some(Symbol("y_υ1υ")))) =>
-                    assert(true)
                   case _ =>
                     assert(false)
               case _ =>
@@ -504,11 +556,10 @@ class EncodingFunctionsSuite extends FunSuite:
             binding2.get(Symbol("y")) match
               case Some(Shadow(Symbol("y"))) =>
                 val id = new helper.υidυ
-                it(0, id(), 1, 0, null) match
+                it(0, id(), null) match
                   case (Definition(_, _, _, _,
                                    +(∥(`.`(∅, π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), true, None))))),
                         1 -> List(None, Some(Symbol("y_υ1υ")))) =>
-                    assert(true)
                   case _ =>
                     assert(false)
               case _ =>
@@ -531,11 +582,10 @@ class EncodingFunctionsSuite extends FunSuite:
             binding2.get(Symbol("x")) -> binding2.get(Symbol("y")) match
               case Some(Shadow(Symbol("x"))) -> Some(Shadow(Symbol("y"))) =>
                 val id = new helper.υidυ
-                it(0, id(), 1, 0, null) match
+                it(0, id(), null) match
                   case (Definition(_, _, _, _,
                                    +(∥(`.`(∅, ν("x_υ1υ"), π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), true, None))))),
                         0 -> List(Some(Symbol("x_υ1υ")), Some(Symbol("y_υ2υ")))) =>
-                    assert(true)
                   case _ =>
                     assert(false)
               case _ =>
@@ -547,7 +597,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   }
 
-  test("rename - Macro.apply - with variables - via refresh - using parser") {
+  test("rename - Macro.apply - with pointers - via refresh - using parser") {
 
     import EncodingParserSuite._
 
@@ -558,11 +608,71 @@ class EncodingFunctionsSuite extends FunSuite:
             binding2.get(Symbol("z")) match
               case Some(Occurrence(None, _)) =>
                 val id = new helper.υidυ
-                it(0, id(), 1, 0, null) match
+                it(0, id(), null) match
                   case (Definition(_, _, _, vs, ∅), 0 -> Nil) =>
                     vs.headOption match
                       case Some(Symbol("z_υ1υ")) =>
-                        assert(true)
+                      case _ =>
+                        assert(false)
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - with pointers - via parser") {
+
+    import ExpansionParserSuite._
+
+    val `13` = new ExpansionParserTest:
+      override def test =
+        parseAll(definition, """⟦ t"1" ⟧{z} =""") match
+          case Success(definition, _) =>
+            if !defn.contains(_code) then defn(_code) = Nil
+            defn(_code) ::= definition
+            parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
+              case Success((_, +(∥(`.`(`⟦⟧`(_, _, ∅, Some(assign)))))), _) =>
+                assign.headOption match
+                  case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
+                  case _ =>
+                    assert(false)
+              case _ =>
+                assert(false)
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("rename - with pointers - twice - via parser") {
+
+    import ExpansionParserSuite._
+
+    val `13` = new ExpansionParserTest:
+      override def test =
+        parseAll(definition, """⟦1 t"1" 1⟧{z} =""") match
+          case Success(definition1 @ (_, Definition(_, _, _, _, ∅)), _) =>
+            if !defn.contains(_code) then defn(_code) = Nil
+            defn(_code) ::= definition1
+            parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
+              case Success(definition2 @ (_, Definition(_, _, _, _, +(∥(`.`(`⟦⟧`(_, _, ∅, Some(assign))))))), _) =>
+                if !defn.contains(_code) then defn(_code) = Nil
+                defn(_code) ::= definition2
+                assign.headOption match
+                  case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
+                    parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
+                      case Success((_, +(∥(`.`(`⟦⟧`(_, _, +(∥(`.`(`⟦⟧`(_, _, ∅, Some(assign1))))), Some(assign2)))))), _) =>
+                        assign1.headOption -> assign2.headOption match
+                          case Some((Symbol("z_υ6υ"), Symbol("y_υ5υ"))) ->
+                               Some((Symbol("y_υ5υ"), Symbol("x"))) =>
+                          case _ =>
+                            assert(false)
                       case _ =>
                         assert(false)
                   case _ =>

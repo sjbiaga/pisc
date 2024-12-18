@@ -55,13 +55,44 @@ class ExpansionParserSuite extends FunSuite:
 
   }
 
+  test("instantiation - rename - pointers - no binding") {
+
+    val `13` = new ExpansionParserTest:
+      override def test =
+        _code = -1
+        parseAll(instantiation(using Names2()), "⟦⟧{x}")
+      parseAll(definition, "⟦⟧ = ") match
+        case Success(it, _) =>
+          defn(0) = it :: Nil
+
+    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #0") {
+      `13`.test
+    }
+
+  }
+
+  test("instantiation - rename - no binding") {
+
+    val `13` = new ExpansionParserTest:
+      override def test =
+        _code = -1
+        parseAll(instantiation(using Names2()), "⟦ x<y>. 1 ⟧")
+      parseAll(definition, "⟦ 'P `1` `_` ⟧ = P{}") match
+        case Success(it, _) =>
+          defn(0) = it :: Nil
+
+    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #0") {
+      `13`.test
+    }
+
+  }
+
   test("instantiation - choice - empty and unique") {
 
     val `13` = new ExpansionParserTest:
       override def test =
         parseAll(instantiation(using Names2()), "⟦⟧") match
           case Success((`⟦⟧`(Definition(0, None, _, _, ∅), _, ∅, None), _), _) =>
-            assert(true)
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)

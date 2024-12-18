@@ -49,7 +49,6 @@ class PiParserSuite extends FunSuite:
       override def test =
         parseAll(ident, "ch") match
           case Success("ch", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -63,7 +62,6 @@ class PiParserSuite extends FunSuite:
       override def test =
         parseAll(ident, "_ch") match
           case Failure("channel name expected but '_' found", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -77,7 +75,6 @@ class PiParserSuite extends FunSuite:
       override def test =
         parseAll(ident, "ch\"'") match
           case Success("ch\"'", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -91,7 +88,6 @@ class PiParserSuite extends FunSuite:
       override def test =
         parseAll(ident, "ch/") match
           case Failure("channel name part expected", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -504,7 +500,6 @@ class PiParserSuite extends FunSuite:
           case (Symbol("x"), Shadow(Symbol("x_shadow"))) =>
             assert(false)
           case _ =>
-            assert(true)
 
     `13`.test
 

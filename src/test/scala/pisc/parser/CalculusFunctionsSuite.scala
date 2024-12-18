@@ -79,7 +79,6 @@ class CalculusFunctionsSuite extends FunSuite:
       override def test =
         parseAll(equation, "Main = ( P + Q ) + R") match
           case Success((_, +(∥(`.`(`(*)`("P", _))), ∥(`.`(`(*)`("Q", _))), ∥(`.`(`(*)`("R", _))))), _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -93,7 +92,6 @@ class CalculusFunctionsSuite extends FunSuite:
       override def test =
         parseAll(equation, "Main = ( P | Q ) | R") match
           case Success((_, +(∥(`.`(`(*)`("P", _)), `.`(`(*)`("Q", _)), `.`(`(*)`("R", _))))), _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -107,7 +105,6 @@ class CalculusFunctionsSuite extends FunSuite:
       override def test =
         parseAll(equation, "Main = τ. ( τ.P )") match
           case Success((_, +(∥(`.`(`(*)`("P", _), τ(_), τ(_))))), _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -121,7 +118,6 @@ class CalculusFunctionsSuite extends FunSuite:
       override def test =
         parseAll(equation, "Main = !!P") match
           case Success((_, +(∥(`.`(!(_, +(∥(`.`(`(*)`("P", _))))))))), _) =>
-            assert(true)
           case _ =>
             assert(false)
 

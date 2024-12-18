@@ -47,7 +47,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(qual, "{path}{to}{package}") match
           case Success(List("path", "to", "package"), _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -61,7 +60,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(IDENT, "P") match
           case Success("P", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -75,7 +73,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(IDENT, "_P") match
           case Failure("agent identifier expected but '_' found", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -89,7 +86,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(IDENT, "P\"'") match
           case Success("P\"'", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -103,7 +99,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(IDENT, "P/") match
           case Failure("agent identifier part expected", _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -231,7 +226,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(invocation(), "P()") match
           case Failure(_, _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -301,7 +295,6 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         parseAll(prefix(using Names2()), "ν()") match
           case Failure(_, _) =>
-            assert(true)
           case _ =>
             assert(false)
 
@@ -345,7 +338,6 @@ class CalculusParserSuite extends FunSuite:
           case Success((ν("m"), _), _) =>
             binding2.headOption match
               case Some((Symbol("m"), Occurrence(None, Position(1, true)))) =>
-                assert(true)
               case _ =>
                 assert(false)
           case _ =>
@@ -382,7 +374,6 @@ class CalculusParserSuite extends FunSuite:
             assertEquals(free, Names() + Symbol("ch"))
             binding2.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
-                assert(true)
               case _ =>
                 assert(false)
           case _ =>
@@ -507,7 +498,6 @@ class CalculusParserSuite extends FunSuite:
             assertEquals(free, Names() + Symbol("ch"))
             binding2.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
-                assert(true)
               case _ =>
                 assert(false)
           case _ =>
