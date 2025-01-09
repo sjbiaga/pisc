@@ -244,7 +244,7 @@ named `_<uuid>` to translate lazily `! P` as:
         lazy val _<uuid>: IO[Any] =
           NonEmptyList
             .fromListUnsafe(
-              πList(
+              List(
                 .  // P
                 .
                 .
