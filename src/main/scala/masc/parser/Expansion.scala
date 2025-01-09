@@ -32,6 +32,7 @@ package parser
 
 import java.util.regex.Pattern
 import scala.util.matching.Regex
+import Regex.Match
 
 import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
 
@@ -72,345 +73,190 @@ abstract class Expansion extends Encoding:
 
     new Parser[(`⟦⟧`, Names)] {
 
-      private def expand(in: Input, ts: Seq[Term], end: Either[String, String])
-                        (using binding2: Names2)
-                        (using substitution: Map[String, String | AST])
-                        (using free: Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
+      def expand(in: Input, shadows: List[Option[String]], key: CacheKey)
+                (op: String, end: Either[String, String])
+                (success: Input => (ParseResult[Fresh], Seq[Term]))
+                (using binding2: Names2)
+                (using substitution: Map[String, String | AST])
+                (using free: Names): (ParseResult[Fresh], Seq[Term]) =
+
+        val source = in.source
+        val offset = in.offset
+        val start = handleWhiteSpace(source, offset)
+
+        if (open_r findPrefixMatchOf SubSequence(source, start, 1 min (source.length - start))).nonEmpty
+        then
+
+          if op.charAt(0).isLower || op == "_"
+          then
+            Failure("name expected not instantiation", in) -> Nil
+
+          else
+
+            _cache.get(key) match
+
+              case Some((exp: `⟦⟧`, cp, free2, given Names2, in2)) =>
+                binding2 ++= binders
+
+                substitution(op) = exp
+                free ++= free2 -- binding2.map(_._1)
+
+                paste(cp)
+
+                success(in2)
+
+              case _ =>
+
+                given Names2 = Names2(binding2)
+                parse(instantiation, in) match
+
+                  case Success((exp, free2), in) =>
+                    binding2 ++= binders
+
+                    substitution(op) = exp
+                    free ++= free2 -- binding2.map(_._1)
+
+                    val source = in.source
+                    val offset = in.offset
+                    val start = handleWhiteSpace(source, offset)
+
+                    val in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
+
+                    _cache(key) = (exp, copy, free2, given_Names2, in2)
+
+                    success(in2)
+
+                  case _ =>
+                    Failure("instantiation expected", in) -> Nil
+
+        else balanced(end)(source, start) match
+
+          case Some(matched) =>
+            var n = matched.end - end.orElse(end.swap).map(_.length).right.get
+            val result = SubSequence(source, start, n).toString
+
+            n += end.map(_.length).getOrElse(0)
+
+            if result.isBlank
+            || result.strip == "_"
+            then
+
+              if op.charAt(0).isUpper
+              then
+                Failure("parallel expected", in) -> Nil
+
+              else
+                val in2 = in.drop(start + n - offset)
+                success(in2)
+
+            else if op.charAt(0).isLower || op == "_"
+            then
+
+              parseAll(name, result) match
+
+                case Success((it, free2), _) =>
+                  shadows(idx) match
+                    case shadow @ Some(_) =>
+                      Names2Occurrence(it, shadow)
+                    case _ =>
+                      binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
+                        case Some((_, Shadow(it))) => substitution(op) = it
+                        case _ => substitution(op) = it
+                      free ++= free2 -- binding2.map(_._1)
+                  idx += 1
+
+                  val in2 = in.drop(start + n - offset)
+                  success(in2)
+
+                case _ =>
+                  Failure("name expected", in) -> Nil
+
+            else
+
+              _cache.get(key) match
+
+                case Some((par: ∥, cp, free2, given Names2, in2)) =>
+                  binding2 ++= binders
+
+                  substitution(op) = par
+                  free ++= free2 -- binding2.map(_._1)
+
+                  paste(cp)
+
+                  success(in2)
+
+                case _ =>
+
+                  given Names2 = Names2(binding2)
+                  parseAll(parallel, result) match
+
+                    case Success((par, free2), _) =>
+                      binding2 ++= binders
+
+                      val par2 = par.flatten.update(using Names2(binding2))
+
+                      substitution(op) = par2
+                      free ++= free2 -- binding2.map(_._1)
+
+                      val in2 = in.drop(start + n - offset)
+
+                      _cache(key) = (par2, copy, free2, given_Names2, in2)
+
+                      success(in2)
+
+                    case _ =>
+                      Failure("parallel expected", in) -> Nil
+
+          case _ =>
+            val found = if start == source.length
+                        then "end of source"
+                        else "'"+source.charAt(start)+"'"
+            Failure(end.map("operator '" + _ + "'").orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset)) -> Nil
+
+
+      def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
+                (using binding2: Names2)
+                (using substitution: Map[String, String | AST])
+                (using free: Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
 
-          var source = in.source
-          var offset = in.offset
-          var start = handleWhiteSpace(source, offset)
+          val source = in.source
+          val offset = in.offset
+          val start = handleWhiteSpace(source, offset)
 
-          var s = SubSequence(source, start)
+          val ts = _ts :+ _rhs
+          val key = path -> (ts.mkString -> end) -> start
 
-          val _ts = ts :+ _rhs
-          val key = path -> (_ts.mkString -> end) -> start
+          def success(in2: Input) =
+            Success(it, in2) -> ts
 
-          if (open_r findPrefixMatchOf s).nonEmpty
-          then
-
-            if rhs.charAt(0).isLower || rhs == "_"
-            then
-              Failure("instantiation expected not name", in) -> Nil
-
-            else
-              var in2: Input = null
-
-              var fail: Option[ParseResult[Fresh]] = None
-
-              _cache.get(key) match
-
-                case Some((exp: `⟦⟧`, it, free2, given Names2, in)) =>
-                  binding2 ++= binders
-
-                  substitution(rhs) = exp
-                  free ++= free2 -- binding2.map(_._1)
-
-                  paste(it)
-
-                  in2 = in
-
-                case _ =>
-
-                  given Names2 = Names2(binding2)
-                  parse(instantiation, in) match
-
-                    case Success((exp, free2), in) =>
-                      binding2 ++= binders
-
-                      substitution(rhs) = exp
-                      free ++= free2 -- binding2.map(_._1)
-
-                      source = in.source
-                      offset = in.offset
-                      start = handleWhiteSpace(source, offset)
-
-                      in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
-
-                      _cache(key) = (exp, copy, free2, given_Names2, in2)
-
-                    case it =>
-                      fail = Some(Failure("instantiation expected", it.next))
-
-              fail match
-                case Some(it) => it -> Nil
-                case _ =>
-                  Success(it, in2) -> ts
-
-          else
-            ( if s.isEmpty
-              || s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-              || (closed_r findPrefixMatchOf s).nonEmpty
-              then Some(null)
-              else
-                val op = end.orElse(end.swap).right.get
-                val n = op.length
-                val matches = (Pattern.quote(op).r findAllMatchIn s).toList
-                var i = 0
-                while i < matches.size
-                && { s = SubSequence(source, start, matches(i).end - n); true }
-                && (open_r findAllMatchIn s).size > (closed_r findAllMatchIn s).size
-                do
-                  i += 1
-                if i < matches.size then Some(matches(i)) else None
-            ) match
-
-              case Some(matched) =>
-                var n = ( if matched eq null
-                          then
-                            if !s.isEmpty && s.charAt(0) == '_' && (s.length == 1 || s.charAt(1).isWhitespace)
-                            then 1
-                            else 0
-                          else matched.end - end.orElse(end.swap).map(_.length).right.get
-                        )
-                val result = SubSequence(source, start, n).toString
-
-                var in2: Input = null
-
-                var fail: Option[ParseResult[Fresh]] = None
-
-                if result.isBlank
-                || result.strip == "_"
-                then
-                  if matched eq null
-                  then
-                    n += result.length
-                  else
-                    n += end.map(_.length).getOrElse(0)
-                else if (closed_r findPrefixMatchOf s).nonEmpty
-                then
-                  {}
-                else
-                  n += end.map(_.length).getOrElse(0)
-
-                  if rhs.charAt(0).isLower || rhs == "_"
-                  then
-
-                    parseAll(name, result) match
-
-                      case Success((it, free2), _) =>
-                        shadows(idx) match
-                          case shadow @ Some(_) =>
-                            Names2Occurrence(it, shadow)
-                          case _ =>
-                            binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
-                              case Some((_, Shadow(it))) => substitution(rhs) = it
-                              case _ => substitution(rhs) = it
-                            free ++= free2 -- binding2.map(_._1)
-                        idx += 1
-
-                      case it =>
-                        fail = Some(Failure("name expected", it.next))
-
-                  else
-
-                    _cache.get(key) match
-
-                      case Some((par: ∥, it, free2, given Names2, in)) =>
-                        binding2 ++= binders
-
-                        substitution(rhs) = par
-                        free ++= free2 -- binding2.map(_._1)
-
-                        paste(it)
-
-                        in2 = in
-
-                      case _ =>
-
-                        given Names2 = Names2(binding2)
-                        parseAll(parallel, result) match
-
-                          case Success((par, free2), _) =>
-                            binding2 ++= binders
-
-                            val par2 = par.flatten.update(using Names2(binding2))
-
-                            substitution(rhs) = par2
-                            free ++= free2 -- binding2.map(_._1)
-
-                            in2 = in.drop(start + n - offset)
-
-                            _cache(key) = (par2, copy, free2, given_Names2, in2)
-
-                          case it =>
-                            fail = Some(Failure("parallel expected", it.next))
-
-                fail match
-                  case Some(it) => it -> Nil
-                  case _ =>
-                    if in2 eq null then in2 = in.drop(start + n - offset)
-                    Success(it, in2) -> ts
-
-              case _ =>
-                val found = if start == source.length
-                            then "end of source"
-                            else "'"+source.charAt(start)+"'"
-                Failure(end.orElse(end.swap).right.get+" expected but "+found+" found", in.drop(start - offset)) -> Nil
+          expand(in, shadows, key)(rhs, end)(success)
 
         case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _op @ Term.Name(op), _, List(rhs))) =>
           val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
 
-          var source = in.source
-          var offset = in.offset
-          var start = handleWhiteSpace(source, offset)
+          val source = in.source
+          val offset = in.offset
+          val start = handleWhiteSpace(source, offset)
 
-          var s = SubSequence(source, start)
+          val ts = _ts :+ _lhs :+ _op
+          val key = path -> (ts.mkString -> end) -> start
 
-          val _ts = ts :+ _lhs :+ _op
-          val key = path -> (_ts.mkString -> end) -> start
+          def success(in2: Input) =
+            expand(in2, ts, end)(it -> rhs)
 
-          if (open_r findPrefixMatchOf s).nonEmpty
-          then
-
-            if lhs.charAt(0).isLower || lhs == "_"
-            then
-              Failure("instantiation expected not name", in) -> Nil
-
-            else
-              var in2: Input = null
-
-              var fail: Option[ParseResult[Fresh]] = None
-
-              _cache.get(key) match
-
-                case Some((exp: `⟦⟧`, it, free2, given Names2, in)) =>
-                  binding2 ++= binders
-
-                  substitution(lhs) = exp
-                  free ++= free2 -- binding2.map(_._1)
-
-                  paste(it)
-
-                  in2 = in
-
-                case _ =>
-
-                  given Names2 = Names2(binding2)
-                  parse(instantiation, in) match
-
-                    case Success((exp, free2), in) =>
-                      binding2 ++= binders
-
-                      substitution(lhs) = exp
-                      free ++= free2 -- binding2.map(_._1)
-
-                      source = in.source
-                      offset = in.offset
-                      start = handleWhiteSpace(source, offset)
-
-                      in2 = in.drop(start + op.length - offset)
-
-                      _cache(key) = (exp, copy, free2, given_Names2, in2)
-
-                    case it =>
-                      fail = Some(Failure("instantiation expected", it.next))
-
-              fail match
-                case Some(it) => it -> Nil
-                case _ =>
-                  expand(in2, _ts, end)(it -> rhs)
-
-          else {
-            val n = op.length
-            val matches = (Pattern.quote(op).r findAllMatchIn s).toList
-            var i = 0
-            while i < matches.size
-            && { s = SubSequence(source, start, matches(i).end - n); true }
-            && (open_r findAllMatchIn s).size > (closed_r findAllMatchIn s).size
-            do
-              i += 1
-            if i < matches.size then Some(matches(i)) else None
-          } match
-
-            case Some(matched) =>
-              val result = SubSequence(source, start, matched.end - op.length).toString
-
-              var in2: Input = null
-
-              var fail: Option[ParseResult[Fresh]] = None
-
-              if result.isBlank
-              || result.strip == "_"
-              then
-                {}
-              else if lhs.charAt(0).isLower || lhs == "_"
-              then
-
-                parseAll(name, result) match
-
-                  case Success((it, free2), _) =>
-                    shadows(idx) match
-                      case shadow @ Some(_) =>
-                        Names2Occurrence(it, shadow)
-                      case _ =>
-                        binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
-                          case Some((_, Shadow(it))) => substitution(lhs) = it
-                          case _ => substitution(lhs) = it
-                        free ++= free2 -- binding2.map(_._1)
-                    idx += 1
-
-                  case it =>
-                    fail = Some(Failure("name expected", it.next))
-
-              else
-
-                _cache.get(key) match
-
-                  case Some((par: ∥, it, free2, given Names2, in)) =>
-                    binding2 ++= binders
-
-                    substitution(lhs) = par
-                    free ++= free2 -- binding2.map(_._1)
-
-                    paste(it)
-
-                    in2 = in
-
-                  case _ =>
-
-                    given Names2 = Names2(binding2)
-                    parseAll(parallel, result) match
-
-                      case Success((par, free2), _) =>
-                        binding2 ++= binders
-
-                        val par2 = par.flatten.update(using Names2(binding2))
-
-                        substitution(lhs) = par2
-                        free ++= free2 -- binding2.map(_._1)
-
-                        in2 = in.drop(start + matched.end - offset)
-
-                        _cache(key) = (par2, copy, free2, given_Names2, in2)
-
-                      case it =>
-                        fail = Some(Failure("parallel expected", it.next))
-
-              fail match
-                case Some(it) => it -> Nil
-                case _ =>
-                  if in2 eq null then in2 = in.drop(start + matched.end - offset)
-                  expand(in2, _ts, end)(it -> rhs)
-
-            case _ =>
-              val found = if start == source.length
-                          then "end of source"
-                          else "'"+source.charAt(start)+"'"
-              Failure("operator '"+op+"' expected but "+found+" found", in.drop(start - offset)) -> Nil
+          expand(in, shadows, key)(lhs, Right(op))(success)
 
         case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, _op @ Term.Name(op), _, List(rhs))) =>
-          expand(in, ts, Right(op))(it -> lhs) match
-            case (Success(_, in), ts) =>
-              val _ts = ts :+ _op
-              expand(in, _ts, end)(it -> rhs)
+          expand(in, _ts, Right(op))(it -> lhs) match
+            case (Success(_, in2), ts) =>
+              expand(in2, ts :+ _op, end)(it -> rhs)
             case it => it
 
         case (it, Term.AnonymousFunction(body)) =>
-          expand(in, ts, end)(it -> body)
+          expand(in, _ts, end)(it -> body)
 
         case _ => ??? /* caught by template */
 
@@ -465,6 +311,53 @@ object Expansion:
 
 
   // functions
+
+  private[parser] def balanced(end: Either[String, String])
+                              (source: CharSequence, start: Int): Option[Match] =
+    var s = SubSequence(source, start)
+    val op = end.orElse(end.swap).right.get
+    val n = op.length
+    val matches = (Pattern.quote(op).r findAllMatchIn s).toList
+    var i = 0
+    while i < matches.size
+    && { s = SubSequence(source, start, matches(i).end - n); true }
+    && (open_r findAllMatchIn s).size > (closed_r findAllMatchIn s).size
+    do
+      i += 1
+    if i < matches.size
+    && {
+      val os = (open_r findAllMatchIn s).toList
+      val cs = (closed_r findAllMatchIn s).toList
+      if os.size != cs.size
+      then
+        false
+      else if os.isEmpty
+      then
+        true
+      else
+        var oi, ci = 0
+        var done = false
+        while !done && oi <= ci && oi < os.size && ci < cs.size
+        do
+          done = true
+          while oi < os.size && os(oi).start < cs(ci).start
+          do
+            done = false
+            oi += 1
+          if oi < os.size
+          then
+            while ci < oi && cs(ci).start < os(oi).start
+            do
+              done = false
+              ci += 1
+          else
+            ci = cs.size
+        oi == os.size && ci == cs.size
+    }
+    then
+      Some(matches(i))
+    else
+      None
 
   def replaced(name: String)
               (using substitution: Map[String, String | AST]): String =
