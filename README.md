@@ -403,7 +403,7 @@ named "`_<uuid>`" to translate lazily `! . π . P` as:
         lazy val _<uuid>: String => IO[Any] = { implicit ^ =>
           NonEmptyList
             .fromListUnsafe(
-              πList(
+              List(
                 .  // P
                 .
                 .
