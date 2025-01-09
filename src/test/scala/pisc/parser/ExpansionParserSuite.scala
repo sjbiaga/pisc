@@ -33,9 +33,9 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
-import _root_.pisc.parser.Pi._
-import _root_.pisc.parser.Calculus._
-import _root_.pisc.parser.Encoding._
+import Pi._
+import Calculus._
+import Encoding._
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion._
 import ExpansionParserSuite._
