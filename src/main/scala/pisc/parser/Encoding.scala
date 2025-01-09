@@ -165,7 +165,7 @@ object Encoding:
 
   type Fresh = (Definition, (Int, List[Option[Symbol]]))
 
-  private type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
+  type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
 
   private type CacheValue = (`⟦⟧` | +, (Any, Any), Names, Names2, Encoding#Input)
 
