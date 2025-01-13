@@ -84,9 +84,63 @@ class ExpansionFunctionsSuite extends FunSuite:
 
   }
 
+  test("balanced - ⟦ ⟧ ⟦ ⟧ ⟦ ⟧ $") {
+
+    balanced(Right("$"))("⟦ ⟧ ⟦ ⟧ ⟦ ⟧ $", 0) match
+      case None =>
+        assert(false)
+      case _ =>
+
+  }
+
+  test("balanced - ⟦ ⟧ ⟦ ⟧ ⟦ ⟧ $") {
+
+    balanced(Right("$"))("⟦ ⟧ ⟦ ⟧ ⟦ ⟧ $", 0) match
+      case None =>
+        assert(false)
+      case _ =>
+
+  }
+
+  test("balanced - ⟦ ⟦ ⟦ ⟦ ⟧ ⟧ ⟧ ⟦ ⟧ ⟧ $") {
+
+    balanced(Right("$"))("⟦ ⟦ ⟦ ⟦ ⟧ ⟧ ⟧ ⟦ ⟧ ⟧ $", 0) match
+      case None =>
+        assert(false)
+      case _ =>
+
+  }
+
+  test("balanced - ⟦ ⟦ ⟧ ⟦ ⟧ ⟧ $") {
+
+    balanced(Right("$"))("⟦ ⟦ ⟧ ⟦ ⟧ ⟧ $", 0) match
+      case None =>
+        assert(false)
+      case _ =>
+
+  }
+
   test("balanced - ⟦ ⟧ ⟧ ⟦ ⟦ ⟧ $") {
 
     balanced(Right("$"))("⟦ ⟧ ⟧ ⟦ ⟦ ⟧ $", 0) match
+      case Some(_) =>
+        assert(false)
+      case _ =>
+
+  }
+
+  test("balanced - ⟦ ⟧ ⟦ ⟧ ⟧ ⟦ $") {
+
+    balanced(Right("$"))("⟦ ⟧ ⟦ ⟧ ⟧ ⟦ $", 0) match
+      case Some(_) =>
+        assert(false)
+      case _ =>
+
+  }
+
+  test("balanced - ⟦ ⟦ ⟦ ⟧ ⟧ ⟧ ⟧ ⟦ $") {
+
+    balanced(Right("$"))("⟦ ⟦ ⟦ ⟧ ⟧ ⟧ ⟧ ⟦ $", 0) match
       case Some(_) =>
         assert(false)
       case _ =>
