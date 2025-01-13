@@ -215,9 +215,9 @@ abstract class Expansion extends Encoding:
 
 
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
-                (using binding2: Names2)
-                (using substitution: Map[String, λ | AST])
-                (using free: Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
+                (using Names2)
+                (using Map[String, λ | AST])
+                (using Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
@@ -336,19 +336,15 @@ object Expansion:
         true
       else
         var oi, ci = 0
-        var done = false
-        while !done && oi <= ci && oi < os.size && ci < cs.size
+        while ci <= oi && oi < os.size
         do
-          done = true
           while oi < os.size && os(oi).start < cs(ci).start
           do
-            done = false
             oi += 1
           if oi < os.size
           then
-            while ci < oi && cs(ci).start < os(oi).start
+            while ci < cs.size && cs(ci).start < os(oi).start
             do
-              done = false
               ci += 1
           else
             ci = cs.size
@@ -503,7 +499,7 @@ object Expansion:
         case it @ `⟦⟧`(_, variables, _, _) =>
           val n = it.assign.map(_.size).getOrElse(0)
           val assign = variables.drop(n) zip pointers
-          val assign2 = it.assign.map(_ ++ assign).getOrElse(assign)
+          val assign2 = it.assign.getOrElse(Set.empty) ++ assign
           it.copy(assign = if assign2.nonEmpty then Some(assign2) else None)
 
         case it @ `{}`(id, _, agent, params*) =>
