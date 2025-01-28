@@ -253,7 +253,7 @@ object StochasticPi:
 
   // functions
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def shallow: T =
 
@@ -261,7 +261,7 @@ object StochasticPi:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(_, it*) =>
           `+`(nil, it.map(_.shallow)*)
@@ -284,8 +284,7 @@ object StochasticPi:
         case `{}`(id, pointers, true, params*) =>
           `(*)`(id, (params ++ pointers.map(λ(_)))*)
 
-        case it =>
-          it
+        case _ => ast
 
 
   final class Main extends Expansion:
@@ -353,7 +352,7 @@ object StochasticPi:
         case _ =>
       }
 
-    extension[T <: AST](ast: T)
+    extension [T <: AST](ast: T)
 
       def parse(using excluded: Map[String, Actions]): (T, Actions) =
 
@@ -371,11 +370,11 @@ object StochasticPi:
 
         ast match
 
-          case ∅ => (∅, nil)
+          case ∅(_) => (ast, nil)
 
           case it: + =>
             val sum = it.choices.foldLeft(`+`(nil)) {
-              case (sum, par) =>
+              case (sum: +, par) =>
                 val (par2, enabled2) = par.parse
                 assert(enabled2.nonEmpty)
                 assert((sum.enabled & enabled2).isEmpty)
@@ -385,7 +384,7 @@ object StochasticPi:
 
           case it: ∥ =>
             val (par, enabled) = it.components.foldLeft((∥(), nil)) {
-              case ((par, enabled), seq) =>
+              case ((par: ∥, enabled), seq) =>
                 val (seq2, enabled2) = seq.parse
                 assert(enabled2.nonEmpty)
                 assert((enabled & enabled2).isEmpty)
@@ -409,7 +408,7 @@ object StochasticPi:
             then
               (`.`(it, ps*), enabled)
             else
-              assert(∅ == it || it.isInstanceOf[`(*)`])
+              assert(it.isInstanceOf[+] && it.asInstanceOf[+].isVoid || it.isInstanceOf[`(*)`])
               insert(it, ps*)
 
           case ?:(c, _t, _f) =>
@@ -444,12 +443,12 @@ object StochasticPi:
           case `⟦⟧`(definition, variables, _sum, υidυ, name, assign) =>
             val n = assign.map(_.size).getOrElse(0)
 
-            val sum = ( if variables.size == n
-                        then
-                          _sum
-                        else
-                          `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-                      )
+            val sum: + = ( if variables.size == n
+                           then
+                             _sum
+                           else
+                             `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                         )
 
             var (it, _) = sum.parse
 
@@ -467,7 +466,7 @@ object StochasticPi:
 
         ast match
 
-          case ∅ => nil
+          case ∅(_) => nil
 
           case +(enabled, par) =>
             par.split
@@ -551,7 +550,7 @@ object StochasticPi:
 
         ast match
 
-          case ∅ => Nil
+          case ∅(_) => Nil
 
           case +(_, ps*) =>
             ps.map(_.graph).reduce(_ ++ _)
@@ -750,7 +749,7 @@ object StochasticPi:
           then
             congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
           else
-            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+            congruent(lt -> rf.getOrElse(`+`(nil))) && congruent(lf.getOrElse(`+`(nil)) -> rt)
 
         case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
              ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
@@ -760,7 +759,7 @@ object StochasticPi:
           then
             congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
           else
-            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+            congruent(lt -> rf.getOrElse(`+`(nil))) && congruent(lf.getOrElse(`+`(nil)) -> rt)
 
         case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)), lsum)
              ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _)), rsum)) =>
