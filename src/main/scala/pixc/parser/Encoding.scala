@@ -134,7 +134,7 @@ abstract class Encoding extends Calculus:
       instantiation ^^ {
         case (exp, free) =>
           val code = exp.definition.code
-          val it = exp.copy(trans = trans)
+          val it: `⟦⟧` = exp.copy(trans = trans)
           if !xctn.contains(trans -> code)
           then
             xctn(trans -> code) = Nil
@@ -343,13 +343,13 @@ object Encoding:
     binding2.filter(_._2.isBinding < 0)
 
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def capitals: Names =
 
       ast match
 
-        case ∅ => Names()
+        case ∅(_) => Names()
 
         case +(it*) => it.map(_.capitals).reduce(_ ++ _)
 
@@ -400,7 +400,7 @@ object Encoding:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(it*) =>
           `+`(it.map(rename(_))*)

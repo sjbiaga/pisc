@@ -197,7 +197,7 @@ object Pi:
 
   // functions
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def shallow: T =
 
@@ -205,7 +205,7 @@ object Pi:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(it*) =>
           `+`(it.map(_.shallow)*)
@@ -228,8 +228,7 @@ object Pi:
         case `{}`(id, pointers, true, params*) =>
           `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
 
-        case it =>
-          it
+        case _ => ast
 
   final class Main extends Expansion:
 
@@ -403,7 +402,7 @@ object Pi:
           then
             congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
           else
-            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+            congruent(lt -> rf.getOrElse(`+`())) && congruent(lf.getOrElse(`+`()) -> rt)
 
         case (?:(((λ(llhs), λ(lrhs)), lm), lt, lf)
              ,?:(((λ(rlhs), λ(rrhs)), rm), rt, rf))
@@ -413,7 +412,7 @@ object Pi:
           then
             congruent(lt -> rt) && (lf zip rf).map(congruent(_)).getOrElse(lf.isEmpty == rf.isEmpty)
           else
-            congruent(lt -> rf.getOrElse(∅)) && congruent(lf.getOrElse(∅) -> rt)
+            congruent(lt -> rf.getOrElse(`+`())) && congruent(lf.getOrElse(`+`()) -> rt)
 
         case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
              ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
