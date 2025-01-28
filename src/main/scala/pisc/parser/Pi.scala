@@ -194,7 +194,7 @@ object Pi:
 
   // functions
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def shallow: T =
 
@@ -202,7 +202,7 @@ object Pi:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(it*) =>
           `+`(it.map(_.shallow)*)
@@ -225,8 +225,7 @@ object Pi:
         case `{}`(id, pointers, true, params*) =>
           `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
 
-        case it =>
-          it
+        case _ => ast
 
 
   final class Main extends Expansion:
