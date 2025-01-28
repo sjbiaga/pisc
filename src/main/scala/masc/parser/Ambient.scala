@@ -155,7 +155,7 @@ object Ambient:
 
   // functions
 
-  extension[T <: Calculus.AST](ast: T)
+  extension [T <: Calculus.AST](ast: T)
 
     def shallow: T =
 
@@ -163,7 +163,7 @@ object Ambient:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case ∥(it*) =>
           ∥(it.map(_.shallow)*)
@@ -186,8 +186,7 @@ object Ambient:
         case `{}`(id, pointers, true, params*) =>
           `(*)`(id, Nil, (params ++ pointers)*)
 
-        case it =>
-          it
+        case _ => ast
 
 
   final class Main extends Expansion:
