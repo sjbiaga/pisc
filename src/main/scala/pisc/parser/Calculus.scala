@@ -75,7 +75,7 @@ abstract class Calculus extends Pi:
         case pre ~ Some((end, free)) =>
           `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
         case pre ~ _ =>
-          `.`(∅, pre._1*) -> pre._2._2 // inaction
+          `.`(`+`(), pre._1*) -> pre._2._2 // inaction
     }
 
   def leaf(using Names2): Parser[(`-`, Names)] =
@@ -211,6 +211,7 @@ object Calculus:
   type Bind = (`(*)`, +)
 
   export Pre._
+  export AST._
 
   enum Pre:
 
@@ -228,75 +229,79 @@ object Calculus:
         else "" + channel + "<" + name + ">."
       case _ => "τ."
 
-  sealed trait AST extends Any
+  enum AST:
 
-  case class +(choices: ∥ *) extends AST:
-    override def toString: String = choices.mkString(" + ")
+    case +(choices: AST.∥ *)
 
-  object ∅ extends +():
-    override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[+]
+    case ∥(components: AST.`.`*)
 
-    @annotation.tailrec
-    override def equals(any: Any): Boolean = any match
-      case +() => true
-      case +(∥(`.`(sum: +))) => equals(sum)
-      case _ => false
+    case `.`(end: &, prefixes: Pre*)
 
-    override def toString: String = "()"
+    case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
-  case class ∥(components: `.`*) extends AnyVal with AST:
-    override def toString: String = components.mkString(" | ")
+    case !(guard: Option[μ], sum: AST.+)
 
-  case class `.`(end: &, prefixes: Pre*) extends AST:
-    override def toString: String =
-      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[+]
-                                                                         then "(" + end + ")" else end)
+    case `⟦⟧`(definition: Definition,
+              variables: Names,
+              sum: AST.+,
+              assign: Option[Set[(Symbol, Symbol)]] = None)
 
-  case class ?:(cond: ((λ, λ), Boolean), t: +, f: Option[+]) extends AST:
-    override def toString: String =
-      val test = "" + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2
-      if f.isEmpty
-      then
-        "[ " + test + " ] " + t
-      else
-        "if " + test + " " + t + " else " + f.get
+    case `{}`(identifier: String,
+              pointers: List[Symbol],
+              agent: Boolean = false,
+              params: λ*)
 
-  case class !(guard: Option[μ], sum: +) extends AST:
-    override def toString: String = "!" + guard.map("." + _).getOrElse("") + sum
+    case `(*)`(identifier: String,
+               qual: List[String],
+               params: λ*)
 
-  case class `⟦⟧`(definition: Definition,
-                  variables: Names,
-                  sum: +,
-                  assign: Option[Set[(Symbol, Symbol)]] = None) extends AST:
-    override def toString: String =
-      val vars = ( if variables.nonEmpty
-                   then
-                     variables.map {
-                       case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
-                         s"${it.name} = ${assign.get.find(_._1 == it).get._2.name}"
-                       case it => it.name
-                     }.mkString("{", ", ", "}")
-                   else
-                     ""
-                 )
-      s"""${Definition(definition.code, definition.term)}$vars = $sum"""
+    override def toString: String = this match
+      case ∅(_) => "()"
+      case +(choices*) => choices.mkString(" + ")
 
-  case class `{}`(identifier: String,
-                  pointers: List[Symbol],
-                  agent: Boolean = false,
-                  params: λ*) extends AST:
-    override def toString: String =
-      val ps = if agent then params.mkString("(", ", ", ")") else ""
-      s"""$identifier$ps{${pointers.map(_.name).mkString(", ")}}"""
+      case ∥(components*) => components.mkString(" | ")
 
-  case class `(*)`(identifier: String,
-                   qual: List[String],
-                   params: λ*) extends AST:
-    override def toString: String =
-      if params.isEmpty
-      then identifier
-      else s"$identifier(${params.mkString(", ")})"
+      case `.`(∅(_)) => "()"
+      case `.`(∅(_), prefixes*) => prefixes.mkString(" ") + " ()"
+      case `.`(end: +, prefixes*) =>
+        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
+      case `.`(end, prefixes*) =>
+        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + end
+
+      case ?:(cond, t, f) =>
+        val test = "" + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2
+        if f.isEmpty
+        then
+          "[ " + test + " ] " + t
+        else
+          "if " + test + " " + t + " else " + f.get
+
+      case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+
+      case `⟦⟧`(definition, variables, sum, assign) =>
+        val vars = ( if variables.nonEmpty
+                     then
+                       variables.map {
+                         case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
+                           s"${it.name} = ${assign.get.find(_._1 == it).get._2.name}"
+                         case it => it.name
+                       }.mkString("{", ", ", "}")
+                     else
+                       ""
+                   )
+        s"""${Definition(definition.code, definition.term)}$vars = $sum"""
+
+      case `{}`(identifier, pointers, agent, params*) =>
+        val ps = if agent then params.mkString("(", ", ", ")") else ""
+        s"""$identifier$ps{${pointers.map(_.name).mkString(", ")}}"""
+
+      case `(*)`(identifier, _) => identifier
+      case `(*)`(identifier, _, params*) => s"$identifier(${params.mkString(", ")})"
+
+  object ∅ :
+    def unapply[T <: AST](self: T): Option[Unit] = self match
+      case sum: + if sum.isVoid => Some(())
+      case _ => None
 
   private val qual_r = "[{][^}]*[}]".r
 
@@ -349,7 +354,14 @@ object Calculus:
 
   // functions
 
-  extension[T <: AST](ast: T)
+  extension (sum: +)
+    @annotation.tailrec
+    private def isVoid: Boolean = sum match
+      case +() => true
+      case +(∥(`.`(sum: +))) => sum.isVoid
+      case _ => false
+
+  extension [T <: AST](ast: T)
 
     def flatten: T =
 
@@ -357,17 +369,17 @@ object Calculus:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(∥(`.`(sum: +)), it*) =>
           val lhs = sum.flatten
           val rhs = `+`(it*).flatten
-          `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+          `+`((lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid)*)
 
         case +(par, it*) =>
-          val lhs = `+`(par.flatten)
+          val lhs: + = `+`(par.flatten)
           val rhs = `+`(it*).flatten
-          `+`((lhs.choices ++ rhs.choices).filterNot(∅ == `+`(_))*)
+          `+`((lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid)*)
 
         case ∥(`.`(+(par)), it*) =>
           val lhs = par.flatten
@@ -375,7 +387,7 @@ object Calculus:
           ∥((lhs.components ++ rhs.components)*)
 
         case ∥(seq, it*) =>
-          val lhs = ∥(seq.flatten)
+          val lhs: ∥ = ∥(seq.flatten)
           val rhs = ∥(it*).flatten
           ∥((lhs.components ++ rhs.components)*)
 

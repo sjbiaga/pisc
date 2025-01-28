@@ -92,7 +92,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         parseAll(instantiation(using Names2()), "⟦⟧") match
-          case Success((`⟦⟧`(Definition(0, None, _, _, ∅), _, ∅, None), _), _) =>
+          case Success((`⟦⟧`(Definition(0, None, _, _, ∅(_)), _, ∅(_), None), _), _) =>
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)

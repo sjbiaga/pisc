@@ -405,7 +405,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "[m = n]") match
-          case Success((?:(((λ(Symbol("m")), λ(Symbol("n"))), false), ∅, None), free), _) =>
+          case Success((?:(((λ(Symbol("m")), λ(Symbol("n"))), false), ∅(_), None), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
             assert(binding2.isEmpty)
           case it =>
@@ -421,7 +421,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "if True ≠ False then else") match
-          case Success((?:(((λ(true), λ(false)), true), ∅, Some(∅)), free), _) =>
+          case Success((?:(((λ(true), λ(false)), true), ∅(_), Some(∅(_))), free), _) =>
             assert(free.isEmpty)
             assert(binding2.isEmpty)
           case _ =>
@@ -437,7 +437,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "False ≠ True ? :") match
-          case Success((?:(((λ(false), λ(true)), true), ∅, Some(∅)), free), _) =>
+          case Success((?:(((λ(false), λ(true)), true), ∅(_), Some(∅(_))), free), _) =>
             assert(free.isEmpty)
             assert(binding2.isEmpty)
           case _ =>
@@ -452,7 +452,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!") match
-          case Success((!(None, ∅), free), _) =>
+          case Success((!(None, ∅(_)), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
@@ -479,7 +479,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.ch(n).") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -494,7 +494,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given binding2: Names2 = Names2()
         parseAll(leaf, "!.ch(n).") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
             binding2.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
@@ -512,7 +512,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.ch<n>/*println('m)*/.") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_))), ∅), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_))), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
             assert(false)
@@ -526,7 +526,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Names2()), "!.τ/*println('n)*/.") match
-          case Success((!(Some(τ(Some(_))), ∅), free), _) =>
+          case Success((!(Some(τ(Some(_))), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)

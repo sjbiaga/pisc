@@ -67,7 +67,7 @@ object Ensure:
       }
     else -1
 
-  extension(ast: AST)
+  extension (ast: AST)
 
     /**
       * When an existing invocation is found on the reachability graph:
@@ -83,7 +83,7 @@ object Ensure:
 
       ast match
 
-        case ∅ =>
+        case ∅(_) =>
 
         case +(it*) =>
          it.foldLeft(())((_, par) => par.recursive)
