@@ -38,7 +38,7 @@ import Meta._
 
 object Program:
 
-  extension(node: Pre | AST)
+  extension (node: Pre | AST)
 
     def generate(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
@@ -47,7 +47,7 @@ object Program:
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case ∅ =>
+        case ∅(_) =>
           * = `_ <- IO.unit`
 
         case +(_, operand) =>

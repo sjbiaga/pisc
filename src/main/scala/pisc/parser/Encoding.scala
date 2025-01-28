@@ -326,13 +326,13 @@ object Encoding:
     binding2.filter(_._2.isBinding < 0)
 
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def capitals: Names =
 
       ast match
 
-        case ∅ => Names()
+        case ∅(_) => Names()
 
         case +(_, it*) => it.map(_.capitals).reduce(_ ++ _)
 
@@ -379,7 +379,7 @@ object Encoding:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case +(_, it*) =>
           `+`(nil, it.map(rename(_))*)
