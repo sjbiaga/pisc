@@ -38,7 +38,7 @@ import Meta._
 
 object Program:
 
-  extension(node: Pre | AST)
+  extension (node: Pre | AST)
 
     def generate(using id: => String)
                 (implicit semaphore: Option[String] = None): List[Enumerator] =
@@ -48,7 +48,7 @@ object Program:
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case ∅ =>
+        case ∅(_) =>
           val ** = `_ <- IO.unit`
 
           semaphore
