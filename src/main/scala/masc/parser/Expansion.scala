@@ -379,7 +379,7 @@ object Expansion:
     }
 
 
-  extension[T <: AST](ast: T)
+  extension [T <: AST](ast: T)
 
     def replace(using substitution: Map[String, String | AST]): T =
 
@@ -387,7 +387,7 @@ object Expansion:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case ∥(it*) =>
           ∥(it.map(_.replace)*)
@@ -458,7 +458,7 @@ object Expansion:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case ∥(it*) =>
           ∥(it.map(_.concatenate)*)
@@ -485,7 +485,7 @@ object Expansion:
           val pointers2 = it.pointers ++ pointers
           `{}`(id, pointers2, agent, params*)
 
-        case it => it
+        case _ => ast
 
 
     def update(using binding2: Names2): T =
@@ -494,7 +494,7 @@ object Expansion:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case ∥(it*) =>
           ∥(it.map(_.update)*)

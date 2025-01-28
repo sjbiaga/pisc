@@ -70,7 +70,7 @@ abstract class Calculus extends Ambient:
         case pre ~ Some((end, free)) =>
           `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
         case pre ~ _ =>
-          `.`(∅, pre._1*) -> pre._2._2 // void
+          `.`(∥(), pre._1*) -> pre._2._2 // void
     }
 
   def leaf(using binding2: Names2): Parser[(-, Names)] =
@@ -195,6 +195,7 @@ object Calculus:
   type Bind = (`(*)`, ∥)
 
   export Pre._
+  export AST._
 
   enum Pre:
 
@@ -212,72 +213,78 @@ object Calculus:
       case `()`(name, _) => s"($name)."
       case _ => "τ."
 
-  sealed trait AST extends Any
+  enum AST:
 
-  case class ∥(components: `.`*) extends AST:
-    override def toString: String = components.mkString(" | ")
+    case ∥(components: AST.`.`*)
 
-  object ∅ extends ∥():
-    override def canEqual(that: Any): Boolean =
-      that.isInstanceOf[∥]
+    case `.`(end: &, prefixes: Pre*)
 
-    @annotation.tailrec
-    override def equals(any: Any): Boolean = any match
-      case ∥() => true
-      case ∥(`.`(par: ∥)) => equals(par)
-      case _ => false
+    case <>(code: Option[Code], path: Ambient.AST*)
 
-    override def toString: String = "()"
+    case !(guard: Option[String], par: AST.∥)
 
-  case class `.`(end: &, prefixes: Pre*) extends AST:
-    override def toString: String =
-      prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + (if ∅ != end && end.isInstanceOf[∥]
-                                                                         then "(" + end + ")" else end)
+    case `[]`(amb: String, par: AST.∥)
 
-  case class <>(code: Option[Code], path: Ambient.AST*) extends AST:
-    override def toString: String = path.mkString("<", ", ", ">")
+    case `go.`(amb: String, par: AST.∥)
 
-  case class !(guard: Option[String], par: ∥) extends AST:
-    override def toString: String = "!" + guard.map(".(" + _ + ").").getOrElse("") + par
+    case `⟦⟧`(definition: Definition,
+              variables: Names,
+              par: AST.∥,
+              assign: Option[Set[(String, String)]] = None)
 
-  case class `[]`(amb: String, par: ∥) extends AST:
-    override def toString: String = amb + (if ∅ == par then " [ ]" else " [ " + par + " ]")
+    case `{}`(identifier: String,
+              pointers: List[String],
+              agent: Boolean = false,
+              params: String*)
 
-  case class `go.`(amb: String, par: ∥) extends AST:
-    override def toString: String = "go " + amb + "." + par
+    case `(*)`(identifier: String,
+               qual: List[String],
+               params: String*)
 
-  case class `⟦⟧`(definition: Definition,
-                  variables: Names,
-                  par: ∥,
-                  assign: Option[Set[(String, String)]] = None) extends AST:
-    override def toString: String =
-      val vars = ( if variables.nonEmpty
-                   then
-                     variables.map {
-                       case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
-                         s"$it = ${assign.get.find(_._1 == it).get._2}"
-                       case it => it
-                     }.mkString("{", ", ", "}")
-                   else
-                     ""
-                 )
-      s"""${Definition(definition.code, definition.term)}$vars = $par"""
+    override def toString: String = this match
+      case ∅(_) => "()"
+      case ∥(components*) => components.mkString(" | ")
 
-  case class `{}`(identifier: String,
-                  pointers: List[String],
-                  agent: Boolean = false,
-                  params: String*) extends AST:
-    override def toString: String =
-      val ps = if agent then params.mkString("(", ", ", ")") else ""
-      s"""$identifier$ps{${pointers.mkString(", ")}}"""
+      case `.`(∅(_)) => "()"
+      case `.`(∅(_), prefixes*) => prefixes.mkString(" ") + " ()"
+      case `.`(end: ∥, prefixes*) =>
+        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
+      case `.`(end, prefixes*) =>
+        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + end
 
-  case class `(*)`(identifier: String,
-                   qual: List[String],
-                   params: String*) extends AST:
-    override def toString: String =
-      if params.isEmpty
-      then identifier
-      else s"$identifier(${params.mkString(", ")})"
+      case <>(_, path*) => path.mkString("<", ", ", ">")
+
+      case !(guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
+
+      case `[]`(amb, ∅(_)) => amb + " [ ]"
+      case `[]`(amb, par) => amb + " [ " + par + " ]"
+
+      case `go.`(amb, par) => "go " + amb + "." + par
+
+      case `⟦⟧`(definition, variables, par, assign) =>
+        val vars = ( if variables.nonEmpty
+                     then
+                       variables.map {
+                         case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
+                           s"$it = ${assign.get.find(_._1 == it).get._2}"
+                         case it => it
+                       }.mkString("{", ", ", "}")
+                     else
+                       ""
+                   )
+        s"""${Definition(definition.code, definition.term)}$vars = $par"""
+
+      case `{}`(identifier, pointers, agent, params*) =>
+        val ps = if agent then params.mkString("(", ", ", ")") else ""
+        s"""$identifier$ps{${pointers.mkString(", ")}}"""
+
+      case `(*)`(identifier, _) => identifier
+      case `(*)`(identifier, _, params*) => s"$identifier(${params.mkString(", ")})"
+
+  object ∅ :
+    def unapply[T <: AST](self: T): Option[Unit] = self match
+      case par: ∥ if par.isVoid => Some(())
+      case _ => None
 
   private val qual_r = "[{][^}]*[}]".r
 
@@ -303,7 +310,14 @@ object Calculus:
 
   // functions
 
-  extension[T <: AST](ast: T)
+  extension (par: ∥)
+    @annotation.tailrec
+    private def isVoid: Boolean = par match
+      case ∥() => true
+      case ∥(`.`(par: ∥)) => par.isVoid
+      case _ => false
+
+  extension [T <: AST](ast: T)
 
     def flatten: T =
 
@@ -311,17 +325,17 @@ object Calculus:
 
       ast match
 
-        case ∅ => ∅
+        case ∅(_) => ast
 
         case ∥(`.`(par: ∥), it*) =>
           val lhs = par.flatten
           val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components).filterNot(∅ == ∥(_))*)
+          ∥((lhs.components ++ rhs.components).filterNot(∥(_).isVoid)*)
 
         case ∥(seq, it*) =>
-          val lhs = ∥(seq.flatten)
+          val lhs: ∥ = ∥(seq.flatten)
           val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components).filterNot(∅ == ∥(_))*)
+          ∥((lhs.components ++ rhs.components).filterNot(∥(_).isVoid)*)
 
         case `.`(∥(`.`(end, ps*)), it*) =>
           `.`(end, (it ++ ps)*).flatten
