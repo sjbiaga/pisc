@@ -28,10 +28,10 @@
 
 import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.collection.mutable.HashMap
-import _root_.scala.concurrent.duration._
+import _root_.scala.concurrent.duration.*
 
 import _root_.breeze.stats.distributions.Exponential
-import _root_.breeze.stats.distributions.Rand.VariableSeed._
+import _root_.breeze.stats.distributions.Rand.VariableSeed.*
 
 import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Ref }

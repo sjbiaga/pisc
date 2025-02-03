@@ -33,10 +33,10 @@ import scala.io.Source
 
 import munit.FunSuite
 
-import StochasticPi._
-import Calculus._
-import Encoding._
-import StochasticPiSuite._
+import StochasticPi.*
+import Calculus.*
+import Encoding.*
+import StochasticPiSuite.*
 
 
 class StochasticPiSuite extends FunSuite:

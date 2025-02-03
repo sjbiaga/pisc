@@ -38,9 +38,9 @@ import scala.io.Source
 
 import generator.Meta.`()(null)`
 
-import StochasticPi._
-import Calculus._
-import Encoding._
+import StochasticPi.*
+import Calculus.*
+import Encoding.*
 import scala.util.parsing.combinator.pixc.parser.Expansion
 
 
@@ -72,10 +72,10 @@ abstract class StochasticPi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ r ~ (par, binding) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (binding, name ++ free2)
-      case (ch, name) ~ r ~ (par, binding) ~ _ =>
-        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id()) -> (binding, name)
+      case (ch, name) ~ r ~ (par, bound) ~ Some((it, free2)) =>
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (bound, name ++ free2)
+      case (ch, name) ~ r ~ (par, bound) ~ _ =>
+        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id()) -> (bound, name)
     }
 
   def name: Parser[(λ, Names)] = ident("channel") ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
@@ -126,7 +126,7 @@ abstract class StochasticPi extends Expression:
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
-  private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Names2)]] = null
+  private[parser] var xctn: Map[(Symbol, Int), List[(`⟦⟧` Either χ, Bindings)]] = null
   protected var _nest = -1
   private[parser] var _nth: Map[Int, Long] = null
   protected final def nest(b: Boolean) =
@@ -141,8 +141,8 @@ abstract class StochasticPi extends Expression:
       _cntr -= _nest+1
   private[parser] var _cntr: Map[Int, Long] = null
 
-  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
+  private[parser] def pos(bound: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), bound) }
+  private[parser] def pos_(bound: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), bound) }
 
   protected final def path = (0 until _nest).map(_nth(_))
 
@@ -180,22 +180,22 @@ abstract class StochasticPi extends Expression:
       }
     }
 
-  protected object Names2Occurrence:
+  protected object BindingOccurrence:
     def apply(names: Names)
-             (using Names2): Unit =
+             (using Bindings): Unit =
       names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
+             (using bindings: Bindings): Unit =
+      bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+          bindings += name -> Occurrence(shadow, it.copy(binds = true))
         case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
+          bindings += name -> Occurrence(shadow, pos(true))
 
 
 object StochasticPi:
@@ -303,7 +303,7 @@ object StochasticPi:
 
     private def ensure(using rec: Map[(String, Int), Int])
               (using prog: List[Bind]): Unit =
-      import helper.Ensure._
+      import helper.Ensure.*
 
       var i = main
 
@@ -649,42 +649,42 @@ object StochasticPi:
 
     object Χ:
 
-      private def apply(it: Symbol, _1_2: 1 | 2)(using (Names2, Names2)): Either[1 | 2, Position] =
-        val binding2 = if _1_2 == 1 then summon[(Names2, Names2)]._1 else summon[(Names2, Names2)]._2
-        binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
+      private def apply(it: Symbol, _1_2: 1 | 2)(using (Bindings, Bindings)): Either[1 | 2, Position] =
+        val bindings = if _1_2 == 1 then summon[(Bindings, Bindings)]._1 else summon[(Bindings, Bindings)]._2
+        bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
           case Some((_, it)) => Right(it.position)
-          case _ => binding2.get(it) match
+          case _ => bindings.get(it) match
             case Some(it) => Right(it.position)
             case _ => Left(_1_2)
 
-      private def equal(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                       (using (Names2, Names2))
+      private def equal(using bound: (MutableList[Symbol], MutableList[Symbol]))
+                       (using (Bindings, Bindings))
                        (lhs: Symbol, rhs: Symbol): Boolean =
-       val (i, j) = binding._1.indexOf(lhs) -> binding._2.indexOf(rhs)
+       val (i, j) = bound._1.indexOf(lhs) -> bound._2.indexOf(rhs)
        i >= 0 && j >= 0 && i == j ||
        i < 0 && j < 0 &&
        this(lhs, 1) == this(rhs, 2)
 
-      private def equal2(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                        (using (Names2, Names2))
+      private def equal2(using bound: (MutableList[Symbol], MutableList[Symbol]))
+                        (using (Bindings, Bindings))
                         (lhs: Symbol, rhs: Symbol): Boolean =
         val _1 = this(lhs, 1)
         val _2 = this(rhs, 2)
         _1 == _2 || _1.isLeft && _2.isLeft && {
-          binding._1.prepend(lhs); binding._2.prepend(rhs)
+          bound._1.prepend(lhs); bound._2.prepend(rhs)
           true
        }
 
-      private inline def mark(using binding: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
-        binding._1.size -> binding._2.size
+      private inline def mark(using bound: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
+        bound._1.size -> bound._2.size
 
-      private inline def backtrack(using binding: (MutableList[Symbol], MutableList[Symbol]))
+      private inline def backtrack(using bound: (MutableList[Symbol], MutableList[Symbol]))
                                   (ln: Int, rn: Int): Boolean =
-        binding._1.dropInPlace(binding._1.size - ln); binding._2.dropInPlace(binding._2.size - rn)
+        bound._1.dropInPlace(bound._1.size - ln); bound._2.dropInPlace(bound._2.size - rn)
         true
 
-      def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
-                   (using (Names2, Names2)): ((AST, AST)) => Boolean = {
+      def congruent(using bound: (MutableList[Symbol], MutableList[Symbol]))
+                   (using (Bindings, Bindings)): ((AST, AST)) => Boolean = {
 
         case (lhs: +, rhs: +) =>
           (lhs.choices zip rhs.choices).foldLeft(lhs.choices.size == rhs.choices.size) {
@@ -709,10 +709,10 @@ object StochasticPi:
                      ,ν(rnames*))) =>
               lnames
                 .map(Symbol(_))
-                .foreach(binding._1.prepend(_))
+                .foreach(bound._1.prepend(_))
               rnames
                 .map(Symbol(_))
-                .foreach(binding._2.prepend(_))
+                .foreach(bound._2.prepend(_))
               true
             case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _, _)
                      ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _, _))) =>
@@ -784,15 +784,15 @@ object StochasticPi:
             && rassign.map(_.size).getOrElse(0) == rvariables.size
             && lvariables.size == rvariables.size =>
           val (ln, rn) = mark
-          (lconstants ++ lvariables).foreach(binding._1.prepend(_))
-          (rconstants ++ rvariables).foreach(binding._2.prepend(_))
+          (lconstants ++ lvariables).foreach(bound._1.prepend(_))
+          (rconstants ++ rvariables).foreach(bound._2.prepend(_))
           (lassign zip rassign)
             .map(_ zip _)
             .map(
               _.foldLeft(true) {
                 case (false, _) => false
                 case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
-                  binding._1.prepend(lvariable); binding._2.prepend(rvariable)
+                  bound._1.prepend(lvariable); bound._2.prepend(rvariable)
                   equal(lpointer, rpointer)
               }
             ).getOrElse(true)
@@ -831,12 +831,12 @@ object StochasticPi:
         ++
         (expansions.keySet & transactions.keySet).flatMap { it =>
           for
-            (exp, binding2_exp) <- expansions.filterKeys(_ == it).values.flatten
-            (xct, binding2_xct) <- transactions.filterKeys(_ == it).values.flatten
+            (exp, bindings_exp) <- expansions.filterKeys(_ == it).values.flatten
+            (xct, bindings_xct) <- transactions.filterKeys(_ == it).values.flatten
             given (MutableList[Symbol]
                   ,MutableList[Symbol]) = MutableList[Symbol]()
                                        -> MutableList[Symbol]()
-            given (Names2, Names2) = binding2_exp -> binding2_xct
+            given (Bindings, Bindings) = bindings_exp -> bindings_xct
             if congruent(exp -> xct.exp)
           yield
             xct.exp.υidυ -> exp.υidυ
