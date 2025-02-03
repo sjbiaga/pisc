@@ -33,9 +33,9 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
-import Calculus._
-import CalculusParserSuite._
-import CalculusFunctionsSuite._
+import Calculus.*
+import CalculusParserSuite.*
+import CalculusFunctionsSuite.*
 import CalculusFunctionsSuite.given
 
 

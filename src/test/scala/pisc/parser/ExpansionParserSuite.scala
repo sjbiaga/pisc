@@ -33,12 +33,12 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
-import Pi._
-import Calculus._
-import Encoding._
+import Pi.*
+import Calculus.*
+import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
-import Expansion._
-import ExpansionParserSuite._
+import Expansion.*
+import ExpansionParserSuite.*
 
 
 class ExpansionParserSuite extends FunSuite:
@@ -47,7 +47,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Names2()), "⟦⟧")
+        parseAll(instantiation(using Bindings()), "⟦⟧")
 
     interceptMessage[NoDefinitionException]("No definition for encoding 0") {
       `13`.test
@@ -60,7 +60,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         _code = -1
-        parseAll(instantiation(using Names2()), "⟦⟧{x}")
+        parseAll(instantiation(using Bindings()), "⟦⟧{x}")
       parseAll(definition, "⟦⟧ = ") match
         case Success(it, _) =>
           defn(0) = it :: Nil
@@ -76,7 +76,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         _code = -1
-        parseAll(instantiation(using Names2()), "⟦ x<y>. 1 ⟧")
+        parseAll(instantiation(using Bindings()), "⟦ x<y>. 1 ⟧")
       parseAll(definition, "⟦ 'P `1` `_` ⟧ = P{}") match
         case Success(it, _) =>
           defn(0) = it :: Nil
@@ -91,12 +91,12 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Names2()), "⟦⟧") match
+        parseAll(instantiation(using Bindings()), "⟦⟧") match
           case Success((`⟦⟧`(Definition(0, None, _, _, ∅(_)), _, ∅(_), None), _), _) =>
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)
-                           (using Names2): Parser[(`⟦⟧`, Names)] =
+                           (using Bindings): Parser[(`⟦⟧`, Names)] =
         new Parser[(`⟦⟧`, Names)]:
           override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
             Failure(null, _in)
@@ -112,7 +112,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Names2()), "⟦⟧")
+        parseAll(instantiation(using Bindings()), "⟦⟧")
       parseAll(definition, "⟦⟧ = ") match
         case Success(it, _) =>
           defn(0) = it :: Nil
@@ -130,7 +130,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Names2()), "⟦ Cons ⟧")
+        parseAll(instantiation(using Bindings()), "⟦ Cons ⟧")
       parseAll(definition, "⟦ Nil ⟧ = ") match
         case Success(it, _) =>
           defn(0) = it :: Nil
@@ -145,7 +145,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Names2()), "⟦ Nil ⟧")
+        parseAll(instantiation(using Bindings()), "⟦ Nil ⟧")
       parseAll(definition, """⟦ t"Nil" ⟧ = """) match
         case Success(it, _) =>
           defn(it._2.code) = it :: Nil

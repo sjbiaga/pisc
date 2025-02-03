@@ -33,10 +33,10 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
-import Pi._
-import Calculus._
-import Encoding._
-import CalculusParserSuite._
+import Pi.*
+import Calculus.*
+import Encoding.*
+import CalculusParserSuite.*
 
 
 class CalculusParserSuite extends FunSuite:
@@ -293,7 +293,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(prefix(using Names2()), "ν()") match
+        parseAll(prefix(using Bindings()), "ν()") match
           case Failure(_, _) =>
           case _ =>
             assert(false)
@@ -306,7 +306,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(prefix(using Names2()), "ν(True, \"string\", m, n)")
+        parseAll(prefix(using Bindings()), "ν(True, \"string\", m, n)")
 
     interceptMessage[PrefixChannelsParsingException]("""True, "string" are not channel names but True False, string literal""") {
       `13`.test
@@ -314,13 +314,13 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - restriction without binding2 check") {
+  test("prefix - restriction without bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(prefix(using Names2()), "ν(m, n)") match
-          case Success((ν("m", "n"), (binding, free)), _) =>
-            assertEquals(binding, Names() + Symbol("m") + Symbol("n"))
+        parseAll(prefix(using Bindings()), "ν(m, n)") match
+          case Success((ν("m", "n"), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("m") + Symbol("n"))
             assert(free.isEmpty)
           case _ =>
             assert(false)
@@ -329,14 +329,14 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - restriction with binding2 check") {
+  test("prefix - restriction with bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(prefix, "ν(m)") match
           case Success((ν("m"), _), _) =>
-            binding2.headOption match
+            bindings.headOption match
               case Some((Symbol("m"), Occurrence(None, Position(1, true)))) =>
               case _ =>
                 assert(false)
@@ -348,13 +348,13 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - μ. - input without binding2 check") {
+  test("prefix - μ. - input without bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(prefix(using Names2()), "ch(n).") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (binding, free)), _) =>
-            assertEquals(binding, Names() + Symbol("n"))
+        parseAll(prefix(using Bindings()), "ch(n).") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -363,16 +363,16 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - μ. - input with binding2 check") {
+  test("prefix - μ. - input with bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(prefix, "ch(n).") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (binding, free)), _) =>
-            assertEquals(binding, Names() + Symbol("n"))
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
-            binding2.headOption match
+            bindings.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
               case _ =>
                 assert(false)
@@ -387,12 +387,12 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(prefix, "ch<n>.") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
-            assert(binding2.isEmpty)
+            assert(bindings.isEmpty)
           case _ =>
             assert(false)
 
@@ -403,11 +403,11 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(leaf, "[m = n]") match
           case Success((?:(((λ(Symbol("m")), λ(Symbol("n"))), false), ∅(_), None), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
-            assert(binding2.isEmpty)
+            assert(bindings.isEmpty)
           case it =>
             assert(false)
 
@@ -419,11 +419,11 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(leaf, "if True ≠ False then else") match
           case Success((?:(((λ(true), λ(false)), true), ∅(_), Some(∅(_))), free), _) =>
             assert(free.isEmpty)
-            assert(binding2.isEmpty)
+            assert(bindings.isEmpty)
           case _ =>
             assert(false)
 
@@ -435,11 +435,11 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(leaf, "False ≠ True ? :") match
           case Success((?:(((λ(false), λ(true)), true), ∅(_), Some(∅(_))), free), _) =>
             assert(free.isEmpty)
-            assert(binding2.isEmpty)
+            assert(bindings.isEmpty)
           case _ =>
             assert(false)
 
@@ -451,7 +451,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(leaf(using Names2()), "!") match
+        parseAll(leaf(using Bindings()), "!") match
           case Success((!(None, ∅(_)), free), _) =>
             assert(free.isEmpty)
           case _ =>
@@ -465,7 +465,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(leaf(using Names2()), "!.ch(ch).")
+        parseAll(leaf(using Bindings()), "!.ch(ch).")
       _werr = true
 
     interceptMessage[GuardParsingException]("ch is both the channel name and the binding parameter name in an input guard") {
@@ -474,11 +474,11 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("leaf - replication - input guard - without binding2 check") {
+  test("leaf - replication - input guard - without bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(leaf(using Names2()), "!.ch(n).") match
+        parseAll(leaf(using Bindings()), "!.ch(n).") match
           case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -488,15 +488,15 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("leaf - replication - input guard - with binding2 check") {
+  test("leaf - replication - input guard - with bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        given binding2: Names2 = Names2()
+        given bindings: Bindings = Bindings()
         parseAll(leaf, "!.ch(n).") match
           case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
-            binding2.headOption match
+            bindings.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
               case _ =>
                 assert(false)
@@ -511,7 +511,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(leaf(using Names2()), "!.ch<n>/*println('m)*/.") match
+        parseAll(leaf(using Bindings()), "!.ch<n>/*println('m)*/.") match
           case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_))), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
@@ -525,7 +525,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(leaf(using Names2()), "!.τ/*println('n)*/.") match
+        parseAll(leaf(using Bindings()), "!.τ/*println('n)*/.") match
           case Success((!(Some(τ(Some(_))), ∅(_)), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
@@ -578,7 +578,7 @@ object CalculusParserSuite:
 
   abstract class CalculusParserTest extends Calculus:
     def regexMatch(_r: Regex): Parser[Regex.Match] = ???
-    def instantiation(using Names2): Parser[(`⟦⟧`, Names)] =
+    def instantiation(using Bindings): Parser[(`⟦⟧`, Names)] =
       new Parser[(`⟦⟧`, Names)]:
         override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
           Failure(null, _in)

@@ -33,10 +33,10 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashMap => Map2, LinkedH
 
 import munit.FunSuite
 
-import Pi._
-import Calculus._
-import Encoding._
-import EncodingParserSuite._
+import Pi.*
+import Calculus.*
+import Encoding.*
+import EncodingParserSuite.*
 
 
 class EncodingParserSuite extends FunSuite:
@@ -341,7 +341,7 @@ object EncodingParserSuite:
       }
     }
     override def instance(defs: List[Define], end: String)
-                         (using Names2): Parser[(`⟦⟧`, Names)] =
+                         (using Bindings): Parser[(`⟦⟧`, Names)] =
       new Parser[(`⟦⟧`, Names)]:
         override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
           Failure(null, _in)

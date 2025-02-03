@@ -34,7 +34,7 @@ import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
-import Expansion._
+import Expansion.*
 
 
 class ExpansionFunctionsSuite extends FunSuite:

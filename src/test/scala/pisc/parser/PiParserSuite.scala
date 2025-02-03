@@ -31,14 +31,14 @@ package parser
 
 import scala.collection.mutable.{ LinkedHashMap => Map2 }
 
-import scala.meta.{ Position => _, _ }
+import scala.meta.{ Position => _, * }
 
 import munit.FunSuite
 
-import Pi._
-import Calculus._
-import Encoding._
-import PiParserSuite._
+import Pi.*
+import Calculus.*
+import Encoding.*
+import PiParserSuite.*
 
 
 class PiParserSuite extends FunSuite:
@@ -183,8 +183,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "τ /*println('ch)*/") match
-          case Success((τ(Some(_)), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((τ(Some(_)), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -210,8 +210,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<>") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, None), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, None), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -225,8 +225,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<n>") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
@@ -240,8 +240,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<n> /*println('m)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_)), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_)), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
             assert(false)
@@ -255,8 +255,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<True>") match
-          case Success((π(λ(Symbol("ch")), λ(true), false, None), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(true), false, None), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -270,8 +270,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<True> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(true), false, Some(_)), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(true), false, Some(_)), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
@@ -285,8 +285,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch</*0*/>") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, None), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, None), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -300,8 +300,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch</*0*/> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, Some(_)), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, Some(_)), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
@@ -315,8 +315,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<>/*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, Some(_)), (binding, free)), _) =>
-            assert(binding.isEmpty)
+          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, Some(_)), (bound, free)), _) =>
+            assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
@@ -366,8 +366,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch(n)") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (binding, free)), _) =>
-            assertEquals(binding, Names() + Symbol("n"))
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -381,8 +381,8 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch(n) /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, Some(_)), (binding, free)), _) =>
-            assertEquals(binding, Names() + Symbol("n"))
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, Some(_)), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
@@ -391,15 +391,15 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - encoded binding occurrence - parameter") {
+  test("Bindings - encoded binding occurrence - parameter") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")))
-        binding2.head match
+        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
+        bindings.head match
           case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
             assertEquals(it, Occurrence(Some(Symbol("x_shadow")), Position(-1, true)))
           case _ =>
@@ -409,15 +409,15 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - hardcoded binding occurrence - parameter") {
+  test("Bindings - hardcoded binding occurrence - parameter") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
-        binding2.head match
+        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
+        bindings.head match
           case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
             assertEquals(it, Occurrence(Some(Symbol("x_shadow")), Position(-1, true)))
           case _ =>
@@ -427,15 +427,15 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - encoded binding occurrence - parameter - uniqueness") {
+  test("Bindings - encoded binding occurrence - parameter - uniqueness") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow2")))
+        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")))
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #0 in the right hand side of encoding 0") {
       `13`.test
@@ -443,15 +443,15 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - hardcoded binding occurrence - parameter - uniqueness") {
+  test("Bindings - hardcoded binding occurrence - parameter - uniqueness") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow2")), hardcoded = true)
+        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")), hardcoded = true)
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, but is duplicated at nesting level #0 in the right hand side of encoding 0") {
       `13`.test
@@ -459,14 +459,14 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - encoded binding occurrence - non-parameter") {
+  test("Bindings - encoded binding occurrence - non-parameter") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")))
+        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
       `13`.test
@@ -474,14 +474,14 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - hardcoded binding occurrence - non-parameter") {
+  test("Bindings - hardcoded binding occurrence - non-parameter") {
 
     val `13` = new PiParserTest:
       override def test =
         _nest = 0
         _code = 0
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
+        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (x) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
       `13`.test
@@ -489,14 +489,14 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("Names2 - binding occurrence - agent parameter") {
+  test("Bindings - binding occurrence - agent parameter") {
 
     val `13` = new PiParserTest:
       override def test =
         _code = -1
-        given binding2: Names2 = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
-        Names2Occurrence(Symbol("x"), Some(Symbol("x_shadow")))
-        binding2.head match
+        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
+        bindings.head match
           case (Symbol("x"), Shadow(Symbol("x_shadow"))) =>
             assert(false)
           case _ =>
