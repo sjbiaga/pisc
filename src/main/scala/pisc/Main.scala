@@ -35,7 +35,7 @@ import java.nio.file.Paths
 import scala.collection.mutable.{ HashMap => Map }
 import scala.io.Source
 
-import scala.meta._
+import scala.meta.*
 import dialects.Scala3
 
 import parser.{ StochasticPi, Calculus }

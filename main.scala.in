@@ -33,7 +33,7 @@ import _root_.scala.collection.immutable.Map
 import _root_.cats.effect.{ IO, IOApp, ExitCode }
 import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
 
-import `Π-loop`._
+import `Π-loop`.*
 import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 
@@ -69,15 +69,15 @@ object π:
   import _root_.scala.Function.const
 
   import _root_.scala.collection.immutable.{ List => πLs }
-  import _root_.cats.syntax.all._
-  import _root_.cats.effect.syntax.all._
+  import _root_.cats.syntax.all.*
+  import _root_.cats.effect.syntax.all.*
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparTraverse =
       import _root_.cats.data.NonEmptyList.{ fromListUnsafe => πfLsU }
       πfLsU(self).parTraverse(identity)
 
-  import sΠ._
+  import sΠ.*
 
   def `π-uuid` = UUID.randomUUID.toString
 

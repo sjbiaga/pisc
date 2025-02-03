@@ -28,13 +28,13 @@
 
 import _root_.scala.collection.immutable.Map
 
-import _root_.cats.syntax.parallel._
+import _root_.cats.syntax.parallel.*
 
 import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Deferred, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
-import `Π-stats`._
+import `Π-stats`.*
 
 
 package object `Π-loop`:

@@ -34,51 +34,51 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.meta.Term
 
 import Expression.Code
-import StochasticPi._
-import Calculus._
-import Encoding._
+import StochasticPi.*
+import Calculus.*
+import Encoding.*
 
 
 abstract class Calculus extends StochasticPi:
 
   def equation: Parser[Bind] =
     invocation(true)<~"=" >> {
-      case (bind, binding) =>
+      case (bind, bound) =>
         _code = -1
-        given Names2 = Names2() ++ binding.map(_ -> Occurrence(None, pos()))
+        given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         choice ^^ {
           case (_sum, _free) =>
             val sum = _sum.flatten
             val free = _free ++ sum.capitals
-            if (free &~ binding).nonEmpty
+            if (free &~ bound).nonEmpty
             then
-              throw EquationFreeNamesException(bind.identifier, free &~ binding)
+              throw EquationFreeNamesException(bind.identifier, free &~ bound)
             bind -> sum
         }
     }
 
-  def choice(using Names2): Parser[(+, Names)] =
+  def choice(using Bindings): Parser[(+, Names)] =
     rep1sep(parallel, "+") ^^ { ps =>
       `+`(nil, ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
     }
 
-  def parallel(using Names2): Parser[(∥, Names)] =
+  def parallel(using Bindings): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { ss =>
       ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
     }
 
-  def sequential(using binding2: Names2): Parser[(`.`, Names)] =
-    given Names2 = Names2(binding2)
+  def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
+    given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ { `pre ~ opt` =>
-      binding2 ++= binders
+      bindings ++= binders
       `pre ~ opt` match
-        case pre ~ Some((end, free)) =>
-          `.`(end, pre._1*) -> (pre._2._2 ++ (free &~ pre._2._1))
-        case pre ~ _ =>
-          `.`(`+`(nil), pre._1*) -> pre._2._2 // inaction
+        case (ps, (bound, free)) ~ Some((end, free2)) =>
+          `.`(end, ps*) -> (free ++ (free2 &~ bound))
+        case (ps, (_, free)) ~ _ =>
+          `.`(`+`(nil), ps*) -> free // inaction
     }
 
-  def leaf(using Names2): Parser[(-, Names)] =
+  def leaf(using Bindings): Parser[(-, Names)] =
     "["~test~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -99,11 +99,11 @@ abstract class Calculus extends StochasticPi:
           then
             throw GuardParsingException(ch.name)
           Console.err.println("Warning! " + GuardParsingException(ch.name).getMessage + ".")
-        val binding = π._2._1
-        Names2Occurrence(binding)
+        val bound = π._2._1
+        BindingOccurrence(bound)
         choice ^^ {
           case (sum, free) =>
-            `!`(Some(π._1), sum) -> ((free &~ binding) ++ π._2._2)
+            `!`(Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
         }
       case Some(μ) =>
         choice ^^ {
@@ -122,38 +122,32 @@ abstract class Calculus extends StochasticPi:
 
   def capital: Parser[(`{}`, Names)]
 
-  def instantiation(using Names2): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings): Parser[(`⟦⟧`, Names)]
 
-  def prefixes(using Names2): Parser[(List[Pre], (Names, Names))] =
+  def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { ps =>
-      val binding = ps.map(_._2._1)
+      val bound = ps.map(_._2._1)
       val free = ps.map(_._2._2)
         .zipWithIndex
         .foldLeft(Names()) { case (r, (ns, i)) =>
-          ns.foldLeft(r) {
-            case (r, n)
-              if {
-                val j = binding.indexWhere(_.contains(n))
-                j < 0 || i <= j
-              } => r + n
-            case (r, _) => r
-          }
+          val bs = bound.take(i)
+          r ++= ns.filter { n => bs.indexWhere(_.contains(n)) < 0 }
         }
-      ps.map(_._1) -> (if binding.nonEmpty then binding.reduce(_ ++ _) else Names(), free)
+      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
     }
 
-  def prefix(using Names2): Parser[(Pre, (Names, Names))] =
+  def prefix(using Bindings): Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { // restriction
       case ns if !ns.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(ns.filterNot(_._1.isSymbol).map(_._1)*)
       case ns =>
-        val binding = ns.map(_._2).reduce(_ ++ _)
-        Names2Occurrence(binding)
-        ν(ns.map(_._1.asSymbol.name)*) -> (binding, Names())
+        val bound = ns.map(_._2).reduce(_ ++ _)
+        BindingOccurrence(bound)
+        ν(ns.map(_._1.asSymbol.name)*) -> (bound, Names())
     } |
     `μ.`<~"." ^^ {
-      case it @ (_, (binding, _)) =>
-        Names2Occurrence(binding)
+      case it @ (_, (bound, _)) =>
+        BindingOccurrence(bound)
         it
     }
 
@@ -201,8 +195,8 @@ object Calculus:
 
   type Bind = (`(*)`, +)
 
-  export Pre._
-  export AST._
+  export Pre.*
+  export AST.*
 
   enum Pre:
 
