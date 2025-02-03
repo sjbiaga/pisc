@@ -33,10 +33,10 @@ import scala.io.Source
 
 import munit.FunSuite
 
-import PolyadicPi._
-import Calculus._
-import Encoding._
-import PolyadicPiSuite._
+import PolyadicPi.*
+import Calculus.*
+import Encoding.*
+import PolyadicPiSuite.*
 
 
 class PolyadicPiSuite extends FunSuite:

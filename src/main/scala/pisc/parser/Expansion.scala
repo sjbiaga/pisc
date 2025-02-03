@@ -41,10 +41,10 @@ import scala.meta.Term
 import _root_.pisc.parser.Expression
 import Expression.Code
 import _root_.pisc.parser.{ Encoding, & }
-import _root_.pisc.parser.PolyadicPi._
-import _root_.pisc.parser.Calculus._
-import Encoding._
-import Expansion._
+import _root_.pisc.parser.PolyadicPi.*
+import _root_.pisc.parser.Calculus.*
+import Encoding.*
+import Expansion.*
 
 
 abstract class Expansion extends Encoding:
@@ -68,7 +68,7 @@ abstract class Expansion extends Encoding:
   }
 
   def instance(defs: List[Define], end: String)
-              (using Names2): Parser[(`⟦⟧`, Names)] =
+              (using Bindings): Parser[(`⟦⟧`, Names)] =
     var idx = -1
 
     new Parser[(`⟦⟧`, Names)] {
@@ -76,7 +76,7 @@ abstract class Expansion extends Encoding:
       def expand(in: Input, shadows: List[Option[Symbol]], key: CacheKey)
                 (op: String, end: Either[String, String])
                 (success: Input => (ParseResult[Fresh], Seq[Term]))
-                (using binding2: Names2)
+                (using bindings: Bindings)
                 (using substitution: Map[String, λ | AST])
                 (using free: Names): (ParseResult[Fresh], Seq[Term]) =
 
@@ -95,11 +95,11 @@ abstract class Expansion extends Encoding:
 
             _cache.get(key) match
 
-              case Some((exp: `⟦⟧`, cp, free2, given Names2, in2)) =>
-                binding2 ++= binders
+              case Some((exp: `⟦⟧`, cp, free2, given Bindings, in2)) =>
+                bindings ++= binders
 
                 substitution(op) = exp
-                free ++= free2 -- binding2.map(_._1)
+                free ++= free2 -- bindings.map(_._1)
 
                 paste(cp)
 
@@ -107,14 +107,14 @@ abstract class Expansion extends Encoding:
 
               case _ =>
 
-                given Names2 = Names2(binding2)
+                given Bindings = Bindings(bindings)
                 parse(instantiation, in) match
 
                   case Success((exp, free2), in) =>
-                    binding2 ++= binders
+                    bindings ++= binders
 
                     substitution(op) = exp
-                    free ++= free2 -- binding2.map(_._1)
+                    free ++= free2 -- bindings.map(_._1)
 
                     val source = in.source
                     val offset = in.offset
@@ -122,7 +122,7 @@ abstract class Expansion extends Encoding:
 
                     val in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
 
-                    _cache(key) = (exp, copy, free2, given_Names2, in2)
+                    _cache(key) = (exp, copy, free2, given_Bindings, in2)
 
                     success(in2)
 
@@ -157,12 +157,12 @@ abstract class Expansion extends Encoding:
                 case Success((λ(it: Symbol), free2), _) =>
                   shadows(idx) match
                     case shadow @ Some(_) =>
-                      Names2Occurrence(it, shadow)
+                      BindingOccurrence(it, shadow)
                     case _ =>
-                      binding2.find { case (`it`, Shadow(_)) => true case _ => false } match
+                      bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
                         case Some((_, Shadow(it))) => substitution(op) = λ(it)
                         case _ => substitution(op) = λ(it)
-                      free ++= free2 -- binding2.map(_._1)
+                      free ++= free2 -- bindings.map(_._1)
                   idx += 1
 
                   val in2 = in.drop(start + n - offset)
@@ -175,11 +175,11 @@ abstract class Expansion extends Encoding:
 
               _cache.get(key) match
 
-                case Some((sum: +, cp, free2, given Names2, in2)) =>
-                  binding2 ++= binders
+                case Some((sum: +, cp, free2, given Bindings, in2)) =>
+                  bindings ++= binders
 
                   substitution(op) = sum
-                  free ++= free2 -- binding2.map(_._1)
+                  free ++= free2 -- bindings.map(_._1)
 
                   paste(cp)
 
@@ -187,20 +187,20 @@ abstract class Expansion extends Encoding:
 
                 case _ =>
 
-                  given Names2 = Names2(binding2)
+                  given Bindings = Bindings(bindings)
                   parseAll(choice, result) match
 
                     case Success((sum, free2), _) =>
-                      binding2 ++= binders
+                      bindings ++= binders
 
-                      val sum2 = sum.flatten.update(using Names2(binding2))
+                      val sum2 = sum.flatten.update(using Bindings(bindings))
 
                       substitution(op) = sum2
-                      free ++= free2 -- binding2.map(_._1)
+                      free ++= free2 -- bindings.map(_._1)
 
                       val in2 = in.drop(start + n - offset)
 
-                      _cache(key) = (sum2, copy, free2, given_Names2, in2)
+                      _cache(key) = (sum2, copy, free2, given_Bindings, in2)
 
                       success(in2)
 
@@ -215,7 +215,7 @@ abstract class Expansion extends Encoding:
 
 
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
-                (using Names2)
+                (using Bindings)
                 (using Map[String, λ | AST])
                 (using Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
@@ -261,9 +261,9 @@ abstract class Expansion extends Encoding:
         case _ => ??? /* caught by template */
 
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
-        val binding2 = summon[Names2]
+        val bindings = summon[Bindings]
 
-        var r: Option[(Fresh, (Map[String, λ | AST], (Names, Names2)), Input)] = None
+        var r: Option[(Fresh, (Map[String, λ | AST], (Names, Bindings)), Input)] = None
 
         var ls = defs
         while ls.nonEmpty
@@ -273,19 +273,19 @@ abstract class Expansion extends Encoding:
 
           given Map[String, λ | AST]()
           given Names()
-          given Names2 = Names2(binding2)
+          given Bindings = Bindings(bindings)
           idx = 0
 
           save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
-              r = Some((it, given_Map_String_| -> (given_Names -> given_Names2), in))
+              r = Some((it, given_Map_String_| -> (given_Names -> given_Bindings), in))
             case _ =>
 
         r match
 
-          case Some(((definition, _), (given Map[String, λ | AST], (free, given Names2)), in)) =>
-            binding2 ++= binders
+          case Some(((definition, _), (given Map[String, λ | AST], (free, given Bindings)), in)) =>
+            bindings ++= binders
 
             Success(definition() -> free, in)
 
@@ -362,14 +362,14 @@ object Expansion:
       case _ => λ(name)
 
   def updated(name: Symbol)
-             (using binding2: Names2): λ =
-    binding2.find { case (`name`, Shadow(_)) => true case _ => false } match
+             (using bindings: Bindings): λ =
+    bindings.find { case (`name`, Shadow(_)) => true case _ => false } match
       case Some((_, Shadow(it))) => λ(it)
       case _ => λ(name)
 
   private def recoded(using code: Option[Code])
                      (using substitution: Map[String, λ | AST] = null)
-                     (using updating: Names2 = null): Option[Code] =
+                     (using updating: Bindings = null): Option[Code] =
     code.map { (_, orig) =>
       Expression(orig)._1 match
         case term @ Term.ForYield(enums, _) =>
@@ -508,7 +508,7 @@ object Expansion:
         case _ => ast
 
 
-    def update(using binding2: Names2): T =
+    def update(using bindings: Bindings): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -523,16 +523,16 @@ object Expansion:
           ∥(it.map(_.update)*)
 
         case `.`(end, _it*) =>
-          given Names2 = Names2(binding2)
+          given Bindings = Bindings(bindings)
           val it = _it.map {
             case it @ ν(names*) =>
-              given_Names2 --= names.map(Symbol(_))
+              given_Bindings --= names.map(Symbol(_))
               it
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
             case π(λ(ch: Symbol), true, given Option[Code], names*) =>
               val ch2 = updated(ch)
-              given_Names2 --= names.map(_.asSymbol)
+              given_Bindings --= names.map(_.asSymbol)
               π(ch2, true, recoded, names*)
             case π(λ(ch: Symbol), false, given Option[Code], _names*) =>
               val names = _names.map {
@@ -560,9 +560,9 @@ object Expansion:
           `!`(Some(it.copy(code = recoded)), sum.update)
 
         case !(Some(π(λ(ch: Symbol), true, given Option[Code], names*)), sum) =>
-          given Names2 = Names2(binding2)
+          given Bindings = Bindings(bindings)
           val ch2 = updated(ch)
-          given_Names2 --= names.map(_.asSymbol)
+          given_Bindings --= names.map(_.asSymbol)
           `!`(Some(π(ch2, true, recoded, names*)), sum.update)
 
         case !(Some(π(λ(ch: Symbol), false, given Option[Code], _names*)), sum) =>
