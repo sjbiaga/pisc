@@ -29,12 +29,12 @@
 package masc
 package generator
 
-import scala.meta._
+import scala.meta.*
 import dialects.Scala3
 
-import parser.Ambient.{ AST => _, _ }
-import parser.Calculus._
-import Meta._
+import parser.Ambient.{ AST => _, * }
+import parser.Calculus.*
+import Meta.*
 
 
 object Program:

@@ -31,7 +31,7 @@ package helper
 
 import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 
-import parser.Calculus._
+import parser.Calculus.*
 
 
 object Ensure:

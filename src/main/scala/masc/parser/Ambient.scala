@@ -32,9 +32,9 @@ package parser
 import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
 
-import Ambient._
-import Calculus.{ AST => _, _ }
-import Encoding._
+import Ambient.*
+import Calculus.{ AST => _, * }
+import Encoding.*
 import scala.util.parsing.combinator.masc.parser.Expansion
 
 
@@ -82,8 +82,8 @@ abstract class Ambient extends Expression:
       _cntr -= _nest+1
   private[parser] var _cntr: Map[Int, Long] = null
 
-  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
+  private[parser] def pos(bound: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), bound) }
+  private[parser] def pos_(bound: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), bound) }
 
   protected final def path = (0 until _nest).map(_nth(_))
 
@@ -109,29 +109,29 @@ abstract class Ambient extends Expression:
          None
     }
 
-  protected object Names2Occurrence:
+  protected object BindingOccurrence:
     def apply(names: Names)
-             (using Names2): Unit =
+             (using Bindings): Unit =
       names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
     def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
+             (using bindings: Bindings): Unit =
+      bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+          bindings += name -> Occurrence(shadow, it.copy(binds = true))
         case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
+          bindings += name -> Occurrence(shadow, pos(true))
 
 
 object Ambient:
 
   enum Op { case in, out, open }
 
-  export AST._
+  export AST.*
 
   enum AST:
 
@@ -195,7 +195,7 @@ object Ambient:
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
     private def ensure(using prog: List[Bind]): Unit =
-      import helper.Ensure._
+      import helper.Ensure.*
 
       val i = main
 
