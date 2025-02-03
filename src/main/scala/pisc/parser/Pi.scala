@@ -34,9 +34,9 @@ import scala.io.Source
 
 import generator.Meta.`()(null)`
 
-import Pi._
-import Calculus._
-import Encoding._
+import Pi.*
+import Calculus.*
+import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 
 
@@ -68,10 +68,10 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, binding) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, Some(it)) -> (binding, name ++ free2)
-      case (ch, name) ~ (par, binding) ~ _ =>
-        π(ch, par, polarity = true, None) -> (binding, name)
+      case (ch, name) ~ (par, bound) ~ Some((it, free2)) =>
+        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ free2)
+      case (ch, name) ~ (par, bound) ~ _ =>
+        π(ch, par, polarity = true, None) -> (bound, name)
     }
 
   def name_capacity: Parser[((λ, Int), Names)] =
@@ -119,8 +119,8 @@ abstract class Pi extends Expression:
       _cntr -= _nest+1
   private[parser] var _cntr: Map[Int, Long] = null
 
-  private[parser] def pos(binding: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binding) }
-  private[parser] def pos_(binding: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binding) }
+  private[parser] def pos(binds: Boolean = false) = { _cntr(_nest) += 1; Position(_cntr(_nest), binds) }
+  private[parser] def pos_(binds: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binds) }
 
   protected final def path = (0 until _nest).map(_nth(_))
 
@@ -146,22 +146,22 @@ abstract class Pi extends Expression:
           None
     }
 
-  protected object Names2Occurrence:
+  protected object BindingOccurrence:
     def apply(names: Names)
-             (using Names2): Unit =
+             (using Bindings): Unit =
       names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
-             (using binding2: Names2): Unit =
-      binding2.get(name) match
+             (using bindings: Bindings): Unit =
+      bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          binding2 += name -> Occurrence(shadow, it.copy(binding = true))
+          bindings += name -> Occurrence(shadow, it.copy(binds = true))
         case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
         case _ =>
-          binding2 += name -> Occurrence(shadow, pos(true))
+          bindings += name -> Occurrence(shadow, pos(true))
 
 
 object Pi:
@@ -234,7 +234,7 @@ object Pi:
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
     private def ensure(using prog: List[Bind]): Unit =
-      import helper.Ensure._
+      import helper.Ensure.*
 
       val i = main
 

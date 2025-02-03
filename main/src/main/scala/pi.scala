@@ -34,7 +34,7 @@ package object Π:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.Supervisor
 
-  import `Π-magic`._
+  import `Π-magic`.*
 
 
   /**

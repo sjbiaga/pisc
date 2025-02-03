@@ -33,10 +33,10 @@ import scala.io.Source
 
 import munit.FunSuite
 
-import Pi._
-import Calculus._
-import Encoding._
-import PiSuite._
+import Pi.*
+import Calculus.*
+import Encoding.*
+import PiSuite.*
 
 
 class PiSuite extends FunSuite:
