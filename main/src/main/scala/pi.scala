@@ -38,7 +38,7 @@ package object Π:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
 
-  import `Π-magic`._
+  import `Π-magic`.*
 
 
   type `Π-Map`[K, +V] = Map[K, V]
