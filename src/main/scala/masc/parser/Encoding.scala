@@ -38,9 +38,9 @@ import scala.collection.mutable.{
 import scala.meta.Term
 
 import Expression.Code
-import Ambient.{ AST => _, _ }
-import Calculus._
-import Encoding._
+import Ambient.{ AST => _, * }
+import Calculus.*
+import Encoding.*
 import scala.util.parsing.combinator.masc.parser.Expansion.replace
 
 
@@ -57,29 +57,30 @@ abstract class Encoding extends Calculus:
         || (constants & variables).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        val binding = _parameters ++ constants ++ variables
-        given Names2 = Names2() ++
-                       binding
-                         .filterNot(_.charAt(0).isUpper)
-                         .map { it => it -> Occurrence(None, (if parameters.contains(it) then pos_() else pos())) }
+        val bound = _parameters ++ constants ++ variables
+        given Bindings = Bindings() ++
+                         bound
+                           .filterNot(_.charAt(0).isUpper)
+                           .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
+                           .map(_ -> Occurrence(None, _))
         parallel ^^ {
           case (_par, _free) =>
             val par = _par.flatten
             val free = _free ++ par.capitals
-            if (free &~ binding).nonEmpty
+            if (free &~ bound).nonEmpty
             then
-              throw DefinitionFreeNamesException(_code, free &~ binding)
+              throw DefinitionFreeNamesException(_code, free &~ bound)
             if parameters.size == _parameters.size
             then
-              eqtn :+= `(*)`("Self_" + _code, Nil, binding.toSeq*) -> par
-            Macro(parameters.toList, _parameters.size, constants, variables, given_Names2, par)
+              eqtn :+= `(*)`("Self_" + _code, Nil, bound.toSeq*) -> par
+            Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, par)
             ->
             Definition(_code, term, constants, variables, par)
         }
     }
 
-  def instantiation(using binding2: Names2): Parser[(`⟦⟧`, Names)] =
-    given Names2 = Names2(binding2)
+  def instantiation(using bindings: Bindings): Parser[(`⟦⟧`, Names)] =
+    given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear
       nest(true)
@@ -119,7 +120,7 @@ abstract class Encoding extends Calculus:
           val assign = if _assign.isEmpty then None else Some(_assign)
           given Names()
           val exp2 = exp.copy(assign = assign).rename(id, free)
-          binding2 ++= purged
+          bindings ++= purged
           exp2 -> (free ++ constants)
         catch
           case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
@@ -127,7 +128,7 @@ abstract class Encoding extends Calculus:
     }
 
   def instance(defs: List[Define], end: String)
-              (using Names2): Parser[(`⟦⟧`, Names)]
+              (using Bindings): Parser[(`⟦⟧`, Names)]
 
   def pointers: Parser[(List[String], Names)] =
     "{"~>rep1sep(name, ",")<~"}" ^^ { ps =>
@@ -164,13 +165,13 @@ object Encoding:
 
   type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
 
-  private type CacheValue = (`⟦⟧` | ∥, Any, Names, Names2, Encoding#Input)
+  private type CacheValue = (`⟦⟧` | ∥, Any, Names, Bindings, Encoding#Input)
 
   case class Macro(parameters: List[String],
                    arity: Int,
                    constants: Names,
                    variables: Names,
-                   binding2: Names2,
+                   bindings: Bindings,
                    par: ∥):
     def apply(code: Int, id: => String, term: Term): Fresh =
       given refresh: MutableList[(String, String)] = MutableList()
@@ -180,7 +181,7 @@ object Encoding:
           refresh.prepend(it -> υidυ)
           υidυ
         }
-      given Names2 = Names2(binding2)
+      given Bindings = Bindings(bindings)
       given Names()
       val par2 = par.rename(id, Set.empty, definition = true)
       val shadows = (
@@ -214,10 +215,10 @@ object Encoding:
         case Some(term) => if code == 0 then s"⟦ $term ⟧" else s"⟦$code $term $code⟧"
         case _ => if code == 0 then s"⟦ ⟧" else s"⟦$code $code⟧"
 
-  final case class Position(counter: Long, binding: Boolean)
+  final case class Position(counter: Long, binds: Boolean)
 
   final case class Occurrence(shadow: String | Option[String], position: Position):
-    val isBinding = if !position.binding then 0 else math.signum(position.counter)
+    val isBinding = position.binds && position.counter < 0
 
   object Binder:
     def apply(self: Occurrence)(υidυ: String) = Occurrence(υidυ, self.position)
@@ -233,11 +234,11 @@ object Encoding:
         case it @ Some(_) => it
         case _ => None
 
-  type Names2 = Map[String, Occurrence]
+  type Bindings = Map[String, Occurrence]
 
-  object Names2:
-    def apply(): Names2 = Map()
-    def apply(binding2: Names2): Names2 = Map.from(binding2)
+  object Bindings:
+    def apply(): Bindings = Map()
+    def apply(bindings: Bindings): Bindings = Map.from(bindings)
 
 
   // exceptions
@@ -274,34 +275,34 @@ object Encoding:
 
   def renamed(it: String)
              (using refresh: MutableList[(String, String)])
-             (using binding2: Names2): String =
+             (using bindings: Bindings): String =
     refresh.find(_._1 == it) match
       case Some((_, r)) => r
       case _ =>
-        binding2.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
+        bindings.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
           case Some((_, Binder(it))) => it
           case Some((_, Shadow(it))) => it
           case _ =>
-            binding2.find { case (`it`, _) | (_, Shadow(`it`)) => true case _ => false } match
+            bindings.find { case (`it`, _) | (_, Shadow(`it`)) => true case _ => false } match
               case Some(_) => it
               case _ => throw NoBPEx(it)
 
   def recoded(free: Names)
              (using code: Option[Code])
              (using MutableList[(String, String)])
-             (using Names2)
-             (using binding: Names): Option[Code] =
+             (using Bindings)
+             (using bound: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
       val (code2, names) = Expression.recode(term)
-      free ++= names.filterNot(binding.contains(_))
+      free ++= names.filterNot(bound.contains(_))
       code2
     }
 
-  def purged(using binding2: Names2): Names2 =
-    binding2.map {
+  def purged(using bindings: Bindings): Bindings =
+    bindings.map {
       case (name, Shadow(it)) =>
-        binding2.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
+        bindings.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
           case Some((_, occurrence)) =>
             Some(name -> (it -> occurrence))
           case _ =>
@@ -310,14 +311,14 @@ object Encoding:
         None
     }.foreach {
       case Some((name, (it, occurrence))) =>
-        binding2 -= it
-        binding2 += name -> occurrence
+        bindings -= it
+        bindings += name -> occurrence
       case _ =>
     }
     binders
 
-  inline def binders(using binding2: Names2): Names2 =
-    binding2.filter(_._2.isBinding < 0)
+  inline def binders(using bindings: Bindings): Bindings =
+    bindings.filter(_._2.isBinding)
 
 
   extension [T <: AST](ast: T)
@@ -351,21 +352,21 @@ object Encoding:
 
 
     def rename(id: => String, free: Names, definition: Boolean = false)
-              (using binding2: Names2)
+              (using bindings: Bindings)
               (using refresh: MutableList[(String, String)])
-              (using binding: Names): T =
+              (using bound: Names): T =
 
       def rebind(it: String)
-                (using binding: Names): String =
+                (using bound: Names): String =
         val υidυ = it.replaceAll("_υ.*υ", "") + id
-        binding2.find { case (_, Shadow(`it`)) => true case _ => false } match
-          case Some((_, occurrence)) if definition && occurrence.isBinding < 0 =>
-            binding2 += it -> Binder(occurrence)(υidυ)
+        bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
+          case Some((_, occurrence)) if definition && occurrence.isBinding =>
+            bindings += it -> Binder(occurrence)(υidυ)
           case Some((_, occurrence)) =>
-            binding2 += it -> Shadow(occurrence)(υidυ)
+            bindings += it -> Shadow(occurrence)(υidυ)
           case _ =>
             refresh.prepend(it -> υidυ)
-        binding += υidυ
+        bound += υidυ
         υidυ
 
       inline def rename[S <: AST](ast: S)(using Names): S = ast.rename(id, free, definition)
@@ -381,7 +382,7 @@ object Encoding:
 
         case `.`(end, _it*) =>
           val n = refresh.size
-          given Names = Names(binding)
+          given Names = Names(bound)
           val it = _it.map {
             case ν(names*) =>
               ν(names.map(rebind(_))*)
@@ -411,7 +412,7 @@ object Encoding:
 
         case !(Some(name), par) =>
           val n = refresh.size
-          given Names = Names(binding)
+          given Names = Names(bound)
           val rep = `!`(Some(rebind(name)), rename(par))
           refresh.dropInPlace(refresh.size - n)
           rep

@@ -31,7 +31,7 @@ package generator
 
 import scala.annotation.tailrec
 
-import scala.meta._
+import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.`(*)`

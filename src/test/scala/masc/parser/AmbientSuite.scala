@@ -33,10 +33,10 @@ import scala.io.Source
 
 import munit.FunSuite
 
-import Ambient._
-import Calculus._
-import Encoding._
-import AmbientSuite._
+import Ambient.*
+import Calculus.*
+import Encoding.*
+import AmbientSuite.*
 
 
 class AmbientSuite extends FunSuite:
