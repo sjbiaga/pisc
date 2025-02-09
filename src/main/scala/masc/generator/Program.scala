@@ -186,19 +186,17 @@ object Program:
 
         case `⟦⟧`(_, variables, _par, assign) =>
           val ** = assign
-            .map(_.map(Pat.Var(_) -> _)
-                  .map(Enumerator.Val(_, _))
-                  .toList
-            ).getOrElse(Nil)
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
 
-          val n = assign.map(_.size).getOrElse(0)
+          val n = assign.size
 
-          val par = ( if variables.size == n
-                      then
-                        _par
-                      else
-                        ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
-                    )
+          val par = if (variables.size == n)
+                    then
+                      _par
+                    else
+                      ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
 
           * = ** ++ par.generate
 

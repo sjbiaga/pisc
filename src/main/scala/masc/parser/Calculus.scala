@@ -64,13 +64,13 @@ abstract class Calculus extends Ambient:
 
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
-    prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ { `pre ~ opt` =>
-      bindings ++= binders
-      `pre ~ opt` match
-        case (ps, (bound, free)) ~ Some((end, free2)) =>
-          `.`(end, ps*) -> (free ++ (free2 &~ bound))
-        case (ps, (_, free)) ~ _ =>
-          `.`(∥(), ps*) -> free // void
+    prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
+      case (ps, (bound, free)) ~ Some((end, free2)) =>
+        bindings ++= binders
+        `.`(end, ps*) -> (free ++ (free2 &~ bound))
+      case (ps, (_, free)) ~ _ =>
+        bindings ++= binders
+        `.`(∥(), ps*) -> free // void
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
@@ -211,7 +211,7 @@ object Calculus:
 
     case ∥(components: AST.`.`*)
 
-    case `.`(end: &, prefixes: Pre*)
+    case `.`(end: AST.∥ | -, prefixes: Pre*)
 
     case <>(code: Option[Code], path: Ambient.AST*)
 
@@ -224,7 +224,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               par: AST.∥,
-              assign: Option[Set[(String, String)]] = None)
+              assign: Set[(String, String)] = Set.empty)
 
     case `{}`(identifier: String,
               pointers: List[String],
@@ -256,16 +256,15 @@ object Calculus:
       case `go.`(amb, par) => "go " + amb + "." + par
 
       case `⟦⟧`(definition, variables, par, assign) =>
-        val vars = ( if variables.nonEmpty
-                     then
-                       variables.map {
-                         case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
-                           s"$it = ${assign.get.find(_._1 == it).get._2}"
-                         case it => it
-                       }.mkString("{", ", ", "}")
-                     else
-                       ""
-                   )
+        val vars = if (variables.isEmpty)
+                   then
+                     ""
+                   else
+                     variables.map {
+                       case it if assign.exists(_._1 == it) =>
+                         s"$it = ${assign.find(_._1 == it).get._2}"
+                       case it => it
+                     }.mkString("{", ", ", "}")
         s"""${Definition(definition.code, definition.term)}$vars = $par"""
 
       case `{}`(identifier, pointers, agent, params*) =>
