@@ -310,33 +310,33 @@ object Pi:
             case Some(it) => Right(it.position)
             case _ => Left(_1_2)
 
-      private def equal(using binding: (MutableList[Symbol], MutableList[Symbol]))
+      private def equal(using bound: (MutableList[Symbol], MutableList[Symbol]))
                        (using (Bindings, Bindings))
                        (lhs: Symbol, rhs: Symbol): Boolean =
-       val (i, j) = binding._1.indexOf(lhs) -> binding._2.indexOf(rhs)
+       val (i, j) = bound._1.indexOf(lhs) -> bound._2.indexOf(rhs)
        i >= 0 && j >= 0 && i == j ||
        i < 0 && j < 0 &&
        this(lhs, 1) == this(rhs, 2)
 
-      private def equal2(using binding: (MutableList[Symbol], MutableList[Symbol]))
+      private def equal2(using bound: (MutableList[Symbol], MutableList[Symbol]))
                         (using (Bindings, Bindings))
                         (lhs: Symbol, rhs: Symbol): Boolean =
         val _1 = this(lhs, 1)
         val _2 = this(rhs, 2)
         _1 == _2 || _1.isLeft && _2.isLeft && {
-          binding._1.prepend(lhs); binding._2.prepend(rhs)
+          bound._1.prepend(lhs); bound._2.prepend(rhs)
           true
        }
 
-      private inline def mark(using binding: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
-        binding._1.size -> binding._2.size
+      private inline def mark(using bound: (MutableList[Symbol], MutableList[Symbol])): (Int, Int) =
+        bound._1.size -> bound._2.size
 
-      private inline def backtrack(using binding: (MutableList[Symbol], MutableList[Symbol]))
+      private inline def backtrack(using bound: (MutableList[Symbol], MutableList[Symbol]))
                                   (ln: Int, rn: Int): Boolean =
-        binding._1.dropInPlace(binding._1.size - ln); binding._2.dropInPlace(binding._2.size - rn)
+        bound._1.dropInPlace(bound._1.size - ln); bound._2.dropInPlace(bound._2.size - rn)
         true
 
-      def congruent(using binding: (MutableList[Symbol], MutableList[Symbol]))
+      def congruent(using bound: (MutableList[Symbol], MutableList[Symbol]))
                    (using (Bindings, Bindings)): ((AST, AST)) => Boolean = {
 
         case (lhs: +, rhs: +) =>
@@ -362,10 +362,10 @@ object Pi:
                      ,ν(rnames*))) =>
               lnames
                 .map(Symbol(_))
-                .foreach(binding._1.prepend(_))
+                .foreach(bound._1.prepend(_))
               rnames
                 .map(Symbol(_))
-                .foreach(binding._2.prepend(_))
+                .foreach(bound._2.prepend(_))
               true
             case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _)
                      ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _))) =>
@@ -433,22 +433,19 @@ object Pi:
             if lcode == rcode
             && lname == rname
             && lconstants == rconstants
-            && lassign.map(_.size).getOrElse(0) == lvariables.size
-            && rassign.map(_.size).getOrElse(0) == rvariables.size
+            && lassign.size == lvariables.size
+            && rassign.size == rvariables.size
             && lvariables.size == rvariables.size =>
           val (ln, rn) = mark
-          (lconstants ++ lvariables).foreach(binding._1.prepend(_))
-          (rconstants ++ rvariables).foreach(binding._2.prepend(_))
+          (lconstants ++ lvariables).foreach(bound._1.prepend(_))
+          (rconstants ++ rvariables).foreach(bound._2.prepend(_))
           (lassign zip rassign)
-            .map(_ zip _)
-            .map(
-              _.foldLeft(true) {
-                case (false, _) => false
-                case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
-                  binding._1.prepend(lvariable); binding._2.prepend(rvariable)
-                  equal(lpointer, rpointer)
-              }
-            ).getOrElse(true)
+            .foldLeft(true) {
+              case (false, _) => false
+              case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
+                bound._1.prepend(lvariable); bound._2.prepend(rvariable)
+                equal(lpointer, rpointer)
+            }
           && congruent(lsum -> rsum) && backtrack(ln, rn)
 
         case (_: `{}`, _) | (_, _: `{}`) => ???
