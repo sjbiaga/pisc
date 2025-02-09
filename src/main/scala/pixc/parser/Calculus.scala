@@ -69,13 +69,13 @@ abstract class Calculus extends StochasticPi:
 
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
-    prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ { `pre ~ opt` =>
-      bindings ++= binders
-      `pre ~ opt` match
-        case (ps, (bound, free)) ~ Some((end, free2)) =>
-          `.`(end, ps*) -> (free ++ (free2 &~ bound))
-        case (ps, (_, free)) ~ _ =>
-          `.`(`+`(nil), ps*) -> free // inaction
+    prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
+      case (ps, (bound, free)) ~ Some((end, free2)) =>
+        bindings ++= binders
+        `.`(end, ps*) -> (free ++ (free2 &~ bound))
+      case (ps, (_, free)) ~ _ =>
+        bindings ++= binders
+        `.`(`+`(nil), ps*) -> free // inaction
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
@@ -133,10 +133,11 @@ abstract class Calculus extends StochasticPi:
       val free = ps.map(_._2._2)
         .zipWithIndex
         .foldLeft(Names()) { case (r, (ns, i)) =>
-          val bs = bound.take(i)
-          r ++= ns.filter { n => bs.indexWhere(_.contains(n)) < 0 }
+          bound.take(i) match
+            case bs =>
+              r ++= ns.filter { n => bs.indexWhere(_.contains(n)) < 0 }
         }
-      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
+      ps.map(_._1) -> ((Names() :: bound).reduce(_ ++ _), free)
     }
 
   def prefix(using bindings: Bindings): Parser[(Pre, (Names, Names))] =
@@ -263,7 +264,7 @@ object Calculus:
 
     case ∥(components: AST.`.`*)
 
-    case `.`(end: &, prefixes: Pre*)
+    case `.`(end: AST.+ | -, prefixes: Pre*)
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
@@ -274,7 +275,7 @@ object Calculus:
               sum: AST.+,
               υidυ: String,
               trans: Symbol = null,
-              assign: Option[Set[(Symbol, Symbol)]] = None)
+              assign: Set[(Symbol, Symbol)] = Set.empty)
 
     case `{}`(identifier: String,
               pointers: List[Symbol],
@@ -308,16 +309,15 @@ object Calculus:
       case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
       case `⟦⟧`(definition, variables, sum, _, trans, assign) =>
-        val vars = ( if variables.nonEmpty
-                     then
-                       variables.map {
-                         case it if assign.map(_.exists(_._1 == it)).getOrElse(false) =>
-                           s"${it.name} = ${assign.get.find(_._1 == it).get._2.name}"
-                         case it => it.name
-                       }.mkString("{", ", ", "}")
-                     else
-                       ""
-                   )
+        val vars = if (variables.isEmpty)
+                   then
+                     ""
+                   else
+                     variables.map {
+                       case it if assign.exists(_._1 == it) =>
+                         s"${it.name} = ${assign.find(_._1 == it).get._2.name}"
+                       case it => it.name
+                     }.mkString("{", ", ", "}")
         (if trans ne null then trans.name else "") +
         s"""${Definition(definition.code, definition.term)}$vars = $sum"""
 

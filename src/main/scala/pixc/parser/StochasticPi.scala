@@ -360,7 +360,7 @@ object StochasticPi:
 
         inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id())
 
-        def insert[S](end: &, ps: Pre*): (S, Actions) =
+        def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val ps2 = ps :+ τ
           `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
 
@@ -441,14 +441,14 @@ object StochasticPi:
             `!`(Some(τ), sum).parse
 
           case `⟦⟧`(definition, variables, _sum, υidυ, name, assign) =>
-            val n = assign.map(_.size).getOrElse(0)
+            val n = assign.size
 
-            val sum: + = ( if variables.size == n
-                           then
-                             _sum
-                           else
-                             `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-                         )
+            val sum: + =
+              if variables.size == n
+              then
+                _sum
+              else
+                `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
             var (it, _) = sum.parse
 
@@ -780,22 +780,19 @@ object StochasticPi:
             if lcode == rcode
             && lname == rname
             && lconstants == rconstants
-            && lassign.map(_.size).getOrElse(0) == lvariables.size
-            && rassign.map(_.size).getOrElse(0) == rvariables.size
+            && lassign.size == lvariables.size
+            && rassign.size == rvariables.size
             && lvariables.size == rvariables.size =>
           val (ln, rn) = mark
           (lconstants ++ lvariables).foreach(bound._1.prepend(_))
           (rconstants ++ rvariables).foreach(bound._2.prepend(_))
           (lassign zip rassign)
-            .map(_ zip _)
-            .map(
-              _.foldLeft(true) {
-                case (false, _) => false
-                case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
-                  bound._1.prepend(lvariable); bound._2.prepend(rvariable)
-                  equal(lpointer, rpointer)
-              }
-            ).getOrElse(true)
+            .foldLeft(true) {
+              case (false, _) => false
+              case (_, ((lvariable, lpointer), (rvariable, rpointer))) =>
+                bound._1.prepend(lvariable); bound._2.prepend(rvariable)
+                equal(lpointer, rpointer)
+            }
           && congruent(lsum -> rsum) && backtrack(ln, rn)
 
         case (_: `{}`, _) | (_, _: `{}`) => ???
