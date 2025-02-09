@@ -266,20 +266,18 @@ object Program:
 
         case `⟦⟧`(_, variables, _sum, assign) =>
           val ** = assign
-            .map { _.map(_.name -> _.name)
-                    .map(Pat.Var(_) -> _)
-                    .map(Enumerator.Val(_, _))
-                    .toList
-            }.getOrElse(Nil)
+            .map(_.name -> _.name)
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
 
-          val n = assign.map(_.size).getOrElse(0)
+          val n = assign.size
 
-          val sum = ( if variables.size == n
-                      then
-                        _sum
-                      else
-                        `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-                    )
+          val sum = if (variables.size == n)
+                    then
+                      _sum
+                    else
+                      `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
           * = ** ++ sum.generate()
 

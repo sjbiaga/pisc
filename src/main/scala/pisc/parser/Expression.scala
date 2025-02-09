@@ -42,7 +42,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
 import PolyadicPi.Names
 import Calculus.{ λ, AST }
 import Encoding.{ renamed, Bindings }
-import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated }
+import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated, Substitution }
 import Expression.*
 
 
@@ -203,7 +203,7 @@ object Expression:
 
   inline def apply(self: sm.Term)
                   (using refresh: MutableList[(Symbol, λ)] = null)
-                  (using replacing: Map[String, λ | AST] = null)
+                  (using replacing: Substitution = null)
                   (using updating: Bindings = null): (sm.Term, Names) =
     given (MutableList[(Symbol, λ)], Bindings) = if refresh eq null then null else refresh -> updating
     Term(self)
@@ -221,7 +221,7 @@ object Expression:
 
     def apply(self: List[sm.Case])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Case], Names) =
       val (cs: List[sm.Case], csns) = UnzipReduce(self.map(CaseTree(_)))
       cs -> csns
@@ -230,7 +230,7 @@ object Expression:
 
     def apply(self: sm.CaseTree)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.CaseTree, Names) = self match
 
       case it @ sm.Case(pat, cond, body) =>
@@ -249,7 +249,7 @@ object Expression:
 
     def apply(self: sm.Ctor)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Ctor, Names) = self match
 
       case it @ sm.Ctor.Primary(mods, _, paramss) =>
@@ -271,13 +271,13 @@ object Expression:
 
     def apply(self: List[sm.Enumerator])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Enumerator], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Enumerator)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Enumerator, Names) = self match
 
       case it @ sm.Enumerator.Generator(pat, rhs) =>
@@ -306,13 +306,13 @@ object Expression:
 
     def apply(self: List[sm.Init])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Init], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Init)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Init, Names) = self match
 
       case it @ sm.Init(tpe, _, argss) =>
@@ -327,13 +327,13 @@ object Expression:
 
     def apply(self: List[sm.Pat])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Pat], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Pat)
              (using renaming: (MutableList[(Symbol, λ)], Bindings))
-             (using replacing: Map[String, λ | AST])
+             (using replacing: Substitution)
              (using updating: Bindings): (sm.Pat, Names) = self match
 
       case it @ sm.Pat.Alternative(lhs, rhs) =>
@@ -374,7 +374,7 @@ object Expression:
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
                     sm.Lit.Symbol(updated(free).asSymbol) -> Names()
-              case given Map[String, λ | AST] =>
+              case given Substitution =>
                 sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
           case (given MutableList[(Symbol, λ)], given Bindings) =>
             sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
@@ -407,7 +407,7 @@ object Expression:
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
                     sm.Term.Name(s"'${updated(free).asSymbol.name}") -> Names()
-              case given Map[String, λ | AST] =>
+              case given Substitution =>
                 sm.Term.Name(s"'${replaced(free).asSymbol.name}") -> Names()
           case (given MutableList[(Symbol, λ)], given Bindings) =>
             sm.Term.Name(s"'${renamed(free).asSymbol.name}") -> Names()
@@ -426,7 +426,7 @@ object Expression:
 
     def apply(self: sm.Ref)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Ref, Names) = self match
 
       case it: sm.Init =>
@@ -444,13 +444,13 @@ object Expression:
 
     def apply(self: List[sm.Stat])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Stat], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Stat)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Stat, Names) = self match
 
       case it: sm.Term =>
@@ -472,7 +472,7 @@ object Expression:
 
       def apply(self: sm.Decl)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Decl, Names) = self match
 
         case it @ sm.Decl.Def(mods, _, tparams, paramss, decltpe) =>
@@ -512,7 +512,7 @@ object Expression:
 
       def apply(self: sm.Defn)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Defn, Names) = self match
 
         case it @ sm.Defn.Class(mods, _, tparams, ctor, templ) =>
@@ -616,13 +616,13 @@ object Expression:
 
       def apply(self: List[sm.Mod])
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (List[sm.Mod], Names) =
         UnzipReduce(self.map(this(_)))
 
       def apply(self: sm.Mod)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Mod, Names) = self match
 
         case it @ sm.Mod.Annot(init) =>
@@ -639,7 +639,7 @@ object Expression:
 
     def apply(self: sm.Template)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Template, Names) = self match
 
       case it @ sm.Template(early, inits, self @ sm.Self(_, decltpe), stats) =>
@@ -656,13 +656,13 @@ object Expression:
 
     def apply(self: List[sm.Term])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Term], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Term)
              (using renaming: (MutableList[(Symbol, λ)], Bindings))
-             (using replacing: Map[String, λ | AST])
+             (using replacing: Substitution)
              (using updating: Bindings): (sm.Term, Names) = self match
 
       case it @ sm.Term.Annotate(expr, annots) =>
@@ -758,7 +758,7 @@ object Expression:
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
                     sm.Lit.Symbol(updated(free).asSymbol) -> Names()
-              case given Map[String, λ | AST] =>
+              case given Substitution =>
                 sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
           case (given MutableList[(Symbol, λ)], given Bindings) =>
             sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
@@ -849,13 +849,13 @@ object Expression:
 
       def apply(self: List[List[sm.Term.Param]])
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (List[List[sm.Term.Param]], Names) =
         UnzipReduce(self.map { ls => UnzipReduce(ls.map(this(_))) })
 
       def apply(self: sm.Term.Param)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Term.Param, Names) = self match
 
         case it @ sm.Term.Param(mods, _, decltpe, default) =>
@@ -871,7 +871,7 @@ object Expression:
 
       def apply(self: sm.Term.Ref)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Term.Ref, Names) = self match
 
         case it @ sm.Term.Select(qual, _) =>
@@ -892,7 +892,7 @@ object Expression:
 
     def apply(self: sm.Type.Bounds)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Type.Bounds, Names) = self match
 
       case it @ sm.Type.Bounds(lo, hi) =>
@@ -902,13 +902,13 @@ object Expression:
 
     def apply(self: List[sm.Type])
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (List[sm.Type], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Type)
              (using (MutableList[(Symbol, λ)], Bindings))
-             (using Map[String, λ | AST])
+             (using Substitution)
              (using Bindings): (sm.Type, Names) = self match
 
       case it @ sm.Type.And(lhs, rhs) =>
@@ -1036,13 +1036,13 @@ object Expression:
 
       def apply(self: List[sm.Type.Param])
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (List[sm.Type.Param], Names) =
         UnzipReduce(self.map(this(_)))
 
       def apply(self: sm.Type.Param)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Type.Param, Names) = self match
 
         case it @ sm.Type.Param(mods, _, tparams, tbounds, vbounds, cbounds) =>
@@ -1060,7 +1060,7 @@ object Expression:
 
       def apply(self: sm.Type.Ref)
                (using (MutableList[(Symbol, λ)], Bindings))
-               (using Map[String, λ | AST])
+               (using Substitution)
                (using Bindings): (sm.Type.Ref, Names) = self match
 
         case it @ sm.Type.Project(qual, _) =>
