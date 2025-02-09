@@ -135,13 +135,13 @@ class PiSuite extends FunSuite:
       case _ :: _ :: Right((_, +(∥(`.`(exp1, ν("x", "y")))))) :: Right((_, +(∥(`.`(exp2, ν("x", "y")))))) :: Nil =>
         exp1 match
           case `⟦⟧`(_, _, +(∥(`.`(`{}`("Agent2", List(Symbol("x_υ5υ"), Symbol("x_υ3υ")), true), ν("x_υ5υ")),
-                              `.`(`(*)`("Agent0", Nil)))), Some(assign1)) =>
+                              `.`(`(*)`("Agent0", Nil)))), assign1) =>
             assertEquals(assign1, Set(Symbol("x_υ3υ") -> Symbol("x"), Symbol("y_υ4υ") -> Symbol("y")))
           case _ =>
             assert(false)
         exp2 match
           case `⟦⟧`(_, _, +(∥(`.`(`(*)`("Agent2", Nil, λ(Symbol("x_υaυ")), λ(Symbol("x_υaυ"))), ν("x_υaυ")),
-                              `.`(`(*)`("Agent0", Nil)))), Some(assign2)) =>
+                              `.`(`(*)`("Agent0", Nil)))), assign2) =>
             assertEquals(assign2, Set(Symbol("x_υ8υ") -> Symbol("x"), Symbol("y_υ9υ") -> Symbol("y")))
           case _ =>
             assert(false)
@@ -163,17 +163,17 @@ class PiSuite extends FunSuite:
     } match
       case Right((_, +(∥(`.`(exp))))) :: Nil =>
         exp match
-          case `⟦⟧`(_, _, +(∥(`.`(exp0, ν("ch_υkυ")))), None) =>
+          case `⟦⟧`(_, _, +(∥(`.`(exp0, ν("ch_υkυ")))), _) =>
             exp0 match
-              case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), Some(assign)) =>
+              case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), assign) =>
                 assertEquals(assign, Set(Symbol("x_υlυ") -> Symbol("ch_υkυ"), Symbol("y_υmυ") -> Symbol("ch_υkυ")))
                 exp1 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("z_υnυ")), λ(Symbol("z_υnυ")), false, None)))), Some(assign1)) =>
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("z_υnυ")), λ(Symbol("z_υnυ")), false, None)))), assign1) =>
                     assertEquals(assign1, Set(Symbol("z_υnυ") -> Symbol("x_υlυ")))
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υoυ")), λ(Symbol("z_υpυ")), true, None), τ(Some(_))))), Some(assign2)) =>
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υoυ")), λ(Symbol("z_υpυ")), true, None), τ(Some(_))))), assign2) =>
                     assertEquals(assign2, Set(Symbol("w_υoυ") -> Symbol("y_υmυ")))
                   case _ =>
                     assert(false)
