@@ -34,15 +34,13 @@ import java.util.regex.Pattern
 import scala.util.matching.Regex
 import Regex.Match
 
-import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
-
 import scala.meta.Term
 
 import _root_.pisc.parser.Expression
 import Expression.Code
-import _root_.pisc.parser.{ Encoding, & }
-import _root_.pisc.parser.StochasticPi._
-import _root_.pisc.parser.Calculus._
+import _root_.pisc.parser.{ Encoding, - }
+import _root_.pisc.parser.StochasticPi.*
+import _root_.pisc.parser.Calculus.*
 import Encoding.*
 import Expansion.*
 
@@ -77,7 +75,7 @@ abstract class Expansion extends Encoding:
                 (op: String, end: Either[String, String])
                 (success: Input => (ParseResult[Fresh], Seq[Term]))
                 (using bindings: Bindings)
-                (using substitution: Map[String, λ | AST])
+                (using substitution: Substitution)
                 (using free: Names): (ParseResult[Fresh], Seq[Term]) =
 
         val source = in.source
@@ -216,7 +214,7 @@ abstract class Expansion extends Encoding:
 
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
                 (using Bindings)
-                (using Map[String, λ | AST])
+                (using Substitution)
                 (using Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
@@ -263,7 +261,7 @@ abstract class Expansion extends Encoding:
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         val bindings = summon[Bindings]
 
-        var r: Option[(Fresh, (Map[String, λ | AST], (Names, Bindings)), Input)] = None
+        var r: Option[(Fresh, (Substitution, (Names, Bindings)), Input)] = None
 
         var ls = defs
         while ls.nonEmpty
@@ -271,20 +269,20 @@ abstract class Expansion extends Encoding:
           val (_macro, Definition(code, Some(term), _, _, _)) = ls.head : @unchecked
           ls = ls.tail
 
-          given Map[String, λ | AST]()
+          given Substitution()
           given Names()
           given Bindings = Bindings(bindings)
           idx = 0
 
           save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term), ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
-            case Some((it @ (_, (arity, _)), in)) if arity == given_Map_String_|.size =>
-              r = Some((it, given_Map_String_| -> (given_Names -> given_Bindings), in))
+            case Some((it @ (_, (arity, _)), in)) if arity == given_Substitution.size =>
+              r = Some((it, given_Substitution -> (given_Names -> given_Bindings), in))
             case _ =>
 
         r match
 
-          case Some(((definition, _), (given Map[String, λ | AST], (free, given Bindings)), in)) =>
+          case Some(((definition, _), (given Substitution, (free, given Bindings)), in)) =>
             bindings ++= binders
 
             Success(definition() -> free, in)
@@ -295,6 +293,10 @@ abstract class Expansion extends Encoding:
 
 
 object Expansion:
+
+  import scala.collection.mutable.{ LinkedHashMap => Map }
+
+  type Substitution = Map[String, λ | AST]
 
   private val open_r = """⟦\d*""".r
   private val closed_r = """\d*⟧""".r
@@ -356,7 +358,7 @@ object Expansion:
       None
 
   def replaced(name: Symbol)
-              (using substitution: Map[String, λ | AST]): λ =
+              (using substitution: Substitution): λ =
     substitution.get(name.name) match
       case Some(it: λ) => it
       case _ => λ(name)
@@ -368,7 +370,7 @@ object Expansion:
       case _ => λ(name)
 
   private def recoded(using code: Option[Code])
-                     (using substitution: Map[String, λ | AST] = null)
+                     (using substitution: Substitution = null)
                      (using updating: Bindings = null): Option[Code] =
     code.map { (_, orig) =>
       Expression(orig)._1 match
@@ -381,7 +383,7 @@ object Expansion:
 
   extension [T <: AST](ast: T)
 
-    def replace(using substitution: Map[String, λ | AST]): T =
+    def replace(using substitution: Substitution): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -437,16 +439,16 @@ object Expansion:
           it.copy(sum = sum.replace)
 
         case it @ `⟦⟧`(_, _, sum, _) =>
-          val assign = it.assign.map(_.map(_ -> replaced(_).asSymbol))
+          val assign = it.assign.map(_ -> replaced(_).asSymbol)
           it.copy(sum = sum.replace, assign = assign)
 
         case `{}`(id, pointers, false) =>
           given List[Symbol] = pointers.map(replaced(_).asSymbol)
           if given_List_Symbol.nonEmpty
           then
-            substitution(id).asInstanceOf[&].flatten.concatenate
+            substitution(id).asInstanceOf[+ | -].flatten.concatenate
           else
-            substitution(id).asInstanceOf[&]
+            substitution(id).asInstanceOf[+ | -]
 
         case `{}`(id, pointers, true, params*) =>
           val pointers2 = pointers.map(replaced(_).asSymbol)
@@ -494,10 +496,8 @@ object Expansion:
           it.copy(sum = sum.concatenate)
 
         case it @ `⟦⟧`(_, variables, _, _) =>
-          val n = it.assign.map(_.size).getOrElse(0)
-          val assign = variables.drop(n) zip pointers
-          val assign2 = it.assign.getOrElse(Set.empty) ++ assign
-          it.copy(assign = if assign2.nonEmpty then Some(assign2) else None)
+          it.assign ++= variables.drop(it.assign.size) zip pointers
+          it
 
         case it @ `{}`(id, _, agent, params*) =>
           `{}`(id, it.pointers ++ pointers, agent, params*)
@@ -570,7 +570,7 @@ object Expansion:
           it.copy(sum = sum.update)
 
         case it @ `⟦⟧`(_, _, sum, assign) =>
-          val assign2 = assign.map(_.map(_ -> updated(_).asSymbol))
+          val assign2 = assign.map(_ -> updated(_).asSymbol)
           it.copy(sum = sum.update, assign = assign2)
 
         case `{}`(id, pointers, agent, params*) =>

@@ -329,7 +329,7 @@ object StochasticPi:
 
         inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id())
 
-        def insert[S](end: &, ps: Pre*): (S, Actions) =
+        def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val ps2 = ps :+ τ
           `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
 
@@ -404,14 +404,14 @@ object StochasticPi:
             `!`(Some(τ), sum).parse
 
           case `⟦⟧`(definition, variables, _sum, assign) =>
-            val n = assign.map(_.size).getOrElse(0)
+            val n = assign.size
 
-            val sum: + = ( if variables.size == n
-                           then
-                             _sum
-                           else
-                             `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-                         )
+            val sum: + =
+              if variables.size == n
+              then
+                _sum
+              else
+                `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
             var (it, _) = sum.parse
 
