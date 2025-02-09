@@ -41,7 +41,7 @@ import Expression.Code
 import Ambient.{ AST => _, * }
 import Calculus.*
 import Encoding.*
-import scala.util.parsing.combinator.masc.parser.Expansion.replace
+import scala.util.parsing.combinator.masc.parser.Expansion.{ replace, Substitution }
 
 
 abstract class Encoding extends Calculus:
@@ -116,8 +116,7 @@ abstract class Encoding extends Calculus:
         given MutableList[(String, String)]()
         try
           val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
-          val _assign = variables zip pointers
-          val assign = if _assign.isEmpty then None else Some(_assign)
+          val assign = variables zip pointers
           given Names()
           val exp2 = exp.copy(assign = assign).rename(id, free)
           bindings ++= purged
@@ -200,7 +199,7 @@ object Encoding:
                         constants: Names,
                         variables: Names,
                         par: ∥):
-    inline def apply()(using Map[String, String | AST]): `⟦⟧` =
+    inline def apply()(using Substitution): `⟦⟧` =
       `⟦⟧`(this, variables, par.replace.flatten)
 
     override def toString: String = Definition(code, term)
@@ -429,21 +428,19 @@ object Encoding:
         case it @ `⟦⟧`(_, variables, par, assign) =>
           val n = refresh.size
           val assign2 = assign
-            .map(
-              _.map { (variable, pointer) =>
-                val υidυ = variable.replaceAll("_υ.*υ", "") + id
-                refresh.prepend(variable -> υidυ)
-                υidυ -> renamed(pointer)
-              }
-            )
+            .map { (variable, pointer) =>
+              val υidυ = variable.replaceAll("_υ.*υ", "") + id
+              refresh.prepend(variable -> υidυ)
+              υidυ -> renamed(pointer)
+            }
           var variables2 = variables
-            .drop(assign.map(_.size).getOrElse(0))
+            .drop(assign.size)
             .map { it =>
               val υidυ = it.replaceAll("_υ.*υ", "") + id
               refresh.prepend(it -> υidυ)
               υidυ
             }
-          variables2 = assign2.map(_.map(_._1)).getOrElse(Names()) ++ variables2
+          variables2 = assign2.map(_._1) ++ variables2
           val par2 = rename(par)
           refresh.dropInPlace(refresh.size - n)
           it.copy(variables = variables2, par = par2, assign = assign2)
@@ -452,7 +449,7 @@ object Encoding:
           val pointers2 = pointers.map(renamed(_))
           val params2 = params.map(renamed(_))
 
-          `{}`(id, pointers = pointers2, agent, params2*)
+          `{}`(id, pointers2, agent, params2*)
 
         case `(*)`(id, qual, params*) =>
           val params2 = params.map(renamed(_))

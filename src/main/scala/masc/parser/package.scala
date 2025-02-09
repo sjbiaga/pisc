@@ -2,8 +2,6 @@ package masc
 
 package object parser:
 
-  import Calculus.{ ∥, <>, !, `[]`, `go.`, `⟦⟧`, `{}`, `(*)` }
+  import Calculus.{ <>, !, `[]`, `go.`, `⟦⟧`, `{}`, `(*)` }
 
   type - = <> | ! | `[]` | `go.` | `⟦⟧` | `{}` | `(*)`
-
-  type & = ∥ | -
