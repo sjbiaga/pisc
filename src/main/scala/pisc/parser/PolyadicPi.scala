@@ -61,9 +61,9 @@ abstract class PolyadicPi extends Expression:
       case (ch, name) ~ _ ~ Some(args) ~ _ =>
         π(ch, polarity = false, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, free2)) =>
-        π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(Expr(`()(null)`)))*) -> (Names(), name ++ free2)
+        π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ free2)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
-        π(ch, polarity = false, None, Seq.fill(arity)(λ(Expr(`()(null)`)))*) -> (Names(), name)
+        π(ch, polarity = false, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
     } |
     name ~ ("("~>rep1sep(name, ",")<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
@@ -85,7 +85,7 @@ abstract class PolyadicPi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 

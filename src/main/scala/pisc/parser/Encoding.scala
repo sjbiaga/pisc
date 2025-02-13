@@ -133,8 +133,9 @@ abstract class Encoding extends Calculus:
     "{"~>rep1sep(name, ",")<~"}" ^^ {
       case ps if !ps.forall(_._1.isSymbol) =>
         throw PointersParsingException(ps.filterNot(_._1.isSymbol).map(_._1)*)
-      case ps =>
-        ps.map(_._1.asSymbol) -> ps.map(_._2).reduce(_ ++ _)
+      case ps => ps.unzip match
+        case (λs, ns) =>
+          λs.map(_.asSymbol) -> ns.reduce(_ ++ _)
     }
 
   def capital: Parser[(`{}`, Names)] =

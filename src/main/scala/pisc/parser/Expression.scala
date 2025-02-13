@@ -212,7 +212,8 @@ object Expression:
   object UnzipReduce:
 
     def apply[T <: sm.Tree | List[? <: sm.Tree]](r: List[(T, Names)]): (List[T], Names) =
-      r.map(_._1) -> r.map(_._2).foldLeft(Names())(_ ++ _)
+      r.unzip match
+        case (ts, ns) => ts -> ns.reduceOption(_ ++ _).getOrElse(Names())
 
 
   // C ///////////////////////////////////////////////////////////////////////

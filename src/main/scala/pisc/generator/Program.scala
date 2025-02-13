@@ -61,7 +61,7 @@ object Program:
         case it: + =>
           implicit val sem = Some(id)
 
-          val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
+          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
@@ -81,7 +81,7 @@ object Program:
           * = operand.generate
 
         case it: ∥ =>
-          val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate())
+          val ios = it.components.foldRight(List[Term]())(_.generate() :: _)
 
           val ** = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
@@ -139,7 +139,7 @@ object Program:
           val code = `for * yield ()`(enums*)
           val arg = args.map {
             case λ(Symbol(name)) => \(name)
-            case λ(Expr(term)) => term
+            case λ(term: Term) => term
             case λ(arg) => s"$arg".parse[Term].get
           }.toList
 
@@ -152,7 +152,7 @@ object Program:
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           val arg = args.map {
             case λ(Symbol(name)) => \(name)
-            case λ(Expr(term)) => term
+            case λ(term: Term) => term
             case λ(arg) => s"$arg".parse[Term].get
           }.toList
 
@@ -164,7 +164,7 @@ object Program:
         case π(λ(Symbol(ch)), false, _, args*) =>
           val arg = args.map {
             case λ(Symbol(name)) => \(name)
-            case λ(Expr(term)) => term
+            case λ(term: Term) => term
             case λ(arg) => s"$arg".parse[Term].get
           }.toList
 
@@ -291,12 +291,8 @@ object Program:
         case `(*)`(identifier, qual, params*) =>
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
-            case λ(value) =>
-              value match
-                case it: BigDecimal => s"BigDecimal($it)"
-                case it: Boolean => it.toString
-                case it: String => it.toString
-                case Expr(it) => it.toString
+            case λ(it: BigDecimal) => s"BigDecimal($it)"
+            case λ(it) => it.toString
           }
 
           qual match
