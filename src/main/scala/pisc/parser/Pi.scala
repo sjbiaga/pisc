@@ -57,9 +57,9 @@ abstract class Pi extends Expression:
       case (ch, name) ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
       case (ch, name) ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, Some(it)) -> (Names(), name ++ free2)
+        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ free2)
       case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, None) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = false, None) -> (Names(), name)
     } |
     name ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
@@ -79,7 +79,7 @@ abstract class Pi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 

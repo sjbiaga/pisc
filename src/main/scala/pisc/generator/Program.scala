@@ -61,7 +61,7 @@ object Program:
         case it: + =>
           implicit val sem = Some(id)
 
-          val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
+          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
@@ -81,7 +81,7 @@ object Program:
           * = operand.generate
 
         case it: ∥ =>
-          val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate())
+          val ios = it.components.foldRight(List[Term]())(_.generate() :: _)
 
           val ** = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
@@ -152,21 +152,21 @@ object Program:
         case π(λ(Symbol(ch)), λ(Symbol(arg)), false, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(\(arg)::Nil, None)))
 
-        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some((Left(enums), _))) =>
+        case π(λ(Symbol(ch)), λ(term: Term), false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(term::Nil, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(Expr(term)), false, Some((Right(term2), _))) =>
+        case π(λ(Symbol(ch)), λ(term: Term), false, Some((Right(term2), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term2))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(term::Nil, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(Expr(term)), false, _) =>
+        case π(λ(Symbol(ch)), λ(term: Term), false, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(term::Nil, None)))
 
         case π(λ(Symbol(ch)), λ(arg), false, Some((Left(enums), _))) =>
@@ -299,12 +299,8 @@ object Program:
         case `(*)`(identifier, qual, params*) =>
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
-            case λ(value) =>
-              value match
-                case it: BigDecimal => s"BigDecimal($it)"
-                case it: Boolean => it.toString
-                case it: String => it.toString
-                case Expr(it) => it.toString
+            case λ(it: BigDecimal) => s"BigDecimal($it)"
+            case λ(it) => it.toString
           }
 
           qual match

@@ -157,7 +157,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(name, "/*'n*/") match
-          case Success((λ(Expr(Term.Name("n"))), free), _) =>
+          case Success((λ(Term.Name("n")), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)
@@ -210,7 +210,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<>") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, None), (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), false, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -285,7 +285,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch</*0*/>") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, None), (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), false, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -300,7 +300,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch</*0*/> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Lit.Int(0))), false, Some(_)), (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), false, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -315,7 +315,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(`μ.`, "ch<>/*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Expr(Term.Apply(Term.Name("()"), Lit.Null() :: Nil))), false, Some(_)), (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), false, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
