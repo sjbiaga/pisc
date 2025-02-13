@@ -58,19 +58,19 @@ abstract class Calculus extends Ambient:
     }
 
   def parallel(using Bindings): Parser[(∥, Names)] =
-    rep1sep(sequential, "|") ^^ { ss =>
-      ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+    rep1sep(sequential, "|") ^^ { _.unzip match
+      case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
     }
 
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
-      case (ps, (bound, free)) ~ Some((end, free2)) =>
+      case (it, (bound, free)) ~ Some((end, free2)) =>
         bindings ++= binders
-        `.`(end, ps*) -> (free ++ (free2 &~ bound))
-      case (ps, (_, free)) ~ _ =>
+        `.`(end, it*) -> (free ++ (free2 &~ bound))
+      case (it, (_, free)) ~ _ =>
         bindings ++= binders
-        `.`(∥(), ps*) -> free // void
+        `.`(∥(), it*) -> free // void
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
@@ -105,22 +105,29 @@ abstract class Calculus extends Ambient:
   def capital: Parser[(`{}`, Names)]
 
   def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
-    rep(prefix) ^^ { ps =>
-      val bound = ps.map(_._2._1)
-      val free = ps.map(_._2._2)
-        .zipWithIndex
-        .foldLeft(Names()) { case (r, (ns, i)) =>
-          val bs = bound.take(i)
-          r ++= ns.filter { n => bs.indexWhere(_.contains(n)) < 0 }
-        }
-      ps.map(_._1) -> (if bound.nonEmpty then bound.reduce(_ ++ _) else Names(), free)
+    rep(prefix) ^^ { _.unzip match
+      case (it, _2) => _2.unzip match
+        case (bs, names) =>
+          bs.foreach(BindingOccurrence(_))
+          val free = Names()
+          names
+            .zipWithIndex
+            .foreach { (ns, i) =>
+              val bound = bs
+                .take(i)
+                .reduceOption(_ ++ _)
+                .getOrElse(Names())
+              free ++= ns -- bound
+            }
+          val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
+          it -> (bound, free)
     }
 
-  def prefix(using Bindings): Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { ns => // restriction
-      val bound = ns.map(_._2).reduce(_ ++ _)
-      BindingOccurrence(bound)
-      ν(ns.map(_._1)*) -> (bound, Names())
+  def prefix: Parser[(Pre, (Names, Names))] =
+    "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { _.unzip match // restriction
+      case (ns, bs) =>
+        val bound = bs.reduce(_ ++ _)
+        ν(ns*) -> (bound, Names())
     } |
     "τ" ~> opt( expression ) <~ "." ^^ { // silent transition
       case Some((it, free)) =>
@@ -132,15 +139,13 @@ abstract class Calculus extends Ambient:
       case (path, free) =>
         `,.`(path*) -> (Names(), free)
     } |
-    ("("~>name<~")") ~ opt( expression ) <~ "." ^^ { case (name, bound) ~ opt => // input action
-      BindingOccurrence(bound)
-      opt match
-        case Some(((Left(enums), _), _)) =>
-          throw TermParsingException(enums)
-        case Some((it @ (Right(_), _), free)) =>
-          `()`(name, Some(it)) -> (bound, free)
-        case _ =>
-          `()`(name, None) -> (bound, Names())
+    ("("~>name<~")") ~ opt( expression ) <~ "." ^^ {
+      case _ ~ Some(((Left(enums), _), _)) =>
+        throw TermParsingException(enums)
+      case (name, bound) ~ Some((it, free)) =>
+        `()`(name, Some(it)) -> (bound, free)
+      case (name, bound) ~ _ =>
+        `()`(name, None) -> (bound, Names())
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
