@@ -55,7 +55,7 @@ object Program:
           * = operand.generate
 
         case it: ∥ =>
-          val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
+          val ios = it.components.foldRight(List[Term]())(_.generate :: _)
 
           * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 

@@ -130,8 +130,8 @@ abstract class Encoding extends Calculus:
               (using Bindings): Parser[(`⟦⟧`, Names)]
 
   def pointers: Parser[(List[String], Names)] =
-    "{"~>rep1sep(name, ",")<~"}" ^^ { ps =>
-        ps.map(_._1) -> ps.map(_._2).reduce(_ ++ _)
+    "{"~>rep1sep(name, ",")<~"}" ^^ { _.unzip match
+      case (it, ns) => it -> ns.reduce(_ ++ _)
     }
 
   def capital: Parser[(`{}`, Names)] =

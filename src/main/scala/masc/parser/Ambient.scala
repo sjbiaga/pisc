@@ -41,8 +41,9 @@ import scala.util.parsing.combinator.masc.parser.Expansion
 abstract class Ambient extends Expression:
 
   def caps: Parser[(List[AST], Names)] =
-    repsep(cap, ",") ^^ { cs =>
-      cs.map(_._1).filterNot(_.isInstanceOf[ε.type]) -> cs.map(_._2).foldLeft(Names())(_ ++ _)
+    repsep(cap, ",") ^^ { _.unzip match
+      case (cs, ns) =>
+        cs.filterNot(_.isInstanceOf[ε.type]) -> ns.reduceOption(_ ++ _).getOrElse(Names())
     }
 
   def cap: Parser[(AST, Names)] =
