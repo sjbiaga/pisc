@@ -36,6 +36,8 @@ import scala.collection.mutable.{
 }
 import scala.io.Source
 
+import scala.meta.Term
+
 import generator.Meta.`()(null)`
 
 import StochasticPi.*
@@ -61,9 +63,9 @@ abstract class StochasticPi extends Expression:
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
     } |
     name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -83,7 +85,7 @@ abstract class StochasticPi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -95,7 +97,7 @@ abstract class StochasticPi extends Expression:
                           floatingPointNumber ^^ { BigDecimal.apply } |
                           super.ident ^^ { Symbol.apply } |
                           expression ^^ {
-                            case ((Right(term), _), free) => Some(Expr(term))
+                            case ((Right(term), _), free) => Some(term)
                             case ((Left(enums), _), _) => throw TermParsingException(enums)
                           }
 
@@ -720,8 +722,8 @@ object StochasticPi:
             case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _, _)
                      ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _, _))) =>
               equal(lch, rch) && equal(larg, rarg)
-            case (_, (π(_, λ(_: Expr), false, _, _), _))
-               | (_, (_, π(_, λ(_: Expr), false, _, _))) => false
+            case (_, (π(_, λ(_: Term), false, _, _), _))
+               | (_, (_, π(_, λ(_: Term), false, _, _))) => false
             case (_, (π(λ(lch: Symbol), λ(larg), false, _, _)
                      ,π(λ(rch: Symbol), λ(rarg), false, _, _))) =>
               equal(lch, rch) && larg == rarg
@@ -738,8 +740,8 @@ object StochasticPi:
           else
             false
 
-        case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
-             (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
+        case (?:(((λ(_: Term), _), _), _, _), _) | (?:(((_, λ(_: Term)), _), _, _), _) |
+             (_, ?:(((λ(_: Term), _), _), _, _)) | (_, ?:(((_, λ(_: Term)), _), _, _)) => false
 
         case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
              ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
@@ -766,8 +768,8 @@ object StochasticPi:
           val (ln, rn) = mark
           equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-        case (!(Some(π(_, λ(_: Expr), false, _, _)), _), _)
-           | (_, !(Some(π(_, λ(_: Expr), false, _, _)), _)) => false
+        case (!(Some(π(_, λ(_: Term), false, _, _)), _), _)
+           | (_, !(Some(π(_, λ(_: Term), false, _, _)), _)) => false
 
         case (!(Some(π(λ(lch: Symbol), λ(larg), false, _, _)), lsum)
              ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _, _)), rsum)) =>
@@ -804,7 +806,7 @@ object StochasticPi:
           (largs zip rargs).foldLeft(true) {
             case (false, _) => false
             case (_, (λ(larg: Symbol), λ(rarg: Symbol))) => equal(larg, rarg)
-            case (_, (λ(_: Expr), _)) | (_, (_, λ(_: Expr))) => false
+            case (_, (λ(_: Term), _)) | (_, (_, λ(_: Term))) => false
             case (_, (λ(larg), λ(rarg))) => larg == rarg
           }
 

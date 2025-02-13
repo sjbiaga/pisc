@@ -35,7 +35,7 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.StochasticPi.Actions
-import parser.Calculus.{ `(*)`, Expr }
+import parser.Calculus.`(*)`
 
 
 object Meta:
@@ -81,24 +81,24 @@ object Meta:
     case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
     case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), Expr(y)) => `* ==== …`(x, y)
+    case (Symbol(x), y: Term) => `* ==== …`(x, y)
     case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
     case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), Symbol(y)) => `… ==== *`(x, y)
+    case (x: Term, Symbol(y)) => `… ==== *`(x, y)
     case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
     case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
     case (x: String, y: String) => s"$x ==== $y".parse[Term].get
-    case (Expr(x), Expr(y)) => Term.ApplyInfix(x,
+    case (x: Term, y: Term) => Term.ApplyInfix(x,
                                                \("===="),
                                                Type.ArgClause(Nil),
                                                Term.ArgClause(y :: Nil, None))
-    case (x: BigDecimal, Expr(y)) => `* ==== …`(x, y)
-    case (x: Boolean, Expr(y)) => `* ==== …`(x, y)
-    case (x: String, Expr(y)) => `* ==== …`(x, y)
-    case (Expr(x), y: BigDecimal) => `… ==== *`(x, y)
-    case (Expr(x), y: Boolean) => `… ==== *`(x, y)
-    case (Expr(x), y: String) => `… ==== *`(x, y)
+    case (x: BigDecimal, y: Term) => `* ==== …`(x, y)
+    case (x: Boolean, y: Term) => `* ==== …`(x, y)
+    case (x: String, y: Term) => `* ==== …`(x, y)
+    case (x: Term, y: BigDecimal) => `… ==== *`(x, y)
+    case (x: Term, y: Boolean) => `… ==== *`(x, y)
+    case (x: Term, y: String) => `… ==== *`(x, y)
 
 
   val rate: Any => Term = {
@@ -107,7 +107,7 @@ object Meta:
                                      Term.ArgClause(Term.Apply(\("BigDecimal"),
                                                                Term.ArgClause(Lit.String(r.toString) :: Nil, None)) :: Nil,
                                                     None))
-    case Expr(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil, None))
+    case r: Term => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil, None))
     case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil, None))
     case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil, None))
   }
