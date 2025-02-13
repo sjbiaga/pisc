@@ -58,24 +58,24 @@ abstract class Calculus extends PolyadicPi:
     }
 
   def choice(using Bindings): Parser[(+, Names)] =
-    rep1sep(parallel, "+") ^^ { ps =>
-      `+`(ps.map(_._1)*) -> ps.map(_._2).reduce(_ ++ _)
+    rep1sep(parallel, "+") ^^ { _.unzip match
+      case (it, ns) => `+`(it*) -> ns.reduce(_ ++ _)
     }
 
   def parallel(using Bindings): Parser[(∥, Names)] =
-    rep1sep(sequential, "|") ^^ { ss =>
-      ∥(ss.map(_._1)*) -> ss.map(_._2).reduce(_ ++ _)
+    rep1sep(sequential, "|") ^^ { _.unzip match
+      case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
     }
 
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (ps, (bound, free)) ~ Some((end, free2)) =>
+      case (it, (bound, free)) ~ Some((end, free2)) =>
         bindings ++= binders
-        `.`(end, ps*) -> (free ++ (free2 &~ bound))
-      case (ps, (_, free)) ~ _ =>
+        `.`(end, it*) -> (free ++ (free2 &~ bound))
+      case (it, (_, free)) ~ _ =>
         bindings ++= binders
-        `.`(`+`(), ps*) -> free // inaction
+        `.`(`+`(), it*) -> free // inaction
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
@@ -125,32 +125,35 @@ abstract class Calculus extends PolyadicPi:
   def capital: Parser[(`{}`, Names)]
 
   def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
-    rep(prefix) ^^ { ps =>
-      val bound = ps.map(_._2._1)
-      val free = ps.map(_._2._2)
-        .zipWithIndex
-        .foldLeft(Names()) { case (r, (ns, i)) =>
-          bound.take(i) match
-            case bs =>
-              r ++= ns.filter { n => bs.indexWhere(_.contains(n)) < 0 }
-        }
-      ps.map(_._1) -> ((Names() :: bound).reduce(_ ++ _), free)
+    rep(prefix) ^^ { _.unzip match
+      case (it, _2) => _2.unzip match
+        case (bs, names) =>
+          bs.foreach(BindingOccurrence(_))
+          val free = Names()
+          names
+            .zipWithIndex
+            .foreach { (ns, i) =>
+              val bound = bs
+                .take(i)
+                .reduceOption(_ ++ _)
+                .getOrElse(Names())
+              free ++= ns -- bound
+            }
+          val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
+          it -> (bound, free)
     }
 
-  def prefix(using Bindings): Parser[(Pre, (Names, Names))] =
+  def prefix: Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>rep1sep(name_capacity, ",")<~")" ^^ { // restriction
-      case ns if !ns.forall(_._1._1.isSymbol) =>
-        throw PrefixChannelsParsingException(ns.filterNot(_._1._1.isSymbol).map(_._1._1)*)
-      case ns =>
-        val bound = ns.map(_._2).reduce(_ ++ _)
-        BindingOccurrence(bound)
-        ν(ns.map { it => it._1._2 -> it._1._1.asSymbol.name }*) -> (bound, Names())
+      case it if !it.forall(_._1._1.isSymbol) =>
+        throw PrefixChannelsParsingException(it.filterNot(_._1._1.isSymbol).map(_._1._1)*)
+      case it => it.unzip match
+        case (ncs, bs) => ncs.unzip match
+          case (λs, cs) =>
+            val bound = bs.reduce(_ ++ _)
+            ν((cs zip λs.map(_.asSymbol.name))*) -> (bound, Names())
     } |
-    `μ.`<~"." ^^ {
-      case it @ (_, (bound, _)) =>
-        BindingOccurrence(bound)
-        it
-    }
+    `μ.`<~"."
 
   def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
     name~("="|"≠")~name ^^ {
@@ -320,17 +323,14 @@ object Calculus:
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
-      case _: Expr => "Scalameta Term"
+      case _: Term => "Scalameta Term"
 
     override def toString: String = value match
       case it: Symbol => it.name
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
       case it: String => it
-      case it: Expr => "" + it
-
-  case class Expr(term: Term):
-    override def toString: String = "/*" + term + "*/"
+      case it: Term => "/*" + it + "*/"
 
 
   // exceptions
