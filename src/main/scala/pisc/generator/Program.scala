@@ -54,7 +54,7 @@ object Program:
           * = operand.generate
 
         case it: + =>
-          val ios = it.choices.foldLeft(List[Term]())(_ :+ _.generate)
+          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
 
           * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
@@ -67,7 +67,7 @@ object Program:
           * = operand.generate
 
         case it: ∥ =>
-          val ios = it.components.foldLeft(List[Term]())(_ :+ _.generate)
+          val ios = it.components.foldRight(List[Term]())(_.generate :: _)
 
           * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
 
@@ -126,7 +126,7 @@ object Program:
                          Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some((Left(enums)), _)) =>
+        case it @ π(λ(Symbol(ch)), λ(term: Term), false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -136,7 +136,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, Some((Right(term2)), _)) =>
+        case it @ π(λ(Symbol(ch)), λ(term: Term), false, r, Some((Right(term2)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term2))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
@@ -146,7 +146,7 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(Expr(term)), false, r, _) =>
+        case it @ π(λ(Symbol(ch)), λ(term: Term), false, r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),
                          Term.ArgClause(s""""${it.υidυ}"""".parse[Term].get::Nil, None)
@@ -303,12 +303,8 @@ object Program:
         case `(*)`(identifier, params*) =>
           val args = params.map {
             case λ(Symbol(name)) => s"`$name`"
-            case λ(value) =>
-              value match
-                case it: BigDecimal => s"BigDecimal($it)"
-                case it: Boolean => it.toString
-                case it: String => it.toString
-                case Expr(it) => it.toString
+            case λ(it: BigDecimal) => s"BigDecimal($it)"
+            case λ(it) => it.toString
           }
 
           * = `_ <- *`(s"`$identifier`(${args.mkString(", ")})(using `π-uuid`)".parse[Term].get)

@@ -61,9 +61,9 @@ abstract class StochasticPi extends Expression:
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
     } |
     name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -83,7 +83,7 @@ abstract class StochasticPi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -95,7 +95,7 @@ abstract class StochasticPi extends Expression:
                           floatingPointNumber ^^ { BigDecimal.apply } |
                           super.ident ^^ { Symbol.apply } |
                           expression ^^ {
-                            case ((Right(term), _), free) => Some(Expr(term))
+                            case ((Right(term), _), free) => Some(term)
                             case ((Left(enums), _), _) => throw TermParsingException(enums)
                           }
 
