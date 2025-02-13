@@ -36,6 +36,8 @@ import scala.collection.mutable.{
 }
 import scala.io.Source
 
+import scala.meta.Term
+
 import generator.Meta.`()(null)`
 
 import Pi.*
@@ -61,9 +63,9 @@ abstract class Pi extends Expression:
       case (ch, name) ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
       case (ch, name) ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, Some(it)) -> (Names(), name ++ free2)
+        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ free2)
       case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(Expr(`()(null)`)), polarity = false, None) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = false, None) -> (Names(), name)
     } |
     name ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
@@ -83,7 +85,7 @@ abstract class Pi extends Expression:
                                  stringLiteral ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(Expr(term)) -> free
+                                   case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -373,8 +375,8 @@ object Pi:
             case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _)
                      ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _))) =>
               equal(lch, rch) && equal(larg, rarg)
-            case (_, (π(_, λ(_: Expr), false, _), _))
-               | (_, (_, π(_, λ(_: Expr), false, _))) => false
+            case (_, (π(_, λ(_: Term), false, _), _))
+               | (_, (_, π(_, λ(_: Term), false, _))) => false
             case (_, (π(λ(lch: Symbol), λ(larg), false, _)
                      ,π(λ(rch: Symbol), λ(rarg), false, _))) =>
               equal(lch, rch) && larg == rarg
@@ -391,8 +393,8 @@ object Pi:
           else
             false
 
-        case (?:(((λ(_: Expr), _), _), _, _), _) | (?:(((_, λ(_: Expr)), _), _, _), _) |
-             (_, ?:(((λ(_: Expr), _), _), _, _)) | (_, ?:(((_, λ(_: Expr)), _), _, _)) => false
+        case (?:(((λ(_: Term), _), _), _, _), _) | (?:(((_, λ(_: Term)), _), _, _), _) |
+             (_, ?:(((λ(_: Term), _), _), _, _)) | (_, ?:(((_, λ(_: Term)), _), _, _)) => false
 
         case (?:(((λ(llhs: Symbol), λ(lrhs: Symbol)), lm), lt, lf)
              ,?:(((λ(rlhs: Symbol), λ(rrhs: Symbol)), rm), rt, rf))
@@ -419,8 +421,8 @@ object Pi:
           val (ln, rn) = mark
           equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-        case (!(Some(π(_, λ(_: Expr), false, _)), _), _)
-           | (_, !(Some(π(_, λ(_: Expr), false, _)), _)) => false
+        case (!(Some(π(_, λ(_: Term), false, _)), _), _)
+           | (_, !(Some(π(_, λ(_: Term), false, _)), _)) => false
 
         case (!(Some(π(λ(lch: Symbol), λ(larg), false, _)), lsum)
              ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _)), rsum)) =>
@@ -458,7 +460,7 @@ object Pi:
           (largs zip rargs).foldLeft(true) {
             case (false, _) => false
             case (_, (λ(larg: Symbol), λ(rarg: Symbol))) => equal(larg, rarg)
-            case (_, (λ(_: Expr), _)) | (_, (_, λ(_: Expr))) => false
+            case (_, (λ(_: Term), _)) | (_, (_, λ(_: Term))) => false
             case (_, (λ(larg), λ(rarg))) => larg == rarg
           }
 
