@@ -118,9 +118,9 @@ abstract class Encoding extends Calculus:
           val pointers = _pointers.map(_._1.map(renamed(_).asSymbol)).getOrElse(Nil)
           val assign = variables zip pointers
           given Names()
-          val exp2 = exp.copy(assign = assign).rename(id, free)
+          val expʹ = exp.copy(assign = assign).rename(id, free)
           bindings ++= purged
-          exp2 -> (free ++ constants)
+          expʹ -> (free ++ constants)
         catch
           case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
           case it => throw it
@@ -178,7 +178,7 @@ object Encoding:
                    sum: +):
     def apply(code: Int, id: => String, term: Term): Fresh =
       given refresh: MutableList[(Symbol, λ)] = MutableList()
-      val variables2 = variables
+      val variablesʹ = variables
         .map { it =>
           val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
           refresh.prepend(it -> λ(υidυ))
@@ -186,7 +186,7 @@ object Encoding:
         }
       given Bindings = Bindings(bindings)
       given Names()
-      val sum2 = sum.rename(id, Set.empty, definition = true)
+      val sumʹ = sum.rename(id, Set.empty, definition = true)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -194,7 +194,7 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      Definition(code, Some(term), constants, variables2, sum2)
+      Definition(code, Some(term), constants, variablesʹ, sumʹ)
       ->
       (arity - shadows.count(_.nonEmpty) -> shadows)
 
@@ -300,9 +300,9 @@ object Encoding:
              (using bound: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
-      val (code2, names) = Expression.recode(term)
+      val (codeʹ, names) = Expression.recode(term)
       free ++= names.filterNot(bound.contains(_))
-      code2
+      codeʹ
     }
 
   def purged(using bindings: Bindings): Bindings =
@@ -405,9 +405,9 @@ object Encoding:
               it.copy(channel = renamed(ch), code = recoded(free))
             case it => it
           }
-          val end2 = rename(end)
+          val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(end2, it*)
+          `.`(endʹ, it*)
 
         case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
           ?:(((renamed(lhs), renamed(rhs)), m), rename(t), f.map(rename(_)))
@@ -428,9 +428,9 @@ object Encoding:
           val n = refresh.size
           given Names = Names(bound)
           val π = it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))
-          val sum2 = rename(sum)
+          val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(Some(π), sum2)
+          `!`(Some(π), sumʹ)
 
         case !(Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), false, given Option[Code])), sum) =>
           val π = it.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))
@@ -445,39 +445,39 @@ object Encoding:
 
         case it @ `⟦⟧`(_, variables, sum, assign) =>
           val n = refresh.size
-          val assign2 = assign
+          val assignʹ = assign
             .map { (variable, pointer) =>
               val υidυ = Symbol(variable.name.replaceAll("_υ.*υ", "") + id)
               refresh.prepend(variable -> λ(υidυ))
               υidυ -> renamed(pointer).asSymbol
             }
-          var variables2 = variables
+          var variablesʹ = variables
             .drop(assign.size)
             .map { it =>
               val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
               refresh.prepend(it -> λ(υidυ))
               υidυ
             }
-          variables2 = assign2.map(_._1) ++ variables2
-          val sum2 = rename(sum)
+          variablesʹ = assignʹ.map(_._1) ++ variablesʹ
+          val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          it.copy(variables = variables2, sum = sum2, assign = assign2)
+          it.copy(variables = variablesʹ, sum = sumʹ, assign = assignʹ)
 
         case `{}`(id, pointers, agent, params*) =>
-          val pointers2 = pointers.map(renamed(_).asSymbol)
-          val params2 = params
+          val pointersʹ = pointers.map(renamed(_).asSymbol)
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
 
-          `{}`(id, pointers2, agent, params2*)
+          `{}`(id, pointersʹ, agent, paramsʹ*)
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)
