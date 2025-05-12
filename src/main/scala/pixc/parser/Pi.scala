@@ -58,12 +58,12 @@ abstract class Pi extends Expression:
     name ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ Some((arg, free)) ~ Some((it, free2)) =>
-        π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ free2)
+      case (ch, name) ~ Some((arg, free)) ~ Some((it, freeʹ)) =>
+        π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
-      case (ch, name) ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ free2)
+      case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
+        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
         π(ch, λ(`()(null)`), polarity = false, None) -> (Names(), name)
     } |
@@ -74,8 +74,8 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ free2)
+      case (ch, name) ~ (par, bound) ~ Some((it, freeʹ)) =>
+        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ freeʹ)
       case (ch, name) ~ (par, bound) ~ _ =>
         π(ch, par, polarity = true, None) -> (bound, name)
     }
@@ -258,7 +258,7 @@ object Pi:
 
       prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
-      if rec.contains("Main" -> 0) then throw MainParsingException2
+      if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
       prog.foreach {
         case (it @ `(*)`("Main", _), _) =>
@@ -320,7 +320,7 @@ object Pi:
        i < 0 && j < 0 &&
        this(lhs, 1) == this(rhs, 2)
 
-      private def equal2(using bound: (MutableList[Symbol], MutableList[Symbol]))
+      private def equalʹ(using bound: (MutableList[Symbol], MutableList[Symbol]))
                         (using (Bindings, Bindings))
                         (lhs: Symbol, rhs: Symbol): Boolean =
         val _1 = this(lhs, 1)
@@ -371,7 +371,7 @@ object Pi:
               true
             case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _)
                      ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _))) =>
-              equal(lch, rch) && equal2(lpar, rpar)
+              equal(lch, rch) && equalʹ(lpar, rpar)
             case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _)
                      ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _))) =>
               equal(lch, rch) && equal(larg, rarg)
@@ -382,7 +382,7 @@ object Pi:
               equal(lch, rch) && larg == rarg
             case (_, (χ(Right(lexp))
                      ,χ(Right(rexp)))) =>
-              equal2(lexp.trans, rexp.trans) && congruent(lexp -> rexp)
+              equalʹ(lexp.trans, rexp.trans) && congruent(lexp -> rexp)
             case (_, (χ(Left(ltrans))
                      ,χ(Left(rtrans)))) =>
               ltrans == rtrans
@@ -419,7 +419,7 @@ object Pi:
         case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
              ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
           val (ln, rn) = mark
-          equal(lch, rch) && equal2(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
+          equal(lch, rch) && equalʹ(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
 
         case (!(Some(π(_, λ(_: Term), false, _)), _), _)
            | (_, !(Some(π(_, λ(_: Term), false, _)), _)) => false

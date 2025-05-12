@@ -388,8 +388,8 @@ package object Π:
                               it.copy(takers = rest) -> (taker.complete(name -> b2).void.map(_ -> b2) <* `1`.release)
                             case it =>
                               val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2._2 ne offerer)) }
-                              val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                              it.copy(offerers = xa -> (name -> offerer) :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanup2)
+                              val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                              it.copy(offerers = xa -> (name -> offerer) :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanupʹ)
                           }.flatten
                         }
                       }
@@ -412,8 +412,8 @@ package object Π:
                               it.copy(takers = rest) -> (taker.complete(name -> b2).void.map(_ -> b2) <* `1`.release)
                             case it =>
                               val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2._2 ne offerer)) }
-                              val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                              it.copy(offerers = xa -> (name -> offerer) :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanup2)
+                              val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                              it.copy(offerers = xa -> (name -> offerer) :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanupʹ)
                           }.flatten <* exec(code)
                         }
                       }
@@ -436,8 +436,8 @@ package object Π:
                                 it.copy(offerers = rest) -> (offerer.complete(() -> b2).as(name).map(_ -> b2) <* `1`.release)
                               case it =>
                                 val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_._2 ne taker)) }
-                                val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                                it.copy(takers = xa -> taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanup2)
+                                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                                it.copy(takers = xa -> taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
                             }.flatten
                           }
                         }
@@ -459,8 +459,8 @@ package object Π:
                                 it.copy(offerers = rest) -> (offerer.complete(() -> b2).as(name).map(_ -> b2) <* `1`.release)
                               case it =>
                                 val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_._2 ne taker)) }
-                                val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                                it.copy(takers = xa -> taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanup2)
+                                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                                it.copy(takers = xa -> taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
                             }.flatten.flatMap {
                               case it @ (null, _) => IO.pure(it)
                               case (it: T, b2) => (code andThen exec)(it)
