@@ -39,13 +39,13 @@ object Ensure:
   case object MainParsingException
       extends EquationParsingException("Exactly one Main parameterless agent not found")
 
-  case object MainParsingException2
+  case object MainParsingExceptionʹ
       extends EquationParsingException("The parameterless Main agent is recursive")
 
   case class RecRepParsingException(id: String, arity: Int, times: Int)
       extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
-  private def index2(prog: List[Bind]): ((String, Int)) => Int =
+  private def indexʹ(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
       prog
         .indexWhere {
@@ -109,7 +109,7 @@ object Ensure:
           val k = stack.lastIndexOf(id -> params.size)
           for
             j <- k until stack.size
-            i = index2(prog)(stack(j))
+            i = indexʹ(prog)(stack(j))
             sign = prog(i)._1.identifier -> prog(i)._1.params.size
           do
             if !rec.contains(sign)
@@ -123,7 +123,7 @@ object Ensure:
               rep(i) += 1
 
         case `(*)`(id, _, params*) =>
-          val i = index2(prog)(id -> params.size)
+          val i = indexʹ(prog)(id -> params.size)
           val par = prog(i)._2
           par.recursive(using stack :+ id -> params.size)
 

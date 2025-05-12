@@ -65,9 +65,9 @@ abstract class Calculus extends Ambient:
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
-      case (it, (bound, free)) ~ Some((end, free2)) =>
+      case (it, (bound, free)) ~ Some((end, freeʹ)) =>
         bindings ++= binders
-        `.`(end, it*) -> (free ++ (free2 &~ bound))
+        `.`(end, it*) -> (free ++ (freeʹ &~ bound))
       case (it, (_, free)) ~ _ =>
         bindings ++= binders
         `.`(∥(), it*) -> free // void
@@ -87,8 +87,8 @@ abstract class Calculus extends Ambient:
     ("<"~>caps<~">") ~ opt( expression ) ^^ { // output action
       case _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (path, free) ~ Some((it @ (Right(_), _), free2)) =>
-        <>(Some(it), path*) -> (free ++ free2)
+      case (path, free) ~ Some((it @ (Right(_), _), freeʹ)) =>
+        <>(Some(it), path*) -> (free ++ freeʹ)
       case (path, free) ~ _ =>
         <>(None, path*) -> free
     } |

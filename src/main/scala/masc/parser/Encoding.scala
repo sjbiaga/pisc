@@ -118,9 +118,9 @@ abstract class Encoding extends Calculus:
           val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
           val assign = variables zip pointers
           given Names()
-          val exp2 = exp.copy(assign = assign).rename(id, free)
+          val expʹ = exp.copy(assign = assign).rename(id, free)
           bindings ++= purged
-          exp2 -> (free ++ constants)
+          expʹ -> (free ++ constants)
         catch
           case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
           case it => throw it
@@ -174,7 +174,7 @@ object Encoding:
                    par: ∥):
     def apply(code: Int, id: => String, term: Term): Fresh =
       given refresh: MutableList[(String, String)] = MutableList()
-      val variables2 = variables
+      val variablesʹ = variables
         .map { it =>
           val υidυ = it.replaceAll("_υ.*υ", "") + id
           refresh.prepend(it -> υidυ)
@@ -182,7 +182,7 @@ object Encoding:
         }
       given Bindings = Bindings(bindings)
       given Names()
-      val par2 = par.rename(id, Set.empty, definition = true)
+      val parʹ = par.rename(id, Set.empty, definition = true)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -190,7 +190,7 @@ object Encoding:
       ) .toList
         .sortBy { (it, _) => parameters.indexOf(it) }
         .map(_._2)
-      Definition(code, Some(term), constants, variables2, par2)
+      Definition(code, Some(term), constants, variablesʹ, parʹ)
       ->
       (arity - shadows.count(_.nonEmpty) -> shadows)
 
@@ -293,9 +293,9 @@ object Encoding:
              (using bound: Names): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
-      val (code2, names) = Expression.recode(term)
+      val (codeʹ, names) = Expression.recode(term)
       free ++= names.filterNot(bound.contains(_))
-      code2
+      codeʹ
     }
 
   def purged(using bindings: Bindings): Bindings =
@@ -397,9 +397,9 @@ object Encoding:
             case it @ `()`(name, given Option[Code]) =>
               it.copy(name = rebind(name), code = recoded(free))
           }
-          val end2 = rename(end)
+          val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(end2, it*)
+          `.`(endʹ, it*)
 
         case <>(given Option[Code], _path*) =>
           val path = _path.map {
@@ -427,31 +427,31 @@ object Encoding:
 
         case it @ `⟦⟧`(_, variables, par, assign) =>
           val n = refresh.size
-          val assign2 = assign
+          val assignʹ = assign
             .map { (variable, pointer) =>
               val υidυ = variable.replaceAll("_υ.*υ", "") + id
               refresh.prepend(variable -> υidυ)
               υidυ -> renamed(pointer)
             }
-          var variables2 = variables
+          var variablesʹ = variables
             .drop(assign.size)
             .map { it =>
               val υidυ = it.replaceAll("_υ.*υ", "") + id
               refresh.prepend(it -> υidυ)
               υidυ
             }
-          variables2 = assign2.map(_._1) ++ variables2
-          val par2 = rename(par)
+          variablesʹ = assignʹ.map(_._1) ++ variablesʹ
+          val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
-          it.copy(variables = variables2, par = par2, assign = assign2)
+          it.copy(variables = variablesʹ, par = parʹ, assign = assignʹ)
 
         case `{}`(id, pointers, agent, params*) =>
-          val pointers2 = pointers.map(renamed(_))
-          val params2 = params.map(renamed(_))
+          val pointersʹ = pointers.map(renamed(_))
+          val paramsʹ = params.map(renamed(_))
 
-          `{}`(id, pointers2, agent, params2*)
+          `{}`(id, pointersʹ, agent, paramsʹ*)
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params.map(renamed(_))
+          val paramsʹ = params.map(renamed(_))
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)
