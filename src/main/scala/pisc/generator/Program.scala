@@ -136,8 +136,8 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case it @ π(λ(Symbol(ch)), λ(term: Term), false, r, Some((Right(term2)), _)) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term2))
+        case it @ π(λ(Symbol(ch)), λ(term: Term), false, r, Some((Right(termʹ)), _)) =>
+          val code = `for * yield ()`(`_ <- IO { * }`(termʹ))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(ch), Term.ArgClause(s"${rate(r)}".parse[Term].get::term::Nil, None)),

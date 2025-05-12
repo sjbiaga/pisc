@@ -70,9 +70,9 @@ abstract class Calculus extends StochasticPi:
   def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (it, (bound, free)) ~ Some((end, free2)) =>
+      case (it, (bound, free)) ~ Some((end, freeʹ)) =>
         bindings ++= binders
-        `.`(end, it*) -> (free ++ (free2 &~ bound))
+        `.`(end, it*) -> (free ++ (freeʹ &~ bound))
       case (it, (_, free)) ~ _ =>
         bindings ++= binders
         `.`(`+`(nil), it*) -> free // inaction

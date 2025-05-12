@@ -56,12 +56,12 @@ abstract class StochasticPi extends Expression:
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, free2)) =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free ++ free2)
+      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹ)) =>
+        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name ++ free)
-      case (ch, name) ~ r ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free2)
+      case (ch, name) ~ r ~ _ ~ Some((it, freeʹ)) =>
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ r ~ _ ~ _ =>
         π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
     } |
@@ -72,8 +72,8 @@ abstract class StochasticPi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ r ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (bound, name ++ free2)
+      case (ch, name) ~ r ~ (par, bound) ~ Some((it, freeʹ)) =>
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (bound, name ++ freeʹ)
       case (ch, name) ~ r ~ (par, bound) ~ _ =>
         π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id()) -> (bound, name)
     }
@@ -298,7 +298,7 @@ object StochasticPi:
 
       prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
-      if rec.contains("Main" -> 0) then throw MainParsingException2
+      if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
       for
         (i, n) <- rep
@@ -330,8 +330,8 @@ object StochasticPi:
         inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id())
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
-          val ps2 = ps :+ τ
-          `.`(end, ps2*).asInstanceOf[S] -> Actions(ps2*)
+          val psʹ = ps :+ τ
+          `.`(end, psʹ*).asInstanceOf[S] -> Actions(psʹ*)
 
         def insert_+(sum: +): + =
           val (seq, enabled) = insert[`.`](sum)
@@ -344,20 +344,20 @@ object StochasticPi:
           case it: + =>
             val sum = it.choices.foldLeft(`+`(nil)) {
               case (sum: +, par) =>
-                val (par2, enabled2) = par.parse
-                assert(enabled2.nonEmpty)
-                assert((sum.enabled & enabled2).isEmpty)
-                (`+`(sum.enabled ++ enabled2, (sum.choices :+ par2)*))
+                val (parʹ, enabledʹ) = par.parse
+                assert(enabledʹ.nonEmpty)
+                assert((sum.enabled & enabledʹ).isEmpty)
+                (`+`(sum.enabled ++ enabledʹ, (sum.choices :+ parʹ)*))
             }
             (sum, sum.enabled)
 
           case it: ∥ =>
             val (par, enabled) = it.components.foldLeft((∥(), nil)) {
               case ((par: ∥, enabled), seq) =>
-                val (seq2, enabled2) = seq.parse
-                assert(enabled2.nonEmpty)
-                assert((enabled & enabled2).isEmpty)
-                (∥((par.components :+ seq2)*), enabled ++ enabled2)
+                val (seqʹ, enabledʹ) = seq.parse
+                assert(enabledʹ.nonEmpty)
+                assert((enabled & enabledʹ).isEmpty)
+                (∥((par.components :+ seqʹ)*), enabled ++ enabledʹ)
             }
             (par, enabled)
 

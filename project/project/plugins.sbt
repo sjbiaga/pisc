@@ -1,1 +1,1 @@
-addSbtPlugin("org.scala-debugger" % "sbt-jdi-tools" % "1.1.1")
+addSbtPlugin("com.github.sbt" % "sbt-jdi-tools" % "1.2.0")
