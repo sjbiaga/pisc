@@ -207,7 +207,7 @@ object Ambient:
 
       prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
-      if rec.contains("Main" -> 0) then throw MainParsingException2
+      if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
       for
         (i, n) <- rep

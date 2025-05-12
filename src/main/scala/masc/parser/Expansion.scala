@@ -93,36 +93,36 @@ abstract class Expansion extends Encoding:
 
             _cache.get(key) match
 
-              case Some((exp: `⟦⟧`, cp, free2, given Bindings, in2)) =>
+              case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
                 bindings ++= binders
 
                 substitution(op) = exp
-                free ++= free2 -- bindings.map(_._1)
+                free ++= freeʹ -- bindings.map(_._1)
 
                 paste(cp)
 
-                success(in2)
+                success(inʹ)
 
               case _ =>
 
                 given Bindings = Bindings(bindings)
                 parse(instantiation, in) match
 
-                  case Success((exp, free2), in) =>
+                  case Success((exp, freeʹ), in) =>
                     bindings ++= binders
 
                     substitution(op) = exp
-                    free ++= free2 -- bindings.map(_._1)
+                    free ++= freeʹ -- bindings.map(_._1)
 
                     val source = in.source
                     val offset = in.offset
                     val start = handleWhiteSpace(source, offset)
 
-                    val in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
+                    val inʹ = in.drop(start + end.map(_.length).getOrElse(0) - offset)
 
-                    _cache(key) = (exp, copy, free2, given_Bindings, in2)
+                    _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
 
-                    success(in2)
+                    success(inʹ)
 
                   case _ =>
                     Failure("instantiation expected", in) -> Nil
@@ -144,15 +144,15 @@ abstract class Expansion extends Encoding:
                 Failure("parallel expected", in) -> Nil
 
               else
-                val in2 = in.drop(start + n - offset)
-                success(in2)
+                val inʹ = in.drop(start + n - offset)
+                success(inʹ)
 
             else if op.charAt(0).isLower || op == "_"
             then
 
               parseAll(name, result) match
 
-                case Success((it, free2), _) =>
+                case Success((it, freeʹ), _) =>
                   shadows(idx) match
                     case shadow @ Some(_) =>
                       BindingOccurrence(it, shadow)
@@ -160,11 +160,11 @@ abstract class Expansion extends Encoding:
                       bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
                         case Some((_, Shadow(it))) => substitution(op) = it
                         case _ => substitution(op) = it
-                      free ++= free2 -- bindings.map(_._1)
+                      free ++= freeʹ -- bindings.map(_._1)
                   idx += 1
 
-                  val in2 = in.drop(start + n - offset)
-                  success(in2)
+                  val inʹ = in.drop(start + n - offset)
+                  success(inʹ)
 
                 case _ =>
                   Failure("name expected", in) -> Nil
@@ -173,34 +173,34 @@ abstract class Expansion extends Encoding:
 
               _cache.get(key) match
 
-                case Some((par: ∥, cp, free2, given Bindings, in2)) =>
+                case Some((par: ∥, cp, freeʹ, given Bindings, inʹ)) =>
                   bindings ++= binders
 
                   substitution(op) = par
-                  free ++= free2 -- bindings.map(_._1)
+                  free ++= freeʹ -- bindings.map(_._1)
 
                   paste(cp)
 
-                  success(in2)
+                  success(inʹ)
 
                 case _ =>
 
                   given Bindings = Bindings(bindings)
                   parseAll(parallel, result) match
 
-                    case Success((par, free2), _) =>
+                    case Success((par, freeʹ), _) =>
                       bindings ++= binders
 
-                      val par2 = par.flatten.update(using Bindings(bindings))
+                      val parʹ = par.flatten.update(using Bindings(bindings))
 
-                      substitution(op) = par2
-                      free ++= free2 -- bindings.map(_._1)
+                      substitution(op) = parʹ
+                      free ++= freeʹ -- bindings.map(_._1)
 
-                      val in2 = in.drop(start + n - offset)
+                      val inʹ = in.drop(start + n - offset)
 
-                      _cache(key) = (par2, copy, free2, given_Bindings, in2)
+                      _cache(key) = (parʹ, copy, freeʹ, given_Bindings, inʹ)
 
-                      success(in2)
+                      success(inʹ)
 
                     case _ =>
                       Failure("parallel expected", in) -> Nil
@@ -227,8 +227,8 @@ abstract class Expansion extends Encoding:
           val ts = _ts :+ _rhs
           val key = path -> (ts.mkString -> end) -> start
 
-          def success(in2: Input) =
-            Success(it, in2) -> ts
+          def success(inʹ: Input) =
+            Success(it, inʹ) -> ts
 
           expand(in, shadows, key)(rhs, end)(success)
 
@@ -242,15 +242,15 @@ abstract class Expansion extends Encoding:
           val ts = _ts :+ _lhs :+ _op
           val key = path -> (ts.mkString -> end) -> start
 
-          def success(in2: Input) =
-            expand(in2, ts, end)(it -> rhs)
+          def success(inʹ: Input) =
+            expand(inʹ, ts, end)(it -> rhs)
 
           expand(in, shadows, key)(lhs, Right(op))(success)
 
         case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, _op @ Term.Name(op), _, List(rhs))) =>
           expand(in, _ts, Right(op))(it -> lhs) match
-            case (Success(_, in2), ts) =>
-              expand(in2, ts :+ _op, end)(it -> rhs)
+            case (Success(_, inʹ), ts) =>
+              expand(inʹ, ts :+ _op, end)(it -> rhs)
             case it => it
 
         case (it, Term.AnonymousFunction(body)) =>
@@ -441,17 +441,17 @@ object Expansion:
             substitution(id).asInstanceOf[∥ | -]
 
         case `{}`(id, pointers, true, params*) =>
-          val pointers2 = pointers.map(replaced(_))
-          val params2 = params.map(replaced(_))
+          val pointersʹ = pointers.map(replaced(_))
+          val paramsʹ = params.map(replaced(_))
 
-          `{}`(id, pointers2, true, params2*)
+          `{}`(id, pointersʹ, true, paramsʹ*)
 
         case _: `{}` => ???
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params.map(replaced(_))
+          val paramsʹ = params.map(replaced(_))
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)
 
 
     private def concatenate(using pointers: List[String]): T =
@@ -482,8 +482,8 @@ object Expansion:
           it
 
         case it @ `{}`(id, _, agent, params*) =>
-          val pointers2 = it.pointers ++ pointers
-          `{}`(id, pointers2, agent, params*)
+          val pointersʹ = it.pointers ++ pointers
+          `{}`(id, pointersʹ, agent, params*)
 
         case _ => ast
 
@@ -543,16 +543,16 @@ object Expansion:
           `go.`(updated(amb), par.update)
 
         case it @ `⟦⟧`(_, _, par, assign) =>
-          val assign2 = assign.map(_ -> updated(_))
-          it.copy(par = par.update, assign = assign2)
+          val assignʹ = assign.map(_ -> updated(_))
+          it.copy(par = par.update, assign = assignʹ)
 
         case `{}`(id, pointers, agent, params*) =>
-          val pointers2 = pointers.map(updated(_))
-          val params2 = params.map(updated(_))
+          val pointersʹ = pointers.map(updated(_))
+          val paramsʹ = params.map(updated(_))
 
-          `{}`(id, pointers2, agent, params2*)
+          `{}`(id, pointersʹ, agent, paramsʹ*)
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params.map(updated(_))
+          val paramsʹ = params.map(updated(_))
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)

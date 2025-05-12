@@ -578,8 +578,8 @@ package object Π:
                 it.copy(queue = rest) -> (IO.pure(name) <* `1`.release)
               case it =>
                 val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanup2)
+                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
             }.flatten
           }
         }
@@ -594,8 +594,8 @@ package object Π:
                 it.copy(queue = rest) -> (IO.pure(name) <* `1`.release)
               case it =>
                 val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                val cleanup2 = `1`.acquire >> cleanup >> `1`.release
-                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanup2)
+                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
+                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
             }.flatten.flatMap {
               case null => IO.pure(null)
               case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
