@@ -55,13 +55,13 @@ abstract class PolyadicPi extends Expression:
       case (ch, _) ~ None ~ None ~ _ =>
         throw PrefixArityParsingException(ch)
       case (ch, _) ~ Some(arity) ~ Some(args) ~ _ =>
-        throw PrefixArityParsingException2(ch, arity, args.size)
-      case (ch, name) ~ _ ~ Some(args) ~ Some((it, free2)) =>
-        π(ch, polarity = false, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ free2)
+        throw PrefixArityParsingExceptionʹ(ch, arity, args.size)
+      case (ch, name) ~ _ ~ Some(args) ~ Some((it, freeʹ)) =>
+        π(ch, polarity = false, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ freeʹ)
       case (ch, name) ~ _ ~ Some(args) ~ _ =>
         π(ch, polarity = false, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
-      case (ch, name) ~ Some(arity) ~ _ ~ Some((it, free2)) =>
-        π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ free2)
+      case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
+        π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
         π(ch, polarity = false, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
     } |
@@ -74,8 +74,8 @@ abstract class PolyadicPi extends Expression:
         throw PrefixUniquenessParsingException(ch.asSymbol.name, params.map(_._1.asSymbol.name)*)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ params ~ Some((it, free2)) =>
-        π(ch, polarity = true, Some(it), params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name ++ free2)
+      case (ch, name) ~ params ~ Some((it, freeʹ)) =>
+        π(ch, polarity = true, Some(it), params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name ++ freeʹ)
       case (ch, name) ~ params ~ _ =>
         π(ch, polarity = true, None, params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name)
     }
@@ -199,7 +199,7 @@ object PolyadicPi:
   case class PrefixArityParsingException(name: λ)
       extends PrefixParsingException(s"Without arguments, channel ${name.asSymbol.name} must specify arity")
 
-  case class PrefixArityParsingException2(name: λ, arity: Int, size: Int)
+  case class PrefixArityParsingExceptionʹ(name: λ, arity: Int, size: Int)
       extends PrefixParsingException(s"${name.asSymbol.name} channel must not specify both arity ($arity) and arguments (#$size)")
 
   case class TermParsingException(enums: List[Enumerator])
@@ -259,7 +259,7 @@ object PolyadicPi:
 
       prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
-      if rec.contains("Main" -> 0) then throw MainParsingException2
+      if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
       for
         (i, n) <- rep
