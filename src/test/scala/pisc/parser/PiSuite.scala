@@ -141,8 +141,8 @@ class PiSuite extends FunSuite:
             assert(false)
         exp2 match
           case `⟦⟧`(_, _, +(∥(`.`(`(*)`("Agent2", Nil, λ(Symbol("x_υaυ")), λ(Symbol("x_υaυ"))), ν("x_υaυ")),
-                              `.`(`(*)`("Agent0", Nil)))), assign2) =>
-            assertEquals(assign2, Set(Symbol("x_υ8υ") -> Symbol("x"), Symbol("y_υ9υ") -> Symbol("y")))
+                              `.`(`(*)`("Agent0", Nil)))), assignʹ) =>
+            assertEquals(assignʹ, Set(Symbol("x_υ8υ") -> Symbol("x"), Symbol("y_υ9υ") -> Symbol("y")))
           case _ =>
             assert(false)
       case _ =>
@@ -163,8 +163,8 @@ class PiSuite extends FunSuite:
     } match
       case Right((_, +(∥(`.`(exp))))) :: Nil =>
         exp match
-          case `⟦⟧`(_, _, +(∥(`.`(exp0, ν("ch_υkυ")))), _) =>
-            exp0 match
+          case `⟦⟧`(_, _, +(∥(`.`(expʹ, ν("ch_υkυ")))), _) =>
+            expʹ match
               case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), assign) =>
                 assertEquals(assign, Set(Symbol("x_υlυ") -> Symbol("ch_υkυ"), Symbol("y_υmυ") -> Symbol("ch_υkυ")))
                 exp1 match
@@ -173,8 +173,8 @@ class PiSuite extends FunSuite:
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υoυ")), λ(Symbol("z_υpυ")), true, None), τ(Some(_))))), assign2) =>
-                    assertEquals(assign2, Set(Symbol("w_υoυ") -> Symbol("y_υmυ")))
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υoυ")), λ(Symbol("z_υpυ")), true, None), τ(Some(_))))), assignʹ) =>
+                    assertEquals(assignʹ, Set(Symbol("w_υoυ") -> Symbol("y_υmυ")))
                   case _ =>
                     assert(false)
               case _ =>

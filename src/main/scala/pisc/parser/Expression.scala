@@ -241,7 +241,7 @@ object Expression:
 
       case it @ sm.Case(pat, cond, body) =>
         val (p, pns) = Pat(pat)
-        val Some((c, cns)) = cond.map(Term(_)).orElse(Some(Term.`null -> Nil`))
+        val Some((c, cns)) = cond.map(Term(_)).orElse(Some(Term.`null -> nil`))
         val (b, bns) = Term(body)
         it.copy(pat = p, cond = cond.map(const(c)), body = b) -> (pns ++ cns ++ bns)
 
@@ -532,7 +532,7 @@ object Expression:
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
           val (ps, psns) = Term.Param(paramss)
-          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
+          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
           val (b, bns) = Term(body)
           it.copy(mods = ms, tparams = ts, paramss = ps, decltpe = decltpe.map(const(dt)), body = b) -> (msns ++ tsns ++ psns ++ dtns ++ bns)
 
@@ -575,7 +575,7 @@ object Expression:
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
           val (ps, psns) = Term.Param(paramss)
-          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
+          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
           val (b, bns) = Term(body)
           it.copy(mods = ms, tparams = ts, paramss = ps, decltpe = decltpe.map(const(dt)), body = b) -> (msns ++ tsns ++ psns ++ dtns ++ bns)
 
@@ -604,15 +604,15 @@ object Expression:
         case it @ sm.Defn.Val(mods, pats, decltpe, rhs) =>
           val (ms, msns) = Mod(mods)
           val (ps, psns) = Pat(pats)
-          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
+          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
           val (r, rns) = Term(rhs)
           it.copy(mods = ms, pats = ps, decltpe = decltpe.map(const(dt)), rhs = r) -> (msns ++ psns ++ dtns ++ rns)
 
         case it @ sm.Defn.Var(mods, pats, decltpe, rhs) =>
           val (ms, msns) = Mod(mods)
           val (ps, psns) = Pat(pats)
-          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
-          val Some((r, rns)) = rhs.map(Term(_)).orElse(Some(Term.`null -> Nil`))
+          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
+          val Some((r, rns)) = rhs.map(Term(_)).orElse(Some(Term.`null -> nil`))
           it.copy(mods = ms, pats = ps, decltpe = decltpe.map(const(dt)), rhs = rhs.map(const(r))) -> (msns ++ psns ++ dtns ++ rns)
 
 
@@ -651,14 +651,14 @@ object Expression:
       case it @ sm.Template(early, inits, self @ sm.Self(_, decltpe), stats) =>
         val (es, esns) = Stat(early)
         val (is, isns) = Init(inits)
-        val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
+        val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
         val (ss, ssns) = Stat(stats)
         it.copy(early = es, inits = is, self = self.copy(decltpe = decltpe.map(const(dt))), stats = ss) -> (esns ++ isns ++ dtns ++ ssns)
 
 
   object Term:
 
-    val `null -> Nil` = null.asInstanceOf[sm.Term] -> Names()
+    val `null -> nil` = null.asInstanceOf[sm.Term] -> Names()
 
     def apply(self: List[sm.Term])
              (using (MutableList[(Symbol, λ)], Bindings))
@@ -823,13 +823,13 @@ object Expression:
       case it @ sm.Term.Try(expr, catchp, finallyp) =>
         val (e, ens) = this(expr)
         val (c, cns) = Case(catchp)
-        val Some((f, fns)) = finallyp.map(this(_)).orElse(Some(`null -> Nil`))
+        val Some((f, fns)) = finallyp.map(this(_)).orElse(Some(`null -> nil`))
         it.copy(expr = e, catchp = c, finallyp = finallyp.map(const(f))) -> (ens ++ cns ++ fns)
 
       case it @ sm.Term.TryWithHandler(expr, catchp, finallyp) =>
         val (e, ens) = this(expr)
         val (c, cns) = this(catchp)
-        val Some((f, fns)) = finallyp.map(this(_)).orElse(Some(`null -> Nil`))
+        val Some((f, fns)) = finallyp.map(this(_)).orElse(Some(`null -> nil`))
         it.copy(expr = e, catchp = c, finallyp = finallyp.map(const(f))) -> (ens ++ cns ++ fns)
 
       case it @ sm.Term.Tuple(args) =>
@@ -866,8 +866,8 @@ object Expression:
 
         case it @ sm.Term.Param(mods, _, decltpe, default) =>
           val (ms, msns) = Stat.Mod(mods)
-          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> Nil`))
-          val Some((d, dns)) = default.map(Term(_)).orElse(Some(Term.`null -> Nil`))
+          val Some((dt, dtns)) = decltpe.map(Type(_)).orElse(Some(Type.`null -> nil`))
+          val Some((d, dns)) = default.map(Term(_)).orElse(Some(Term.`null -> nil`))
           it.copy(mods = ms, decltpe = decltpe.map(const(dt)), default = default.map(const(d))) -> (msns ++ dtns ++ dns)
 
 
@@ -894,7 +894,7 @@ object Expression:
 
   object Type:
 
-    val `null -> Nil` = null.asInstanceOf[sm.Type] -> Names()
+    val `null -> nil` = null.asInstanceOf[sm.Type] -> Names()
 
     def apply(self: sm.Type.Bounds)
              (using (MutableList[(Symbol, λ)], Bindings))
@@ -902,8 +902,8 @@ object Expression:
              (using Bindings): (sm.Type.Bounds, Names) = self match
 
       case it @ sm.Type.Bounds(lo, hi) =>
-        val Some((l, lns)) = lo.map(this(_)).orElse(Some(`null -> Nil`))
-        val Some((h, hns)) = hi.map(this(_)).orElse(Some(`null -> Nil`))
+        val Some((l, lns)) = lo.map(this(_)).orElse(Some(`null -> nil`))
+        val Some((h, hns)) = hi.map(this(_)).orElse(Some(`null -> nil`))
         it.copy(lo = lo.map(const(l)), hi = hi.map(const(h))) -> (lns ++ hns)
 
     def apply(self: List[sm.Type])
@@ -1015,7 +1015,7 @@ object Expression:
         Ref(it)
 
       case it @ sm.Type.Refine(tpe, stats) =>
-        val Some((t, tns)) = tpe.map(this(_)).orElse(Some(`null -> Nil`))
+        val Some((t, tns)) = tpe.map(this(_)).orElse(Some(`null -> nil`))
         val (ss, ssns) = Stat(stats)
         it.copy(tpe = tpe.map(const(t)), stats = ss) -> (tns ++ ssns)
 

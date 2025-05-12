@@ -52,12 +52,12 @@ abstract class Pi extends Expression:
     name ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ Some((arg, free)) ~ Some((it, free2)) =>
-        π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ free2)
+      case (ch, name) ~ Some((arg, free)) ~ Some((it, freeʹ)) =>
+        π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ Some((arg, free)) ~ _ =>
         π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
-      case (ch, name) ~ _ ~ Some((it, free2)) =>
-        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ free2)
+      case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
+        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
         π(ch, λ(`()(null)`), polarity = false, None) -> (Names(), name)
     } |
@@ -68,8 +68,8 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, bound) ~ Some((it, free2)) =>
-        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ free2)
+      case (ch, name) ~ (par, bound) ~ Some((it, freeʹ)) =>
+        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ freeʹ)
       case (ch, name) ~ (par, bound) ~ _ =>
         π(ch, par, polarity = true, None) -> (bound, name)
     }
@@ -236,7 +236,7 @@ object Pi:
 
       prog(i)._2.recursive(using "Main" -> 0 :: Nil)
 
-      if rec.contains("Main" -> 0) then throw MainParsingException2
+      if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
       for
         (i, n) <- rep

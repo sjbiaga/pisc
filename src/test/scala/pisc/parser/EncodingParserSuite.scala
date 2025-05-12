@@ -29,7 +29,11 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashMap => Map2, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  HashMap => Map,
+  LinkedHashMap => Mapʹ,
+  LinkedHashSet => Set
+}
 
 import munit.FunSuite
 
@@ -155,10 +159,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦⟧ =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b2, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
-            assert(b2.isEmpty)
+            assert(b.isEmpty)
             assertEquals(cs1, cs2)
             assertEquals(vs1, vs2)
           case _ =>
@@ -173,10 +177,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
-          case Success((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b2, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
-            assertEquals(b2, Map2(
+            assertEquals(b, Mapʹ(
                            Symbol("x") -> Occurrence(None, Position(-1, false)),
                            Symbol("y") -> Occurrence(None, Position(-2, false))))
             assertEquals(cs1, cs2)
@@ -193,11 +197,11 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(nil, cons) =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b2, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
             assertEquals(cs1, Names() + Symbol("nil") + Symbol("cons"))
             assert(vs1.isEmpty)
-            assertEquals(b2, Map2(
-                           Symbol("nil") -> Occurrence(None, Position(1, false)),
+            assertEquals(b, Mapʹ(
+                           Symbol("nil")  -> Occurrence(None, Position(1, false)),
                            Symbol("cons") -> Occurrence(None, Position(2, false))))
             assertEquals(cs1, cs2)
             assertEquals(vs1, vs2)
@@ -213,10 +217,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b2, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
             assert(cs1.isEmpty)
             assertEquals(vs1, Names() + Symbol("x"))
-            assertEquals(b2, Map2(Symbol("x") -> Occurrence(None, Position(1, false))))
+            assertEquals(b, Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false))))
             assertEquals(cs1, cs2)
             assertEquals(vs1, vs2)
           case _ =>

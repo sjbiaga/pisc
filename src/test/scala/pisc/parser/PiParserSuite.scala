@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashMap => Map2 }
+import scala.collection.mutable.{ LinkedHashMap => Mapʹ }
 
 import scala.meta.{ Position => _, * }
 
@@ -397,7 +397,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(-1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
         bindings.head match
           case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
@@ -415,7 +415,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(-1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
         bindings.head match
           case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
@@ -433,7 +433,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(-1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")))
 
@@ -449,7 +449,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(-1, false)))
+        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(-1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")), hardcoded = true)
 
@@ -465,7 +465,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
@@ -480,7 +480,7 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (x) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
@@ -494,7 +494,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         _code = -1
-        given bindings: Bindings = Map2(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
         bindings.head match
           case (Symbol("x"), Shadow(Symbol("x_shadow"))) =>

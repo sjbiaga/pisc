@@ -159,8 +159,8 @@ object Program:
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), λ(term: Term), false, Some((Right(term2), _))) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term2))
+        case π(λ(Symbol(ch)), λ(term: Term), false, Some((Right(termʹ), _))) =>
+          val code = `for * yield ()`(`_ <- IO { * }`(termʹ))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(term::Nil, None)),
                          Term.ArgClause(code::Nil, None)
