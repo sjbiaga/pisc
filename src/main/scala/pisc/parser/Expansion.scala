@@ -93,36 +93,36 @@ abstract class Expansion extends Encoding:
 
             _cache.get(key) match
 
-              case Some((exp: `⟦⟧`, cp, free2, given Bindings, in2)) =>
+              case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
                 bindings ++= binders
 
                 substitution(op) = exp
-                free ++= free2 -- bindings.map(_._1)
+                free ++= freeʹ -- bindings.map(_._1)
 
                 paste(cp)
 
-                success(in2)
+                success(inʹ)
 
               case _ =>
 
                 given Bindings = Bindings(bindings)
                 parse(instantiation, in) match
 
-                  case Success((exp, free2), in) =>
+                  case Success((exp, freeʹ), in) =>
                     bindings ++= binders
 
                     substitution(op) = exp
-                    free ++= free2 -- bindings.map(_._1)
+                    free ++= freeʹ -- bindings.map(_._1)
 
                     val source = in.source
                     val offset = in.offset
                     val start = handleWhiteSpace(source, offset)
 
-                    val in2 = in.drop(start + end.map(_.length).getOrElse(0) - offset)
+                    val inʹ = in.drop(start + end.map(_.length).getOrElse(0) - offset)
 
-                    _cache(key) = (exp, copy, free2, given_Bindings, in2)
+                    _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
 
-                    success(in2)
+                    success(inʹ)
 
                   case _ =>
                     Failure("instantiation expected", in) -> Nil
@@ -144,15 +144,15 @@ abstract class Expansion extends Encoding:
                 Failure("choice expected", in) -> Nil
 
               else
-                val in2 = in.drop(start + n - offset)
-                success(in2)
+                val inʹ = in.drop(start + n - offset)
+                success(inʹ)
 
             else if op.charAt(0).isLower || op == "_"
             then
 
               parseAll(name, result) match
 
-                case Success((λ(it: Symbol), free2), _) =>
+                case Success((λ(it: Symbol), freeʹ), _) =>
                   shadows(idx) match
                     case shadow @ Some(_) =>
                       BindingOccurrence(it, shadow)
@@ -160,11 +160,11 @@ abstract class Expansion extends Encoding:
                       bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
                         case Some((_, Shadow(it))) => substitution(op) = λ(it)
                         case _ => substitution(op) = λ(it)
-                      free ++= free2 -- bindings.map(_._1)
+                      free ++= freeʹ -- bindings.map(_._1)
                   idx += 1
 
-                  val in2 = in.drop(start + n - offset)
-                  success(in2)
+                  val inʹ = in.drop(start + n - offset)
+                  success(inʹ)
 
                 case _ =>
                   Failure("name expected", in) -> Nil
@@ -173,34 +173,34 @@ abstract class Expansion extends Encoding:
 
               _cache.get(key) match
 
-                case Some((sum: +, cp, free2, given Bindings, in2)) =>
+                case Some((sum: +, cp, freeʹ, given Bindings, inʹ)) =>
                   bindings ++= binders
 
                   substitution(op) = sum
-                  free ++= free2 -- bindings.map(_._1)
+                  free ++= freeʹ -- bindings.map(_._1)
 
                   paste(cp)
 
-                  success(in2)
+                  success(inʹ)
 
                 case _ =>
 
                   given Bindings = Bindings(bindings)
                   parseAll(choice, result) match
 
-                    case Success((sum, free2), _) =>
+                    case Success((sum, freeʹ), _) =>
                       bindings ++= binders
 
-                      val sum2 = sum.flatten.update(using Bindings(bindings))
+                      val sumʹ = sum.flatten.update(using Bindings(bindings))
 
-                      substitution(op) = sum2
-                      free ++= free2 -- bindings.map(_._1)
+                      substitution(op) = sumʹ
+                      free ++= freeʹ -- bindings.map(_._1)
 
-                      val in2 = in.drop(start + n - offset)
+                      val inʹ = in.drop(start + n - offset)
 
-                      _cache(key) = (sum2, copy, free2, given_Bindings, in2)
+                      _cache(key) = (sumʹ, copy, freeʹ, given_Bindings, inʹ)
 
-                      success(in2)
+                      success(inʹ)
 
                     case _ =>
                       Failure("choice expected", in) -> Nil
@@ -227,8 +227,8 @@ abstract class Expansion extends Encoding:
           val ts = _ts :+ _rhs
           val key = path -> (ts.mkString -> end) -> start
 
-          def success(in2: Input) =
-            Success(it, in2) -> ts
+          def success(inʹ: Input) =
+            Success(it, inʹ) -> ts
 
           expand(in, shadows, key)(rhs, end)(success)
 
@@ -242,15 +242,15 @@ abstract class Expansion extends Encoding:
           val ts = _ts :+ _lhs :+ _op
           val key = path -> (ts.mkString -> end) -> start
 
-          def success(in2: Input) =
-            expand(in2, ts, end)(it -> rhs)
+          def success(inʹ: Input) =
+            expand(inʹ, ts, end)(it -> rhs)
 
           expand(in, shadows, key)(lhs, Right(op))(success)
 
         case (it, Term.ApplyInfix(lhs: Term.ApplyInfix, _op @ Term.Name(op), _, List(rhs))) =>
           expand(in, _ts, Right(op))(it -> lhs) match
-            case (Success(_, in2), ts) =>
-              expand(in2, ts :+ _op, end)(it -> rhs)
+            case (Success(_, inʹ), ts) =>
+              expand(inʹ, ts :+ _op, end)(it -> rhs)
             case it => it
 
         case (it, Term.AnonymousFunction(body)) =>
@@ -454,25 +454,25 @@ object Expansion:
             substitution(id).asInstanceOf[+ | -]
 
         case `{}`(id, pointers, true, params*) =>
-          val pointers2 = pointers.map(replaced(_).asSymbol)
-          val params2 = params
+          val pointersʹ = pointers.map(replaced(_).asSymbol)
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => replaced(it)
               case it => it
             }
 
-          `{}`(id, pointers2, true, params2*)
+          `{}`(id, pointersʹ, true, paramsʹ*)
 
         case _: `{}` => ???
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => replaced(it)
               case it => it
             }
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)
 
 
     private def concatenate(using pointers: List[Symbol]): T =
@@ -531,9 +531,9 @@ object Expansion:
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
             case π(λ(ch: Symbol), true, given Option[Code], names*) =>
-              val ch2 = updated(ch)
+              val chʹ = updated(ch)
               given_Bindings --= names.map(_.asSymbol)
-              π(ch2, true, recoded, names*)
+              π(chʹ, true, recoded, names*)
             case π(λ(ch: Symbol), false, given Option[Code], _names*) =>
               val names = _names.map {
                 case λ(arg: Symbol) => updated(arg)
@@ -561,9 +561,9 @@ object Expansion:
 
         case !(Some(π(λ(ch: Symbol), true, given Option[Code], names*)), sum) =>
           given Bindings = Bindings(bindings)
-          val ch2 = updated(ch)
+          val chʹ = updated(ch)
           given_Bindings --= names.map(_.asSymbol)
-          `!`(Some(π(ch2, true, recoded, names*)), sum.update)
+          `!`(Some(π(chʹ, true, recoded, names*)), sum.update)
 
         case !(Some(π(λ(ch: Symbol), false, given Option[Code], _names*)), sum) =>
           val names = _names.map {
@@ -576,24 +576,24 @@ object Expansion:
           it.copy(sum = sum.update)
 
         case it @ `⟦⟧`(_, _, sum, assign) =>
-          val assign2 = assign.map(_ -> updated(_).asSymbol)
-          it.copy(sum = sum.update, assign = assign2)
+          val assignʹ = assign.map(_ -> updated(_).asSymbol)
+          it.copy(sum = sum.update, assign = assignʹ)
 
         case `{}`(id, pointers, agent, params*) =>
-          val pointers2 = pointers.map(updated(_).asSymbol)
-          val params2 = params
+          val pointersʹ = pointers.map(updated(_).asSymbol)
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => updated(it)
               case it => it
             }
 
-          `{}`(id, pointers2, agent, params2*)
+          `{}`(id, pointersʹ, agent, paramsʹ*)
 
         case `(*)`(id, qual, params*) =>
-          val params2 = params
+          val paramsʹ = params
             .map {
               case λ(it: Symbol) => updated(it)
               case it => it
             }
 
-          `(*)`(id, qual, params2*)
+          `(*)`(id, qual, paramsʹ*)
