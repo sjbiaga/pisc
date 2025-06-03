@@ -105,6 +105,8 @@ abstract class Expansion extends Encoding:
 
               case _ =>
 
+                val n = end.map(_.length).getOrElse(0)
+
                 given Bindings = Bindings(bindings)
                 parse(instantiation, in) match
 
@@ -118,11 +120,17 @@ abstract class Expansion extends Encoding:
                     val offset = in.offset
                     val start = handleWhiteSpace(source, offset)
 
-                    val inʹ = in.drop(start + end.map(_.length).getOrElse(0) - offset)
+                    if start + n <= source.length
+                    && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
+                    then
+                      val inʹ = in.drop(start + n - offset)
 
-                    _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
+                      _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
 
-                    success(inʹ)
+                      success(inʹ)
+
+                    else
+                      Failure(s"operator '${end.right.get}' expected", in) -> Nil
 
                   case _ =>
                     Failure("instantiation expected", in) -> Nil
@@ -213,9 +221,7 @@ abstract class Expansion extends Encoding:
 
 
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
-                (using Bindings)
-                (using Substitution)
-                (using Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
+                (using Bindings, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
@@ -258,6 +264,7 @@ abstract class Expansion extends Encoding:
 
         case _ => ??? /* caught by template */
 
+
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
         val bindings = summon[Bindings]
 
@@ -274,7 +281,7 @@ abstract class Expansion extends Encoding:
           given Bindings = Bindings(bindings)
           idx = 0
 
-          save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term), ls.isEmpty && r.isEmpty) match
+          save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term)._1, ls.isEmpty && r.isEmpty) match
             case Some(_) if r.nonEmpty => throw AmbiguousParsingException
             case Some((it @ (_, (arity, _)), in)) if arity == given_Substitution.size =>
               r = Some((it, given_Substitution -> (given_Names -> given_Bindings), in))
