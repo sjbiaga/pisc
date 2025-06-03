@@ -158,14 +158,14 @@ abstract class StochasticPi extends Expression:
     _id.paste(it._1)
     sπ_id.paste(it._2)
 
-  protected final def save[T](r: => (ParseResult[T], Any), fail: Boolean): Option[(T, Input)] =
+  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
     _id.save {
       sπ_id.save {
         r match
-          case (Success(it, in), _) => Some(it -> in)
-          case (failure: NoSuccess, _) if fail =>
+          case Success(it, in) => Some(it -> in)
+          case failure: NoSuccess if fail =>
             scala.sys.error(failure.msg)
           case _ =>
             _cntr = cntr
