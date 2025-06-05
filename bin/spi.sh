@@ -18,7 +18,7 @@ function spi() {
     done
     set ../loop.scala ../spi.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.1-RC2 \
+                  -q -O -nowarn -S 3.7.1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.7-4972921 \
