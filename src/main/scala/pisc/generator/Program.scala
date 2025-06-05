@@ -65,7 +65,7 @@ object Program:
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
-            `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
+            `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
           )
 
           semaphore
@@ -83,7 +83,7 @@ object Program:
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.generate() :: _)
 
-          val ** = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
+          val ** = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
@@ -97,12 +97,12 @@ object Program:
         case it @ `.`(?:(_, _, None)) if semaphore.nonEmpty =>
           def cases(sum: +): Term =
             sum match
-              case +(∥(`.`(?:(((λ(lhs), λ(rhs)), mismatch), t, None)))) =>
+              case +(∥(`.`(?:(((lhs, rhs), mismatch), t, None)))) =>
                 if mismatch
                 then
-                  `if * then … else …`(====(lhs -> rhs), Nil, cases(t))
+                  `if * then … else …`(====(lhs, rhs), Nil, cases(t))
                 else
-                  `if * then … else …`(====(lhs -> rhs), cases(t), Nil)
+                  `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
                 `_ <- *.tryAcquire.ifM`(semaphore.get, sum.generate())
 
@@ -135,57 +135,45 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), false, Some((Left(enums), _)), args*) =>
+        case π(λ(Symbol(ch)), false, Some((Left(enums), _)), params*) =>
           val code = `for * yield ()`(enums*)
-          val arg = args.map {
-            case λ(Symbol(name)) => \(name)
-            case λ(term: Term) => term
-            case λ(arg) => s"$arg".parse[Term].get
-          }.toList
+          val args = params.map(_.toTerm).toList
 
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(arg, None)),
+                         Term.Apply(\(ch), Term.ArgClause(args, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), false, Some((Right(term), _)), args*) =>
+        case π(λ(Symbol(ch)), false, Some((Right(term), _)), params*) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
-          val arg = args.map {
-            case λ(Symbol(name)) => \(name)
-            case λ(term: Term) => term
-            case λ(arg) => s"$arg".parse[Term].get
-          }.toList
+          val args = params.map(_.toTerm).toList
 
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(arg, None)),
+                         Term.Apply(\(ch), Term.ArgClause(args, None)),
                          Term.ArgClause(code::Nil, None)
                        ))
 
-        case π(λ(Symbol(ch)), false, _, args*) =>
-          val arg = args.map {
-            case λ(Symbol(name)) => \(name)
-            case λ(term: Term) => term
-            case λ(arg) => s"$arg".parse[Term].get
-          }.toList
+        case π(λ(Symbol(ch)), false, _, params*) =>
+          val args = params.map(_.toTerm).toList
 
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg, None)))
+          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args, None)))
 
         case π(_, true, Some((Left(_), _)), _*) => ??? // Scalameta Enumerator - caught by parser
 
         case π(λ(Symbol(ch)), true, Some((Right(code), _)), params*) =>
-          val par = params.map {
+          val args = params.map {
             case λ(Symbol(name)) => name
           }
-          * = Enumerator.Generator(`Seq(*) <- …`(par*), Term.Apply(
-                                                          Term.Apply(\(ch), Term.ArgClause(Nil, None)),
-                                                          Term.ArgClause(code::Nil, None)
+          * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(
+                                                           Term.Apply(\(ch), Term.ArgClause(Nil, None)),
+                                                           Term.ArgClause(code::Nil, None)
                                    ))
 
         case π(λ(Symbol(ch)), true, _, params*) =>
-          val par = params.map {
+          val args = params.map {
             case λ(Symbol(name)) => name
           }
-          * = Enumerator.Generator(`Seq(*) <- …`(par*), Term.Apply(\(ch), Term.ArgClause(Nil, None)))
+          * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(\(ch), Term.ArgClause(Nil, None)))
 
         case _: π => ??? // caught by parser
 
@@ -194,14 +182,14 @@ object Program:
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
-        case ?:(((λ(lhs), λ(rhs)), mismatch), t, f) =>
+        case ?:(((lhs, rhs), mismatch), t, f) =>
           * = f.map(_.generate()).getOrElse(Nil)
 
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), *, t.generate()))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.generate()))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs -> rhs), t.generate(), *))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.generate(), *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -218,7 +206,7 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", args.head),
                            `IO.cede`,
-                           `NonEmptyList( *, … ).parTraverse(identity)`(
+                           `NonEmptyList( *, … ).parSequence`(
                              sum.generate(),
                              `!.π⋯`
                            )
@@ -242,7 +230,7 @@ object Program:
                                                             Nil)
                                                   }
 
-          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
+          val it = `NonEmptyList( *, … ).parSequence`(
                      sum.generate(),
                      `!.μ⋯`
                    )
@@ -252,7 +240,7 @@ object Program:
         case !(_, sum) =>
           val υidυ = id
 
-          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
+          val it = `NonEmptyList( *, … ).parSequence`(
                      sum.generate(),
                      `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
@@ -289,17 +277,13 @@ object Program:
         // INVOCATION //////////////////////////////////////////////////////////
 
         case `(*)`(identifier, qual, params*) =>
-          val args = params.map {
-            case λ(Symbol(name)) => s"`$name`"
-            case λ(it: BigDecimal) => s"BigDecimal($it)"
-            case λ(it) => it.toString
-          }
+          val args = params.map(_.toTerm).toList
 
-          qual match
-            case Nil =>
-              * :+= `_ <- *`(s"""`$identifier`(${args.mkString(", ")})""".parse[Term].get)
-            case _ =>
-              * :+= `_ <- *`(s"""${qual.mkString(".")}.π.`$identifier`(${args.mkString(", ")})""".parse[Term].get)
+          val term = qual match
+            case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
+            case _ => \(identifier)
+
+          * :+= `_ <- *`(Term.Apply(term, Term.ArgClause(args, None)))
 
         ////////////////////////////////////////////////////////// invocation //
 

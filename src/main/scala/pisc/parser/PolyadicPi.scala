@@ -80,10 +80,10 @@ abstract class PolyadicPi extends Expression:
         π(ch, polarity = true, None, params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name)
     }
 
-  def name: Parser[(λ, Names)] = ident ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
-                                 floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
-                                 stringLiteral ^^ { λ(_) -> Names() } |
-                                 ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
+  def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
+                                 floatingPointNumber ^^ (BigDecimal(_)) ^^ { λ(_) -> Names() } |
+                                 stringLiteral ^^ (_.stripPrefix("\"").stripSuffix("\"")) ^^ { λ(_) -> Names() } |
+                                 ( "True" | "False" ) ^^ (_ == "True") ^^ { λ(_) -> Names() } |
                                  expression ^^ {
                                    case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
