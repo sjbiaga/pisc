@@ -18,7 +18,7 @@ function ma() {
     done
     set ../ma.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.1-RC2 \
+                  -q -O -nowarn -S 3.7.1 \
                   --dep org.typelevel::cats-effect:3.7-4972921 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \

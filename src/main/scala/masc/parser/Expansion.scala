@@ -105,8 +105,6 @@ abstract class Expansion extends Encoding:
 
               case _ =>
 
-                val n = end.map(_.length).getOrElse(0)
-
                 given Bindings = Bindings(bindings)
                 parse(instantiation, in) match
 
@@ -119,6 +117,8 @@ abstract class Expansion extends Encoding:
                     val source = in.source
                     val offset = in.offset
                     val start = handleWhiteSpace(source, offset)
+
+                    val n = end.map(_.length).getOrElse(0)
 
                     if start + n <= source.length
                     && (n == 0 || SubSequence(source, start, n).toString == end.right.get)

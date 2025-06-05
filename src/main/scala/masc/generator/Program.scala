@@ -57,7 +57,7 @@ object Program:
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.generate :: _)
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(ios*))
+          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -117,7 +117,7 @@ object Program:
 
           val it = Term.If(Term.ApplyUnary("!", name),
                            `IO.cede`,
-                           `NonEmptyList( *, … ).parTraverse(identity)`(
+                           `NonEmptyList( *, … ).parSequence`(
                              par.generate,
                              `!.(*).⋯`
                            )
@@ -128,7 +128,7 @@ object Program:
         case !(_, par) =>
           val υidυ = id
 
-          val it = `NonEmptyList( *, … ).parTraverse(identity)`(
+          val it = `NonEmptyList( *, … ).parSequence`(
                      par.generate,
                      `_ <- IO.unit` :: `_ <- *`(υidυ)
                    )
@@ -143,7 +143,7 @@ object Program:
         case `[]`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -153,7 +153,7 @@ object Program:
         case `go.`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parTraverse(identity)`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
 
         ////////////////////////////////////////////////////////////////// go //
 
@@ -208,13 +208,16 @@ object Program:
         // INVOCATION //////////////////////////////////////////////////////////
 
         case `(*)`(identifier, qual, params*) =>
-          val args = params.map("`" + _ + "`")
+          val args = params.map(\(_)).toList
 
-          qual match
-            case Nil =>
-              * :+= `_ <- *`(s"""`$identifier`(`)(`)(${args.mkString(", ")})""".parse[Term].get)
-            case _ =>
-              * :+= `_ <- *`(s"""${qual.mkString(".")}.π.`$identifier`(`)(`)(${args.mkString(", ")})""".parse[Term].get)
+          val term = qual match
+            case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
+            case _ => \(identifier)
+
+          * :+= `_ <- *`(Term.Apply(
+                           Term.Apply(term,
+                                      Term.ArgClause(\(")(")::Nil, None)),
+                           Term.ArgClause(args, None)))
 
         ////////////////////////////////////////////////////////// invocation //
 
