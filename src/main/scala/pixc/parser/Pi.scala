@@ -80,10 +80,10 @@ abstract class Pi extends Expression:
         π(ch, par, polarity = true, None) -> (bound, name)
     }
 
-  def name: Parser[(λ, Names)] = ident("channel") ^^ { it => λ(Symbol(it)) -> Set(Symbol(it)) } |
-                                 floatingPointNumber ^^ { it => λ(BigDecimal(it)) -> Names() } |
-                                 stringLiteral ^^ { λ(_) -> Names() } |
-                                 ( "True" | "False" ) ^^ { it => λ(it == "True") -> Names() } |
+  def name: Parser[(λ, Names)] = ident("channel") ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
+                                 floatingPointNumber ^^ (BigDecimal(_)) ^^ { λ(_) -> Names() } |
+                                 stringLiteral ^^ (_.stripPrefix("\"").stripSuffix("\"")) ^^ { λ(_) -> Names() } |
+                                 ( "True" | "False" ) ^^ (_ == "True") ^^ { λ(_) -> Names() } |
                                  expression ^^ {
                                    case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
