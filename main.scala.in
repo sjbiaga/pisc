@@ -73,9 +73,8 @@ object π:
   import _root_.cats.effect.syntax.all.*
 
   extension (self: πLs[IO[?]])
-    private[π] inline def πparTraverse =
-      import _root_.cats.data.NonEmptyList.{ fromListUnsafe => πfLsU }
-      πfLsU(self).parTraverse(identity)
+    private[π] inline def πparSequence: IO[Unit] =
+      _root_.cats.data.NonEmptyList.fromListUnsafe(self).parSequence.void
 
   import sΠ.*
 

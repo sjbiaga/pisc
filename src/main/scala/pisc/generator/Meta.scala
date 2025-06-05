@@ -35,7 +35,7 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.StochasticPi.Actions
-import parser.Calculus.`(*)`
+import parser.Calculus.{ λ, `(*)` }
 
 
 object Meta:
@@ -64,41 +64,11 @@ object Meta:
       )
 
 
-  private def `* ==== …`(* : Any, ** : Term): Term =
-    Term.ApplyInfix(s"${*}".parse[Term].get,
+  def ====(lhs: λ, rhs: λ): Term =
+    Term.ApplyInfix(lhs.toTerm,
                     \("===="),
                     Type.ArgClause(Nil),
-                    Term.ArgClause(** :: Nil, None))
-
-  private def `… ==== *`(** : Term, * : Any): Term =
-    Term.ApplyInfix(**,
-                    \("===="),
-                    Type.ArgClause(Nil),
-                    Term.ArgClause(s"${*}".parse[Term].get :: Nil, None))
-
-  val ==== : ((Any, Any)) => Term =
-    case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: Term) => `* ==== …`(x, y)
-    case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: Term, Symbol(y)) => `… ==== *`(x, y)
-    case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
-    case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
-    case (x: String, y: String) => s"$x ==== $y".parse[Term].get
-    case (x: Term, y: Term) => Term.ApplyInfix(x,
-                                               \("===="),
-                                               Type.ArgClause(Nil),
-                                               Term.ArgClause(y :: Nil, None))
-    case (x: BigDecimal, y: Term) => `* ==== …`(x, y)
-    case (x: Boolean, y: Term) => `* ==== …`(x, y)
-    case (x: String, y: Term) => `* ==== …`(x, y)
-    case (x: Term, y: BigDecimal) => `… ==== *`(x, y)
-    case (x: Term, y: Boolean) => `… ==== *`(x, y)
-    case (x: Term, y: String) => `… ==== *`(x, y)
+                    Term.ArgClause(rhs.toTerm :: Nil, None))
 
 
   val rate: Any => Term = {
@@ -218,14 +188,14 @@ object Meta:
       case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil, None))
 
   @tailrec
-  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
+  def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
     if *.exists {
-      case Term.Select(Term.Apply(Term.Name("πLs"), _), Term.Name("πparTraverse")) => true
+      case Term.Select(Term.Apply(Term.Name("πLs"), _), Term.Name("πparSequence")) => true
       case _ => false
     } then
-      `NonEmptyList( *, … ).parTraverse(identity)`((
+      `NonEmptyList( *, … ).parSequence`((
         *.flatMap {
-          case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparTraverse")) =>
+          case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparSequence")) =>
             ls.map {
               case it @ Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => it
               case Term.Apply(Term.Name("π-supervised"), it :: Nil) => it
@@ -233,7 +203,7 @@ object Meta:
           case it => it :: Nil
         })*)
       else
-        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(`π-supervised(*)`).toList)), "πparTraverse")
+        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(`π-supervised(*)`).toList)), "πparSequence")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =

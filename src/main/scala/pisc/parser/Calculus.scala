@@ -289,8 +289,9 @@ object Calculus:
         val ps = if agent then params.mkString("(", ", ", ")") else ""
         s"""$identifier$ps{${pointers.map(_.name).mkString(", ")}}"""
 
-      case `(*)`(identifier, _) => identifier
-      case `(*)`(identifier, _, params*) => s"$identifier(${params.mkString(", ")})"
+      case `(*)`(identifier, params*) =>
+        val args = params.map(_.toTerm).toList
+        Term.Apply(Term.Name(identifier), Term.ArgClause(args, None)).toString
 
   object ∅ :
     def unapply[T <: AST](self: T): Option[Unit] = self match
@@ -310,11 +311,21 @@ object Calculus:
       case _: String => "string literal"
       case _: Term => "Scalameta Term"
 
+    def toTerm: Term =
+      import scala.meta._
+      import dialects.Scala3
+      value match
+        case it: Symbol => Term.Name(it.name)
+        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil, None))
+        case it: Boolean => Lit.Boolean(it)
+        case it: String => Lit.String(it)
+        case it: Term => it
+
     override def toString: String = value match
       case it: Symbol => it.name
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
-      case it: String => it
+      case it: String => "\"" + it + "\""
       case it: Term => "/*" + it + "*/"
 
 
