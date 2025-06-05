@@ -276,8 +276,13 @@ object Calculus:
         val ps = if agent then params.mkString("(", ", ", ")") else ""
         s"""$identifier$ps{${pointers.mkString(", ")}}"""
 
-      case `(*)`(identifier, _) => identifier
-      case `(*)`(identifier, _, params*) => s"$identifier(${params.mkString(", ")})"
+      case `(*)`(identifier, qual, params*) =>
+        import generator.Meta.\
+        val args = params.map(\(_)).toList
+        val term = qual match
+          case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
+          case _ => \(identifier)
+        Term.Apply(term, Term.ArgClause(args, None)).toString
 
   object ∅ :
     def unapply[T <: AST](self: T): Option[Unit] = self match

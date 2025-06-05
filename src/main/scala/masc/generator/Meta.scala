@@ -156,8 +156,8 @@ object Meta:
       `for * yield ()`(`_ <- IO.unit`)
 
 
-  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
-    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparTraverse")
+  def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
+    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparSequence")
 
 
   def `IO { def *(*: )(): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
