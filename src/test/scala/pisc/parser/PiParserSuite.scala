@@ -129,7 +129,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(name, "\"string\"") match
-          case Success((λ("\"string\""), free), _) =>
+          case Success((λ("string"), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
