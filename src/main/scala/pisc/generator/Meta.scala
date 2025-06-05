@@ -34,7 +34,7 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
-import parser.Calculus.`(*)`
+import parser.Calculus.{ λ, `(*)` }
 
 
 object Meta:
@@ -51,41 +51,11 @@ object Meta:
                body)
 
 
-  private def `* ==== …`(* : Any, ** : Term): Term =
-    Term.ApplyInfix(s"${*}".parse[Term].get,
+  def ====(lhs: λ, rhs: λ): Term =
+    Term.ApplyInfix(lhs.toTerm,
                     \("===="),
                     Type.ArgClause(Nil),
-                    Term.ArgClause(** :: Nil, None))
-
-  private def `… ==== *`(** : Term, * : Any): Term =
-    Term.ApplyInfix(**,
-                    \("===="),
-                    Type.ArgClause(Nil),
-                    Term.ArgClause(s"${*}".parse[Term].get :: Nil, None))
-
-  val ==== : ((Any, Any)) => Term =
-    case (Symbol(x), Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: BigDecimal) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: Boolean) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: String) => s"$x ==== $y".parse[Term].get
-    case (Symbol(x), y: Term) => `* ==== …`(x, y)
-    case (x: BigDecimal, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: Boolean, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: String, Symbol(y)) => s"$x ==== $y".parse[Term].get
-    case (x: Term, Symbol(y)) => `… ==== *`(x, y)
-    case (x: BigDecimal, y: BigDecimal) => s"$x ==== $y".parse[Term].get
-    case (x: Boolean, y: Boolean) => s"$x ==== $y".parse[Term].get
-    case (x: String, y: String) => s"$x ==== $y".parse[Term].get
-    case (x: Term, y: Term) => Term.ApplyInfix(x,
-                                               \("===="),
-                                               Type.ArgClause(Nil),
-                                               Term.ArgClause(y :: Nil, None))
-    case (x: BigDecimal, y: Term) => `* ==== …`(x, y)
-    case (x: Boolean, y: Term) => `* ==== …`(x, y)
-    case (x: String, y: Term) => `* ==== …`(x, y)
-    case (x: Term, y: BigDecimal) => `… ==== *`(x, y)
-    case (x: Term, y: Boolean) => `… ==== *`(x, y)
-    case (x: Term, y: String) => `… ==== *`(x, y)
+                    Term.ArgClause(rhs.toTerm :: Nil, None))
 
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
@@ -197,8 +167,8 @@ object Meta:
     )
 
 
-  def `NonEmptyList( *, … ).parTraverse(identity)`(* : Term*): Term =
-    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparTraverse")
+  def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
+    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparSequence")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =

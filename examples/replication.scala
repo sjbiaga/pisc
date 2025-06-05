@@ -38,16 +38,15 @@ object App extends IOApp:
 object π:
 
   import _root_.scala.collection.immutable.{List => πLs}
-  import _root_.cats.syntax.all._
-  import _root_.cats.effect.syntax.all._
+  import _root_.cats.syntax.all.*
+  import _root_.cats.effect.syntax.all.*
   import _root_.cats.effect.std.Semaphore
 
   extension (self: πLs[IO[?]])
-    private[π] inline def πparTraverse =
-      import _root_.cats.data.NonEmptyList.{fromListUnsafe => πfLsU}
-      πfLsU(self).parTraverse(identity)
+    private[π] inline def πparSequence: IO[Unit] =
+      _root_.cats.data.NonEmptyList.fromListUnsafe(self).parSequence.void
 
-  import Π._
+  import Π.*
 
   import scala.concurrent.duration._
 
@@ -60,8 +59,8 @@ object π:
     x <- ν(2147483647)
     _ <- πLs(
       for {
-        _υ1υ <- IO {
-          lazy val _υ1υ: IO[Any] = πLs(
+        _υ2υ <- IO {
+          lazy val _υ2υ: IO[Any] = πLs(
             for {
               i <- c.get
               _ <- IO.sleep(ms)
@@ -76,16 +75,16 @@ object π:
               _ <- c.update(_ + 1 min 50)
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _υ1υ
+              _ <- _υ2υ
             } yield ()
-          ).πparTraverse
-          _υ1υ
+          ).πparSequence
+          _υ2υ
         }
-        _    <- _υ1υ
+        _    <- _υ2υ
       } yield (),
       for {
-        _υ2υ <- IO {
-          lazy val _υ2υ: IO[Any] = πLs(
+        _υ1υ <- IO {
+          lazy val _υ1υ: IO[Any] = πLs(
             for {
               _ <- IO.sleep(ms)
               y <- x()
@@ -98,12 +97,12 @@ object π:
               _ <- IO.unit
               i <- c.get
               _ <- if i == 50 then IO.never else IO.cede
-              _ <- _υ2υ
+              _ <- _υ1υ
             } yield ()
-          ).πparTraverse
-          _υ2υ
+          ).πparSequence
+          _υ1υ
         }
-        _    <- _υ2υ
+        _    <- _υ1υ
       } yield ()
-    ).πparTraverse
+    ).πparSequence
   } yield ()
