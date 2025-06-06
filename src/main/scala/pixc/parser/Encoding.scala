@@ -103,7 +103,7 @@ abstract class Encoding extends Calculus:
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
           (choice <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
             case (sum, free) ~ ps =>
-              (`⟦⟧`(definition, definition.variables, sum, χ_id()) -> free) -> ps
+              (`⟦⟧`(definition, definition.variables, sum.flatten, χ_id()) -> free) -> ps
           }
         case it =>
           (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
@@ -238,7 +238,7 @@ object Encoding:
   final case class Position(counter: Long, binds: Boolean)
 
   final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
-    val isBinding = if !position.binds then 0 else math.signum(position.counter)
+    val isBinding = position.binds && position.counter < 0
 
   object Binder:
     def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
@@ -341,7 +341,7 @@ object Encoding:
     binders
 
   inline def binders(using bindings: Bindings): Bindings =
-    bindings.filter(_._2.isBinding < 0)
+    bindings.filter(_._2.isBinding)
 
 
   extension [T <: AST](ast: T)
@@ -386,7 +386,7 @@ object Encoding:
                 (using bound: Names): λ =
         val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
         bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
-          case Some((_, occurrence)) if definition && occurrence.isBinding < 0 =>
+          case Some((_, occurrence)) if definition && occurrence.isBinding =>
             bindings += it -> Binder(occurrence)(υidυ)
           case Some((_, occurrence)) =>
             bindings += it -> Shadow(occurrence)(υidυ)

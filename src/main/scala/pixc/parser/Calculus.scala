@@ -79,15 +79,15 @@ abstract class Calculus extends StochasticPi:
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
-    "["~test~"]"~choice ^^ { // (mis)match
+    "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
     } |
-    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    test~"?"~choice~":"~choice ^^ { // Elvis operator
+    condition~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
@@ -157,19 +157,19 @@ abstract class Calculus extends StochasticPi:
     } |
     "start"~> ("("~> ident("transaction") <~ ")") ~ opt("@"~>rate) >> {
       case name ~ r =>
-      val trans = Symbol(name)
-      val bound = Names() + trans
-      BindingOccurrence(bound)
-      instantiation <~"." ^^ {
-        case (exp, free) =>
-          val code = exp.definition.code
-          val it: χ = χ(Right(exp.copy(trans = trans)), r.getOrElse(1L))(sπ_id())
-          if !xctn.contains(trans -> code)
-          then
-            xctn(trans -> code) = Nil
-          xctn(trans -> code) ::= Right(it) -> Bindings(bindings)
-          it -> (bound, free -- bound)
-        }
+        val trans = Symbol(name)
+        val bound = Names() + trans
+        BindingOccurrence(bound)
+        instantiation <~"." ^^ {
+          case (exp, free) =>
+            val code = exp.definition.code
+            val it: χ = χ(Right(exp.copy(trans = trans)), r.getOrElse(1L))(sπ_id())
+            if !xctn.contains(trans -> code)
+            then
+              xctn(trans -> code) = Nil
+            xctn(trans -> code) ::= Right(it) -> Bindings(bindings)
+            it -> (bound, free -- bound)
+          }
     } |
     "end"~> ("("~> ident("transaction") <~ ")") ~ opt("@"~>rate) <~"." ^^ {
       case name ~ r =>
@@ -183,7 +183,7 @@ abstract class Calculus extends StochasticPi:
         it
     }
 
-  def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
+  def condition: Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
         (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
@@ -451,9 +451,6 @@ object Calculus:
             case it => `!`(None, it)
 
         case it @ !(_, sum) =>
-          it.copy(sum = sum.flatten)
-
-        case it @ `⟦⟧`(_, _, sum, _, _, _) =>
           it.copy(sum = sum.flatten)
 
         case _ => ast

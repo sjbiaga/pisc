@@ -304,7 +304,7 @@ object StochasticPi:
     }
 
     private def ensure(using rec: Map[(String, Int), Int])
-              (using prog: List[Bind]): Unit =
+                      (using prog: List[Bind]): Unit =
       import helper.Ensure.*
 
       var i = main
@@ -621,7 +621,7 @@ object StochasticPi:
 
       given List[Bind] = prog.map(_ -> _.shallow.parse._1)
 
-      given rec: Map[(String, Int), Int] = Map()
+      given Map[(String, Int), Int] = Map()
 
       ensure
 
