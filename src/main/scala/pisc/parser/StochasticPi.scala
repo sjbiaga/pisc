@@ -30,7 +30,7 @@ package pisc
 package parser
 
 import scala.collection.mutable.{
-  HashMap => Map,
+  LinkedHashMap => Map,
   ListBuffer => MutableList,
   LinkedHashSet => Set
 }

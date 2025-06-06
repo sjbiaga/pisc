@@ -109,32 +109,6 @@ object Program:
                          Term.ArgClause(Lit.String(it.υidυ)::Nil, None)))
 
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some((Left(enums)), _)) =>
-          val code = `for * yield ()`(enums*)
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: \(arg) :: Nil, None)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
-                         ),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, Some((Right(term)), _)) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: \(arg) :: Nil, None)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
-                         ),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case it @ π(λ(Symbol(ch)), λ(Symbol(arg)), false, r, _) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply( \(ch), Term.ArgClause(rate(r) :: \(arg) :: Nil, None)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
-                       ))
-
         case it @ π(λ(Symbol(ch)), arg, false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(

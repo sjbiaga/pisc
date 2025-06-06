@@ -29,7 +29,7 @@
 package pisc
 package helper
 
-import scala.collection.mutable.{ HashMap => Map }
+import scala.collection.mutable.{ LinkedHashMap => Map }
 
 import parser.Calculus.*
 

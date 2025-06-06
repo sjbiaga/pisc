@@ -32,7 +32,7 @@ import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.Charset
 import java.nio.file.Paths
 
-import scala.collection.mutable.{ HashMap => Map }
+import scala.collection.{ Map, Set }
 import scala.io.Source
 
 import scala.meta.*

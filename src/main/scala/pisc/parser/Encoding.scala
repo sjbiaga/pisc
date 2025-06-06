@@ -103,7 +103,7 @@ abstract class Encoding extends Calculus:
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
           (choice <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
             case (sum, free) ~ ps =>
-              (`⟦⟧`(definition, definition.variables, sum) -> free) -> ps
+              (`⟦⟧`(definition, definition.variables, sum.flatten) -> free) -> ps
           }
         case it =>
           (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
@@ -471,7 +471,7 @@ object Encoding:
               case it => it
             }
 
-          `{}`(id, pointers, agent, paramsʹ*)
+          `{}`(id, pointersʹ, agent, paramsʹ*)
 
         case `(*)`(id, params*) =>
           val paramsʹ = params

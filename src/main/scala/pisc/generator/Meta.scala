@@ -211,10 +211,7 @@ object Meta:
 
 
   val `: String => IO[Any]` =
-    Some(Type.Function(
-           Type.FuncParamClause(Type.Name("String") :: Nil),
-           Type.Apply(Type.Name("IO"),
-                      Type.ArgClause(Type.Name("Unit") :: Nil))))
+    `: IO[Any]`.map(Type.Function(Type.FuncParamClause(Type.Name("String") :: Nil), _))
 
 
   def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
