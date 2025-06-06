@@ -418,12 +418,12 @@ object Expansion:
               it.copy(code = recoded)
             case π(λ(ch: Symbol), true, given Option[Code], names*) =>
               π(replaced(ch), true, recoded, names*)
-            case π(λ(ch: Symbol), false, given Option[Code], _names*) =>
-              val names = _names.map {
+            case π(λ(ch: Symbol), false, given Option[Code], names*) =>
+              val namesʹ = names.map {
                 case λ(arg: Symbol) => replaced(arg)
                 case it => it
               }
-              π(replaced(ch), false, recoded, names*)
+              π(replaced(ch), false, recoded, namesʹ*)
             case it => it
           }
           `.`(end.replace, it*)
@@ -446,12 +446,12 @@ object Expansion:
         case !(Some(π(λ(ch: Symbol), true, given Option[Code], names*)), sum) =>
           `!`(Some(π(replaced(ch), true, recoded, names*)), sum.replace)
 
-        case !(Some(π(λ(ch: Symbol), false, given Option[Code], _names*)), sum) =>
-          val names = _names.map {
+        case !(Some(π(λ(ch: Symbol), false, given Option[Code], names*)), sum) =>
+          val namesʹ = names.map {
             case λ(arg: Symbol) => replaced(arg)
             case it => it
           }
-          `!`(Some(π(replaced(ch), false, recoded, names*)), sum.replace)
+          `!`(Some(π(replaced(ch), false, recoded, namesʹ*)), sum.replace)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.replace)
@@ -549,12 +549,12 @@ object Expansion:
               val chʹ = updated(ch)
               given_Bindings --= names.map(_.asSymbol)
               π(chʹ, true, recoded, names*)
-            case π(λ(ch: Symbol), false, given Option[Code], _names*) =>
-              val names = _names.map {
+            case π(λ(ch: Symbol), false, given Option[Code], names*) =>
+              val namesʹ = names.map {
                 case λ(arg: Symbol) => updated(arg)
                 case it => it
               }
-              π(updated(ch), false, recoded, names*)
+              π(updated(ch), false, recoded, namesʹ*)
             case it => it
           }
           `.`(end.update, it*)
@@ -580,12 +580,12 @@ object Expansion:
           given_Bindings --= names.map(_.asSymbol)
           `!`(Some(π(chʹ, true, recoded, names*)), sum.update)
 
-        case !(Some(π(λ(ch: Symbol), false, given Option[Code], _names*)), sum) =>
-          val names = _names.map {
+        case !(Some(π(λ(ch: Symbol), false, given Option[Code], names*)), sum) =>
+          val namesʹ = names.map {
             case λ(arg: Symbol) => updated(arg)
             case it => it
           }
-          `!`(Some(π(updated(ch), false, recoded, names*)), sum.update)
+          `!`(Some(π(updated(ch), false, recoded, namesʹ*)), sum.update)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.update)

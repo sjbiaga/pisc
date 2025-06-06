@@ -161,18 +161,14 @@ object Program:
         case π(_, true, Some((Left(_), _)), _*) => ??? // Scalameta Enumerator - caught by parser
 
         case π(λ(Symbol(ch)), true, Some((Right(code), _)), params*) =>
-          val args = params.map {
-            case λ(Symbol(name)) => name
-          }
+          val args = params.map(_.asSymbol.name)
           * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(
                                                            Term.Apply(\(ch), Term.ArgClause(Nil, None)),
                                                            Term.ArgClause(code::Nil, None)
                                    ))
 
         case π(λ(Symbol(ch)), true, _, params*) =>
-          val args = params.map {
-            case λ(Symbol(name)) => name
-          }
+          val args = params.map(_.asSymbol.name)
           * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(\(ch), Term.ArgClause(Nil, None)))
 
         case _: π => ??? // caught by parser
@@ -194,9 +190,9 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        ////// REPLICATION /////////////////////////////////////////////////////
+        // REPLICATION /////////////////////////////////////////////////////////
 
-        case `!`(Some(π @ π(_, true, _, params*)), sum) =>
+        case !(Some(π @ π(_, true, _, params*)), sum) =>
           val υidυ = id
 
           val args = params.map(_.asSymbol.name)
