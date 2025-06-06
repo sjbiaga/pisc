@@ -103,7 +103,7 @@ abstract class Encoding extends Calculus:
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
           (choice <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
             case (sum, free) ~ ps =>
-              (`⟦⟧`(definition, definition.variables, sum, χ_id()) -> free) -> ps
+              (`⟦⟧`(definition, definition.variables, sum.flatten, χ_id()) -> free) -> ps
           }
         case it =>
           (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
@@ -383,7 +383,7 @@ object Encoding:
               (using bound: Names): T =
 
       def rebind(it: Symbol)
-                (using binding: Names): λ =
+                (using bound: Names): λ =
         val υidυ = Symbol(it.name.replaceAll("_υ.*υ", "") + id)
         bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
           case Some((_, occurrence)) if definition && occurrence.isBinding =>

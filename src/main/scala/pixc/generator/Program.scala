@@ -158,23 +158,6 @@ object Program:
 
         case π(λ(Symbol(_)), par, true, _) if !par.isSymbol => ??? // not binding a name - caught by parser
 
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Left(enums), _))) =>
-          val code = `for * yield ()`(enums*)
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Right(term), _))) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, _) =>
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(\(arg) :: \(")(") :: Nil, None)))
-
         case π(λ(Symbol(ch)), arg, false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
