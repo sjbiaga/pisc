@@ -79,15 +79,15 @@ abstract class Calculus extends Pi:
     }
 
   def leaf(using Bindings): Parser[(-, Names)] =
-    "["~test~"]"~choice ^^ { // (mis)match
+    "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
     } |
-    "if"~test~"then"~choice~"else"~choice ^^ { // if then else
+    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    test~"?"~choice~":"~choice ^^ { // Elvis operator
+    condition~"?"~choice~":"~choice ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
@@ -155,7 +155,7 @@ abstract class Calculus extends Pi:
     } |
     `μ.`<~"."
 
-  def test: Parser[(((λ, λ), Boolean), Names)] = "("~>test<~")" |
+  def condition: Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
         (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
