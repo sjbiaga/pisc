@@ -56,7 +56,7 @@ abstract class Expression extends JavaTokenParsers:
     * @return
     */
   def expression: Parser[(Code, Names)] =
-    """[/][*].*?[*][/]""".r ^^ { it =>
+    expression_r ^^ { it =>
       val expr = it.stripPrefix("/*").stripSuffix("*/")
       try
         val orig = expr.parse[Term].get
@@ -119,7 +119,7 @@ abstract class Expression extends JavaTokenParsers:
       case _ => Nil
 
   def template: Parser[(Option[Term], Names)] =
-    regexMatch("""⟦(\d*)(.*?)\1⟧""".r) ^^ { it =>
+    regexMatch(template_r) ^^ { it =>
       _code = if it.group(1).isEmpty then 0 else it.group(1).toInt
       if it.group(2).isBlank
       then
@@ -172,6 +172,10 @@ abstract class Expression extends JavaTokenParsers:
 
 object Expression:
 
+  private val expression_r = "[/][*].*?[*][/]".r
+
+  private val template_r = """⟦(\d*)(.*?)\1⟧""".r
+
   import scala.Function.const
 
   import scala.{ meta => sm }
@@ -206,6 +210,7 @@ object Expression:
                   (using replacing: Substitution = null)
                   (using updating: Bindings = null): (sm.Term, Names) =
     given (MutableList[(Symbol, λ)], Bindings) = if refresh eq null then null else refresh -> updating
+    given Bindings = if refresh eq null then updating else null
     Term(self)
 
 
