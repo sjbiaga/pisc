@@ -135,23 +135,6 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Left(enums), _))) =>
-          val code = `for * yield ()`(enums*)
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(\(arg)::Nil, None)),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, Some((Right(term), _))) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(\(arg)::Nil, None)),
-                         Term.ArgClause(code::Nil, None)
-                       ))
-
-        case π(λ(Symbol(ch)), λ(Symbol(arg)), false, _) =>
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(\(arg)::Nil, None)))
-
         case π(λ(Symbol(ch)), arg, false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
@@ -199,7 +182,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        ////// REPLICATION /////////////////////////////////////////////////////
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(Some(π @ π(_, λ(Symbol(par)), true, _)), sum) =>
           val υidυ = id
