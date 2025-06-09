@@ -56,7 +56,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main()
+      val spi = StochasticPi.Main(in)
 
       try
         source = Source.fromFile(s"$examples/pisc/$in")
@@ -100,9 +100,7 @@ object Main:
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
       catch t =>
-        val (m, n) = spi.ln
-        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
-        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()
