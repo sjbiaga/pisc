@@ -95,10 +95,7 @@ abstract class Calculus extends PolyadicPi:
       case Some(π @ (π(λ(ch: Symbol), true, _, _par*), _)) =>
         if _par.filter(_.isSymbol).exists(_.asSymbol == ch)
         then
-          if _werr
-          then
-            throw GuardParsingException(ch.name)
-          Console.err.println("Warning! " + GuardParsingException(ch.name).getMessage + ".")
+          warn(throw GuardParsingException(ch.name))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -162,28 +159,28 @@ abstract class Calculus extends PolyadicPi:
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
     qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
-      case qual ~ id ~ _ if equation && qual.nonEmpty =>
-        throw EquationQualifiedException(id, qual)
-      case _ ~ id ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
-        throw EquationParamsException(id, params.filterNot(_._1.isSymbol).map(_._1)*)
+      case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
+        throw EquationQualifiedException(identifier, qual)
+      case _ ~ identifier ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
+        throw EquationParamsException(identifier, params.filterNot(_._1.isSymbol).map(_._1)*)
       case qual ~ "Self" ~ Some(params) =>
         self += _code
         `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ "Self" ~ _ =>
         self += _code
         `(*)`("Self_" + _code, qual) -> Names()
-      case qual ~ id ~ Some(params) =>
-        id match
+      case qual ~ identifier ~ Some(params) =>
+        identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
-      case qual ~ id ~ _ =>
-        id match
+        `(*)`(identifier, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+      case qual ~ identifier ~ _ =>
+        identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(id, qual) -> Names()
+        `(*)`(identifier, qual) -> Names()
     }
 
   /**
@@ -241,7 +238,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               sum: AST.+,
-              assign: Set[(Symbol, Symbol)] = Set.empty)
+              assignment: Set[(Symbol, Symbol)] = Set.empty)
 
     case `{}`(identifier: String,
               pointers: List[Symbol],
@@ -275,14 +272,14 @@ object Calculus:
 
       case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
-      case `⟦⟧`(definition, variables, sum, assign) =>
+      case `⟦⟧`(definition, variables, sum, assignment) =>
         val vars = if (variables.isEmpty)
                    then
                      ""
                    else
                      variables.map {
-                       case it if assign.exists(_._1 == it) =>
-                         s"${it.name} = ${assign.find(_._1 == it).get._2.name}"
+                       case it if assignment.exists(_._1 == it) =>
+                         s"${it.name} = ${assignment.find(_._1 == it).get._2.name}"
                        case it => it.name
                      }.mkString("{", ", ", "}")
         s"""${Definition(definition.code, definition.term)}$vars = $sum"""
@@ -344,14 +341,14 @@ object Calculus:
   abstract class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class EquationQualifiedException(id: String, qual: List[String])
-      extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $id""")
+  case class EquationQualifiedException(identifier: String, qual: List[String])
+      extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $identifier""")
 
-  case class EquationParamsException(id: String, params: λ*)
-      extends EquationParsingException(s"""The "formal" parameters (${params.mkString(", ")}) are not names in the left hand side of $id""")
+  case class EquationParamsException(identifier: String, params: λ*)
+      extends EquationParsingException(s"""The "formal" parameters (${params.mkString(", ")}) are not names in the left hand side of $identifier""")
 
-  case class EquationFreeNamesException(id: String, free: Names)
-      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
+  case class EquationFreeNamesException(identifier: String, free: Names)
+      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $identifier""")
 
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and a binding parameter name in an input guard")
