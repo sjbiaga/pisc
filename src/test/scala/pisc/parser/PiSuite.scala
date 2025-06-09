@@ -45,8 +45,8 @@ class PiSuite extends FunSuite:
 
   test("agent-no-binding") {
 
-    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #0") {
-     Main() {
+    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1") {
+     Main(getClass.getSimpleName) {
         source("""
                ⟦⟧ =
                P(u) = u(x). u(x). ( u(v). ⟦ z(x). ⟧ )
@@ -58,8 +58,8 @@ class PiSuite extends FunSuite:
 
   test("encoding-no-binding") {
 
-    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #0 in the right hand side of encoding 1") {
-      Main() {
+    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1 in the right hand side of encoding 1") {
+      Main(getClass.getSimpleName) {
         source("""
                ⟦⟧ =
                ⟦1 t"X" 1⟧ = ⟦ z(x). ⟧
@@ -72,7 +72,7 @@ class PiSuite extends FunSuite:
   test("encoding-uniqueness-hardcoded-binding") {
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, but is duplicated at nesting level #0 in the right hand side of encoding 1") {
-      Main() {
+      Main(getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(x). M{v}
                """)
@@ -84,7 +84,7 @@ class PiSuite extends FunSuite:
   test("encoding-uniqueness-encoded-binding") {
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (z) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #1 in the right hand side of encoding 3") {
-      Main() {
+      Main(getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
                ⟦2 t"λ $x,$y . ${$M}" 2⟧{u} = u(x). u(y). M{y}
@@ -98,7 +98,7 @@ class PiSuite extends FunSuite:
   test("encoding-non-parameter-hardcoded-binding") {
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (u) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 1") {
-      Main() {
+      Main(getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = x(u).
                """)
@@ -110,7 +110,7 @@ class PiSuite extends FunSuite:
   test("encoding-non-parameter-encoded-binding") {
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
-      Main() {
+      Main(getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(v). M{v}
@@ -123,7 +123,7 @@ class PiSuite extends FunSuite:
 
   test("encoding - with invocation - parameters and pointers mixed or not") {
 
-    Main() {
+    Main(getClass.getSimpleName) {
       source("""
                 ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
                 Agent0 = ()
@@ -134,17 +134,17 @@ class PiSuite extends FunSuite:
     } match
       case _ :: _ :: Right((_, +(∥(`.`(exp1, ν("x", "y")))))) :: Right((_, +(∥(`.`(exp2, ν("x", "y")))))) :: Nil =>
         exp1 match
-          case `⟦⟧`(_, _, +(∥(`.`(`{}`("Agent2", List(Symbol("x_υ5υ"), Symbol("x_υ3υ")), true), ν("x_υ5υ")),
-                              `.`(`(*)`("Agent0", Nil)))), assign1) =>
-            assertEquals(assign1, Set(Symbol("x_υ3υ") -> Symbol("x"), Symbol("y_υ4υ") -> Symbol("y")))
+          case `⟦⟧`(_, _, +(∥(`.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
+                              `.`(`(*)`("Agent0", Nil)))), assignment1) =>
+            assertEquals(assignment1, Set(Symbol("x_υ4υ") -> Symbol("x"), Symbol("y_υ5υ") -> Symbol("y")))
           case _ =>
             assert(false)
         exp2 match
-          case `⟦⟧`(_, _, +(∥(`.`(`(*)`("Agent2", Nil, λ(Symbol("x_υaυ")), λ(Symbol("x_υaυ"))), ν("x_υaυ")),
-                              `.`(`(*)`("Agent0", Nil)))), assignʹ) =>
-            assertEquals(assignʹ, Set(Symbol("x_υ8υ") -> Symbol("x"), Symbol("y_υ9υ") -> Symbol("y")))
+          case `⟦⟧`(_, _, +(∥(`.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
+                              `.`(`(*)`("Agent0", Nil)))), assignmentʹ) =>
+            assertEquals(assignmentʹ, Set(Symbol("x_υaυ") -> Symbol("x"), Symbol("y_υbυ") -> Symbol("y")))
           case _ =>
-            assert(false)
+            assert(false, exp2)
       case _ =>
         assert(false)
 
@@ -152,7 +152,7 @@ class PiSuite extends FunSuite:
 
   test("encoding - nested") {
 
-    Main() {
+    Main(getClass.getSimpleName) {
       source("""
                 ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
                 ⟦1 t"Out" 1⟧{z} = z<z>.()
@@ -163,18 +163,18 @@ class PiSuite extends FunSuite:
     } match
       case Right((_, +(∥(`.`(exp))))) :: Nil =>
         exp match
-          case `⟦⟧`(_, _, +(∥(`.`(expʹ, ν("ch_υkυ")))), _) =>
+          case `⟦⟧`(_, _, +(∥(`.`(expʹ, ν("ch_υnυ")))), _) =>
             expʹ match
-              case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), assign) =>
-                assertEquals(assign, Set(Symbol("x_υlυ") -> Symbol("ch_υkυ"), Symbol("y_υmυ") -> Symbol("ch_υkυ")))
+              case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), assignment) =>
+                assertEquals(assignment, Set(Symbol("x_υoυ") -> Symbol("ch_υnυ"), Symbol("y_υpυ") -> Symbol("ch_υnυ")))
                 exp1 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("z_υnυ")), λ(Symbol("z_υnυ")), false, None)))), assign1) =>
-                    assertEquals(assign1, Set(Symbol("z_υnυ") -> Symbol("x_υlυ")))
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), false, None)))), assignment1) =>
+                    assertEquals(assignment1, Set(Symbol("z_υqυ") -> Symbol("x_υoυ")))
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υoυ")), λ(Symbol("z_υpυ")), true, None), τ(Some(_))))), assignʹ) =>
-                    assertEquals(assignʹ, Set(Symbol("w_υoυ") -> Symbol("y_υmυ")))
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), true, None), τ(Some(_))))), assignmentʹ) =>
+                    assertEquals(assignmentʹ, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
                   case _ =>
                     assert(false)
               case _ =>

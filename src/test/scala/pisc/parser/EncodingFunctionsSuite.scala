@@ -459,13 +459,13 @@ class EncodingFunctionsSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{z} =") match
           case Success((_, definition @ Definition(_, _, _, _, ∅(_))), _) =>
-            given Map[String, λ | AST]()
-            val `13` = definition()
-
             val id = new helper.υidυ
             given MutableList[(Symbol, λ)]()
             given Bindings()
             given Names()
+
+            given Map[String, λ | AST]()
+            val `13` = definition(_code, _nest, id(), Names())
 
             `13`.rename(id(), Names()) match
               case `⟦⟧`(_, vs, ∅(_), _) =>
@@ -493,13 +493,13 @@ class EncodingFunctionsSuite extends FunSuite:
                                                                         ν("x"),
                                                                         π(λ(Symbol("z")), λ(Symbol("y")), true, None),
                                                                         π(λ(Symbol("y")), λ(Symbol("x")), false, None)))))), _) =>
-            given Map[String, λ | AST]()
-            val `13` = definition()
-
             val id = new helper.υidυ
             given MutableList[(Symbol, λ)]()
             given Bindings = Bindings(it.bindings)
             given Names()
+
+            given Map[String, λ | AST]()
+            val `13` = definition(_code, _nest, id(), Names())
 
             `13`.rename(id(), Names()) match
               case `⟦⟧`(_, vs, +(∥(`.`(∅(_),
@@ -636,8 +636,8 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition
             parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
-              case Success((_, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assign))))), _) =>
-                assign.headOption match
+              case Success((_, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assignment))))), _) =>
+                assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
                   case _ =>
                     assert(false)
@@ -661,14 +661,14 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition1
             parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
-              case Success(definition2 @ (_, Definition(_, _, _, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assign)))))), _) =>
+              case Success(definition2 @ (_, Definition(_, _, _, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assignment)))))), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition2
-                assign.headOption match
+                assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
                     parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
-                      case Success((_, +(∥(`.`(`⟦⟧`(_, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assign1)))), assign2))))), _) =>
-                        assign1.headOption -> assign2.headOption match
+                      case Success((_, +(∥(`.`(`⟦⟧`(_, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), assignment1)))), assignment2))))), _) =>
+                        assignment1.headOption -> assignment2.headOption match
                           case Some((Symbol("z_υ6υ"), Symbol("y_υ5υ"))) ->
                                Some((Symbol("y_υ5υ"), Symbol("x"))) =>
                           case _ =>

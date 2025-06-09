@@ -50,7 +50,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val pi = Pi.Main()
+      val pi = Pi.Main(in)
 
       try
         source = Source.fromFile(s"$examples/pisc/$in")
@@ -72,9 +72,7 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        val (m, n) = pi.ln
-        val l = if m == n then s"line #$n" else s"lines #$m-#$n"
-        Console.err.println(s"Error in file `$in' $l: " + t.getMessage + ".")
+        Console.err.println(s"Error in file `$in' ${pi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()

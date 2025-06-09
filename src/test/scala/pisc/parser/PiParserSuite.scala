@@ -512,5 +512,7 @@ object PiParserSuite:
 
   abstract class PiParserTest extends Pi:
     def regexMatch(_r: Regex): Parser[Regex.Match] = ???
+    override protected def in: String = getClass.getSimpleName
+    override def ln: String = "line #0"
 
     def test: Unit

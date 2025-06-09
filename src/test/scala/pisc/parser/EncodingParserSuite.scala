@@ -344,6 +344,8 @@ object EncodingParserSuite:
         }
       }
     }
+    override protected def in: String = getClass.getSimpleName
+    override def ln: String = "line #0"
     override def instance(defs: List[Define], end: String)
                          (using Bindings): Parser[(`⟦⟧`, Names)] =
       new Parser[(`⟦⟧`, Names)]:

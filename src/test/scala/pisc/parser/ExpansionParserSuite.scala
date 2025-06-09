@@ -65,7 +65,7 @@ class ExpansionParserSuite extends FunSuite:
         case Success(it, _) =>
           defn(0) = it :: Nil
 
-    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #0") {
+    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #1") {
       `13`.test
     }
 
@@ -81,7 +81,7 @@ class ExpansionParserSuite extends FunSuite:
         case Success(it, _) =>
           defn(0) = it :: Nil
 
-    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #0") {
+    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #1") {
       `13`.test
     }
 
@@ -165,6 +165,8 @@ object ExpansionParserSuite:
   import scala.util.matching.Regex
 
   abstract class ExpansionParserTest extends Expansion:
+    override protected def in: String = getClass.getSimpleName
+    override def ln: String = "line #0"
 
     eqtn = List()
     defn = Map()
