@@ -57,7 +57,7 @@ abstract class Encoding extends Calculus:
         || (constants & variables).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        val bound = _parameters ++ constants ++ variables
+        var bound = _parameters ++ constants ++ variables
         given Bindings = Bindings() ++
                          bound
                            .filterNot(_.charAt(0).isUpper)
@@ -67,13 +67,36 @@ abstract class Encoding extends Calculus:
           case (_par, _free) =>
             val par = _par.flatten
             val free = _free ++ par.capitals
+            val (constantsʹ, variablesʹ, bindingsʹ, parʹ) =
+              par match
+                case ∥(`.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, assignmentʹ)))
+                    if assignmentʹ.size < variablesʹ.size =>
+                  val constantsʹʹ = constantsʹ &~ constants
+                  val pointersʹ = variablesʹ.map(_.replaceAll("_υ.*υ", ""))
+                  val variablesʹʹ = (pointersʹ &~ variables)
+                                      .map { it => variablesʹ.find(_.startsWith(it)).get }
+                  val pointersʹʹ = pointersʹ.drop(assignmentʹ.size)
+                  if variablesʹʹ.size != pointersʹʹ.size
+                  then
+                    warn(throw EncodingAliasAbandonedException(_code))
+                    (constants, variables, given_Bindings, par)
+                  else
+                    val assignmentʹʹ = assignmentʹ ++ (variablesʹʹ zip pointersʹʹ)
+                    val boundʹ = constantsʹʹ ++ pointersʹʹ
+                    bound ++= boundʹ
+                    val bindingsʹ = boundʹ.map(_ -> Occurrence(None, pos()))
+                    val expʹ: `⟦⟧` = exp.copy(assignment = assignmentʹʹ)
+                    val parʹ: ∥ = ∥(`.`(expʹ))
+                    (constants ++ constantsʹʹ, variables ++ pointersʹʹ, given_Bindings ++ bindingsʹ, parʹ)
+                case _ =>
+                  (constants, variables, given_Bindings, par)
             if (free &~ bound).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ bound)
             if parameters.size == _parameters.size
             then
-              eqtn :+= `(*)`("Self_" + _code, Nil, bound.toSeq*) -> par
-            Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, par)
+              eqtn :+= `(*)`("Self_" + _code, Nil, bound.toSeq*) -> parʹ
+            Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, parʹ)
             ->
             Definition(_code, term, constants, variables, par)
         }
@@ -112,14 +135,14 @@ abstract class Encoding extends Calculus:
           }
     } ^^ {
       case ((exp @ `⟦⟧`(Definition(_, _, constants, _, _), variables, _, _), free), _pointers) =>
-        nest(false)
-        given MutableList[(String, String)]()
         try
+          given MutableList[(String, String)]()
           val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
-          val assign = variables zip pointers
+          val assignment = variables zip pointers
           given Names()
-          val expʹ = exp.copy(assign = assign).rename(id, free)
+          val expʹ = exp.copy(assignment = assignment).rename(id, free)
           bindings ++= purged
+          nest(false)
           expʹ -> (free ++ constants)
         catch
           case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
@@ -136,21 +159,21 @@ abstract class Encoding extends Calculus:
 
   def capital: Parser[(`{}`, Names)] =
     IDENT ~ pointers ^^ {
-      case id ~ ps =>
-        `{}`(id, ps._1) -> ps._2
+      case identifier ~ ps =>
+        `{}`(identifier, ps._1) -> ps._2
     } |
     IDENT <~"{"<~"}" ^^ (`{}`(_, Nil) -> Names()) |
     IDENT ~ ("("~>opt( rep1sep(name, ",") )<~")") ~ pointers ^^ {
-      case id ~ Some(params) ~ ps =>
-        `{}`(id, ps._1, true, params.map(_._1)*) -> (ps._2 ++ params.map(_._2).reduce(_ ++ _))
-      case id ~ _ ~ ps =>
-        `{}`(id, ps._1, true) -> ps._2
+      case identifier ~ Some(params) ~ ps =>
+        `{}`(identifier, ps._1, true, params.map(_._1)*) -> (ps._2 ++ params.map(_._2).reduce(_ ++ _))
+      case identifier ~ _ ~ ps =>
+        `{}`(identifier, ps._1, true) -> ps._2
     } |
     IDENT ~ ("("~>opt( rep1sep(name, ",") )<~")") <~"{"<~"}" ^^ {
-      case id ~ Some(params) =>
-        `{}`(id, Nil, true, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
-      case id ~ _ =>
-        `{}`(id, Nil, true) -> Names()
+      case identifier ~ Some(params) =>
+        `{}`(identifier, Nil, true, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+      case identifier ~ _ =>
+        `{}`(identifier, Nil, true) -> Names()
     }
 
   protected final val _cache = Map[CacheKey, CacheValue]()
@@ -173,16 +196,18 @@ object Encoding:
                    bindings: Bindings,
                    par: ∥):
     def apply(code: Int, id: => String, term: Term): Fresh =
-      given refresh: MutableList[(String, String)] = MutableList()
+      given Bindings = Bindings(bindings)
+      given MutableList[(String, String)]()
       val variablesʹ = variables
         .map { it =>
           val υidυ = it.replaceAll("_υ.*υ", "") + id
-          refresh.prepend(it -> υidυ)
+          given_Bindings(υidυ) = given_Bindings(it)
+          given_Bindings -= it
+          given_MutableList_String_String.prepend(it -> υidυ)
           υidυ
         }
-      given Bindings = Bindings(bindings)
       given Names()
-      val parʹ = par.rename(id, Set.empty, definition = true)
+      val parʹ = par.rename(id, Names(), definition = true)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -199,7 +224,19 @@ object Encoding:
                         constants: Names,
                         variables: Names,
                         par: ∥):
-    inline def apply()(using Substitution): `⟦⟧` =
+    def apply(_code: Int, nest: Int, id: => String, free: Names)
+             (using bindings: Bindings)
+             (using Substitution): `⟦⟧` =
+      given (∥ | - => ∥ | -) = { ast =>
+        try
+          given Bindings = Bindings(bindings)
+          given MutableList[(String, String)]()
+          given Names()
+          ast.rename(id, Names(free))
+        catch
+          case it: NoBPEx => throw NoBindingParsingException(_code, nest, it.getMessage)
+          case it => throw it
+      }
       `⟦⟧`(this, variables, par.replace.flatten)
 
     override def toString: String = Definition(code, term)
@@ -261,13 +298,16 @@ object Encoding:
   case class NoBindingParsingException(code: Int, nest: Int, name: String)
       extends BindingParsingException(code, nest, s"No binding for $name")
 
-  private class NoBPEx(name: String) extends Throwable(name)
+  final private class NoBPEx(name: String) extends Throwable(name)
 
   case class UniquenessBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
 
   case class NonParameterBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
+
+  case class EncodingAliasAbandonedException(code: Int)
+      extends ParsingException(s"An encoding alias was abandoned as the right hand side of encoding $code")
 
 
   // functions
@@ -345,7 +385,7 @@ object Encoding:
         case `⟦⟧`(_, _, par, _) =>
           par.capitals
 
-        case `{}`(id, _, false) => Set(id)
+        case `{}`(identifier, _, false) => Set(identifier)
 
         case _ => Names()
 
@@ -425,33 +465,33 @@ object Encoding:
         case `go.`(amb, par) =>
           `go.`(renamed(amb), rename(par))
 
-        case it @ `⟦⟧`(_, variables, par, assign) =>
+        case it @ `⟦⟧`(_, variables, par, assignment) =>
           val n = refresh.size
-          val assignʹ = assign
-            .map { (variable, pointer) =>
-              val υidυ = variable.replaceAll("_υ.*υ", "") + id
-              refresh.prepend(variable -> υidυ)
-              υidυ -> renamed(pointer)
-            }
-          var variablesʹ = variables
-            .drop(assign.size)
-            .map { it =>
-              val υidυ = it.replaceAll("_υ.*υ", "") + id
-              refresh.prepend(it -> υidυ)
-              υidυ
-            }
-          variablesʹ = assignʹ.map(_._1) ++ variablesʹ
+          val assignmentʹ = assignment
+                              .map { (it, pt) =>
+                                val υidυ = it.replaceAll("_υ.*υ", "") + id
+                                refresh.prepend(it -> υidυ)
+                                υidυ -> renamed(pt)
+                              }
+          val variablesʹ = assignmentʹ.map(_._1)
+                        ++ variables
+                             .drop(assignment.size)
+                             .map { it =>
+                               val υidυ = it.replaceAll("_υ.*υ", "") + id
+                               refresh.prepend(it -> υidυ)
+                               υidυ
+                             }
           val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
-          it.copy(variables = variablesʹ, par = parʹ, assign = assignʹ)
+          it.copy(variables = variablesʹ, par = parʹ, assignment = assignmentʹ)
 
-        case `{}`(id, pointers, agent, params*) =>
+        case `{}`(identifier, pointers, agent, params*) =>
           val pointersʹ = pointers.map(renamed(_))
           val paramsʹ = params.map(renamed(_))
 
-          `{}`(id, pointersʹ, agent, paramsʹ*)
+          `{}`(identifier, pointersʹ, agent, paramsʹ*)
 
-        case `(*)`(id, qual, params*) =>
+        case `(*)`(identifier, qual, params*) =>
           val paramsʹ = params.map(renamed(_))
 
-          `(*)`(id, qual, paramsʹ*)
+          `(*)`(identifier, qual, paramsʹ*)

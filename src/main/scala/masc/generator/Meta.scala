@@ -157,7 +157,12 @@ object Meta:
 
 
   def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
-    Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.toList)), "πparSequence")
+    *.flatMap {
+      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case it => Some(it)
+    } match
+      case Nil => `IO.cede`
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList, None)), "πparSequence")
 
 
   def `IO { def *(*: )(): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =

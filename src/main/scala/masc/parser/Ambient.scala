@@ -65,7 +65,6 @@ abstract class Ambient extends Expression:
       rep1(acceptIf(Character.isLowerCase)("ambient name expected but '" + _ + "' found"),
           elem("ambient name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -184,13 +183,13 @@ object Ambient:
         case it @ `⟦⟧`(_, _, par, _) =>
           it.copy(par = par.shallow)
 
-        case `{}`(id, pointers, true, params*) =>
-          `(*)`(id, Nil, (params ++ pointers)*)
+        case `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, Nil, (params ++ pointers)*)
 
         case _ => ast
 
 
-  final class Main extends Expansion:
+  final class Main(override protected val in: String) extends Expansion:
 
     def line: Parser[Either[Bind, Define]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -213,11 +212,8 @@ object Ambient:
         (i, n) <- rep
       do
         prog(i)._1 match
-          case `(*)`(id, _, params*) =>
-            if _werr
-            then
-              throw RecRepParsingException(id, params.size, n)
-            Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
+          case `(*)`(identifier, _, params*) =>
+            warn(throw RecRepParsingException(identifier, params.size, n))
 
     def apply(prog: List[Bind]): List[Bind] =
       given List[Bind] = prog.map(_ -> _.shallow)
@@ -226,7 +222,7 @@ object Ambient:
 
     private var i: Int = -1
     private var l: (Int, Int) = (-1, -1)
-    def ln = l
+    override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
@@ -238,41 +234,40 @@ object Ambient:
       i = 0
       l = (0, 0)
 
-      (source.getLines().toList :+ "")
-      .zipWithIndex
-      .foldLeft(List[(String, (Int, Int))]() -> false) {
-        case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-        case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
-      }._1
-      .flatMap { case (it, (m, n)) =>
-        l = (m+1, n+1)
-        if it.matches("^[ ]*#.*") // commented lines
-        || it.isBlank // empty lines
-        then
-          None
-        else if it.matches("^[ ]*@.*")
-        then // Scala
-          Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-        else // Ambient
-          _cntr = Map(0 -> 0L)
-          _nth = Map(0 -> 0L)
-          parseAll(line, it) match
-            case Success(Left(equation), _) =>
-              eqtn :+= equation
-              val equations = eqtn.slice(i, eqtn.size)
-              i = eqtn.size
-              equations.map(Right(_))
-            case Success(Right(definition), _) =>
-              if !defn.contains(_code) then defn(_code) = Nil
-              defn(_code) ::= definition
-              Nil
-            case failure: NoSuccess =>
-              scala.sys.error(failure.msg)
-      }
-      .filter {
-        case Right((`(*)`(s"Self_$n", _, _*), _))
-            if { try { n.toInt; true } catch _ => false } =>
-          self.contains(n.toInt)
-        case _ => true
-      }
-      .toList
+      (source.getLines() ++ Some(""))
+        .zipWithIndex
+        .foldLeft(List[(String, (Int, Int))]() -> false) {
+          case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+          case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+        }._1
+        .flatMap { case (it, (m, n)) =>
+          l = (m+1, n+1)
+          if it.matches("^[ ]*#.*") // commented lines
+          || it.isBlank // empty lines
+          then
+            None
+          else if it.matches("^[ ]*@.*")
+          then // Scala
+            Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+          else // Ambient
+            _cntr = Map(0 -> 0L)
+            _nth = Map(0 -> 0L)
+            parseAll(line, it) match
+              case Success(Left(equation), _) =>
+                eqtn :+= equation
+                val equations = eqtn.slice(i, eqtn.size)
+                i = eqtn.size
+                equations.map(Right(_))
+              case Success(Right(definition), _) =>
+                if !defn.contains(_code) then defn(_code) = Nil
+                defn(_code) ::= definition
+                Nil
+              case failure: NoSuccess =>
+                scala.sys.error(failure.msg)
+        }
+        .filter {
+          case Right((`(*)`(s"Self_$n", _, _*), _))
+              if { try { n.toInt; true } catch _ => false } =>
+            self.contains(n.toInt)
+          case _ => true
+        }

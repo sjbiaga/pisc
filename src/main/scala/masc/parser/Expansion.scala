@@ -292,7 +292,7 @@ abstract class Expansion extends Encoding:
           case Some(((definition, _), (given Substitution, (free, given Bindings)), in)) =>
             bindings ++= binders
 
-            Success(definition() -> free, in)
+            Success(definition(_code, _nest, id, free) -> free, in)
 
           case _ => throw UndefinedParsingException
 
@@ -390,7 +390,8 @@ object Expansion:
 
   extension [T <: AST](ast: T)
 
-    def replace(using substitution: Substitution): T =
+    def replace(using rename: ∥ | - => ∥ | -)
+               (using substitution: Substitution): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -436,29 +437,30 @@ object Expansion:
           `go.`(replaced(amb), par.replace)
 
         case it @ `⟦⟧`(_, _, par, _) =>
-          val assign = it.assign.map(_ -> replaced(_))
-          it.copy(par = par.replace, assign = assign)
+          val assignment = it.assignment.map(_ -> replaced(_))
+          it.copy(par = par.replace, assignment = assignment)
 
-        case `{}`(id, pointers, false) =>
+        case `{}`(identifier, pointers, false) =>
           given List[String] = pointers.map(replaced(_))
+          val ast = rename(substitution(identifier).asInstanceOf[∥ | -].flatten)
           if given_List_String.nonEmpty
           then
-            substitution(id).asInstanceOf[∥ | -].flatten.concatenate
+            ast.concatenate
           else
-            substitution(id).asInstanceOf[∥ | -]
+            ast
 
-        case `{}`(id, pointers, true, params*) =>
+        case `{}`(identifier, pointers, true, params*) =>
           val pointersʹ = pointers.map(replaced(_))
           val paramsʹ = params.map(replaced(_))
 
-          `{}`(id, pointersʹ, true, paramsʹ*)
+          `{}`(identifier, pointersʹ, true, paramsʹ*)
 
         case _: `{}` => ???
 
-        case `(*)`(id, qual, params*) =>
+        case `(*)`(identifier, qual, params*) =>
           val paramsʹ = params.map(replaced(_))
 
-          `(*)`(id, qual, paramsʹ*)
+          `(*)`(identifier, qual, paramsʹ*)
 
 
     private def concatenate(using pointers: List[String]): T =
@@ -485,12 +487,12 @@ object Expansion:
           it.copy(par = par.concatenate)
 
         case it @ `⟦⟧`(_, variables, _, _) =>
-          it.assign ++= variables.drop(it.assign.size) zip pointers
+          it.assignment ++= variables.drop(it.assignment.size) zip pointers
           it
 
-        case it @ `{}`(id, _, agent, params*) =>
+        case it @ `{}`(identifier, _, agent, params*) =>
           val pointersʹ = it.pointers ++ pointers
-          `{}`(id, pointersʹ, agent, params*)
+          `{}`(identifier, pointersʹ, agent, params*)
 
         case _ => ast
 
@@ -549,17 +551,17 @@ object Expansion:
         case `go.`(amb, par) =>
           `go.`(updated(amb), par.update)
 
-        case it @ `⟦⟧`(_, _, par, assign) =>
-          val assignʹ = assign.map(_ -> updated(_))
-          it.copy(par = par.update, assign = assignʹ)
+        case it @ `⟦⟧`(_, _, par, assignment) =>
+          val assignmentʹ = assignment.map(_ -> updated(_))
+          it.copy(par = par.update, assignment = assignmentʹ)
 
-        case `{}`(id, pointers, agent, params*) =>
+        case `{}`(identifier, pointers, agent, params*) =>
           val pointersʹ = pointers.map(updated(_))
           val paramsʹ = params.map(updated(_))
 
-          `{}`(id, pointersʹ, agent, paramsʹ*)
+          `{}`(identifier, pointersʹ, agent, paramsʹ*)
 
-        case `(*)`(id, qual, params*) =>
+        case `(*)`(identifier, qual, params*) =>
           val paramsʹ = params.map(updated(_))
 
-          `(*)`(id, qual, paramsʹ*)
+          `(*)`(identifier, qual, paramsʹ*)

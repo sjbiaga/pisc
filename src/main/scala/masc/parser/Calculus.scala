@@ -150,26 +150,26 @@ abstract class Calculus extends Ambient:
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
     qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
-      case qual ~ id ~ _ if equation && qual.nonEmpty =>
-        throw EquationQualifiedException(id, qual)
+      case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
+        throw EquationQualifiedException(identifier, qual)
       case qual ~ "Self" ~ Some(params) =>
         self += _code
         `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ "Self" ~ _ =>
         self += _code
         `(*)`("Self_" + _code, qual) -> Names()
-      case qual ~ id ~ Some(params) =>
-        id match
+      case qual ~ identifier ~ Some(params) =>
+        identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(id, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
-      case qual ~ id ~ _ =>
-        id match
+        `(*)`(identifier, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+      case qual ~ identifier ~ _ =>
+        identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(id, qual) -> Names()
+        `(*)`(identifier, qual) -> Names()
     }
 
   /**
@@ -229,7 +229,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               par: AST.∥,
-              assign: Set[(String, String)] = Set.empty)
+              assignment: Set[(String, String)] = Set.empty)
 
     case `{}`(identifier: String,
               pointers: List[String],
@@ -260,14 +260,14 @@ object Calculus:
 
       case `go.`(amb, par) => "go " + amb + "." + par
 
-      case `⟦⟧`(definition, variables, par, assign) =>
+      case `⟦⟧`(definition, variables, par, assignment) =>
         val vars = if (variables.isEmpty)
                    then
                      ""
                    else
                      variables.map {
-                       case it if assign.exists(_._1 == it) =>
-                         s"$it = ${assign.find(_._1 == it).get._2}"
+                       case it if assignment.exists(_._1 == it) =>
+                         s"$it = ${assignment.find(_._1 == it).get._2}"
                        case it => it
                      }.mkString("{", ", ", "}")
         s"""${Definition(definition.code, definition.term)}$vars = $par"""
@@ -299,11 +299,11 @@ object Calculus:
   abstract class EquationParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
 
-  case class EquationQualifiedException(id: String, qual: List[String])
-      extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $id""")
+  case class EquationQualifiedException(identifier: String, qual: List[String])
+      extends EquationParsingException(s"""A qualified package ${qual.mkString(".")} is present in the left hand side of $identifier""")
 
-  case class EquationFreeNamesException(id: String, free: Names)
-      extends EquationParsingException(s"""The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $id""")
+  case class EquationFreeNamesException(identifier: String, free: Names)
+      extends EquationParsingException(s"""The free names (${free.mkString(", ")}) in the right hand side are not formal parameters of the left hand side of $identifier""")
 
   import scala.meta.Enumerator
 

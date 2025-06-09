@@ -184,13 +184,13 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _par, assign) =>
-          val ** = assign
+        case `⟦⟧`(_, variables, _par, assignment) =>
+          val ** = assignment
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
 
-          val n = assign.size
+          val n = assignment.size
 
           val par = if (variables.size == n)
                     then

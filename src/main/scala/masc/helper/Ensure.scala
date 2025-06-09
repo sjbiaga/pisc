@@ -104,9 +104,9 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case it @ `(*)`(id, _, params*)
-            if stack.contains(id -> params.size) =>
-          val k = stack.lastIndexOf(id -> params.size)
+        case it @ `(*)`(identifier, _, params*)
+            if stack.contains(identifier -> params.size) =>
+          val k = stack.lastIndexOf(identifier -> params.size)
           for
             j <- k until stack.size
             i = indexʹ(prog)(stack(j))
@@ -122,9 +122,9 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, _, params*) =>
-          val i = indexʹ(prog)(id -> params.size)
+        case `(*)`(identifier, _, params*) =>
+          val i = indexʹ(prog)(identifier -> params.size)
           val par = prog(i)._2
-          par.recursive(using stack :+ id -> params.size)
+          par.recursive(using stack :+ identifier -> params.size)
 
         case _ =>
