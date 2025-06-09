@@ -74,6 +74,17 @@ abstract class Expression extends JavaTokenParsers:
 
   def regexMatch(r: Regex): Parser[Regex.Match]
 
+  protected def in: String
+  def ln: String
+  protected var _werr: Boolean = false
+
+  final protected def warn(t: => Nothing): Unit =
+    try
+      t
+    catch
+      case t if !_werr =>
+        Console.err.println(s"Warning in file `$in' $ln! ${t.getMessage}.")
+
   protected var _code: Int = -1
 
   private def apply(using params: MutableList[String])
