@@ -42,11 +42,11 @@ object Ensure:
   case object MainParsingExceptionʹ
       extends EquationParsingException("The parameterless Main agent is recursive")
 
-  case class RecRepParsingException(id: String, arity: Int, times: Int)
-      extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+  case class RecRepParsingException(identifier: String, arity: Int, times: Int)
+      extends EquationParsingException(s"""$identifier#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
 
-  case class StartParsingException(id: String, arity: Int, by: String)
-      extends EquationParsingException(s"$id#$arity leads to a start transaction prefix by $by")
+  case class StartParsingException(identifier: String, arity: Int, by: String)
+      extends EquationParsingException(s"$identifier#$arity leads to a start transaction prefix by $by")
 
   private def indexʹ(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
@@ -111,9 +111,9 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case it @ `(*)`(id, params*)
-            if stack.contains(id -> params.size) =>
-          val k = stack.lastIndexOf(id -> params.size)
+        case it @ `(*)`(identifier, params*)
+            if stack.contains(identifier -> params.size) =>
+          val k = stack.lastIndexOf(identifier -> params.size)
           for
             j <- k until stack.size
             i = indexʹ(prog)(stack(j))
@@ -129,10 +129,10 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, params*) =>
-          val i = indexʹ(prog)(id -> params.size)
+        case `(*)`(identifier, params*) =>
+          val i = indexʹ(prog)(identifier -> params.size)
           val sum = prog(i)._2
-          sum.recursive(using stack :+ id -> params.size)
+          sum.recursive(using stack :+ identifier -> params.size)
 
     /**
       * Called for "Main".
@@ -183,13 +183,13 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case `(*)`(id, params*)
-            if stack.contains(id -> params.size) => true
+        case `(*)`(identifier, params*)
+            if stack.contains(identifier -> params.size) => true
 
-        case `(*)`(id, params*) =>
-          val i = rec(id -> params.size)
+        case `(*)`(identifier, params*) =>
+          val i = rec(identifier -> params.size)
           val sum = prog(i.abs-1)._2
-          sum.replication(using id -> params.size :: stack)
+          sum.replication(using identifier -> params.size :: stack)
 
     /**
       * Called only for recursive agents.
@@ -236,10 +236,10 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case `(*)`(id, params*)
-            if stack.contains(id -> params.size) => true
+        case `(*)`(identifier, params*)
+            if stack.contains(identifier -> params.size) => true
 
-        case `(*)`(id, params*) =>
-          val i = rec(id -> params.size)
+        case `(*)`(identifier, params*) =>
+          val i = rec(identifier -> params.size)
           val sum = prog(i.abs-1)._2
-          sum.recursion(using id -> params.size :: stack)
+          sum.recursion(using identifier -> params.size :: stack)
