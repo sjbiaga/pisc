@@ -111,9 +111,9 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case it @ `(*)`(id, _, params*)
-            if stack.contains(id -> params.size) =>
-          val k = stack.lastIndexOf(id -> params.size)
+        case it @ `(*)`(identifier, _, params*)
+            if stack.contains(identifier -> params.size) =>
+          val k = stack.lastIndexOf(identifier -> params.size)
           for
             j <- k until stack.size
             i = indexʹ(prog)(stack(j))
@@ -129,10 +129,10 @@ object Ensure:
                 rep(i) = 0
               rep(i) += 1
 
-        case `(*)`(id, _, params*) =>
-          val i = indexʹ(prog)(id -> params.size)
+        case `(*)`(identifier, _, params*) =>
+          val i = indexʹ(prog)(identifier -> params.size)
           val sum = prog(i)._2
-          sum.recursive(using stack :+ id -> params.size)
+          sum.recursive(using stack :+ identifier -> params.size)
 
     /**
       * Called for "Main".
@@ -183,13 +183,13 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case `(*)`(id, _, params*)
-            if stack.contains(id -> params.size) => true
+        case `(*)`(identifier, _, params*)
+            if stack.contains(identifier -> params.size) => true
 
-        case `(*)`(id, _, params*) =>
-          val i = rec(id -> params.size)
+        case `(*)`(identifier, _, params*) =>
+          val i = rec(identifier -> params.size)
           val sum = prog(i.abs-1)._2
-          sum.replication(using id -> params.size :: stack)
+          sum.replication(using identifier -> params.size :: stack)
 
     /**
       * Called only for recursive agents.
@@ -236,10 +236,10 @@ object Ensure:
 
         case _: `{}` => ???
 
-        case `(*)`(id, _, params*)
-            if stack.contains(id -> params.size) => true
+        case `(*)`(identifier, _, params*)
+            if stack.contains(identifier -> params.size) => true
 
-        case `(*)`(id, _, params*) =>
-          val i = rec(id -> params.size)
+        case `(*)`(identifier, _, params*) =>
+          val i = rec(identifier -> params.size)
           val sum = prog(i.abs-1)._2
-          sum.recursion(using id -> params.size :: stack)
+          sum.recursion(using identifier -> params.size :: stack)

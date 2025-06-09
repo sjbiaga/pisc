@@ -98,7 +98,6 @@ abstract class Pi extends Expression:
       rep1(acceptIf(Character.isLowerCase)(s"$what name expected but '" + _ + "' found"),
           elem(s"$what name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  private[parser] var _werr: Boolean = false
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -227,12 +226,12 @@ object Pi:
         case it @ `⟦⟧`(_, _, sum, _, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers, true, params*) =>
-          `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
+        case `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, Nil, (params ++ pointers.map(λ(_)))*)
 
         case _ => ast
 
-  final class Main extends Expansion:
+  final class Main(override protected val in: String) extends Expansion:
 
     def line: Parser[Either[Bind, Define]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -264,13 +263,13 @@ object Pi:
         case (it @ `(*)`("Main", _), _) =>
           val i = index(prog)(it)
           rec("Main" -> 0) = -(i+1)
-        case (it @ `(*)`(id, _, params*), _) if !rec.contains(id -> params.size) =>
+        case (it @ `(*)`(identifier, _, params*), _) if !rec.contains(identifier -> params.size) =>
           val i = index(prog)(it)
           val sum = prog(i)._2
-          sum.recursive(using id -> params.size :: Nil)
-          if !rec.contains(id -> params.size)
+          sum.recursive(using identifier -> params.size :: Nil)
+          if !rec.contains(identifier -> params.size)
           then
-            rec(id -> params.size) = -(i+1)
+            rec(identifier -> params.size) = -(i+1)
         case _ =>
       }
 
@@ -278,22 +277,19 @@ object Pi:
         (i, n) <- rep
       do
         prog(i)._1 match
-          case `(*)`(id, _, params*) =>
-            if _werr
-            then
-              throw RecRepParsingException(id, params.size, n)
-            Console.err.println("Warning! " + RecRepParsingException(id, params.size, n).getMessage + ".")
+          case `(*)`(identifier, _, params*) =>
+            warn(throw RecRepParsingException(identifier, params.size, n))
 
       i = rec("Main" -> 0)
       if !prog(-i-1)._2.replication(using "Main" -> 0 :: Nil)
       then throw StartParsingException("Main", 0, "replication")
 
       prog.foreach {
-        case (`(*)`(id, _, params*), _) if rec(id -> params.size) > 0 =>
-          val i = rec(id -> params.size)
+        case (`(*)`(identifier, _, params*), _) if rec(identifier -> params.size) > 0 =>
+          val i = rec(identifier -> params.size)
           val sum = prog(i-1)._2
-          if !sum.recursion(using id -> params.size :: Nil)
-          then throw StartParsingException(id, params.size, "recursion")
+          if !sum.recursion(using identifier -> params.size :: Nil)
+          then throw StartParsingException(identifier, params.size, "recursion")
         case _ =>
       }
 
@@ -501,7 +497,7 @@ object Pi:
 
     private var i: Int = -1
     private var l: (Int, Int) = (-1, -1)
-    def ln = l
+    override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
@@ -515,41 +511,40 @@ object Pi:
       i = 0
       l = (0, 0)
 
-      (source.getLines().toList :+ "")
-      .zipWithIndex
-      .foldLeft(List[(String, (Int, Int))]() -> false) {
-        case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-        case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
-      }._1
-      .flatMap { case (it, (m, n)) =>
-        l = (m+1, n+1)
-        if it.matches("^[ ]*#.*") // commented lines
-        || it.isBlank // empty lines
-        then
-          None
-        else if it.matches("^[ ]*@.*")
-        then // Scala
-          Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-        else // Pi
-          _cntr = Map(0 -> 0L)
-          _nth = Map(0 -> 0L)
-          parseAll(line, it) match
-            case Success(Left(equation), _) =>
-              eqtn :+= equation
-              val equations = eqtn.slice(i, eqtn.size)
-              i = eqtn.size
-              equations.map(Right(_))
-            case Success(Right(definition), _) =>
-              if !defn.contains(_code) then defn(_code) = Nil
-              defn(_code) ::= definition
-              Nil
-            case failure: NoSuccess =>
-              scala.sys.error(failure.msg)
-      }
-      .filter {
-        case Right((`(*)`(s"Self_$n", _, _*), _))
-            if { try { n.toInt; true } catch _ => false } =>
-          self.contains(n.toInt)
-        case _ => true
-      }
-      .toList
+      (source.getLines() ++ Some(""))
+        .zipWithIndex
+        .foldLeft(List[(String, (Int, Int))]() -> false) {
+          case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+          case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+        }._1
+        .flatMap { case (it, (m, n)) =>
+          l = (m+1, n+1)
+          if it.matches("^[ ]*#.*") // commented lines
+          || it.isBlank // empty lines
+          then
+            None
+          else if it.matches("^[ ]*@.*")
+          then // Scala
+            Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+          else // Pi
+            _cntr = Map(0 -> 0L)
+            _nth = Map(0 -> 0L)
+            parseAll(line, it) match
+              case Success(Left(equation), _) =>
+                eqtn :+= equation
+                val equations = eqtn.slice(i, eqtn.size)
+                i = eqtn.size
+                equations.map(Right(_))
+              case Success(Right(definition), _) =>
+                if !defn.contains(_code) then defn(_code) = Nil
+                defn(_code) ::= definition
+                Nil
+              case failure: NoSuccess =>
+                scala.sys.error(failure.msg)
+        }
+        .filter {
+          case Right((`(*)`(s"Self_$n", _, _*), _))
+              if { try { n.toInt; true } catch _ => false } =>
+            self.contains(n.toInt)
+          case _ => true
+        }

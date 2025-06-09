@@ -261,14 +261,14 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, υidυ, name, assign) =>
-          val ** = assign
+        case `⟦⟧`(_, variables, _sum, υidυ, name, assignment) =>
+          val ** = assignment
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
 
-          val n = assign.size
+          val n = assignment.size
 
           val sum = if (variables.size == n)
                     then
