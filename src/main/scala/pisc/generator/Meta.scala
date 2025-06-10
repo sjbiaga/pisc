@@ -68,18 +68,17 @@ object Meta:
     Term.ApplyInfix(lhs.toTerm,
                     \("===="),
                     Type.ArgClause(Nil),
-                    Term.ArgClause(rhs.toTerm :: Nil, None))
+                    Term.ArgClause(rhs.toTerm :: Nil))
 
 
   val rate: Any => Term = {
-    case w: Long if w < 0 => Term.Apply(\("∞"), Term.ArgClause(Lit.Long(-w) :: Nil, None))
+    case w: Long if w < 0 => Term.Apply(\("∞"), Term.ArgClause(Lit.Long(-w) :: Nil))
     case r: BigDecimal => Term.Apply(\("ℝ⁺"),
                                      Term.ArgClause(Term.Apply(\("BigDecimal"),
-                                                               Term.ArgClause(Lit.String(r.toString) :: Nil, None)) :: Nil,
-                                                    None))
-    case r: Term => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil, None))
-    case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil, None))
-    case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil, None))
+                                                               Term.ArgClause(Lit.String(r.toString) :: Nil)) :: Nil))
+    case r: Term => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil))
+    case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil))
+    case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
   }
 
 
@@ -153,7 +152,7 @@ object Meta:
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),
-                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
 
   @tailrec
@@ -185,7 +184,7 @@ object Meta:
   private def `π-supervised(*)`(* : Term): Term =
     * match
       case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => *
-      case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil, None))
+      case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil))
 
   @tailrec
   def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
@@ -236,7 +235,6 @@ object Meta:
                             )
                    ) :: \(*._1) :: Nil
                  ) :: Nil
-                 , None
                )
     )
 
@@ -258,15 +256,14 @@ object Meta:
                             )
                    ) :: \(*) :: Nil
                  ) :: Nil
-                 , None
                )
     )
 
 
   val `()(null)`: Term =
-    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
+    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil))
 
 
   def `π-exclude`(enabled: Actions): Term =
     Term.Apply(\("π-exclude"),
-               Term.ArgClause(enabled.map(Lit.String(_)).toList, None))
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))

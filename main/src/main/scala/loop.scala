@@ -31,7 +31,7 @@ import _root_.scala.collection.immutable.Map
 import _root_.cats.syntax.parallel.*
 
 import _root_.cats.data.NonEmptyList
-import _root_.cats.effect.{ IO, Deferred, Ref }
+import _root_.cats.effect.{ IO, ExitCode, Deferred, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-stats`.*
@@ -47,6 +47,8 @@ package object `Π-loop`:
   type + = (Deferred[IO, Option[(Double, (-, -))]], (>*<, Option[Boolean], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
+
+  type ^ = Ref[IO, ExitCode]
 
   type * = Semaphore[IO]
 
@@ -106,7 +108,7 @@ package object `Π-loop`:
       IO.unit
 
 
-  def loop(using % : %, * : *)
+  def loop(using % : %, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
       it <- %.modify { m =>
@@ -125,6 +127,7 @@ package object `Π-loop`:
               then
                 val nel = NonEmptyList.fromList(it.map(_._1).toList).get
                 for
+                  _ <- ^.set(ExitCode.Error)
                   _ <- nel.traverse { key =>
                                       for
                                         d <- %.modify { m => m -> m(key).asInstanceOf[+]._1 }

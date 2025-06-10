@@ -91,48 +91,48 @@ object Program:
         case it @ τ(r, Some((Left(enums)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil, None)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil, None)))
+                                    Term.ArgClause(rate(r)::Nil)),
+                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
           * ++= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil, None)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil, None)))
+                                    Term.ArgClause(rate(r)::Nil)),
+                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
           * :+= `_ <- IO { * }`(term)
 
         case it @ τ(r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil, None)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil, None)))
+                                    Term.ArgClause(rate(r)::Nil)),
+                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
 
 
         case it @ π(λ(Symbol(ch)), arg, false, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil, None)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
+                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                           Term.ArgClause(Lit.String(it.υidυ)::Nil)
                          ),
-                         Term.ArgClause(code::Nil, None)
+                         Term.ArgClause(code::Nil)
                        ))
 
         case it @ π(λ(Symbol(ch)), arg, false, r, Some((Right(term)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil, None)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
+                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                           Term.ArgClause(Lit.String(it.υidυ)::Nil)
                          ),
-                         Term.ArgClause(code::Nil, None)
+                         Term.ArgClause(code::Nil)
                        ))
 
         case it @ π(λ(Symbol(ch)), arg, false, r, _) =>
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil, None)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
+                         Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                         Term.ArgClause(Lit.String(it.υidυ)::Nil)
                        ))
 
         case π(_, _, true, _, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
@@ -141,17 +141,17 @@ object Program:
           * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                    Term.Apply(
                                      Term.Apply(
-                                       Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil, None)),
-                                       Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
+                                       Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil)),
+                                       Term.ArgClause(Lit.String(it.υidυ)::Nil)
                                      ),
-                                     Term.ArgClause(code::Nil, None)
+                                     Term.ArgClause(code::Nil)
                                    ))
 
         case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r, _) =>
           * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                    Term.Apply(
-                                     Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil, None)),
-                                     Term.ArgClause(Lit.String(it.υidυ)::Nil, None)
+                                     Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil)),
+                                     Term.ArgClause(Lit.String(it.υidυ)::Nil)
                                    ))
 
         case _: π => ??? // caught by parser
@@ -213,7 +213,7 @@ object Program:
 
           val `!.μ⋯` = `μ.generate` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
                                                                           Type.ArgClause(Nil),
-                                                                          Term.ArgClause(Lit.Null() :: Nil, None)),
+                                                                          Term.ArgClause(Lit.Null() :: Nil)),
                                                           `IO.cede`,
                                                           s"$υidυ(`π-uuid`)".parse[Term].get,
                                                           Nil)
@@ -261,8 +261,7 @@ object Program:
           val args = params.map(_.toTerm).toList
 
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(identifier),
-                                    Term.ArgClause(args, None)),
+                         Term.Apply(\(identifier), Term.ArgClause(args)),
                          Term.ArgClause(\("π-uuid")::Nil, Some(Mod.Using()))))
 
         ////////////////////////////////////////////////////////// invocation //
