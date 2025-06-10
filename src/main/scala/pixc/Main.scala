@@ -123,7 +123,7 @@ object Main:
              Term.ApplyInfix(Term.Name("π-trick"),
                              Term.Name("->"),
                              Type.ArgClause(Nil),
-                             Term.ArgClause(Term.Name("π-spell") :: Nil, None)))
+                             Term.ArgClause(Term.Name("π-spell") :: Nil)))
 
   def `trick-or-treat`(name: String, discarded: Map[String, Actions]): Defn.Val =
     Defn.Val(Nil,
@@ -133,7 +133,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this.Π(discarded).toList, None)))
+                        Term.ArgClause(this.Π(discarded).toList)))
 
   def `spell, magic spell`(name: String, enabled: Map[String, Actions]): Defn.Val =
     Defn.Val(Nil,
@@ -143,7 +143,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this.Π(enabled).toList, None)))
+                        Term.ArgClause(this.Π(enabled).toList)))
 
   def `if-then-else`(name: String, excluded: Map[String, Actions]): Defn.Val =
     Defn.Val(Mod.Implicit() :: Nil,
@@ -153,7 +153,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-Set"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this.Π(excluded).toList, None)))
+                        Term.ArgClause(this.Π(excluded).toList)))
 
   def `King Kong`(name: String, congruent: Map[String, Set[String]]): Defn.Val =
     Defn.Val(Mod.Implicit() :: Nil,
@@ -163,7 +163,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-List"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this.Χ(congruent).toList, None)))
+                        Term.ArgClause(this.Χ(congruent).toList)))
 
   private object Χ:
 
@@ -174,9 +174,8 @@ object Main:
         Term.ApplyInfix(Lit.String(s"$id"),
                         Term.Name("->"), Type.ArgClause(Nil),
                         Term.ArgClause(Term.Apply(scollimmList,
-                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                                                 None)
-                                       ) :: Nil, None))
+                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
+                                       ) :: Nil))
 
   private object Π:
 
@@ -187,17 +186,15 @@ object Main:
         Term.ApplyInfix(Lit.String(s"$id"),
                         Term.Name("->"), Type.ArgClause(Nil),
                         Term.ArgClause(Term.Apply(scollimmSet,
-                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                                                 None)
-                                       ) :: Nil, None))
+                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
+                                       ) :: Nil))
 
     def apply(it: Actions): Defn.Val =
       Defn.Val(Nil,
                Pat.Var(Term.Name("π-main")) :: Nil,
                None,
                Term.Apply(scollimmSet,
-                          Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                         None)
+                          Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
                ))
 
   private val scollimmList =

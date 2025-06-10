@@ -330,7 +330,7 @@ object Calculus:
 
       case `(*)`(identifier, params*) =>
         val args = params.map(_.toTerm).toList
-        Term.Apply(Term.Name(identifier), Term.ArgClause(args, None)).toString
+        Term.Apply(Term.Name(identifier), Term.ArgClause(args)).toString
 
   object ∅ :
     def unapply[T <: AST](self: T): Option[Unit] = self match
@@ -355,7 +355,7 @@ object Calculus:
       import dialects.Scala3
       value match
         case it: Symbol => Term.Name(it.name)
-        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil, None))
+        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
         case it: Term => it
