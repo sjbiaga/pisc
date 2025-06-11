@@ -295,7 +295,7 @@ object Calculus:
         val term = qual match
           case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
           case _ => \(identifier)
-        Term.Apply(term, Term.ArgClause(args, None)).toString
+        Term.Apply(term, Term.ArgClause(args)).toString
 
   object ∅ :
     def unapply[T <: AST](self: T): Option[Unit] = self match
@@ -322,7 +322,7 @@ object Calculus:
       import dialects.Scala3
       value match
         case it: Symbol => Term.Name(it.name)
-        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil, None))
+        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
         case it: Term => it
