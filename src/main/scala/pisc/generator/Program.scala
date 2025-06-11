@@ -121,7 +121,7 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { (c, n) => `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Lit.Int(c) :: Nil, None))) }.toList
+          * = names.map { (c, n) => `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Lit.Int(c) :: Nil))) }.toList
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
@@ -140,8 +140,8 @@ object Program:
           val args = params.map(_.toTerm).toList
 
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(args, None)),
-                         Term.ArgClause(code::Nil, None)
+                         Term.Apply(\(ch), Term.ArgClause(args)),
+                         Term.ArgClause(code::Nil)
                        ))
 
         case π(λ(Symbol(ch)), false, Some((Right(term), _)), params*) =>
@@ -149,27 +149,27 @@ object Program:
           val args = params.map(_.toTerm).toList
 
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(args, None)),
-                         Term.ArgClause(code::Nil, None)
+                         Term.Apply(\(ch), Term.ArgClause(args)),
+                         Term.ArgClause(code::Nil)
                        ))
 
         case π(λ(Symbol(ch)), false, _, params*) =>
           val args = params.map(_.toTerm).toList
 
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args, None)))
+          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args)))
 
         case π(_, true, Some((Left(_), _)), _*) => ??? // Scalameta Enumerator - caught by parser
 
         case π(λ(Symbol(ch)), true, Some((Right(code), _)), params*) =>
           val args = params.map(_.asSymbol.name)
           * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(
-                                                           Term.Apply(\(ch), Term.ArgClause(Nil, None)),
-                                                           Term.ArgClause(code::Nil, None)
+                                                           Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                                           Term.ArgClause(code::Nil)
                                    ))
 
         case π(λ(Symbol(ch)), true, _, params*) =>
           val args = params.map(_.asSymbol.name)
-          * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(\(ch), Term.ArgClause(Nil, None)))
+          * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(\(ch), Term.ArgClause(Nil)))
 
         case _: π => ??? // caught by parser
 
@@ -198,7 +198,7 @@ object Program:
           val args = params.map(_.asSymbol.name)
 
           val `!.π⋯` = π.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                           Term.ArgClause(args.map(\(_)).toList, None)))
+                                                           Term.ArgClause(args.map(\(_)).toList)))
 
           val it = Term.If(Term.ApplyUnary("!", args.head),
                            `IO.cede`,
@@ -220,7 +220,7 @@ object Program:
 
           val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
                                                                             Type.ArgClause(Nil),
-                                                                            Term.ArgClause(\("None") :: Nil, None)),
+                                                                            Term.ArgClause(\("None") :: Nil)),
                                                             `IO.cede`,
                                                             υidυ,
                                                             Nil)
@@ -279,7 +279,7 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * :+= `_ <- *`(Term.Apply(term, Term.ArgClause(args, None)))
+          * :+= `_ <- *`(Term.Apply(term, Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
