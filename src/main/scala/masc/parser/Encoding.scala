@@ -187,7 +187,7 @@ object Encoding:
 
   type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
 
-  private type CacheValue = (`⟦⟧` | ∥, Any, Names, Bindings, Encoding#Input)
+  private type CacheValue = (∥ | `⟦⟧`, Any, Names, Bindings, Encoding#Input)
 
   case class Macro(parameters: List[String],
                    arity: Int,
@@ -225,11 +225,9 @@ object Encoding:
                         variables: Names,
                         par: ∥):
     def apply(_code: Int, nest: Int, id: => String, free: Names)
-             (using bindings: Bindings)
-             (using Substitution): `⟦⟧` =
-      given (∥ | - => ∥ | -) = { ast =>
+             (using Bindings, Substitution): `⟦⟧` =
+      given (∥ | `⟦⟧` => ∥ | `⟦⟧`) = { ast =>
         try
-          given Bindings = Bindings(bindings)
           given MutableList[(String, String)]()
           given Names()
           ast.rename(id, Names(free))

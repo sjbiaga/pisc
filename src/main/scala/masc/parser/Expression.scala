@@ -114,7 +114,7 @@ abstract class Expression extends JavaTokenParsers:
             Term.ApplyInfix(Term.Name(it),
                             Term.Name(op.strip),
                             Type.ArgClause(Nil),
-                            Term.ArgClause(this(operators.tail, operands.tail), None)) :: Nil
+                            Term.ArgClause(this(operators.tail, operands.tail))) :: Nil
           case _ =>
             Term.Name(it) :: Nil
       case Some(it: String) =>
@@ -124,7 +124,7 @@ abstract class Expression extends JavaTokenParsers:
             Term.ApplyInfix(Term.Name(it),
                             Term.Name(op.strip),
                             Type.ArgClause(Nil),
-                            Term.ArgClause(this(operators.tail, operands.tail), None)) :: Nil
+                            Term.ArgClause(this(operators.tail, operands.tail))) :: Nil
           case _ =>
             Term.Name(it) :: Nil
       case _ if operators.nonEmpty => ???
