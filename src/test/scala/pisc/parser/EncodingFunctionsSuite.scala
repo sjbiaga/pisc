@@ -464,7 +464,7 @@ class EncodingFunctionsSuite extends FunSuite:
             given Bindings()
             given Names()
 
-            given Map[String, λ | AST]()
+            given Map[String, λ | (+ | `⟦⟧`)]()
             val `13` = definition(_code, _nest, id(), Names())
 
             `13`.rename(id(), Names()) match
@@ -498,7 +498,7 @@ class EncodingFunctionsSuite extends FunSuite:
             given Bindings = Bindings(it.bindings)
             given Names()
 
-            given Map[String, λ | AST]()
+            given Map[String, λ | (+ | `⟦⟧`)]()
             val `13` = definition(_code, _nest, id(), Names())
 
             `13`.rename(id(), Names()) match
