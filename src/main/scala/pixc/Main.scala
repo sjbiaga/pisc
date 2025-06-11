@@ -96,7 +96,7 @@ object Main:
                                                  Type.Apply(Type.Name("Π-List"),
                                                             Type.ArgClause(Type.Name("String") :: Nil)))))),
              Term.Apply(scollimmMap,
-                        Term.ArgClause(this.Χ(congruent).toList, None)))
+                        Term.ArgClause(this.Χ(congruent).toList)))
 
   private object Χ:
 
@@ -107,9 +107,8 @@ object Main:
           Term.ApplyInfix(Lit.String(s"$id"),
                           Term.Name("->"), Type.ArgClause(Nil),
                           Term.ArgClause(Term.Apply(scollimmList,
-                                                    Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList,
-                                                                   None)
-                                         ) :: Nil, None))
+                                                    Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
+                                         ) :: Nil))
 
   private val scollimmMap =
     Term.Select(

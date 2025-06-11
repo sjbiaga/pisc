@@ -55,7 +55,7 @@ object Meta:
     Term.ApplyInfix(lhs.toTerm,
                     \("===="),
                     Type.ArgClause(Nil),
-                    Term.ArgClause(rhs.toTerm :: Nil, None))
+                    Term.ArgClause(rhs.toTerm :: Nil))
 
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
@@ -132,7 +132,7 @@ object Meta:
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),
-                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
 
   @tailrec
@@ -163,7 +163,7 @@ object Meta:
 
   def `_ <- *.tryAcquire.ifM`(* : String, ** : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(Term.Select(*, "tryAcquire"), "ifM"),
-                                                Term.ArgClause(** :: `IO.cede` :: Nil, None)
+                                                Term.ArgClause(** :: `IO.cede` :: Nil)
                                      )
     )
 
@@ -171,7 +171,7 @@ object Meta:
     Enumerator.Generator(`* <- …`(*),
                          Term.Apply(Term.ApplyType(\("Semaphore"),
                                                    Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(1) :: Nil, None)
+                                    Term.ArgClause(Lit.Int(1) :: Nil)
                          )
     )
 
@@ -182,7 +182,7 @@ object Meta:
       case it => Some(it)
     } match
       case Nil => `IO.cede`
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList, None)), "πparSequence")
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
@@ -204,7 +204,6 @@ object Meta:
                              `…`
                    ) :: \(*._1) :: Nil
                  ) :: Nil
-                 , None
                )
     )
 
@@ -216,24 +215,23 @@ object Meta:
                                          `: IO[Any]`,
                                          `…`
                                 ) :: \(*) :: Nil
-                              ) :: Nil,
-                              None
+                              ) :: Nil
                )
     )
 
 
   val `()(null)`: Term =
-    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil, None))
+    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil))
 
 
   def `* <- χ; _ <- }{()(, *)`(name: String, υidυ: String): List[Enumerator] =
-    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(υidυ) :: Nil, None))) ::
-    `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil, None))) :: Nil
+    `* <- *`(name -> Term.Apply(\("χ"), Term.ArgClause(Lit.String(υidυ) :: Nil))) ::
+    `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(name) :: Nil))) :: Nil
 
   def `* <- }{(*)()()`(name: String, υidυ: String): Enumerator =
-    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(υidυ) :: Nil, None)),
-                                Term.ArgClause(\(")(") :: Nil, None)))
+    `* <- *`(name -> Term.Apply(Term.Apply(\("}{"), Term.ArgClause(Lit.String(υidυ) :: Nil)),
+                                Term.ArgClause(\(")(") :: Nil)))
 
   def `_ <- }{(*)()()`(name: String): Enumerator =
-    `_ <- *`(Term.Apply(Term.Apply(\("}{"), Term.ArgClause(\(name) :: Nil, None)),
-                        Term.ArgClause(\(")(") :: Nil, None)))
+    `_ <- *`(Term.Apply(Term.Apply(\("}{"), Term.ArgClause(\(name) :: Nil)),
+                        Term.ArgClause(\(")(") :: Nil)))

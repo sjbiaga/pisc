@@ -161,30 +161,30 @@ object Program:
         case π(λ(Symbol(ch)), arg, false, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil, None)),
-                         Term.ArgClause(code::Nil, None)
+                         Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil)),
+                         Term.ArgClause(code::Nil)
                        ))
 
         case π(λ(Symbol(ch)), arg, false, Some((Right(term), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil, None)),
-                         Term.ArgClause(code::Nil, None)
+                         Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil)),
+                         Term.ArgClause(code::Nil)
                        ))
 
         case π(λ(Symbol(ch)), arg, false, _) =>
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil, None)))
+          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: \(")(") :: Nil)))
 
         case π(_, _, true, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
 
         case π(λ(Symbol(ch)), λ(Symbol(par)), true, Some((Right(code), _))) =>
           * = `* <- *`(par -> Term.Apply(
-                                Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil, None)),
-                                Term.ArgClause(code::Nil, None)
+                                Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil)),
+                                Term.ArgClause(code::Nil)
                        ))
 
         case π(λ(Symbol(ch)), λ(Symbol(par)), true, _) =>
-          * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil, None)))
+          * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(\(")(") :: Nil)))
 
         case _: π => ??? // caught by parser
 
@@ -211,7 +211,7 @@ object Program:
           val υidυ = id
 
           val `!.π⋯` = π.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                           Term.ArgClause(\(par) :: Nil, None)))
+                                                           Term.ArgClause(\(par) :: Nil)))
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
@@ -233,7 +233,7 @@ object Program:
 
           val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
                                                                             Type.ArgClause(Nil),
-                                                                            Term.ArgClause(\("None") :: Nil, None)),
+                                                                            Term.ArgClause(\("None") :: Nil)),
                                                             `IO.cede`,
                                                             υidυ,
                                                             Nil)
@@ -299,8 +299,8 @@ object Program:
 
           * :+= `_ <- *`(Term.Apply(
                            Term.Apply(term,
-                                      Term.ArgClause(\(")(")::Nil, None)),
-                           Term.ArgClause(args, None)))
+                                      Term.ArgClause(\(")(")::Nil)),
+                           Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
