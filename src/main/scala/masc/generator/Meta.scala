@@ -127,7 +127,7 @@ object Meta:
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),
-                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil, None)))
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
 
   @tailrec
@@ -162,7 +162,7 @@ object Meta:
       case it => Some(it)
     } match
       case Nil => `IO.cede`
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList, None)), "πparSequence")
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
 
 
   def `IO { def *(*: )(): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
@@ -180,7 +180,6 @@ object Meta:
                              `…`
                    ) :: \(*._1) :: Nil
                  ) :: Nil
-                 , None
                )
     )
 
@@ -193,8 +192,7 @@ object Meta:
                                          `: IO[Any]`,
                                          `…`
                                 ) :: \(*) :: Nil
-                              ) :: Nil,
-                              None
+                              ) :: Nil
                )
     )
 
@@ -203,15 +201,14 @@ object Meta:
     Term.Apply(\("<>"),
                Term.ArgClause(Term.Apply(
                                 Term.Select("Π", ")("),
-                                Term.ArgClause(Lit.Null() :: Nil,
-                                               None)
-                              ) :: Nil, None)
+                                Term.ArgClause(Lit.Null() :: Nil)
+                              ) :: Nil)
     )
 
 
   def `ζ(op, *, …)`(head: AST, tail: Seq[AST]): Term =
     val next = if tail.isEmpty then \("None")
-               else Term.Apply(\("Some"), Term.ArgClause(`ζ(op, *, …)`(tail.head, tail.tail) :: Nil, None))
+               else Term.Apply(\("Some"), Term.ArgClause(`ζ(op, *, …)`(tail.head, tail.tail) :: Nil))
 
     head match
 
@@ -219,14 +216,13 @@ object Meta:
         Term.Apply(\("ζ"),
                    Term.ArgClause(
                      Term.Apply(\("Some"),
-                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil, None)) ::
+                                Term.ArgClause(Term.Select("ζ-Op", op.toString) :: Nil)) ::
                      Term.Apply(\("Left"),
-                                Term.ArgClause(\(amb) :: Nil, None)) ::
-                     next :: Nil,
-                     None))
+                                Term.ArgClause(\(amb) :: Nil)) ::
+                     next :: Nil))
 
       case Λ(name) =>
         Term.Apply(Term.Select("Π", ")("),
-                   Term.ArgClause(\(name) :: next :: Nil, None))
+                   Term.ArgClause(\(name) :: next :: Nil))
 
       case _ => ??? // neither name nor path - caught by parser

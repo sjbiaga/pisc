@@ -38,7 +38,7 @@ import scala.meta.Term
 
 import _root_.masc.parser.Expression
 import Expression.Code
-import _root_.masc.parser.{ Encoding, - }
+import _root_.masc.parser.Encoding
 import _root_.masc.parser.Ambient.{ AST => _, * }
 import _root_.masc.parser.Calculus.*
 import Encoding.*
@@ -290,9 +290,9 @@ abstract class Expansion extends Encoding:
         r match
 
           case Some(((definition, _), (given Substitution, (free, given Bindings)), in)) =>
-            bindings ++= binders
+            bindings ++= given_Bindings
 
-            Success(definition(_code, _nest, id, free) -> free, in)
+            Success(definition(_code, _nest, id, free)(using bindings) -> free, in)
 
           case _ => throw UndefinedParsingException
 
@@ -303,7 +303,7 @@ object Expansion:
 
   import scala.collection.mutable.{ LinkedHashMap => Map }
 
-  type Substitution = Map[String, String | AST]
+  type Substitution = Map[String, String | (∥ | `⟦⟧`)]
 
   private val open_r = """⟦\d*""".r
   private val closed_r = """\d*⟧""".r
@@ -390,7 +390,7 @@ object Expansion:
 
   extension [T <: AST](ast: T)
 
-    def replace(using rename: ∥ | - => ∥ | -)
+    def replace(using rename: ∥ | `⟦⟧` => ∥ | `⟦⟧`)
                (using substitution: Substitution): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
@@ -441,8 +441,8 @@ object Expansion:
           it.copy(par = par.replace, assignment = assignment)
 
         case `{}`(identifier, pointers, false) =>
+          val ast = rename(substitution(identifier).asInstanceOf[∥ | `⟦⟧`])
           given List[String] = pointers.map(replaced(_))
-          val ast = rename(substitution(identifier).asInstanceOf[∥ | -].flatten)
           if given_List_String.nonEmpty
           then
             ast.concatenate

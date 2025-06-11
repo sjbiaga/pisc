@@ -282,7 +282,7 @@ object Calculus:
         val term = qual match
           case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
           case _ => \(identifier)
-        Term.Apply(term, Term.ArgClause(args, None)).toString
+        Term.Apply(term, Term.ArgClause(args)).toString
 
   object ∅ :
     def unapply[T <: AST](self: T): Option[Unit] = self match

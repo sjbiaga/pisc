@@ -92,15 +92,15 @@ object Program:
 
         case `,.`(path*) =>
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil, None)),
-                         Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)))
+                         Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil)),
+                         Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)))
 
 
         case `()`(name, it) =>
-          val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil, None))
+          val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil))
           * = it match
                 case Some((Right(code), _)) =>
-                  `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                  `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil)))
                 case _ =>
                   `* <- *`(name -> term)
 
@@ -113,7 +113,7 @@ object Program:
           val υidυ = id
 
           val `!.(*).⋯` = `()`(name, None).generate :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                                           Term.ArgClause(\(name) :: Nil, None)))
+                                                                           Term.ArgClause(\(name) :: Nil)))
 
           val it = Term.If(Term.ApplyUnary("!", name),
                            `IO.cede`,
@@ -141,7 +141,7 @@ object Program:
         // AMBIENT /////////////////////////////////////////////////////////////
 
         case `[]`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
+          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
           * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
 
@@ -151,7 +151,7 @@ object Program:
         // GO //////////////////////////////////////////////////////////////////
 
         case `go.`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil, None)))
+          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
           * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
 
@@ -161,21 +161,21 @@ object Program:
         // OUTPUT //////////////////////////////////////////////////////////////
 
         case <>(it) =>
-          val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil, None))
+          val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil))
           * = it match
                 case Some((Right(code), _)) =>
-                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil)))
                 case _ =>
                   `_ <- *`(term)
 
         case <>(it, path*) =>
           val term = Term.Apply(
-                       Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil, None)),
-                       Term.ArgClause(\(")(") :: Nil, None))
+                       Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)),
+                       Term.ArgClause(\(")(") :: Nil))
 
           * = it match
                 case Some((Right(code), _)) =>
-                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil, None)))
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil)))
                 case _ =>
                   `_ <- *`(term)
 
@@ -216,8 +216,8 @@ object Program:
 
           * :+= `_ <- *`(Term.Apply(
                            Term.Apply(term,
-                                      Term.ArgClause(\(")(")::Nil, None)),
-                           Term.ArgClause(args, None)))
+                                      Term.ArgClause(\(")(")::Nil)),
+                           Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
