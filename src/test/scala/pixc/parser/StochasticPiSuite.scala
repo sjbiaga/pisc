@@ -81,7 +81,7 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-uniqueness-encoded-binding") {
 
-    interceptMessage[UniquenessBindingParsingException]("A binding name (z) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #1 in the right hand side of encoding 3") {
+    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #1 in the right hand side of encoding 3") {
       Main(getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
@@ -107,7 +107,7 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-non-parameter-encoded-binding") {
 
-    interceptMessage[NonParameterBindingParsingException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
+    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
       Main(getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.

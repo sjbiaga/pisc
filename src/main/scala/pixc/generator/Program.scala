@@ -259,7 +259,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, υidυ, name, assignment) =>
+        case `⟦⟧`(_, variables, _sum, xid, name, assignment) =>
           val ** = assignment
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
@@ -278,7 +278,7 @@ object Program:
 
           name match
             case Symbol(it) =>
-              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, υidυ) ++ *))
+              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ++ *))
             case _ =>
 
         case _: `{}` => ???
