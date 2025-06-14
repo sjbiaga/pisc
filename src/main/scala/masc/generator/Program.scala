@@ -184,7 +184,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _par, assignment) =>
+        case `⟦⟧`(_, variables, _par, _, assignment) =>
           val ** = assignment
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))

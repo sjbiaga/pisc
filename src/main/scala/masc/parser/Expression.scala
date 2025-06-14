@@ -88,11 +88,12 @@ abstract class Expression extends JavaTokenParsers:
 
   protected var _code: Int = -1
 
+  protected var _dir: Option[(String, String | List[String])] = None
+
   private def apply(using params: MutableList[String])
                    (using names: Names): Term => Unit =
     case Term.Placeholder() =>
-    case Term.Name(rhs)
-        if names.contains(rhs) && params.contains(rhs) =>
+    case Term.Name(rhs) if names.contains(rhs) && params.contains(rhs) =>
       throw TemplateParameterParsingException(rhs)
     case Term.Name(rhs) =>
       if names.contains(rhs) then params += rhs
@@ -133,6 +134,7 @@ abstract class Expression extends JavaTokenParsers:
   def template: Parser[(Option[Term], Names)] =
     regexMatch(template_r) ^^ { it =>
       _code = if it.group(1).isEmpty then 0 else it.group(1).toInt
+      _dir = None
       if it.group(2).isBlank
       then
         None -> Names()
@@ -173,6 +175,14 @@ abstract class Expression extends JavaTokenParsers:
                 given MutableList[String]()
                 this(term)
                 Some(term) -> given_Names
+            case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
+                if it.group(1).isEmpty =>
+              _dir = Some(lhs -> rhs.map(_.toString))
+              Some(term) -> Names()
+            case (term @ Term.Assign(Term.Name(lhs), rhs), _)
+                if it.group(1).isEmpty =>
+              _dir = Some(lhs -> rhs.toString)
+              Some(term) -> Names()
             case (term, given Names) =>
               given MutableList[String]()
               this(term)

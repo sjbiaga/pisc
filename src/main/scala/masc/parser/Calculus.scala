@@ -37,14 +37,16 @@ import Expression.Code
 import Ambient.*
 import Calculus.*
 import Encoding.*
+import scala.util.parsing.combinator.masc.parser.Expansion.Duplications
 
 
 abstract class Calculus extends Ambient:
 
-  def equation: Parser[Bind] =
+  def equation(using Duplications): Parser[Bind] =
     invocation(true)<~"=" >> {
       case (bind, bound) =>
         _code = -1
+        _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         parallel ^^ {
           case (_par, _free) =>
@@ -57,12 +59,12 @@ abstract class Calculus extends Ambient:
         }
     }
 
-  def parallel(using Bindings): Parser[(∥, Names)] =
+  def parallel(using Bindings, Duplications): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { _.unzip match
       case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
     }
 
-  def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
       case (it, (bound, free)) ~ Some((end, freeʹ)) =>
@@ -73,7 +75,7 @@ abstract class Calculus extends Ambient:
         `.`(∥(), it*) -> free // void
     }
 
-  def leaf(using Bindings): Parser[(-, Names)] =
+  def leaf(using Bindings, Duplications): Parser[(-, Names)] =
     "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
       case Some((it, bound)) ~ (par, free) =>
         `!`(Some(it), par) -> (free &~ bound)
@@ -100,7 +102,7 @@ abstract class Calculus extends Ambient:
     invocation() |
     instantiation
 
-  def instantiation(using Bindings): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
 
   def capital: Parser[(`{}`, Names)]
 
@@ -229,6 +231,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               par: AST.∥,
+              xid: String = null,
               assignment: Set[(String, String)] = Set.empty)
 
     case `{}`(identifier: String,
@@ -260,7 +263,7 @@ object Calculus:
 
       case `go.`(amb, par) => "go " + amb + "." + par
 
-      case `⟦⟧`(definition, variables, par, assignment) =>
+      case `⟦⟧`(definition, variables, par, _, assignment) =>
         val vars = if (variables.isEmpty)
                    then
                      ""
