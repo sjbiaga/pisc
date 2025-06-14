@@ -30,8 +30,7 @@ package pisc
 package parser
 
 import scala.collection.mutable.{
-  HashMap => Map,
-  LinkedHashMap => Mapʹ,
+  LinkedHashMap => Map,
   LinkedHashSet => Set
 }
 
@@ -40,6 +39,8 @@ import munit.FunSuite
 import Pi.*
 import Calculus.*
 import Encoding.*
+import scala.util.parsing.combinator.pisc.parser.Expansion
+import Expansion.*
 import EncodingParserSuite.*
 
 
@@ -159,7 +160,7 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦⟧ =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
             assert(b.isEmpty)
@@ -177,10 +178,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
-          case Success((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success(Some((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
-            assertEquals(b, Mapʹ(
+            assertEquals(b, Map(
                            Symbol("x") -> Occurrence(None, Position(-1, false)),
                            Symbol("y") -> Occurrence(None, Position(-2, false))))
             assertEquals(cs1, cs2)
@@ -197,10 +198,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(nil, cons) =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
             assertEquals(cs1, Names() + Symbol("nil") + Symbol("cons"))
             assert(vs1.isEmpty)
-            assertEquals(b, Mapʹ(
+            assertEquals(b, Map(
                            Symbol("nil")  -> Occurrence(None, Position(1, false)),
                            Symbol("cons") -> Occurrence(None, Position(2, false))))
             assertEquals(cs1, cs2)
@@ -217,10 +218,10 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} =") match
-          case Success((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
             assert(cs1.isEmpty)
             assertEquals(vs1, Names() + Symbol("x"))
-            assertEquals(b, Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false))))
+            assertEquals(b, Map(Symbol("x") -> Occurrence(None, Position(1, false))))
             assertEquals(cs1, cs2)
             assertEquals(vs1, vs2)
           case _ =>
@@ -326,37 +327,19 @@ object EncodingParserSuite:
 
   import scala.util.matching.Regex
 
-  abstract class EncodingParserTest extends Encoding:
-    /**
-      * A parser that matches a regex string and returns the Match
-      * [[https://stackoverflow.com/questions/1815716/accessing-scala-parser-regular-expression-match-data]]
-      */
-    def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
-      def apply(in: Input) = {
-        val source = in.source
-        val offset = in.offset
-        val start = handleWhiteSpace(source, offset)
-        (r findPrefixMatchOf source.subSequence(start, source.length)) match {
-          case Some(matched) =>
-            Success(matched, in.drop(start + matched.end - offset))
-          case None =>
-            Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))
-        }
-      }
-    }
+  abstract class EncodingParserTest extends Expansion:
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
-    override def instance(defs: List[Define], end: String)
-                         (using Bindings): Parser[(`⟦⟧`, Names)] =
-      new Parser[(`⟦⟧`, Names)]:
-        override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
-          Failure(null, _in)
 
     eqtn = List()
     defn = Map()
     self = Set()
     _nest = 0
+    _id = new helper.υidυ
+    _χ_id = new helper.υidυ
     _cntr = Map(0 -> 0L)
     _nth = Map(0 -> 0L)
+
+    given Duplications()
 
     def test: Unit

@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{ LinkedHashMap => Map, LinkedHashSet => Set }
 
 import munit.FunSuite
 
@@ -37,6 +37,7 @@ import Pi.*
 import Calculus.*
 import Encoding.*
 import CalculusParserSuite.*
+import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
 
 
 class CalculusParserSuite extends FunSuite:
@@ -580,7 +581,7 @@ object CalculusParserSuite:
     def regexMatch(_r: Regex): Parser[Regex.Match] = ???
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
-    def instantiation(using Bindings): Parser[(`⟦⟧`, Names)] =
+    def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
       new Parser[(`⟦⟧`, Names)]:
         override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
           Failure(null, _in)
@@ -591,5 +592,7 @@ object CalculusParserSuite:
 
     _nest = 0
     _cntr = Map(0 -> 0L)
+
+    given Duplications()
 
     def test: Unit
