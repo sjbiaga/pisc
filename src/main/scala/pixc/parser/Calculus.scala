@@ -37,14 +37,16 @@ import Expression.Code
 import Pi.*
 import Calculus.*
 import Encoding.*
+import scala.util.parsing.combinator.pixc.parser.Expansion.Duplications
 
 
 abstract class Calculus extends Pi:
 
-  def equation: Parser[Bind] =
+  def equation(using Duplications): Parser[Bind] =
     invocation(true)<~"=" >> {
       case (bind, bound) =>
         _code = -1
+        _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         choice ^^ {
           case (_sum, _free) =>
@@ -57,17 +59,17 @@ abstract class Calculus extends Pi:
         }
     }
 
-  def choice(using Bindings): Parser[(+, Names)] =
+  def choice(using Bindings, Duplications): Parser[(+, Names)] =
     rep1sep(parallel, "+") ^^ { _.unzip match
       case (it, ns) => `+`(it*) -> ns.reduce(_ ++ _)
     }
 
-  def parallel(using Bindings): Parser[(∥, Names)] =
+  def parallel(using Bindings, Duplications): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { _.unzip match
       case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
     }
 
-  def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
       case (it, (bound, free)) ~ Some((end, freeʹ)) =>
@@ -78,7 +80,7 @@ abstract class Calculus extends Pi:
         `.`(`+`(), it*) -> free // inaction
     }
 
-  def leaf(using Bindings): Parser[(-, Names)] =
+  def leaf(using Bindings, Duplications): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -120,11 +122,11 @@ abstract class Calculus extends Pi:
 
   def capital: Parser[(`{}`, Names)]
 
-  def instantiation(using Bindings): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
 
-  def transaction(using Bindings): Parser[(`⟦⟧`, Names)]
+  def transaction(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
 
-  def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
+  def prefixes(using Bindings, Duplications): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
       case (it, _2) => _2.unzip match
         case (bs, names) =>
@@ -142,7 +144,8 @@ abstract class Calculus extends Pi:
           it -> (bound, free)
     }
 
-  def prefix(using bindings: Bindings): Parser[(Pre, (Names, Names))] =
+  def prefix(using bindings: Bindings)
+            (using Duplications): Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { // restriction
       case it if !it.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
@@ -274,7 +277,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               sum: AST.+,
-              υidυ: String,
+              xid: String = null,
               trans: Symbol = null,
               assignment: Set[(Symbol, Symbol)] = Set.empty)
 

@@ -29,12 +29,13 @@
 package pixc
 package parser
 
+import scala.io.Source
+
 import scala.collection.mutable.{
   LinkedHashMap => Map,
   ListBuffer => MutableList,
   LinkedHashSet => Set
 }
-import scala.io.Source
 
 import scala.meta.Term
 
@@ -44,6 +45,7 @@ import Pi.*
 import Calculus.*
 import Encoding.*
 import scala.util.parsing.combinator.pixc.parser.Expansion
+import Expansion.Duplications
 
 
 abstract class Pi extends Expression:
@@ -121,28 +123,32 @@ abstract class Pi extends Expression:
 
   protected final def path = (0 until _nest).map(_nth(_))
 
+  protected var _dirs = List[Map[String, Any]]()
+
+  protected var _dups: Boolean = false
+
   private[parser] var _id: helper.υidυ = null
 
-  protected var χ_id: helper.υidυ = null
+  private[parser] var _χ_id: helper.υidυ = null
 
   protected final def id = _id()
 
+  protected final def χ_id = _χ_id()
+
   protected final def copy: (Any, Any) =
-    _id.copy -> χ_id.copy
+    _id.copy -> _χ_id.copy
 
   protected final def paste(it: (Any, Any)) =
     _id.paste(it._1)
-    χ_id.paste(it._2)
+    _χ_id.paste(it._2)
 
-  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
+  protected final def save[T](r: => ParseResult[T]): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
     _id.save {
-      χ_id.save {
+      _χ_id.save {
         r match
           case Success(it, in) => Some(it -> in)
-          case failure: NoSuccess if fail =>
-            scala.sys.error(failure.msg)
           case _ =>
             _cntr = cntr
             _nest = nest
@@ -233,7 +239,7 @@ object Pi:
 
   final class Main(override protected val in: String) extends Expansion:
 
-    def line: Parser[Either[Bind, Define]] =
+    def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
     private def index(prog: List[Bind]): `(*)` => Int = {
@@ -474,7 +480,7 @@ object Pi:
             .filterKeys(_ == it)
             .values
             .flatten
-            .map(_._1.exp.υidυ -> Set.empty)
+            .map(_._1.exp.xid -> Set.empty)
         }
           .toMap
         ++
@@ -488,7 +494,7 @@ object Pi:
             given (Bindings, Bindings) = bindings_exp -> bindings_xct
             if congruent(exp -> xct.exp)
           yield
-            xct.exp.υidυ -> exp.υidυ
+            xct.exp.xid -> exp.xid
         }
           .groupBy(_._1)
           .mapValues(_.map(_._2))
@@ -501,15 +507,19 @@ object Pi:
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
+      _dups = false
+      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
       eqtn = List()
       defn = Map()
       self = Set()
       xctn = Map()
       _nest = 0
       _id = new helper.υidυ
-      χ_id = new helper.υidυ
+      _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+
+      given Duplications()
 
       (source.getLines() ++ Some(""))
         .zipWithIndex
@@ -535,9 +545,11 @@ object Pi:
                 val equations = eqtn.slice(i, eqtn.size)
                 i = eqtn.size
                 equations.map(Right(_))
-              case Success(Right(definition), _) =>
+              case Success(Right(Some(definition)), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition
+                Nil
+              case Success(Right(_), _) => // directive
                 Nil
               case failure: NoSuccess =>
                 scala.sys.error(failure.msg)
