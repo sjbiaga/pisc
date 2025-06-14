@@ -34,6 +34,8 @@ import java.util.regex.Pattern
 import scala.util.matching.Regex
 import Regex.Match
 
+import scala.collection.mutable.{ LinkedHashMap => Map }
+
 import scala.meta.Term
 
 import _root_.pisc.parser.Expression
@@ -65,9 +67,11 @@ abstract class Expansion extends Encoding:
     }
   }
 
+
   def instance(defs: List[Define], end: String)
-              (using Bindings): Parser[(`⟦⟧`, Names)] =
+              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
     var idx = -1
+    val xid = χ_id
 
     new Parser[(`⟦⟧`, Names)] {
 
@@ -75,6 +79,7 @@ abstract class Expansion extends Encoding:
                 (op: String, end: Either[String, String])
                 (success: Input => (ParseResult[Fresh], Seq[Term]))
                 (using bindings: Bindings)
+                (using duplications: Duplications)
                 (using substitution: Substitution)
                 (using free: Names): (ParseResult[Fresh], Seq[Term]) =
 
@@ -164,10 +169,13 @@ abstract class Expansion extends Encoding:
                   shadows(idx) match
                     case shadow @ Some(_) =>
                       BindingOccurrence(it, shadow)
+                      duplications(xid)._2(op) = it -> shadow
                     case _ =>
                       bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
-                        case Some((_, Shadow(it))) => substitution(op) = λ(it)
-                        case _ => substitution(op) = λ(it)
+                        case Some((_, Shadow(υidυ))) =>
+                          substitution(op) = λ(υidυ)
+                        case _ =>
+                          substitution(op) = λ(it)
                       free ++= freeʹ -- bindings.map(_._1)
                   idx += 1
 
@@ -207,7 +215,7 @@ abstract class Expansion extends Encoding:
                     case Success((sum, freeʹ), _) =>
                       bindings ++= binders
 
-                      val sumʹ = sum.flatten.update(using Bindings(bindings))
+                      val sumʹ = sum.flatten.update(using Bindings(given_Bindings))
 
                       substitution(op) = sumʹ
                       free ++= freeʹ -- bindings.map(_._1)
@@ -229,7 +237,7 @@ abstract class Expansion extends Encoding:
 
 
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
-                (using Bindings, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
+                (using Bindings, Duplications, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
           val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
@@ -270,46 +278,101 @@ abstract class Expansion extends Encoding:
         case (it, Term.AnonymousFunction(body)) =>
           expand(in, _ts, end)(it -> body)
 
-        case _ => ??? /* caught by template */
+        case _ => ??? // caught by template
 
 
       override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
-        val bindings = summon[Bindings]
+        val duplications = summon[Duplications]
+        duplications += xid -> (false, Map())
 
-        var r: Option[(Fresh, (Substitution, (Names, Bindings)), Input)] = None
+        try
+          val bindings = summon[Bindings]
 
-        var ls = defs
-        while ls.nonEmpty
-        do
-          val (_macro, Definition(code, Some(term), _, _, _)) = ls.head : @unchecked
-          ls = ls.tail
+          var r: Option[(Fresh, (Substitution, (Names, (Bindings, Duplications))), Input)] = None
 
-          given Substitution()
-          given Names()
-          given Bindings = Bindings(bindings)
-          idx = 0
+          var ls = defs
+          while ls.nonEmpty
+          do
+            val (_macro, Definition(code, Some(term), _, _, _)) = ls.head : @unchecked
+            ls = ls.tail
 
-          save(expand(in, Nil, Left(end))(_macro(code, id, term) -> term)._1, ls.isEmpty && r.isEmpty) match
-            case Some(_) if r.nonEmpty => throw AmbiguousParsingException
-            case Some((it @ (_, (arity, _)), in)) if arity == given_Substitution.size =>
-              r = Some((it, given_Substitution -> (given_Names -> given_Bindings), in))
-            case _ =>
+            given Bindings = Bindings(bindings)
+            given Duplications = Duplications(duplications)
+            given Substitution()
+            given Names()
+            idx = 0
 
-        r match
+            save(expand(in, Nil, Left(end))(_macro(code, term, _dups)(id, χ_id) -> term)._1) match
+              case Some(_) if r.nonEmpty => throw AmbiguousParsingException
+              case Some((it @ (_, (arity, _)), in)) if arity == given_Substitution.size =>
+                r = Some((it, given_Substitution -> (given_Names -> (given_Bindings, given_Duplications)), in))
+              case _ =>
 
-          case Some(((definition, _), (given Substitution, (free, given Bindings)), in)) =>
-            bindings ++= given_Bindings
+          r match
 
-            Success(definition(_code, _nest, id, free)(using bindings) -> free, in)
+            case Some(((definition, _), (given Substitution, (free, (given Bindings, given Duplications))), inʹ)) =>
+              given_Duplications --= duplications.keySet
+              duplications ++= given_Duplications
 
-          case _ => throw UndefinedParsingException
+              val exp = definition(_code, _nest, _dups, duplicated)(id)(using duplications)
+
+              bindings ++= purged
+
+              Success(exp.copy(xid = xid) -> free, inʹ)
+
+            case _ => throw UndefinedParsingException
+
+        catch t =>
+          duplications -= xid
+
+          Failure(t.getMessage, in)
 
     }.named(s"""⟦${if defs.size == 1 then defs.head._2.code.toString else ""}⟧""")
 
 
+  protected def duplicated(xid: String)
+                          (using Bindings)
+                          (using duplications: Duplications): Term => Unit =
+
+    case _rhs @ (Term.Name(_) | Term.Placeholder()) =>
+      val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
+
+      duplications(xid) match
+        case (true, map) =>
+          map.get(rhs) match
+            case Some(it -> shadow) =>
+              BindingOccurrence(it, shadow)
+            case _ =>
+        case _ =>
+
+    case Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _, _, List(rhs)) =>
+      val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
+
+      duplications(xid) match
+        case (true, map) =>
+          map.get(lhs) match
+            case Some(it -> shadow) =>
+              BindingOccurrence(it, shadow)
+            case _ =>
+        case _ =>
+
+      duplicated(xid)(rhs)
+
+    case Term.ApplyInfix(lhs: Term.ApplyInfix, _, _, List(rhs)) =>
+      duplicated(xid)(lhs)
+      duplicated(xid)(rhs)
+
+    case Term.AnonymousFunction(body) =>
+      duplicated(xid)(body)
+
+
 object Expansion:
 
-  import scala.collection.mutable.{ LinkedHashMap => Map }
+  type Duplications = Map[String, (Boolean, Map[String, (Symbol, Option[Symbol])])]
+
+  object Duplications:
+    def apply(): Duplications = Map()
+    def apply(duplications: Duplications): Duplications = Map.from(duplications)
 
   type Substitution = Map[String, λ | (+ | `⟦⟧`)]
 
@@ -454,7 +517,7 @@ object Expansion:
         case it @ !(_, sum) =>
           it.copy(sum = sum.replace)
 
-        case it @ `⟦⟧`(_, _, sum, _) =>
+        case it @ `⟦⟧`(_, _, sum, _, _) =>
           val assignment = it.assignment.map(_ -> replaced(_).asSymbol)
           it.copy(sum = sum.replace, assignment = assignment)
 
@@ -512,7 +575,7 @@ object Expansion:
         case it @ !(_, sum) =>
           it.copy(sum = sum.concatenate)
 
-        case it @ `⟦⟧`(_, variables, _, _) =>
+        case it @ `⟦⟧`(_, variables, _, _, _) =>
           it.assignment ++= variables.drop(it.assignment.size) zip pointers
           it
 
@@ -586,7 +649,7 @@ object Expansion:
         case it @ !(_, sum) =>
           it.copy(sum = sum.update)
 
-        case it @ `⟦⟧`(_, _, sum, assignment) =>
+        case it @ `⟦⟧`(_, _, sum, _, assignment) =>
           val assignmentʹ = assignment.map(_ -> updated(_).asSymbol)
           it.copy(sum = sum.update, assignment = assignmentʹ)
 

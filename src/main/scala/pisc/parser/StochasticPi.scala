@@ -29,12 +29,13 @@
 package pisc
 package parser
 
+import scala.io.Source
+
 import scala.collection.mutable.{
   LinkedHashMap => Map,
   ListBuffer => MutableList,
   LinkedHashSet => Set
 }
-import scala.io.Source
 
 import generator.Meta.`()(null)`
 
@@ -42,6 +43,7 @@ import StochasticPi.*
 import Calculus.*
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
+import Expansion.Duplications
 
 
 abstract class StochasticPi extends Expression:
@@ -49,21 +51,21 @@ abstract class StochasticPi extends Expression:
   def `μ.`: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ Some((it, free)) =>
-        τ(r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), free)
+        τ(r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), free)
       case _ ~ r ~ _ =>
-        τ(r.getOrElse(1L), None)(sπ_id()) -> (Names(), Names())
+        τ(r.getOrElse(1L), None)(sπ_id) -> (Names(), Names())
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ free ++ freeʹ)
+        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name ++ free)
+        π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id()) -> (Names(), name ++ freeʹ)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id()) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id) -> (Names(), name)
     } |
     name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -73,9 +75,9 @@ abstract class StochasticPi extends Expression:
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, bound) ~ Some((it, freeʹ)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id()) -> (bound, name ++ freeʹ)
+        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id) -> (bound, name ++ freeʹ)
       case (ch, name) ~ r ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id()) -> (bound, name)
+        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id) -> (bound, name)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -144,32 +146,43 @@ abstract class StochasticPi extends Expression:
 
   protected final def path = (0 until _nest).map(_nth(_))
 
+  protected var _dirs = List[Map[String, Any]]()
+
+  protected var _dups: Boolean = false
+
   private[parser] var _id: helper.υidυ = null
 
-  protected var sπ_id: helper.υidυ = null
+  private[parser] var _sπ_id: helper.υidυ = null
+
+  private[parser] var _χ_id: helper.υidυ = null
 
   protected final def id = _id()
 
-  protected final def copy: (Any, Any) =
-    _id.copy -> sπ_id.copy
+  protected final def sπ_id = _sπ_id()
 
-  protected final def paste(it: (Any, Any)) =
-    _id.paste(it._1)
-    sπ_id.paste(it._2)
+  protected final def χ_id = _χ_id()
 
-  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
+  protected final def copy: ((Any, Any), Any) =
+    _id.copy -> _sπ_id.copy -> _χ_id.copy
+
+  protected final def paste(it: ((Any, Any), Any)) =
+    _id.paste(it._1._1)
+    _sπ_id.paste(it._1._2)
+    _χ_id.paste(it._2)
+
+  protected final def save[T](r: => ParseResult[T]): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
     _id.save {
-      sπ_id.save {
-        r match
-          case Success(it, in) => Some(it -> in)
-          case failure: NoSuccess if fail =>
-            scala.sys.error(failure.msg)
-          case _ =>
-            _cntr = cntr
-            _nest = nest
-            None
+      _sπ_id.save {
+        _χ_id.save {
+          r match
+            case Success(it, in) => Some(it -> in)
+            case _ =>
+              _cntr = cntr
+              _nest = nest
+              None
+        }
       }
     }
 
@@ -271,7 +284,7 @@ object StochasticPi:
         case it @ !(_, sum) =>
           it.copy(sum = sum.shallow)
 
-        case it @ `⟦⟧`(_, _, sum, _) =>
+        case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.shallow)
 
         case `{}`(identifier, pointers, true, params*) =>
@@ -282,7 +295,7 @@ object StochasticPi:
 
   final class Main(override protected val in: String) extends Expansion:
 
-    def line: Parser[Either[Bind, Define]] =
+    def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
     private def ensure(implicit prog: List[Bind]): Unit =
@@ -323,7 +336,7 @@ object StochasticPi:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id())
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ
@@ -399,8 +412,8 @@ object StochasticPi:
           case !(_, sum) =>
             `!`(Some(τ), sum).parse
 
-          case `⟦⟧`(definition, variables, _sum, assign) =>
-            val n = assign.size
+          case `⟦⟧`(definition, variables, _sum, xid, assignment) =>
+            val n = assignment.size
 
             val sum: + =
               if variables.size == n
@@ -415,7 +428,7 @@ object StochasticPi:
             then
               it = insert_+(it)
 
-            (`⟦⟧`(definition, variables, it, assign), it.enabled)
+            (`⟦⟧`(definition, variables, it, xid, assignment), it.enabled)
 
           case _: `{}` => ???
 
@@ -490,7 +503,7 @@ object StochasticPi:
 
           case _: ! => ??? // impossible by 'parse'
 
-          case `⟦⟧`(_, _, sum, _) =>
+          case `⟦⟧`(_, _, sum, _, _) =>
             sum.split
             sum.enabled
 
@@ -536,7 +549,7 @@ object StochasticPi:
                 case !(Some(μ), _) =>
                   Seq(ps(k) -> μ)
                 case _: ! => ??? // impossible by 'parse'
-                case `⟦⟧`(_, _, sum, _) =>
+                case `⟦⟧`(_, _, sum, _, _) =>
                   Seq(ps(k) -> sum)
                 case _: `{}` => ???
                 case it: `(*)` =>
@@ -553,7 +566,7 @@ object StochasticPi:
 
           case _: ! => ??? // impossible by 'parse'
 
-          case `⟦⟧`(_, _, sum, _) =>
+          case `⟦⟧`(_, _, sum, _, _) =>
             sum.graph
 
           case _: `{}` => ???
@@ -598,14 +611,19 @@ object StochasticPi:
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
+      _dups = false
+      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
       eqtn = List()
       defn = Map()
       self = Set()
       _nest = 0
       _id = new helper.υidυ
-      sπ_id = new helper.υidυ
+      _sπ_id = new helper.υidυ
+      _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+
+      given Duplications()
 
       (source.getLines() ++ Some(""))
         .zipWithIndex
@@ -631,9 +649,11 @@ object StochasticPi:
                 val equations = eqtn.slice(i, eqtn.size)
                 i = eqtn.size
                 equations.map(Right(_))
-              case Success(Right(definition), _) =>
+              case Success(Right(Some(definition)), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition
+                Nil
+              case Success(Right(_), _) => // directive
                 Nil
               case failure: NoSuccess =>
                 scala.sys.error(failure.msg)
