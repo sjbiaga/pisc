@@ -37,14 +37,16 @@ import Expression.Code
 import Pi.*
 import Calculus.*
 import Encoding.*
+import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
 
 
 abstract class Calculus extends Pi:
 
-  def equation: Parser[Bind] =
+  def equation(using Duplications): Parser[Bind] =
     invocation(true)<~"=" >> {
       case (bind, bound) =>
         _code = -1
+        _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         choice ^^ {
           case (_sum, _free) =>
@@ -57,17 +59,17 @@ abstract class Calculus extends Pi:
         }
     }
 
-  def choice(using Bindings): Parser[(+, Names)] =
+  def choice(using Bindings, Duplications): Parser[(+, Names)] =
     rep1sep(parallel, "+") ^^ { _.unzip match
       case (it, ns) => `+`(it*) -> ns.reduce(_ ++ _)
     }
 
-  def parallel(using Bindings): Parser[(∥, Names)] =
+  def parallel(using Bindings, Duplications): Parser[(∥, Names)] =
     rep1sep(sequential, "|") ^^ { _.unzip match
       case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
     }
 
-  def sequential(using bindings: Bindings): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
       case (it, (bound, free)) ~ Some((end, freeʹ)) =>
@@ -78,7 +80,7 @@ abstract class Calculus extends Pi:
         `.`(`+`(), it*) -> free // inaction
     }
 
-  def leaf(using Bindings): Parser[(-, Names)] =
+  def leaf(using Bindings, Duplications): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -117,7 +119,7 @@ abstract class Calculus extends Pi:
     invocation() |
     instantiation
 
-  def instantiation(using Bindings): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
 
   def capital: Parser[(`{}`, Names)]
 
@@ -239,6 +241,7 @@ object Calculus:
     case `⟦⟧`(definition: Definition,
               variables: Names,
               sum: AST.+,
+              xid: String = null,
               assignment: Set[(Symbol, Symbol)] = Set.empty)
 
     case `{}`(identifier: String,
@@ -273,7 +276,7 @@ object Calculus:
 
       case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
-      case `⟦⟧`(definition, variables, sum, assignment) =>
+      case `⟦⟧`(definition, variables, sum, _, assignment) =>
         val vars = if (variables.isEmpty)
                    then
                      ""

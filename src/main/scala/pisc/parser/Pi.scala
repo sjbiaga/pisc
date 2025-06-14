@@ -29,8 +29,12 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
 import scala.io.Source
+
+import scala.collection.mutable.{
+  LinkedHashMap => Map,
+  LinkedHashSet => Set
+}
 
 import generator.Meta.`()(null)`
 
@@ -38,6 +42,7 @@ import Pi.*
 import Calculus.*
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
+import Expansion.Duplications
 
 
 abstract class Pi extends Expression:
@@ -123,26 +128,37 @@ abstract class Pi extends Expression:
 
   protected final def path = (0 until _nest).map(_nth(_))
 
+  protected var _dirs = List[Map[String, Any]]()
+
+  protected var _dups: Boolean = false
+
   private[parser] var _id: helper.υidυ = null
+
+  private[parser] var _χ_id: helper.υidυ = null
 
   protected final def id = _id()
 
-  protected final def copy: Any = _id.copy
+  protected final def χ_id = _χ_id()
 
-  protected final def paste(it: Any) = _id.paste(it)
+  protected final def copy: (Any, Any) =
+    _id.copy -> _χ_id.copy
 
-  protected final def save[T](r: => ParseResult[T], fail: Boolean): Option[(T, Input)] =
+  protected final def paste(it: (Any, Any)) =
+    _id.paste(it._1)
+    _χ_id.paste(it._2)
+
+  protected final def save[T](r: => ParseResult[T]): Option[(T, Input)] =
     val nest = _nest
     val cntr = Map.from(_cntr)
     _id.save {
-      r match
-        case Success(it, in) => Some(it -> in)
-        case failure: NoSuccess if fail =>
-          scala.sys.error(failure.msg)
-        case _ =>
-          _cntr = cntr
-          _nest = nest
-          None
+      _χ_id.save {
+        r match
+          case Success(it, in) => Some(it -> in)
+          case _ =>
+            _cntr = cntr
+            _nest = nest
+            None
+      }
     }
 
   protected object BindingOccurrence:
@@ -218,7 +234,7 @@ object Pi:
         case it @ !(_, sum) =>
           it.copy(sum = sum.shallow)
 
-        case it @ `⟦⟧`(_, _, sum, _) =>
+        case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.shallow)
 
         case `{}`(id, pointers, true, params*) =>
@@ -229,7 +245,7 @@ object Pi:
 
   final class Main(override protected val in: String) extends Expansion:
 
-    def line: Parser[Either[Bind, Define]] =
+    def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
     private def ensure(using prog: List[Bind]): Unit =
@@ -264,13 +280,18 @@ object Pi:
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
+      _dups = false
+      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
       eqtn = List()
       defn = Map()
       self = Set()
       _nest = 0
       _id = new helper.υidυ
+      _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+
+      given Duplications()
 
       (source.getLines() ++ Some(""))
         .zipWithIndex
@@ -296,9 +317,11 @@ object Pi:
                 val equations = eqtn.slice(i, eqtn.size)
                 i = eqtn.size
                 equations.map(Right(_))
-              case Success(Right(definition), _) =>
+              case Success(Right(Some(definition)), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition
+                Nil
+              case Success(Right(_), _) => // directive
                 Nil
               case failure: NoSuccess =>
                 scala.sys.error(failure.msg)
