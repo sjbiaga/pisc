@@ -248,7 +248,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, assignment) =>
+        case `⟦⟧`(_, variables, _sum, _, assignment) =>
           val ** = assignment
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
