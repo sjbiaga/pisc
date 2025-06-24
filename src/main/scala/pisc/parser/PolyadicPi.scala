@@ -47,7 +47,7 @@ import Expansion.Duplications
 
 abstract class PolyadicPi extends Expression:
 
-  def `μ.`: Parser[(μ, (Names, Names))] =
+  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         τ(Some(it)) -> (Names(), free)
@@ -62,27 +62,42 @@ abstract class PolyadicPi extends Expression:
       case (ch, _) ~ Some(arity) ~ Some(args) ~ _ =>
         throw PrefixArityParsingExceptionʹ(ch, arity, args.size)
       case (ch, name) ~ _ ~ Some(args) ~ Some((it, freeʹ)) =>
-        π(ch, polarity = false, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ freeʹ)
+        π(ch, polarity = None, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ freeʹ)
       case (ch, name) ~ _ ~ Some(args) ~ _ =>
-        π(ch, polarity = false, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
+        π(ch, polarity = None, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, polarity = false, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
+        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
-        π(ch, polarity = false, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
+        π(ch, polarity = None, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
     } |
-    name ~ ("("~>rep1sep(name, ",")<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+    name ~ ("("~>names<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
+      case _ ~ (params, _) ~ _ if !params.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
-      case (ch, _) ~ params ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+      case (ch, _) ~ (params, _) ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
         throw PrefixUniquenessParsingException(ch.asSymbol.name, params.map(_._1.asSymbol.name)*)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ params ~ Some((it, freeʹ)) =>
-        π(ch, polarity = true, Some(it), params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name ++ freeʹ)
-      case (ch, name) ~ params ~ _ =>
-        π(ch, polarity = true, None, params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name)
+      case (λ(ch: Symbol), _) ~ (params, _) ~ _
+          if bindings.get(ch).map(_.position.counter == Long.MinValue).getOrElse(false)
+          && params.exists { case (λ(`ch`), _) => true case _ => false } =>
+        throw ConsItselfParsingException(ch, bindings.get(ch).get.asInstanceOf[ConsOccurrence].cons)
+      case (ch, name) ~ (params, cons) ~ code =>
+        if cons.nonEmpty
+        then
+          params.foreach { case (λ(arg: Symbol), _) =>
+            bindings.get(arg) match
+              case Some(Cons(`cons`)) =>
+              case Some(Occurrence(_, Position(counter, binds))) if counter < 0 =>
+                val extra = if counter == Long.MinValue then ""
+                            else (if binds then " binding" else "") + " parameter"
+                throw ConsBindingParsingException(_code, _nest, cons, arg, extra)
+              case _ =>
+            bindings(arg) = ConsOccurrence(cons)
+          }
+        val freeʹ = code.map(_._2).getOrElse(Names())
+        π(ch, polarity = Some(cons), code.map(_._1), params.map(_._1)*) -> (params.map(_._2).reduce(_ ++ _), name ++ freeʹ)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -93,6 +108,21 @@ abstract class PolyadicPi extends Expression:
                                    case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
+
+  def names: Parser[(List[(λ, Names)], String)] =
+    rep1sep(nameʹ, ",") ^^ { _ -> "" } |
+    cons_r ~ rep1sep(nameʹ, ",") ~ cons_r ^^ {
+      case l ~ _ ~ r if l != r =>
+        throw ConsParsingException(l, r)
+      case cons ~ params ~ _ =>
+        params -> cons
+    }
+
+  def nameʹ: Parser[(λ, Names)] =
+    name ~ opt(`type`) ^^ {
+      case (λ, free) ~ tpe =>
+        (λ.copy()(using tpe), free)
+    }
 
   /**
    * Channel names start with lower case.
@@ -171,8 +201,9 @@ abstract class PolyadicPi extends Expression:
       bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+        case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(Long.MinValue, true))) =>
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -181,6 +212,8 @@ abstract class PolyadicPi extends Expression:
 
 
 object PolyadicPi:
+
+  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}\p{Space}'",.>)\]}*/]+""".r
 
   type Names = Set[Symbol]
 
@@ -202,7 +235,7 @@ object PolyadicPi:
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
-      extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+      extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
 
   case class PrefixChannelsParsingException(names: λ*)
       extends PrefixParsingException(s"${names.mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}")
@@ -220,6 +253,12 @@ object PolyadicPi:
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
 
+  case class ConsParsingException(left: String, right: String)
+      extends PrefixParsingException(s"The CONS operator varies between `$left' and `$right'")
+
+  case class ConsItselfParsingException(name: Symbol, cons: String)
+      extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is itself the result")
+
 
   // functions
 
@@ -231,7 +270,7 @@ object PolyadicPi:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case +(it*) =>
           `+`(it.map(_.shallow)*)

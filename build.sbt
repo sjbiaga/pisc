@@ -34,7 +34,7 @@ lazy val main = (project in file("main"))
     scalaVersion := "3.7.1",
     crossScalaVersions ++= Seq("2.13.16", "3.7.1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(catseffect, scalameta, munit % Test)
+    libraryDependencies ++= Seq(catseffect, munit % Test)
   )
 
 lazy val main_ = (project in file("main_"))
@@ -47,7 +47,7 @@ lazy val main_ = (project in file("main_"))
     scalaVersion := "3.7.1",
     crossScalaVersions ++= Seq("2.13.16", "3.7.1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(catseffect, scalameta, munit % Test)
+    libraryDependencies ++= Seq(catseffect, munit % Test)
   )
 
 unmanagedSources / excludeFilter := "ppi*.scala" || "examples/*.scala"

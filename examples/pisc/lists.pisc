@@ -4,23 +4,21 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/lists
 
-@given Conversion[`()`, List[Int]] = _.as[List[Int]]
-@given Conversion[`()`, Int] = _.as[Int]
-
 Main = ν(sumlist)ν(print)ν(rch)                            \
      ( Client(sumlist, print, rch, /*args.map(_.toInt)*/)  \
      | Server(sumlist)                                     \
-     | print(sum).τ/*println(s"sum=${'sum}")*/.            \
+     | print(sum: Int /**/).τ/*println(s"sum=${'sum}")*/.  \
        sumlist#2<>.                                        \
      )
 
 Client(sumlist, print, rch, l) = sumlist<l,rch>.rch(sum).print<sum>.
 
-Server(sumlist) = !.sumlist(list,rch).                                           \
-                  if /*'list.isEmpty*/ = True                                    \
-                  then                                                           \
-                    rch</*0*/>.                                                  \
-                  else                                                           \
-                    ν(rch_recursive_call)                                        \
-                    (sumlist</*'list.tail*/,rch_recursive_call>.                 \
-                     rch_recursive_call(tailsum).rch</*'list.head+'tailsum*/>.)
+Server(sumlist) = !.sumlist(:: list: List[Int] /**/, rch ::).                         \
+                  if /*'list.isEmpty*/ = True                                         \
+                  then                                                                \
+                    rch</*0*/>.                                                       \
+                  else                                                                \
+                    ν(rch_recursive_call)                                             \
+                    list(head: Int /**/).                                             \
+                    (sumlist<list,rch_recursive_call>.                                \
+                     rch_recursive_call(tailsum: Int /**/).rch</*'head+'tailsum*/>.)
