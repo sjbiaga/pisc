@@ -179,7 +179,7 @@ object Ambient:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(it*) =>
           ∥(it.map(_.shallow)*)

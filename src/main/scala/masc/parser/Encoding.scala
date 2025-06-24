@@ -320,7 +320,7 @@ object Encoding:
         }
         given (∥ | `⟦⟧` => ∥ | `⟦⟧`) = { ast =>
           lazy val count: AST => Unit =
-            case ∅(_) =>
+            case ∅() =>
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case !(_, par) => count(par)
@@ -345,7 +345,7 @@ object Encoding:
             case it => throw it
         }
         lazy val reset: AST => Unit =
-          case ∅(_) =>
+          case ∅() =>
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case !(_, par) => reset(par)
@@ -512,7 +512,7 @@ object Encoding:
 
       ast match
 
-        case ∅(_) => Names()
+        case ∅() => Names()
 
         case ∥(it*) => it.map(_.capitals).reduce(_ ++ _)
 
@@ -565,7 +565,7 @@ object Encoding:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(it*) =>
           ∥(it.map(rename(_))*)

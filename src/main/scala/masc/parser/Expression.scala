@@ -139,56 +139,57 @@ abstract class Expression extends JavaTokenParsers:
       then
         None -> Names()
       else
-        try
-          Expression(it.group(2).parse[Term].get) match
-            case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
-              var operators = _operators.map { case Lit.String(it) => it }
-              var operands: Seq[Symbol | String] = _operands.map {
-                case Term.Name(it) => Symbol(it)
-                case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
-                case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
-              }
-              if operators.mkString.isBlank
+        ( try
+            Expression(it.group(2).parse[Term].get)
+          catch t =>
+            throw ExpressionParsingException(it.group(2), t)
+        ) match
+          case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
+            var operators = _operators.map { case Lit.String(it) => it }
+            var operands: Seq[Symbol | String] = _operands.map {
+              case Term.Name(it) => Symbol(it)
+              case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
+              case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
+            }
+            if operators.mkString.isBlank
+            then
+              operands.size match
+                case 0 =>
+                  None -> Names()
+                case 1 =>
+                  operands.head match
+                    case Symbol(free @ it) =>
+                      Some(Term.Name(it)) -> Set(free)
+                    case _ => ???
+                case _ => ???
+            else
+              if operators.head.isBlank
               then
-                operands.size match
-                  case 0 =>
-                    None -> Names()
-                  case 1 =>
-                    operands.head match
-                      case Symbol(free @ it) =>
-                        Some(Term.Name(it)) -> Set(free)
-                      case _ => ???
-                  case _ => ???
+                operators = operators.tail
               else
-                if operators.head.isBlank
-                then
-                  operators = operators.tail
-                else
-                  operands = "_" +: operands
-                if operators.last.isBlank
-                then
-                  operators = operators.init
-                else
-                  operands = operands :+ "_"
-                given Names()
-                val term = this(operators, operands).head
-                given MutableList[String]()
-                this(term)
-                Some(term) -> given_Names
-            case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
-                if it.group(1).isEmpty =>
-              _dir = Some(lhs -> rhs.map(_.toString))
-              Some(term) -> Names()
-            case (term @ Term.Assign(Term.Name(lhs), rhs), _)
-                if it.group(1).isEmpty =>
-              _dir = Some(lhs -> rhs.toString)
-              Some(term) -> Names()
-            case (term, given Names) =>
+                operands = "_" +: operands
+              if operators.last.isBlank
+              then
+                operators = operators.init
+              else
+                operands = operands :+ "_"
+              given Names()
+              val term = this(operators, operands).head
               given MutableList[String]()
               this(term)
               Some(term) -> given_Names
-        catch t =>
-          throw ExpressionParsingException(it.group(2), t)
+          case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
+              if it.group(1).isEmpty =>
+            _dir = Some(lhs -> rhs.map(_.toString))
+            Some(term) -> Names()
+          case (term @ Term.Assign(Term.Name(lhs), rhs), _)
+              if it.group(1).isEmpty =>
+            _dir = Some(lhs -> rhs.toString)
+            Some(term) -> Names()
+          case (term, given Names) =>
+            given MutableList[String]()
+            this(term)
+            Some(term) -> given_Names
     }
 
 

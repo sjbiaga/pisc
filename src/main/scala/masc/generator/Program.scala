@@ -48,7 +48,7 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∅(_) =>
+        case ∅() =>
           * = `_ <- IO.unit`
 
         case ∥(operand) =>

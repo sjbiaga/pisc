@@ -82,7 +82,7 @@ object Ensure:
 
       ast match
 
-        case ∅(_) =>
+        case ∅() =>
 
         case ∥(it*) =>
          it.foldLeft(())((_, seq) => seq.recursive)
