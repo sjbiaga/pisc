@@ -31,7 +31,7 @@ package parser
 
 import scala.collection.mutable.{ LinkedHashSet => Set }
 
-import scala.meta.Term
+import scala.meta.{ Term, Type }
 
 import Expression.Code
 import StochasticPi.*
@@ -71,16 +71,20 @@ abstract class Calculus extends StochasticPi:
 
   def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
-    prefixes ~ opt( leaf | "("~>choice<~")" ) ^^ {
-      case (it, (bound, free)) ~ Some((end, freeʹ)) =>
+    prefixes ~ ( leaf | choiceʹ ) ^^ {
+      case (it, (bound, free)) ~ (end, freeʹ) =>
         bindings ++= binders
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
-      case (it, (_, free)) ~ _ =>
-        bindings ++= binders
-        `.`(`+`(nil), it*) -> free // inaction
     }
 
-  def leaf(using Bindings, Duplications): Parser[(-, Names)] =
+  def choiceʹ(using bindings: Bindings, _ds: Duplications): Parser[(+, Names)] =
+    given Bindings = Bindings(bindings)
+    opt( "("~>choice<~")" ) ^^ { it =>
+      bindings ++= bindersʹ
+      it.getOrElse(`+`(nil) -> Names())
+    }
+
+  def leaf(using bindings: Bindings, _ds: Duplications): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -93,11 +97,15 @@ abstract class Calculus extends StochasticPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~>`μ.`<~"." ) >> { // [guarded] replication
-      case Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), true, _, _), _)) =>
+    "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
+      case Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, _), _)) =>
         if ch == par
         then
           warn(throw GuardParsingException(ch.name))
+        bindings.get(ch) match
+          case Some(Cons(cons)) =>
+            warn(throw ConsPossibleGuardParsingException(cons, ch.name))
+          case _ =>
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -163,7 +171,7 @@ abstract class Calculus extends StochasticPi:
         instantiation <~"." ^^ {
           case (exp, free) =>
             val code = exp.definition.code
-            val it: χ = χ(Right(exp.copy(trans = trans)), r.getOrElse(1L))(sπ_id)
+            val it: χ = χ(Right(exp.copy(trans = trans)), Some(r.getOrElse(None)))(sπ_id)
             if !xctn.contains(trans -> code)
             then
               xctn(trans -> code) = Nil
@@ -174,10 +182,10 @@ abstract class Calculus extends StochasticPi:
     "end"~> ("("~> ident("transaction") <~ ")") ~ opt("@"~>rate) <~"." ^^ {
       case name ~ r =>
         val trans = Symbol(name)
-        val it = χ(Left(trans), r.getOrElse(1L))(sπ_id)
+        val it = χ(Left(trans), Some(r.getOrElse(None)))(sπ_id)
         it -> (Names(), Names() + trans)
     } |
-    `μ.`<~"." ^^ {
+    μ<~"." ^^ {
       case it @ (_, (bound, _)) =>
         BindingOccurrence(bound)
         it
@@ -225,6 +233,8 @@ abstract class Calculus extends StochasticPi:
 
 object Calculus:
 
+  private val qual_r = "[{][^}]*[}]".r
+
   type Bind = (`(*)`, +)
 
   export Pre.*
@@ -234,26 +244,26 @@ object Calculus:
 
     case ν(names: String*) // forcibly
 
-    case τ(override val rate: Any,
+    case τ(override val rate: Option[Any],
            code: Option[Code])(id: => String)
         extends Pre with Act(() => id)
 
     case π(channel: λ,
            name: λ,
-           polarity: Boolean,
-           override val rate: Any,
+           polarity: Option[String],
+           override val rate: Option[Any],
            code: Option[Code])(id: => String)
         extends Pre with Act(() => id)
 
     case χ(dir: Either[Symbol, `⟦⟧`],
-           override val rate: Any)(id: => String)
+           override val rate: Option[Any])(id: => String)
         extends Pre with Act(() => id)
 
     override def toString: String = this match
       case ν(names*) => names.mkString("ν(", ", ", ")")
       case π(channel, name, polarity, _, _) =>
-        if polarity
-        then "" + channel + "(" + name + ")."
+        if polarity.isDefined
+        then "" + channel + s"(${polarity.get}" + name + s"${polarity.get})."
         else "" + channel + "<" + name + ">."
       case χ(dir, _) =>
         dir match
@@ -292,13 +302,13 @@ object Calculus:
                params: λ*)
 
     override def toString: String = this match
-      case ∅(_) => "()"
+      case ∅() => "()"
       case +(choices*) => choices.mkString(" + ")
 
       case ∥(components*) => components.mkString(" | ")
 
-      case `.`(∅(_)) => "()"
-      case `.`(∅(_), prefixes*) => prefixes.mkString(" ") + " ()"
+      case `.`(∅()) => "()"
+      case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
       case `.`(end: +, prefixes*) =>
         prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
       case `.`(end, prefixes*) =>
@@ -336,17 +346,17 @@ object Calculus:
         Term.Apply(Term.Name(identifier), Term.ArgClause(args)).toString
 
   object ∅ :
-    def unapply[T <: AST](self: T): Option[Unit] = self match
-      case sum: + if sum.isVoid => Some(())
-      case _ => None
+    def unapply(self: AST): Boolean = self match
+      case sum: + => sum.isVoid
+      case _ => false
 
-  case class λ(value: Any):
-    val isSymbol: Boolean = value.isInstanceOf[Symbol]
-    def asSymbol: Symbol = value.asInstanceOf[Symbol]
+  case class λ(`val`: Any)(using val `type`: Option[(Type, Option[Type])] = None):
+    val isSymbol: Boolean = `val`.isInstanceOf[Symbol]
+    def asSymbol: Symbol = `val`.asInstanceOf[Symbol]
 
-    type Kind = value.type
+    type Kind = `val`.type
 
-    val kind: String = value match
+    val kind: String = `val` match
       case _: Symbol => "channel name"
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
@@ -356,14 +366,14 @@ object Calculus:
     def toTerm: Term =
       import scala.meta._
       import dialects.Scala3
-      value match
+      `val` match
         case it: Symbol => Term.Name(it.name)
         case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
         case it: Term => it
 
-    override def toString: String = value match
+    override def toString: String = `val` match
       case it: Symbol => it.name
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
@@ -390,6 +400,9 @@ object Calculus:
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
 
+  case class ConsPossibleGuardParsingException(cons: String, name: String)
+      extends PrefixParsingException(s"Possibly, a name $name that knows how to CONS (`$cons') is used as replication guard")
+
 
   // functions
 
@@ -408,7 +421,7 @@ object Calculus:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case +(_, ∥(`.`(sum: +)), it*) =>
           val lhs = sum.flatten

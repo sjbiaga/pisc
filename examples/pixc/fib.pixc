@@ -1,5 +1,7 @@
 # -*- indent-tabs-mode: nil; -*-
 
+@import eu.timepit.refined.numeric.*
+
 @given Conversion[`()`, Long] = _.as[Long]
 
 @val max = 11
@@ -8,15 +10,14 @@
 
 @def random = 3+gen.nextLong(max-2)
 
-Main = ν(num)                                                   \
-     (                                                          \
-     (!.num(n).ν(out) ( Fib(n, out)                             \
-                      | out(fib).                               \
-                        τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
-                        num</*random*/>.                        \
-                      )                                         \
-     )                                                          \
-     | num</*random*/>.                                         \
+Main = ν(num)                                                     \
+     ( (!.num(n).ν(out) ( Fib(n, out)                             \
+                        | out(fib: Long /* NonNegative */).       \
+                          τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                          num</*random*/>.                        \
+                        )                                         \
+       )                                                          \
+     | num</*random*/>.                                           \
      )
 
 Fib(n, out) = τ/*println(s"n=${'n}")*/.  \

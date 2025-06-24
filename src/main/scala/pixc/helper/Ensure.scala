@@ -85,7 +85,7 @@ object Ensure:
 
       ast match
 
-        case ∅(_) =>
+        case ∅() =>
 
         case +(_, it*) =>
          it.foldLeft(())((_, par) => par.recursive)
@@ -144,7 +144,7 @@ object Ensure:
 
       ast match
 
-        case ∅(_) => true
+        case ∅() => true
 
         case +(_, it*) =>
          it.foldLeft(true) {
@@ -200,7 +200,7 @@ object Ensure:
 
       ast match
 
-        case ∅(_) => true
+        case ∅() => true
 
         case +(_, it*) =>
          it.foldLeft(true) {

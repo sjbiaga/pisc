@@ -61,7 +61,8 @@ abstract class Expression extends JavaTokenParsers:
       try
         val orig = expr.parse[Term].get
         Expression(orig) match
-          case (term, names) => (Right(term), orig) -> names
+          case (term, names) =>
+            (Right(term), orig) -> names
       catch _ =>
         try
           val orig = ("for { " + expr + " } yield ()").parse[Term].get
@@ -138,64 +139,84 @@ abstract class Expression extends JavaTokenParsers:
       then
         None -> Names()
       else
-        try
-          Expression(it.group(2).parse[Term].get) match
-            case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
-              var operators = _operators.map { case Lit.String(it) => it }
-              var operands: Seq[Symbol | String] = _operands.map {
-                case Term.Name(it) => Symbol(it)
-                case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
-                case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
-              }
-              if operators.mkString.isBlank
+        ( try
+            Expression(it.group(2).parse[Term].get)
+          catch t =>
+            throw ExpressionParsingException(it.group(2), t)
+        ) match
+          case (Term.Interpolate(_, List(_operators*), List(_operands*)), _) =>
+            var operators = _operators.map { case Lit.String(it) => it }
+            var operands: Seq[Symbol | String] = _operands.map {
+              case Term.Name(it) => Symbol(it)
+              case Term.Block(Term.Name(it) :: Nil) if it.charAt(0) == '$' => Symbol(it.tail)
+              case Term.Block(Term.Name(it) :: Nil) => Symbol(it)
+            }
+            if operators.mkString.isBlank
+            then
+              operands.size match
+                case 0 =>
+                  None -> Names()
+                case 1 =>
+                  operands.head match
+                    case free @ Symbol(it) =>
+                      Some(Term.Name(it)) -> Set(free)
+                    case _ => ???
+                case _ => ???
+            else
+              if operators.head.isBlank
               then
-                operands.size match
-                  case 0 =>
-                    None -> Names()
-                  case 1 =>
-                    operands.head match
-                      case free @ Symbol(it) =>
-                        Some(Term.Name(it)) -> Set(free)
-                      case _ => ???
-                  case _ => ???
+                operators = operators.tail
               else
-                if operators.head.isBlank
-                then
-                  operators = operators.tail
-                else
-                  operands = "_" +: operands
-                if operators.last.isBlank
-                then
-                  operators = operators.init
-                else
-                  operands = operands :+ "_"
-                given Names()
-                val term = this(operators, operands).head
-                given MutableList[String]()
-                this(term)
-                Some(term) -> given_Names
-            case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
-                if it.group(1).isEmpty =>
-              _dir = Some(lhs -> rhs.map(_.toString))
-              Some(term) -> Names()
-            case (term @ Term.Assign(Term.Name(lhs), rhs), _)
-                if it.group(1).isEmpty =>
-              _dir = Some(lhs -> rhs.toString)
-              Some(term) -> Names()
-            case (term, given Names) =>
+                operands = "_" +: operands
+              if operators.last.isBlank
+              then
+                operators = operators.init
+              else
+                operands = operands :+ "_"
+              given Names()
+              val term = this(operators, operands).head
               given MutableList[String]()
               this(term)
               Some(term) -> given_Names
+          case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
+              if it.group(1).isEmpty =>
+            _dir = Some(lhs -> rhs.map(_.toString))
+            Some(term) -> Names()
+          case (term @ Term.Assign(Term.Name(lhs), rhs), _)
+              if it.group(1).isEmpty =>
+            _dir = Some(lhs -> rhs.toString)
+            Some(term) -> Names()
+          case (term, given Names) =>
+            given MutableList[String]()
+            this(term)
+            Some(term) -> given_Names
+    }
+
+  def `type`: Parser[(Type, Option[Type])] =
+    regexMatch(refined_r) ^^ { it =>
+      ( try
+          Expression(it.group(1).parse[Type].get)
         catch t =>
-          throw ExpressionParsingException(it.group(2), t)
+          throw ExpressionParsingExceptionʹ(it.group(1), t)
+      ) match
+        case (tpe, _) if it.group(2).isBlank => tpe -> None
+        case (tpe, _) =>
+          ( try
+              Expression(it.group(2).parse[Type].get)
+            catch t =>
+              throw ExpressionParsingExceptionʹ(it.group(2), t)
+          ) match
+            case (refined, _) => tpe -> Some(refined)
     }
 
 
 object Expression:
 
-  private val expression_r = "[/][*].*?[*][/]".r
+  private lazy val expression_r = "[/][*].*?[*][/]".r
 
-  private val template_r = """⟦(\d*)(.*?)\1⟧""".r
+  private lazy val template_r = """⟦(\d*)(.*?)\1⟧""".r
+
+  private lazy val refined_r = """:\p{Space}(.+?)[/][*](.*?)[*][/]""".r
 
   import scala.Function.const
 
@@ -207,6 +228,9 @@ object Expression:
 
   case class ExpressionParsingException(expr: String, cause: Throwable)
       extends ParsingException(s"Expression $expr is not a valid Scalameta Term or Enumerator(s)", cause)
+
+  case class ExpressionParsingExceptionʹ(expr: String, cause: Throwable)
+      extends ParsingException(s"Expression $expr is not a valid Scalameta Type", cause)
 
   case class TemplateParsingException(it: sm.Term)
       extends ParsingException(s"An encoding template strictly parses Term.ApplyInfix and not $it terms")
@@ -233,6 +257,13 @@ object Expression:
     given (MutableList[(Symbol, λ)], Bindings) = if refresh eq null then null else refresh -> updating
     given Bindings = if refresh eq null then updating else null
     Term(self)
+
+
+  inline def apply(self: sm.Type): (sm.Type, Names) =
+    given (MutableList[(Symbol, λ)], Bindings) = null
+    given Substitution = null
+    given Bindings = null
+    Type(self)
 
 
   object UnzipReduce:
