@@ -50,7 +50,7 @@ import Expansion.Duplications
 
 abstract class Pi extends Expression:
 
-  def `μ.`: Parser[(μ, (Names, Names))] =
+  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         τ(Some(it)) -> (Names(), free)
@@ -61,25 +61,38 @@ abstract class Pi extends Expression:
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, name) ~ Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = false, Some(it)) -> (Names(), name ++ free ++ freeʹ)
+        π(ch, arg, polarity = None, Some(it)) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = false, None) -> (Names(), name ++ free)
+        π(ch, arg, polarity = None, None) -> (Names(), name ++ free)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = false, Some(it)) -> (Names(), name ++ freeʹ)
+        π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = false, None) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = None, None) -> (Names(), name)
     } |
-    name ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+    name ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ (par, _) ~ _ if !par.isSymbol =>
+      case _ ~ (par, _, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, bound) ~ Some((it, freeʹ)) =>
-        π(ch, par, polarity = true, Some(it)) -> (bound, name ++ freeʹ)
-      case (ch, name) ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, None) -> (bound, name)
+      case (λ(ch: Symbol), _) ~ (λ(arg: Symbol), _, _) ~ _
+          if ch == arg && bindings.get(ch).map(_.position.counter == Long.MinValue).getOrElse(false) =>
+        throw ConsItselfParsingException(ch, bindings.get(ch).get.asInstanceOf[ConsOccurrence].cons)
+      case (ch, name) ~ (par, cons, bound) ~ code =>
+        if cons.nonEmpty
+        then
+          val arg = par.asSymbol
+          bindings.get(arg) match
+            case Some(Cons(`cons`)) =>
+            case Some(Occurrence(_, Position(counter, binds))) if counter < 0 =>
+              val extra = if counter == Long.MinValue then ""
+                          else (if binds then " binding" else "") + " parameter"
+              throw ConsBindingParsingException(_code, _nest, cons, arg, extra)
+            case _ =>
+          bindings(arg) = ConsOccurrence(cons)
+        val freeʹ = code.map(_._2).getOrElse(Names())
+        π(ch, par, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ freeʹ)
     }
 
   def name: Parser[(λ, Names)] = ident("channel") ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -90,6 +103,18 @@ abstract class Pi extends Expression:
                                    case ((Right(term), _), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
+
+  def nameʹ: Parser[(λ, String, Names)] =
+    name ~ opt(`type`) ^^ {
+      case (λ, free) ~ tpe =>
+        (λ.copy()(using tpe), "", free)
+    } |
+    cons_r ~ name ~ opt(`type`) ~ cons_r ^^ {
+      case l ~ _ ~ _ ~ r if l != r =>
+        throw ConsParsingException(l, r)
+      case cons ~ (λ, free) ~ tpe ~ _ =>
+        (λ.copy()(using tpe), cons, free)
+    }
 
   /**
    * Channel or transaction names start with lower case.
@@ -165,8 +190,9 @@ abstract class Pi extends Expression:
       bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+        case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(Long.MinValue, true))) =>
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -175,6 +201,8 @@ abstract class Pi extends Expression:
 
 
 object Pi:
+
+  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}\p{Space}'",.>)\]}*/]+""".r
 
   type Names = Set[Symbol]
 
@@ -196,10 +224,16 @@ object Pi:
       extends ParsingException(msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
-      extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+      extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+  case class ConsParsingException(left: String, right: String)
+      extends PrefixParsingException(s"The CONS operator varies between `$left' and `$right'")
+
+  case class ConsItselfParsingException(name: Symbol, cons: String)
+      extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is itself the result")
 
 
   // functions
@@ -212,7 +246,7 @@ object Pi:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case +(it*) =>
           `+`(it.map(_.shallow)*)
@@ -371,16 +405,16 @@ object Pi:
                 .map(Symbol(_))
                 .foreach(bound._2.prepend(_))
               true
-            case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), true, _)
-                     ,π(λ(rch: Symbol), λ(rpar: Symbol), true, _))) =>
-              equal(lch, rch) && equalʹ(lpar, rpar)
-            case (_, (π(λ(lch: Symbol), λ(larg: Symbol), false, _)
-                     ,π(λ(rch: Symbol), λ(rarg: Symbol), false, _))) =>
+            case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _)
+                     ,π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _))) =>
+              equal(lch, rch) && equalʹ(lpar, rpar) && lcons == rcons
+            case (_, (π(λ(lch: Symbol), λ(larg: Symbol), None, _)
+                     ,π(λ(rch: Symbol), λ(rarg: Symbol), None, _))) =>
               equal(lch, rch) && equal(larg, rarg)
-            case (_, (π(_, λ(_: Term), false, _), _))
-               | (_, (_, π(_, λ(_: Term), false, _))) => false
-            case (_, (π(λ(lch: Symbol), λ(larg), false, _)
-                     ,π(λ(rch: Symbol), λ(rarg), false, _))) =>
+            case (_, (π(_, λ(_: Term), None, _), _))
+               | (_, (_, π(_, λ(_: Term), None, _))) => false
+            case (_, (π(λ(lch: Symbol), λ(larg), None, _)
+                     ,π(λ(rch: Symbol), λ(rarg), None, _))) =>
               equal(lch, rch) && larg == rarg
             case (_, (χ(Right(lexp))
                      ,χ(Right(rexp)))) =>
@@ -418,16 +452,16 @@ object Pi:
           else
             congruent(lt -> rf.getOrElse(`+`())) && congruent(lf.getOrElse(`+`()) -> rt)
 
-        case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), true, _)), lsum)
-             ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), true, _)), rsum)) =>
+        case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _)), lsum)
+             ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _)), rsum)) =>
           val (ln, rn) = mark
-          equal(lch, rch) && equalʹ(lpar, rpar) && congruent(lsum -> rsum) && backtrack(ln, rn)
+          equal(lch, rch) && equalʹ(lpar, rpar) && lcons == rcons && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-        case (!(Some(π(_, λ(_: Term), false, _)), _), _)
-           | (_, !(Some(π(_, λ(_: Term), false, _)), _)) => false
+        case (!(Some(π(_, λ(_: Term), None, _)), _), _)
+           | (_, !(Some(π(_, λ(_: Term), None, _)), _)) => false
 
-        case (!(Some(π(λ(lch: Symbol), λ(larg), false, _)), lsum)
-             ,!(Some(π(λ(rch: Symbol), λ(rarg), false, _)), rsum)) =>
+        case (!(Some(π(λ(lch: Symbol), λ(larg), None, _)), lsum)
+             ,!(Some(π(λ(rch: Symbol), λ(rarg), None, _)), rsum)) =>
           equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
 
         case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
