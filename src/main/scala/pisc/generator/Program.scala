@@ -29,6 +29,8 @@
 package pisc
 package generator
 
+import scala.collection.mutable.{ LinkedHashMap => Map }
+
 import scala.meta.*
 import dialects.Scala3
 
@@ -40,7 +42,7 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String)
+    def generate(using id: => String, cs: Map[String, String])
                 (implicit semaphore: Option[String] = None): List[Enumerator] =
       var * = List[Enumerator]()
 
@@ -48,7 +50,7 @@ object Program:
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case ∅(_) =>
+        case ∅() =>
           val ** = `_ <- IO.unit`
 
           semaphore
@@ -135,33 +137,73 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), arg, false, Some((Left(enums), _))) =>
+        case π(λ(Symbol(ch)), arg, None, Some((Left(enums), _))) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)),
                          Term.ArgClause(code::Nil)
                        ))
 
-        case π(λ(Symbol(ch)), arg, false, Some((Right(term), _))) =>
+        case π(λ(Symbol(ch)), arg, None, Some((Right(term), _))) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)),
                          Term.ArgClause(code::Nil)
                        ))
 
-        case π(λ(Symbol(ch)), arg, false, _) =>
+        case π(λ(Symbol(ch)), arg, None, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)))
 
-        case π(_, _, true, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
+        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), Some((Right(code), _))) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
 
-        case π(λ(Symbol(ch)), λ(Symbol(par)), true, Some((Right(code), _))) =>
-          * = `* <- *`(par -> Term.Apply(
-                                Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                Term.ArgClause(code::Nil)
-                       ))
+          val par = if λ.`type`.isDefined then id else arg
 
-        case π(λ(Symbol(ch)), λ(Symbol(par)), true, _) =>
-          * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
+          if cs.contains(ch)
+          then
+            val consʹ = cs(ch)
+            val chʹ = id
+
+            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
+
+          else
+            * = `* <- *`(par -> Term.Apply(
+                                  Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                  Term.ArgClause(code::Nil)
+                         ))
+
+          λ.`type` match
+            case Some((tpe, Some(refined))) =>
+              * :+= `* = *: * …`(arg, par, tpe, refined)
+            case Some((tpe, _)) =>
+              * :+= `* = *: *`(arg, par, tpe)
+            case _ =>
+
+        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), _) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
+
+          val par = if λ.`type`.isDefined then id else arg
+
+          if cs.contains(ch)
+          then
+            val consʹ = cs(ch)
+            val chʹ = id
+
+            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
+
+          else
+            * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
+
+          λ.`type` match
+            case Some((tpe, Some(refined))) =>
+              * :+= `* = *: * …`(arg, par, tpe, refined)
+            case Some((tpe, _)) =>
+              * :+= `* = *: *`(arg, par, tpe)
+            case _ =>
 
         case _: π => ??? // caught by parser
 
@@ -184,17 +226,34 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(Some(π @ π(_, λ(Symbol(par)), true, _)), sum) =>
+        case !(Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), _)), sum) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
+
+          val par = if λ.`type`.isDefined then id else arg
+
           val υidυ = id
 
-          val `!.π⋯` = π.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                           Term.ArgClause(\(par) :: Nil)))
+          val πʹ = π.copy(name = λ.copy()(using None), polarity = Some(""))
+          val `!.π⋯` = πʹ.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
+                                                            Term.ArgClause(\(arg) :: Nil)))
+
+          val `val` =
+            λ.`type` match
+              case Some((tpe, Some(refined))) =>
+                `val * = *: * …`(arg, par, tpe, refined) :: Nil
+              case Some((tpe, _)) =>
+                `val * = *: *`(arg, par, tpe) :: Nil
+              case _ => Nil
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
-                           `NonEmptyList( *, … ).parSequence`(
-                             sum.generate(),
-                             `!.π⋯`
+                           Term.Block(`val` :::
+                             `NonEmptyList( *, … ).parSequence`(
+                               sum.generate(),
+                               `!.π⋯`
+                             ) :: Nil
                            )
                    )
 
@@ -280,4 +339,7 @@ object Program:
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
-      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)
+      prog
+        .map(_ -> _.generate(using id(), Map()))
+        .map(_.swap)
+        .map(defn(_)(_).toString)

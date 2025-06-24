@@ -42,6 +42,8 @@ object π:
   import _root_.cats.effect.syntax.all.*
   import _root_.cats.effect.std.Semaphore
 
+  import eu.timepit.refined.*
+
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
       _root_.cats.data.NonEmptyList.fromListUnsafe(self).parSequence.void
