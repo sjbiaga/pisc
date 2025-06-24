@@ -66,14 +66,14 @@ abstract class Calculus extends Ambient:
 
   def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
-    prefixes ~ opt( leaf | "("~>parallel<~")" ) ^^ {
-      case (it, (bound, free)) ~ Some((end, freeʹ)) =>
+    prefixes ~ ( leaf | parallelʹ ) ^^ {
+      case (it, (bound, free)) ~ (end, freeʹ) =>
         bindings ++= binders
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
-      case (it, (_, free)) ~ _ =>
-        bindings ++= binders
-        `.`(∥(), it*) -> free // void
     }
+
+  def parallelʹ(using Bindings, Duplications): Parser[(∥, Names)] =
+    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥() -> Names()) }
 
   def leaf(using Bindings, Duplications): Parser[(-, Names)] =
     "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
@@ -193,6 +193,8 @@ abstract class Calculus extends Ambient:
 
 object Calculus:
 
+  private val qual_r = "[{][^}]*[}]".r
+
   type Bind = (`(*)`, ∥)
 
   export Pre.*
@@ -244,11 +246,11 @@ object Calculus:
                params: String*)
 
     override def toString: String = this match
-      case ∅(_) => "()"
+      case ∅() => "()"
       case ∥(components*) => components.mkString(" | ")
 
-      case `.`(∅(_)) => "()"
-      case `.`(∅(_), prefixes*) => prefixes.mkString(" ") + " ()"
+      case `.`(∅()) => "()"
+      case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
       case `.`(end: ∥, prefixes*) =>
         prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
       case `.`(end, prefixes*) =>
@@ -258,7 +260,7 @@ object Calculus:
 
       case !(guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 
-      case `[]`(amb, ∅(_)) => amb + " [ ]"
+      case `[]`(amb, ∅()) => amb + " [ ]"
       case `[]`(amb, par) => amb + " [ " + par + " ]"
 
       case `go.`(amb, par) => "go " + amb + "." + par
@@ -288,11 +290,9 @@ object Calculus:
         Term.Apply(term, Term.ArgClause(args)).toString
 
   object ∅ :
-    def unapply[T <: AST](self: T): Option[Unit] = self match
-      case par: ∥ if par.isVoid => Some(())
-      case _ => None
-
-  private val qual_r = "[{][^}]*[}]".r
+    def unapply(self: AST): Boolean = self match
+      case par: ∥ => par.isVoid
+      case _ => false
 
 
   // exceptions
@@ -331,7 +331,7 @@ object Calculus:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(`.`(par: ∥), it*) =>
           val lhs = par.flatten

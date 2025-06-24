@@ -459,7 +459,7 @@ object Expansion:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(it*) =>
           ∥(it.map(_.replace)*)
@@ -531,7 +531,7 @@ object Expansion:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(it*) =>
           ∥(it.map(_.concatenate)*)
@@ -565,7 +565,7 @@ object Expansion:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case ∥(it*) =>
           ∥(it.map(_.update)*)
