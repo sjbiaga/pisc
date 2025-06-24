@@ -324,7 +324,7 @@ object Encoding:
         }
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
           lazy val count: AST => Unit =
-            case ∅(_) =>
+            case ∅() =>
             case +(it*) => it.foreach(count)
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
@@ -349,7 +349,7 @@ object Encoding:
             case it => throw it
         }
         lazy val reset: AST => Unit =
-          case ∅(_) =>
+          case ∅() =>
           case +(it*) => it.foreach(reset)
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
@@ -389,8 +389,17 @@ object Encoding:
 
   final case class Position(counter: Long, binds: Boolean)
 
-  final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
+  sealed case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
     val isBinding = position.binds && position.counter < 0
+
+  final class ConsOccurrence(val cons: String)
+      extends Occurrence(None, Position(Long.MinValue, true))
+
+  object Cons:
+    def unapply(self: Occurrence): Option[String] =
+      self match
+        case it: ConsOccurrence => Some(it.cons)
+        case _ => None
 
   object Binder:
     def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
@@ -444,6 +453,9 @@ object Encoding:
 
   case class NonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
+
+  case class ConsBindingParsingException(code: Int, nest: Int, cons: String, param: Symbol, extra: String)
+      extends BindingParsingException(code, nest, s"""A name (${param.name}) that knows how to CONS (`$cons') clobbers another$extra""")
 
   case class EncodingAliasAbandonedException(code: Int)
       extends ParsingException(s"An encoding alias was abandoned as the right hand side of encoding $code")
@@ -512,6 +524,9 @@ object Encoding:
   inline def binders(using bindings: Bindings): Bindings =
     bindings.filter(_._2.isBinding)
 
+  inline def bindersʹ(using bindings: Bindings): Bindings =
+    binders.filterNot(_._2.position.counter == Long.MinValue)
+
 
   extension [T <: AST](ast: T)
 
@@ -519,7 +534,7 @@ object Encoding:
 
       ast match
 
-        case ∅(_) => Names()
+        case ∅() => Names()
 
         case +(it*) => it.map(_.capitals).reduce(_ ++ _)
 
@@ -571,7 +586,7 @@ object Encoding:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case +(it*) =>
           `+`(it.map(rename(_))*)
@@ -588,17 +603,17 @@ object Encoding:
               ν(namesʹ.map(_.asSymbol.name)*)
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded(free))
-            case π(λ(ch: Symbol), true, given Option[Code], names*) =>
+            case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
               val chʹ = renamed(ch)
               val namesʹ = names.map(_.asSymbol).map(rebind(_))
-              π(chʹ, true, recoded(free), namesʹ*)
-            case π(λ(ch: Symbol), false, given Option[Code], names*) =>
+              π(chʹ, cons, recoded(free), namesʹ*)
+            case π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val chʹ = renamed(ch)
               val namesʹ = names.map {
                 case λ(arg: Symbol) => renamed(arg)
                 case it => it
               }
-              π(chʹ, false, recoded(free), namesʹ*)
+              π(chʹ, None, recoded(free), namesʹ*)
             case it => it
           }
           val endʹ = rename(end)
@@ -620,22 +635,22 @@ object Encoding:
         case !(Some(it @ τ(given Option[Code])), sum) =>
           `!`(Some(it.copy(code = recoded(free))), rename(sum))
 
-        case !(Some(π(λ(ch: Symbol), true, given Option[Code], names*)), sum) =>
+        case !(Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
           val n = refresh.size
           given Names = Names(bound)
           val chʹ = renamed(ch)
           val namesʹ = names.map(_.asSymbol).map(rebind(_))
-          val it: π = π(chʹ, true, recoded(free), namesʹ*)
+          val it: π = π(chʹ, cons, recoded(free), namesʹ*)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
           `!`(Some(it), sumʹ)
 
-        case !(Some(π(λ(ch: Symbol), false, given Option[Code], names*)), sum) =>
+        case !(Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => renamed(arg)
             case it => it
           }
-          `!`(Some(π(renamed(ch), false, recoded(free), namesʹ*)), rename(sum))
+          `!`(Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
 
         case it @ !(_, sum) =>
           it.copy(sum = rename(sum))
