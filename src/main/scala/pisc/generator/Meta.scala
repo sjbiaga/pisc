@@ -79,6 +79,7 @@ object Meta:
     case r: Term => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil))
     case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil))
     case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
+    case _ => rate(1L)
   }
 
 
@@ -136,6 +137,43 @@ object Meta:
   def `* <- *`(* : (String, Term)): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*._1), *._2)
 
+  def `* = *: *`(* : (String, String, Type)): Enumerator.Val =
+    Enumerator.Val(Pat.Typed(Pat.Var(*._1), *._3),
+                   Term.ApplyType(
+                     Term.Select(*._2, "as"),
+                     Type.ArgClause(*._3 :: Nil)
+                   ))
+
+  def `* = *: * …`(* : (String, String, Type, Type)): Enumerator.Val =
+    Enumerator.Val(Pat.Typed(Pat.Var(*._1), *._3),
+                   Term.Select(
+                     Term.Select(
+                       Term.Select(
+                         Term.Apply(
+                           Term.ApplyType(
+                             \("refineV"),
+                             Type.ArgClause(*._4 :: Nil)
+                           ),
+                           Term.ArgClause(
+                             Term.ApplyType(
+                               Term.Select(*._2, "as"),
+                               Type.ArgClause(*._3 :: Nil)
+                             ) :: Nil)
+                         ),
+                         "right"
+                       ),
+                       "get"
+                     ),
+                     "value"
+                   ))
+
+  def `* :: * = *`(* : String*) =
+    Enumerator.Val(
+      Pat.ExtractInfix(Pat.Var(*(0)),
+                       \(*(1)),
+                       Pat.ArgClause(Pat.Var(*(2)) :: Nil)),
+      *(3))
+
 
   val `_ <- IO.unit` = `_ <- IO.*`("unit")
 
@@ -153,6 +191,15 @@ object Meta:
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+
+  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
+    Enumerator.Generator(
+      `* <- …`(*._1),
+      Term.Apply(
+        Term.Select("IO", "pure"),
+        Term.ArgClause(*._2 :: Nil)
+      )
+    )
 
 
   @tailrec
@@ -212,6 +259,40 @@ object Meta:
   val `: String => IO[Any]` =
     `: IO[Any]`.map(Type.Function(Type.FuncParamClause(Type.Name("String") :: Nil), _))
 
+
+  def `val * = *: *`(* : (String, String, Type)): Defn.Val =
+    Defn.Val(Nil,
+             Pat.Var(*._1) :: Nil,
+             Some(*._3),
+             Term.ApplyType(
+               Term.Select(*._2, "as"),
+               Type.ArgClause(*._3 :: Nil)
+             )
+    )
+
+  def `val * = *: * …`(* : (String, String, Type, Type)): Defn.Val =
+   Defn.Val(Nil,
+            Pat.Var(*._1) :: Nil,
+            Some(*._3),
+            Term.Select(
+              Term.Select(
+                Term.Select(
+                  Term.Apply(
+                    Term.ApplyType(\("refineV"),
+                      Type.ArgClause(*._4 :: Nil)
+                    ),
+                    Term.ArgClause(
+                      Term.ApplyType(
+                        Term.Select(*._2, "as"),
+                        Type.ArgClause(*._3 :: Nil)) :: Nil)
+                  ),
+                  "right"
+                ),
+                "get"
+              ),
+              "value"
+            )
+   )
 
   def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(\("IO"),

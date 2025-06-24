@@ -1,5 +1,7 @@
 # -*- indent-tabs-mode: nil; -*-
 
+@import eu.timepit.refined.numeric.*
+
 @given Conversion[`()`, Long] = _.as[Long]
 
 @val max = 11
@@ -8,10 +10,12 @@
 
 @def random = 3+gen.nextLong(max-2)
 
+@import scala.concurrent.duration._
+
 Main = ν(num)                                           \
      ( (!.num(n).                                       \
         ν(in) ( Fib(n, in)                              \
-              | in(fib).                                \
+              | in(fib: Long /* NonNegative */).        \
                 τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
                 num</*random*/>.                        \
               )                                         \

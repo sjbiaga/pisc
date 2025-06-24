@@ -29,6 +29,8 @@
 package pisc
 package generator
 
+import scala.collection.mutable.{ LinkedHashMap => Map }
+
 import scala.meta.*
 import dialects.Scala3
 
@@ -40,14 +42,14 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String): List[Enumerator] =
+    def generate(using id: => String, cs: Map[String, String]): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
-        case ∅(_) =>
+        case ∅() =>
           * = `_ <- IO.unit`
 
         case +(_, operand) =>
@@ -91,68 +93,110 @@ object Program:
         case it @ τ(r, Some((Left(enums)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil)),
+                                    Term.ArgClause(rate(r.get)::Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)))
           * ++= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil)),
+                                    Term.ArgClause(rate(r.get)::Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)))
           * :+= `_ <- IO { * }`(term)
 
         case it @ τ(r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r)::Nil)),
+                                    Term.ArgClause(rate(r.get)::Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)))
 
 
-        case it @ π(λ(Symbol(ch)), arg, false, r, Some((Left(enums)), _)) =>
+        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Left(enums)), _)) =>
           val code = `for * yield ()`(enums*)
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                           Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                            Term.ArgClause(Lit.String(it.υidυ)::Nil)
                          ),
                          Term.ArgClause(code::Nil)
                        ))
 
-        case it @ π(λ(Symbol(ch)), arg, false, r, Some((Right(term)), _)) =>
+        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Right(term)), _)) =>
           val code = `for * yield ()`(`_ <- IO { * }`(term))
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                           Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                            Term.ArgClause(Lit.String(it.υidυ)::Nil)
                          ),
                          Term.ArgClause(code::Nil)
                        ))
 
-        case it @ π(λ(Symbol(ch)), arg, false, r, _) =>
+        case it @ π(λ(Symbol(ch)), arg, None, r, _) =>
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(rate(r) :: arg.toTerm :: Nil)),
+                         Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)
                        ))
 
-        case π(_, _, true, _, Some((Left(_), _))) => ??? // Scalameta Enumerator - caught by parser
+        case it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), r, Some((Right(code), _))) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r, Some((Right(code), _))) =>
-          * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
-                                   Term.Apply(
+          val par = if λ.`type`.isDefined then id else arg
+
+          if cs.contains(ch)
+          then
+            assert(!r.isDefined)
+            val consʹ = cs(ch)
+            val chʹ = id
+
+            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
+
+          else
+            * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                      Term.Apply(
-                                       Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil)),
-                                       Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                                     ),
-                                     Term.ArgClause(code::Nil)
-                                   ))
+                                       Term.Apply(
+                                         Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                         Term.ArgClause(Lit.String(it.υidυ)::Nil)
+                                       ),
+                                       Term.ArgClause(code::Nil)
+                                     ))
 
-        case it @ π(λ(Symbol(ch)), λ(Symbol(par)), true, r, _) =>
-          * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
-                                   Term.Apply(
-                                     Term.Apply(\(ch), Term.ArgClause(rate(r)::Nil)),
-                                     Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                                   ))
+          λ.`type` match
+            case Some((tpe, Some(refined))) =>
+              * :+= `* = *: * …`(arg, par, tpe, refined)
+            case Some((tpe, _)) =>
+              * :+= `* = *: *`(arg, par, tpe)
+            case _ =>
+
+        case it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), r, _) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
+
+          val par = if λ.`type`.isDefined then id else arg
+
+          if cs.contains(ch)
+          then
+            assert(!r.isDefined)
+            val consʹ = cs(ch)
+            val chʹ = id
+
+            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
+
+          else
+            * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
+                                     Term.Apply(
+                                       Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                       Term.ArgClause(Lit.String(it.υidυ)::Nil)
+                                     ))
+
+          λ.`type` match
+            case Some((tpe, Some(refined))) =>
+              * :+= `* = *: * …`(arg, par, tpe, refined)
+            case Some((tpe, _)) =>
+              * :+= `* = *: *`(arg, par, tpe)
+            case _ =>
 
         case _: π => ??? // caught by parser
 
@@ -187,17 +231,36 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(Some(π @ π(_, λ(Symbol(par)), true, _, _)), sum) =>
+        case !(Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), _, _)), sum) =>
+          if cons.nonEmpty
+          then
+            cs(arg) = cons
+
+          val par = if λ.`type`.isDefined then id else arg
+
           val υidυ = id
 
-          val `!.π⋯` = π.generate ++
-                       `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
+          val πʹ = {
+            def idʹ: String = π.υidυ
+            π.copy(name = λ.copy()(using None), polarity = Some(""))(idʹ)
+          }
+          val `!.π⋯` = πʹ.generate :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
+
+          val `val` =
+            λ.`type` match
+              case Some((tpe, Some(refined))) =>
+                `val * = *: * …`(arg, par, tpe, refined) :: Nil
+              case Some((tpe, _)) =>
+                `val * = *: *`(arg, par, tpe) :: Nil
+              case _ => Nil
 
           val it = Term.If(Term.ApplyUnary("!", par),
                            `IO.cede`,
-                           `NonEmptyList( *, … ).parSequence`(
-                             sum.generate,
-                             `!.π⋯`
+                           Term.Block(`val` :::
+                             `NonEmptyList( *, … ).parSequence`(
+                               sum.generate,
+                               `!.π⋯`
+                             ) :: Nil
                            )
                    )
 
@@ -273,4 +336,7 @@ object Program:
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
-      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)
+      prog
+        .map(_ -> _.generate(using id(), Map()))
+        .map(_.swap)
+        .map(defn(_)(_).toString)

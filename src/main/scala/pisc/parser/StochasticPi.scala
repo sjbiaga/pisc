@@ -48,36 +48,58 @@ import Expansion.Duplications
 
 abstract class StochasticPi extends Expression:
 
-  def `μ.`: Parser[(μ, (Names, Names))] =
+  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ Some((it, free)) =>
-        τ(r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), free)
+        τ(Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), free)
       case _ ~ r ~ _ =>
-        τ(r.getOrElse(1L), None)(sπ_id) -> (Names(), Names())
+        τ(Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), Names())
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
+        π(ch, arg, polarity = None, Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = false, r.getOrElse(1L), None)(sπ_id) -> (Names(), name ++ free)
+        π(ch, arg, polarity = None, Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), name ++ free)
       case (ch, name) ~ r ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), Some(it))(sπ_id) -> (Names(), name ++ freeʹ)
+        π(ch, λ(`()(null)`), polarity = None, Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = false, r.getOrElse(1L), None)(sπ_id) -> (Names(), name)
+        π(ch, λ(`()(null)`), polarity = None, Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), name)
     } |
-    name ~ opt("@"~>rate) ~ ("("~>name<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+    name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ (par, _) ~ _ if !par.isSymbol =>
+      case _ ~ _ ~ (par, _, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ r ~ (par, bound) ~ Some((it, freeʹ)) =>
-        π(ch, par, polarity = true, r.getOrElse(1L), Some(it))(sπ_id) -> (bound, name ++ freeʹ)
-      case (ch, name) ~ r ~ (par, bound) ~ _ =>
-        π(ch, par, polarity = true, r.getOrElse(1L), None)(sπ_id) -> (bound, name)
+      case (λ(ch: Symbol), _) ~ _ ~ (λ(arg: Symbol), _, _) ~ _
+          if ch == arg && bindings.get(ch).map(_.position.counter == Long.MinValue).getOrElse(false) =>
+        throw ConsItselfParsingException(ch, bindings.get(ch).get.asInstanceOf[ConsOccurrence].cons)
+      case (λ(ch: Symbol), _) ~ Some(_) ~ _ ~ _
+          if bindings.get(ch).map(_.position.counter == Long.MinValue).getOrElse(false) =>
+        throw ConsWithRateParsingException(ch, bindings.get(ch).get.asInstanceOf[ConsOccurrence].cons)
+      case (ch, name) ~ r ~ (par, cons, bound) ~ code =>
+        if cons.nonEmpty
+        then
+          val arg = par.asSymbol
+          bindings.get(arg) match
+            case Some(Cons(`cons`)) =>
+            case Some(Occurrence(_, Position(counter, binds))) if counter < 0 =>
+              val extra = if counter == Long.MinValue then ""
+                          else (if binds then " binding" else "") + " parameter"
+              throw ConsBindingParsingException(_code, _nest, cons, arg, extra)
+            case _ =>
+          bindings(arg) = ConsOccurrence(cons)
+        val rʹ =
+          if bindings.get(ch.asSymbol).map(_.position.counter == Long.MinValue).getOrElse(false)
+          then
+            None
+          else
+            Some(r.getOrElse(None))
+        val freeʹ = code.map(_._2).getOrElse(Names())
+        π(ch, par, polarity = Some(cons), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ freeʹ)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -100,6 +122,18 @@ abstract class StochasticPi extends Expression:
                             case ((Right(term), _), free) => Some(term)
                             case ((Left(enums), _), _) => throw TermParsingException(enums)
                           }
+
+  def nameʹ: Parser[(λ, String, Names)] =
+    name ~ opt(`type`) ^^ {
+      case (λ, free) ~ tpe =>
+        (λ.copy()(using tpe), "", free)
+    } |
+    cons_r ~ name ~ opt(`type`) ~ cons_r ^^ {
+      case l ~ _ ~ _ ~ r if l != r =>
+        throw ConsParsingException(l, r)
+      case cons ~ (λ, free) ~ tpe ~ _ =>
+        (λ.copy()(using tpe), cons, free)
+    }
 
   /**
    * Channel names start with lower case.
@@ -195,8 +229,9 @@ abstract class StochasticPi extends Expression:
       bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+        case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(_, Position(Long.MinValue, true))) =>
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -211,7 +246,7 @@ object StochasticPi:
   object Actions:
     def apply(ps: Pre*): Actions = Set.from(
       ps
-        .filter(_.isInstanceOf[Act])
+        .filter { case Act(it) => it }
         .headOption
         .map(_.asInstanceOf[Act].υidυ)
     )
@@ -220,13 +255,21 @@ object StochasticPi:
 
 
   trait Act(fun: () => String):
-    val rate: Any
+    val rate: Option[Any]
     final def id = fun()
     final lazy val υidυ: String = id
+
+  object Act:
+    def unapply(self: Pre): Option[Boolean] =
+      self match
+        case it: Act => Some(it.rate.isDefined)
+        case _ => Some(false)
 
   trait Sum:
     val enabled: Actions
 
+
+  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}\p{Space}'",.>)\]}*/]+""".r
 
   type Names = Set[Symbol]
 
@@ -251,10 +294,19 @@ object StochasticPi:
       extends PrefixParsingException("The weight is a natural number that must " + msg, cause)
 
   case class PrefixChannelParsingException(name: λ)
-      extends PrefixParsingException(s"${name.value} is not a channel name but a ${name.kind}")
+      extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
+
+  case class ConsParsingException(left: String, right: String)
+      extends PrefixParsingException(s"The CONS operator varies between `$left' and `$right'")
+
+  case class ConsItselfParsingException(name: Symbol, cons: String)
+      extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is itself the result")
+
+  case class ConsWithRateParsingException(name: Symbol, cons: String)
+      extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is used with a rate")
 
 
   // functions
@@ -267,7 +319,7 @@ object StochasticPi:
 
       ast match
 
-        case ∅(_) => ast
+        case ∅() => ast
 
         case +(_, it*) =>
           `+`(nil, it.map(_.shallow)*)
@@ -336,7 +388,7 @@ object StochasticPi:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(-Long.MaxValue, None)(sπ_id)
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(-Long.MaxValue), None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ
@@ -348,7 +400,7 @@ object StochasticPi:
 
         ast match
 
-          case ∅(_) => (ast, nil)
+          case ∅() => (ast, nil)
 
           case it: + =>
             val sum = it.choices.foldLeft(`+`(nil)) {
@@ -438,7 +490,7 @@ object StochasticPi:
 
         ast match
 
-          case ∅(_) => nil
+          case ∅() => nil
 
           case +(enabled, par) =>
             par.split
@@ -515,7 +567,7 @@ object StochasticPi:
 
         ast match
 
-          case ∅(_) => Nil
+          case ∅() => Nil
 
           case +(_, ps*) =>
             ps.map(_.graph).reduce(_ ++ _)
@@ -530,14 +582,14 @@ object StochasticPi:
             end.graph ++
             ( for
                 i <- 0 until ps.size
-                if ps(i).isInstanceOf[Act]
-                j = ps.drop(i+1).indexWhere(_.isInstanceOf[Act])
+                if ps(i) match { case Act(it) => it }
+                j = ps.drop(i+1).indexWhere { case Act(it) => it }
                 if j >= 0
               yield
                 ps(i).asInstanceOf[Act] -> ps(i+1+j).asInstanceOf[Act]
             ) ++
             {
-              val k = ps.lastIndexWhere(_.isInstanceOf[Act])
+              val k = ps.lastIndexWhere { case Act(it) => it }
               if k >= 0
               then end match
                 case sum: + =>
