@@ -1,0 +1,20 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ pi lists.scala -- 1 2 3 5 7
+
+@type LLI = LazyList[Int]
+
+Main = ν(ch)                                             \
+     ( Client(ch, /*LazyList.from(args.map(_.toInt))*/)  \
+     | Server(ch)                                        \
+     )
+
+Client(ch, l) = ch<l>.
+
+Server(ch) = !.ch(#:: list: LLI /**/ #::).       \
+             if /*'list.nonEmpty*/ = True        \
+             then                                \
+               list(head). τ/*println('head)*/.  \
+               ch<list>.                         \
+             else                                \
+               ch<>.

@@ -268,7 +268,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via refresh") {
 
-    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), true, None))
+    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -277,7 +277,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Names()
 
     `13`.rename()(id())() match
-      case `.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
+      case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
       case _ =>
         assert(false)
 
@@ -285,7 +285,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - shadow is itself") {
 
-    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), true, None))
+    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -295,7 +295,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Names()
 
     `13`.rename()(id())() match
-      case `.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
+      case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(""), None)) =>
         assert(bindings.size == 1)
         bindings.head match
           case Symbol("x") -> Shadow(Symbol("x_υ1υ")) =>
@@ -308,7 +308,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - shadow is itself - definition is true") {
 
-    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), true, None))
+    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -318,7 +318,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Names()
 
     `13`.rename(expansion = true)(id())() match
-      case `.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
+      case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 1)
         bindings.head match
           case Symbol("x") -> Shadow(Symbol("x_υ1υ")) =>
@@ -331,7 +331,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - with shadow") {
 
-    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), true, None))
+    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -341,7 +341,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Names()
 
     `13`.rename()(id())() match
-      case `.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
+      case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 2)
         bindings.tail.head match
           case Symbol("x_υ0υ") -> Shadow(Symbol("x_υ1υ")) =>
@@ -354,7 +354,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - with shadow - definition is true") {
 
-    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), true, None))
+    val `13` = `.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -364,7 +364,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Names()
 
     `13`.rename(expansion = true)(id())() match
-      case `.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)) =>
+      case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 2)
         bindings.tail.head match
           case Symbol("x_υ0υ") -> Binder(Symbol("x_υ1υ")) =>
@@ -384,7 +384,7 @@ class EncodingFunctionsSuite extends FunSuite:
       Names(),
       Bindings() + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
                  + (Symbol("ch") -> Occurrence(None, Position(-2, false))),
-      `+`(∥(`.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), true, None))))
+      `+`(∥(`.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))))
     )
 
     val id = new helper.υidυ
@@ -392,7 +392,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Duplications()
 
     `13`(0, null, false)(id(), χ_id()) match
-      case (Definition(0, Some(_), _, _, +(∥(`.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)))))
+      case (Definition(0, Some(_), _, _, +(∥(`.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)))))
            ,(1, List(Some(Symbol("x_υ1υ")), None))) =>
       case _ =>
         assert(false)
@@ -408,7 +408,7 @@ class EncodingFunctionsSuite extends FunSuite:
       Names(),
       Bindings() + (Symbol("x") -> Occurrence(None, Position(-1, false)))
                  + (Symbol("ch") -> Occurrence(None, Position(-2, false))),
-      `+`(∥(`.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), true, None))))
+      `+`(∥(`.`(`+`(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))))
     )
 
     val id = new helper.υidυ
@@ -416,7 +416,7 @@ class EncodingFunctionsSuite extends FunSuite:
     given Duplications()
 
     `13`(0, null, false)(id(), χ_id()) match
-      case (Definition(0, Some(_), _, _, +(∥(`.`(∅(_), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), true, None)))))
+      case (Definition(0, Some(_), _, _, +(∥(`.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)))))
            ,(2, List(None, None))) =>
       case _ =>
         assert(false)
@@ -437,7 +437,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(true), λ(false)), false),
-                      +(∥(`.`(!(None, ∅(_)), ν("x_υ1υ")))),
+                      +(∥(`.`(!(None, ∅()), ν("x_υ1υ")))),
                       Some(+(∥(`.`(`(*)`("P", Nil))))))))) =>
       case _ =>
         assert(false)
@@ -447,7 +447,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - by restriction - via refresh") {
 
     val `13` = `+`(∥(`.`(?:(((λ(Symbol("x")), λ(Symbol("y"))), false),
-                            `+`(∥(`.`(`!`(Some(π(λ(Symbol("x")), λ(Symbol("y")), false, None)), `+`())))),
+                            `+`(∥(`.`(`!`(Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`())))),
                             Some(`+`(∥(`.`(`(*)`("P", Nil, λ(Symbol("x")), λ(Symbol("y")))))))),
                             ν("x", "y"))))
 
@@ -459,7 +459,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ"))), false),
-                      +(∥(`.`(!(Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), false, None)), ∅(_))))),
+                      +(∥(`.`(!(Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
                       Some(+(∥(`.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
                    ν("x_υ1υ", "y_υ2υ")))) =>
       case _ =>
@@ -474,7 +474,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{z} =") match
-          case Success(Some((_, definition @ Definition(_, _, _, _, ∅(_)))), _) =>
+          case Success(Some((_, definition @ Definition(_, _, _, _, ∅()))), _) =>
             given MutableList[(Symbol, λ)]()
             given Bindings()
             given Names()
@@ -483,7 +483,7 @@ class EncodingFunctionsSuite extends FunSuite:
             val `13` = definition(_code, _nest, _dups, duplicated)(id)
 
             `13`.rename()(id)() match
-              case `⟦⟧`(_, vs, ∅(_), _, _) =>
+              case `⟦⟧`(_, vs, ∅(), _, _) =>
                 vs.headOption match
                   case Some(Symbol("z_υ1υ")) =>
                   case _ =>
@@ -504,10 +504,10 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{z} = ν(x) z(y). y<x>.") match
-          case Success((Some((it, definition @ Definition(_, _, _, _, +(∥(`.`(∅(_),
+          case Success((Some((it, definition @ Definition(_, _, _, _, +(∥(`.`(∅(),
                                                                               ν("x"),
-                                                                              π(λ(Symbol("z")), λ(Symbol("y")), true, None),
-                                                                              π(λ(Symbol("y")), λ(Symbol("x")), false, None)))))))), _) =>
+                                                                              π(λ(Symbol("z")), λ(Symbol("y")), Some(""), None),
+                                                                              π(λ(Symbol("y")), λ(Symbol("x")), None, None)))))))), _) =>
             given MutableList[(Symbol, λ)]()
             given Bindings = Bindings(it.bindings)
             given Names()
@@ -516,10 +516,10 @@ class EncodingFunctionsSuite extends FunSuite:
             val `13` = definition(_code, _nest, _dups, duplicated)(id)
 
             `13`.rename()(id)() match
-              case `⟦⟧`(_, vs, +(∥(`.`(∅(_),
+              case `⟦⟧`(_, vs, +(∥(`.`(∅(),
                                        ν("x_υ2υ"),
-                                       π(λ(Symbol("z_υ1υ")), λ(Symbol("y_υ3υ")), true, None),
-                                       π(λ(Symbol("y_υ3υ")), λ(Symbol("x_υ2υ")), false, None)))), _, _) =>
+                                       π(λ(Symbol("z_υ1υ")), λ(Symbol("y_υ3υ")), Some(""), None),
+                                       π(λ(Symbol("y_υ3υ")), λ(Symbol("x_υ2υ")), None, None)))), _, _) =>
                 vs.headOption match
                   case Some(Symbol("z_υ1υ")) =>
                   case _ =>
@@ -545,7 +545,7 @@ class EncodingFunctionsSuite extends FunSuite:
               case Some(Shadow(Symbol("y"))) =>
                 it(0, null, false)(id, χ_id) match
                   case (Definition(_, _, _, _,
-                                   +(∥(`.`(∅(_), ν("y_υ1υ"), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), false, None))))),
+                                   +(∥(`.`(∅(), ν("y_υ1υ"), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), None, None))))),
                         1 -> List(None, Some(Symbol("y_υ1υ")))) =>
                   case _ =>
                     assert(false)
@@ -570,7 +570,7 @@ class EncodingFunctionsSuite extends FunSuite:
               case Some(Shadow(Symbol("y"))) =>
                 it(0, null, false)(id, χ_id) match
                   case (Definition(_, _, _, _,
-                                   +(∥(`.`(∅(_), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), true, None))))),
+                                   +(∥(`.`(∅(), π(λ(Symbol("x")), λ(Symbol("y_υ1υ")), Some(_), None))))),
                         1 -> List(None, Some(Symbol("y_υ1υ")))) =>
                   case _ =>
                     assert(false)
@@ -595,7 +595,7 @@ class EncodingFunctionsSuite extends FunSuite:
               case Some(Shadow(Symbol("x"))) -> Some(Shadow(Symbol("y"))) =>
                 it(0, null, false)(id, χ_id) match
                   case (Definition(_, _, _, _,
-                                   +(∥(`.`(∅(_), ν("x_υ1υ"), π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), true, None))))),
+                                   +(∥(`.`(∅(), ν("x_υ1υ"), π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), Some(_), None))))),
                         0 -> List(Some(Symbol("x_υ1υ")), Some(Symbol("y_υ2υ")))) =>
                   case _ =>
                     assert(false)
@@ -619,7 +619,7 @@ class EncodingFunctionsSuite extends FunSuite:
             bindings.get(Symbol("z")) match
               case Some(Occurrence(None, _)) =>
                 it(0, null, false)(id, χ_id) match
-                  case (Definition(_, _, _, vs, ∅(_)), 0 -> Nil) =>
+                  case (Definition(_, _, _, vs, ∅()), 0 -> Nil) =>
                     vs.headOption match
                       case Some(Symbol("z_υ1υ")) =>
                       case _ =>
@@ -646,7 +646,7 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition
             parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
-              case Success((_, +(∥(`.`(`⟦⟧`(_, _, ∅(_), _, assignment))))), _) =>
+              case Success((_, +(∥(`.`(`⟦⟧`(_, _, ∅(), _, assignment))))), _) =>
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
                   case _ =>
@@ -667,17 +667,17 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         parseAll(definition, """⟦1 t"1" 1⟧{z} =""") match
-          case Success(Some(definition1 @ (_, Definition(_, _, _, _, ∅(_)))), _) =>
+          case Success(Some(definition1 @ (_, Definition(_, _, _, _, ∅()))), _) =>
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition1
             parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
-              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), _, assignment))))))), _) =>
+              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(∥(`.`(`⟦⟧`(_, _, ∅(), _, assignment))))))), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition2
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
                     parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
-                      case Success((_, +(∥(`.`(`⟦⟧`(_, _, +(∥(`.`(`⟦⟧`(_, _, ∅(_), _, assignment1)))), _, assignment2))))), _) =>
+                      case Success((_, +(∥(`.`(`⟦⟧`(_, _, +(∥(`.`(`⟦⟧`(_, _, ∅(), _, assignment1)))), _, assignment2))))), _) =>
                         assignment1.headOption -> assignment2.headOption match
                           case Some((Symbol("z_υ6υ"), Symbol("y_υ5υ"))) ->
                                Some((Symbol("y_υ5υ"), Symbol("x"))) =>

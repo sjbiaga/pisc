@@ -168,12 +168,12 @@ class PiSuite extends FunSuite:
               case `⟦⟧`(_, _, +(∥(`.`(exp1), `.`(exp2))), _, assignment) =>
                 assertEquals(assignment, Set(Symbol("x_υoυ") -> Symbol("ch_υnυ"), Symbol("y_υpυ") -> Symbol("ch_υnυ")))
                 exp1 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), false, None)))), _, assignment1) =>
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, assignment1) =>
                     assertEquals(assignment1, Set(Symbol("z_υqυ") -> Symbol("x_υoυ")))
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, _, +(∥(`.`(∅(_), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), true, None), τ(Some(_))))), _, assignmentʹ) =>
+                  case `⟦⟧`(_, _, +(∥(`.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, assignmentʹ) =>
                     assertEquals(assignmentʹ, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
                   case _ =>
                     assert(false)

@@ -160,7 +160,7 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦⟧ =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
             assert(b.isEmpty)
@@ -178,7 +178,7 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
-          case Success(Some((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
+          case Success(Some((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
             assert(cs1.isEmpty)
             assert(vs1.isEmpty)
             assertEquals(b, Map(
@@ -198,7 +198,7 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(nil, cons) =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
             assertEquals(cs1, Names() + Symbol("nil") + Symbol("cons"))
             assert(vs1.isEmpty)
             assertEquals(b, Map(
@@ -218,7 +218,7 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅(_)), Definition(0, _, cs2, vs2, ∅(_)))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
             assert(cs1.isEmpty)
             assertEquals(vs1, Names() + Symbol("x"))
             assertEquals(b, Map(Symbol("x") -> Occurrence(None, Position(1, false))))
@@ -298,7 +298,7 @@ class EncodingParserSuite extends FunSuite:
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
           case Success(_, _) =>
             eqtn.headOption match
-              case Some((`(*)`("Self_0", Nil, λ(Symbol("x")), λ(Symbol("y"))), ∅(_))) =>
+              case Some((`(*)`("Self_0", Nil, λ(Symbol("x")), λ(Symbol("y"))), ∅())) =>
               case _ =>
                 assert(false)
           case _ =>
@@ -322,10 +322,32 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
+  test("CONS clobber - within definition") {
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'ch ⟧ = ch(:: ch ::).")
+
+    interceptMessage[ConsBindingParsingException]("A name (ch) that knows how to CONS (`::') clobbers another parameter at nesting level #0 in the right hand side of encoding 0") {
+      `13`.test
+    }
+
+  }
+
+  test("CONS clobber - within definition - binding") {
+
+    val `13` = new EncodingParserTest:
+      override def test =
+        parseAll(definition, "⟦ 'ch ⟧ = ν(c) c(ch). ch(:: ch ::).")
+
+    interceptMessage[ConsBindingParsingException]("A name (ch) that knows how to CONS (`::') clobbers another binding parameter at nesting level #0 in the right hand side of encoding 0") {
+      `13`.test
+    }
+
+  }
+
 
 object EncodingParserSuite:
-
-  import scala.util.matching.Regex
 
   abstract class EncodingParserTest extends Expansion:
     override protected def in: String = getClass.getSimpleName

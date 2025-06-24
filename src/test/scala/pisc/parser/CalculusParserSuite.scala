@@ -349,12 +349,12 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - μ. - input without bindings check") {
+  test("prefix - μ - input without bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(prefixes(using Bindings()), "ch(n).") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None) :: Nil, (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None) :: Nil, (bound, free)), _) =>
             assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -364,13 +364,13 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - μ. - input with bindings check") {
+  test("prefix - μ - input with bindings check") {
 
     val `13` = new CalculusParserTest:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(prefixes, "ch(n).") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None) :: Nil, (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None) :: Nil, (bound, free)), _) =>
             assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
             bindings.headOption match
@@ -384,13 +384,13 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("prefix - μ. - output") {
+  test("prefix - μ - output") {
 
     val `13` = new CalculusParserTest:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(prefix, "ch<n>.") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (bound, free)), _) =>
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), None, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
             assert(bindings.isEmpty)
@@ -406,7 +406,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(leaf, "[m = n]") match
-          case Success((?:(((λ(Symbol("m")), λ(Symbol("n"))), false), ∅(_), None), free), _) =>
+          case Success((?:(((λ(Symbol("m")), λ(Symbol("n"))), false), ∅(), None), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
             assert(bindings.isEmpty)
           case it =>
@@ -422,7 +422,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(leaf, "if True ≠ False then else") match
-          case Success((?:(((λ(true), λ(false)), true), ∅(_), Some(∅(_))), free), _) =>
+          case Success((?:(((λ(true), λ(false)), true), ∅(), Some(∅())), free), _) =>
             assert(free.isEmpty)
             assert(bindings.isEmpty)
           case _ =>
@@ -438,7 +438,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(leaf, "False ≠ True ? :") match
-          case Success((?:(((λ(false), λ(true)), true), ∅(_), Some(∅(_))), free), _) =>
+          case Success((?:(((λ(false), λ(true)), true), ∅(), Some(∅())), free), _) =>
             assert(free.isEmpty)
             assert(bindings.isEmpty)
           case _ =>
@@ -453,7 +453,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Bindings()), "!") match
-          case Success((!(None, ∅(_)), free), _) =>
+          case Success((!(None, ∅()), free), _) =>
             assert(free.isEmpty)
           case _ =>
             assert(false)
@@ -480,7 +480,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Bindings()), "!.ch(n).") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None)), ∅()), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
@@ -495,7 +495,7 @@ class CalculusParserSuite extends FunSuite:
       override def test =
         given bindings: Bindings = Bindings()
         parseAll(leaf, "!.ch(n).") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), true, None)), ∅(_)), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None)), ∅()), free), _) =>
             assertEquals(free, Names() + Symbol("ch"))
             bindings.headOption match
               case Some((Symbol("n"), Occurrence(None, Position(1, true)))) =>
@@ -513,7 +513,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Bindings()), "!.ch<n>/*println('m)*/.") match
-          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_))), ∅(_)), free), _) =>
+          case Success((!(Some(π(λ(Symbol("ch")), λ(Symbol("n")), None, Some(_))), ∅()), free), _) =>
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
             assert(false)
@@ -527,7 +527,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf(using Bindings()), "!.τ/*println('n)*/.") match
-          case Success((!(Some(τ(Some(_))), ∅(_)), free), _) =>
+          case Success((!(Some(τ(Some(_))), ∅()), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)
@@ -572,23 +572,71 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
+  test("CONS no clobber - within equation") {
+
+    val `13` = new CalculusParserTest:
+      override def test =
+        parseAll(equation, "P(ch) = ch(:: list ::). ch(:: list ::).")
+
+    `13`.test
+
+  }
+
+  test("CONS clobber no overlapping - within equation") {
+
+    val `13` = new CalculusParserTest:
+      override def test =
+        parseAll(equation, "P(ch) = ( ch(#:: list #::). ) | ch(:: list ::).")
+
+    `13`.test
+
+  }
+
+  test("CONS clobber overlapping - within equation") {
+
+    val `13` = new CalculusParserTest:
+      override def test =
+        parseAll(equation, "P(ch) = ch(#:: list #::). | ch(:: list ::).")
+
+    interceptMessage[ConsBindingParsingException]("A name (list) that knows how to CONS (`::') clobbers another at nesting level #0") {
+      `13`.test
+    }
+
+  }
+
+  test("CONS itself - within equation") {
+
+    val `13` = new CalculusParserTest:
+      override def test =
+        parseAll(equation, "P(ch) = ch(:: list ::). list(list).")
+
+    interceptMessage[ConsItselfParsingException]("A name list that knows how to CONS (`::') is itself the result") {
+      `13`.test
+    }
+
+  }
+
+  test("CONS guard - within equation") {
+
+    val `13` = new CalculusParserTest:
+      override def test =
+        _werr = true
+        parseAll(equation, "P(ch) = ch(:: list ::). !.list(elem).")
+
+    interceptMessage[ConsPossibleGuardParsingException]("Possibly, a name list that knows how to CONS (`::') is used as replication guard") {
+      `13`.test
+    }
+
+  }
+
 
 object CalculusParserSuite:
 
-  import scala.util.matching.Regex
+  import scala.util.parsing.combinator.pisc.parser.Expansion
 
-  abstract class CalculusParserTest extends Calculus:
-    def regexMatch(_r: Regex): Parser[Regex.Match] = ???
+  abstract class CalculusParserTest extends Expansion:
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
-    def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
-      new Parser[(`⟦⟧`, Names)]:
-        override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
-          Failure(null, _in)
-    def capital: Parser[(`{}`, Names)] =
-      new Parser[(`{}`, Names)]:
-        override def apply(_in: Input): ParseResult[(`{}`, Names)] =
-          Failure(null, _in)
 
     _nest = 0
     _cntr = Map(0 -> 0L)

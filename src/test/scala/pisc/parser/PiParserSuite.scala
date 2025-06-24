@@ -178,11 +178,11 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - silent - expression with a symbol") {
+  test("μ - silent - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "τ /*println('ch)*/") match
+        parseAll(μ, "τ /*println('ch)*/") match
           case Success((τ(Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
@@ -193,11 +193,11 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - channel not a name") {
+  test("μ - output - channel not a name") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "True < >")
+        parseAll(μ, "True < >")
 
     interceptMessage[PrefixChannelParsingException]("true is not a channel name but a True False") {
       `13`.test
@@ -205,12 +205,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - null - no expression") {
+  test("μ - output - null - no expression") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<>") match
-          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), false, None), (bound, free)), _) =>
+        parseAll(μ, "ch<>") match
+          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -220,12 +220,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - name - no expression") {
+  test("μ - output - name - no expression") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<n>") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, None), (bound, free)), _) =>
+        parseAll(μ, "ch<n>") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), None, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -235,12 +235,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - name - expression with a symbol") {
+  test("μ - output - name - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<n> /*println('m)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), false, Some(_)), (bound, free)), _) =>
+        parseAll(μ, "ch<n> /*println('m)*/") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), None, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
@@ -250,12 +250,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - value - no expression") {
+  test("μ - output - value - no expression") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<True>") match
-          case Success((π(λ(Symbol("ch")), λ(true), false, None), (bound, free)), _) =>
+        parseAll(μ, "ch<True>") match
+          case Success((π(λ(Symbol("ch")), λ(true), None, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -265,12 +265,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - value - expression with a symbol") {
+  test("μ - output - value - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<True> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(true), false, Some(_)), (bound, free)), _) =>
+        parseAll(μ, "ch<True> /*println('n)*/") match
+          case Success((π(λ(Symbol("ch")), λ(true), None, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -280,12 +280,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - expression - no expression") {
+  test("μ - output - expression - no expression") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch</*0*/>") match
-          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), false, None), (bound, free)), _) =>
+        parseAll(μ, "ch</*0*/>") match
+          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), None, None), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -295,12 +295,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - expression - expression with a symbol") {
+  test("μ - output - expression - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch</*0*/> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), false, Some(_)), (bound, free)), _) =>
+        parseAll(μ, "ch</*0*/> /*println('n)*/") match
+          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), None, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -310,12 +310,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - output - null - expression with a symbol") {
+  test("μ - output - null - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch<>/*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), false, Some(_)), (bound, free)), _) =>
+        parseAll(μ, "ch<>/*println('n)*/") match
+          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, Some(_)), (bound, free)), _) =>
             assert(bound.isEmpty)
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -325,11 +325,11 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - input - channel not a name") {
+  test("μ - input - channel not a name") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "True(ch)")
+        parseAll(μ, "True(ch)")
 
     interceptMessage[PrefixChannelParsingException]("true is not a channel name but a True False") {
       `13`.test
@@ -337,11 +337,11 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - input - parameter not a channel name") {
+  test("μ - input - parameter not a channel name") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch(True)")
+        parseAll(μ, "ch(True)")
 
     interceptMessage[PrefixChannelParsingException]("true is not a channel name but a True False") {
       `13`.test
@@ -349,11 +349,11 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - input - expression enums") {
+  test("μ - input - expression enums") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch(n) /*_ <- IO.println()*/")
+        parseAll(μ, "ch(n) /*_ <- IO.println()*/")
 
     interceptMessage[TermParsingException]("The embedded Scalameta should be a Term, not Enumerator `List(_ <- IO.println())'") {
       `13`.test
@@ -361,12 +361,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - input - no expression") {
+  test("μ - input - no expression") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch(n)") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, None), (bound, free)), _) =>
+        parseAll(μ, "ch(n)") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None), (bound, free)), _) =>
             assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch"))
           case _ =>
@@ -376,12 +376,12 @@ class PiParserSuite extends FunSuite:
 
   }
 
-  test("μ. - input - expression with a symbol") {
+  test("μ - input - expression with a symbol") {
 
     val `13` = new PiParserTest:
       override def test =
-        parseAll(`μ.`, "ch(n) /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), true, Some(_)), (bound, free)), _) =>
+        parseAll(μ, "ch(n) /*println('n)*/") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), Some(_)), (bound, free)), _) =>
             assertEquals(bound, Names() + Symbol("n"))
             assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
@@ -508,11 +508,12 @@ class PiParserSuite extends FunSuite:
 
 object PiParserSuite:
 
-  import scala.util.matching.Regex
+  import scala.util.parsing.combinator.pisc.parser.Expansion
 
-  abstract class PiParserTest extends Pi:
-    def regexMatch(_r: Regex): Parser[Regex.Match] = ???
+  abstract class PiParserTest extends Expansion:
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
+
+    given Bindings()
 
     def test: Unit

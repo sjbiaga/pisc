@@ -1,8 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@import scala.util.control.TailCalls.{ done, tailcall, TailRec }
+@import eu.timepit.refined.numeric.*
+@import eu.timepit.refined.boolean.*
 
-@given Conversion[`()`, Long] = _.as[Long]
+@import scala.util.control.TailCalls.{ done, tailcall, TailRec }
 
 Main = Fib(-1)
 
@@ -15,6 +16,7 @@ Fib(n) = ν(x)                                          \
                      catch _ => -1L                    \
                    } */ .                              \
          x<n> .                                        \
+         x(k: Long /**/) .                             \
          x</*                                          \
          {                                             \
            def fibonacci(k: Long): TailRec[Long] =     \
@@ -27,20 +29,14 @@ Fib(n) = ν(x)                                          \
                yield                                   \
                  m + n                                 \
            ;                                           \
-           if ('n < 0)                                 \
-             println("Enter a non-negative number.")   \
-           else                                        \
-             fibonacci('n).result                      \
+           fibonacci('k).result                        \
          }                                             \
          */> .                                         \
        )                                               \
        |                                               \
-       ( x(n) .                                        \
-         x(f) .                                        \
-         τ /* if ('n >= 0)                             \
-                println(s"fib(${'n}) = ${'f}") */ .    \
-         if /*'n < 0*/ = True                          \
-         then Fib(-1)                                  \
-         else ()                                       \
+       ( x(n: Long /* NonNegative And Less[46L] */) .  \
+         x<n> .                                        \
+         x(f: Long /* NonNegative */) .                \
+         τ /* println(s"fib(${'n}) = ${'f}") */ .      \
        )                                               \
        )                                               \
