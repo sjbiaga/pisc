@@ -216,7 +216,7 @@ object Expression:
 
   private lazy val template_r = """⟦(\d*)(.*?)\1⟧""".r
 
-  private lazy val refined_r = """:\p{Space}(.+?)[/][*](.*?)[*][/]""".r
+  private lazy val refined_r = """:(.+?)[/][*](.*?)[*][/]""".r
 
   import scala.Function.const
 
