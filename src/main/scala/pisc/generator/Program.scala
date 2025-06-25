@@ -29,8 +29,6 @@
 package pisc
 package generator
 
-import scala.collection.mutable.{ LinkedHashMap => Map }
-
 import scala.meta.*
 import dialects.Scala3
 
@@ -42,7 +40,7 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String, cs: Map[String, String])
+    def generate(using id: => String)
                 (implicit semaphore: Option[String] = None): List[Enumerator] =
       var * = List[Enumerator]()
 
@@ -154,49 +152,41 @@ object Program:
         case π(λ(Symbol(ch)), arg, None, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)))
 
-        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), Some((Right(code), _))) =>
-          if cons.nonEmpty
-          then
-            cs(arg) = cons
+        case π(λ(Symbol(ch)), λ(params: List[λ]), Some(cons), code) =>
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
 
-          val par = if λ.`type`.isDefined then id else arg
+          * = `* :: … :: * = *`(cons -> ch, args*)
 
-          if cs.contains(ch)
-          then
-            val consʹ = cs(ch)
-            val chʹ = id
+          params.zipWithIndex.foreach {
+            case (λ @ λ(Symbol(arg)), i) =>
+              val par = args(i)
+              λ.`type` match
+                case Some((tpe, Some(refined))) =>
+                  * :+= `* = *: * …`(arg, par, tpe, refined)
+                case Some((tpe, _)) =>
+                  * :+= `* = *: *`(arg, par, tpe)
+                case _ =>
+          }
 
-            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
-
-          else
-            * = `* <- *`(par -> Term.Apply(
-                                  Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                  Term.ArgClause(code::Nil)
-                         ))
-
-          λ.`type` match
-            case Some((tpe, Some(refined))) =>
-              * :+= `* = *: * …`(arg, par, tpe, refined)
-            case Some((tpe, _)) =>
-              * :+= `* = *: *`(arg, par, tpe)
+          code match
+            case Some((Right(term), _)) =>
+              * :+= `_ <- IO { * }`(term)
             case _ =>
 
-        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), _) =>
-          if cons.nonEmpty
-          then
-            cs(arg) = cons
-
+        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
           val par = if λ.`type`.isDefined then id else arg
 
-          if cs.contains(ch)
-          then
-            val consʹ = cs(ch)
-            val chʹ = id
-
-            * = `* :: * = *`(par, consʹ, chʹ, ch) :: `* <- IO.pure(*)`(ch -> chʹ)
-
-          else
-            * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
+          code match
+            case Some((Right(term), _)) =>
+              * = `* <- *`(par -> Term.Apply(
+                                    Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                    Term.ArgClause(term::Nil)
+                           ))
+            case _ =>
+              * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
 
           λ.`type` match
             case Some((tpe, Some(refined))) =>
@@ -226,16 +216,12 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(cons), _)), sum) =>
-          if cons.nonEmpty
-          then
-            cs(arg) = cons
-
+        case !(Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           val υidυ = id
 
-          val πʹ = π.copy(name = λ.copy()(using None), polarity = Some(""))
+          val πʹ = π.copy(name = λ.copy()(using None))
           val `!.π⋯` = πʹ.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
                                                             Term.ArgClause(\(arg) :: Nil)))
 
@@ -340,6 +326,6 @@ object Program:
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
       prog
-        .map(_ -> _.generate(using id(), Map()))
+        .map(_ -> _.generate(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)

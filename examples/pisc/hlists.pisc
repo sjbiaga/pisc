@@ -11,10 +11,10 @@ Main = ν(ch)                                                             \
 
 Client(ch, l) = ch<l>.
 
-Server(ch) = !.ch(:: list: HList /**/ ::).       \
-             if /*'list ne HNil*/ = True         \
-             then                                \
-               list(head). τ/*println('head)*/.  \
-               ch<list>.                         \
-             else                                \
+Server(ch) = !.ch(list: HList /**/).                   \
+             if /*'list ne HNil*/ = True               \
+             then                                      \
+               list::(head, tail) /*println('head)*/.  \
+               ch<tail>.                               \
+             else                                      \
                ch<>.

@@ -322,30 +322,6 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("CONS clobber - within definition") {
-
-    val `13` = new EncodingParserTest:
-      override def test =
-        parseAll(definition, "⟦ 'ch ⟧ = ch(:: ch ::).")
-
-    interceptMessage[ConsBindingParsingException]("A name (ch) that knows how to CONS (`::') clobbers another parameter at nesting level #0 in the right hand side of encoding 0") {
-      `13`.test
-    }
-
-  }
-
-  test("CONS clobber - within definition - binding") {
-
-    val `13` = new EncodingParserTest:
-      override def test =
-        parseAll(definition, "⟦ 'ch ⟧ = ν(c) c(ch). ch(:: ch ::).")
-
-    interceptMessage[ConsBindingParsingException]("A name (ch) that knows how to CONS (`::') clobbers another binding parameter at nesting level #0 in the right hand side of encoding 0") {
-      `13`.test
-    }
-
-  }
-
 
 object EncodingParserSuite:
 

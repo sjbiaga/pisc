@@ -572,43 +572,11 @@ class CalculusParserSuite extends FunSuite:
 
   }
 
-  test("CONS no clobber - within equation") {
-
-    val `13` = new CalculusParserTest:
-      override def test =
-        parseAll(equation, "P(ch) = ch(:: list ::). ch(:: list ::).")
-
-    `13`.test
-
-  }
-
-  test("CONS clobber no overlapping - within equation") {
-
-    val `13` = new CalculusParserTest:
-      override def test =
-        parseAll(equation, "P(ch) = ( ch(#:: list #::). ) | ch(:: list ::).")
-
-    `13`.test
-
-  }
-
-  test("CONS clobber overlapping - within equation") {
-
-    val `13` = new CalculusParserTest:
-      override def test =
-        parseAll(equation, "P(ch) = ch(#:: list #::). | ch(:: list ::).")
-
-    interceptMessage[ConsBindingParsingException]("A name (list) that knows how to CONS (`::') clobbers another at nesting level #0") {
-      `13`.test
-    }
-
-  }
-
   test("CONS itself - within equation") {
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(equation, "P(ch) = ch(:: list ::). list(list).")
+        parseAll(equation, "P(ch) = ch(list). list::(list).")
 
     interceptMessage[ConsItselfParsingException]("A name list that knows how to CONS (`::') is itself the result") {
       `13`.test
@@ -621,9 +589,9 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         _werr = true
-        parseAll(equation, "P(ch) = ch(:: list ::). !.list(elem).")
+        parseAll(equation, "P(ch) = ch(list). !.list::(elem).")
 
-    interceptMessage[ConsPossibleGuardParsingException]("Possibly, a name list that knows how to CONS (`::') is used as replication guard") {
+    interceptMessage[ConsGuardParsingException]("A name list that knows how to CONS (`::') is used as replication guard") {
       `13`.test
     }
 
