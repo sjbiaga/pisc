@@ -77,12 +77,8 @@ abstract class Calculus extends Pi:
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
-  def choiceʹ(using bindings: Bindings, _ds: Duplications): Parser[(+, Names)] =
-    given Bindings = Bindings(bindings)
-    opt( "("~>choice<~")" ) ^^ { it =>
-      bindings ++= bindersʹ
-      it.getOrElse(`+`() -> Names())
-    }
+  def choiceʹ(using Bindings, Duplications): Parser[(+, Names)] =
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`() -> Names()) }
 
   def leaf(using bindings: Bindings, _ds: Duplications): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
@@ -98,14 +94,12 @@ abstract class Calculus extends Pi:
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(_), _), _)) =>
+      case Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty =>
+        throw ConsGuardParsingException(cons, ch.name)
+      case Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
         if ch == par
         then
           warn(throw GuardParsingException(ch.name))
-        bindings.get(ch) match
-          case Some(Cons(cons)) =>
-            warn(throw ConsPossibleGuardParsingException(cons, ch.name))
-          case _ =>
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -236,7 +230,7 @@ object Calculus:
       case ν(cap_names*) => cap_names.map(_._2).mkString("ν(", ", ", ")")
       case π(channel, name, polarity, _) =>
         if polarity.isDefined
-        then "" + channel + s"(${polarity.get}" + name + s"${polarity.get})."
+        then "" + channel + s"${polarity.get}(" + name + ")."
         else "" + channel + "<" + name + ">."
       case _ => "τ."
 
@@ -331,6 +325,7 @@ object Calculus:
       case _: Boolean => "True False"
       case _: String => "string literal"
       case _: Term => "Scalameta Term"
+      case _ => "polyadic names"
 
     def toTerm: Term =
       import scala.meta._
@@ -348,6 +343,7 @@ object Calculus:
       case it: Boolean => it.toString.capitalize
       case it: String => "\"" + it + "\""
       case it: Term => "/*" + it + "*/"
+      case it: List[λ] => it.mkString(", ")
 
 
   // exceptions
@@ -372,8 +368,8 @@ object Calculus:
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
 
-  case class ConsPossibleGuardParsingException(cons: String, name: String)
-      extends PrefixParsingException(s"Possibly, a name $name that knows how to CONS (`$cons') is used as replication guard")
+  case class ConsGuardParsingException(cons: String, name: String)
+      extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
 
 
   // functions

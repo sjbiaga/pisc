@@ -69,27 +69,37 @@ abstract class Pi extends Expression:
     name ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ (par, _, _) ~ _ if !par.isSymbol =>
+      case _ ~ (par, _) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (λ(ch: Symbol), _) ~ (λ(arg: Symbol), _, _) ~ _
-          if ch == arg && bindings.get(ch).map(_.position.counter == Long.MinValue).getOrElse(false) =>
-        throw ConsItselfParsingException(ch, bindings.get(ch).get.asInstanceOf[ConsOccurrence].cons)
-      case (ch, name) ~ (par, cons, bound) ~ code =>
-        if cons.nonEmpty
-        then
-          val arg = par.asSymbol
-          bindings.get(arg) match
-            case Some(Cons(`cons`)) =>
-            case Some(Occurrence(_, Position(counter, binds))) if counter < 0 =>
-              val extra = if counter == Long.MinValue then ""
-                          else (if binds then " binding" else "") + " parameter"
-              throw ConsBindingParsingException(_code, _nest, cons, arg, extra)
-            case _ =>
-          bindings(arg) = ConsOccurrence(cons)
+      case (ch, name) ~ (par, bound) ~ code =>
         val freeʹ = code.map(_._2).getOrElse(Names())
-        π(ch, par, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ freeʹ)
+        π(ch, par, polarity = Some(""), code.map(_._1)) -> (bound, name ++ freeʹ)
+    } |
+    name ~ cons_r ~ ("("~> ( names ~ opt(",") ) <~")") ~ opt( expression ) ^^ { // polyadic unconsing
+      case (ch, _) ~ _ ~ ( _ ~ _ ) ~ _ if !ch.isSymbol =>
+        throw PrefixChannelParsingException(ch)
+      case _ ~ _ ~ ( params ~ _ ) ~ _ if !params.forall(_._1.isSymbol) =>
+        throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
+      case (ch, _) ~ _ ~ ( params ~ _ ) ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+        throw PrefixChannelsParsingExceptionʹ(ch.asSymbol, params.map(_._1.asSymbol.name)*)
+      case _ ~ _ ~ ( _ ~ _ ) ~ Some(((Left(enums), _), _)) =>
+        throw TermParsingException(enums)
+      case (λ(ch: Symbol), _) ~ cons ~ ( params ~ _ ) ~ _
+          if params.exists { case (λ(`ch`), _) => true case _ => false } =>
+        throw ConsItselfParsingException(ch, cons)
+      case (ch, name) ~ cons ~ ( _params ~ c ) ~ code =>
+        val params =
+          if c.isDefined || _params.size == 1
+          then
+            _params :+ (λ(Symbol("")) -> Names())
+          else
+            _params
+        val args = λ(params.map(_._1))
+        val bound = params.map(_._2).reduce(_ ++ _)
+        val free = code.map(_._2).getOrElse(Names())
+        π(ch, args, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ free &~ bound)
     }
 
   def name_capacity: Parser[((λ, Int), Names)] =
@@ -110,17 +120,14 @@ abstract class Pi extends Expression:
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
-  def nameʹ: Parser[(λ, String, Names)] =
+  def nameʹ: Parser[(λ, Names)] =
     name ~ opt(`type`) ^^ {
       case (λ, free) ~ tpe =>
-        (λ.copy()(using tpe), "", free)
-    } |
-    cons_r ~ name ~ opt(`type`) ~ cons_r ^^ {
-      case l ~ _ ~ _ ~ r if l != r =>
-        throw ConsParsingException(l, r)
-      case cons ~ (λ, free) ~ tpe ~ _ =>
-        (λ.copy()(using tpe), cons, free)
+        (λ.copy()(using tpe), free)
     }
+
+  def names: Parser[List[(λ, Names)]] =
+    rep1sep(nameʹ, ",")
 
   /**
    * Channel names start with lower case.
@@ -197,7 +204,6 @@ abstract class Pi extends Expression:
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
         case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
-        case Some(Occurrence(_, Position(Long.MinValue, true))) =>
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -207,7 +213,7 @@ abstract class Pi extends Expression:
 
 object Pi:
 
-  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}\p{Space}'",.>)\]}*/]+""".r
+  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   type Names = Set[Symbol]
 
@@ -231,11 +237,11 @@ object Pi:
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
 
+  case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
+      extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
+
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
-
-  case class ConsParsingException(left: String, right: String)
-      extends PrefixParsingException(s"The CONS operator varies between `$left' and `$right'")
 
   case class ConsItselfParsingException(name: Symbol, cons: String)
       extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is itself the result")

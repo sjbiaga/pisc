@@ -389,17 +389,8 @@ object Encoding:
 
   final case class Position(counter: Long, binds: Boolean)
 
-  sealed case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
+  final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
     val isBinding = position.binds && position.counter < 0
-
-  final class ConsOccurrence(val cons: String)
-      extends Occurrence(None, Position(Long.MinValue, true))
-
-  object Cons:
-    def unapply(self: Occurrence): Option[String] =
-      self match
-        case it: ConsOccurrence => Some(it.cons)
-        case _ => None
 
   object Binder:
     def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
@@ -453,9 +444,6 @@ object Encoding:
 
   case class NonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
-
-  case class ConsBindingParsingException(code: Int, nest: Int, cons: String, param: Symbol, extra: String)
-      extends BindingParsingException(code, nest, s"""A name (${param.name}) that knows how to CONS (`$cons') clobbers another$extra""")
 
   case class EncodingAliasAbandonedException(code: Int)
       extends ParsingException(s"An encoding alias was abandoned as the right hand side of encoding $code")
@@ -523,9 +511,6 @@ object Encoding:
 
   inline def binders(using bindings: Bindings): Bindings =
     bindings.filter(_._2.isBinding)
-
-  inline def bindersʹ(using bindings: Bindings): Bindings =
-    binders.filterNot(_._2.position.counter == Long.MinValue)
 
 
   extension [T <: AST](ast: T)
