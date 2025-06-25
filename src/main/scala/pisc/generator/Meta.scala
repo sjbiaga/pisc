@@ -139,16 +139,20 @@ object Meta:
                      "value"
                    ))
 
-  def `* :: … :: * = *`(* : (String, (String, String)), `…`: String*) =
+  def `* :: … :: * = *`(* : (String, String), `…`: String*) =
     def pat(** : String*): Pat =
-      if **.isEmpty
+      if **.size == 1
       then
-        Pat.Var(*._2._1)
+        if **.head.isEmpty
+        then
+          Pat.Wildcard()
+        else
+          Pat.Var(**.head)
       else
         Pat.ExtractInfix(Pat.Var(**.head),
                          \(*._1),
                          Pat.ArgClause(pat(**.tail*) :: Nil))
-    Enumerator.Val(pat(`…`*), *._2._2)
+    Enumerator.Val(pat(`…`*), *._2)
 
 
   val `_ <- IO.unit` = `_ <- IO.*`("unit")
@@ -167,15 +171,6 @@ object Meta:
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
-
-  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    Enumerator.Generator(
-      `* <- …`(*._1),
-      Term.Apply(
-        Term.Select("IO", "pure"),
-        Term.ArgClause(*._2 :: Nil)
-      )
-    )
 
 
   @tailrec

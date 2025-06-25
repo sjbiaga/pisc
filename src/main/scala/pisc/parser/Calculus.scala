@@ -77,12 +77,8 @@ abstract class Calculus extends PolyadicPi:
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
-  def choiceʹ(using bindings: Bindings, _ds: Duplications): Parser[(+, Names)] =
-    given Bindings = Bindings(bindings)
-    opt( "("~>choice<~")" ) ^^ { it =>
-      bindings ++= bindersʹ
-      it.getOrElse(`+`() -> Names())
-    }
+  def choiceʹ(using Bindings, Duplications): Parser[(+, Names)] =
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`() -> Names()) }
 
   def leaf(using bindings: Bindings, _ds: Duplications): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
@@ -98,14 +94,13 @@ abstract class Calculus extends PolyadicPi:
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case Some(π @ (π(λ(ch: Symbol), Some(_), _, _par*), _)) =>
+      case Some(π @ (π(λ(ch: Symbol), Some(cons), _, _par*), _)) =>
+        if cons.nonEmpty
+        then
+          throw ConsGuardParsingException(cons, ch.name)
         if _par.filter(_.isSymbol).exists(_.asSymbol == ch)
         then
           warn(throw GuardParsingException(ch.name))
-        bindings.get(ch) match
-          case Some(Cons(cons)) =>
-            warn(throw ConsPossibleGuardParsingException(cons, ch.name))
-          case _ =>
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -379,8 +374,8 @@ object Calculus:
   case class GuardParsingException(name: String)
       extends PrefixParsingException(s"$name is both the channel name and a binding parameter name in an input guard")
 
-  case class ConsPossibleGuardParsingException(cons: String, name: String)
-      extends PrefixParsingException(s"Possibly, a name $name that knows how to CONS (`$cons') is used as replication guard")
+  case class ConsGuardParsingException(cons: String, name: String)
+      extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
 
 
   // functions
