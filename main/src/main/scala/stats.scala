@@ -71,7 +71,7 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
-  def |(% : Map[String, (>*<, Option[Boolean], Rate)])
+  def ∥(% : Map[String, (>*<, Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
        (parallelism: Int, check: Boolean = false): Option[NonEmptyList[(String, String, Double)]] =
                                                                      // ^^^^^^  ^^^^^^  ^^^^^^

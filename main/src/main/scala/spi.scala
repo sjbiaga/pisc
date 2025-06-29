@@ -319,8 +319,8 @@ package object sΠ:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = as[>*<]
-    private[sΠ] def xct = as[`)(`]
+    private def ref = `()`[>*<]
+    private[sΠ] def xct = `()`[`)(`]
 
     def ====(that: `()`) =
       try
@@ -330,7 +330,8 @@ package object sΠ:
           this.name == that.name
 
     inline def unary_! : Boolean = name == null
-    inline def as[T]: T = name.asInstanceOf[T]
+    inline def `()`[T]: T = name.asInstanceOf[T]
+    inline def `()`(using DummyImplicit): `()` = this
 
     /**
       * negative prefix i.e. output
@@ -377,7 +378,7 @@ package object sΠ:
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key, `)(`)(deferred)(ref)
       yield
-        `()`(r) -> delay
+        new `()`(r) -> delay
 
     /**
       * positive prefix i.e. input
@@ -392,7 +393,7 @@ package object sΠ:
         _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
         (r, delay) <- ><(key, `)(`)(code)(deferred)(ref)
       yield
-        `()`(r) -> delay
+        new `()`(r) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
