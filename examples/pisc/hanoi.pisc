@@ -2,7 +2,7 @@
 
 # ./examples $ ppi_ hanoi.scala
 
-@given Conversion[`()`, Int] = _.as[Int]
+@given Conversion[`()`, Int] = _.`()`[Int]
 
 @val ! : Seq[Any] => IO[Seq[Any]] = { _ => IO.pure(Seq(null)) }
 

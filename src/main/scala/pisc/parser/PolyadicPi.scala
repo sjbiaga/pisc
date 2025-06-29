@@ -54,7 +54,7 @@ abstract class PolyadicPi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name ~ opt(arity) ~ ("<"~>opt(rep1sep(name, ","))<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ opt(arity) ~ ("<"~>opt(names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case (ch, _) ~ None ~ None ~ _ =>
@@ -70,7 +70,7 @@ abstract class PolyadicPi extends Expression:
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
         π(ch, polarity = None, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
     } |
-    name ~ ("("~>names<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+    name ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
@@ -85,25 +85,26 @@ abstract class PolyadicPi extends Expression:
         val free = code.map(_._2).getOrElse(Names())
         π(ch, polarity = Some(""), code.map(_._1), args*) -> (bound, name ++ free)
     } |
-    name ~ cons_r ~ ("("~> ( names ~ opt(",") ) <~")") ~ opt( expression ) ^^ { // polyadic unconsing
-      case (ch, _) ~ _ ~ ( _ ~ _ ) ~ _ if !ch.isSymbol =>
+    name ~ cons_r ~ ("("~>namesʹʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
+      case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ ( params ~ _ ) ~ _ if !params.forall(_._1.isSymbol) =>
+      case _ ~ _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
-      case (ch, _) ~ _ ~ ( params ~ _ ) ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
-        throw PrefixUniquenessParsingException(ch.asSymbol, params.map(_._1.asSymbol.name)*)
-      case _ ~ _ ~ ( _ ~ _ ) ~ Some(((Left(enums), _), _)) =>
+      case (ch, _) ~ _ ~ params ~ _
+          if {
+            val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
+            paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
+          } =>
+        throw PrefixUniquenessParsingException(ch.asSymbol,
+                                               params
+                                                 .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                 .map(_._1.asSymbol.name)*)
+      case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (λ(ch: Symbol), _) ~ cons ~ ( params ~ _ ) ~ _
+      case (λ(ch: Symbol), _) ~ cons ~ params ~ _
           if params.exists { case (λ(`ch`), _) => true case _ => false } =>
         throw ConsItselfParsingException(ch, cons)
-      case (ch, name) ~ cons ~ ( _params ~ c ) ~ code =>
-        val params =
-          if c.isDefined || _params.size == 1
-          then
-            _params :+ (λ(Symbol("")) -> Names())
-          else
-            _params
+      case (ch, name) ~ cons ~ params ~ code =>
         val args = params.map(_._1)
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
@@ -120,7 +121,13 @@ abstract class PolyadicPi extends Expression:
                                  }
 
   def names: Parser[List[(λ, Names)]] =
+    rep1sep(name, ",")
+
+  def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(nameʹ, ",")
+
+  def namesʹʹ: Parser[List[(λ, Names)]] =
+    rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def nameʹ: Parser[(λ, Names)] =
     name ~ opt(`type`) ^^ {
