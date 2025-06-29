@@ -16,11 +16,11 @@ programmatically typed as `Scala` code using `CE` `IO`.
 Communications in ambients work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parSequence`.
 
-Ambient: singly parallelized with - `parTraverse` and `IOLocal`.
+Ambient: singly parallelized with - `parSequence` and `IOLocal`.
 
-[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -37,9 +37,10 @@ and objective move.
 
 The BNF formal grammar for processes is the following.
 
-    LINE           ::= EQUATION | DEFINITION
+    LINE           ::= EQUATION | DEFINITION | DIRECTIVE
     EQUATION       ::= INVOCATION "=" PARALLEL
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" PARALLEL
+    DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
     LEAF           ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
@@ -96,7 +97,7 @@ unambiguously parsed.
 
 When an ambient is "launched" with the `NAME "[" PARALLEL "]"` syntax, a new `UUID`
 will be associated with it, as the common value of all `IOLocal`s corresponding to
-the fibers created in parallel by `parTraverse`. The `NAME` must have been previously
+the fibers created in parallel by `parSequence`. The `NAME` must have been previously
 introduced using "ν" - an ambient name.
 
 Not part of the original `Ambient Calculus`, an agent (invocation) expression - unless
@@ -117,7 +118,7 @@ that is found in these terms is considered a _free_ name.
 Ambients
 --------
 
-Recall that using `parTraverse` in `CE` resorts to fibers. There isn't really any
+Recall that using `parSequence` in `CE` resorts to fibers. There isn't really any
 distinction between fibers ran in parallel, so not between ambients, were it not
 for the possibility to have per-fiber copies of the same `IOLocal`. And so, in
 fact, ambients are not differentiated at runtime (running in parallel) except
@@ -294,7 +295,7 @@ named `_<uuid>` to translate lazily `! P` as:
                   ()
               )
             )
-            .parTraverse(identity)
+            .parSequence
         _<uuid>
       }
       _ <- _<uuid>

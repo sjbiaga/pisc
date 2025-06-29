@@ -126,7 +126,7 @@ abstract class Calculus extends Ambient:
     }
 
   def prefix: Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { _.unzip match // restriction
+    "ν"~>"("~>names<~")" ^^ { _.unzip match // restriction
       case (ns, bs) =>
         val bound = bs.reduce(_ ++ _)
         ν(ns*) -> (bound, Names())
@@ -151,7 +151,7 @@ abstract class Calculus extends Ambient:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~>names<~")" ) ^^ {
       case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(identifier, qual)
       case qual ~ "Self" ~ Some(params) =>
