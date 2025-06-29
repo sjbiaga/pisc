@@ -76,7 +76,7 @@ package object Π:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = as[>*<]
+    private def ref = `()`[>*<]
 
     def ====(that: `()`) =
       try
@@ -86,7 +86,8 @@ package object Π:
           this.name == that.name
 
     inline def unary_! : Boolean = name == null
-    inline def as[T]: T = name.asInstanceOf[T]
+    inline def `()`[T]: T = name.asInstanceOf[T]
+    inline def `()`(using DummyImplicit): `()` = this
 
     /**
       * negative prefix i.e. output
