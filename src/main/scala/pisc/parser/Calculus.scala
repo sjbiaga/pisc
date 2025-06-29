@@ -104,12 +104,25 @@ abstract class Calculus extends StochasticPi:
         BindingOccurrence(bound)
         choice ^^ {
           case (sum, free) =>
-            `!`(Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
+            val πʹ: π = {
+              π._1 match
+                case it: π =>
+                  def idʹ: String = '!' + π._1.υidυ
+                  it.copy()(idʹ)
+            }
+            `!`(Some(πʹ), sum) -> ((free &~ bound) ++ π._2._2)
         }
       case Some(μ) =>
         choice ^^ {
           case (sum, free) =>
-            `!`(Some(μ._1), sum) -> (free ++ μ._2._2)
+            val μʹ: μ = {
+              μ._1 match
+                case it: π =>
+                  def idʹ: String = '!' + μ._1.υidυ
+                  it.copy()(idʹ)
+                case _ => μ._1
+            }
+            `!`(Some(μʹ), sum) -> (free ++ μ._2._2)
         }
       case _ =>
         choice ^^ {
@@ -144,7 +157,7 @@ abstract class Calculus extends StochasticPi:
     }
 
   def prefix(using bindings: Bindings): Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { // restriction
+    "ν"~>"("~>names<~")" ^^ { // restriction
       case it if !it.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
       case it => it.unzip match
@@ -166,7 +179,7 @@ abstract class Calculus extends StochasticPi:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
+    IDENT ~ opt( "("~>names<~")" ) ^^ {
       case identifier ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(identifier, params.filterNot(_._1.isSymbol).map(_._1)*)
       case "Self" ~ Some(params) =>

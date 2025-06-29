@@ -18,7 +18,7 @@ function spi() {
     done
     set ../loop.scala ../spi.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.1 \
+                  -q -O -nowarn -S 3.7.2-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.7-4972921 \
@@ -33,7 +33,7 @@ function spio() {
     do
         { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
-        scalafmt --quiet --non-interactive --stdin >| "$1".scala
+        scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift
     done
 }

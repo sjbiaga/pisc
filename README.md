@@ -16,11 +16,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`, which can be at most one.
 
-Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parSequence`.
 
-Summation: *probabilistic* choice modelled with - `parTraverse`.
+Summation: *probabilistic* choice modelled with - `parSequence`.
 
-[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -38,8 +38,10 @@ prefixes per se.
 The BNF formal grammar for processes is the following.
 
     LINE           ::= EQUATION | DEFINITION
+    LINE           ::= EQUATION | DEFINITION | DIRECTIVE
     EQUATION       ::= INVOCATION "=" CHOICE
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" CHOICE
+    DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
     CHOICE         ::= PARALLEL { "+" PARALLEL }
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
@@ -56,6 +58,7 @@ The BNF formal grammar for processes is the following.
     PARAMS         ::= [ "(" NAMES ")" ]
     POINTERS       ::= "{" NAMES "}"
     NAMES          ::= NAME { "," NAME }
+    NAMESʹ         ::= [ NAME ] { "," [ NAME ] }
 
 The BNF formal grammar for prefixes is the following.
 
@@ -65,6 +68,7 @@ The BNF formal grammar for prefixes is the following.
     μ              ::= "τ" [ @ RATE ] [ EXPRESSION ]
                      | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
                      | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
+                     | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
     EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
@@ -246,7 +250,7 @@ action `rate` associated with the key, or enqueues a quadruple in the `/` `Queue
 That does not mean the rate will be used, because the action may be _discarded_.
 Then, it blocks semantically on the `Deferred.get` method. If discarded, it will
 be `canceled`, but the cancellation will not outlive the `Supervisor`'s lifecycle
-which the fiber `use`s for this purpose in a parameter to a (nested) `parTraverse`.
+which the fiber `use`s for this purpose in a parameter to a (nested) `parSequence`.
 
 A background fiber blocks on (`take`ing or) dequeuing this `Queue`. It then updates
 the `%` map of all enabled actions by merely mapping the string `^ + key` (where `^`
@@ -413,7 +417,7 @@ named "`_<uuid>`" to translate lazily `! . π . P` as:
                   ()
               )
             )
-            .parTraverse(identity)
+            .parSequence
         }
         <uuid>
       }

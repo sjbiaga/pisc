@@ -166,7 +166,8 @@ object Main:
     def apply(it: Actions): Defn.Val =
       Defn.Val(Nil,
                Pat.Var(Term.Name("π-main")) :: Nil,
-               None,
+               Some(Type.Apply(Type.Name("Π-Set"),
+                               Type.ArgClause(Type.Name("String") :: Nil))),
                Term.Apply(scollimmSet,
                           Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
                ))

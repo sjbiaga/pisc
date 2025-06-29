@@ -47,7 +47,7 @@ import scala.util.parsing.combinator.pisc.parser.Expansion.{ replace, Duplicatio
 abstract class Encoding extends Calculus:
 
   def definition(using Duplications): Parser[Option[Define]] =
-    template ~ opt( "("~>rep1sep(name, ",")<~")" ) ~ opt( pointers ) >> {
+    template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
       case (term, _parameters) ~ _constants ~ _variables =>
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
         val variables = _variables.map(_._2).getOrElse(Names())
@@ -162,7 +162,7 @@ abstract class Encoding extends Calculus:
               (using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
 
   def pointers: Parser[(List[Symbol], Names)] =
-    "{"~>rep1sep(name, ",")<~"}" ^^ {
+    "{"~>names<~"}" ^^ {
       case ps if !ps.forall(_._1.isSymbol) =>
         throw PointersParsingException(ps.filterNot(_._1.isSymbol).map(_._1)*)
       case ps => ps.unzip match
@@ -176,13 +176,13 @@ abstract class Encoding extends Calculus:
         `{}`(identifier, ps._1) -> ps._2
     } |
     IDENT <~"{"<~"}" ^^ (`{}`(_, Nil) -> Names()) |
-    IDENT ~ ("("~>opt( rep1sep(name, ",") )<~")") ~ pointers ^^ {
+    IDENT ~ ("("~>opt( names )<~")") ~ pointers ^^ {
       case identifier ~ Some(params) ~ ps =>
         `{}`(identifier, ps._1, true, params.map(_._1)*) -> (ps._2 ++ params.map(_._2).reduce(_ ++ _))
       case identifier ~ _ ~ ps =>
         `{}`(identifier, ps._1, true) -> ps._2
     } |
-    IDENT ~ ("("~>opt( rep1sep(name, ",") )<~")") <~"{"<~"}" ^^ {
+    IDENT ~ ("("~>opt( names )<~")") <~"{"<~"}" ^^ {
       case identifier ~ Some(params) =>
         `{}`(identifier, Nil, true, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
       case identifier ~ _ =>

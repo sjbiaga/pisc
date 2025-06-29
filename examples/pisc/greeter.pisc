@@ -2,7 +2,7 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-@given Conversion[`()`, String] = _.as[String]
+@given Conversion[`()`, String] = _.`()`[String]
 
 @val nl: String => IO[String] = { it => IO { s"$it\n" } }
 

@@ -78,25 +78,26 @@ abstract class StochasticPi extends Expression:
         val free = code.map(_._2).getOrElse(Names())
         π(ch, par, polarity = Some(""), Some(r.getOrElse(None)), code.map(_._1))(sπ_id) -> (bound, name ++ free)
     } |
-    name ~ cons_r ~ ("("~> ( names ~ opt(",") ) <~")") ~ opt( expression ) ^^ { // polyadic unconsing
-      case (ch, _) ~ _ ~ ( _ ~ _ ) ~ _ if !ch.isSymbol =>
+    name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
+      case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ _ ~ ( params ~ _ ) ~ _ if !params.forall(_._1.isSymbol) =>
+      case _ ~ _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
-      case (ch, _) ~ _ ~ ( params ~ _ ) ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
-        throw PrefixChannelsParsingExceptionʹ(ch.asSymbol, params.map(_._1.asSymbol.name)*)
-      case _ ~ _ ~ ( _ ~ _ ) ~ Some(((Left(enums), _), _)) =>
+      case (ch, _) ~ _ ~ params ~ _
+          if {
+            val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
+            paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
+          } =>
+        throw PrefixChannelsParsingExceptionʹ(ch.asSymbol,
+                                              params
+                                                .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                .map(_._1.asSymbol.name)*)
+      case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (λ(ch: Symbol), _) ~ cons ~ ( params ~ _ ) ~ _
+      case (λ(ch: Symbol), _) ~ cons ~ params ~ _
           if params.exists { case (λ(`ch`), _) => true case _ => false } =>
         throw ConsItselfParsingException(ch, cons)
-      case (ch, name) ~ cons ~ ( _params ~ c ) ~ code =>
-        val params =
-          if c.isDefined || _params.size == 1
-          then
-            _params :+ (λ(Symbol("")) -> Names())
-          else
-            _params
+      case (ch, name) ~ cons ~ params ~ code =>
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
@@ -131,7 +132,10 @@ abstract class StochasticPi extends Expression:
     }
 
   def names: Parser[List[(λ, Names)]] =
-    rep1sep(nameʹ, ",")
+    rep1sep(name, ",")
+
+  def namesʹ: Parser[List[(λ, Names)]] =
+    rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   /**
    * Channel names start with lower case.

@@ -140,7 +140,7 @@ object Meta:
   def `* = *: *`(* : (String, String, Type)): Enumerator.Val =
     Enumerator.Val(Pat.Typed(Pat.Var(*._1), *._3),
                    Term.ApplyType(
-                     Term.Select(*._2, "as"),
+                     Term.Select(*._2, "()"),
                      Type.ArgClause(*._3 :: Nil)
                    ))
 
@@ -156,7 +156,7 @@ object Meta:
                            ),
                            Term.ArgClause(
                              Term.ApplyType(
-                               Term.Select(*._2, "as"),
+                               Term.Select(*._2, "()"),
                                Type.ArgClause(*._3 :: Nil)
                              ) :: Nil)
                          ),
@@ -169,17 +169,16 @@ object Meta:
 
   def `* :: … :: * = *`(* : (String, String), `…`: String*) =
     def pat(** : String*): Pat =
-      if **.size == 1
-      then
-        if **.head.isEmpty
-        then
+      val head =
+        if **.head.isEmpty then
           Pat.Wildcard()
         else
           Pat.Var(**.head)
+      if **.size == 1
+      then
+        head
       else
-        Pat.ExtractInfix(Pat.Var(**.head),
-                         \(*._1),
-                         Pat.ArgClause(pat(**.tail*) :: Nil))
+        Pat.ExtractInfix(head, \(*._1), Pat.ArgClause(pat(**.tail*) :: Nil))
     Enumerator.Val(pat(`…`*), *._2)
 
 
@@ -227,10 +226,10 @@ object Meta:
       `for * yield ()`(`_ <- IO.unit`)
 
 
-  private def `π-supervised(*)`(* : Term): Term =
+  private def `π-supervised(*)`(* : Term): Option[Term] =
     * match
-      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => *
-      case _ => Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil))
+      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case _ => Some(Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil)))
 
   @tailrec
   def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
@@ -240,15 +239,17 @@ object Meta:
     } then
       `NonEmptyList( *, … ).parSequence`((
         *.flatMap {
+          case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
           case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparSequence")) =>
-            ls.map {
-              case it @ Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => it
-              case Term.Apply(Term.Name("π-supervised"), it :: Nil) => it
+            ls.flatMap {
+              case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+              case Term.Apply(Term.Name("π-supervised"), it :: Nil) => Some(it)
+              case it => Some(it)
             }
-          case it => it :: Nil
+          case it => Some(it)
         })*)
       else
-        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(`π-supervised(*)`).toList)), "πparSequence")
+        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.flatMap(`π-supervised(*)`).toList)), "πparSequence")
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =
@@ -264,7 +265,7 @@ object Meta:
              Pat.Var(*._1) :: Nil,
              Some(*._3),
              Term.ApplyType(
-               Term.Select(*._2, "as"),
+               Term.Select(*._2, "()"),
                Type.ArgClause(*._3 :: Nil)
              )
     )
@@ -282,7 +283,7 @@ object Meta:
                     ),
                     Term.ArgClause(
                       Term.ApplyType(
-                        Term.Select(*._2, "as"),
+                        Term.Select(*._2, "()"),
                         Type.ArgClause(*._3 :: Nil)) :: Nil)
                   ),
                   "right"

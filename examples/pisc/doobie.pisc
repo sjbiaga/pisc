@@ -55,7 +55,7 @@
 
 @val _ = transactor.use(create.transact[IO]).unsafeRunSync()
 
-@given Conversion[`()`, Int] = _.as[Int]
+@given Conversion[`()`, Int] = _.`()`[Int]
 
 @val f = Faker()
 
