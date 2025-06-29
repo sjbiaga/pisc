@@ -2,7 +2,7 @@
 
 @import eu.timepit.refined.numeric.*
 
-@given Conversion[`()`, Long] = _.as[Long]
+@given Conversion[`()`, Long] = _.`()`[Long]
 
 @val max = 13
 

@@ -148,7 +148,7 @@ abstract class Calculus extends Pi:
 
   def prefix(using bindings: Bindings)
             (using Duplications): Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>rep1sep(name, ",")<~")" ^^ { // restriction
+    "ν"~>"("~>names<~")" ^^ { // restriction
       case it if !it.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
       case it => it.unzip match
@@ -191,7 +191,7 @@ abstract class Calculus extends Pi:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>rep1sep(name, ",")<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~>names<~")" ) ^^ {
       case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(identifier, qual)
       case _ ~ identifier ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>

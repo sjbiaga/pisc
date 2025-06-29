@@ -274,8 +274,8 @@ package object Π:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = as[>*<]
-    private[Π] def xct = as[`)(`]
+    private def ref = `()`[>*<]
+    private[Π] def xct = `()`[`)(`]
 
     def ====(that: `()`) =
       try
@@ -285,7 +285,8 @@ package object Π:
           this.name == that.name
 
     inline def unary_! : Boolean = name == null
-    inline def as[T]: T = name.asInstanceOf[T]
+    inline def `()`[T]: T = name.asInstanceOf[T]
+    inline def `()`(using DummyImplicit): `()` = this
 
     /**
       * negative prefix i.e. output
@@ -318,7 +319,7 @@ package object Π:
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa)(ref).map(`()`)
+        r  <- ><(xa)(ref).map(new `()`(_))
       yield
         r
 
@@ -329,7 +330,7 @@ package object Π:
                 (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`()`] =
       for
         xa <- Π.`][`(`)(`)
-        r  <- ><(xa)(code)(ref).map(`()`)
+        r  <- ><(xa)(code)(ref).map(new `()`(_))
       yield
         r
 
