@@ -18,7 +18,7 @@ function pi() {
     done
     set ../pi.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.1 \
+                  -q -O -nowarn -S 3.7.2-RC1 \
                   --dep org.typelevel::cats-effect:3.7-4972921 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
@@ -44,7 +44,7 @@ function pi_() {
     done
     set ../pi_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.1 \
+                  -q -O -nowarn -S 3.7.2-RC1 \
                   --dep org.typelevel::cats-effect:3.7-4972921 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
@@ -57,7 +57,7 @@ function pio() {
     do
         { cat ../main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
-        scalafmt --quiet --non-interactive --stdin >| "$1".scala
+        scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift
     done
 }

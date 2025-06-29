@@ -110,7 +110,7 @@ object Meta:
   def `* = *: *`(* : (String, String, Type)): Enumerator.Val =
     Enumerator.Val(Pat.Typed(Pat.Var(*._1), *._3),
                    Term.ApplyType(
-                     Term.Select(*._2, "as"),
+                     Term.Select(*._2, "()"),
                      Type.ArgClause(*._3 :: Nil)
                    ))
 
@@ -126,7 +126,7 @@ object Meta:
                            ),
                            Term.ArgClause(
                              Term.ApplyType(
-                               Term.Select(*._2, "as"),
+                               Term.Select(*._2, "()"),
                                Type.ArgClause(*._3 :: Nil)
                              ) :: Nil)
                          ),
@@ -139,17 +139,16 @@ object Meta:
 
   def `* :: … :: * = *`(* : (String, String), `…`: String*) =
     def pat(** : String*): Pat =
-      if **.size == 1
-      then
-        if **.head.isEmpty
-        then
+      val head =
+        if **.head.isEmpty then
           Pat.Wildcard()
         else
           Pat.Var(**.head)
+      if **.size == 1
+      then
+        head
       else
-        Pat.ExtractInfix(Pat.Var(**.head),
-                         \(*._1),
-                         Pat.ArgClause(pat(**.tail*) :: Nil))
+        Pat.ExtractInfix(head, \(*._1), Pat.ArgClause(pat(**.tail*) :: Nil))
     Enumerator.Val(pat(`…`*), *._2)
 
 
@@ -230,7 +229,7 @@ object Meta:
              Pat.Var(*._1) :: Nil,
              Some(*._3),
              Term.ApplyType(
-               Term.Select(*._2, "as"),
+               Term.Select(*._2, "()"),
                Type.ArgClause(*._3 :: Nil)
              )
     )
@@ -248,7 +247,7 @@ object Meta:
                     ),
                     Term.ArgClause(
                       Term.ApplyType(
-                        Term.Select(*._2, "as"),
+                        Term.Select(*._2, "()"),
                         Type.ArgClause(*._3 :: Nil)) :: Nil)
                   ),
                   "right"

@@ -23,11 +23,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parTraverse(identity)`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parSequence.void`.
 
-Summation: non-deterministic choice modelled with - `parTraverse` and `Semaphore.tryAcquire.ifM`.
+Summation: non-deterministic choice modelled with - `parSequence` and `Semaphore.tryAcquire.ifM`.
 
-[Guarded] Replication: modelled with - `parTraverse` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code generator in `Program.scala`.
@@ -44,9 +44,10 @@ prefixes per se.
 
 The BNF formal grammar for processes is the following.
 
-    LINE           ::= EQUATION | DEFINITION
+    LINE           ::= EQUATION | DEFINITION | DIRECTIVE
     EQUATION       ::= INVOCATION "=" CHOICE
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" CHOICE
+    DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
     CHOICE         ::= PARALLEL { "+" PARALLEL }
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" CHOICE ")" ]
@@ -63,6 +64,7 @@ The BNF formal grammar for processes is the following.
     PARAMS         ::= [ "(" NAMES ")" ]
     POINTERS       ::= "{" NAMES "}"
     NAMES          ::= NAME { "," NAME }
+    NAMESʹ         ::= [ NAME ] { "," [ NAME ] }
 
 The BNF formal grammar for prefixes is the following.
 
@@ -72,6 +74,7 @@ The BNF formal grammar for prefixes is the following.
     μ              ::= "τ" [ EXPRESSION ]
                      | NAME "<" [ NAME ] ">" [ EXPRESSION ]
                      | NAME "(" NAME ")" [ EXPRESSION ]
+                     | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
     EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
@@ -260,7 +263,7 @@ named `_<uuid>` to translate lazily `! P` as:
                   ()
               )
             )
-            .parTraverse(identity)
+            .parSequence
         _<uuid>
       }
       _ <- _<uuid>
