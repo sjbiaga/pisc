@@ -2,7 +2,7 @@
 
 # ./examples $ pi_ hanoi.scala
 
-@given Conversion[`()`, Int] = _.as[Int]
+@given Conversion[`()`, Int] = _.`()`[Int]
 
 @val ! : String => IO[String] = { _ => IO.canceled.as("") }
 
