@@ -61,6 +61,9 @@ abstract class Ambient extends Expression:
 
   def name: Parser[(String, Names)] = ident ^^ { it => it -> Set(it) }
 
+  def names: Parser[List[(String, Names)]] =
+    rep1sep(name, ",")
+
   /**
    * Ambient names start with lower case.
    * @return
