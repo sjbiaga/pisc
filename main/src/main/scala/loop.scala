@@ -40,6 +40,8 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
+  private val spirsx = "pi.stochastic.replications.exitcode.ignore"
+
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
   export sΠ.`π-exclude`
 
@@ -119,7 +121,7 @@ package object `Π-loop`:
       IO.unit
 
 
-  def loop(`1`: Semaphore[IO], exit: Boolean = false)
+  def loop(parallelism: Int, `1`: Semaphore[IO], exit: Boolean = false)
           (using % : %, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -135,9 +137,9 @@ package object `Π-loop`:
               ^.complete(ExitCode.Success).void
             else if it.isEmpty
             then
-              *.acquire >> loop(`1`, true)
+              *.acquire >> loop(parallelism, `1`, true)
             else
-              ∥(it)(`π-wand`._1)(parallelism = 9) match
+              ∥(it)(`π-wand`._1)(parallelism) match
                 case Some(nel) =>
                   `1`.acquire >>
                   nel.parTraverse { case (key1, key2, delay) =>
@@ -163,7 +165,7 @@ package object `Π-loop`:
                                       _  <- --.await
                                     yield
                                       ()
-                                  } >> `1`.release >> loop(`1`)
+                                  } >> `1`.release >> loop(parallelism, `1`)
                 case _ =>
                   val nel = NonEmptyList.fromListUnsafe(it.map(_._1).toList)
                   nel
@@ -171,7 +173,8 @@ package object `Π-loop`:
                       %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
                     }
                     .as {
-                      if nel.forall(_.charAt(36) == '!')
+                      if !sys.BooleanProp.keyExists(spirsx).value
+                      && nel.forall(_.charAt(36) == '!')
                       then ExitCode.Success
                       else ExitCode.Error
                     } >>= (^.complete(_).void)
