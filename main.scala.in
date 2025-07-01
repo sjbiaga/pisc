@@ -39,9 +39,11 @@ import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 object App extends IOApp:
 
-  private def run(args: List[String])(% : %, / : /, * : *, ^ : ^): IO[ExitCode] =
+  private val spicsp = "pi.stochastic.communications.parallelism.level"
+
+  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop()(using %, ^, *)(π.`π-wand`).background
+        _ <- loop(parallelism)(using %, ^, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
       yield
         ()
@@ -61,8 +63,11 @@ object App extends IOApp:
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](1)
       _ <- *.acquire
+      p  = if sys.Prop.IntProp(spicsp).isSet
+           then sys.Prop.IntProp(spicsp).value
+           else 9
       ^ <- Deferred[IO, ExitCode]
-      x <- run(args)(%, /, *, ^)
+      x <- run(p, args)(%, /, *, ^)
     yield
       x
 

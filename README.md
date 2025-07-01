@@ -37,7 +37,6 @@ prefixes per se.
 
 The BNF formal grammar for processes is the following.
 
-    LINE           ::= EQUATION | DEFINITION
     LINE           ::= EQUATION | DEFINITION | DIRECTIVE
     EQUATION       ::= INVOCATION "=" CHOICE
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" CHOICE

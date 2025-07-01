@@ -50,22 +50,31 @@ abstract class StochasticPi extends Expression:
 
   def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
-      case _ ~ r ~ Some((it, free)) =>
-        τ(Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), free)
-      case _ ~ r ~ _ =>
-        τ(Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), Names())
+      case _ ~ r ~ code =>
+        val free = code.map(_._2).getOrElse(Names())
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free ++ freeʹ)
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = None, Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
+      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹʹ)) =>
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        π(ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ ++ freeʹʹ)
       case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = None, Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), name ++ free)
-      case (ch, name) ~ r ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = None, Some(r.getOrElse(None)), Some(it))(sπ_id) -> (Names(), name ++ freeʹ)
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        π(ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free ++ freeʹ)
+      case (ch, name) ~ r ~ _ ~ Some((it, free)) =>
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        π(ch, λ(`()(null)`), polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
       case (ch, name) ~ r ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = None, Some(r.getOrElse(None)), None)(sπ_id) -> (Names(), name)
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        π(ch, λ(`()(null)`), polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ freeʹ)
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -76,7 +85,9 @@ abstract class StochasticPi extends Expression:
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, bound) ~ code =>
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, par, polarity = Some(""), Some(r.getOrElse(None)), code.map(_._1))(sπ_id) -> (bound, name ++ free)
+        val rʹ = Some(r.map(_._1).getOrElse(None))
+        val freeʹ = r.map(_._2).getOrElse(Names())
+        π(ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ free ++ freeʹ)
     } |
     name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -113,17 +124,17 @@ abstract class StochasticPi extends Expression:
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
-  def rate: Parser[Any] = "("~>rate<~")" |
-                          "∞" ^^ { _ => -1L } |
-                          wholeNumber<~"∞" ^^ { -_.toLong.abs } |
-                          "⊤" ^^ { _ => 1L } |
-                          wholeNumber<~"⊤" ^^ { _.toLong.abs } |
-                          floatingPointNumber ^^ { BigDecimal.apply } |
-                          super.ident ^^ { Symbol.apply } |
-                          expression ^^ {
-                            case ((Right(term), _), free) => Some(term)
-                            case ((Left(enums), _), _) => throw TermParsingException(enums)
-                          }
+  def rate: Parser[(Any, Names)] = "("~>rate<~")" |
+                                   "∞" ^^ { _ => -1L -> Names() } |
+                                   wholeNumber<~"∞" ^^ { -_.toLong.abs -> Names() } |
+                                   "⊤" ^^ { _ => 1L -> Names() } |
+                                   wholeNumber<~"⊤" ^^ { _.toLong.abs -> Names() } |
+                                   floatingPointNumber ^^ { BigDecimal(_) -> Names() } |
+                                   super.ident ^^ { Symbol(_) -> Names() } |
+                                   expression ^^ {
+                                     case ((Right(term), _), free) => term -> free
+                                     case ((Left(enums), _), _) => throw TermParsingException(enums)
+                                   }
 
   def nameʹ: Parser[(λ, Names)] =
     name ~ opt(`type`) ^^ {
