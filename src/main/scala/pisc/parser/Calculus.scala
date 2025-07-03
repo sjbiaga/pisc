@@ -475,9 +475,8 @@ object Calculus:
 
         case ∅() => ast
 
-        case +(_, ∥(it: `.`)) =>
-          import Sum.*
-          `+`(nil, ∥(it.label(0)))
+        case +(_, ∥(it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
+          `+`(nil, ∥(it.label(l)))
 
         case +(_, ∥(it*)) =>
           import Par.*
