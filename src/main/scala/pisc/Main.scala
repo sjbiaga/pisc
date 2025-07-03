@@ -29,7 +29,7 @@
 package pisc
 
 import java.io.{ FileWriter, BufferedWriter }
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
 
 import scala.collection.{ Map, Set }
@@ -60,7 +60,7 @@ object Main:
 
       try
         source = Source.fromFile(s"$examples/pisc/$in")
-        fwr = FileWriter(out, Charset.forName("UTF-8"))
+        fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
         val bs = spi(source)
@@ -157,10 +157,10 @@ object Main:
       for
         (id, it) <- self
       yield
-        Term.ApplyInfix(Lit.String(s"$id"),
+        Term.ApplyInfix(Lit.String(id),
                         Term.Name("->"), Type.ArgClause(Nil),
                         Term.ArgClause(Term.Apply(scollimmSet,
-                                                  Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
+                                                  Term.ArgClause(it.map(Lit.String(_)).toList)
                                        ) :: Nil))
 
     def apply(it: Actions): Defn.Val =
@@ -169,7 +169,7 @@ object Main:
                Some(Type.Apply(Type.Name("Π-Set"),
                                Type.ArgClause(Type.Name("String") :: Nil))),
                Term.Apply(scollimmSet,
-                          Term.ArgClause(it.map { id => Lit.String(s"$id") }.toList)
+                          Term.ArgClause(it.map(Lit.String(_)).toList)
                ))
 
   private val scollimmMap =

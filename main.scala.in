@@ -39,35 +39,33 @@ import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 object App extends IOApp:
 
-  private val spicsp = "pi.stochastic.communications.parallelism.level"
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ^ : ^): IO[ExitCode] =
+  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism)(using %, ^, *)(π.`π-wand`).background
+        _ <- loop(parallelism)(using %, !, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- `π-enable`(π.`π-main`)(using %)
-        _ <- π.`π-supervised`(π.Main(args*)(using π.`π-uuid`)(using %, /, { () => *.release }))
-        _ <- *.release
-        x <- ^.get
+        _ <- π.`π-supervised`(π.Main(args*)(using π.`π-uuid`)(using %, /, { () => *.offer(()) }))
+        x <- !.get
       yield
         x
     }
 
   override def run(args: List[String]): IO[ExitCode] =
+    val p = if sys.Prop.IntProp(spicsp).isSet
+            then sys.Prop.IntProp(spicsp).value
+            else 9
     for
       % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]
-      * <- Semaphore[IO](1)
-      _ <- *.acquire
-      p  = if sys.Prop.IntProp(spicsp).isSet
-           then sys.Prop.IntProp(spicsp).value
-           else 9
-      ^ <- Deferred[IO, ExitCode]
-      x <- run(p, args)(%, /, *, ^)
+      * <- Queue.unbounded[IO, Unit]
+      ! <- Deferred[IO, ExitCode]
+      _ <- `π-enable`(π.`π-main`)(using %)
+      x <- run(p, args)(%, /, *, !)
     yield
       x
 

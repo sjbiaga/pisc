@@ -37,8 +37,6 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import generator.Meta.`()(null)`
-
 import StochasticPi.*
 import Calculus.*
 import Encoding.*
@@ -48,7 +46,7 @@ import Expansion.Duplications
 
 abstract class StochasticPi extends Expression:
 
-  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
+  def μ(using Bindings): Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ code =>
         val free = code.map(_._2).getOrElse(Names())
@@ -56,25 +54,17 @@ abstract class StochasticPi extends Expression:
         val rʹ = Some(r.map(_._1).getOrElse(None))
         τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free ++ freeʹ)
     } |
-    name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ opt("@"~>rate) ~ ("<"~>name<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹʹ)) =>
+      case (ch, name) ~ r ~  (arg, free) ~ Some((it, freeʹʹ)) =>
         val rʹ = Some(r.map(_._1).getOrElse(None))
         val freeʹ = r.map(_._2).getOrElse(Names())
         π(ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ ++ freeʹʹ)
-      case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
+      case (ch, name) ~ r ~ (arg, free) ~ _ =>
         val rʹ = Some(r.map(_._1).getOrElse(None))
         val freeʹ = r.map(_._2).getOrElse(Names())
         π(ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ r ~ _ ~ Some((it, free)) =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, λ(`()(null)`), polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ r ~ _ ~ _ =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, λ(`()(null)`), polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ freeʹ)
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -112,7 +102,7 @@ abstract class StochasticPi extends Expression:
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, args, polarity = Some(cons), None, code.map(_._1))(sπ_id) -> (bound, name ++ free &~ bound)
+        π(ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ free &~ bound)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -196,6 +186,8 @@ abstract class StochasticPi extends Expression:
   protected var _dirs = List[Map[String, Any]]()
 
   protected var _dups: Boolean = false
+
+  protected var _traces: Option[Option[String]] = None
 
   private[parser] var _id: helper.υidυ = null
 
@@ -304,6 +296,9 @@ object StochasticPi:
 
   case class WholeNumberFormatException(msg: String, cause: Throwable = null)
       extends PrefixParsingException("The weight is a natural number that must " + msg, cause)
+
+  case object TracesRateException
+      extends PrefixParsingException("When tracing is on, used rates must not be Scala code")
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
@@ -676,7 +671,8 @@ object StochasticPi:
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
       _dups = false
-      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
+      _traces = None
+      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups, "traces" -> _traces))
       eqtn = List()
       defn = Map()
       self = Set()
@@ -723,7 +719,7 @@ object StochasticPi:
                 scala.sys.error(failure.msg)
         }
         .filter {
-          case Right((`(*)`(s"Self_$n", _, _*), _))
+          case Right((`(*)`(s"Self_$n", _*), _))
               if { try { n.toInt; true } catch _ => false } =>
             self.contains(n.toInt)
           case _ => true

@@ -65,7 +65,7 @@ The BNF formal grammar for prefixes is the following.
     PREFIX         ::= μ "."
                      | "ν" "(" NAMES ")"
     μ              ::= "τ" [ @ RATE ] [ EXPRESSION ]
-                     | NAME [ @ RATE ] "<" [ NAME ] ">" [ EXPRESSION ]
+                     | NAME [ @ RATE ] "<" NAME ">" [ EXPRESSION ]
                      | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
                      | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
     EXPRESSION     ::= "/*" ... "*/"
@@ -131,15 +131,6 @@ that is applied the prior result from the input, obtaining the `IO[T]` that is
 executed under supervision (so that cancellation does not outlive the
 `cats.effect.std.Supervisor[IO]`) providing the actual result, just after ending
 the input but before returning from it.
-
-If `null` is received, that function will not run. Otherwise, if its result is
-`null`, this may be used to cease guarded replication with _output_ prefix guard:
-i.e., should just this one input prefix remain, the (stack-safe, recursive)
-replication stops.
-
-And if, for each guarded replication, care is taken of to *stop* each, then the
-entire program exits; unless prevented by non-exiting - self or mutual - recursive
-invocations or unguarded replication.
 
 Unlike the rest of the agents, the `Main` agent has the command line arguments
 spliced as `vararg` parameter(s).
@@ -273,13 +264,13 @@ There are two kinds of keys:
 
 It is crucial the [enabled] actions are enabled (rate absent, but enough for
 the loose key to be in the `%` map) already when actions are fired in parallel.
-A second background fiber is blocked on a `Semaphore` that the other background
-fiber releases, and then (blocking) polls for a next "offer".
+A second background fiber is blocked on a different `Queue` that the other
+background fiber releases, and then (blocking) polls for a next "offer".
 
 This second background fiber then awaits for all enabled actions to be "reached"
 or "fired", and thus have associated a rate rather than a number (the value type
 of the `%` map is a `Scala 3` _union_ type). If the multisets are not empty,
-then it will block on the semaphore shared with the first background fiber.
+then it will block on the `Queue` shared with the first background fiber.
 
 As soon as the multisets are empty, the second background fiber computes
 [statistically](https://github.com/scalanlp/breeze) - starting from the
@@ -302,6 +293,32 @@ passed, such that all three fibers (a parallel fiber from the loop, the positive
 polarity action and the negative polarity action) `await`, and only continue as
 soon as - after the "communication" but not before its result -, the keys to be
 discarded are discarded and the keys to be enabled are enabled.
+
+Tracing
+-------
+
+Tracing is enabled by the `"traces"` directive. If active, the keys of actions
+are appended: the agent name from the current equation, a label, the action's
+rate and the filename where traces are directed. However, it is not until
+runtime that these keys may be possibly used. The tracing output is a `.csv`
+file with the following columns:
+
+    start,end,silent,key,replication,agent,label,rate,delay,duration,filename
+
+The first two column are two timestamps, the `start` and `end` of the action in
+nanoseconds. The third column tells whether this row corresponds to the silent
+action or otherwise to the input or the output part of a communication (if the
+latter is the case, the `end` timestamp is the same). The fourth column stores
+the _key_. The fifth tells whether the action is the guard of a _replication_. The
+sixth is the originating agent _name_. The seventh is a _label_ that is a string
+of tags, which differentiate between the elements in summations and compositions.
+The eighth is the _delay_ of the action (silent or communication). The ninth may
+be `0.0` for immediate actions, `NaN` for passive actions or the same as the
+eighth for active actions. The final tenth column is the _filename_ (with
+possible ignored commas) or empty.
+
+There may be silent actions which are inserted after the other are labelled:
+these are not traceable, but neither do they need be.
 
 Program
 -------

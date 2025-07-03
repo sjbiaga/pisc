@@ -2,8 +2,6 @@
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 
-@val ! : String => IO[String] = { _ => IO.pure(null) }
-
 Main = ν(a,b,c)             \
      ( (!.a<"a">.)          \
      | (!.b<"b">.)          \
@@ -21,7 +19,6 @@ Hanoi(a,b,c,n) = ν(w)                                        \
                    */.                                       \
                  Hanoi(a,b,c,n,w)                            \
                | w(w). τ/*println(s"#${'w} moves")*/.        \
-                       a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
                )
 
 Move(from,to,z) = from(x).to(y).                    \

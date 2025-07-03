@@ -26,13 +26,15 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
+import _root_.java.io.{ PrintStream, FileOutputStream }
+
 import _root_.scala.collection.immutable.Map
 
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 
 import _root_.cats.data.NonEmptyList
-import _root_.cats.effect.{ IO, ExitCode, Deferred, Ref }
+import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-stats`.*
@@ -47,7 +49,7 @@ package object `Π-loop`:
 
   type - = CyclicBarrier[IO]
 
-  type + = (Deferred[IO, Option[(Double, (-, -))]], (>*<, Option[Boolean], Rate))
+  type + = (Deferred[IO, Option[(Double, (-, -))]], (Long, (>*<, Option[Boolean], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -110,6 +112,25 @@ package object `Π-loop`:
     else
       IO.unit
 
+  private def tracing(started: Long, ended: Long, silent: Boolean, delay: Double, duration: Double): String => IO[Unit] =
+    _.split(",") match
+      case Array(key, agent, label, rate) =>
+        IO.blocking {
+          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+                 started, ended, silent, key.stripPrefix("!"), key.startsWith("!"),
+                 agent, label, rate, delay, duration)
+        }
+      case Array(key, agent, label, rate, filename*) =>
+        var ps: PrintStream = null
+        IO.blocking {
+          ps = PrintStream(FileOutputStream(filename.mkString(",") + ".csv", true), true)
+          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    started, ended, silent, key.stripPrefix("!"), key.startsWith("!"),
+                    agent, label, rate, delay, duration, filename.mkString(","))
+        }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
+      case _ =>
+        IO.unit
+
 
   private def exit(ls: List[String])
                   (using % : %, ! : !): IO[Unit] =
@@ -135,7 +156,7 @@ package object `Π-loop`:
                m -> ( if m.exists(_._2.isInstanceOf[Int])
                       then Map.empty -> false
                       else m
-                           .map(_ -> _.asInstanceOf[+]._2)
+                           .map(_ -> _.asInstanceOf[+]._2._2)
                            .toMap
                         -> m.forall { case (key, _: +) => key.charAt(36) == '!' case _ => false }
                     )
@@ -149,7 +170,7 @@ package object `Π-loop`:
             else
               ∥(it)(`π-wand`._1)(parallelism) match
                 case Some(nel) =>
-                  nel.parTraverse { case (key1, key2, delay) =>
+                  nel.parTraverse { case (key1, key2, (delay, duration)) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
                                     val ^  = key1.substring(0, 36)
@@ -157,13 +178,20 @@ package object `Π-loop`:
                                     for
                                       -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                       -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      d1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
-                                      d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                      p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                      p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
+                                      (d1, (ts1, _)) = p1
+                                      (d2, (ts2, _)) = p2
                                       _  <- discard(k1, ^)
                                       _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
                                       _  <- %.update(_ - key1 - key2)
                                       _  <- d1.complete(Some(delay -> (-, --)))
                                       _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
+                                      ts <- Clock[IO].monotonic.map(_.toNanos)
+                                      _  <- tracing(ts1, ts, k1 == k2, delay, duration)(k1)
+                                      _  <- if k1 == k2
+                                            then IO.unit
+                                            else tracing(ts2, ts, k1 == k2, delay, duration)(k2)
                                       _  <- -.await
                                       _  <- ready(k1)
                                       _  <- if k1 == k2 then IO.unit else ready(k2)

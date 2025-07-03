@@ -33,6 +33,8 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.{ Term, Type }
 
+import generator.Meta.rateʹ
+
 import Expression.Code
 import StochasticPi.*
 import Calculus.*
@@ -55,7 +57,11 @@ abstract class Calculus extends StochasticPi:
             if (free &~ bound).nonEmpty
             then
               throw EquationFreeNamesException(bind.identifier, free &~ bound)
-            bind -> sum
+            if _traces.isDefined
+            then
+              bind -> sum.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+            else
+              bind -> sum
         }
     }
 
@@ -374,6 +380,9 @@ object Calculus:
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
 
+  case class TracesElvisParsingException(identifier: String)
+      extends ParsingException(s"When tracing is on, either if-then-else or Elvis operator is not allowed in the right hand side of $identifier")
+
 
   // functions
 
@@ -430,5 +439,73 @@ object Calculus:
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.flatten)
+
+        case _ => ast
+
+  extension [T <: AST](ast: T)
+
+    def label(l: String)(using (String, String)): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      object Sum:
+        inline implicit def lʹ(i: Int): String = l + "+" + i
+
+      object Par:
+        inline implicit def lʹ(i: Int): String = l + "∥" + i
+
+      inline def idʹ(id: => String, r: Any): String =
+        val (identifier, filename) = summon[(String, String)]
+        id + "," + identifier + "," + l + "," + rateʹ(r) + "," + filename
+
+      val relabelled: Seq[Pre] => Seq[Pre] =
+        _.map {
+          case it: τ =>
+            it.copy()(idʹ(it.id, it.rate.get))
+          case it: π
+              if it.polarity.map(_.isEmpty).getOrElse(true) =>
+            it.copy()(idʹ(it.id, it.rate.get))
+          case it => it
+        }
+
+      inline def relabelledʹ(it: Option[μ]): Option[μ] =
+        relabelled(it.toSeq).headOption.asInstanceOf[Option[μ]]
+
+      ast match
+
+        case ∅() => ast
+
+        case +(_, ∥(it: `.`)) =>
+          import Sum.*
+          `+`(nil, ∥(it.label(0)))
+
+        case +(_, ∥(it*)) =>
+          import Par.*
+          `+`(nil, ∥(it.zipWithIndex.map(_.label(_))*))
+
+        case +(_, it*) =>
+          import Sum.*
+          `+`(nil, it.zipWithIndex.map(_.label(_))*)
+
+        case ∥(it*) =>
+          ∥(it.map(_.label(l))*)
+
+        case `.`(end, it*) =>
+          `.`(end.label(l), relabelled(it)*)
+
+        case ?:(cond, t, None) =>
+          ?:(cond, t.label(l), None)
+
+        case _: ?: =>
+          throw TracesElvisParsingException(summon[(String, String)]._1)
+
+        case !(None, sum) =>
+          `!`(None, sum.label(l))
+
+        case !(it, sum) =>
+          `!`(relabelledʹ(it), sum.label(l))
+
+        case it @ `⟦⟧`(_, _, sum, _, _) =>
+          it.copy(sum = sum.label(l))
 
         case _ => ast

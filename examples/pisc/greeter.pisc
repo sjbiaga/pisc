@@ -15,15 +15,15 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout, "")
 Greeter(stdin, stdout, line) = \
                              ( stdout<"What's your name?">.stdin(name). \
                                                                         if /* 'name.isBlank */ = True \
-                                                                        then stdout<>. Greeter(stdin, stdout, line) \
+                                                                        then Greeter(stdin, stdout, line) \
                                                                         else Chooser(stdout, name) \
                              ) \
                              | \
                              ( stdout(prompt) /* nl */. \
                                τ /* _    <- IO { print('prompt) }; \
                                    'line <- IO.blocking { scala.io.StdIn.readLine } */. \
-                                                        stdin<line>.stdout(greet) /* nl */. \
-                               [/* !'greet */ = False] τ/*print('greet)*/. \
+                               stdin<line>.stdout(greet) /* nl */. \
+                               τ/*print('greet)*/. \
                              )
 
 Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \

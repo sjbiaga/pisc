@@ -34,7 +34,7 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
-import parser.StochasticPi.Actions
+import parser.StochasticPi.{ Actions, TracesRateException }
 import parser.Calculus.{ λ, `(*)` }
 
 
@@ -80,6 +80,16 @@ object Meta:
     case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil))
     case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
     case _ => rate(1L)
+  }
+
+  val rateʹ: Any => Term = {
+    case w: Long if w < 0 => Term.Apply(\("∞"), Term.ArgClause(Lit.Long(-w) :: Nil))
+    case r: BigDecimal => Term.Apply(\("ℝ⁺"),
+                                     Term.ArgClause(Term.Apply(\("BigDecimal"),
+                                                               Term.ArgClause(Lit.String(r.toString) :: Nil)) :: Nil))
+    case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
+    case _: Term | Symbol(_) => throw TracesRateException
+    case _ => rateʹ(1L)
   }
 
 
@@ -339,10 +349,6 @@ object Meta:
                  ) :: Nil
                )
     )
-
-
-  val `()(null)`: Term =
-    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil))
 
 
   def `π-exclude`(enabled: Actions): Term =
