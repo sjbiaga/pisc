@@ -341,7 +341,14 @@ object Program:
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
+
+      ( prog.head match
+          case (`(*)`("_par", λ(parallelism: Lit.Int)), _) =>
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString :: Nil
+          case _ => Nil
+      ) :::
       prog
+        .tail
         .map(_ -> _.generate(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)
