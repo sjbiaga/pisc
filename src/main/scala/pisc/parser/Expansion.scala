@@ -612,7 +612,7 @@ object Expansion:
               it.copy(code = recoded)
             case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
               val chʹ = updated(ch)
-              given_Bindings --= names.map(_.asSymbol)
+              given_Bindings --= names.map(_.asSymbol).filterNot(_.name.isEmpty)
               π(chʹ, cons, recoded, names*)
             case π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val namesʹ = names.map {
