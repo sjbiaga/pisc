@@ -29,7 +29,7 @@
 package masc
 
 import java.io.{ FileWriter, BufferedWriter }
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
 
 import scala.io.Source
@@ -54,7 +54,7 @@ object Main:
 
       try
         source = Source.fromFile(s"$examples/masc/$in")
-        fwr = FileWriter(out, Charset.forName("UTF-8"))
+        fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
         val bind = ma(source).zipWithIndex
