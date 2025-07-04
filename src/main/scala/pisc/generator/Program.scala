@@ -152,7 +152,7 @@ object Program:
         case π(λ(Symbol(ch)), arg, None, _) =>
           * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)))
 
-        case π(λ(Symbol(ch)), λ(params: List[λ]), Some(cons), code) =>
+        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), code) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par

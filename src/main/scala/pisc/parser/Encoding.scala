@@ -588,6 +588,9 @@ object Encoding:
               ν(names.map(_ -> _.asSymbol.name)*)
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded(free))
+            case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), given Option[Code]) =>
+              val paramsʹ = params.map(_.asSymbol).filterNot(_.name.isEmpty).map(rebind(_))
+              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded(free))
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code]) =>
               it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code]) =>
