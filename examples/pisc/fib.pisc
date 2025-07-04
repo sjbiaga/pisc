@@ -10,8 +10,6 @@
 
 @def random = 3+gen.nextLong(max-2)
 
-@import scala.concurrent.duration._
-
 Main = ν(num)                                           \
      ( (!.num(n).                                       \
         ν(in) ( Fib(n, in)                              \
@@ -29,12 +27,12 @@ Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
               | f@∞(res).out<res>.       \
               )
 
-Fibonacci(f, n) = if /*'n < 2*/ = True               \
-                  then                               \
-                    f@∞<n>.                          \
-                  else                               \
-                    ν(g)ν(h)                         \
-                    ( Fibonacci(g, /*'n-1*/)         \
-                    | Fibonacci(h, /*'n-2*/)         \
-                    | g@∞(p).h@∞(r).f@∞</*'p+'r*/>.  \
-                    )
+Fibonacci(f, n) =                                  \
+                ( ([/*'n < 2*/ = True] f@∞<n>.)    \
+                + [/*'n < 2*/ = False]             \
+                  ν(g)ν(h)                         \
+                  ( Fibonacci(g, /*'n-1*/)         \
+                  | Fibonacci(h, /*'n-2*/)         \
+                  | g@∞(p).h@∞(r).f@∞</*'p+'r*/>.  \
+                  )                                \
+                )

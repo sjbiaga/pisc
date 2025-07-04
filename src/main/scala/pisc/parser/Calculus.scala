@@ -355,7 +355,7 @@ object Calculus:
       case it: Boolean => it.toString.capitalize
       case it: String => "\"" + it + "\""
       case it: Term => "/*" + it + "*/"
-      case it: List[λ] => it.mkString(", ")
+      case it: List[`λ`] => it.mkString(", ")
 
 
   // exceptions
@@ -441,8 +441,6 @@ object Calculus:
           it.copy(sum = sum.flatten)
 
         case _ => ast
-
-  extension [T <: AST](ast: T)
 
     def label(l: String)(using (String, String)): T =
 

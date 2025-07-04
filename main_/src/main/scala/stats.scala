@@ -33,7 +33,6 @@ import _root_.scala.concurrent.duration.*
 import _root_.breeze.stats.distributions.Exponential
 import _root_.breeze.stats.distributions.Rand.VariableSeed.*
 
-import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Ref }
 
 import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
@@ -73,9 +72,9 @@ package object `Π-stats`:
 
   def ∥(% : Map[String, (>*<, Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (parallelism: Int, check: Boolean = false): Option[NonEmptyList[(String, String, (Double, Double))]] =
-                                                                     // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
-                                                                     // key1    key1|2   delay   duration
+       (parallelism: Int, check: Boolean = false): List[(String, String, (Double, Double))] =
+                                                      // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
+                                                      // key1    key1|2   delay   duration
 
     val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -226,42 +225,40 @@ package object `Π-stats`:
 
     r = r.sortBy(_._2).reverse
 
-    NonEmptyList.fromList {
-      ( for
-          (((key1, key2, _), _), i) <- r.zipWithIndex
-        yield
-          val k1 = key1.substring(36)
-          val k2 = key2.substring(36)
-          val ^ = key1.substring(0, 36)
-          val ^^ = key2.substring(0, 36)
-          r(i)._1 -> {
-            0 > r.indexWhere(
-              {
-                case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
-                case ((key, _, _), _)
-                    if {
-                      val k = key.substring(36)
-                      `π-trick`.contains(k) && {
-                        val ^^^ = key.substring(0, 36)
-                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                      }
-                    } => true
-                case ((_, key, _), _)
-                    if {
-                      val k = key.substring(36)
-                      `π-trick`.contains(k) && {
-                        val ^^^ = key.substring(0, 36)
-                        `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                      }
-                    } => true
-                case _ => false
-              }
-              , i + 1
-            )
-          }
-      )
-      .filter(_._2)
-      .map(_._1)
-      .reverse
-      .take(parallelism)
-    }
+    ( for
+        (((key1, key2, _), _), i) <- r.zipWithIndex
+      yield
+        val k1 = key1.substring(36)
+        val k2 = key2.substring(36)
+        val ^ = key1.substring(0, 36)
+        val ^^ = key2.substring(0, 36)
+        r(i)._1 -> {
+          0 > r.indexWhere(
+            {
+              case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
+              case ((key, _, _), _)
+                  if {
+                    val k = key.substring(36)
+                    `π-trick`.contains(k) && {
+                      val ^^^ = key.substring(0, 36)
+                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                    }
+                  } => true
+              case ((_, key, _), _)
+                  if {
+                    val k = key.substring(36)
+                    `π-trick`.contains(k) && {
+                      val ^^^ = key.substring(0, 36)
+                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+                    }
+                  } => true
+              case _ => false
+            }
+            , i + 1
+          )
+        }
+    )
+    .filter(_._2)
+    .map(_._1)
+    .reverse
+    .take(parallelism)

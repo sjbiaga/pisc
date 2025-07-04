@@ -135,7 +135,7 @@ object Program:
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)
                        ))
 
-        case π(λ(Symbol(ch)), λ(params: List[λ]), Some(cons), _, code) =>
+        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par

@@ -607,6 +607,10 @@ object Expansion:
               it
             case it @ τ(_, given Option[Code]) =>
               it.copy(code = recoded)(it.id)
+            case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), _, given Option[Code]) =>
+              val chʹ = updated(ch)
+              given_Bindings --= params.map(_.asSymbol).filterNot(_.name.isEmpty)
+              it.copy(channel = chʹ, code = recoded)(it.id)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code]) =>
               val chʹ = updated(ch)
               given_Bindings -= par

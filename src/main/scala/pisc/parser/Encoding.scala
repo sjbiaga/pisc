@@ -100,8 +100,13 @@ abstract class Encoding extends Calculus:
                 throw DefinitionFreeNamesException(_code, free &~ bound)
               if parameters.size == _parameters.size
               then
-                val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+                if _traces.isDefined
+                then
+                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+                  eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+                else
+                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+                  eqtn :+= bind -> sumʹ
               Some {
                 Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, sumʹ)
                 ->
@@ -618,6 +623,9 @@ object Encoding:
               ν(names.map(_.asSymbol.name)*)
             case it @ τ(_, given Option[Code]) =>
               it.copy(code = recoded(free))(it.id)
+            case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), _, given Option[Code]) =>
+              val paramsʹ = params.map(_.asSymbol).filterNot(_.name.isEmpty).map(rebind(_))
+              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded(free))(it.id)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code]) =>
               it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))(it.id)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code]) =>

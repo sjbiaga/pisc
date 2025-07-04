@@ -30,8 +30,10 @@ import _root_.java.io.{ PrintStream, FileOutputStream }
 
 import _root_.scala.collection.immutable.Map
 
+import _root_.cats.instances.list.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
+import _root_.cats.syntax.traverse.*
 
 import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, Ref }
@@ -132,21 +134,22 @@ package object `Π-loop`:
         IO.unit
 
 
-  private def exit(ls: List[String])
+  private def exit(ks: List[String])
                   (using % : %, ! : !): IO[Unit] =
-    NonEmptyList.fromList(ls).map(_
-      .traverse { key =>
-        %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
-      }
-      .as {
-        if !sys.BooleanProp.keyExists(spirsx).value
-        && ls.forall(_.charAt(36) == '!')
-        then ExitCode.Success
-        else ExitCode.Error
-      } >>= (!.complete(_).void)
-    ).getOrElse {
+    if ks.isEmpty
+    then
       !.complete(ExitCode.Success).void
-    }
+    else
+      ks
+        .traverse { key =>
+          %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
+        }
+        .as {
+          if !sys.BooleanProp.keyExists(spirsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.Success
+          else ExitCode.Error
+        } >>= (!.complete(_).void)
 
 
   def loop(parallelism: Int)
@@ -169,7 +172,9 @@ package object `Π-loop`:
               *.take >> loop(parallelism)
             else
               ∥(it)(`π-wand`._1)(parallelism) match
-                case Some(nel) =>
+                case Nil =>
+                  this.exit(it.map(_._1).toList)
+                case nel =>
                   nel.parTraverse { case (key1, key2, (delay, duration)) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
@@ -199,8 +204,6 @@ package object `Π-loop`:
                                     yield
                                       ()
                                   } >> loop(parallelism)
-                case _ =>
-                  this.exit(it.map(_._1).toList)
           }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
