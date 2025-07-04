@@ -39,8 +39,6 @@ import scala.collection.mutable.{
 
 import scala.meta.Term
 
-import generator.Meta.`()(null)`
-
 import StochasticPi.*
 import Calculus.*
 import Encoding.*
@@ -50,33 +48,22 @@ import Expansion.Duplications
 
 abstract class StochasticPi extends Expression:
 
-  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
+  def μ: Parser[(μ, (Names, Names))] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ code =>
         val free = code.map(_._2).getOrElse(Names())
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free ++ freeʹ)
+        val rʹ = Some(r.getOrElse(None))
+        τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free)
     } |
-    name ~ opt("@"~>rate) ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ opt("@"~>rate) ~ ("<"~>name<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~  Some((arg, free)) ~ Some((it, freeʹʹ)) =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ ++ freeʹʹ)
-      case (ch, name) ~ r ~ Some((arg, free)) ~ _ =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ r ~ _ ~ Some((it, free)) =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, λ(`()(null)`), polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ r ~ _ ~ _ =>
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, λ(`()(null)`), polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ freeʹ)
+      case (ch, name) ~ r ~  (arg, free) ~ Some((it, freeʹ)) =>
+        val rʹ = Some(r.getOrElse(None))
+        π(ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
+      case (ch, name) ~ r ~ (arg, free) ~ _ =>
+        val rʹ = Some(r.getOrElse(None))
+        π(ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free)
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -87,9 +74,8 @@ abstract class StochasticPi extends Expression:
         throw TermParsingException(enums)
       case (ch, name) ~ r ~ (par, bound) ~ code =>
         val free = code.map(_._2).getOrElse(Names())
-        val rʹ = Some(r.map(_._1).getOrElse(None))
-        val freeʹ = r.map(_._2).getOrElse(Names())
-        π(ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ free ++ freeʹ)
+        val rʹ = Some(r.getOrElse(None))
+        π(ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ free)
     } |
     name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -126,17 +112,25 @@ abstract class StochasticPi extends Expression:
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
-  def rate: Parser[(Any, Names)] = "("~>rate<~")" |
-                                   "∞" ^^ { _ => -1L -> Names() } |
-                                   wholeNumber<~"∞" ^^ { -_.toLong.abs -> Names() } |
-                                   "⊤" ^^ { _ => 1L -> Names() } |
-                                   wholeNumber<~"⊤" ^^ { _.toLong.abs -> Names() } |
-                                   floatingPointNumber ^^ { BigDecimal(_) -> Names() } |
-                                   super.ident ^^ { Symbol(_) -> Names() } |
-                                   expression ^^ {
-                                     case ((Right(term), _), free) => term -> free
-                                     case ((Left(enums), _), _) => throw TermParsingException(enums)
-                                   }
+  def rate: Parser[Any] = "("~>rate<~")" |
+                          "∞" ^^ { _ => -1L } |
+                          wholeNumber<~"∞" ^^ { -_.toLong.abs } |
+                          "⊤" ^^ { _ => 1L } |
+                          wholeNumber<~"⊤" ^^ { _.toLong.abs } |
+                          floatingPointNumber ^^ { BigDecimal(_) } |
+                          super.ident ^^ { Symbol(_) } |
+                          expression ^^ {
+                            case ((Right(term), _), free) =>
+                              if free.nonEmpty
+                              then
+                                val werr = _werr
+                                _werr = false
+                                warn(throw RateFreeNamesException(free.map(_.name).toSeq*))
+                                _werr = werr
+                              term
+                            case ((Left(enums), _), _) =>
+                              throw TermParsingException(enums)
+                          }
 
   def nameʹ: Parser[(λ, Names)] =
     name ~ opt(`type`) ^^ {
@@ -199,6 +193,8 @@ abstract class StochasticPi extends Expression:
   protected var _dirs = List[Map[String, Any]]()
 
   protected var _dups: Boolean = false
+
+  protected var _traces: Option[Option[String]] = None
 
   private[parser] var _id: helper.υidυ = null
 
@@ -308,6 +304,12 @@ object StochasticPi:
   case class WholeNumberFormatException(msg: String, cause: Throwable = null)
       extends PrefixParsingException("The weight is a natural number that must " + msg, cause)
 
+  case class RateFreeNamesException(names: String*)
+      extends PrefixParsingException(s"""A rate that is a Scalameta Term may have free names '${names.mkString(", ")}' which are ignored""")
+
+  case object TracesRateException
+      extends PrefixParsingException("When tracing is on, used rates must not be Scala code")
+
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
 
@@ -319,9 +321,6 @@ object StochasticPi:
 
   case class ConsItselfParsingException(name: Symbol, cons: String)
       extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is itself the result")
-
-  case class ConsWithRateParsingException(name: Symbol, cons: String)
-      extends PrefixParsingException(s"A name ${name.name} that knows how to CONS (`$cons') is used with a rate")
 
 
   // functions
@@ -784,6 +783,11 @@ object StochasticPi:
                 .map(Symbol(_))
                 .foreach(bound._2.prepend(_))
               true
+            case (_, (π(λ(lch: Symbol), λ(lparams: List[`λ`]), Some(lcons), _, _)
+                     ,π(λ(rch: Symbol), λ(rparams: List[`λ`]), Some(rcons), _, _))) =>
+              val lparamsʹ = lparams.map(_.asSymbol)
+              val rparamsʹ = rparams.map(_.asSymbol)
+              equal(lch, rch) && (lparamsʹ zip rparamsʹ).map(equalʹ(_, _)).forall(identity) && lcons == rcons
             case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _, _)
                      ,π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _, _))) =>
               equal(lch, rch) && equalʹ(lpar, rpar) && lcons == rcons
@@ -920,7 +924,8 @@ object StochasticPi:
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
       _dups = false
-      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
+      _traces = None
+      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups, "traces" -> _traces))
       eqtn = List()
       defn = Map()
       self = Set()

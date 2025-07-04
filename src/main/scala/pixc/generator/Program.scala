@@ -161,7 +161,7 @@ object Program:
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)
                        ))
 
-        case π(λ(Symbol(ch)), λ(params: List[λ]), Some(cons), _, code) =>
+        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -264,33 +264,21 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val it = Term.If(Term.ApplyUnary("!", par),
-                           `IO.cede`,
-                           Term.Block(`val` :::
-                             `NonEmptyList( *, … ).parSequence`(
-                               sum.generate,
-                               `!.π⋯`
-                             ) :: Nil
-                           )
+          val it = Term.Block(`val` :::
+                              `NonEmptyList( *, … ).parSequence`(
+                                sum.generate,
+                                `!.π⋯`
+                              ) :: Nil
                    )
 
           * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
 
         case !(Some(μ), sum) =>
           val υidυ = id
-          val υidυ2 = id
 
-          val `μ.generate` = μ.generate match
-            case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              it.copy(pat = Pat.Var(υidυ2)) :: tl
+          val `μ.generate` = μ.generate
 
-          val `!.μ⋯` = `μ.generate` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
-                                                                          Type.ArgClause(Nil),
-                                                                          Term.ArgClause(Lit.Null() :: Nil)),
-                                                          `IO.cede`,
-                                                          s"$υidυ(`π-uuid`)".parse[Term].get,
-                                                          Nil)
-                                                }
+          val `!.μ⋯` = `μ.generate` :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
 
           val it = `NonEmptyList( *, … ).parSequence`(
                      sum.generate,

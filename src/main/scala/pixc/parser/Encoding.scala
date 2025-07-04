@@ -100,7 +100,13 @@ abstract class Encoding extends Calculus:
                 throw DefinitionFreeNamesException(_code, free &~ bound)
               if parameters.size == _parameters.size
               then
-                eqtn :+= `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*) -> sumʹ
+                if _traces.isDefined
+                then
+                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+                  eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+                else
+                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+                  eqtn :+= bind -> sumʹ
               Some {
                 Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, sumʹ)
                 ->
@@ -216,7 +222,7 @@ abstract class Encoding extends Calculus:
       case it => it
 
     private def key: String => Boolean = canonical andThen {
-      case "errors" | "duplications" => true
+      case "errors" | "duplications" | "traces" => true
       case _ => false
     }
 
@@ -229,11 +235,25 @@ abstract class Encoding extends Calculus:
             case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
         case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
 
+    private def file: Option[String] =
+      _dir.get._2 match
+        case it: String if it.toLowerCase == "console" => None
+        case _: String => Some(string("<console> or a filename"))
+        case _ => throw DirectiveValueParsingException(_dir.get, "<console> or a filename")
+
     private def keys: Set[String] =
       _dir.get._2 match
         case it: String if key(it) => Set(canonical(it))
         case it: List[String] if it.forall(key) => Set.from(it.map(canonical))
         case _ => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
+
+    private def string(`type`: String = "a string"): String =
+      _dir.get._2 match
+        case it: String
+            if (it.startsWith("\"") ||  it.startsWith("'"))
+            && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
+          it.substring(1, it.length-1)
+        case _ => throw DirectiveValueParsingException(_dir.get, s"${`type`}")
 
     def apply(): Unit =
 
@@ -245,16 +265,30 @@ abstract class Encoding extends Calculus:
         case "duplications" =>
           _dups = boolean
 
+        case "traces" =>
+          try
+            if boolean
+            then
+              _traces = Some(None)
+            else
+              _traces = None
+          catch _ =>
+             try
+               _traces = Some(file)
+             catch _ =>
+               throw DirectiveValueParsingException(_dir.get, "a boolean, <console> or a filename")
+
         case "push" =>
           try
             if boolean
             then
-              _dirs ::= Map("errors" -> _werr, "duplications" -> _dups)
+              _dirs ::= Map("errors" -> _werr, "duplications" -> _dups, "traces" -> _traces)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
+                case it @ "traces" => it -> _traces
               }
             }
 
@@ -264,6 +298,7 @@ abstract class Encoding extends Calculus:
             _dirs.head.foreach {
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
+              case ("traces", it: Option[Option[String]]) => _traces = it
               case _ => ???
             }
             _dirs = _dirs.tail
@@ -609,6 +644,9 @@ object Encoding:
               ν(names.map(_.asSymbol.name)*)
             case it @ τ(_, given Option[Code]) =>
               it.copy(code = recoded(free))(it.id)
+            case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), _, given Option[Code]) =>
+              val paramsʹ = params.map(_.asSymbol).filterNot(_.name.isEmpty).map(rebind(_))
+              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded(free))(it.id)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code]) =>
               it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))(it.id)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code]) =>

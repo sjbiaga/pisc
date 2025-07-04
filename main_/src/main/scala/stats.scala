@@ -72,9 +72,9 @@ package object `Π-stats`:
 
   def ∥(% : Map[String, (>*<, Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (parallelism: Int, check: Boolean = false): List[(String, String, Double)] =
-                                                      // ^^^^^^  ^^^^^^  ^^^^^^
-                                                      // key1    key1|2  duration
+       (parallelism: Int, check: Boolean = false): List[(String, String, (Double, Double))] =
+                                                      // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
+                                                      // key1    key1|2   delay   duration
 
     val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -154,9 +154,9 @@ package object `Π-stats`:
         case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, Double), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^    ^^^  ^^^^^^
-    //             key1    key1|2  duration  pri  delay
+    var r = List[((String, String, (Double, Double)), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2   delay   duration   pri  delay
 
     for
       i <- 0 until χ.size
@@ -177,7 +177,7 @@ package object `Π-stats`:
           else
             ???
         val delay = delta(rate)
-        r :+= (key1, key1, if priority == 2 then delay else duration) -> (priority -> delay)
+        r :+= (key1, key1, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -219,9 +219,9 @@ package object `Π-stats`:
               val delay = delta(rate)
               if polarity2.get
               then
-                r :+= (key1, key2, if priority == 2 then delay else duration) -> (priority -> delay)
+                r :+= (key1, key2, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
               else
-                r :+= (key2, key1, if priority == 2 then delay else duration) -> (priority -> delay)
+                r :+= (key2, key1, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 

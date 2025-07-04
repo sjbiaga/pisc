@@ -76,7 +76,7 @@ Main(k) = ν(aaa)             \
         )
 
 Fake(k, aaa) = if k = /*0*/                                                          \
-               then aaa<>/*_ <- transactor                                           \
+               then τ/*_ <- transactor                                               \
                                   .use(select                                        \
                                          .fold(()) { case (_, (c, p, b)) =>          \
                                                      var w = "landed on";            \

@@ -35,7 +35,7 @@ package object sΠ:
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ IO, IOLocal, Deferred, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Clock, Deferred, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
 
@@ -297,7 +297,8 @@ package object sΠ:
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[(Double, (-, -))]]
         dummy_ref <- Ref.of[IO, ><](><())
-        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref, None, rate)))
+        timestamp <- Clock[IO].monotonic.map(_.toNanos)
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref, None, rate))))
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -333,11 +334,12 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String, `][`: `][`): IO[java.lang.Double] =
       for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
-        _        <- IO { assert(!value.name.isInstanceOf[`)(`]) }
-        delay    <- ><(key, value.name, `)(`)(deferred)(ref)
+        _         <- exclude(key)
+        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        timestamp <- Clock[IO].monotonic.map(_.toNanos)
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref, Some(false), rate))))
+        _         <- IO { assert(!value.name.isInstanceOf[`)(`]) }
+        delay     <- ><(key, value.name, `)(`)(deferred)(ref)
       yield
         delay
 
@@ -349,11 +351,12 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String, `][`: `][`): IO[java.lang.Double] =
       for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
-        _        <- IO { assert(!value.name.isInstanceOf[`)(`]) }
-        delay    <- ><(key, value.name, `)(`)(code)(deferred)(ref)
+        _         <- exclude(key)
+        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        timestamp <- Clock[IO].monotonic.map(_.toNanos)
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref, Some(false), rate))))
+        _         <- IO { assert(!value.name.isInstanceOf[`)(`]) }
+        delay     <- ><(key, value.name, `)(`)(code)(deferred)(ref)
       yield
         delay
 
@@ -367,7 +370,8 @@ package object sΠ:
       for
         _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
+        timestamp  <- Clock[IO].monotonic.map(_.toNanos)
+        _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref, Some(true), rate))))
         (r, delay) <- ><(key, `)(`)(deferred)(ref)
       yield
         new `()`(r) -> delay
@@ -382,7 +386,8 @@ package object sΠ:
       for
         _          <- exclude(key)
         deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
+        timestamp  <- Clock[IO].monotonic.map(_.toNanos)
+        _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref, Some(true), rate))))
         (r, delay) <- ><(key, `)(`)(code)(deferred)(ref)
       yield
         new `()`(r) -> delay
