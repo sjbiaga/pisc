@@ -50,7 +50,7 @@ import Expansion.Duplications
 
 abstract class Pi extends Expression:
 
-  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
+  def μ: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         τ(Some(it)) -> (Names(), free)
@@ -415,6 +415,11 @@ object Pi:
                 .map(Symbol(_))
                 .foreach(bound._2.prepend(_))
               true
+            case (_, (π(λ(lch: Symbol), λ(lparams: List[`λ`]), Some(lcons), _)
+                     ,π(λ(rch: Symbol), λ(rparams: List[`λ`]), Some(rcons), _))) =>
+              val lparamsʹ = lparams.map(_.asSymbol)
+              val rparamsʹ = rparams.map(_.asSymbol)
+              equal(lch, rch) && (lparamsʹ zip rparamsʹ).map(equalʹ(_, _)).forall(identity) && lcons == rcons
             case (_, (π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _)
                      ,π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _))) =>
               equal(lch, rch) && equalʹ(lpar, rpar) && lcons == rcons
