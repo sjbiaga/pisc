@@ -100,13 +100,14 @@ abstract class Encoding extends Calculus:
                 throw DefinitionFreeNamesException(_code, free &~ bound)
               if parameters.size == _parameters.size
               then
-                if _traces.isDefined
+                if !_exclude
                 then
                   val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                  eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
-                else
-                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                  eqtn :+= bind -> sumʹ
+                  if _traces.isDefined
+                  then
+                    eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+                  else
+                    eqtn :+= bind -> sumʹ
               Some {
                 Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, sumʹ)
                 ->
@@ -205,7 +206,9 @@ abstract class Encoding extends Calculus:
       case it => it
 
     private def key: String => Boolean = canonical andThen {
-      case "errors" | "duplications" | "traces" => true
+      case "errors" | "duplications"
+         | "exclude" | "include"
+         | "parallelism" | "traces" => true
       case _ => false
     }
 
@@ -217,6 +220,15 @@ abstract class Encoding extends Calculus:
             case "1" | "on" | "true" => true
             case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
         case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
+
+    private def number: Double =
+      _dir.get._2 match
+        case it: String =>
+          try
+            it.toDouble
+          catch
+            case _: NumberFormatException =>
+              throw DirectiveValueParsingException(_dir.get, "a number")
 
     private def file: Option[String] =
       _dir.get._2 match
@@ -248,6 +260,15 @@ abstract class Encoding extends Calculus:
         case "duplications" =>
           _dups = boolean
 
+        case "exclude" =>
+          _exclude = boolean
+
+        case "include" =>
+          _exclude = !boolean
+
+        case "parallelism" =>
+          _par = 1 max number.toInt
+
         case "traces" =>
           try
             if boolean
@@ -265,12 +286,18 @@ abstract class Encoding extends Calculus:
           try
             if boolean
             then
-              _dirs ::= Map("errors" -> _werr, "duplications" -> _dups, "traces" -> _traces)
+              _dirs ::= Map("errors" -> _werr,
+                            "duplications" -> _dups,
+                            "exclude" -> _exclude,
+                            "parallelism" -> _par,
+                            "traces" -> _traces)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
+                case "exclude" | "include" => "exclude" -> _exclude
+                case it @ "parallelism" => it -> _par
                 case it @ "traces" => it -> _traces
               }
             }
@@ -281,6 +308,8 @@ abstract class Encoding extends Calculus:
             _dirs.head.foreach {
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
+              case ("exclude", it: Boolean) => _exclude = it
+              case ("parallelism", it: Int) => _par = it
               case ("traces", it: Option[Option[String]]) => _traces = it
               case _ => ???
             }

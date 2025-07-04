@@ -24,10 +24,10 @@ function spi() {
                   --dep org.typelevel::cats-effect:3.7-4972921 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
-                  -Dpisc.stochastic.communications.parallelism.level=9 \
-                  -Dpisc.stochastic.replications.exitcode.ignore=false \
                   ${args#?} \
                   2>&1
+#                  -Dpisc.stochastic.replications.exitcode.ignore=false \
+#                  -Dpisc.stochastic.communications.parallelism.level=9 \
 }
 
 function spi_() {
@@ -54,10 +54,10 @@ function spi_() {
                   --dep org.typelevel::cats-effect:3.7-4972921 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
-                  -Dpisc.stochastic.communications.parallelism.level=9 \
-                  -Dpisc.stochastic.replications.exitcode.ignore=false \
                   ${args#?} \
                   2>&1
+#                  -Dpisc.stochastic.replications.exitcode.ignore=false \
+#                  -Dpisc.stochastic.communications.parallelism.level=9 \
 }
 
 function spio() {

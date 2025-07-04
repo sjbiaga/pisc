@@ -452,17 +452,19 @@ object Calculus:
       object Par:
         inline implicit def lʹ(i: Int): String = l + "∥" + i
 
-      inline def idʹ(id: => String, r: Any): String =
+      inline def idʹ(id: => String, ch: String, p: String, r: Any): String =
         val (identifier, filename) = summon[(String, String)]
-        id + "," + identifier + "," + l + "," + rateʹ(r) + "," + filename
+        id + "," + ch + "," + p + "," + identifier + "," + l + "," + rateʹ(r) + "," + filename
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {
           case it: τ =>
-            it.copy()(idʹ(it.id, it.rate.get))
+            it.copy()(idʹ(it.id, "τ", "", it.rate.get))
           case it: π
               if it.polarity.map(_.isEmpty).getOrElse(true) =>
-            it.copy()(idʹ(it.id, it.rate.get))
+            val polarity = it.polarity.fold(false)(_ => true)
+            val name = it.channel.asSymbol.name
+            it.copy()(idʹ(it.id, name, polarity.toString, it.rate.get))
           case it => it
         }
 

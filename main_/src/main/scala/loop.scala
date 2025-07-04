@@ -116,19 +116,22 @@ package object `Π-loop`:
 
   private def tracing(started: Long, ended: Long, silent: Boolean, delay: Double, duration: Double): String => IO[Unit] =
     _.split(",") match
-      case Array(key, agent, label, rate) =>
+      case Array(key, name, polarity, agent, label, rate) =>
         IO.blocking {
-          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 started, ended, silent, key.stripPrefix("!"), key.startsWith("!"),
+          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+                 started, ended, silent, name, polarity,
+                 key.stripPrefix("!"), key.startsWith("!"),
                  agent, label, rate, delay, duration)
         }
-      case Array(key, agent, label, rate, filename*) =>
+      case Array(key, name, polarity, agent, label, rate, filename*) =>
         var ps: PrintStream = null
         IO.blocking {
-          ps = PrintStream(FileOutputStream(filename.mkString(",") + ".csv", true), true)
-          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    started, ended, silent, key.stripPrefix("!"), key.startsWith("!"),
-                    agent, label, rate, delay, duration, filename.mkString(","))
+          val fn = filename.mkString(",")
+          ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
+          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    started, ended, silent, name, polarity,
+                    key.stripPrefix("!"), key.startsWith("!"),
+                    agent, label, rate, delay, duration, fn)
         }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
       case _ =>
         IO.unit

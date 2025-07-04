@@ -58,7 +58,7 @@ object App extends IOApp:
   override def run(args: List[String]): IO[ExitCode] =
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
-            else 9
+            else π.`π-parallelism`
     for
       % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]

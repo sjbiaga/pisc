@@ -135,7 +135,6 @@ the input but before returning from it.
 Unlike the rest of the agents, the `Main` agent has the command line arguments
 spliced as `vararg` parameter(s).
 
-
 Stochastic
 ----------
 
@@ -294,31 +293,34 @@ polarity action and the negative polarity action) `await`, and only continue as
 soon as - after the "communication" but not before its result -, the keys to be
 discarded are discarded and the keys to be enabled are enabled.
 
-Tracing
--------
+Traces
+------
 
-Tracing is enabled by the `"traces"` directive. If active, the keys of actions
-are appended: the agent name from the current equation, a label, the action's
-rate and the filename where traces are directed. However, it is not until
-runtime that these keys may be possibly used. The tracing output is a `.csv`
-file with the following columns:
+Traces are enabled by the `"traces"` directive. If active, the keys of actions
+are appended: the channel name, ("τ" for the silent action), the agent name from
+the current equation, a label, the action's rate, and the filename where traces
+are directed. However, it is not until runtime that these keys may be possibly
+used. The traces' output is a `.csv` file with the following columns:
 
-    start,end,silent,key,replication,agent,label,rate,delay,duration,filename
+    start,end,silent,name,polarity,key,replication,agent,label,rate,delay,duration,filename
 
 The first two column are two timestamps, the `start` and `end` of the action in
-nanoseconds. The third column tells whether this row corresponds to the silent
+nanoseconds. The third column tells whether this row corresponds to the _silent_
 action or otherwise to the input or the output part of a communication (if the
-latter is the case, the `end` timestamp is the same). The fourth column stores
-the _key_. The fifth tells whether the action is the guard of a _replication_. The
-sixth is the originating agent _name_. The seventh is a _label_ that is a string
-of tags, which differentiate between the elements in summations and compositions.
-The eighth is the _delay_ of the action (silent or communication). The ninth may
-be `0.0` for immediate actions, `NaN` for passive actions or the same as the
-eighth for active actions. The final tenth column is the _filename_ (with
-possible ignored commas) or empty.
+latter is the case, the `end` timestamp is the same): the _channel name_ is the
+fourth column (or "τ"). The polarity of the action (`false` for output, `true`
+for input, empty for `τ`) is the fifth column. The sixth stores the unique
+_key_. The seventh tells whether the action is the guard of a _replication_. The
+eighth is the originating _agent name_. The ninth is a _label_ that is a string
+of tags, which differentiate between summations and compositions. The tenth is
+the _rate_. The eleventh is the _delay_ of the action (silent or communication).
+The twelfth may be `0.0` for immediate actions, `NaN` for  passive actions or
+the same as the eleventh for active actions. The final thirteenth column is a
+_filename_ (with possible to be ignored commas) or empty.
 
 There may be silent actions which are inserted after the other are labelled:
-these are not traceable, but neither do they need be.
+these are not traceable, but nor should they need be; if they are still needed,
+they must be inserted explicitly.
 
 Program
 -------
