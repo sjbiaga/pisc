@@ -47,7 +47,7 @@ import Expansion.Duplications
 
 abstract class PolyadicPi extends Expression:
 
-  def μ(using bindings: Bindings): Parser[(μ, (Names, Names))] =
+  def μ: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         τ(Some(it)) -> (Names(), free)
