@@ -342,7 +342,7 @@ object Calculus:
       case it: Boolean => it.toString.capitalize
       case it: String => "\"" + it + "\""
       case it: Term => "/*" + it + "*/"
-      case it: List[λ] => it.mkString(", ")
+      case it: List[`λ`] => it.mkString(", ")
 
 
   // exceptions
