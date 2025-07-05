@@ -99,6 +99,8 @@ abstract class Ambient extends Expression:
 
   protected var _dups: Boolean = false
 
+  protected var _exclude: Boolean = false
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _χ_id: helper.υidυ = null
@@ -246,7 +248,10 @@ object Ambient:
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _werr = errors
       _dups = false
-      _dirs = List(Map("errors" -> _werr, "duplications" -> _dups))
+      _exclude = false
+      _dirs = List(Map("errors" -> _werr,
+                       "duplications" -> _dups,
+                       "exclude" -> _exclude))
       eqtn = List()
       defn = Map()
       self = Set()
@@ -258,42 +263,55 @@ object Ambient:
 
       given Duplications()
 
-      (source.getLines() ++ Some(""))
-        .zipWithIndex
-        .foldLeft(List[(String, (Int, Int))]() -> false) {
-          case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-          case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
-        }._1
-        .flatMap { case (it, (m, n)) =>
-          l = (m+1, n+1)
-          if it.matches("^[ ]*#.*") // commented lines
-          || it.isBlank // empty lines
-          then
-            None
-          else if it.matches("^[ ]*@.*")
-          then // Scala
-            Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-          else // Ambient
-            _cntr = Map(0 -> 0L)
-            _nth = Map(0 -> 0L)
-            parseAll(line, it) match
-              case Success(Left(equation), _) =>
-                eqtn :+= equation
-                val equations = eqtn.slice(i, eqtn.size)
-                i = eqtn.size
-                equations.map(Right(_))
-              case Success(Right(Some(definition)), _) =>
-                if !defn.contains(_code) then defn(_code) = Nil
-                defn(_code) ::= definition
-                Nil
-              case Success(Right(_), _) => // directive
-                Nil
-              case failure: NoSuccess =>
-                scala.sys.error(failure.msg)
-        }
-        .filter {
-          case Right((`(*)`(s"Self_$n", _, _*), _))
-              if { try { n.toInt; true } catch _ => false } =>
-            self.contains(n.toInt)
-          case _ => true
-        }
+      val r =
+        (source.getLines() ++ Some(""))
+          .zipWithIndex
+          .foldLeft(List[(String, (Int, Int))]() -> false) {
+            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
+            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          }._1
+          .flatMap { case (it, (m, n)) =>
+            l = (m+1, n+1)
+            if it.matches("^[ ]*#.*") // commented lines
+            || it.isBlank // empty lines
+            then
+              None
+            else if it.matches("^[ ]*@.*")
+            then // Scala
+              Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+            else // Ambient
+              _cntr = Map(0 -> 0L)
+              _nth = Map(0 -> 0L)
+              parseAll(line, it) match
+                case Success(Left(equation), _) =>
+                  if !_exclude
+                  then
+                    eqtn :+= equation
+                    val equations = eqtn.slice(i, eqtn.size)
+                    i = eqtn.size
+                    equations.map(Right(_))
+                  else
+                    Nil
+                case Success(Right(Some(definition)), _) =>
+                  if !_exclude
+                  then
+                    if !defn.contains(_code) then defn(_code) = Nil
+                    defn(_code) ::= definition
+                  Nil
+                case Success(Right(_), _) => // directive
+                  Nil
+                case failure: NoSuccess =>
+                  scala.sys.error(failure.msg)
+          }
+
+      ( if i < eqtn.size && !_exclude
+        then
+          r ::: eqtn.slice(i, eqtn.size).map(Right(_))
+        else
+          r
+      ).filter {
+        case Right((`(*)`(s"Self_$n", _, _*), _))
+            if { try { n.toInt; true } catch _ => false } =>
+          self.contains(n.toInt)
+        case _ => true
+      }
