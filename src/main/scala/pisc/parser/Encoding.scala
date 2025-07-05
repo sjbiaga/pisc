@@ -100,7 +100,10 @@ abstract class Encoding extends Calculus:
                 throw DefinitionFreeNamesException(_code, free &~ bound)
               if parameters.size == _parameters.size
               then
-                eqtn :+= `(*)`("Self_" + _code, Nil, bound.map(λ(_)).toSeq*) -> sumʹ
+                if !_exclude
+                then
+                  val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.map(λ(_)).toSeq*)
+                  eqtn :+= bind -> sumʹ
               Some {
                 Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, sumʹ)
                 ->
@@ -199,7 +202,8 @@ abstract class Encoding extends Calculus:
       case it => it
 
     private def key: String => Boolean = canonical andThen {
-      case "errors" | "duplications" => true
+      case "errors" | "duplications"
+         | "exclude" | "include" => true
       case _ => false
     }
 
@@ -228,16 +232,25 @@ abstract class Encoding extends Calculus:
         case "duplications" =>
           _dups = boolean
 
+        case "exclude" =>
+          _exclude = boolean
+
+        case "include" =>
+          _exclude = !boolean
+
         case "push" =>
           try
             if boolean
             then
-              _dirs ::= Map("errors" -> _werr, "duplications" -> _dups)
+              _dirs ::= Map("errors" -> _werr,
+                            "exclude" -> _exclude,
+                            "duplications" -> _dups)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
+                case "exclude" | "include" => "exclude" -> _exclude
               }
             }
 
@@ -247,6 +260,7 @@ abstract class Encoding extends Calculus:
             _dirs.head.foreach {
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
+              case ("exclude", it: Boolean) => _exclude = it
               case _ => ???
             }
             _dirs = _dirs.tail
