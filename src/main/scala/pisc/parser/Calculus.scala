@@ -59,7 +59,7 @@ abstract class Calculus extends StochasticPi:
               throw EquationFreeNamesException(bind.identifier, free &~ bound)
             if _traces.isDefined
             then
-              bind -> sum.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+              bind -> sum.labelʹ(using bind.identifier -> _traces.get.getOrElse(""))
             else
               bind -> sum
         }
@@ -380,9 +380,6 @@ object Calculus:
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
 
-  case class TracesElvisParsingException(identifier: String)
-      extends ParsingException(s"When tracing is on, either if-then-else or Elvis operator is not allowed in the right hand side of $identifier")
-
 
   // functions
 
@@ -442,6 +439,16 @@ object Calculus:
 
         case _ => ast
 
+    def labelʹ(using (String, String)): T =
+
+      ast match
+
+        case `+`(_, ∥(`.`(!(Some(_), _)))) =>
+          ast.label("+0")
+
+        case _ =>
+          ast.label("")
+
     def label(l: String)(using (String, String)): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
@@ -454,7 +461,7 @@ object Calculus:
 
       inline def idʹ(id: => String, ch: String, p: String, r: Any): String =
         val (identifier, filename) = summon[(String, String)]
-        id + "," + ch + "," + p + "," + identifier + "," + l + "," + rateʹ(r) + "," + filename
+        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + identifier + "," + filename
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {
@@ -492,11 +499,12 @@ object Calculus:
         case `.`(end, it*) =>
           `.`(end.label(l), relabelled(it)*)
 
-        case ?:(cond, t, None) =>
-          ?:(cond, t.label(l), None)
+        case ?:(cond, t, Some(f)) =>
+          import Sum.*
+          ?:(cond, t.label(0), Some(f.label(1)))
 
-        case _: ?: =>
-          throw TracesElvisParsingException(summon[(String, String)]._1)
+        case ?:(cond, t, _) =>
+          ?:(cond, t.label(l), None)
 
         case !(None, sum) =>
           `!`(None, sum.label(l))

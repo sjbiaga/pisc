@@ -114,24 +114,24 @@ package object `Π-loop`:
     else
       IO.unit
 
-  private def tracing(started: Long, ended: Long, silent: Boolean, delay: Double, duration: Double): String => IO[Unit] =
+  private def traces(started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
     _.split(",") match
-      case Array(key, name, polarity, agent, label, rate) =>
+      case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
-          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 started, ended, silent, name, polarity,
+          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+                 started, ended, name, polarity,
                  key.stripPrefix("!"), key.startsWith("!"),
-                 agent, label, rate, delay, duration)
+                 label, rate, delay, duration, agent)
         }
-      case Array(key, name, polarity, agent, label, rate, filename*) =>
+      case Array(key, name, polarity, label, rate, agent, filename*) =>
         var ps: PrintStream = null
         IO.blocking {
           val fn = filename.mkString(",")
           ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    started, ended, silent, name, polarity,
+          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
-                    agent, label, rate, delay, duration, fn)
+                    label, rate, delay, duration, agent, fn)
         }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
       case _ =>
         IO.unit
@@ -196,10 +196,10 @@ package object `Π-loop`:
                                       _  <- d1.complete(Some(delay -> (-, --)))
                                       _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
                                       ts <- Clock[IO].monotonic.map(_.toNanos)
-                                      _  <- tracing(ts1, ts, k1 == k2, delay, duration)(k1)
+                                      _  <- traces(ts1, ts, delay, duration)(k1)
                                       _  <- if k1 == k2
                                             then IO.unit
-                                            else tracing(ts2, ts, k1 == k2, delay, duration)(k2)
+                                            else traces(ts2, ts, delay, duration)(k2)
                                       _  <- -.await
                                       _  <- ready(k1)
                                       _  <- if k1 == k2 then IO.unit else ready(k2)

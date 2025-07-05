@@ -311,7 +311,7 @@ object StochasticPi:
       extends PrefixParsingException(s"""A rate that is a Scalameta Term may have free names '${names.mkString(", ")}' which are ignored""")
 
   case object TracesRateException
-      extends PrefixParsingException("When tracing is on, used rates must not be Scala code")
+      extends PrefixParsingException("When traces are active, used rates must not be Scala code")
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")

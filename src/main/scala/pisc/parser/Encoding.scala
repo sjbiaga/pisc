@@ -105,7 +105,7 @@ abstract class Encoding extends Calculus:
                   val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
                   if _traces.isDefined
                   then
-                    eqtn :+= bind -> sumʹ.label("")(using bind.identifier -> _traces.get.getOrElse(""))
+                    eqtn :+= bind -> sumʹ.labelʹ(using bind.identifier -> _traces.get.getOrElse(""))
                   else
                     eqtn :+= bind -> sumʹ
               Some {
