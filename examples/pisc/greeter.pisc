@@ -31,9 +31,10 @@ Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
                       + τ@r.Greeter"'(stdout, name)
 
 Greeter'(stdout, name) = \
-                       ( ([/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">.)                   \
-                       | ([name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">.)                                 \
-                       | ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"][name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.)  \
+                       ( ([/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">.)  \
+                       + ([name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">.)                \
+                       + ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"]                                      \
+                          [name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.)                            \
                        )
 
 Greeter"(stdout, name) =                                                    \

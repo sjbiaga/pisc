@@ -1,11 +1,15 @@
-Stochastic Pi-calculus in SCala aka PISC ala RISC
-=================================================
+Stochastic Pi-calculus in SCala aka sPISC ala RISC
+==================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
 
 The stochastic branch adds rates to actions in comparison with
 the [π-calculus](https://github.com/sjbiaga/pisc/tree/main).
+This branch heavily uses `flatMap`'s and comparison with `null` to
+discard actions.
+Another [branch](https://github.com/sjbiaga/pisc/tree/stochastic)
+uses cancellation to discard actions.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.
@@ -239,8 +243,7 @@ It creates a `Deferred[IO, Option[(Double, -)]]` and offers these together with 
 action `rate` associated with the key, or enqueues a quadruple in the `/` `Queue`.
 That does not mean the rate will be used, because the action may be _discarded_.
 Then, it blocks semantically on the `Deferred.get` method. If discarded, it will
-be `canceled`, but the cancellation will not outlive the `Supervisor`'s lifecycle
-which the fiber `use`s for this purpose in a parameter to a (nested) `parSequence`.
+`cede` and drop any subsequent actions altogether.
 
 A background fiber blocks on (`take`ing or) dequeuing this `Queue`. It then updates
 the `%` map of all enabled actions by merely mapping the string `^ + key` (where `^`
@@ -288,7 +291,7 @@ Meanwhile, all methods called (in parallel, either summation or composition)
 from a `for` generator, having `offered` the action rate, are (and must _all_
 be) blocked on `Deferred.get`'s method. As soon as one (pair of) `Deferred` is
 `complete`d, the rest - upon being discarded - will be semantically unblocked
-_and_ canceled. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
+_and_ dropped. Upon `complete`ion of a pair, a `CyclicBarrier[IO](3)` is also
 passed, such that all three fibers (a parallel fiber from the loop, the positive
 polarity action and the negative polarity action) `await`, and only continue as
 soon as - after the "communication" but not before its result -, the keys to be
@@ -449,6 +452,7 @@ where "`uuid`" is some generated `java.util.UUID`.
 
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
+
 
 Apps (examples)
 ---------------

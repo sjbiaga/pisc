@@ -38,7 +38,111 @@ import Meta.*
 
 object Program:
 
-  extension (node: Pre | AST)
+  extension (node: Pre)
+
+    def generate(* : List[Enumerator])(using id: => String): Term =
+
+      val υidυ = id
+
+      node match
+
+        // PREFIXES ////////////////////////////////////////////////////////////
+
+        case it @ τ(r, Some((Left(enums)), _)) =>
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
+                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)),
+                                      enums ::: *)
+
+        case it @ τ(r, Some((Right(term)), _)) =>
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
+                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)),
+                                      `_ <- IO { * }`(term) :: *)
+
+        case it @ τ(r, _) =>
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
+                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)),
+                                      *)
+
+        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Left(enums)), _)) =>
+          val code = `for * yield ()`(enums*)
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                                            Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(code::Nil)),
+                                      *)
+
+        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Right(term)), _)) =>
+          val code = `for * yield ()`(`_ <- IO { * }`(term))
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                                            Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(code::Nil)),
+                                      *)
+
+        case it @ π(λ(Symbol(ch)), arg, None, r, _) =>
+          `*.flatMap { null else … }`(υidυ,
+                                      Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)),
+                                      *)
+
+        case it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code) =>
+          val par = if λ.`type`.isDefined then id else arg
+
+          val ** =
+            λ.`type` match
+              case Some((tpe, Some(refined))) =>
+                `* = *: * …`(arg, par, tpe, refined) :: *
+              case Some((tpe, _)) =>
+                `* = *: *`(arg, par, tpe) :: *
+              case _ =>
+                *
+
+          code match
+            case Some((Right(term), _)) =>
+              Term.Apply(
+                Term.Select(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                                  Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(term::Nil)), "flatMap"),
+                Term.ArgClause(
+                  Term.Block(
+                    Term.Function(
+                      Term.ParamClause(Term.Param(Nil, par, None, None)
+                                    :: Term.Param(Nil, υidυ, None, None) :: Nil),
+                      `if * then … else …`(
+                        Term.ApplyInfix(\(υidυ), \("eq"),
+                                        Type.ArgClause(Nil),
+                                        Term.ArgClause(Lit.Null()::Nil)),
+                        `IO.cede`,
+                        `for * yield ()`(** *)
+                      )
+                    ) :: Nil) :: Nil)
+              )
+
+            case _ =>
+              Term.Apply(
+                Term.Select(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                       Term.ArgClause(Lit.String(it.υidυ)::Nil)), "flatMap"),
+                Term.ArgClause(
+                  Term.Block(
+                    Term.Function(
+                      Term.ParamClause(Term.Param(Nil, par, None, None)
+                                    :: Term.Param(Nil, υidυ, None, None) :: Nil),
+                      `if * then … else …`(
+                        Term.ApplyInfix(\(υidυ), \("eq"),
+                                        Type.ArgClause(Nil),
+                                        Term.ArgClause(Lit.Null()::Nil)),
+                        `IO.cede`,
+                        `for * yield ()`(** *)
+                      )
+                    ) :: Nil) :: Nil)
+              )
+
+        case _ => ??? // caught by parser
+
+        //////////////////////////////////////////////////////////// prefixes //
+
+
+  extension (node: AST)
 
     def generate(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
@@ -76,119 +180,44 @@ object Program:
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ++ _.generate)
+        case `.`(end, ps*) =>
+          * = ps.foldRight(end.generate) {
+
+            case (ν(names*), ios) =>
+              names.map { it => `* <- *`(it -> "ν") }.toList ::: ios
+
+            case (π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code), ios) =>
+              val args = params.map {
+                case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+                case λ(Symbol(par)) => par
+              }
+
+              * = `* :: … :: * = *`(cons -> ch, args*)
+
+              params.zipWithIndex.foreach {
+                case (λ @ λ(Symbol(arg)), i) =>
+                  val par = args(i)
+                  λ.`type` match
+                    case Some((tpe, Some(refined))) =>
+                      * :+= `* = *: * …`(arg, par, tpe, refined)
+                    case Some((tpe, _)) =>
+                      * :+= `* = *: *`(arg, par, tpe)
+                    case _ =>
+              }
+
+              code match
+                case Some((Right(term), _)) =>
+                  * :+= `_ <- IO { * }`(term)
+                case _ =>
+
+              * ::: ios
+
+            case (it, ios) =>
+              `_ <- *`(it.generate(ios))
+
+          }
 
         //////////////////////////////////////////////////////////// sequence //
-
-
-        // RESTRICTION | PREFIXES //////////////////////////////////////////////
-
-        case ν(names*) =>
-          * = names.map { it => `* <- *`(it -> "ν") }.toList
-
-
-        case it @ τ(r, Some((Left(enums)), _)) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
-          * ++= enums
-
-        case it @ τ(r, Some((Right(term)), _)) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
-          * :+= `_ <- IO { * }`(term)
-
-        case it @ τ(r, _) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
-
-
-        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Left(enums)), _)) =>
-          val code = `for * yield ()`(enums*)
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                         ),
-                         Term.ArgClause(code::Nil)
-                       ))
-
-        case it @ π(λ(Symbol(ch)), arg, None, r, Some((Right(term)), _)) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(
-                           Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                           Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                         ),
-                         Term.ArgClause(code::Nil)
-                       ))
-
-        case it @ π(λ(Symbol(ch)), arg, None, r, _) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                       ))
-
-        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code) =>
-          val args = params.map {
-            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
-            case λ(Symbol(par)) => par
-          }
-
-          * = `* :: … :: * = *`(cons -> ch, args*)
-
-          params.zipWithIndex.foreach {
-            case (λ @ λ(Symbol(arg)), i) =>
-              val par = args(i)
-              λ.`type` match
-                case Some((tpe, Some(refined))) =>
-                  * :+= `* = *: * …`(arg, par, tpe, refined)
-                case Some((tpe, _)) =>
-                  * :+= `* = *: *`(arg, par, tpe)
-                case _ =>
-          }
-
-          code match
-            case Some((Right(term), _)) =>
-              * :+= `_ <- IO { * }`(term)
-            case _ =>
-
-        case it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code) =>
-          val par = if λ.`type`.isDefined then id else arg
-
-          code match
-            case Some((Right(term), _)) =>
-              * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
-                                       Term.Apply(
-                                         Term.Apply(
-                                           Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
-                                           Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                                         ),
-                                         Term.ArgClause(term::Nil)
-                                       ))
-            case _ =>
-              * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
-                                       Term.Apply(
-                                         Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
-                                         Term.ArgClause(Lit.String(it.υidυ)::Nil)
-                                       ))
-
-          λ.`type` match
-            case Some((tpe, Some(refined))) =>
-              * :+= `* = *: * …`(arg, par, tpe, refined)
-            case Some((tpe, _)) =>
-              * :+= `* = *: *`(arg, par, tpe)
-            case _ =>
-
-        case _: π => ??? // caught by parser
-
-        ////////////////////////////////////////////// restriction | prefixes //
 
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
@@ -228,7 +257,7 @@ object Program:
             def idʹ: String = π.υidυ
             π.copy(name = λ.copy()(using None))(idʹ)
           }
-          val `!.π⋯` = πʹ.generate :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
+          val `!.π⋯` = `_ <- *`(πʹ.generate(`_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)))
 
           val `val` =
             λ.`type` match
@@ -250,9 +279,7 @@ object Program:
         case !(Some(μ), sum) =>
           val υidυ = id
 
-          val `μ.generate` = μ.generate
-
-          val `!.μ⋯` = `μ.generate` :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
+          val `!.μ⋯` = `_ <- *`(μ.generate(`_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)))
 
           val it = `NonEmptyList( *, … ).parSequence`(
                      sum.generate,
