@@ -19,7 +19,7 @@ function ppi() {
     set ../ppi.scala ${srcs#?}
     scala-cli run "$@" \
                   -q -O -nowarn -S 3.7.2-RC1 \
-                  --dep org.typelevel::cats-effect:3.7-4972921 \
+                  --dep org.typelevel::cats-effect:3.6.2 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
@@ -45,7 +45,7 @@ function ppi_() {
     set ../ppi_.scala ${srcs#?}
     scala-cli run "$@" \
                   -q -O -nowarn -S 3.7.2-RC1 \
-                  --dep org.typelevel::cats-effect:3.7-4972921 \
+                  --dep org.typelevel::cats-effect:3.6.2 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
