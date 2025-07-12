@@ -275,6 +275,7 @@ where `uuid` is some generated `java.util.UUID`.
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
 
+
 Apps (examples)
 ---------------
 
@@ -319,6 +320,7 @@ If there are more `App`s' with agents that depend one to another, pass the `--in
     ./examples $ pi --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.
+
 
 DotArrow
 --------
