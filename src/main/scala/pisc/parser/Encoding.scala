@@ -604,7 +604,10 @@ object Encoding:
               it.copy(code = recoded(free))
             case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
               val chʹ = renamed(ch)
-              val namesʹ = names.map(_.asSymbol).filterNot(_.name.isEmpty).map(rebind(_))
+              val namesʹ = names.map {
+                case par @ λ(Symbol("")) => par
+                case λ(par: Symbol) => rebind(par)
+              }
               π(chʹ, cons, recoded(free), namesʹ*)
             case π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val chʹ = renamed(ch)
