@@ -21,7 +21,7 @@ function spi() {
                   -q -O -nowarn -S 3.7.2-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.7-4972921 \
+                  --dep org.typelevel::cats-effect:3.6.2 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
@@ -51,7 +51,7 @@ function spi_() {
                   -q -O -nowarn -S 3.7.2-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.7-4972921 \
+                  --dep org.typelevel::cats-effect:3.6.2 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
