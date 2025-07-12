@@ -1,5 +1,5 @@
-Pi-calculus with Transactions in SCala aka PIXC
-===============================================
+Pi-calculus with (Biological) Transactions in SCala aka PIXC ala RISC
+=====================================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
@@ -270,6 +270,7 @@ where `uuid` is some generated `java.util.UUID`.
 
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
+
 
 Apps (examples)
 ---------------

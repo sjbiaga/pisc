@@ -108,24 +108,17 @@ object Program:
 
           * = `_ <- *`(cases(`+`(∥(it))))
 
-        case `.`(end, it*) =>
-          val ** =
-            if it.isEmpty
-            then
-              end.generate()
+        case `.`(end, ps*) =>
+          val ** = ps.foldRight(end.generate()) {
+            case (χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _))), ios) =>
+              `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
 
-            else
-              val ios = `.`(end, it.tail*).generate()
+            case (χ(Left(Symbol(name))), ios) =>
+              `_ <- }{(*)()()`(name) :: ios
 
-              it.head match
-                case χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _))) =>
-                  `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
-
-                case χ(Left(Symbol(name))) =>
-                  `_ <- }{(*)()()`(name) :: ios
-
-                case _ =>
-                  it.head.generate() ++ ios
+            case (it, ios) =>
+              it.generate() ::: ios
+          }
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
