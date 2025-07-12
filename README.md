@@ -275,6 +275,7 @@ where `uuid` is some generated `java.util.UUID`.
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
 
+
 Apps (examples)
 ---------------
 
