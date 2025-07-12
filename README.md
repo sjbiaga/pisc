@@ -307,6 +307,7 @@ where `uuid` is some generated `java.util.UUID`.
 Agent identifiers (literals) start with uppercase, while
 ambient names start with lowercase.
 
+
 Apps (examples)
 ---------------
 
@@ -344,6 +345,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ am --interactive ex1.scala ex2.scala
+    ./examples $ ma --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.
