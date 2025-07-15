@@ -46,7 +46,7 @@ object Meta:
                "Main",
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `String*`("args") :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
+                 `String*`("args") :: `(using String)(using %, /, \\)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -57,7 +57,7 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `(…)`(params*) :: `(using ^ : String)(using % : %, / : /, \\ : \\)`,
+                 `(…)`(params*) :: `(using String)(using %, /, \\)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -113,14 +113,14 @@ object Meta:
                     ,None)
 
 
-  val `(using ^ : String)(using % : %, / : /, \\ : \\)` =
+  val `(using String)(using %, /, \\)` =
     Term.ParamClause(Term.Param(Mod.Using() :: Nil,
-                                "^", Some(Type.Name("String")),
+                                Name.Anonymous(), Some(Type.Name("String")),
                                 None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,
-                                               it, Some(Type.Name(it)),
+                                               Name.Anonymous(), Some(Type.Name(it)),
                                                None)
                        }
                     ,Some(Mod.Using())) ::

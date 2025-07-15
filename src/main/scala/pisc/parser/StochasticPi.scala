@@ -255,6 +255,8 @@ abstract class StochasticPi extends Expression:
 
 object StochasticPi:
 
+  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
+
   type Actions = Set[String]
 
   object Actions:
@@ -282,8 +284,6 @@ object StochasticPi:
   trait Sum:
     val enabled: Actions
 
-
-  private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   type Names = Set[Symbol]
 
@@ -761,4 +761,4 @@ object StochasticPi:
           case _ => true
         }
 
-      Right(`(*)`("_par", λ(Lit.Int(_par))), `+`(nil)) :: prog
+      Right(`(*)`(_, λ(Lit.Int(_par))), `+`(nil)) :: prog

@@ -279,7 +279,7 @@ object Calculus:
 
     override def toString: String = this match
       case ∅() => "()"
-      case +(choices*) => choices.mkString(" + ")
+      case +(_, choices*) => choices.mkString(" + ")
 
       case ∥(components*) => components.mkString(" | ")
 

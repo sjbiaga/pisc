@@ -77,7 +77,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ++ _.generate)
+          * = (it :+ end).foldLeft(*)(_ ::: _.generate)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -93,7 +93,7 @@ object Program:
                          Term.Apply(\("τ"),
                                     Term.ArgClause(rate(r.get)::Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)))
-          * ++= enums
+          * :::= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
@@ -281,7 +281,7 @@ object Program:
                     else
                       `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ++ sum.generate
+          * = ** ::: sum.generate
 
         case _: `{}` => ???
 
@@ -308,7 +308,7 @@ object Program:
       val id = new helper.υidυ
 
       ( prog.head match
-          case (`(*)`("_par", λ(parallelism: Lit.Int)), _) =>
+          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
       ) ::
       prog
