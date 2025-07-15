@@ -322,11 +322,11 @@ object Program:
                     else
                       `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ++ sum.generate
+          * = ** ::: sum.generate
 
           name match
             case Symbol(it) =>
-              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ++ *))
+              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ::: *))
             case _ =>
 
         case _: `{}` => ???
@@ -356,7 +356,7 @@ object Program:
       val id = new helper.υidυ
 
       ( prog.head match
-          case (`(*)`("_par", λ(parallelism: Lit.Int)), _) =>
+          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString :: Nil
           case _ => Nil
       ) :::
