@@ -53,7 +53,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         case +(operand) =>
           * = operand.generate
@@ -70,7 +70,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -87,7 +87,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -109,11 +109,11 @@ object Program:
           * = `_ <- *`(cases(`+`(∥(it))))
 
         case `.`(end, it*) =>
-          val ** = (it :+ end).foldLeft(*)(_ ++ _.generate())
+          val ** = (it :+ end).foldLeft(*)(_ ::: _.generate())
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -125,7 +125,7 @@ object Program:
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
-          * ++= enums
+          * :::= enums
 
         case τ(Some((Right(term), _))) =>
           * :+= `_ <- *`("τ")
@@ -317,7 +317,7 @@ object Program:
                     else
                       `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ++ sum.generate()
+          * = ** ::: sum.generate()
 
         case _: `{}` => ???
 
