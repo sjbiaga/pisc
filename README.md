@@ -7,6 +7,8 @@ The π-calculus maps one to one on `Scala` for-comprehensions
 The bioambients branch adds capabilities in comparison with
 the [stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic).
 This branch uses _cancellation_ to discard actions/capabilities.
+Another [branch](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap)
+heavily uses `flatMap`'s and comparison with `null` to discard actions/capabilities.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.

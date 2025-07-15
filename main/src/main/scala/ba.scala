@@ -233,7 +233,7 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[(Double, (-, -))]]
@@ -272,7 +272,7 @@ package object sΠ:
              (using % : %, / : /)
              (using `][`)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[(Double, (-, -))]]
@@ -291,7 +291,7 @@ package object sΠ:
              (using % : %, / : /)
              (using `][`)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[(Double, (-, -))]]
@@ -307,7 +307,7 @@ package object sΠ:
              (using % : %, / : /)
              (using `][`)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[(Double, (-, -))]]
@@ -409,7 +409,7 @@ package object sΠ:
         def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)
                  (deferred: Deferred[IO, Option[(Double, (-, -))]])
                  (using `][`: `][`)
-                 (`>R`: >*<): IO[java.lang.Double] =
+                 (`>R`: >*<): IO[Double] =
           for
             opt     <- deferred.get
             _       <- if opt eq None then IO.canceled else IO.unit
@@ -437,7 +437,7 @@ package object sΠ:
         def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                  (deferred: Deferred[IO, Option[(Double, (-, -))]])
                  (using `][`: `][`)
-                 (`>R`: >*<): IO[java.lang.Double] =
+                 (`>R`: >*<): IO[Double] =
           for
             opt     <- deferred.get
             _       <- if opt eq None then IO.canceled else IO.unit
@@ -465,7 +465,7 @@ package object sΠ:
         def apply(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                  (deferred: Deferred[IO, Option[(Double, (-, -))]])
                  (using `][`: `][`)
-                 (`<R`: >*<): IO[(Any, java.lang.Double)] =
+                 (`<R`: >*<): IO[(Any, Double)] =
           for
             opt     <- deferred.get
             _       <- if opt eq None then IO.canceled else IO.unit
@@ -493,7 +493,7 @@ package object sΠ:
         def apply[T](key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
                     (deferred: Deferred[IO, Option[(Double, (-, -))]])
                     (using `][`: `][`)
-                    (`<R`: >*<): IO[(Any, java.lang.Double)] =
+                    (`<R`: >*<): IO[(Any, Double)] =
           for
             opt     <- deferred.get
             _       <- if opt eq None then IO.canceled else IO.unit
@@ -631,7 +631,7 @@ package object sΠ:
           def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
                    (deferred: Deferred[IO, Option[(Double, (-, -))]])
                    (using `][`: `][`)
-                   (`>R`: >*<): IO[java.lang.Double] =
+                   (`>R`: >*<): IO[Double] =
             for
               opt     <- deferred.get
               _       <- if opt eq None then IO.canceled else IO.unit
@@ -661,7 +661,7 @@ package object sΠ:
           def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
                    (deferred: Deferred[IO, Option[(Double, (-, -))]])
                    (using `][`: `][`)
-                   (`<R`: >*<): IO[java.lang.Double] =
+                   (`<R`: >*<): IO[Double] =
             for
               opt     <- deferred.get
               _       <- if opt eq None then IO.canceled else IO.unit
