@@ -108,7 +108,7 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[(Double, (-, -))]]
@@ -147,7 +147,7 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[(Double, (-, -))]]
@@ -163,7 +163,7 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)(code: => IO[Any])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): IO[Double] =
       for
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[(Double, (-, -))]]
@@ -243,7 +243,7 @@ package object sΠ:
 
       def apply(key: String, name: Any)
                (deferred: Deferred[IO, Option[(Double, (-, -))]])
-               (`>R`: >*<): IO[java.lang.Double] =
+               (`>R`: >*<): IO[Double] =
         for
           opt     <- deferred.get
           _       <- if opt eq None then IO.canceled else IO.unit
@@ -267,7 +267,7 @@ package object sΠ:
 
       def apply(key: String, name: Any)(code: => IO[Any])
                (deferred: Deferred[IO, Option[(Double, (-, -))]])
-               (`>R`: >*<): IO[java.lang.Double] =
+               (`>R`: >*<): IO[Double] =
         for
           opt     <- deferred.get
           _       <- if opt eq None then IO.canceled else IO.unit
