@@ -35,7 +35,6 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.data.NonEmptyList
 import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
@@ -47,7 +46,6 @@ package object `Π-loop`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
-  export sΠ.`π-exclude`
 
   type - = CyclicBarrier[IO]
 
@@ -97,8 +95,7 @@ package object `Π-loop`:
                          (implicit ^ : String): IO[Unit] =
     for
       m <- %.get
-      _ <- if discarded.isEmpty then IO.unit
-           else NonEmptyList.fromListUnsafe(discarded.toList).traverse(unblock(m, _)).void
+      _ <- discarded.toList.traverse(unblock(m, _)).void
       _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
     yield
       ()
@@ -167,10 +164,7 @@ package object `Π-loop`:
                         -> m.forall { case (key, _: +) => key.charAt(36) == '!' case _ => false }
                     )
     } >>= { case (it, exit) =>
-            if exit
-            then
-              this.exit(it.map(_._1).toList)
-            else if it.isEmpty
+            if !exit && it.isEmpty
             then
               *.take >> loop(parallelism)
             else
@@ -179,33 +173,35 @@ package object `Π-loop`:
                   this.exit(it.map(_._1).toList)
                 case nel =>
                   nel.parTraverse { case (key1, key2, (delay, duration)) =>
-                                    val k1 = key1.substring(36)
-                                    val k2 = key2.substring(36)
-                                    val ^  = key1.substring(0, 36)
-                                    val ^^ = key2.substring(0, 36)
-                                    for
-                                      -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
-                                      p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                      (d1, (ts1, _)) = p1
-                                      (d2, (ts2, _)) = p2
-                                      _  <- discard(k1, ^)
-                                      _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
-                                      _  <- %.update(_ - key1 - key2)
-                                      _  <- d1.complete(Some(delay -> (-, --)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
-                                      ts <- Clock[IO].monotonic.map(_.toNanos)
-                                      _  <- traces(ts1, ts, delay, duration)(k1)
-                                      _  <- if k1 == k2
-                                            then IO.unit
-                                            else traces(ts2, ts, delay, duration)(k2)
-                                      _  <- -.await
-                                      _  <- ready(k1)
-                                      _  <- if k1 == k2 then IO.unit else ready(k2)
-                                      _  <- --.await
-                                    yield
-                                      ()
+                                    IO.uncancelable { _ =>
+                                      val k1 = key1.substring(36)
+                                      val k2 = key2.substring(36)
+                                      val ^  = key1.substring(0, 36)
+                                      val ^^ = key2.substring(0, 36)
+                                      for
+                                        -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                        p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
+                                        (d1, (ts1, _)) = p1
+                                        (d2, (ts2, _)) = p2
+                                        _  <- discard(k1, ^)
+                                        _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
+                                        _  <- %.update(_ - key1 - key2)
+                                        _  <- d1.complete(Some(delay -> (-, --)))
+                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
+                                        ts <- Clock[IO].monotonic.map(_.toNanos)
+                                        _  <- traces(ts1, ts, delay, duration)(k1)
+                                        _  <- if k1 == k2
+                                              then IO.unit
+                                              else traces(ts2, ts, delay, duration)(k2)
+                                        _  <- -.await
+                                        _  <- ready(k1)
+                                        _  <- if k1 == k2 then IO.unit else ready(k2)
+                                        _  <- --.await
+                                      yield
+                                        ()
+                                    }
                                   } >> loop(parallelism)
           }
 
