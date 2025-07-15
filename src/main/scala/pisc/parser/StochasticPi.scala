@@ -761,4 +761,4 @@ object StochasticPi:
           case _ => true
         }
 
-      Right(`(*)`(_, λ(Lit.Int(_par))), `+`(nil)) :: prog
+      Right(`(*)`(null, λ(Lit.Int(_par))), `+`(nil)) :: prog
