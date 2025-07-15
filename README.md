@@ -1,14 +1,12 @@
-Stochastic Pi-calculus in SCala aka sPISC ala RISC
-==================================================
+BioAmbients in SCala aka BASC ala RISC
+======================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
 
-The stochastic branch adds rates to actions in comparison with
-the [π-calculus](https://github.com/sjbiaga/pisc/tree/main).
-This branch uses _cancellation_ to discard actions.
-Another [branch](https://github.com/sjbiaga/pisc/tree/stochastic-flatMap)
-heavily uses `flatMap`'s and comparison with `null` to discard actions.
+The bioambients branch adds capabilities in comparison with
+the [stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic).
+This branch uses _cancellation_ to discard actions/capabilities.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.
@@ -32,7 +30,7 @@ The source code is divided in two: the parser in `Calculus.scala` and the
 Calculus
 --------
 
-The π-calculus process expressions are exactly as in the literature, with
+The bioambients process expressions are exactly as in the literature, with
 both ASCII and UTF-8 characters, and slight variations. There is "match" and
 "mismatch", but also there is `if then else` or the sugared Elvis operator.
 Forcibly, _restriction_ is "considered" a _prefix_, besides input/output
@@ -51,6 +49,7 @@ The BNF formal grammar for processes is the following.
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
                      | "!" [ "." μ "." ] CHOICE
+                     | [ LABEL ] "[" CHOICE "]"
                      | CAPITAL
                      | INVOCATION
                      | INSTANTIATION
@@ -66,18 +65,21 @@ The BNF formal grammar for prefixes is the following.
 
     PREFIXES       ::= { PREFIX }
     PREFIX         ::= μ "."
+                     | ζ "."
                      | "ν" "(" NAMES ")"
     μ              ::= "τ" [ @ RATE ] [ EXPRESSION ]
-                     | NAME [ @ RATE ] "<" NAME ">" [ EXPRESSION ]
-                     | NAME [ @ RATE ] "(" NAME ")" [ EXPRESSION ]
+                     | [ $ ] NAME [ @ RATE ] "!" "{" NAME "}" [ EXPRESSION ]
+                     | [ $ ] NAME [ @ RATE ] "?" "{" NAME "}" [ EXPRESSION ]
                      | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
+    ζ              ::= ( "enter" | "accept" | "exit" | "expel" | "merge+" | "merge-" ) NAME [ @ RATE ]
+    $              ::= "local" | "s2s" | "p2c" | "c2p"
     EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;
 capital `IDENT` is an agent identifier starting with uppercase letter. Both may contain
 single and double quotes.
 
-A source file with the "`.pisc`" extension consists of equations, binding an agent identifier
+A source file with the "`.basc`" extension consists of equations, binding an agent identifier
 with an optional list of "formal" (bound names) parameters, to a process expression. Because
 the use of parentheses in a _restriction_ would lead to ambiguities, it is forced to start
 with the UTF-8 character "ν". "()" is _inaction_ or the _empty sum_.
@@ -139,11 +141,11 @@ Unlike the rest of the agents, the `Main` agent has the command line arguments
 spliced as `vararg` parameter(s).
 
 
-Stochastic
-----------
+BioAmbients
+-----------
 
-The execution of a stochastic π-calculus program is handled in the files:
-`loop.scala`, `stats.scala` and `spi.scala`. The `Main` agent is invoked from the
+The execution of a bioambients program is handled in the files:
+`loop.scala`, `stats.scala` and `ba.scala`. The `Main` agent is invoked from the
 final generated source file wherein `main.scala.in` was `cat`enated.
 
 From `main.scala.in`, two fibers are launched in `background` and used as `Resource`s,
@@ -165,10 +167,10 @@ or discarded) prior to its "expiration", immediately enables other "successor"
 actions, including possibly, again itself.
 
 Unlike π-calculus, where communication occurs unhindered whenever a channel inputs
-and outputs, in stochastic π-calculus actions have rates, and depending on these
+and outputs, in bioambients actions and capabilities have rates, and depending on these
 there is a "probabilistic" _election_ which determine which channels are elected for
-input/output. Therefore, it is important that there should be a "moment" for this
-election to consider _all_ enabled actions when selecting the pairs to communicate,
+communication/movement. Therefore, it is important that there should be a "moment" for this
+election to consider _all_ enabled actions when selecting the pairs to communicate/move,
 or otherwise - if some enabled actions are provisionally "pending" - none.
 
 Thus, in advance, it is always known which (as well as how many of _the same_)
@@ -188,7 +190,7 @@ per replication - the scope. And due to the atomicity of updates, the management
 of the data structure for the enabled actions, is coherent among all actions thus
 "firing" in parallel. This makes actions behave as multisets.
 
-The file `StochasticPi.scala` is used to create a _directed multigraph_ with nodes
+The file `BioAmbients.scala` is used to create a _directed multigraph_ with nodes
 the _union_ of action and sum _type_, which at runtime gives rise to a
 _transition system_ with states - multisets of enabled actions -, for the purpose of
 enabling the actions in the successor state, immediately prior to the "expiration"
@@ -206,20 +208,20 @@ replicated process. This means that after expiration of the guard action, the
 enabled actions are again the guard itself and the enabled actions of the process
 that fires up in parallel.
 
-Besides the _enabled_ actions, `StochasticPi.scala` is used to create also the
-_discarded_ actions. Each choice corresponds to a set of enabled actions. The
-set of enabled actions of the summation is but the union of the former. However,
-a somewhat "duplicated" algorithm creates the discarded actions: and, with this
-occasion, alse the _excluded_ actions.
+Besides the _enabled_ actions, `BioAmbients.scala` is used to create also the
+_discarded_ actions. Each choice corresponds to a set of enabled actions or
+capabilities. The set of enabled actions/capabilities of the summation is but
+the union of the former. However, a somewhat "duplicated" algorithm creates the
+discarded actions: and, with this occasion, alse the _excluded_ actions.
 
 Thus, assume a choice of the summation; the union of the set of _all_ enabled
 actions of the choices to the left; and, the union of the set of _all_ enabled
 actions of the choices to the right. Then for each key in the summation, the
 discarded actions is the union of "left" with "right".
 
-As an action is part of many summations on the way up to the top level,
+As an action/capability is part of many summations on the way up to the top level,
 each time there is more than one choice, to the same key there will be added
-more "left/right" discarded actions/keys.
+more "left/right" discarded actions/capabilities/keys.
 
 What is the benefit? At execution, when a key is part of the enabled actions,
 performing the action corresponding to that key means two things. First, the
@@ -235,7 +237,7 @@ are declared as `π-trick`, `π-elvis` and `π-spell`, respectively.
 
 The contention between the enabled actions occurs as follows. First, it "disables"
 the excluded actions associated, if any. Each action in a sequence is a `for`
-generator that calls a method in `spi.scala`; the key of this
+generator that calls a method in `ba.scala`; the key of this
 action is passed as second argument. The method is within a unique scope (`^`)
 to distinguish between different actions that correspond to the same key (multisets).
 It creates a `Deferred[IO, Option[(Double, -)]]` and offers these together with the
@@ -280,7 +282,7 @@ As soon as the multisets are empty, the second background fiber computes
 rate(s) and/or weight(s) - the _delay(s)_ (or duration(s) or "delta(s)") that
 correspond(s) to the fastest action(s). In plural, because the programmer can
 set a degree of parallelism - the number of cores - allowing for multiple
-communications to occur (simultaneously), as long as these do not discard each
+communications to occur (quasi-simultaneously), as long as these do not discard each
 other - only those satisfying this condition are returned: for each (pair), it
 then uses a key to get an associated `Deferred`, and the delay to _complete_ a
 `Deferred`; it does this twice, for actions of opposite polarities, unless it's
@@ -303,11 +305,12 @@ Traces
 
 Traces are enabled by the `"traces"` directive. If active, the keys of actions
 are appended: the channel name, ("τ" for the silent action), the agent name from
-the current equation, a label, the action's rate, and the filename where traces
-are directed. However, it is not until runtime that these keys may be possibly
-used. The traces' output is a `.csv` file with the following columns:
+the current equation, a label, the action's rate, the direction/capability, and
+the filename where traces are directed. However, it is not until runtime that
+these keys may be possibly used. The traces' output is a `.csv` file with the
+following columns:
 
-    start,end,name,polarity,key,replication,label,rate,delay,duration,agent,filename
+    start,end,name,polarity,key,replication,label,rate,delay,duration,agent,dir_cap,filename
 
 The first two column are two timestamps, the `start` and `end` of the action in
 nanoseconds. The _channel name_ is the third column (or "τ"). The polarity of
@@ -318,8 +321,9 @@ which differentiate between the elements of summations and compositions. The
 eighth is the _rate_. The ninth is the _delay_ of the action (silent or
 communication). The tenth may be `0.0` for immediate actions, `NaN` for passive
 actions or the same as the ninth for active actions. The eleventh is the
-originating _agent name_. The final twelfth column is a _filename_ (with
-possible to be ignored commas) or empty.
+originating _agent name_. The twelfth is either the _direction_ or the
+_capability_. The final thirteenth column is a _filename_ (with possible to be
+ignored commas) or empty.
 
 There may be silent actions which are inserted after the other are labelled:
 these are not traceable, but nor should they need be; if they are still needed,
@@ -341,7 +345,7 @@ A new name - will be available in the Scala scope:
 
 The inaction - `IO.unit`.
 
-A long prefix path - "`v(x).x<5>.x(y).τ@(1).x@∞(z).z<y>.`":
+A long prefix path - "`v(x).x!{5}.x?{y}.τ@(1).x@∞?{z}.z!{y}.`":
 
     for
       x      <- ν
@@ -460,30 +464,30 @@ Apps (examples)
 The `examples` folder *must* have three sub-folders:
 
     ./examples/
-       pisc/
+       basc/
        in/
        out/
 
-The root project folder contains five files: `loop.scala`, `stats.scala`, `spi.scala`,
+The root project folder contains four files: `loop.scala`, `stats.scala`, `ba.scala`,
 and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/spi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ba.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ spi ex.scala
+    ./examples $ ba ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ spio ex
+    ./examples $ baio ex
 
 To get the intermediary `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
 
-    sbt:Stochastic π-Calculus2Scala> run ex
+    sbt:BioAmbients2Scala> run ex
 
-where `example/pisc/ex.pisc` contains the stochastic π-calculus source (equations binding
+where `example/basc/ex.basc` contains the bioambients source (equations binding
 agents to process expressions).

@@ -1,0 +1,11 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ traces = console ⟧
+
+P = ν(x) [ [ accept x. τ/*println("accepted")*/. ] | [ enter x. τ/*println("entered")*/. ] ]
+
+Q = ν(x) [ [ exit x. τ/*println("exited")*/. ] | expel x. τ/*println("expelled")*/. ]
+
+R = ν(x) [ "+"[ merge+ x. τ/*println("merged+")*/. ] | "-"[ merge- x. τ/*println("merged-")*/. ] ]
+
+Main = P | Q | R

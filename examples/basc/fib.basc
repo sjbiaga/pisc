@@ -1,0 +1,38 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import eu.timepit.refined.numeric.*
+
+@given Conversion[`()`, Long] = _.`()`[Long]
+
+@val max = 11
+
+@val gen = new scala.util.Random
+
+@def random = 3+gen.nextLong(max-2)
+
+Main = ν(num)                                           \
+     ( (!. num?{n}.                                     \
+        ν(in) ( Fib(n, in)                              \
+              | in?{fib: Long /* NonNegative */}.       \
+                τ/*println(s"fib(${'n}) = ${'fib}")*/.  \
+                num!{/*random*/}.                       \
+              )                                         \
+       )                                                \
+     | num!{/*random*/}.                                \
+     )
+
+Fib(n, out) = τ/*println(s"n=${'n}")*/.  \
+              ν(f)                       \
+              ( Fibonacci(f, n)          \
+              | f@∞?{res}.out!{res}.     \
+              )
+
+Fibonacci(f, n) =                                     \
+                ( ([/*'n < 2*/ = True] f@∞!{n}.)      \
+                + [/*'n < 2*/ = False]                \
+                  ν(g)ν(h)                            \
+                  ( Fibonacci(g, /*'n-1*/)            \
+                  | Fibonacci(h, /*'n-2*/)            \
+                  | g@∞?{p}.h@∞?{r}.f@∞!{/*'p+'r*/}.  \
+                  )                                   \
+                )

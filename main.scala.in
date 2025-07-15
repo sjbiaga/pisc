@@ -30,7 +30,7 @@
 
 import _root_.scala.collection.immutable.Map
 
-import _root_.cats.effect.{ IO, IOApp, ExitCode, Deferred, Ref }
+import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode, Deferred, Ref }
 import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
 
 import `Π-loop`.*
@@ -39,33 +39,35 @@ import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 object App extends IOApp:
 
-  private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
 
-  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !): IO[ExitCode] =
+  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism)(using %, !, *)(π.`π-wand`).background
+        _ <- loop(parallelism)(using %, !, ^, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
       yield
         ()
     ).use { _ =>
       for
-        _ <- π.`π-supervised`(π.Main(args*)(using π.`π-uuid`)(using %, /, { () => *.offer(()) }))
-        x <- !.get
+        (lo, tree) <- sΠ.`][`()
+        _          <- π.`π-supervised`(π.Main(lo)(args*)(using π.`π-uuid`)(using %, /, { () => *.offer(()) })(using tree, ^))
+        exitcode   <- !.get
       yield
-        x
+        exitcode
     }
 
   override def run(args: List[String]): IO[ExitCode] =
-    val p = if sys.Prop.IntProp(spicsp).isSet
-            then sys.Prop.IntProp(spicsp).value
+    val p = if sys.Prop.IntProp(bacsp).isSet
+            then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
     for
       % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Queue.unbounded[IO, Unit]
       ! <- Deferred[IO, ExitCode]
+      ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, args)(%, /, *, !)
+      x <- run(p, args)(%, /, *, !, ^)
     yield
       x
 
@@ -76,6 +78,7 @@ object π:
   import _root_.scala.Function.const
 
   import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
   import _root_.cats.effect.syntax.all.*
 
@@ -83,9 +86,10 @@ object π:
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
-      _root_.cats.data.NonEmptyList.fromListUnsafe(self).parSequence.void
+      self.parSequence.void
 
   import sΠ.*
+  import `π-$`.*, `π-ζ`.*
 
   def `π-uuid` = UUID.randomUUID.toString
 

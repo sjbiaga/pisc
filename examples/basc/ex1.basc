@@ -1,0 +1,11 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ traces = console ⟧
+
+P(x) = (!. local x@∞ ! { 1 }. τ/*println("out 1")*/.) | (!. local x@∞ ? { z }. τ/*println(s"in ${'z}")*/.)
+
+Q(x) = [ !. s2s x@∞ ! { 2 }. τ/*println("out 2")*/. ] | [ !. s2s x@∞ ? { z }. τ/*println(s"in ${'z}")*/. ]
+
+R(x) = [ [ !. c2p x@∞ ! { 3 }. τ/*println("out 3")*/. ] | ( !. p2c x@∞ ? { z }. τ/*println(s"in ${'z}")*/. ) ]
+
+Main = ν(x) [ P(x) | Q(x) | R(x) ]

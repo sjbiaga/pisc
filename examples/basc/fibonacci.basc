@@ -1,0 +1,42 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@import eu.timepit.refined.numeric.*
+@import eu.timepit.refined.boolean.*
+
+@import scala.util.control.TailCalls.{ done, tailcall, TailRec }
+
+Main = Fib(-1)
+
+Fib(n) = ν(x)                                           \
+       (                                                \
+       ( τ /* _ <- IO { print("n = ") };                \
+             'n <- IO.blocking {                        \
+                     try                                \
+                       scala.io.StdIn.readLine.toLong   \
+                     catch _ => -1L                     \
+                   } */ .                               \
+         x!{n} .                                        \
+         x?{k: Long /**/} .                             \
+         x!{/*                                          \
+         {                                              \
+           def fibonacci(k: Long): TailRec[Long] =      \
+             if (k < 2)                                 \
+               done(k * k)                              \
+             else                                       \
+               for                                      \
+                 m <- tailcall { fibonacci(k - 2) };    \
+                 n <- tailcall { fibonacci(k - 1) }     \
+               yield                                    \
+                 m + n                                  \
+           ;                                            \
+           fibonacci('k).result                         \
+         }                                              \
+         */} .                                          \
+       )                                                \
+       |                                                \
+       ( x?{n: Long /* NonNegative And Less[46L] */} .  \
+         x!{n} .                                        \
+         x?{f: Long /* NonNegative */} .                \
+         τ /* println(s"fib(${'n}) = ${'f}") */ .       \
+       )                                                \
+       )                                                \

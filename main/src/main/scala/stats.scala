@@ -70,13 +70,13 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
-  def ∥(% : Map[String, (>*<, Option[Boolean], Rate)])
+  def ∥(% : Map[String, ((>*<, Int), Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
        (parallelism: Int, check: Boolean = false): List[(String, String, Double)] =
                                                       // ^^^^^^  ^^^^^^  ^^^^^^
                                                       // key1    key1|2  duration
 
-    val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
+    val mls = HashMap[((>*<, Int), Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
@@ -94,7 +94,7 @@ package object `Π-stats`:
           mls(e -> p) :+= Right(Right(r.weight))
       }
 
-    val msrt = HashMap[(>*<, Option[Boolean]), BigDecimal]() // [timed] sums of rates
+    val msrt = HashMap[((>*<, Int), Option[Boolean]), BigDecimal]() // [timed] sums of rates
 
     mls // timed
       .foreach {
@@ -108,7 +108,7 @@ package object `Π-stats`:
             msrt(ep) = rs.sum
       }
 
-    val mswi = HashMap[(>*<, Option[Boolean]), Long]() // [immediate] sums of weights
+    val mswi = HashMap[((>*<, Int), Option[Boolean]), Long]() // [immediate] sums of weights
 
     mls // immediate
       .foreach {
@@ -121,7 +121,7 @@ package object `Π-stats`:
             mswi(ep) = ws.sum
       }
 
-    val mswp = HashMap[(>*<, Option[Boolean]), Long]() // [passive] sums of weights
+    val mswp = HashMap[((>*<, Int), Option[Boolean]), Long]() // [passive] sums of weights
 
     mls // passive
       .foreach {
@@ -185,7 +185,7 @@ package object `Π-stats`:
           (key2, (ether2, polarity2, (rate2, weight2))) = χ(j)
           if polarity2 ne None
         do
-          if (ether1 eq ether2) && polarity1.get != polarity2.get
+          if ether1 == ether2 && polarity1.get != polarity2.get
           then
             val ^^ = key2.substring(0, 36)
             if ^ != ^^

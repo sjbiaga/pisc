@@ -41,18 +41,19 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
+  private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
-  export sΠ.`π-exclude`
 
   type - = CyclicBarrier[IO]
 
-  type + = (Deferred[IO, Option[(Double, (-, -))]], (>*<, Option[Boolean], Rate))
+  type + = (Deferred[IO, Option[(Double, (-, -))]], ((>*<, Int), Option[Boolean], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
 
   type ! = Deferred[IO, ExitCode]
+
+  type ^ = Semaphore[IO]
 
   type * = Queue[IO, Unit]
 
@@ -94,8 +95,7 @@ package object `Π-loop`:
                          (implicit ^ : String): IO[Unit] =
     for
       m <- %.get
-      _ <- if discarded.isEmpty then IO.unit
-           else discarded.toList.traverse(unblock(m, _)).void
+      _ <- discarded.toList.traverse(unblock(m, _)).void
       _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
     yield
       ()
@@ -123,7 +123,7 @@ package object `Π-loop`:
           %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
         }
         .as {
-          if !sys.BooleanProp.keyExists(spirsx).value
+          if !sys.BooleanProp.keyExists(barsx).value
           && ks.forall(_.charAt(36) == '!')
           then ExitCode.Success
           else ExitCode.Error
@@ -131,7 +131,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int)
-          (using % : %, ! : !, * : *)
+          (using % : %, ! : !, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
@@ -142,10 +142,7 @@ package object `Π-loop`:
                         -> m.forall { case (key, _: +) => key.charAt(36) == '!' case _ => false }
                     )
     } >>= { case (it, exit) =>
-            if exit
-            then
-              this.exit(it.map(_._1).toList)
-            else if it.isEmpty
+            if !exit && it.isEmpty
             then
               *.take >> loop(parallelism)
             else
@@ -154,26 +151,30 @@ package object `Π-loop`:
                   this.exit(it.map(_._1).toList)
                 case nel =>
                   nel.parTraverse { case (key1, key2, delay) =>
-                                    val k1 = key1.substring(36)
-                                    val k2 = key2.substring(36)
-                                    val ^  = key1.substring(0, 36)
-                                    val ^^ = key2.substring(0, 36)
-                                    for
-                                      -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      d1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
-                                      d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                      _  <- discard(k1, ^)
-                                      _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
-                                      _  <- %.update(_ - key1 - key2)
-                                      _  <- d1.complete(Some(delay -> (-, --)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
-                                      _  <- -.await
-                                      _  <- ready(k1)
-                                      _  <- if k1 == k2 then IO.unit else ready(k2)
-                                      _  <- --.await
-                                    yield
-                                      ()
+                                    IO.uncancelable { _ =>
+                                      val k1 = key1.substring(36)
+                                      val k2 = key2.substring(36)
+                                      val ^| = key1.substring(0, 36)
+                                      val ^^ = key2.substring(0, 36)
+                                      for
+                                        -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        d1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
+                                        d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
+                                        _  <- discard(k1, ^|)
+                                        _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
+                                        _  <- %.update(_ - key1 - key2)
+                                        _  <- ^.acquire
+                                        _  <- d1.complete(Some(delay -> (-, --)))
+                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
+                                        _  <- -.await
+                                        _  <- ^.release
+                                        _  <- ready(k1)
+                                        _  <- if k1 == k2 then IO.unit else ready(k2)
+                                        _  <- --.await
+                                      yield
+                                        ()
+                                    }
                                   } >> loop(parallelism)
           }
 
