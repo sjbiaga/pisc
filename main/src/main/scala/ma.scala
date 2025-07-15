@@ -32,8 +32,8 @@ package object Π:
 
   import _root_.scala.collection.immutable.{ List, Queue, Set, Map }
 
-  import _root_.cats.data.NonEmptyList
-
+  import _root_.cats.instances.list.*
+  import _root_.cats.syntax.traverse.*
   import _root_.cats.effect.{ Deferred, IOLocal, IO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
@@ -89,10 +89,10 @@ package object Π:
 
     private def remove_(node: `)*(`, sibling: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
-    `][`.update { it =>
-                  val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
-                  it + (sibling -> (tree.copy(siblings = siblings - node), heth))
-                }
+      `][`.update { it =>
+                    val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
+                    it + (sibling -> (tree.copy(siblings = siblings - node), heth))
+                  }
 
     private def remove(node: `)*(`, tree: `}{`)
                       (implicit `][`: `][`): IO[Unit] =
@@ -100,14 +100,7 @@ package object Π:
       `][`.update { it =>
                     val (rtree, reth) = it(root)
                     it + (root -> (rtree.copy(children = siblings), reth))
-                  } >> ( if siblings.isEmpty
-                         then IO.cede
-                         else NonEmptyList
-                                .fromList(siblings.toList)
-                                .get
-                                .traverse(remove_(node, _))
-                                .void
-                       )
+                  } >> siblings.toList.traverse(remove_(node, _)).void
 
     private def insert_(node: `)*(`, child: `)*(`)
                        (implicit `][`: `][`): IO[Unit] =
@@ -120,12 +113,7 @@ package object Π:
                       (implicit `][`: `][`): IO[Unit] =
       for
         tree <- `][`.modify { it => it -> it(root)._1 }
-        _    <- if tree.children.isEmpty
-                then IO.cede
-                else NonEmptyList
-                       .fromList(tree.children.toList).get
-                       .traverse(insert_(node, _))
-                       .void
+        _    <- tree.children.toList.traverse(insert_(node, _)).void
         _    <- `][`.update { it =>
                               val (ntree, neth) = it(node)
                               val (rtree @ `}{`(_, _, children, _), reth) = it(root)
@@ -147,14 +135,7 @@ package object Π:
       `][`.update { it =>
                     val (tree @ `}{`(_, _, children, _), reth) = it(temp.root)
                     it + (temp.root -> (tree.copy(children = children - root + join), reth))
-                  } >> ( if temp.siblings.isEmpty
-                         then IO.cede
-                         else NonEmptyList
-                                .fromList(temp.siblings.toList)
-                                .get
-                                .traverse(update_(root, join, _))
-                                .void
-                       )
+                  } >> temp.siblings.toList.traverse(update_(root, join, _)).void
 
     private def merge_(join: `)*(`, node: `)*(`)
                       (implicit `][`: `][`): IO[Unit] =
@@ -176,29 +157,9 @@ package object Π:
       `][`.update { it =>
                     val (temp, jeth) = it(join)
                     it + (join -> (temp.copy(children = children), jeth))
-                  } >> ( if children.isEmpty
-                         then IO.cede
-                         else NonEmptyList
-                                .fromList(children.toList)
-                                .get
-                                .traverse(merge_(join, _))
-                                .void
-                       )
-                    >> ( if tree.siblings.isEmpty
-                         then IO.cede
-                         else NonEmptyList
-                                .fromList(tree.siblings.toList)
-                                .get
-                                .traverse(merge__(tree.children, _))
-                                .void
-                       )
-                    >> ( if tree.children.isEmpty
-                         then IO.cede
-                         else NonEmptyList
-                                .fromList(tree.children.toList).get
-                                .traverse(merge__(tree.siblings, _))
-                                .void
-                       )
+                  } >> children.toList.traverse(merge_(join, _)).void
+                    >> tree.siblings.toList.traverse(merge__(tree.children, _)).void
+                    >> tree.children.toList.traverse(merge__(tree.siblings, _)).void
 
     private def ether(lhs: ><, rhs: ><): IO[><] =
       val min = lhs.queue.size min rhs.takers.size
@@ -206,9 +167,7 @@ package object Π:
       then
         IO.pure(><(lhs.queue, rhs.takers))
       else
-        NonEmptyList
-          .fromList(lhs.queue.take(min).toList zip rhs.takers.take(min))
-          .get
+        (lhs.queue.take(min).toList zip rhs.takers.take(min))
           .traverse { (n, t) => t.complete(n).void }
           .as(><(lhs.queue.drop(min), rhs.takers.drop(min)))
 
@@ -384,15 +343,7 @@ package object Π:
                                   (it + (node -> (`}{`(amb, key, Set.empty, children), neth))
                                       + (key  -> (tree.copy(children = children + node), reth))) -> children
                                 }
-        _        <- if (children.isEmpty)
-                    then
-                      IO.cede
-                    else
-                      NonEmptyList
-                        .fromList(children.toList)
-                        .get
-                        .traverse(apply_(node, _))
-                        .void
+        _        <- children.toList.traverse(apply_(node, _)).void
         _        <- `1`.release
       yield
         ()

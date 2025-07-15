@@ -65,7 +65,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ++ _.generate)
+          * = (it :+ end).foldLeft(*)(_ ::: _.generate)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -78,7 +78,7 @@ object Program:
 
         case τ(Some((Left(enums), _))) =>
           * = `_ <- *`("τ")
-          * ++= enums
+          * :::= enums
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
@@ -143,7 +143,7 @@ object Program:
         case `[]`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ::: par.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -153,7 +153,7 @@ object Program:
         case `go.`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ++ par.generate))
+          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ::: par.generate))
 
         ////////////////////////////////////////////////////////////////// go //
 
@@ -198,7 +198,7 @@ object Program:
                     else
                       ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
 
-          * = ** ++ par.generate
+          * = ** ::: par.generate
 
         case _: `{}` => ???
 
