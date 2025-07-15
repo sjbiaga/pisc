@@ -7,6 +7,8 @@ The π-calculus maps one to one on `Scala` for-comprehensions
 [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
 [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic) is also supported.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
+[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
+combination of ambients with stochastic π-calculus.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `CE` `IO`.

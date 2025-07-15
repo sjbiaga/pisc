@@ -53,7 +53,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         case +(operand) =>
           * = operand.generate
@@ -70,7 +70,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -87,7 +87,7 @@ object Program:
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -110,6 +110,7 @@ object Program:
 
         case `.`(end, ps*) =>
           val ** = ps.foldRight(end.generate()) {
+
             case (χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _))), ios) =>
               `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
 
@@ -118,11 +119,12 @@ object Program:
 
             case (it, ios) =>
               it.generate() ::: ios
+
           }
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* ++= **)
+            .getOrElse(* :::= **)
 
         case _: χ => ??? // handled above
 
@@ -137,7 +139,7 @@ object Program:
 
         case τ(Some((Left(enums), _))) =>
           * = `_ <- *`("τ")
-          * ++= enums
+          * :::= enums
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
@@ -310,11 +312,11 @@ object Program:
                     else
                       `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ++ sum.generate()
+          * = ** ::: sum.generate()
 
           name match
             case Symbol(it) =>
-              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ++ *))
+              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ::: *))
             case _ =>
 
         case _: `{}` => ???
