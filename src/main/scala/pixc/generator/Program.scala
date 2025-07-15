@@ -76,32 +76,27 @@ object Program:
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case `.`(end, it*) =>
-          * =
-            if it.isEmpty
-            then
-              end.generate
+        case `.`(end, ps*) =>
+          * = ps.foldRight(end.generate) {
 
-            else
-              val ios = `.`(end, it.tail*).generate
+            case (xa @ χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _)), r), ios) =>
+              `_ <- *`(Term.Apply(
+                         Term.Apply(\("τ"),
+                                    Term.ArgClause(rate(r.get)::Nil)),
+                         Term.ArgClause(Lit.String(xa.υidυ)::Nil))) ::
+              `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
 
-              it.head match
-                case xa @ χ(Right(`⟦⟧`(_, _, _, υidυ, Symbol(name), _)), r) =>
-                  `_ <- *`(Term.Apply(
-                             Term.Apply(\("τ"),
-                                        Term.ArgClause(rate(r.get)::Nil)),
-                             Term.ArgClause(Lit.String(xa.υidυ)::Nil))) ::
-                  `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- }{(*)()()`(name, υidυ) :: ios)) :: Nil
+            case (xa @ χ(Left(Symbol(name)), r), ios) =>
+              `_ <- *`(Term.Apply(
+                         Term.Apply(\("τ"),
+                                    Term.ArgClause(rate(r.get)::Nil)),
+                         Term.ArgClause(Lit.String(xa.υidυ)::Nil))) ::
+              `_ <- }{(*)()()`(name) :: ios
 
-                case xa @ χ(Left(Symbol(name)), r) =>
-                  `_ <- *`(Term.Apply(
-                             Term.Apply(\("τ"),
-                                        Term.ArgClause(rate(r.get)::Nil)),
-                             Term.ArgClause(Lit.String(xa.υidυ)::Nil))) ::
-                  `_ <- }{(*)()()`(name) :: ios
+            case (it, ios) =>
+              it.generate ::: ios
 
-                case _ =>
-                  it.head.generate ++ ios
+          }
 
         case _: χ => ??? // handled above
 
@@ -119,7 +114,7 @@ object Program:
                          Term.Apply(\("τ"),
                                     Term.ArgClause(rate(r.get)::Nil)),
                          Term.ArgClause(Lit.String(it.υidυ)::Nil)))
-          * ++= enums
+          * :::= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
@@ -307,11 +302,11 @@ object Program:
                     else
                       `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ++ sum.generate
+          * = ** ::: sum.generate
 
           name match
             case Symbol(it) =>
-              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ++ *))
+              * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(`* <- χ; _ <- }{()(, *)`(it, xid) ::: *))
             case _ =>
 
         case _: `{}` => ???
@@ -341,7 +336,7 @@ object Program:
       val id = new helper.υidυ
 
       ( prog.head match
-          case (`(*)`("_par", λ(parallelism: Lit.Int)), _) =>
+          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString :: Nil
           case _ => Nil
       ) :::
