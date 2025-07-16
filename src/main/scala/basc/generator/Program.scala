@@ -92,21 +92,21 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
                                     Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
+                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
           * :::= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
                                     Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
+                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
           * :+= `_ <- IO { * }`(term)
 
         case it @ τ(r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
                                     Term.ArgClause(rate(r.get)::Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ)::Nil)))
+                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
 
 
         case it @ π(dir, λ(Symbol(ch)), arg, None, r, Some((Left(enums)), _)) =>
