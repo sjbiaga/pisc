@@ -55,6 +55,8 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
+  type & = Ref[IO, Long]
+
   type * = Queue[IO, Unit]
 
   type / = Queue[IO, ((String, String), +)]
@@ -111,12 +113,12 @@ package object `Π-loop`:
     else
       IO.unit
 
-  private def traces(started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
-          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 started, ended, name, polarity,
+          printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+                 number, started, ended, name, polarity,
                  key.stripPrefix("!"), key.startsWith("!"),
                  label, rate, delay, duration, agent)
         }
@@ -125,8 +127,8 @@ package object `Π-loop`:
         IO.blocking {
           val fn = filename.mkString(",")
           ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    started, ended, name, polarity,
+          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    number, started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, fn)
         }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
@@ -153,7 +155,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int)
-          (using % : %, ! : !, * : *)
+          (using % : %, ! : !, & : &, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
@@ -191,10 +193,11 @@ package object `Π-loop`:
                                         _  <- d1.complete(Some(delay -> (-, --)))
                                         _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
                                         ts <- Clock[IO].monotonic.map(_.toNanos)
-                                        _  <- traces(ts1, ts, delay, duration)(k1)
+                                        n  <- &.updateAndGet(_ + 1)
+                                        _  <- record(n, ts1, ts, delay, duration)(k1)
                                         _  <- if k1 == k2
                                               then IO.unit
-                                              else traces(ts2, ts, delay, duration)(k2)
+                                              else record(n, ts2, ts, delay, duration)(k2)
                                         _  <- -.await
                                         _  <- ready(k1)
                                         _  <- if k1 == k2 then IO.unit else ready(k2)
