@@ -41,11 +41,11 @@ object App extends IOApp:
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !): IO[ExitCode] =
+  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !, & : &): IO[ExitCode] =
     for
       s <- Semaphore[IO](1)
       x <- ( for
-               _ <- loop(parallelism, s)(using %, !, *)(π.`π-wand`).background
+               _ <- loop(parallelism, s)(using %, !, &, *)(π.`π-wand`).background
                _ <- poll(using %, /, *).background
              yield
                ()
@@ -69,8 +69,9 @@ object App extends IOApp:
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Queue.unbounded[IO, Unit]
       ! <- Deferred[IO, ExitCode]
+      & <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, args)(%, /, *, !)
+      x <- run(p, args)(%, /, *, !, &)
     yield
       x
 
