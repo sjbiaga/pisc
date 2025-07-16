@@ -137,6 +137,8 @@ abstract class Calculus extends BioAmbients:
         }
     } |
     opt(stringLiteral) ~ ("["~>choice<~"]") ^^ { // ambient
+      case Some(label) ~ _ if label.contains(',') =>
+        throw AmbientLabelParsingException(label)
       case label ~ (sum, free) =>
         val labelʹ = label.map(_.stripPrefix("\"").stripSuffix("\""))
         `[]`(labelʹ, sum) -> free
@@ -401,6 +403,9 @@ object Calculus:
 
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
+
+  case class AmbientLabelParsingException(label: String)
+      extends ParsingException(s"An ambient label $label contains commas")
 
 
   // functions

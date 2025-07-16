@@ -230,7 +230,7 @@ package object sΠ:
 
   object τ:
 
-    def apply(rate: Rate)(key: String)
+    def apply(rate: Rate)(key: String, `_)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
@@ -646,13 +646,13 @@ package object sΠ:
 
                 case `π-merge+` =>
                   for
-                    (node, tree) <- `][`.modify { m => m -> (nodeʹ, m(nodeʹ)) }
-                    _            <- remove(node, tree)
-                    (root, temp) <- `][`.modify { m => m -> (node, m(node)) }
-                    join          = root ++ node
-                    _            <- `][`.update { _ - root - node + (join -> temp) }
-                    _            <- update(temp, root, join)
-                    _            <- merge(tree, join)
+                    tree <- `][`.modify { m => m -> m(nodeʹ) }
+                    _    <- remove(nodeʹ, tree)
+                    temp <- `][`.modify { m => m -> m(node) }
+                    join  = node ++ nodeʹ
+                    _    <- `][`.update { _ - node - nodeʹ + (join -> temp) }
+                    _    <- update(temp, node, join)
+                    _    <- merge(tree, join)
                   yield
                     true
 

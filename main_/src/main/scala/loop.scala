@@ -49,13 +49,15 @@ package object `Π-loop`:
 
   type - = CyclicBarrier[IO]
 
-  type + = (Deferred[IO, Option[(Double, (-, -))]], (Long, ((>*<, Int), Option[Boolean], Rate)))
+  type + = (Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]], (Long, ((>*<, Int), Option[Boolean], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
   type ! = Deferred[IO, ExitCode]
 
   type ^ = Semaphore[IO]
+
+  type & = Ref[IO, Long]
 
   type * = Queue[IO, Unit]
 
@@ -113,24 +115,24 @@ package object `Π-loop`:
     else
       IO.unit
 
-  private def traces(started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, String)): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         IO.blocking {
-          printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 started, ended, name, polarity,
+          printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+                 number, started, ended, name, polarity,
                  key.stripPrefix("!"), key.startsWith("!"),
-                 label, rate, delay, duration, agent, dir_cap)
+                 label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2)
         }
       case Array(key, name, polarity, label, rate, agent, dir_cap, filename*) =>
         var ps: PrintStream = null
         IO.blocking {
           val fn = filename.mkString(",")
           ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    started, ended, name, polarity,
+          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    number, started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, dir_cap, fn)
+                    label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2, fn)
         }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
       case _ =>
         IO.unit
@@ -155,7 +157,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int)
-          (using % : %, ! : !, ^ : ^, * : *)
+          (using % : %, ! : !, & : &, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
@@ -183,6 +185,8 @@ package object `Π-loop`:
                                       for
                                         -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                         -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        +  <- Deferred[IO, (String, String)]
+                                        ++ <- Deferred[IO, (String, String)]
                                         p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                         p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                         (d1, (ts1, _)) = p1
@@ -191,15 +195,18 @@ package object `Π-loop`:
                                         _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
                                         _  <- %.update(_ - key1 - key2)
                                         _  <- ^.acquire
-                                        _  <- d1.complete(Some(delay -> (-, --)))
-                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
+                                        _  <- d1.complete(Some((delay, (-, --), +)))
+                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, (-, --), ++)))
                                         ts <- Clock[IO].monotonic.map(_.toNanos)
-                                        _  <- traces(ts1, ts, delay, duration)(k1)
+                                        _  <- -.await
+                                        l1 <- +.get
+                                        l2 <- if k1 == k2 then IO.pure(l1) else ++.get
+                                        _  <- ^.release
+                                        n  <- &.updateAndGet(_ + 1)
+                                        _  <- record(n, ts1, ts, delay, duration, l1)(k1)
                                         _  <- if k1 == k2
                                               then IO.unit
-                                              else traces(ts2, ts, delay, duration)(k2)
-                                        _  <- -.await
-                                        _  <- ^.release
+                                              else record(n, ts2, ts, delay, duration, l2)(k2)
                                         _  <- ready(k1)
                                         _  <- if k1 == k2 then IO.unit else ready(k2)
                                         _  <- --.await

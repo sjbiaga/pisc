@@ -132,6 +132,17 @@ package object sΠ:
       yield
         ()
 
+    /**
+      * Return the label for this [[IOLocal]].
+      */
+    def apply(`)(`: IOLocal[`)(`])
+             (implicit `][`: `][`): IO[String] =
+      for
+        node <- `)(`.get
+        lab  <- `][`.modify { m => m -> m(m.keys.find(_.contains(node)).get).label.getOrElse("") }
+      yield
+        lab
+
   /**
     * Type of ambients' trees.
     */
@@ -230,13 +241,15 @@ package object sΠ:
 
   object τ:
 
-    def apply(rate: Rate)(key: String)
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
+             (using `][`)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        s_label   <- `}{`(`)(`)
+        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
         dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
         _         <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
@@ -245,10 +258,12 @@ package object sΠ:
                        then
                          IO.pure(null: java.lang.Double)
                        else
-                         val (delay, (b, b2)) = opt.get
+                         val (delay, (b, b2), d) = opt.get
                          for
-                           _ <- b.await
-                           _ <- b2.await
+                           _       <- b.await
+                           e_label <- `}{`(`)(`)
+                           _       <- d.complete(s_label -> e_label)
+                           _       <- b2.await
                          yield
                            java.lang.Double(delay)
                      )
@@ -282,13 +297,13 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
-        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
+        polarity   = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
         _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
-        delay    <- if polarity
-                    then ><.ζ.<(key, `)(`, cap)(deferred)(ref)
-                    else ><.ζ.>(key, `)(`, cap)(deferred)(ref)
+        delay     <- if polarity
+                     then ><.ζ.<(key, `)(`, cap)(deferred)(ref)
+                     else ><.ζ.>(key, `)(`, cap)(deferred)(ref)
       yield
         delay
 
@@ -302,7 +317,7 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
         _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         delay     <- ><.π(key, value.name, `)(`, dir)(deferred)(ref)
@@ -319,7 +334,7 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
         _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         delay     <- ><.π(key, value.name, `)(`, dir)(code)(deferred)(ref)
@@ -336,7 +351,7 @@ package object sΠ:
                        ^ : String): IO[(`()`, java.lang.Double)] =
       for
         _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred   <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
         timestamp  <- Clock[IO].monotonic.map(_.toNanos)
         _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         (r, delay) <- ><.π(key, `)(`, dir)(deferred)(ref)
@@ -353,7 +368,7 @@ package object sΠ:
                           ^ : String): IO[(`()`, java.lang.Double)] =
       for
         _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred   <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
         timestamp  <- Clock[IO].monotonic.map(_.toNanos)
         _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         (r, delay) <- ><.π(key, `)(`, dir)(code)(deferred)(ref)
@@ -419,7 +434,7 @@ package object sΠ:
       object π:
 
         def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                  (using `][`: `][`)
                  (`>R`: >*<): IO[java.lang.Double] =
           for
@@ -428,9 +443,10 @@ package object sΠ:
                      then
                        IO.pure(null: java.lang.Double)
                      else
-                       val (delay, (b, b2)) = opt.get
+                       val (delay, (b, b2), d) = opt.get
                        val ord = dir.ord
                        for
+                         s_label <- `}{`(`)(`)
                          offerer <- Deferred[IO, Boolean]
                          _       <- IO.uncancelable { poll =>
                                       sΠ.`][`(`)(`).flatMap { node =>
@@ -444,7 +460,15 @@ package object sΠ:
                                               (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
                                               poll(offerer.get).onCancel(cleanup)
                                         }.flatten
-                                      } <* b.await <* b2.await
+                                      }.flatTap { _ =>
+                                        for
+                                          _       <- b.await
+                                          e_label <- `}{`(`)(`)
+                                          _       <- d.complete(s_label -> e_label)
+                                          _       <- b2.await
+                                        yield
+                                          ()
+                                      }
                                     }.ifM(IO.unit, IO.never)
                        yield
                          java.lang.Double(delay)
@@ -453,7 +477,7 @@ package object sΠ:
             del
 
         def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                  (using `][`: `][`)
                  (`>R`: >*<): IO[java.lang.Double] =
           for
@@ -462,9 +486,10 @@ package object sΠ:
                      then
                        IO.pure(null: java.lang.Double)
                      else
-                       val (delay, (b, b2)) = opt.get
+                       val (delay, (b, b2), d) = opt.get
                        val ord = dir.ord
                        for
+                         s_label <- `}{`(`)(`)
                          offerer <- Deferred[IO, Boolean]
                          _       <- IO.uncancelable { poll =>
                                       sΠ.`][`(`)(`).flatMap { node =>
@@ -478,7 +503,15 @@ package object sΠ:
                                               (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
                                               poll(offerer.get).onCancel(cleanup)
                                         }.flatten <* exec(code)
-                                      } <* b.await <* b2.await
+                                      }.flatTap { _ =>
+                                        for
+                                          _       <- b.await
+                                          e_label <- `}{`(`)(`)
+                                          _       <- d.complete(s_label -> e_label)
+                                          _       <- b2.await
+                                        yield
+                                          ()
+                                      }
                                     }.ifM(IO.unit, IO.never)
                        yield
                          java.lang.Double(delay)
@@ -487,7 +520,7 @@ package object sΠ:
             del
 
         def apply(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                  (using `][`: `][`)
                  (`<R`: >*<): IO[(Any, java.lang.Double)] =
           for
@@ -496,24 +529,33 @@ package object sΠ:
                       then
                         IO.pure((null: Any) -> (null: java.lang.Double))
                       else
-                        val (delay, (b, b2)) = opt.get
+                        val (delay, (b, b2), d) = opt.get
                         val ord = dir.ord
                         for
-                          taker <- Deferred[IO, (Any, Boolean)]
-                          name  <- IO.uncancelable { poll =>
-                                     sΠ.`][`(`)(`).flatMap { node =>
-                                       `<R`.modify { m =>
-                                         m(ord) match
-                                           case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
-                                             (m + (ord -> it.copy(offerer = None))) ->
-                                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
-                                           case it =>
-                                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                             (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
-                                             poll(taker.get).onCancel(cleanup)
-                                       }.flatten
-                                     } <* b.await <* b2.await
-                                   }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
+                          s_label <- `}{`(`)(`)
+                          taker   <- Deferred[IO, (Any, Boolean)]
+                          name    <- IO.uncancelable { poll =>
+                                       sΠ.`][`(`)(`).flatMap { node =>
+                                         `<R`.modify { m =>
+                                           m(ord) match
+                                             case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
+                                               (m + (ord -> it.copy(offerer = None))) ->
+                                               check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
+                                             case it =>
+                                               val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                               (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
+                                               poll(taker.get).onCancel(cleanup)
+                                         }.flatten
+                                       }.flatTap { _ =>
+                                         for
+                                           _       <- b.await
+                                           e_label <- `}{`(`)(`)
+                                           _       <- d.complete(s_label -> e_label)
+                                           _       <- b2.await
+                                         yield
+                                           ()
+                                       }
+                                     }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
                         yield
                           name -> java.lang.Double(delay)
                     )
@@ -521,7 +563,7 @@ package object sΠ:
             pair
 
         def apply[T](key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
-                    (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                    (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                     (using `][`: `][`)
                     (`<R`: >*<): IO[(Any, java.lang.Double)] =
           for
@@ -530,25 +572,34 @@ package object sΠ:
                       then
                         IO.pure((null: Any) -> (null: java.lang.Double))
                       else
-                        val (delay, (b, b2)) = opt.get
+                        val (delay, (b, b2), d) = opt.get
                         val ord = dir.ord
                         for
-                          taker <- Deferred[IO, (Any, Boolean)]
-                          name  <- IO.uncancelable { poll =>
-                                     sΠ.`][`(`)(`).flatMap { node =>
-                                       `<R`.modify { m =>
-                                         m(ord) match
-                                           case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
-                                             (m + (ord -> it.copy(offerer = None))) ->
-                                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
-                                           case it =>
-                                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                             (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
-                                             poll(taker.get).onCancel(cleanup)
-                                       }.flatten
-                                        .flatMap { case (it: T, ok) => (code andThen exec)(it).map(_ -> ok) }
-                                     } <* b.await <* b2.await
-                                   }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
+                          s_label <- `}{`(`)(`)
+                          taker   <- Deferred[IO, (Any, Boolean)]
+                          name    <- IO.uncancelable { poll =>
+                                       sΠ.`][`(`)(`).flatMap { node =>
+                                         `<R`.modify { m =>
+                                           m(ord) match
+                                             case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
+                                               (m + (ord -> it.copy(offerer = None))) ->
+                                               check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
+                                             case it =>
+                                               val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                               (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
+                                               poll(taker.get).onCancel(cleanup)
+                                         }.flatten
+                                          .flatMap { case (it: T, ok) => (code andThen exec)(it).map(_ -> ok) }
+                                       }.flatTap { _ =>
+                                         for
+                                           _       <- b.await
+                                           e_label <- `}{`(`)(`)
+                                           _       <- d.complete(s_label -> e_label)
+                                           _       <- b2.await
+                                         yield
+                                           ()
+                                       }
+                                     }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
                         yield
                           name -> java.lang.Double(delay)
                     )
@@ -652,20 +703,20 @@ package object sΠ:
 
                 case `π-merge+` =>
                   for
-                    (node, tree) <- `][`.modify { m => m -> (nodeʹ, m(nodeʹ)) }
-                    _            <- remove(node, tree)
-                    (root, temp) <- `][`.modify { m => m -> (node, m(node)) }
-                    join          = root ++ node
-                    _            <- `][`.update { _ - root - node + (join -> temp) }
-                    _            <- update(temp, root, join)
-                    _            <- merge(tree, join)
+                    tree <- `][`.modify { m => m -> m(nodeʹ) }
+                    _    <- remove(nodeʹ, tree)
+                    temp <- `][`.modify { m => m -> m(node) }
+                    join  = node ++ nodeʹ
+                    _    <- `][`.update { _ - node - nodeʹ + (join -> temp) }
+                    _    <- update(temp, node, join)
+                    _    <- merge(tree, join)
                   yield
                     true
 
         object > :
 
           def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                   (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                    (using `][`: `][`)
                    (`>R`: >*<): IO[java.lang.Double] =
             for
@@ -674,9 +725,10 @@ package object sΠ:
                        then
                          IO.pure(null: java.lang.Double)
                        else
-                         val (delay, (b, b2)) = opt.get
+                         val (delay, (b, b2), d) = opt.get
                          val ord = cap.ord
                          for
+                           s_label <- `}{`(`)(`)
                            offerer <- Deferred[IO, Boolean]
                            _       <- IO.uncancelable { poll =>
                                         sΠ.`][`(`)(`).flatMap { node =>
@@ -690,7 +742,15 @@ package object sΠ:
                                                 (m + (ord -> it.copy(offerer = Some(() -> offerer -> node -> cap)))) ->
                                                 poll(offerer.get).onCancel(cleanup)
                                           }.flatten
-                                        } <* b.await <* b2.await
+                                        }.flatTap { _ =>
+                                          for
+                                            _       <- b.await
+                                            e_label <- `}{`(`)(`)
+                                            _       <- d.complete(s_label -> e_label)
+                                            _       <- b2.await
+                                          yield
+                                            ()
+                                        }
                                       }.ifM(IO.unit, IO.never)
                          yield
                            java.lang.Double(delay)
@@ -701,7 +761,7 @@ package object sΠ:
         object < :
 
           def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -))]])
+                   (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
                    (using `][`: `][`)
                    (`<R`: >*<): IO[java.lang.Double] =
             for
@@ -710,25 +770,34 @@ package object sΠ:
                        then
                          IO.pure(null: java.lang.Double)
                        else
-                         val (delay, (b, b2)) = opt.get
+                         val (delay, (b, b2), d) = opt.get
                          val ord = cap.ord
                          for
-                           taker <- Deferred[IO, (Any, Boolean)]
-                           _     <- IO.uncancelable { poll =>
-                                      sΠ.`][`(`)(`).flatMap { node =>
-                                        `<R`.modify { m =>
-                                          m(ord) match
-                                            case it @ ><(_, Some((((name, offerer), nodeʹ), capʹ: `π-ζ`))) =>
-                                              (m + (ord -> it.copy(offerer = None))) ->
-                                              check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
-                                            case it =>
-                                              val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                              (m + (ord -> it.copy(taker = Some(taker -> node -> cap)))) ->
-                                              poll(taker.get).onCancel(cleanup)
-                                        }.flatten
-                                         .flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
-                                      } <* b.await <* b2.await
-                                    }.ifM(IO.unit, IO.never)
+                           s_label <- `}{`(`)(`)
+                           taker   <- Deferred[IO, (Any, Boolean)]
+                           _       <- IO.uncancelable { poll =>
+                                        sΠ.`][`(`)(`).flatMap { node =>
+                                          `<R`.modify { m =>
+                                            m(ord) match
+                                              case it @ ><(_, Some((((name, offerer), nodeʹ), capʹ: `π-ζ`))) =>
+                                                (m + (ord -> it.copy(offerer = None))) ->
+                                                check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
+                                              case it =>
+                                                val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                                (m + (ord -> it.copy(taker = Some(taker -> node -> cap)))) ->
+                                                poll(taker.get).onCancel(cleanup)
+                                          }.flatten
+                                           .flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
+                                        }.flatTap { _ =>
+                                          for
+                                            _       <- b.await
+                                            e_label <- `}{`(`)(`)
+                                            _       <- d.complete(s_label -> e_label)
+                                            _       <- b2.await
+                                          yield
+                                            ()
+                                        }
+                                      }.ifM(IO.unit, IO.never)
                          yield
                            java.lang.Double(delay)
                      )
