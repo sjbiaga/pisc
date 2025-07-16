@@ -53,6 +53,8 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
+  type & = Ref[IO, Long]
+
   type * = Queue[IO, Unit]
 
   type / = Queue[IO, ((String, String), +)]
@@ -129,7 +131,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int)
-          (using % : %, ! : !, * : *)
+          (using % : %, ! : !, & : &, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])

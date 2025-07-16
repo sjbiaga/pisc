@@ -307,18 +307,20 @@ the current equation, a label, the action's rate, and the filename where traces
 are directed. However, it is not until runtime that these keys may be possibly
 used. The traces' output is a `.csv` file with the following columns:
 
-    start,end,name,polarity,key,replication,label,rate,delay,duration,agent,filename
+    number,start,end,name,polarity,key,replication,label,rate,delay,duration,agent,filename
 
-The first two column are two timestamps, the `start` and `end` of the action in
-nanoseconds. The _channel name_ is the third column (or "τ"). The polarity of
-the action (`false` for output, `true` for input, empty for `τ`) is the fourth
-column. The fifth stores the unique _key_. The sixth tells whether the action is
-the guard of a _replication_. The seventh is a _label_ that is a string of tags,
-which differentiate between the elements of summations and compositions. The
-eighth is the _rate_. The ninth is the _delay_ of the action (silent or
-communication). The tenth may be `0.0` for immediate actions, `NaN` for passive
-actions or the same as the ninth for active actions. The eleventh is the
-originating _agent name_. The final twelfth column is a _filename_ (with
+The first column is the current _number_. The next two columns are two timestamps,
+the `start` and `end` of the action in nanoseconds. The _channel name_ is the
+fourth column (or "τ"). The polarity of the action (`false` for output, `true`
+for input, empty for `τ`) is the fifth column. (The number and the `end`
+timestamp are the same for any _two_ input/output actions that result in a
+communication). The sixth stores the unique _key_. The seventh tells whether the
+action is the guard of a _replication_. The eighth is a _label_ that is a string
+of tags, which differentiate between the elements of summations and compositions.
+The ninth is the _rate_. The tenth is the _delay_ of the action (silent or
+communication). The eleventh may be `0.0` for immediate actions, `NaN` for
+passive actions, or the same as the tenth for active actions. The twelfth is the
+originating _agent name_. The final thirteenth column is a _filename_ (with
 possible to be ignored commas) or empty.
 
 There may be silent actions which are inserted after the other are labelled:
