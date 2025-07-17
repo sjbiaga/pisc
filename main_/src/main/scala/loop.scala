@@ -49,7 +49,9 @@ package object `Π-loop`:
 
   type - = CyclicBarrier[IO]
 
-  type + = (Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]], (Long, ((>*<, Int), Option[Boolean], Rate)))
+  type <> = Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+
+  type + = (<>, (Long, ((>*<, Int), Option[Boolean], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -115,14 +117,15 @@ package object `Π-loop`:
     else
       IO.unit
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, String)): String => IO[Unit] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => IO[String] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         IO.blocking {
           printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
                  number, started, ended, name, polarity,
                  key.stripPrefix("!"), key.startsWith("!"),
-                 label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2)
+                 label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1)
+          polarity
         }
       case Array(key, name, polarity, label, rate, agent, dir_cap, filename*) =>
         var ps: PrintStream = null
@@ -132,11 +135,23 @@ package object `Π-loop`:
           ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                     number, started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2, fn)
-        }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
+                    label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
+          polarity
+        }.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
       case _ =>
-        IO.unit
+        IO.pure(null)
 
+  private def record(number: Long, polarity: String, snapshot: String): IO[Unit] =
+    if polarity eq null
+    then
+      IO.unit
+    else
+      var ps: PrintStream = null
+      IO.blocking {
+        ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
+        ps.println("""<?xml version="1.0" ?>""")
+        ps.println(snapshot)
+      }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
 
   private def exit(ks: List[String])
                   (using % : %, ! : !): IO[Unit] =
@@ -156,7 +171,7 @@ package object `Π-loop`:
         } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int)
+  def loop(parallelism: Int, snapshot: Boolean)
           (using % : %, ! : !, & : &, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -170,7 +185,7 @@ package object `Π-loop`:
     } >>= { case (it, exit) =>
             if !exit && it.isEmpty
             then
-              *.take >> loop(parallelism)
+              *.take >> loop(parallelism, snapshot)
             else
               ∥(it)(`π-wand`._1)(parallelism) match
                 case Nil =>
@@ -185,8 +200,8 @@ package object `Π-loop`:
                                       for
                                         -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                         -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                        +  <- Deferred[IO, (String, String)]
-                                        ++ <- Deferred[IO, (String, String)]
+                                        +  <- Deferred[IO, (String, (String, String))]
+                                        ++ <- Deferred[IO, (String, (String, String))]
                                         p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                         p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                         (d1, (ts1, _)) = p1
@@ -195,25 +210,32 @@ package object `Π-loop`:
                                         _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
                                         _  <- %.update(_ - key1 - key2)
                                         _  <- ^.acquire
-                                        _  <- d1.complete(Some((delay, (-, --), +)))
-                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, (-, --), ++)))
+                                        _  <- d1.complete(Some((delay, (-, --), snapshot, +)))
+                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, (-, --), snapshot, ++)))
                                         ts <- Clock[IO].monotonic.map(_.toNanos)
                                         _  <- -.await
                                         l1 <- +.get
                                         l2 <- if k1 == k2 then IO.pure(l1) else ++.get
                                         _  <- ^.release
                                         n  <- &.updateAndGet(_ + 1)
-                                        _  <- record(n, ts1, ts, delay, duration, l1)(k1)
-                                        _  <- if k1 == k2
-                                              then IO.unit
-                                              else record(n, ts2, ts, delay, duration, l2)(k2)
+                                        p  <- record(n, ts1, ts, delay, duration, l1)(k1)
+                                        _  <- if snapshot then record(n, p, l1._2._2) else IO.unit
+                                        _  <- if (k1 == k2)
+                                              then
+                                                IO.unit
+                                              else
+                                                for
+                                                  p <- record(n, ts2, ts, delay, duration, l2)(k2)
+                                                  _ <- if snapshot then record(n, p, l2._2._2) else IO.unit
+                                                yield
+                                                  ()
                                         _  <- ready(k1)
                                         _  <- if k1 == k2 then IO.unit else ready(k2)
                                         _  <- --.await
                                       yield
                                         ()
                                     }
-                                  } >> loop(parallelism)
+                                  } >> loop(parallelism, snapshot)
           }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =

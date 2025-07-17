@@ -335,6 +335,18 @@ these are not traceable, but nor should they need be; if they are still needed,
 they must be inserted explicitly.
 
 
+Snapshots
+---------
+
+Snapshots are enabled by the `"snapshot"` directive. If set, the ambients'
+hierarchy at the end of each communication, is flushed into an `.xml` file. The
+name of this file is the current number - the same as the first column in
+[traces](#traces) - dash the polarity - the same as the fifth column in
+[traces](#traces): these two name components are enough to make the name unique,
+as well as to be corroborated with the `.csv` entries. Unlike the `.csv` file
+which is appended records to, the `.xml` file gets always overwritten.
+
+
 Program
 -------
 

@@ -38,7 +38,7 @@ package object sΠ:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Semaphore, Supervisor }
 
-  import `Π-loop`.{ -, %, /, \ }
+  import `Π-loop`.{ <>, -, %, /, \ }
   import `Π-magic`.><
   export `Π-magic`.>*<
   import `Π-stats`.Rate
@@ -133,15 +133,86 @@ package object sΠ:
         ()
 
     /**
-      * Return the label for this [[IOLocal]].
+      * Return the label and the snapshot for this [[IOLocal]].
       */
-    def apply(`)(`: IOLocal[`)(`])
-             (implicit `][`: `][`): IO[String] =
+    def apply(`)(`: IOLocal[`)(`], snapshot: Boolean = false)
+             (implicit `][`: `][`): IO[(String, String)] =
       for
-        node <- `)(`.get
-        lab  <- `][`.modify { m => m -> m(m.keys.find(_.contains(node)).get).label.getOrElse("") }
+        node  <- `)(`.get
+        lab_s <- `][`.modify { m => m -> {
+                               var root = m.keys.find(_.contains(node)).get
+                               def label(node: `)*(`): String = m(node).label.getOrElse("")
+                               label(root) -> (
+                                 if !snapshot
+                                 then ""
+                                 else
+                                   while m(root).root ne null do root = m(root).root
+                                   var id = 0L
+                                   var tree = Map[`)*(`, Long](root -> id)
+                                   def build(root: `)*(`): Unit =
+                                     for
+                                       node <- m(root).children
+                                     yield
+                                       id += 1
+                                       tree += node -> id
+                                       build(node)
+                                   build(root)
+                                   def xml(root: `)*(`, count: Int, indent: String): String =
+                                     val pid = tree(root)
+                                     def siblings(node: `)*(`, count: Int): String =
+                                       val sid = tree(node)
+                                       s"$indent\t\t<siblings count=$count sibling=$sid>\n" +
+                                       ( for
+                                           nodeʹ <- m(node).siblings
+                                           sidʹ   = tree(nodeʹ)
+                                         yield
+                                           s"""$indent\t\t\t<node id=$sidʹ label="${label(nodeʹ)}" parent=$pid sibling=$sid/>"""
+                                       ).mkString("", "\n", "\n") +
+                                       s"$indent\t\t</siblings>\n"
+                                     def children: String =
+                                       s"$indent<children count=$count parent=$pid>\n" +
+                                       ( for
+                                           node <- m(root).children
+                                           cid   = tree(node)
+                                         yield
+                                           val count = m(node).children.size
+                                           if count == 0
+                                           then
+                                             val count = m(node).siblings.size
+                                             if count == 0
+                                             then
+                                               s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid/>"""
+                                             else
+                                               s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""" +
+                                               siblings(node, count) +
+                                               s"$indent\t</node>"
+                                           else
+                                             s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""" +
+                                             xml(node, count, indent + "\t\t") +
+                                             { val count = m(node).siblings.size
+                                               if count == 0
+                                               then
+                                                 "\n"
+                                               else
+                                                 "\n" + siblings(node, count)
+                                             } +
+                                             s"$indent\t</node>"
+                                       ).mkString("", "\n", "\n") +
+                                       s"$indent</children>"
+                                     children
+                                   val count = m(root).children.size
+                                   if count == 0
+                                   then
+                                     s"""<root id=${tree(root)} label="${label(root)}"/>\n"""
+                                   else
+                                     s"""<root id=${tree(root)} label="${label(root)}">\n""" +
+                                     xml(root, count, "\t") +
+                                     "\n</root>"
+                               )
+                            }
+                }
       yield
-        lab
+        lab_s
 
   /**
     * Type of ambients' trees.
@@ -247,21 +318,21 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        s_label   <- `}{`(`)(`)
-        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
-        opt       <- deferred.get
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        dummy_ref    <- Ref.of[IO, Map[Int, ><]](Map.empty)
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
+        opt          <- deferred.get
+        _            <- if opt eq None then IO.canceled else IO.unit
         (delay,
         (b, b2),
-        d)         = opt.get
-        _         <- b.await
-        e_label   <- `}{`(`)(`)
-        _         <- d.complete(s_label -> e_label)
-        _         <- b2.await
+        s, d)         = opt.get
+        _            <- b.await
+        e_label      <- `}{`(`)(`, s)
+           _         <- d.complete(s_label -> e_label)
+        _            <- b2.await
       yield
         delay
 
@@ -291,14 +362,15 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        polarity   = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
-        delay     <- if polarity
-                     then ><.ζ.<(key, `)(`, cap)(deferred)(ref)
-                     else ><.ζ.>(key, `)(`, cap)(deferred)(ref)
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
+        delay        <- if polarity
+                        then ><.ζ.<(key, s_label, `)(`, cap)(deferred)(ref)
+                        else ><.ζ.>(key, s_label, `)(`, cap)(deferred)(ref)
       yield
         delay
 
@@ -311,11 +383,12 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
-        delay     <- ><.π(key, value.name, `)(`, dir)(deferred)(ref)
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
+        delay        <- ><.π(key, value.name, s_label, `)(`, dir)(deferred)(ref)
       yield
         delay
 
@@ -328,11 +401,12 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
-        delay     <- ><.π(key, value.name, `)(`, dir)(code)(deferred)(ref)
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
+        delay        <- ><.π(key, value.name, s_label, `)(`, dir)(code)(deferred)(ref)
       yield
         delay
 
@@ -345,11 +419,12 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        timestamp  <- Clock[IO].monotonic.map(_.toNanos)
-        _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
-        (r, delay) <- ><.π(key, `)(`, dir)(deferred)(ref)
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
+        (r, delay)   <- ><.π(key, s_label, `)(`, dir)(deferred)(ref)
       yield
         new `()`(r) -> delay
 
@@ -362,11 +437,12 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]]
-        timestamp  <- Clock[IO].monotonic.map(_.toNanos)
-        _          <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
-        (r, delay) <- ><.π(key, `)(`, dir)(code)(deferred)(ref)
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        (s_label, _) <- `}{`(`)(`)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
+        (r, delay)   <- ><.π(key, s_label, `)(`, dir)(code)(deferred)(ref)
       yield
         new `()`(r) -> delay
 
@@ -428,8 +504,8 @@ package object sΠ:
 
       object π:
 
-        def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+        def apply(key: String, name: Any, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                 (deferred: <>)
                  (using `][`: `][`)
                  (`>R`: >*<): IO[Double] =
           for
@@ -437,9 +513,8 @@ package object sΠ:
             _       <- if opt eq None then IO.canceled else IO.unit
             (delay,
             (b, b2),
-            d)       = opt.get
+            s, d)    = opt.get
             ord      = dir.ord
-            s_label <- `}{`(`)(`)
             offerer <- Deferred[IO, Boolean]
             _       <- IO.uncancelable { poll =>
                          sΠ.`][`(`)(`).flatMap { node =>
@@ -456,7 +531,7 @@ package object sΠ:
                          }.flatTap { _ =>
                            for
                              _       <- b.await
-                             e_label <- `}{`(`)(`)
+                             e_label <- `}{`(`)(`, s)
                              _       <- d.complete(s_label -> e_label)
                              _       <- b2.await
                            yield
@@ -466,8 +541,8 @@ package object sΠ:
           yield
             delay
 
-        def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+        def apply(key: String, name: Any, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
+                 (deferred: <>)
                  (using `][`: `][`)
                  (`>R`: >*<): IO[Double] =
           for
@@ -475,9 +550,8 @@ package object sΠ:
             _       <- if opt eq None then IO.canceled else IO.unit
             (delay,
             (b, b2),
-            d)       = opt.get
+            s, d)    = opt.get
             ord      = dir.ord
-            s_label <- `}{`(`)(`)
             offerer <- Deferred[IO, Boolean]
             _       <- IO.uncancelable { poll =>
                          sΠ.`][`(`)(`).flatMap { node =>
@@ -494,7 +568,7 @@ package object sΠ:
                          }.flatTap { _ =>
                            for
                              _       <- b.await
-                             e_label <- `}{`(`)(`)
+                             e_label <- `}{`(`)(`, s)
                              _       <- d.complete(s_label -> e_label)
                              _       <- b2.await
                            yield
@@ -504,8 +578,8 @@ package object sΠ:
           yield
             delay
 
-        def apply(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+        def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                 (deferred: <>)
                  (using `][`: `][`)
                  (`<R`: >*<): IO[(Any, Double)] =
           for
@@ -513,9 +587,8 @@ package object sΠ:
             _       <- if opt eq None then IO.canceled else IO.unit
             (delay,
             (b, b2),
-            d)       = opt.get
+            s, d)    = opt.get
             ord      = dir.ord
-            s_label <- `}{`(`)(`)
             taker   <- Deferred[IO, (Any, Boolean)]
             name    <- IO.uncancelable { poll =>
                          sΠ.`][`(`)(`).flatMap { node =>
@@ -532,7 +605,7 @@ package object sΠ:
                          }.flatTap { _ =>
                            for
                              _       <- b.await
-                             e_label <- `}{`(`)(`)
+                             e_label <- `}{`(`)(`, s)
                              _       <- d.complete(s_label -> e_label)
                              _       <- b2.await
                            yield
@@ -542,8 +615,8 @@ package object sΠ:
           yield
             name -> delay
 
-        def apply[T](key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
-                    (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+        def apply[T](key: String, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
+                    (deferred: <>)
                     (using `][`: `][`)
                     (`<R`: >*<): IO[(Any, Double)] =
           for
@@ -551,9 +624,8 @@ package object sΠ:
             _       <- if opt eq None then IO.canceled else IO.unit
             (delay,
             (b, b2),
-            d)       = opt.get
+            s, d)    = opt.get
             ord      = dir.ord
-            s_label <- `}{`(`)(`)
             taker   <- Deferred[IO, (Any, Boolean)]
             name    <- IO.uncancelable { poll =>
                          sΠ.`][`(`)(`).flatMap { node =>
@@ -571,7 +643,7 @@ package object sΠ:
                          }.flatTap { _ =>
                            for
                              _       <- b.await
-                             e_label <- `}{`(`)(`)
+                             e_label <- `}{`(`)(`, s)
                              _       <- d.complete(s_label -> e_label)
                              _       <- b2.await
                            yield
@@ -690,8 +762,8 @@ package object sΠ:
 
         object > :
 
-          def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+          def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
+                   (deferred: <>)
                    (using `][`: `][`)
                    (`>R`: >*<): IO[Double] =
             for
@@ -699,9 +771,8 @@ package object sΠ:
               _       <- if opt eq None then IO.canceled else IO.unit
               (delay,
               (b, b2),
-              d)       = opt.get
+              s, d)    = opt.get
               ord      = cap.ord
-              s_label <- `}{`(`)(`)
               offerer <- Deferred[IO, Boolean]
               _       <- IO.uncancelable { poll =>
                            sΠ.`][`(`)(`).flatMap { node =>
@@ -718,7 +789,7 @@ package object sΠ:
                            }.flatTap { _ =>
                              for
                                _       <- b.await
-                               e_label <- `}{`(`)(`)
+                               e_label <- `}{`(`)(`, s)
                                _       <- d.complete(s_label -> e_label)
                                _       <- b2.await
                              yield
@@ -730,8 +801,8 @@ package object sΠ:
 
         object < :
 
-          def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -), Deferred[IO, (String, String)])]])
+          def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
+                   (deferred: <>)
                    (using `][`: `][`)
                    (`<R`: >*<): IO[Double] =
             for
@@ -739,9 +810,8 @@ package object sΠ:
               _       <- if opt eq None then IO.canceled else IO.unit
               (delay,
               (b, b2),
-              d)       = opt.get
+              s, d)    = opt.get
               ord      = cap.ord
-              s_label <- `}{`(`)(`)
               taker   <- Deferred[IO, (Any, Boolean)]
               _       <- IO.uncancelable { poll =>
                            sΠ.`][`(`)(`).flatMap { node =>
@@ -759,7 +829,7 @@ package object sΠ:
                            }.flatTap { _ =>
                              for
                                _       <- b.await
-                               e_label <- `}{`(`)(`)
+                               e_label <- `}{`(`)(`, s)
                                _       <- d.complete(s_label -> e_label)
                                _       <- b2.await
                              yield
