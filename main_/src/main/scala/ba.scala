@@ -314,14 +314,16 @@ package object sΠ:
 
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
-             (using `][`)
+             (using `][`: `][`, `1`: Semaphore[IO])
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
         dummy_ref    <- Ref.of[IO, Map[Int, ><]](Map.empty)
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
         opt          <- deferred.get
@@ -358,14 +360,16 @@ package object sΠ:
       */
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
              (using % : %, / : /)
-             (using `][`)
+             (using `][`: `][`, `1`: Semaphore[IO])
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
         polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
         delay        <- if polarity
@@ -379,13 +383,15 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
              (using % : %, / : /)
-             (using `][`)
+             (using `][`: `][`, `1`: Semaphore[IO])
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         delay        <- ><.π(key, value.name, s_label, `)(`, dir)(deferred)(ref)
@@ -397,13 +403,15 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
              (using % : %, / : /)
-             (using `][`)
+             (using `][`: `][`, `1`: Semaphore[IO])
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         delay        <- ><.π(key, value.name, s_label, `)(`, dir)(code)(deferred)(ref)
@@ -415,13 +423,15 @@ package object sΠ:
       */
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
              (using % : %, / : /)
-             (using `][`)
+             (using `][`: `][`, `1`: Semaphore[IO])
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         (r, delay)   <- ><.π(key, s_label, `)(`, dir)(deferred)(ref)
@@ -433,13 +443,15 @@ package object sΠ:
       */
     def apply[T](rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
                 (using % : %, / : /)
-                (using `][`)
+                (using `][`: `][`, `1`: Semaphore[IO])
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
         deferred     <- Deferred[IO, Option[(Double, (-, -), Boolean, Deferred[IO, (String, (String, String))])]]
+        _            <- `1`.acquire
         (s_label, _) <- `}{`(`)(`)
+        _            <- `1`.release
         timestamp    <- Clock[IO].monotonic.map(_.toNanos)
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         (r, delay)   <- ><.π(key, s_label, `)(`, dir)(code)(deferred)(ref)
