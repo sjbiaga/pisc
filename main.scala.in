@@ -40,10 +40,11 @@ import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 object App extends IOApp:
 
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, args: List[String])(% : %, / : /, * : *, ! : !, & : &, ^ : ^): IO[ExitCode] =
+  private def run(parallelism: Int, snapshot: Boolean, args: List[String])(% : %, / : /, * : *, ! : !, & : &, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism)(using %, !, &, ^, *)(π.`π-wand`).background
+        _ <- loop(parallelism, snapshot)(using %, !, &, ^, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
       yield
         ()
@@ -60,6 +61,9 @@ object App extends IOApp:
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
+    val s = if sys.BooleanProp.keyExists(baass).value
+            then true
+            else π.`π-snapshot`
     for
       % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]
@@ -68,7 +72,7 @@ object App extends IOApp:
       & <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, args)(%, /, *, !, &, ^)
+      x <- run(p, s, args)(%, /, *, !, &, ^)
     yield
       x
 

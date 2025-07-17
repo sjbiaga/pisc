@@ -56,19 +56,19 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = BioAmbients.Main(in)
+      val ba = BioAmbients.Main(in)
 
       try
         source = Source.fromFile(s"$examples/basc/$in")
         fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
-        val bs = spi(source)
+        val bs = ba(source)
 
         val bind = bs.zipWithIndex
         val prog_ = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
+        val (prog, (discarded, excluded, enabled)) = ba(prog_.map(_._1))
 
         val ps = Program.Main()(prog)
         val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
@@ -100,7 +100,7 @@ object Main:
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage + ".")
+        Console.err.println(s"Error in file `$in' ${ba.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()

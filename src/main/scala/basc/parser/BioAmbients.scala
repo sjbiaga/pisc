@@ -213,6 +213,8 @@ abstract class BioAmbients extends Expression:
 
   protected var _par: Int = 9
 
+  protected var _snapshot: Boolean = false
+
   protected var _traces: Option[Option[String]] = None
 
   protected var _exclude: Boolean = false
@@ -777,11 +779,13 @@ object BioAmbients:
       _dups = false
       _exclude = false
       _par = 9
+      _snapshot = false
       _traces = None
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
                        "parallelism" -> _par,
+                       "snapshot" -> _snapshot,
                        "traces" -> _traces))
       eqtn = List()
       defn = Map()
@@ -856,4 +860,5 @@ object BioAmbients:
           case _ => true
         }
 
-      Right(`(*)`(null, λ(Lit.Int(_par))), `+`(nil)) :: prog
+      Right((`(*)`(null, λ(Lit.Int(_par))), `+`(nil)): Bind) ::
+      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(nil)): Bind) :: prog
