@@ -132,7 +132,7 @@ package object `Π-loop`:
         } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int)
+  def loop(parallelism: Int, snapshot: Boolean)
           (using % : %, ! : !, & : &, ^ : ^, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -146,7 +146,7 @@ package object `Π-loop`:
     } >>= { case (it, exit) =>
             if !exit && it.isEmpty
             then
-              *.take >> loop(parallelism)
+              *.take >> loop(parallelism, snapshot)
             else
               ∥(it)(`π-wand`._1)(parallelism) match
                 case Nil =>
@@ -177,7 +177,7 @@ package object `Π-loop`:
                                       yield
                                         ()
                                     }
-                                  } >> loop(parallelism)
+                                  } >> loop(parallelism, snapshot)
           }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =

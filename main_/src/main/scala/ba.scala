@@ -523,7 +523,7 @@ package object sΠ:
 
         def apply(key: String, name: Any, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                  (deferred: <>)
-                 (using `][`: `][`)
+                 (using `][`)
                  (`>R`: >*<): IO[java.lang.Double] =
           for
             opt <- deferred.get
@@ -536,7 +536,7 @@ package object sΠ:
                        for
                          offerer <- Deferred[IO, Boolean]
                          _       <- IO.uncancelable { poll =>
-                                      sΠ.`][`(`)(`).flatMap { node =>
+                                      `][`(`)(`).flatMap { node =>
                                         `>R`.modify { m =>
                                           m(ord) match
                                             case it @ ><(Some(((taker, nodeʹ), dirʹ: `π-$`)), _) =>
@@ -565,7 +565,7 @@ package object sΠ:
 
         def apply(key: String, name: Any, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                  (deferred: <>)
-                 (using `][`: `][`)
+                 (using `][`)
                  (`>R`: >*<): IO[java.lang.Double] =
           for
             opt <- deferred.get
@@ -578,7 +578,7 @@ package object sΠ:
                        for
                          offerer <- Deferred[IO, Boolean]
                          _       <- IO.uncancelable { poll =>
-                                      sΠ.`][`(`)(`).flatMap { node =>
+                                      `][`(`)(`).flatMap { node =>
                                         `>R`.modify { m =>
                                           m(ord) match
                                             case it @ ><(Some(((taker, nodeʹ), dirʹ: `π-$`)), _) =>
@@ -607,7 +607,7 @@ package object sΠ:
 
         def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                  (deferred: <>)
-                 (using `][`: `][`)
+                 (using `][`)
                  (`<R`: >*<): IO[(Any, java.lang.Double)] =
           for
             opt  <- deferred.get
@@ -620,7 +620,7 @@ package object sΠ:
                         for
                           taker   <- Deferred[IO, (Any, Boolean)]
                           name    <- IO.uncancelable { poll =>
-                                       sΠ.`][`(`)(`).flatMap { node =>
+                                       `][`(`)(`).flatMap { node =>
                                          `<R`.modify { m =>
                                            m(ord) match
                                              case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
@@ -649,7 +649,7 @@ package object sΠ:
 
         def apply[T](key: String, s_label: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
                     (deferred: <>)
-                    (using `][`: `][`)
+                    (using `][`)
                     (`<R`: >*<): IO[(Any, java.lang.Double)] =
           for
             opt  <- deferred.get
@@ -662,7 +662,7 @@ package object sΠ:
                         for
                           taker   <- Deferred[IO, (Any, Boolean)]
                           name    <- IO.uncancelable { poll =>
-                                       sΠ.`][`(`)(`).flatMap { node =>
+                                       `][`(`)(`).flatMap { node =>
                                          `<R`.modify { m =>
                                            m(ord) match
                                              case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
@@ -801,7 +801,7 @@ package object sΠ:
 
           def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
                    (deferred: <>)
-                   (using `][`: `][`)
+                   (using `][`)
                    (`>R`: >*<): IO[java.lang.Double] =
             for
               opt <- deferred.get
@@ -814,7 +814,7 @@ package object sΠ:
                          for
                            offerer <- Deferred[IO, Boolean]
                            _       <- IO.uncancelable { poll =>
-                                        sΠ.`][`(`)(`).flatMap { node =>
+                                        `][`(`)(`).flatMap { node =>
                                           `>R`.modify { m =>
                                             m(ord) match
                                               case it @ ><(Some(((taker, nodeʹ), capʹ: `π-ζ`)), _) =>
@@ -845,7 +845,7 @@ package object sΠ:
 
           def apply(key: String, s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
                    (deferred: <>)
-                   (using `][`: `][`)
+                   (using `][`)
                    (`<R`: >*<): IO[java.lang.Double] =
             for
               opt <- deferred.get
@@ -858,7 +858,7 @@ package object sΠ:
                          for
                            taker   <- Deferred[IO, (Any, Boolean)]
                            _       <- IO.uncancelable { poll =>
-                                        sΠ.`][`(`)(`).flatMap { node =>
+                                        `][`(`)(`).flatMap { node =>
                                           `<R`.modify { m =>
                                             m(ord) match
                                               case it @ ><(_, Some((((name, offerer), nodeʹ), capʹ: `π-ζ`))) =>
