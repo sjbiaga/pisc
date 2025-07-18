@@ -126,7 +126,9 @@ abstract class Calculus extends StochasticPi:
                 case it: π =>
                   def idʹ: String = '!' + μ._1.υidυ
                   it.copy()(idʹ)
-                case _ => μ._1
+                case it: τ =>
+                  def idʹ: String = '!' + μ._1.υidυ
+                  it.copy()(idʹ)
             }
             `!`(Some(μʹ), sum) -> (free ++ μ._2._2)
         }
