@@ -322,3 +322,37 @@ If there are more `App`s' with agents that depend one to another, pass the `--in
     ./examples $ pi --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.
+
+
+Branches
+--------
+
+- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
+
+- [π-calculus async](https://github.com/sjbiaga/pisc/tree/main-async)
+
+- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
+
+- [Polyadic π-calculus async](https://github.com/sjbiaga/pisc/tree/polyadic-async)
+
+- [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
+
+- [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
+
+- [π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/transactions)
+
+- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) using supervisor/`IO.canceled`
+
+- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-flatMap) with `flatMap`s/`null` comparison
+
+- [Stochastic π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions) using supervisor/`IO.canceled`
+
+- [Stochastic π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions-flatMap) with `flatMap`s/`null` comparison
+
+- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) using supervisor/`IO.canceled`
+
+- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap) with `flatMap`s/`null` comparison
+
+- [BioAmbients async](https://github.com/sjbiaga/pisc/tree/bioambients-async) using supervisor/`IO.canceled`
+
+- [BioAmbients async](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap-async) with `flatMap`s/`null` comparison
