@@ -149,65 +149,77 @@ package object sΠ:
                                    while m(root).root ne null do root = m(root).root
                                    var id = 0L
                                    var tree = Map[`)*(`, Long](root -> id)
-                                   def build(root: `)*(`): Unit =
+                                   def make(root: `)*(`): Unit =
                                      for
                                        node <- m(root).children
                                      yield
                                        id += 1
                                        tree += node -> id
-                                       build(node)
-                                   build(root)
-                                   def xml(root: `)*(`, count: Int, indent: String): String =
+                                       make(node)
+                                   make(root)
+                                   def xml(root: `)*(`, count: Int, indent: String): StringBuilder =
                                      val pid = tree(root)
-                                     def siblings(node: `)*(`, count: Int): String =
+                                     def siblings(node: `)*(`, count: Int): StringBuilder =
                                        val sid = tree(node)
-                                       s"$indent\t\t<siblings count=$count sibling=$sid>\n" +
-                                       ( for
-                                           nodeʹ <- m(node).siblings
-                                           sidʹ   = tree(nodeʹ)
-                                         yield
-                                           s"""$indent\t\t\t<node id=$sidʹ label="${label(nodeʹ)}" parent=$pid sibling=$sid/>"""
-                                       ).mkString("", "\n", "\n") +
-                                       s"$indent\t\t</siblings>\n"
-                                     def children: String =
-                                       s"$indent<children count=$count parent=$pid>\n" +
-                                       ( for
-                                           node <- m(root).children
-                                           cid   = tree(node)
-                                         yield
-                                           val count = m(node).children.size
-                                           if count == 0
-                                           then
-                                             val count = m(node).siblings.size
-                                             if count == 0
-                                             then
-                                               s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid/>"""
-                                             else
-                                               s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""" +
-                                               siblings(node, count) +
-                                               s"$indent\t</node>"
-                                           else
-                                             s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""" +
-                                             xml(node, count, indent + "\t\t") +
-                                             { val count = m(node).siblings.size
+                                       val sb = StringBuilder()
+                                       sb.append(s"$indent\t\t<siblings count=$count sibling=$sid>\n")
+                                         .append {
+                                           ( for
+                                               nodeʹ <- m(node).siblings
+                                               sidʹ   = tree(nodeʹ)
+                                             yield
+                                               StringBuilder(s"""$indent\t\t\t<node id=$sidʹ label="${label(nodeʹ)}" parent=$pid sibling=$sid/>""")
+                                           ).reduce(_.append("\n").append(_)).append("\n")
+                                         }
+                                         .append(s"$indent\t\t</siblings>\n")
+                                     def children: StringBuilder =
+                                       val sb = StringBuilder()
+                                       sb.append(s"$indent<children count=$count parent=$pid>\n")
+                                         .append {
+                                           ( for
+                                               node <- m(root).children
+                                               cid   = tree(node)
+                                             yield
+                                               val sbʹ = StringBuilder()
+                                               val count = m(node).children.size
                                                if count == 0
                                                then
-                                                 "\n"
+                                                 val count = m(node).siblings.size
+                                                 if count == 0
+                                                 then
+                                                   sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid/>""")
+                                                 else
+                                                   sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""")
+                                                      .append(siblings(node, count))
+                                                      .append(s"$indent\t</node>")
                                                else
-                                                 "\n" + siblings(node, count)
-                                             } +
-                                             s"$indent\t</node>"
-                                       ).mkString("", "\n", "\n") +
-                                       s"$indent</children>"
+                                                 sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""")
+                                                    .append(xml(node, count, indent + "\t\t"))
+                                                    .append("\n")
+                                                    .append {
+                                                      val count = m(node).siblings.size
+                                                      if count == 0
+                                                      then
+                                                        StringBuilder()
+                                                      else
+                                                        siblings(node, count)
+                                                    }
+                                                    .append(s"$indent\t</node>")
+                                           ).reduce(_.append("\n").append(_)).append("\n")
+                                         }
+                                         .append(s"$indent</children>")
                                      children
                                    val count = m(root).children.size
+                                   val sb = StringBuilder()
                                    if count == 0
                                    then
-                                     s"""<root id=${tree(root)} label="${label(root)}"/>\n"""
+                                     sb.append(s"""<root id=${tree(root)} label="${label(root)}"/>\n""")
+                                       .toString
                                    else
-                                     s"""<root id=${tree(root)} label="${label(root)}">\n""" +
-                                     xml(root, count, "\t") +
-                                     "\n</root>"
+                                     sb.append(s"""<root id=${tree(root)} label="${label(root)}">\n""")
+                                       .append(xml(root, count, "\t"))
+                                       .append("\n</root>")
+                                       .toString
                                )
                             }
                 }
@@ -543,7 +555,7 @@ package object sΠ:
                                               (m + (ord -> it.copy(taker = None))) ->
                                               check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
                                             case it =>
-                                              val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                                              val cleanup = `>R`.update { m => m + (ord -> it.copy(offerer = None)) }
                                               (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
                                               poll(offerer.get).onCancel(cleanup)
                                         }.flatten
@@ -585,7 +597,7 @@ package object sΠ:
                                               (m + (ord -> it.copy(taker = None))) ->
                                               check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
                                             case it =>
-                                              val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                                              val cleanup = `>R`.update { m => m + (ord -> it.copy(offerer = None)) }
                                               (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
                                               poll(offerer.get).onCancel(cleanup)
                                         }.flatten <* exec(code)
@@ -627,7 +639,7 @@ package object sΠ:
                                                (m + (ord -> it.copy(offerer = None))) ->
                                                check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
                                              case it =>
-                                               val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                               val cleanup = `<R`.update { m => m + (ord -> it.copy(taker = None)) }
                                                (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
                                                poll(taker.get).onCancel(cleanup)
                                          }.flatten
@@ -669,7 +681,7 @@ package object sΠ:
                                                (m + (ord -> it.copy(offerer = None))) ->
                                                check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
                                              case it =>
-                                               val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                               val cleanup = `<R`.update { m => m + (ord -> it.copy(taker = None)) }
                                                (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
                                                poll(taker.get).onCancel(cleanup)
                                          }.flatten
@@ -821,7 +833,7 @@ package object sΠ:
                                                 (m + (ord -> it.copy(taker = None))) ->
                                                 check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
                                               case it =>
-                                                val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                                                val cleanup = `>R`.update { m => m + (ord -> it.copy(offerer = None)) }
                                                 (m + (ord -> it.copy(offerer = Some(() -> offerer -> node -> cap)))) ->
                                                 poll(offerer.get).onCancel(cleanup)
                                           }.flatten
@@ -861,11 +873,11 @@ package object sΠ:
                                         `][`(`)(`).flatMap { node =>
                                           `<R`.modify { m =>
                                             m(ord) match
-                                              case it @ ><(_, Some((((name, offerer), nodeʹ), capʹ: `π-ζ`))) =>
+                                              case it @ ><(_, Some((((_, offerer), nodeʹ), capʹ: `π-ζ`))) =>
                                                 (m + (ord -> it.copy(offerer = None))) ->
                                                 check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
                                               case it =>
-                                                val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                                                val cleanup = `<R`.update { m => m + (ord -> it.copy(taker = None)) }
                                                 (m + (ord -> it.copy(taker = Some(taker -> node -> cap)))) ->
                                                 poll(taker.get).onCancel(cleanup)
                                           }.flatten

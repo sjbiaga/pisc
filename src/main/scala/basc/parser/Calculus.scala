@@ -99,7 +99,7 @@ abstract class Calculus extends BioAmbients:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
+    "!"~> opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
       case Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty =>
         throw ConsGuardParsingException(cons, ch.name)
       case Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
@@ -121,12 +121,17 @@ abstract class Calculus extends BioAmbients:
       case Some(μ) =>
         choice ^^ {
           case (sum, free) =>
-            val μʹ: μ = {
+            val μʹ: μ | ζ = {
               μ._1 match
                 case it: π =>
-                  def idʹ: String = '!' + μ._1.υidυ
+                  def idʹ: String = '!' + it.υidυ
                   it.copy()(idʹ)
-                case _ => μ._1
+                case it: τ =>
+                  def idʹ: String = '!' + it.υidυ
+                  it.copy()(idʹ)
+                case it: ζ =>
+                  def idʹ: String = '!' + it.υidυ
+                  it.copy()(idʹ)
             }
             `!`(Some(μʹ), sum) -> (free ++ μ._2._2)
         }
@@ -184,7 +189,7 @@ abstract class Calculus extends BioAmbients:
         BindingOccurrence(bound)
         it
     } |
-    ζ<~"." ^^ { it => it._1 -> (Names(), it._2) }
+    ζ<~"."
 
   def condition: Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
@@ -280,7 +285,7 @@ object Calculus:
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
-    case !(guard: Option[μ], sum: AST.+)
+    case !(guard: Option[μ | ζ], sum: AST.+)
 
     case `[]`(label: Option[String], sum: AST.+)
 
@@ -507,8 +512,8 @@ object Calculus:
           case it => it
         }
 
-      inline def relabelledʹ(it: Option[μ]): Option[μ] =
-        relabelled(it.toSeq).headOption.asInstanceOf[Option[μ]]
+      inline def relabelledʹ(it: Option[μ | ζ]): Option[μ | ζ] =
+        relabelled(it.toSeq).headOption.asInstanceOf[Option[μ | ζ]]
 
       ast match
 
