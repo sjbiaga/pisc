@@ -715,6 +715,10 @@ object Encoding:
           val π = it.copy(channel = renamed(ch), code = recoded(free))(it.id)
           `!`(Some(π), rename(sum))
 
+        case !(Some(it @ ζ(_, name, _, _)), sum) =>
+          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name)(it.id)
+          `!`(Some(ζ), rename(sum))
+
         case it @ !(_, sum) =>
           it.copy(sum = rename(sum))
 

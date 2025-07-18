@@ -106,7 +106,7 @@ abstract class BioAmbients extends Expression:
         π(`$`.local, ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ free &~ bound)
     }
 
-  def ζ: Parser[(ζ, Names)] =
+  def ζ: Parser[(ζ, (Names, Names))] =
     ("enter"|"accept"|"exit"|"expel"|"merge+"|"merge-") ~ name ~ opt("@"~>rate) ^^ {
       case _ ~ (name, _) ~ _ if !name.isSymbol =>
         throw PrefixChannelParsingException(name)
@@ -116,7 +116,7 @@ abstract class BioAmbients extends Expression:
           cap match
             case "enter"|"exit"|"merge+" => true
             case "accept"|"expel"|"merge-" => false
-        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ)(sζ_id) -> free
+        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ)(sζ_id) -> (Names(), free)
     }
 
   def dir: Parser[`$`] = ( "local" | "s2s" | "p2c" | "c2p" ) ^^ { `$`.valueOf(_) }

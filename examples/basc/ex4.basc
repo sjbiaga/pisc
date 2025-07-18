@@ -1,0 +1,9 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ traces = console ⟧
+
+C(x) = exit x. τ/*println("exited")*/. s2s x ? {y}. enter y. τ/*println("entered")*/. C(y)
+
+P(x) = expel x. τ/*println("expelled")*/. ν(y) s2s x ! {y}. accept y. τ/*println("accepted")*/. P(y)
+
+Main = ν(x) [ "p"[ "c"[ C(x) ] | P(x) ] ]
