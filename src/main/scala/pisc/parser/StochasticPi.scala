@@ -479,7 +479,9 @@ object StochasticPi:
             (`!`(Some(μ), it), Actions(μ))
 
           case !(_, sum) =>
-            `!`(Some(τ), sum).parse
+            val τʹ: τ = τ
+            def idʹ: String = '!' + τʹ.υidυ
+            `!`(Some(τʹ.copy()(idʹ)), sum).parse
 
           case `⟦⟧`(definition, variables, _sum, xid, assignment) =>
             val n = assignment.size
