@@ -13,7 +13,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(main, main_)
   .settings(
-    name := "BioAmbients2Scala",
+    name := "BioAmbients[async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
 
 lazy val main = (project in file("main"))
   .settings(
-    name := "main BioAmbients2Scala",
+    name := "main BioAmbients[async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -39,7 +39,7 @@ lazy val main = (project in file("main"))
 
 lazy val main_ = (project in file("main_"))
   .settings(
-    name := "main_ BioAmbients2Scala",
+    name := "main_ BioAmbients[async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",

@@ -53,8 +53,6 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
-  type ^ = Semaphore[IO]
-
   type & = Ref[IO, Long]
 
   type * = Queue[IO, Unit]
@@ -133,7 +131,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int, snapshot: Boolean)
-          (using % : %, ! : !, & : &, ^ : ^, * : *)
+          (using % : %, ! : !, & : &, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
@@ -156,21 +154,19 @@ package object `Π-loop`:
                                     IO.uncancelable { _ =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^| = key1.substring(0, 36)
+                                      val ^  = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       for
                                         -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                         -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                         d1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
                                         d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                        _  <- discard(k1, ^|)
+                                        _  <- discard(k1, ^)
                                         _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
                                         _  <- %.update(_ - key1 - key2)
-                                        _  <- ^.acquire
                                         _  <- d1.complete(Some(delay -> (-, --)))
                                         _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
                                         _  <- -.await
-                                        _  <- ^.release
                                         _  <- ready(k1)
                                         _  <- if k1 == k2 then IO.unit else ready(k2)
                                         _  <- --.await

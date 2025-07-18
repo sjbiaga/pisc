@@ -7,7 +7,7 @@ The π-calculus maps one to one on `Scala` for-comprehensions
 The bioambients branch adds capabilities in comparison with
 the [stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic).
 This branch uses _cancellation_ to discard actions/capabilities.
-Another [branch](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap)
+Another [branch](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap-async)
 heavily uses `flatMap`'s and comparison with `null` to discard actions/capabilities.
 
 After code generation, the π-calculus "processes" could be
@@ -284,7 +284,7 @@ As soon as the multisets are empty, the second background fiber computes
 rate(s) and/or weight(s) - the _delay(s)_ (or duration(s) or "delta(s)") that
 correspond(s) to the fastest action(s). In plural, because the programmer can
 set a degree of parallelism - the number of cores - allowing for multiple
-communications to occur (quasi-simultaneously), as long as these do not discard each
+communications to occur (simultaneously), as long as these do not discard each
 other - only those satisfying this condition are returned: for each (pair), it
 then uses a key to get an associated `Deferred`, and the delay to _complete_ a
 `Deferred`; it does this twice, for actions of opposite polarities, unless it's
