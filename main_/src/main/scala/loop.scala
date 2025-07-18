@@ -57,8 +57,6 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
-  type ^ = Semaphore[IO]
-
   type & = Ref[IO, Long]
 
   type * = Queue[IO, Unit]
@@ -172,7 +170,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int, snapshot: Boolean)
-          (using % : %, ! : !, & : &, ^ : ^, * : *)
+          (using % : %, ! : !, & : &, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
@@ -195,7 +193,7 @@ package object `Π-loop`:
                                     IO.uncancelable { _ =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^| = key1.substring(0, 36)
+                                      val ^  = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       for
                                         -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
@@ -206,17 +204,15 @@ package object `Π-loop`:
                                         p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                         (d1, (ts1, _)) = p1
                                         (d2, (ts2, _)) = p2
-                                        _  <- discard(k1, ^|)
+                                        _  <- discard(k1, ^)
                                         _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
                                         _  <- %.update(_ - key1 - key2)
-                                        _  <- ^.acquire
                                         _  <- d1.complete(Some((delay, (-, --), snapshot, +)))
                                         _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, (-, --), snapshot, ++)))
                                         ts <- Clock[IO].monotonic.map(_.toNanos)
                                         _  <- -.await
                                         l1 <- +.get
                                         l2 <- if k1 == k2 then IO.pure(l1) else ++.get
-                                        _  <- ^.release
                                         n  <- &.updateAndGet(_ + 1)
                                         p  <- record(n, ts1, ts, delay, duration, l1)(k1)
                                         _  <- if snapshot then record(n, p, l1._2._2) else IO.unit

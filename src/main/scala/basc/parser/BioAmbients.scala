@@ -517,7 +517,9 @@ object BioAmbients:
             (`!`(Some(μ), it), Actions(μ))
 
           case !(_, sum) =>
-            `!`(Some(τ), sum).parse
+            val τʹ: τ = τ
+            def idʹ: String = '!' + τʹ.υidυ
+            `!`(Some(τʹ.copy()(idʹ)), sum).parse
 
           case `[]`(label, sum) =>
             var (it, _) = sum.parse
