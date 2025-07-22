@@ -26,16 +26,17 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.Map
+import _root_.scala.collection.immutable.{ List, Map }
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Deferred, ExitCode, Ref }
+import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
+import `Π-dump`.*
 import `Π-stats`.*
 
 
@@ -43,11 +44,12 @@ package object `Π-loop`:
 
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
+
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type - = CyclicBarrier[IO]
+  type <> = Deferred[IO, Option[(Double, CyclicBarrier[IO])]]
 
-  type + = (Deferred[IO, Option[(Double, (-, -))]], ((>*<, Int), Option[Boolean], Rate))
+  type + = (<>, (Long, ((>*<, Int), Option[Boolean], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -59,29 +61,27 @@ package object `Π-loop`:
 
   type / = Queue[IO, ((String, String), +)]
 
-  type \ = () => IO[Unit]
+  type \ = IO[Unit]
 
 
-  def `π-enable`(enabled: `Π-Set`[String])
-                (using % : %): IO[Unit] =
-    %.update(enabled.foldLeft(_) { (m, key) =>
+  def `π-enable`(enabled: `Π-Set`[String], key: String)
+                (using % : %)
+                (implicit ^ : String): IO[Unit] =
+    %.update { m =>
+      enabled
+        .foldLeft(m - (^ + key)) { (m, key) =>
                                    val n = if m.contains(key)
                                            then m(key).asInstanceOf[Int]
                                            else 0
                                    m + (key -> (n + 1))
                                  }
-    )
+    }
 
-  private def ready(key: String)
-                   (using % : %)
-                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+  private def enable(key: String)(using String)
+                    (using % : %)
+                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     val (_, spell) = `π-wand`
-    ( if spell.contains(key)
-      then
-        `π-enable`(spell(key))
-      else
-        IO.unit
-    )
+    `π-enable`(spell(key), key)
 
 
   private def unblock(m: Map[String, Int | +], k: String)
@@ -131,50 +131,55 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int, snapshot: Boolean)
-          (using % : %, ! : !, & : &, * : *)
+          (using % : %, / : /, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
                m -> ( if m.exists(_._2.isInstanceOf[Int])
                       then Map.empty -> false
                       else m
-                           .map(_ -> _.asInstanceOf[+]._2)
+                           .map(_ -> _.asInstanceOf[+]._2._2)
                            .toMap
-                        -> m.forall { case (key, _: +) => key.charAt(36) == '!' case _ => false }
+                        -> m.forall(_._1.charAt(36) == '!')
                     )
-    } >>= { case (it, exit) =>
-            if !exit && it.isEmpty
-            then
-              *.take >> loop(parallelism, snapshot)
-            else
-              ∥(it)(`π-wand`._1)(parallelism) match
-                case Nil =>
-                  this.exit(it.map(_._1).toList)
-                case nel =>
-                  nel.parTraverse { case (key1, key2, delay) =>
-                                    IO.uncancelable { _ =>
-                                      val k1 = key1.substring(36)
-                                      val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
-                                      val ^^ = key2.substring(0, 36)
-                                      for
-                                        -  <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                        -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                        d1 <- %.modify { m => m -> m(key1).asInstanceOf[+]._1 }
-                                        d2 <- %.modify { m => m -> m(key2).asInstanceOf[+]._1 }
-                                        _  <- discard(k1, ^)
-                                        _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
-                                        _  <- %.update(_ - key1 - key2)
-                                        _  <- d1.complete(Some(delay -> (-, --)))
-                                        _  <- if k1 == k2 then IO.unit else d2.complete(Some(delay -> (-, --)))
-                                        _  <- -.await
-                                        _  <- ready(k1)
-                                        _  <- if k1 == k2 then IO.unit else ready(k2)
-                                        _  <- --.await
-                                      yield
-                                        ()
-                                    }
-                                  } >> loop(parallelism, snapshot)
-          }
+    } >>= {
+      case (it, exit) =>
+        if !exit && it.isEmpty
+        then
+          *.take >> loop(parallelism, snapshot)
+        else
+          ∥(it)(`π-wand`._1)() match
+            case Nil =>
+              this.exit(it.keys.toList)
+            case nel =>
+              Semaphore[IO](parallelism).flatMap { sem =>
+                nel.parTraverse { case (key1, key2, delay) =>
+                                  IO.uncancelable { _ =>
+                                    val k1 = key1.substring(36)
+                                    val k2 = key2.substring(36)
+                                    val ^  = key1.substring(0, 36)
+                                    val ^^ = key2.substring(0, 36)
+                                    for
+                                      -- <- CyclicBarrier[IO](2)
+                                      p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                      p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
+                                      (d1, (ts1, _)) = p1
+                                      (d2, (ts2, _)) = p2
+                                      _  <- discard(k1, ^)
+                                      _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
+                                      _  <- enable(k1)(using ^)
+                                      _  <- if k1 == k2 then IO.unit else enable(k2)(using ^^)
+                                      _  <- sem.acquire
+                                      _  <- d1.complete(Some((delay, --)))
+                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, --)))
+                                      ts <- Clock[IO].monotonic.map(_.toNanos)
+                                      no <- &.updateAndGet(_ + 1)
+                                      _  <- sem.release
+                                    yield
+                                      ()
+                                  }
+                                }
+              } >> IO.cede >> loop(parallelism, snapshot)
+    }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
     for

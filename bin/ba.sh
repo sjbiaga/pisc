@@ -16,9 +16,9 @@ function ba() {
         args="$args $1"
         shift
     done
-    set ../loop.scala ../ba.scala ../stats.scala ${srcs#?}
+    set ${srcs#?} ../ba.scala ../dump.scala ../loop.scala ../stats.scala
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.2-RC1 \
+                  -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.6.2 \
@@ -46,9 +46,9 @@ function ba_() {
         args="$args $1"
         shift
     done
-    set ../loop_.scala ../ba_.scala ../stats_.scala ${srcs#?}
+    set ${srcs#?} ../ba_.scala ../dump_.scala ../loop_.scala ../stats_.scala
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.2-RC1 \
+                  -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep org.typelevel::cats-effect:3.6.2 \

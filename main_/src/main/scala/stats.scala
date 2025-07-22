@@ -72,9 +72,9 @@ package object `Π-stats`:
 
   def ∥(% : Map[String, ((>*<, Int), Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (parallelism: Int, check: Boolean = false): List[(String, String, (Double, Double))] =
-                                                      // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
-                                                      // key1    key1|2   delay   duration
+       (check: Boolean = false): List[(String, String, (Double, Double))] =
+                                    // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
+                                    // key1    key1|2   delay   duration
 
     val mls = HashMap[((>*<, Int), Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -261,4 +261,3 @@ package object `Π-stats`:
     .filter(_._2)
     .map(_._1)
     .reverse
-    .take(parallelism)
