@@ -8,4 +8,4 @@ P(x) = expel x. τ/*println("expelled")*/. ν(y) s2s x!{y}. accept y. τ/*printl
 
 Main = ν(x) "p"[ "c"[ ! .c2p x?{y}. C(y) ] | ν(y) ! .p2c x!{y}. P(y) ]
 
-⟦ snapshot = yes ⟧
+⟦ snapshot = n ⟧

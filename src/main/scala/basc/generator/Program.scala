@@ -188,11 +188,32 @@ object Program:
 
         case _: π => ??? // caught by parser
 
-        case it @ ζ(cap, name, _, r) =>
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
-                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
-                       ))
+        case it @ ζ(cap, name, _, r, code) =>
+
+          code match
+            case Some((Left(enums), _)) =>
+              val term = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
+                             ),
+                             Term.ArgClause(term::Nil)
+                           ))
+            case Some((Right(term), _)) =>
+              val code = `for * yield ()`(`_ <- IO { * }`(term))
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
+                             ),
+                             Term.ArgClause(code::Nil)
+                           ))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                             Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
+                           ))
 
         ////////////////////////////////////////////// restriction | prefixes //
 

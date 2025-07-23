@@ -32,7 +32,7 @@ package object sΠ:
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
-  import _root_.cats.effect.{ IO, IOLocal, Clock, Deferred, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Clock, Deferred, FiberIO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
@@ -146,12 +146,12 @@ package object sΠ:
                                  then ""
                                  else
                                    while m(root).root ne null do root = m(root).root
-                                   var id = 0L
-                                   var tree = Map[`)*(`, Long](root -> id)
+                                   var id = 0
+                                   var tree = Map[`)*(`, Int](root -> id)
                                    def make(root: `)*(`): Unit =
                                      for
                                        node <- m(root).children
-                                     yield
+                                     do
                                        id += 1
                                        tree += node -> id
                                        make(node)
@@ -334,7 +334,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         dummy_ref    <- Ref.of[IO, Map[Int, ><]](Map.empty)
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
@@ -343,12 +343,14 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, _, d)     = opt.get
+        (delay, _,
+         s, b, f, d)  = opt.get
         _            <- `2`.acquireN(2)
         e_label      <- `}{`(`)(`, s)
         _            <- `2`.releaseN(2)
         _            <- d.complete(s_label -> e_label)
+        _            <- b.await
+        _            <- f.join
       yield
         delay
 
@@ -394,7 +396,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
@@ -403,18 +405,54 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, b, d)     = opt.get
+        (delay, b2,
+         s, b, f, d)  = opt.get
         nodeCB       <- CyclicBarrier[IO](2)
         nodeCB2      <- CyclicBarrier[IO](2)
         nodeD        <- Deferred[IO, `)*(`]
         nodeR        <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         _            <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
                           if polarity
-                          then ><.ζ.<(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(s, d)(ref)
-                          else ><.ζ.>(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(s, d)(ref)
+                          then ><.ζ.<(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(b2, s, d)(ref)
+                          else ><.ζ.>(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(b2, s, d)(ref)
                         }
         _            <- b.await
+        _            <- f.join
+      yield
+        delay
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
+             (using % : %, / : /)
+             (using `][`: `][`, `2`: Semaphore[IO])
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                       ^ : String): IO[Double] =
+      for
+        _            <- exclude(key)
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        _            <- `2`.acquireN(2)
+        (s_label, _) <- `}{`(`)(`)
+        _            <- `2`.releaseN(2)
+        timestamp    <- Clock[IO].monotonic.map(_.toNanos)
+        _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
+        opt          <- deferred.get
+        _            <- if opt eq None then IO.canceled else IO.unit
+        (delay, b2,
+         s, b, f, d)  = opt.get
+        nodeCB       <- CyclicBarrier[IO](2)
+        nodeCB2      <- CyclicBarrier[IO](2)
+        nodeD        <- Deferred[IO, `)*(`]
+        nodeR        <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
+        _            <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
+                          if polarity
+                          then ><.ζ.<(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(b2, s, d)(code)(ref)
+                          else ><.ζ.>(s_label, `)(`, cap, nodeCB, nodeCB2, nodeR)(b2, s, d)(code)(ref)
+                        }
+        _            <- b.await
+        _            <- f.join
       yield
         delay
 
@@ -428,7 +466,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -436,8 +474,8 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, b, d)     = opt.get
+        (delay, _,
+         s, b, f, d)  = opt.get
         nodeCB       <- CyclicBarrier[IO](2)
         nodeCB2      <- CyclicBarrier[IO](2)
         nodeD        <- Deferred[IO, `)*(`]
@@ -446,6 +484,7 @@ package object sΠ:
                           ><.π(value.name, s_label, `)(`, dir, nodeCB, nodeCB2, nodeR)(s, d)(ref)
                         }
         _            <- b.await
+        _            <- f.join
       yield
         delay
 
@@ -459,7 +498,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -467,8 +506,8 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, b, d)     = opt.get
+        (delay, _,
+         s, b, f, d)  = opt.get
         nodeCB       <- CyclicBarrier[IO](2)
         nodeCB2      <- CyclicBarrier[IO](2)
         nodeD        <- Deferred[IO, `)*(`]
@@ -477,6 +516,7 @@ package object sΠ:
                           ><.π(value.name, s_label, `)(`, dir, nodeCB, nodeCB2, nodeR)(s, d)(code)(ref)
                         }
         _            <- b.await
+        _            <- f.join
       yield
         delay
 
@@ -490,7 +530,7 @@ package object sΠ:
                        ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -498,8 +538,8 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, b, d)     = opt.get
+        (delay, _,
+         s, b, f, d)  = opt.get
         nodeCB       <- CyclicBarrier[IO](2)
         nodeCB2      <- CyclicBarrier[IO](2)
         nodeD        <- Deferred[IO, `)*(`]
@@ -508,6 +548,7 @@ package object sΠ:
                           ><.π(s_label, `)(`, dir, nodeCB, nodeCB2, nodeR)(s, d)(ref)
                         }
         _            <- b.await
+        _            <- f.join
       yield
         new `()`(name) -> delay
 
@@ -521,7 +562,7 @@ package object sΠ:
                           ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, Boolean, CyclicBarrier[IO], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -529,8 +570,8 @@ package object sΠ:
         _            <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         opt          <- deferred.get
         _            <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         s, b, d)     = opt.get
+        (delay, _,
+         s, b, f, d)  = opt.get
         nodeCB       <- CyclicBarrier[IO](2)
         nodeCB2      <- CyclicBarrier[IO](2)
         nodeD        <- Deferred[IO, `)*(`]
@@ -539,6 +580,7 @@ package object sΠ:
                           ><.π(s_label, `)(`, dir, nodeCB, nodeCB2, nodeR)(s, d)(code)(ref)
                         }
         _            <- b.await
+        _            <- f.join
       yield
         new `()`(name) -> delay
 
@@ -932,7 +974,7 @@ package object sΠ:
 
           def apply(s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
+                   (b2: CyclicBarrier[IO], snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
                    (using `][`)
                    (using `2`: Semaphore[IO])
                    (`>R`: >*<): IO[Unit] =
@@ -958,6 +1000,7 @@ package object sΠ:
                                          poll(offerer.get)
                                    ).flatTap { _ =>
                                       for
+                                        _       <- b2.await
                                         e_label <- `}{`(`)(`, snapshot)
                                         _       <- `2`.release
                                         _       <- deferred.complete(s_label -> e_label)
@@ -985,11 +1028,68 @@ package object sΠ:
             yield
               ()
 
+          def apply(s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`,
+                    nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                   (b2: CyclicBarrier[IO], snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
+                   (code: => IO[Any])
+                   (using `][`)
+                   (using `2`: Semaphore[IO])
+                   (`>R`: >*<): IO[Unit] =
+            for
+              offerer <- Deferred[IO, Unit]
+              ord      = cap.ord
+              _       <- {
+                           def loop: IO[Unit] =
+                             def take(node: `)*(`, head: Option[ν.>]): IO[Unit] =
+                               IO.uncancelable { poll =>
+                                 ( head match
+                                     case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                       nodeCBʹ.await
+                                       *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                       nodeCB2ʹ.await
+                                     case _ =>
+                                       IO.pure(true)
+                                 ).ifM(
+                                   ( head match
+                                       case Some(((taker, _), _)) =>
+                                         taker.complete(node).void
+                                       case _ =>
+                                         poll(offerer.get)
+                                   ).flatTap { _ =>
+                                      for
+                                        _       <- b2.await
+                                        e_label <- `}{`(`)(`, snapshot)
+                                        _       <- `2`.release
+                                        _       <- deferred.complete(s_label -> e_label)
+                                      yield
+                                        ()
+                                   }.flatTap { _ => exec(code) },
+                                   `>R`.flatModify { m =>
+                                     val queue = m(ord).takers.enqueue(head.get)
+                                     m + (ord -> m(ord).copy(takers = queue)) ->
+                                     (`2`.releaseN(2) >> IO.cede >> loop)
+                                   }
+                                 )
+                               }
+                             `>R`.flatModify { m =>
+                               m(ord).takers.dequeueOption match
+                                 case Some((taker, queue)) =>
+                                   m + (ord -> m(ord).copy(takers = queue)) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(taker)))
+                                 case _ =>
+                                   val queue = m(ord).offerers.enqueue(() -> offerer -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   m + (ord -> m(ord).copy(offerers = queue)) -> IO.pure((null: `)*(`) -> None)
+                             }.flatMap(take.tupled)
+                           loop
+                       }
+            yield
+              ()
+
         object < :
 
           def apply(s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
+                   (b2: CyclicBarrier[IO], snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
                    (using `][`)
                    (using `2`: Semaphore[IO])
                    (`<R`: >*<): IO[Unit] =
@@ -1022,12 +1122,77 @@ package object sΠ:
                                        ζ(node, nodeʹ, cap)
                                    }.flatTap { _ =>
                                       for
+                                        _       <- b2.await
                                         e_label <- `}{`(`)(`, snapshot)
                                         _       <- `2`.release
                                         _       <- deferred.complete(s_label -> e_label)
                                       yield
                                         ()
                                    },
+                                   `<R`.flatModify { m =>
+                                     val queue = m(ord).offerers.enqueue(head.get)
+                                     m + (ord -> m(ord).copy(offerers = queue)) ->
+                                     (`2`.releaseN(2) >> IO.cede >> loop)
+                                   }
+                                 )
+                               }
+                             `<R`.flatModify { m =>
+                               m(ord).offerers.dequeueOption match
+                                 case Some((offerer, queue)) =>
+                                   m + (ord -> m(ord).copy(offerers = queue)) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(offerer)))
+                                 case _ =>
+                                   val queue = m(ord).takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   m + (ord -> m(ord).copy(takers = queue)) -> IO.pure((null: `)*(`) -> None)
+                             }.flatMap(offer.tupled)
+                           loop
+                       }
+            yield
+              ()
+
+          def apply(s_label: String, `)(`: IOLocal[`)(`], cap: `π-ζ`,
+                    nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                   (b2: CyclicBarrier[IO], snapshot: Boolean, deferred: Deferred[IO, (String, (String, String))])
+                   (code: => IO[Any])
+                   (using `][`)
+                   (using `2`: Semaphore[IO])
+                   (`<R`: >*<): IO[Unit] =
+            for
+              taker   <- Deferred[IO, Any]
+              ord      = cap.ord
+              _       <- {
+                           def loop: IO[Unit] =
+                             def offer(node: `)*(`, head: Option[ν.<]): IO[Unit] =
+                               IO.uncancelable { poll =>
+                                 ( head match
+                                    case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                      nodeCBʹ.await
+                                      *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                      nodeCB2ʹ.await
+                                    case _ =>
+                                      IO.pure(true)
+                                 ).ifM(
+                                   ( head match
+                                       case Some((((_, offerer), (nodeCBʹ, _, nodeRʹ)), _)) =>
+                                         nodeCBʹ.await
+                                         *> nodeRʹ.get.flatMap(_.get.flatMap(offerer.complete(()).as(_)))
+                                       case _ =>
+                                         poll(taker.get)
+                                   ).flatMap { nodeʹ =>
+                                     if node eq null
+                                     then
+                                       `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
+                                     else
+                                       ζ(node, nodeʹ, cap)
+                                   }.flatTap { _ =>
+                                      for
+                                        _       <- b2.await
+                                        e_label <- `}{`(`)(`, snapshot)
+                                        _       <- `2`.release
+                                        _       <- deferred.complete(s_label -> e_label)
+                                      yield
+                                        ()
+                                   }.flatTap { _ => exec(code) },
                                    `<R`.flatModify { m =>
                                      val queue = m(ord).offerers.enqueue(head.get)
                                      m + (ord -> m(ord).copy(offerers = queue)) ->

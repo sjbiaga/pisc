@@ -676,8 +676,8 @@ object Encoding:
               it.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))(it.id)
             case it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code]) =>
               it.copy(channel = renamed(ch), code = recoded(free))(it.id)
-            case it @ ζ(_, name, _, _) =>
-              it.copy(name = renamed(Symbol(name)).asSymbol.name)(it.id)
+            case it @ ζ(_, name, _, _, given Option[Code]) =>
+              it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
             case it => it
           }
           val endʹ = rename(end)
@@ -715,8 +715,8 @@ object Encoding:
           val π = it.copy(channel = renamed(ch), code = recoded(free))(it.id)
           `!`(Some(π), rename(sum))
 
-        case !(Some(it @ ζ(_, name, _, _)), sum) =>
-          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name)(it.id)
+        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
           `!`(Some(ζ), rename(sum))
 
         case it @ !(_, sum) =>

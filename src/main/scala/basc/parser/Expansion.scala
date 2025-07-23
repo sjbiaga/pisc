@@ -486,8 +486,8 @@ object Expansion:
               it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)(it.id)
             case it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code]) =>
               it.copy(channel = replaced(ch), code = recoded)(it.id)
-            case it @ ζ(_, name, _, _) =>
-              it.copy(name = replaced(Symbol(name)).asSymbol.name)(it.id)
+            case it @ ζ(_, name, _, _, given Option[Code]) =>
+              it.copy(name = replaced(Symbol(name)).asSymbol.name, code = recoded)(it.id)
             case it => it
           }
           `.`(end.replace, it*)
@@ -516,8 +516,8 @@ object Expansion:
         case !(Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
           `!`(Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
 
-        case !(Some(it @ ζ(_, name, _, _)), sum) =>
-          `!`(Some(it.copy(name = replaced(Symbol(name)).asSymbol.name)(it.id)), sum.replace)
+        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          `!`(Some(it.copy(name = replaced(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.replace)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.replace)
@@ -630,8 +630,8 @@ object Expansion:
               it.copy(channel = updated(ch), name = updated(arg), code = recoded)(it.id)
             case it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code]) =>
               it.copy(channel = updated(ch), code = recoded)(it.id)
-            case it @ ζ(_, name, _, _) =>
-              it.copy(name = updated(Symbol(name)).asSymbol.name)(it.id)
+            case it @ ζ(_, name, _, _, given Option[Code]) =>
+              it.copy(name = updated(Symbol(name)).asSymbol.name, code = recoded)(it.id)
             case it => it
           }
           `.`(end.update, it*)
@@ -663,8 +663,8 @@ object Expansion:
         case !(Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
           `!`(Some(it.copy(channel = updated(ch), code = recoded)(it.id)), sum.update)
 
-        case !(Some(it @ ζ(_, name, _, _)), sum) =>
-          `!`(Some(it.copy(name = updated(Symbol(name)).asSymbol.name)(it.id)), sum.update)
+        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          `!`(Some(it.copy(name = updated(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.update)
 
         case it @ !(_, sum) =>
           it.copy(sum = sum.update)

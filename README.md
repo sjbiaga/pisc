@@ -258,7 +258,7 @@ There are two kinds of keys:
 
 - the size of an `UUID`, each action has hard-coded a unique key; in the dual `%`
   map, these correspond to numbers: a number increases (`π-enable` method in
-  `spi.scala`) as more actions - with the same key, i.e., in parallel - are enabled,
+  `ba.scala`) as more actions - with the same key, i.e., in parallel - are enabled,
   but decreases (`poll` method in `loop.scala`) as the actions are "fired": when
   the number/counter reaches zero, a key is removed from the `%` map (also, when
   keys are `π-discard`ed);

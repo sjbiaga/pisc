@@ -33,7 +33,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, Ref }
+import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
@@ -47,7 +47,7 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = Deferred[IO, Option[(Double, CyclicBarrier[IO])]]
+  type <> = Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
 
   type + = (<>, (Long, ((>*<, Int), Option[Boolean], Rate)))
 
@@ -64,24 +64,21 @@ package object `Π-loop`:
   type \ = IO[Unit]
 
 
-  def `π-enable`(enabled: `Π-Set`[String], key: String)
-                (using % : %)
-                (implicit ^ : String): IO[Unit] =
-    %.update { m =>
-      enabled
-        .foldLeft(m - (^ + key)) { (m, key) =>
-                                   val n = if m.contains(key)
-                                           then m(key).asInstanceOf[Int]
-                                           else 0
-                                   m + (key -> (n + 1))
+  def `π-enable`(enabled: `Π-Set`[String])
+                (using % : %): IO[Unit] =
+    %.update(enabled.foldLeft(_) { (m, key) =>
+                                    val n = if m.contains(key)
+                                            then m(key).asInstanceOf[Int]
+                                            else 0
+                                    m + (key -> (n + 1))
                                  }
-    }
+    )
 
-  private def enable(key: String)(using String)
-                    (using % : %)
+  private def enable(key: String)
+                    (using %)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     val (_, spell) = `π-wand`
-    `π-enable`(spell(key), key)
+    `π-enable`(spell(key))
 
 
   private def unblock(m: Map[String, Int | +], k: String)
@@ -100,13 +97,12 @@ package object `Π-loop`:
     yield
       ()
 
-  private def discard(key: String, scope: String)
-                     (using % : %)
+  private def discard(key: String)(using ^ : String)
+                     (using %)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     val (trick, _) = `π-wand`
     if trick.contains(key)
     then
-      implicit val ^ : String = scope
       `π-discard`(trick(key))
     else
       IO.unit
@@ -130,55 +126,73 @@ package object `Π-loop`:
         } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int, snapshot: Boolean)
+  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
           (using % : %, / : /, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    %.modify { m =>
-               m -> ( if m.exists(_._2.isInstanceOf[Int])
-                      then Map.empty -> false
-                      else m
-                           .map(_ -> _.asInstanceOf[+]._2._2)
-                           .toMap
-                        -> m.forall(_._1.charAt(36) == '!')
-                    )
+    %.flatModify { m =>
+      m -> started.get.map { n =>
+        if n > 0
+        || m.exists(_._2.isInstanceOf[Int])
+        then Map.empty -> false
+        else m
+             .map(_ -> _.asInstanceOf[+]._2._2)
+             .toMap
+          -> m.forall(_._1.charAt(36) == '!')
+      }
     } >>= {
       case (it, exit) =>
         if !exit && it.isEmpty
         then
-          *.take >> loop(parallelism, snapshot)
+          *.take >> loop(parallelism, snapshot, started)
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
-              this.exit(it.keys.toList)
+              started.get.flatMap { n =>
+                *.size.flatMap { m =>
+                  if n + m == 0
+                  then
+                    this.exit(it.keys.toList)
+                  else
+                    *.take >> loop(parallelism, snapshot, started)
+                }
+              }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
                 nel.parTraverse { case (key1, key2, delay) =>
                                   IO.uncancelable { _ =>
-                                    val k1 = key1.substring(36)
-                                    val k2 = key2.substring(36)
-                                    val ^  = key1.substring(0, 36)
-                                    val ^^ = key2.substring(0, 36)
+                                    val k1   = key1.substring(36)
+                                    val k2   = key2.substring(36)
+                                    val ^    = key1.substring(0, 36)
+                                    val ^^   = key2.substring(0, 36)
                                     for
-                                      -- <- CyclicBarrier[IO](2)
+                                      b2 <- CyclicBarrier[IO](2)
+                                      -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                       (d1, (ts1, _)) = p1
                                       (d2, (ts2, _)) = p2
-                                      _  <- discard(k1, ^)
-                                      _  <- if k1 == k2 then IO.unit else discard(k2, ^^)
-                                      _  <- enable(k1)(using ^)
-                                      _  <- if k1 == k2 then IO.unit else enable(k2)(using ^^)
+                                      _  <- discard(k1)(using ^)
+                                      _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
+                                      _  <- %.update(_ - key1 - key2)
+                                      _  <- started.update(_ + 1)
+                                      fb <- ( for
+                                                _ <- --.await
+                                                _ <- enable(k1)
+                                                _ <- if k1 == k2 then IO.unit else enable(k2)
+                                                _ <- started.update(_ - 1)
+                                                _ <- *.offer(())
+                                              yield
+                                                ()
+                                            ).start
                                       _  <- sem.acquire
-                                      _  <- d1.complete(Some((delay, --)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, --)))
-                                      ts <- Clock[IO].monotonic.map(_.toNanos)
-                                      no <- &.updateAndGet(_ + 1)
+                                      _  <- d1.complete(Some((delay, b2, --, fb)))
+                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, --, fb)))
                                       _  <- sem.release
                                     yield
                                       ()
                                   }
                                 }
-              } >> IO.cede >> loop(parallelism, snapshot)
+              } >> IO.cede >> loop(parallelism, snapshot, started)
     }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
