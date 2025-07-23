@@ -2,12 +2,12 @@
 
 ⟦ traces = console ⟧
 
-⟦ snapshot = on ⟧
+P = ν(x) [ "l"[ accept x /*println("accepted")*/. ] | "r"[ enter x /*println("entered")*/. ] ]
 
-P = ν(x) [ "l"[ accept x. τ/*println("accepted")*/. ] | "r"[ enter x. τ/*println("entered")*/. ] ]
+Q = ν(x) "p"[ "c"[ exit x /*println("exited")*/. ] | expel x /*println("expelled")*/. ]
 
-Q = ν(x) "p"[ "c"[ exit x. τ/*println("exited")*/. ] | expel x. τ/*println("expelled")*/. ]
-
-R = ν(x) "r"[ "+"[ merge+ x. τ/*println("merged+")*/. ] | "-"[ merge- x. τ/*println("merged-")*/. ] ]
+R = ν(x) "r"[ "+"[ merge+ x /*println("merged+")*/. ] | "-"[ merge- x /*println("merged-")*/. ] ]
 
 Main = P | Q | R
+
+⟦ snapshot = yes ⟧

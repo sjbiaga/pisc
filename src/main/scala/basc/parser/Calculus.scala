@@ -102,7 +102,7 @@ abstract class Calculus extends BioAmbients:
     "!"~> opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
       case Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty =>
         throw ConsGuardParsingException(cons, ch.name)
-      case Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
+      case Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, _), _)) =>
         if ch == par
         then
           warn(throw GuardParsingException(ch.name))
@@ -259,7 +259,8 @@ object Calculus:
     case ζ(cap: Cap,
            name: String,
            polarity: Boolean,
-           override val rate: Option[Any])(id: => String)
+           override val rate: Option[Any],
+           code: Option[Code])(id: => String)
         extends Pre with Act(() => id)
 
     override def toString: String = this match
@@ -270,7 +271,7 @@ object Calculus:
         else if polarity.isDefined
         then s"$dir " + channel + " ! {" + name + "}."
         else s"$dir " + channel + " ? {" + name + "}."
-      case ζ(cap, name, _, _) =>
+      case ζ(cap, name, _, _, _) =>
         "" + cap + " " + name + "."
       case _ => "τ."
 
@@ -507,7 +508,7 @@ object Calculus:
             val polarity = it.polarity.fold(false)(_ => true)
             val name = it.channel.asSymbol.name
             it.copy()(idʹ(it.id, name, polarity.toString, it.rate.get, it.dir.toString))
-          case it @ ζ(cap, name, polarity, rate) =>
+          case it @ ζ(cap, name, polarity, rate, _) =>
             it.copy()(idʹ(it.id, name, polarity.toString, rate.get, cap.toString))
           case it => it
         }
