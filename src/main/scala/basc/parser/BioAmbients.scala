@@ -107,16 +107,17 @@ abstract class BioAmbients extends Expression:
     }
 
   def ζ: Parser[(ζ, (Names, Names))] =
-    ("enter"|"accept"|"exit"|"expel"|"merge+"|"merge-") ~ name ~ opt("@"~>rate) ^^ {
-      case _ ~ (name, _) ~ _ if !name.isSymbol =>
+    ("enter"|"accept"|"exit"|"expel"|"merge+"|"merge-") ~ name ~ opt("@"~>rate) ~ opt( expression ) ^^ {
+      case _ ~ (name, _) ~ _ ~ _ if !name.isSymbol =>
         throw PrefixChannelParsingException(name)
-      case cap ~ (name, free) ~ r =>
+      case cap ~ (name, free) ~ r ~ code =>
+        val freeʹ = code.map(_._2).getOrElse(Names())
         val rʹ = Some(r.getOrElse(None))
         val p =
           cap match
             case "enter"|"exit"|"merge+" => true
             case "accept"|"expel"|"merge-" => false
-        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ)(sζ_id) -> (Names(), free)
+        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ, code.map(_._1))(sζ_id) -> (Names(), free ++ freeʹ)
     }
 
   def dir: Parser[`$`] = ( "local" | "s2s" | "p2c" | "c2p" ) ^^ { `$`.valueOf(_) }
@@ -210,8 +211,6 @@ abstract class BioAmbients extends Expression:
   protected var _dirs = List[Map[String, Any]]()
 
   protected var _dups: Boolean = false
-
-  protected var _par: Int = 9
 
   protected var _snapshot: Boolean = false
 
@@ -780,13 +779,11 @@ object BioAmbients:
       _werr = errors
       _dups = false
       _exclude = false
-      _par = 9
       _snapshot = false
       _traces = None
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
-                       "parallelism" -> _par,
                        "snapshot" -> _snapshot,
                        "traces" -> _traces))
       eqtn = List()
@@ -818,7 +815,7 @@ object BioAmbients:
             else if it.matches("^[ ]*@.*")
             then // Scala
               Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-            else // SPi
+            else // BioAmbients
               _cntr = Map(0 -> 0L)
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
@@ -862,5 +859,4 @@ object BioAmbients:
           case _ => true
         }
 
-      Right((`(*)`(null, λ(Lit.Int(_par))), `+`(nil)): Bind) ::
       Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(nil)): Bind) :: prog

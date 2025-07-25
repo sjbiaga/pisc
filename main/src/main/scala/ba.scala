@@ -28,17 +28,15 @@
 
 package object sΠ:
 
-  import _root_.java.util.UUID
-
-  import _root_.scala.collection.immutable.{ List, Map, Set }
+  import _root_.scala.collection.immutable.{ Map, Set }
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
-  import _root_.cats.effect.{ IO, IOLocal, Deferred, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Deferred, FiberIO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Semaphore, Supervisor }
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
-  import `Π-loop`.{ -, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \ }
   import `Π-magic`.><
   export `Π-magic`.>*<
   import `Π-stats`.Rate
@@ -47,9 +45,9 @@ package object sΠ:
 
 
   /**
-    * Wraps ambient keys ([[UUID]]).
+    * Wraps ambient keys.
     *
-    * @param value [[UUID]]
+    * @param value
     */
   final class `)(`(private val value: Any) extends AnyVal:
     override def toString: String = value.toString
@@ -58,7 +56,8 @@ package object sΠ:
     /**
       * Initial ambient unique key.
       */
-    def apply(): `)(` = new `)(`(UUID.randomUUID)
+    def apply(): IO[`)(`] =
+      UUIDGen.randomUUID[IO].map(new `)(`(_))
 
   /**
     * Type of keys in [[`][`]].
@@ -118,7 +117,7 @@ package object sΠ:
       for
         _        <- `1`.acquire
         root     <- `)(`.get
-        uuid      = sΠ.`)(`()
+        uuid     <- sΠ.`)(`()
         node      = Set(uuid)
         _        <- `)(`.set(uuid)
         children <- `][`.modify { m =>
@@ -140,14 +139,14 @@ package object sΠ:
   object `][`:
     def apply(): IO[(IOLocal[`)(`], `][`)] =
       for
-        _   <- IO.unit
-        uuid = `)(`()
-        root = Set(uuid)
+        _    <- IO.unit
+        uuid <- `)(`()
+        root  = Set(uuid)
         lo  <- IOLocal[`)(`](uuid)
-        map  = Map(root -> `}{`(None, null, Set.empty, Set.empty))
-        tr  <- Ref.of[IO, Map[`)*(`, `}{`]](map)
+        map   = Map(root -> `}{`(None, null, Set.empty, Set.empty))
+        tree <- Ref.of[IO, Map[`)*(`, `}{`]](map)
       yield
-        (lo, tr)
+        (lo, tree)
 
     /**
       * Return the [[`)*(`]] node for this [[IOLocal]].
@@ -177,7 +176,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): IO[Unit] =
-    `π-exclude`(Set.from(enabled)) >> \()
+    `π-exclude`(Set.from(enabled)) >> \
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): IO[Unit] =
@@ -206,6 +205,10 @@ package object sΠ:
     */
   object ν:
 
+    type > = ((Deferred[IO, (Any, Boolean)], `)*(`), `π-$` | `π-ζ`)
+
+    type < = (((Any, Deferred[IO, Boolean]), `)*(`), `π-$` | `π-ζ`)
+
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
@@ -230,21 +233,23 @@ package object sΠ:
 
   object τ:
 
-    def apply(rate: Rate)(key: String, `_)(`: IOLocal[`)(`])
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
+             (using `][`)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred  <- Deferred[IO, Option[<>]]
         dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
         _         <- /.offer(^ -> key -> (deferred -> (dummy_ref -> -1, None, rate)))
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay,
-        (b, b2))   = opt.get
+         b, f)     = opt.get
         _         <- b.await
-        _         <- b2.await
+        _         <- b.await
+        _         <- f.join
       yield
         delay
 
@@ -275,12 +280,45 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred <- Deferred[IO, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         _        <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
-        delay    <- if polarity
-                    then ><.ζ.<(key, `)(`, cap)(deferred)(ref)
-                    else ><.ζ.>(key, `)(`, cap)(deferred)(ref)
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        _        <- if polarity
+                    then ><.ζ.<(node, cap)(b)(ref)
+                    else ><.ζ.>(node, cap)(b)(ref)
+        _        <- b.await
+        _        <- f.join
+      yield
+        delay
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
+             (using % : %, / : /)
+             (using `][`)
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                       ^ : String): IO[Double] =
+      for
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        _        <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        _        <- if polarity
+                    then ><.ζ.<(node, cap)(b)(code)(ref)
+                    else ><.ζ.>(node, cap)(b)(code)(ref)
+        _        <- b.await
+        _        <- f.join
       yield
         delay
 
@@ -294,9 +332,16 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred <- Deferred[IO, Option[<>]]
         _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
-        delay    <- ><.π(key, value.name, `)(`, dir)(deferred)(ref)
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        _        <- ><.π(value.name, node, dir)(b)(ref)
+        _        <- b.await
+        _        <- f.join
       yield
         delay
 
@@ -310,9 +355,16 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
+        deferred <- Deferred[IO, Option[<>]]
         _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
-        delay    <- ><.π(key, value.name, `)(`, dir)(code)(deferred)(ref)
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        _        <- ><.π(value.name, node, dir)(b)(code)(ref)
+        _        <- b.await
+        _        <- f.join
       yield
         delay
 
@@ -325,12 +377,19 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
-        (r, delay) <- ><.π(key, `)(`, dir)(deferred)(ref)
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        name     <- ><.π(node, dir)(b)(ref)
+        _        <- b.await
+        _        <- f.join
       yield
-        new `()`(r) -> delay
+        new `()`(name) -> delay
 
     /**
       * positive prefix i.e. input
@@ -341,12 +400,19 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
-        (r, delay) <- ><.π(key, `)(`, dir)(code)(deferred)(ref)
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f)    = opt.get
+        node     <- `][`(`)(`)
+        name     <- ><.π(node, dir)(b)(code)(ref)
+        _        <- b.await
+        _        <- f.join
       yield
-        new `()`(r) -> delay
+        new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -375,8 +441,7 @@ package object sΠ:
      * limitations under the License.
      */
 
-    final case class ><(taker: Option[((Deferred[IO, (Any, Boolean)], `)*(`), `π-$` | `π-ζ`)],
-                        offerer: Option[(((Any, Deferred[IO, Boolean]), `)*(`), `π-$` | `π-ζ`)])
+    final case class ><(taker: Option[ν.>], offerer: Option[ν.<])
 
     type >*< = Ref[IO, Map[Int, ><]]
 
@@ -406,118 +471,90 @@ package object sΠ:
 
       object π:
 
-        def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
+        def apply(name: Any, node: `)*(`, dir: `π-$`)
+                 (b: CyclicBarrier[IO])
                  (using `][`)
-                 (`>R`: >*<): IO[Double] =
+                 (`>R`: >*<): IO[Unit] =
           for
-            opt     <- deferred.get
-            _       <- if opt eq None then IO.canceled else IO.unit
-            (delay,
-            (b, b2)) = opt.get
-            ord      = dir.ord
             offerer <- Deferred[IO, Boolean]
-            _       <- IO.uncancelable { poll =>
-                         `][`(`)(`).flatMap { node =>
-                           `>R`.modify { m =>
-                             m(ord) match
-                               case it @ ><(Some(((taker, nodeʹ), dirʹ: `π-$`)), _) =>
-                                 (m + (ord -> it.copy(taker = None))) ->
-                                 check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
-                               case it =>
-                                 val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                                 (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
-                                 poll(offerer.get).onCancel(cleanup)
-                           }.flatten
-                         } <* b.await <* b2.await
-                       }.ifM(IO.unit, IO.never)
-          yield
-            delay
-
-        def apply(key: String, name: Any, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
-                 (using `][`)
-                 (`>R`: >*<): IO[Double] =
-          for
-            opt     <- deferred.get
-            _       <- if opt eq None then IO.canceled else IO.unit
-            (delay,
-            (b, b2)) = opt.get
             ord      = dir.ord
+            _       <- `>R`.flatModifyFull { (poll, m) =>
+                         m(ord).taker match
+                           case Some(((taker, nodeʹ), dirʹ: `π-$`)) =>
+                             m + (ord -> m(ord).copy(taker = None)) ->
+                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
+                           case _ =>
+                             val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                             m + (ord -> m(ord).copy(offerer = Some(name -> offerer -> node -> dir))) ->
+                             poll(offerer.get).onCancel(cleanup)
+                       }.ifM(b.await, b.await >> IO.never)
+          yield
+            ()
+
+        def apply(name: Any, node: `)*(`, dir: `π-$`)
+                 (b: CyclicBarrier[IO])
+                 (code: => IO[Any])
+                 (using `][`)
+                 (`>R`: >*<): IO[Unit] =
+          for
             offerer <- Deferred[IO, Boolean]
-            _       <- IO.uncancelable { poll =>
-                         `][`(`)(`).flatMap { node =>
-                           `>R`.modify { m =>
-                             m(ord) match
-                               case it @ ><(Some(((taker, nodeʹ), dirʹ: `π-$`)), _) =>
-                                 (m + (ord -> it.copy(taker = None))) ->
-                                 check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
-                               case it =>
-                                 val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                                 (m + (ord -> it.copy(offerer = Some(name -> offerer -> node -> dir)))) ->
-                                 poll(offerer.get).onCancel(cleanup)
-                           }.flatten <* exec(code)
-                         } <* b.await <* b2.await
-                       }.ifM(IO.unit, IO.never)
-          yield
-            delay
-
-        def apply(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
-                 (deferred: Deferred[IO, Option[(Double, (-, -))]])
-                 (using `][`)
-                 (`<R`: >*<): IO[(Any, Double)] =
-          for
-            opt     <- deferred.get
-            _       <- if opt eq None then IO.canceled else IO.unit
-            (delay,
-            (b, b2)) = opt.get
             ord      = dir.ord
+            _       <- `>R`.flatModifyFull { (poll, m) =>
+                         m(ord).taker match
+                           case Some(((taker, nodeʹ), dirʹ: `π-$`)) =>
+                             m + (ord -> m(ord).copy(taker = None)) ->
+                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
+                           case _ =>
+                             val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                             m + (ord -> m(ord).copy(offerer = Some(name -> offerer -> node -> dir))) ->
+                             poll(offerer.get).onCancel(cleanup)
+                       }.ifM(b.await, b.await >> IO.never) >> exec(code)
+          yield
+            ()
+
+        def apply(node: `)*(`, dir: `π-$`)
+                 (b: CyclicBarrier[IO])
+                 (using `][`)
+                 (`<R`: >*<): IO[Any] =
+          for
             taker   <- Deferred[IO, (Any, Boolean)]
-            name    <- IO.uncancelable { poll =>
-                         `][`(`)(`).flatMap { node =>
-                           `<R`.modify { m =>
-                             m(ord) match
-                               case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
-                                 (m + (ord -> it.copy(offerer = None))) ->
-                                 check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
-                               case it =>
-                                 val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                 (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
-                                 poll(taker.get).onCancel(cleanup)
-                           }.flatten
-                         } <* b.await <* b2.await
-                       }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
+            ord      = dir.ord
+            name    <- `<R`.flatModifyFull { (poll, m) =>
+                         m(ord).offerer match
+                           case Some((((name, offerer), nodeʹ), dirʹ: `π-$`)) =>
+                             m + (ord -> m(ord).copy(offerer = None)) ->
+                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
+                           case _ =>
+                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                             m + (ord -> m(ord).copy(taker = Some(taker -> node -> dir))) ->
+                             poll(taker.get).onCancel(cleanup)
+                       }.flatMap { (name, ok) => if ok then b.await >> IO.pure(name)
+                                                 else b.await >> IO.never }
           yield
-            name -> delay
+            name
 
-        def apply[T](key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
-                    (deferred: Deferred[IO, Option[(Double, (-, -))]])
+        def apply[T](node: `)*(`, dir: `π-$`)
+                    (b: CyclicBarrier[IO])
+                    (code: T => IO[T])
                     (using `][`)
-                    (`<R`: >*<): IO[(Any, Double)] =
+                    (`<R`: >*<): IO[Any] =
           for
-            opt     <- deferred.get
-            _       <- if opt eq None then IO.canceled else IO.unit
-            (delay,
-            (b, b2)) = opt.get
-            ord      = dir.ord
             taker   <- Deferred[IO, (Any, Boolean)]
-            name    <- IO.uncancelable { poll =>
-                         `][`(`)(`).flatMap { node =>
-                           `<R`.modify { m =>
-                             m(ord) match
-                               case it @ ><(_, Some((((name, offerer), nodeʹ), dirʹ: `π-$`))) =>
-                                 (m + (ord -> it.copy(offerer = None))) ->
-                                 check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
-                               case it =>
-                                 val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                 (m + (ord -> it.copy(taker = Some(taker -> node -> dir)))) ->
-                                 poll(taker.get).onCancel(cleanup)
-                           }.flatten
-                            .flatMap { case (it: T, ok) => (code andThen exec)(it).map(_ -> ok) }
-                         } <* b.await <* b2.await
-                       }.flatMap { (name, ok) => if ok then IO.pure(name) else IO.never }
+            ord      = dir.ord
+            name    <- `<R`.flatModifyFull { (poll, m) =>
+                         m(ord).offerer match
+                           case Some((((name, offerer), nodeʹ), dirʹ: `π-$`)) =>
+                             m + (ord -> m(ord).copy(offerer = None)) ->
+                             check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
+                           case _ =>
+                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                             m + (ord -> m(ord).copy(taker = Some(taker -> node -> dir))) ->
+                             poll(taker.get).onCancel(cleanup)
+                       }.flatMap { (name, ok) => if ok then b.await >> IO.pure(name)
+                                                 else b.await >> IO.never }
+                        .flatMap { case it: T => (code andThen exec)(it) }
           yield
-            name -> delay
+            name
 
       object ζ:
 
@@ -628,61 +665,88 @@ package object sΠ:
 
         object > :
 
-          def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -))]])
+          def apply(node: `)*(`, cap: `π-ζ`)
+                   (b: CyclicBarrier[IO])
                    (using `][`)
-                   (`>R`: >*<): IO[Double] =
+                   (`>R`: >*<): IO[Unit] =
             for
-              opt     <- deferred.get
-              _       <- if opt eq None then IO.canceled else IO.unit
-              (delay,
-              (b, b2)) = opt.get
-              ord      = cap.ord
               offerer <- Deferred[IO, Boolean]
-              _       <- IO.uncancelable { poll =>
-                           `][`(`)(`).flatMap { node =>
-                             `>R`.modify { m =>
-                               m(ord) match
-                                 case it @ ><(Some(((taker, nodeʹ), capʹ: `π-ζ`)), _) =>
-                                   (m + (ord -> it.copy(taker = None))) ->
-                                   check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
-                                 case it =>
-                                   val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                                   (m + (ord -> it.copy(offerer = Some(() -> offerer -> node -> cap)))) ->
-                                   poll(offerer.get).onCancel(cleanup)
-                             }.flatten
-                           } <* b.await <* b2.await
-                         }.ifM(IO.unit, IO.never)
+              ord      = cap.ord
+              _       <- `>R`.flatModifyFull { (poll, m) =>
+                           m(ord).taker match
+                             case Some(((taker, nodeʹ), capʹ: `π-ζ`)) =>
+                               (m + (ord -> m(ord).copy(taker = None))) ->
+                               check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
+                             case _ =>
+                               val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                               (m + (ord -> m(ord).copy(offerer = Some(() -> offerer -> node -> cap)))) ->
+                               poll(offerer.get).onCancel(cleanup)
+                         }.ifM(b.await, b.await >> IO.never)
             yield
-              delay
+              ()
+
+          def apply(node: `)*(`, cap: `π-ζ`)
+                   (b: CyclicBarrier[IO])
+                   (code: => IO[Any])
+                   (using `][`)
+                   (`>R`: >*<): IO[Unit] =
+            for
+              offerer <- Deferred[IO, Boolean]
+              ord      = cap.ord
+              _       <- `>R`.flatModifyFull { (poll, m) =>
+                           m(ord).taker match
+                             case Some(((taker, nodeʹ), capʹ: `π-ζ`)) =>
+                               (m + (ord -> m(ord).copy(taker = None))) ->
+                               check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
+                             case _ =>
+                               val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
+                               (m + (ord -> m(ord).copy(offerer = Some(() -> offerer -> node -> cap)))) ->
+                               poll(offerer.get).onCancel(cleanup)
+                         }.ifM(b.await, b.await >> IO.never) >> exec(code)
+            yield
+              ()
 
         object < :
 
-          def apply(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-                   (deferred: Deferred[IO, Option[(Double, (-, -))]])
+          def apply(node: `)*(`, cap: `π-ζ`)
+                   (b: CyclicBarrier[IO])
                    (using `][`)
-                   (`<R`: >*<): IO[Double] =
+                   (`<R`: >*<): IO[Unit] =
             for
-              opt     <- deferred.get
-              _       <- if opt eq None then IO.canceled else IO.unit
-              (delay,
-              (b, b2)) = opt.get
-              ord      = cap.ord
-              taker   <- Deferred[IO, (Any, Boolean)]
-              _       <- IO.uncancelable { poll =>
-                           `][`(`)(`).flatMap { node =>
-                             `<R`.modify { m =>
-                               m(ord) match
-                                 case it @ ><(_, Some((((name, offerer), nodeʹ), capʹ: `π-ζ`))) =>
-                                   (m + (ord -> it.copy(offerer = None))) ->
-                                   check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
-                                 case it =>
-                                   val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                                   (m + (ord -> it.copy(taker = Some(taker -> node -> cap)))) ->
-                                   poll(taker.get).onCancel(cleanup)
-                             }.flatten
-                              .flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
-                           } <* b.await <* b2.await
-                         }.ifM(IO.unit, IO.never)
+              taker <- Deferred[IO, (Any, Boolean)]
+              ord    = cap.ord
+              _     <- `<R`.flatModifyFull { (poll, m) =>
+                         m(ord).offerer match
+                           case Some((((_, offerer), nodeʹ), capʹ: `π-ζ`)) =>
+                             (m + (ord -> m(ord).copy(offerer = None))) ->
+                             check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
+                           case _ =>
+                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                             (m + (ord -> m(ord).copy(taker = Some(taker -> node -> cap)))) ->
+                             poll(taker.get).onCancel(cleanup)
+                           }.flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
+                            .ifM(b.await, b.await >> IO.never)
             yield
-              delay
+              ()
+
+          def apply(node: `)*(`, cap: `π-ζ`)
+                   (b: CyclicBarrier[IO])
+                   (code: => IO[Any])
+                   (using `][`)
+                   (`<R`: >*<): IO[Unit] =
+            for
+              taker <- Deferred[IO, (Any, Boolean)]
+              ord    = cap.ord
+              _     <- `<R`.flatModifyFull { (poll, m) =>
+                         m(ord).offerer match
+                           case Some((((_, offerer), nodeʹ), capʹ: `π-ζ`)) =>
+                             (m + (ord -> m(ord).copy(offerer = None))) ->
+                             check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
+                           case _ =>
+                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
+                             (m + (ord -> m(ord).copy(taker = Some(taker -> node -> cap)))) ->
+                             poll(taker.get).onCancel(cleanup)
+                           }.flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
+                            .ifM(b.await, b.await >> IO.never) >> exec(code)
+            yield
+              ()

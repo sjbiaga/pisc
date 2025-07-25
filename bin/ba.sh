@@ -18,16 +18,15 @@ function ba() {
     done
     set ../loop.scala ../ba.scala ../stats.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.2-RC1 \
+                  -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.6.2 \
+                  --dep org.typelevel::cats-effect:3.6.3 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
-#                  -Dpisc.bioambients.communications.parallelism.level=9 \
 }
 
 function ba_() {
@@ -48,16 +47,15 @@ function ba_() {
     done
     set ../loop_.scala ../ba_.scala ../stats_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.2-RC1 \
+                  -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.6.2 \
+                  --dep org.typelevel::cats-effect:3.6.3 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
-#                  -Dpisc.bioambients.communications.parallelism.level=9 \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 
