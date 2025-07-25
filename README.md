@@ -71,7 +71,7 @@ The BNF formal grammar for prefixes is the following.
 
 The BNF formal grammar for capabilities is the following.
 
-    CAPS           ::= CAPABILITY { "," CAPABILITY }
+    CAPS           ::= CAPABILITY { "." CAPABILITY }
     CAPABILITY     ::= "ε"
                      | ( "in" | "out" | "open" ) NAME
                      | NAME

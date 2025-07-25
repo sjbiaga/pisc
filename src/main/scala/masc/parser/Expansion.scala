@@ -468,13 +468,13 @@ object Expansion:
           val it = _it.map {
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
-            case `,.`(_path*) =>
+            case `..`(_path*) =>
               val path = _path.map {
                 case Λ(name) => Λ(replaced(name))
                 case ζ(op, amb) => ζ(op, replaced(amb))
                 case it => it
               }
-              `,.`(path*)
+              `..`(path*)
             case it @ `()`(_, given Option[Code]) =>
               it.copy(code = recoded)
             case it => it
@@ -578,13 +578,13 @@ object Expansion:
               it
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
-            case `,.`(_path*) =>
+            case `..`(_path*) =>
               val path = _path.map {
                 case Λ(name) => Λ(updated(name))
                 case ζ(op, amb) => ζ(op, updated(amb))
                 case it => it
               }
-              `,.`(path*)
+              `..`(path*)
             case it @ `()`(name, given Option[Code]) =>
               given_Bindings -= name
               it.copy(code = recoded)
