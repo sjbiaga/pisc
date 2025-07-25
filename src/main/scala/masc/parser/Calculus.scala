@@ -139,7 +139,7 @@ abstract class Calculus extends Ambient:
     } |
     caps <~ "." ^^ { // capability action
       case (path, free) =>
-        `,.`(path*) -> (Names(), free)
+        `..`(path*) -> (Names(), free)
     } |
     ("("~>name<~")") ~ opt( expression ) <~ "." ^^ {
       case _ ~ Some(((Left(enums), _), _)) =>
@@ -206,13 +206,13 @@ object Calculus:
 
     case τ(code: Option[Code])
 
-    case `,.`(path: Ambient.AST*)
+    case `..`(path: Ambient.AST*)
 
     case `()`(name: String, code: Option[Code])
 
     override def toString: String = this match
       case ν(names*) => names.mkString("ν(", ", ", ")")
-      case `,.`(path*) => path.mkString("", ", ", ".")
+      case `..`(path*) => path.mkString("", ". ", ".")
       case `()`(name, _) => s"($name)."
       case _ => "τ."
 
@@ -256,7 +256,7 @@ object Calculus:
       case `.`(end, prefixes*) =>
         prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + end
 
-      case <>(_, path*) => path.mkString("<", ", ", ">")
+      case <>(_, path*) => path.mkString("<", ". ", ">")
 
       case !(guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 

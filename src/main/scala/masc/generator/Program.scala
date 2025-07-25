@@ -88,9 +88,9 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case `,.`() =>
+        case `..`() =>
 
-        case `,.`(path*) =>
+        case `..`(path*) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil)),
                          Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)))

@@ -28,15 +28,13 @@
 
 package object Π:
 
-  import _root_.java.util.UUID
-
-  import _root_.scala.collection.immutable.{ List, Set, Map }
+  import _root_.scala.collection.immutable.{ Queue, Map, Set }
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
   import _root_.cats.effect.{ Deferred, IOLocal, IO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Semaphore, Supervisor }
+  import _root_.cats.effect.std.{ Semaphore, Supervisor, UUIDGen }
 
   import `Π-magic`.*
 
@@ -65,7 +63,7 @@ package object Π:
     /**
       * Initial ambient unique key.
       */
-    def apply(): `)(` = `)(`(UUID.randomUUID)
+    def apply(): IO[`)(`] = UUIDGen.randomUUID[IO].map(new `)(`(_))
     /**
       * Discriminate names from capabilities.
       */
@@ -292,8 +290,8 @@ package object Π:
                                }
         _       <- if blocked then `1`.release >> IO.cede >> this(`)(`, amb)
                    else
-                     val uuid = Π.`)(`()
                      for
+                       uuid                  <- Π.`)(`()
                        _                     <- `)(`.set(uuid)
                        (node, v @ (tree, _)) <- `][`.modify { it =>
                                                               val key = it.keys.find(_.contains(root)).get
@@ -329,9 +327,9 @@ package object Π:
 
     def apply(`)(`: IOLocal[`)(`], amb: `)(`)
              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
-      val uuid = Π.`)(`()
-      val node = Set(uuid)
       for
+        uuid     <- Π.`)(`()
+        node      = Set(uuid)
         amb      <- IO { try amb.ζ.amb.right.get catch _ => amb }
         _        <- `1`.acquire
         root     <- `)(`.get
@@ -357,15 +355,15 @@ package object Π:
   object `][`:
     def apply(): IO[(IOLocal[`)(`], `][`)] =
       for
-        eth <- Ref.of[IO, ><](><())
-        amb  = `)(`(())
-        uuid = `)(`()
-        root = Set(uuid)
-        lo  <- IOLocal[`)(`](uuid)
-        map  = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
-        tr  <- Ref.of[IO, Map[`)*(`, (`}{`, >*<)]](map)
+        eth  <- Ref.of[IO, ><](><())
+        amb   = `)(`(())
+        uuid <- `)(`()
+        root  = Set(uuid)
+        lo   <- IOLocal[`)(`](uuid)
+        map   = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
+        tree <- Ref.of[IO, Map[`)*(`, (`}{`, >*<)]](map)
       yield
-        (lo, tr)
+        (lo, tree)
 
     /**
       * Return the [[>*<]] ether for this [[IOLocal]].
@@ -420,17 +418,17 @@ package object Π:
   object <> :
 
      def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])
-              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+              (using `][`, Semaphore[IO]): IO[Unit] =
        for
-         `>R` <- Π.`][`(`)(`)
+         `>R` <- `][`(`)(`)
          _    <- ><(wrap)(`>R`)
        yield
          ()
 
      def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])(code: => IO[Any])
-              (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
+              (using `][`, Semaphore[IO]): IO[Unit] =
        for
-         `>R` <- Π.`][`(`)(`)
+         `>R` <- `][`(`)(`)
          _    <- ><(wrap)(code)(`>R`)
        yield
          ()
@@ -441,17 +439,17 @@ package object Π:
   object `()`:
 
     def apply(`)(`: IOLocal[`)(`])
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
+             (using `][`, Semaphore[IO]): IO[`)(`] =
        for
-         `<R` <- Π.`][`(`)(`)
+         `<R` <- `][`(`)(`)
          name <- ><()(`<R`)
        yield
          name
 
     def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
-                (implicit `][`: `][`, `1`: Semaphore[IO]): IO[`)(`] =
+                (using `][`, Semaphore[IO]): IO[`)(`] =
        for
-         `<R` <- Π.`][`(`)(`)
+         `<R` <- `][`(`)(`)
          name <- ><()(code)(`<R`)
        yield
          name
@@ -481,8 +479,8 @@ package object Π:
      * limitations under the License.
      */
 
-    final case class ><(takers: List[Deferred[IO, `)(`]],
-                        offerers: List[(`)(`, Deferred[IO, Unit])])
+    final case class ><(takers: Queue[Deferred[IO, `)(`]],
+                        offerers: Queue[(`)(`, Deferred[IO, Unit])])
 
     /**
       * Type of ambients' ether.
@@ -491,79 +489,59 @@ package object Π:
 
     object >< :
 
-      inline def apply(): >< = ><(Nil, Nil)
-
-      import _root_.scala.util.Random
-
-      private val random = Random()
+      inline def apply(): >< = ><(Queue.empty, Queue.empty)
 
       def apply(wrap: `)(`)(`>R`: Ref[IO, ><])
                (implicit `1`: Semaphore[IO]): IO[Unit] =
         Deferred[IO, Unit].flatMap { offerer =>
-          IO.uncancelable { poll =>
-            `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
-                val i = random.nextInt(takers.size)
-                val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
-                it.copy(takers = rest) -> (taker.complete(wrap).void <* `1`.release)
-              case it =>
-                val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
-                it.copy(offerers = wrap -> offerer :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanupʹ)
-            }.flatten
+          `>R`.flatModifyFull { (poll, it) =>
+            it.takers.dequeueOption match
+              case Some((taker, queue)) =>
+                it.copy(takers = queue) -> (taker.complete(wrap).void <* `1`.release)
+              case _ =>
+                val queue = it.offerers.enqueue(wrap -> offerer)
+                it.copy(offerers = queue) -> poll(`1`.release *> offerer.get)
           }
         }
 
       def apply(wrap: `)(`)(code: => IO[Any])(`>R`: Ref[IO, ><])
                (implicit `1`: Semaphore[IO]): IO[Unit] =
         Deferred[IO, Unit].flatMap { offerer =>
-          IO.uncancelable { poll =>
-            `>R`.modify {
-              case it @ ><(takers, _) if takers.nonEmpty =>
-                val i = random.nextInt(takers.size)
-                val (taker, rest) = takers(i) -> (takers.take(i) ++ takers.drop(i+1))
-                it.copy(takers = rest) -> (taker.complete(wrap).void <* `1`.release)
-              case it =>
-                val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
-                it.copy(offerers = wrap -> offerer :: it.offerers) -> poll(`1`.release *> offerer.get).onCancel(cleanupʹ)
-            }.flatten <* exec(code)
+          `>R`.flatModifyFull { (poll, it) =>
+            it.takers.dequeueOption match
+              case Some((taker, queue)) =>
+                it.copy(takers = queue) -> (taker.complete(wrap).void <* `1`.release)
+              case _ =>
+                val queue = it.offerers.enqueue(wrap -> offerer)
+                it.copy(offerers = queue) -> poll(`1`.release *> offerer.get)
           }
-        }
+        } <* exec(code)
 
       def apply()(`<R`: Ref[IO, ><])
                  (implicit `1`: Semaphore[IO]): IO[`)(`] =
         Deferred[IO, `)(`].flatMap { taker =>
-          IO.uncancelable { poll =>
-            `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
-                val i = random.nextInt(offerers.size)
-                val ((name, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
-                it.copy(offerers = rest) -> (offerer.complete(()).as(name) <* `1`.release)
-              case it =>
-                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
-                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
-            }.flatten
+          `<R`.flatModifyFull { (poll, it) =>
+            it.offerers.dequeueOption match
+              case Some(((name, offerer), queue)) =>
+                it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* `1`.release)
+              case _ =>
+                val queue = it.takers.enqueue(taker)
+                it.copy(takers = queue) -> poll(`1`.release *> taker.get)
           }
         }
 
       def apply[T]()(code: T => IO[T])(`<R`: Ref[IO, ><])
                     (implicit `1`: Semaphore[IO]): IO[`)(`] =
         Deferred[IO, `)(`].flatMap { taker =>
-          IO.uncancelable { poll =>
-            `<R`.modify {
-              case it @ ><(_, offerers) if offerers.nonEmpty =>
-                val i = random.nextInt(offerers.size)
-                val ((name, offerer), rest) = offerers(i) -> (offerers.take(i) ++ offerers.drop(i+1))
-                it.copy(offerers = rest) -> (offerer.complete(()).as(name) <* `1`.release)
-              case it =>
-                val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                val cleanupʹ = `1`.acquire >> cleanup >> `1`.release
-                it.copy(takers = taker :: it.takers) -> poll(`1`.release *> taker.get).onCancel(cleanupʹ)
-            }.flatten.flatMap {
-              case null => IO.pure(null)
-              case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
-            }
+          `<R`.flatModifyFull { (poll, it) =>
+            it.offerers.dequeueOption match
+              case Some(((name, offerer), queue)) =>
+                it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* `1`.release)
+              case _ =>
+                val queue = it.takers.enqueue(taker)
+                it.copy(takers = queue) -> poll(`1`.release *> taker.get)
           }
+        }.flatMap {
+          case null => IO.pure(null)
+          case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
         }

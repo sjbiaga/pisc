@@ -46,7 +46,7 @@ import Expansion.Duplications
 abstract class Ambient extends Expression:
 
   def caps: Parser[(List[AST], Names)] =
-    repsep(cap, ",") ^^ { _.unzip match
+    repsep(cap, ".") ^^ { _.unzip match
       case (cs, ns) =>
         cs.filterNot(_.isInstanceOf[ε.type]) -> ns.reduceOption(_ ++ _).getOrElse(Names())
     }
@@ -57,7 +57,7 @@ abstract class Ambient extends Expression:
       case op ~ (amb, free) =>
         ζ(Op.valueOf(op), amb) -> free
     } |
-    name ^^ { Λ(_) -> _ }
+    not("ν" | "τ") ~> name <~ not("[") ^^ { Λ(_) -> _ }
 
   def name: Parser[(String, Names)] = ident ^^ { it => it -> Set(it) }
 
