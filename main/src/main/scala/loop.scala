@@ -47,9 +47,9 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
+  type <> = (Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])
 
-  type + = (<>, (Long, ((>*<, Int), Option[Boolean], Rate)))
+  type + = (Deferred[IO, Option[<>]], ((>*<, Int), Option[Boolean], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -114,16 +114,14 @@ package object `Π-loop`:
     then
       !.complete(ExitCode.Success).void
     else
-      ks
-        .traverse { key =>
-          %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
-        }
-        .as {
-          if !sys.BooleanProp.keyExists(barsx).value
-          && ks.forall(_.charAt(36) == '!')
-          then ExitCode.Success
-          else ExitCode.Error
-        } >>= (!.complete(_).void)
+      %.flatModify { m =>
+        m -> ks.traverse(m(_).asInstanceOf[+]._1.complete(None))
+      }.as {
+        if !sys.BooleanProp.keyExists(barsx).value
+        && ks.forall(_.charAt(36) == '!')
+        then ExitCode.Success
+        else ExitCode.Error
+      } >>= (!.complete(_).void)
 
 
   def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
@@ -135,7 +133,7 @@ package object `Π-loop`:
         || m.exists(_._2.isInstanceOf[Int])
         then Map.empty -> false
         else m
-             .map(_ -> _.asInstanceOf[+]._2._2)
+             .map(_ -> _.asInstanceOf[+]._2)
              .toMap
           -> m.forall(_._1.charAt(36) == '!')
       }
@@ -147,14 +145,12 @@ package object `Π-loop`:
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
-              started.get.flatMap { n =>
-                *.size.flatMap { m =>
-                  if n + m == 0
-                  then
-                    this.exit(it.keys.toList)
-                  else
-                    *.take >> loop(parallelism, snapshot, started)
-                }
+              (started.get product *.size).flatMap { (n, m) =>
+                if n + m == 0
+                then
+                  this.exit(it.keys.toList)
+                else
+                  *.take >> loop(parallelism, snapshot, started)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -169,8 +165,8 @@ package object `Π-loop`:
                                       -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                      (d1, (ts1, _)) = p1
-                                      (d2, (ts2, _)) = p2
+                                      (d1, _) = p1
+                                      (d2, _) = p2
                                       _  <- discard(k1)(using ^)
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)

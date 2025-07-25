@@ -91,16 +91,14 @@ package object `Π-dump`:
     then
       !.complete(ExitCode.Success).void
     else
-      ks
-        .traverse { key =>
-          %.modify { m => m -> m(key).asInstanceOf[+]._1 } >>= (_.complete(None))
-        }
-        .as {
-          if !sys.BooleanProp.keyExists(barsx).value
-          && ks.forall(_.charAt(36) == '!')
-          then ExitCode.Success
-          else ExitCode.Error
-        } >>= (!.complete(_).void)
+      %.flatModify { m =>
+        m -> ks.traverse(m(_).asInstanceOf[+]._1.complete(None))
+      }.as {
+        if !sys.BooleanProp.keyExists(barsx).value
+        && ks.forall(_.charAt(36) == '!')
+        then ExitCode.Success
+        else ExitCode.Error
+      } >>= (!.complete(_).void)
 
 
   def dump(snapshot: Boolean)

@@ -44,9 +44,9 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+  type <> = (Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])
 
-  type + = (<>, (Long, ((>*<, Int), Option[Boolean], Rate)))
+  type + = (Deferred[IO, Option[<>]], (Long, ((>*<, Int), Option[Boolean], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -126,14 +126,12 @@ package object `Π-loop`:
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
-              started.get.flatMap { n =>
-                *.size.flatMap { m =>
-                  if n + m == 0
-                  then
-                    -.offer(it.keys.toList)
-                  else
-                    *.take >> loop(parallelism, snapshot, started)
-                }
+              (started.get product *.size).flatMap { (n, m) =>
+                if n + m == 0
+                then
+                  -.offer(it.keys.toList)
+                else
+                  *.take >> loop(parallelism, snapshot, started)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -156,12 +154,17 @@ package object `Π-loop`:
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)
                                       _  <- started.update(_ + 1)
+                                      tD <- Deferred[IO, Long]
+                                      nD <- Deferred[IO, Long]
                                       fb <- ( for
-                                                _ <- --.await
-                                                _ <- enable(k1)
-                                                _ <- if k1 == k2 then IO.unit else enable(k2)
-                                                _ <- started.update(_ - 1)
-                                                _ <- *.offer(())
+                                                _  <- --.await
+                                                ts <- tD.get
+                                                no <- nD.get
+                                                _  <- -.offer((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (+, ++)))
+                                                _  <- enable(k1)
+                                                _  <- if k1 == k2 then IO.unit else enable(k2)
+                                                _  <- started.update(_ - 1)
+                                                _  <- *.offer(())
                                               yield
                                                 ()
                                             ).start
@@ -170,8 +173,9 @@ package object `Π-loop`:
                                       _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, snapshot, --, fb, ++)))
                                       ts <- Clock[IO].monotonic.map(_.toNanos)
                                       no <- &.updateAndGet(_ + 1)
+                                      _  <- tD.complete(ts)
+                                      _  <- nD.complete(no)
                                       _  <- sem.release
-                                      _  <- -.offer((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (+, ++)))
                                     yield
                                       ()
                                   }

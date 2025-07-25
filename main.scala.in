@@ -74,9 +74,9 @@ object App extends IOApp:
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[IO, (String, (String, String))], Deferred[IO, (String, (String, String))]))]
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
-      c <- IO.ref(0L)
+      n <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, s, c, args)(%, /, *, -, !, &)
+      x <- run(p, s, n, args)(%, /, *, -, !, &)
     yield
       x
 

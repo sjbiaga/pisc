@@ -32,7 +32,7 @@ package object sΠ:
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
-  import _root_.cats.effect.{ IO, IOLocal, Clock, Deferred, FiberIO, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Deferred, FiberIO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
@@ -240,10 +240,9 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
+        deferred  <- Deferred[IO, Option[<>]]
         dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (dummy_ref -> -1, None, rate))))
+        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref -> -1, None, rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -301,10 +300,9 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
+        deferred  <- Deferred[IO, Option[<>]]
         polarity   = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
+        _         <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -339,10 +337,9 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
+        deferred  <- Deferred[IO, Option[<>]]
         polarity   = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> cap.ord, Some(polarity), rate))))
+        _         <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -377,9 +374,8 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
+        deferred  <- Deferred[IO, Option[<>]]
+        _         <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -412,9 +408,8 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(false), rate))))
+        deferred  <- Deferred[IO, Option[<>]]
+        _         <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -447,9 +442,8 @@ package object sΠ:
                        ^ : String): IO[(`()`, java.lang.Double)] =
       for
         _             <- exclude(key)
-        deferred      <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
-        timestamp     <- Clock[IO].monotonic.map(_.toNanos)
-        _             <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
+        deferred      <- Deferred[IO, Option[<>]]
+        _             <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
         opt           <- deferred.get
         (name, delay) <- ( if opt eq None
                            then
@@ -481,11 +475,10 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, java.lang.Double)] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
-        opt       <- deferred.get
+        _             <- exclude(key)
+        deferred      <- Deferred[IO, Option[<>]]
+        _             <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
+        opt           <- deferred.get
         (name, delay) <- ( if opt eq None
                            then
                              IO.pure((null: Any) -> (null: java.lang.Double))
@@ -637,8 +630,7 @@ package object sΠ:
                                        taker.complete(name).void
                                      case _ =>
                                        poll(offerer.get)
-                                 ).flatTap { _ => `2`.release }
-                                  .flatTap { _ => exec(code) },
+                                 ).flatTap { _ => `2`.release >> exec(code) },
                                  `>R`.flatModify { m =>
                                    val queue = m(ord).takers.enqueue(head.get)
                                    m + (ord -> m(ord).copy(takers = queue)) ->
@@ -733,8 +725,7 @@ package object sΠ:
                                        offerer.complete(()).as(name)
                                      case _ =>
                                        poll(taker.get)
-                                 ).flatTap { _ => `2`.release }
-                                  .flatMap { case it: T => (code andThen exec)(it) },
+                                 ).flatMap { case it: T => `2`.release >> (code andThen exec)(it) },
                                  `<R`.flatModify { m =>
                                    val queue = m(ord).offerers.enqueue(head.get)
                                    m + (ord -> m(ord).copy(offerers = queue)) ->
@@ -940,8 +931,7 @@ package object sΠ:
                                          taker.complete(node).void
                                        case _ =>
                                          poll(offerer.get)
-                                   ).flatTap { _ => b2.await >> `2`.release }
-                                    .flatTap { _ => exec(code) },
+                                   ).flatTap { _ => b2.await >> `2`.release >> exec(code) },
                                    `>R`.flatModify { m =>
                                      val queue = m(ord).takers.enqueue(head.get)
                                      m + (ord -> m(ord).copy(takers = queue)) ->
@@ -1054,8 +1044,7 @@ package object sΠ:
                                        `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
                                      else
                                        ζ(node, nodeʹ, cap)
-                                   }.flatTap { _ => b2.await >> `2`.release }
-                                    .flatTap { _ => exec(code) },
+                                   }.flatTap { _ => b2.await >> `2`.release >> exec(code) },
                                    `<R`.flatModify { m =>
                                      val queue = m(ord).offerers.enqueue(head.get)
                                      m + (ord -> m(ord).copy(offerers = queue)) ->
