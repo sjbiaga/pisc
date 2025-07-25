@@ -334,7 +334,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         dummy_ref    <- Ref.of[IO, Map[Int, ><]](Map.empty)
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
@@ -396,7 +396,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
@@ -431,7 +431,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         polarity      = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
@@ -466,7 +466,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -498,7 +498,7 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -530,7 +530,7 @@ package object sΠ:
                        ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -562,7 +562,7 @@ package object sΠ:
                           ^ : String): IO[(`()`, Double)] =
       for
         _            <- exclude(key)
-        deferred     <- Deferred[IO, Option[(Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])]]
+        deferred     <- Deferred[IO, Option[<>]]
         _            <- `2`.acquireN(2)
         (s_label, _) <- `}{`(`)(`)
         _            <- `2`.releaseN(2)
@@ -728,9 +728,10 @@ package object sΠ:
                                       e_label <- `}{`(`)(`, snapshot)
                                       _       <- `2`.release
                                       _       <- deferred.complete(s_label -> e_label)
+                                      _       <- exec(code)
                                     yield
                                       ()
-                                 }.flatTap { _ => exec(code) },
+                                 },
                                  `>R`.flatModify { m =>
                                    val queue = m(ord).takers.enqueue(head.get)
                                    m + (ord -> m(ord).copy(takers = queue)) ->
@@ -834,14 +835,15 @@ package object sΠ:
                                        offerer.complete(()).as(name)
                                      case _ =>
                                        poll(taker.get)
-                                 ).flatTap { _ =>
+                                 ).flatMap { case it: T =>
                                     for
                                       e_label <- `}{`(`)(`, snapshot)
                                       _       <- `2`.release
                                       _       <- deferred.complete(s_label -> e_label)
+                                      it      <- (code andThen exec)(it)
                                     yield
-                                      ()
-                                 }.flatMap { case it: T => (code andThen exec)(it) },
+                                      it
+                                 },
                                  `<R`.flatModify { m =>
                                    val queue = m(ord).offerers.enqueue(head.get)
                                    m + (ord -> m(ord).copy(offerers = queue)) ->
@@ -1061,9 +1063,10 @@ package object sΠ:
                                         e_label <- `}{`(`)(`, snapshot)
                                         _       <- `2`.release
                                         _       <- deferred.complete(s_label -> e_label)
+                                        _       <- exec(code)
                                       yield
                                         ()
-                                   }.flatTap { _ => exec(code) },
+                                   },
                                    `>R`.flatModify { m =>
                                      val queue = m(ord).takers.enqueue(head.get)
                                      m + (ord -> m(ord).copy(takers = queue)) ->
@@ -1190,9 +1193,10 @@ package object sΠ:
                                         e_label <- `}{`(`)(`, snapshot)
                                         _       <- `2`.release
                                         _       <- deferred.complete(s_label -> e_label)
+                                        _       <- exec(code)
                                       yield
                                         ()
-                                   }.flatTap { _ => exec(code) },
+                                   },
                                    `<R`.flatModify { m =>
                                      val queue = m(ord).offerers.enqueue(head.get)
                                      m + (ord -> m(ord).copy(offerers = queue)) ->

@@ -21,7 +21,7 @@ function ba() {
                   -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.6.2 \
+                  --dep org.typelevel::cats-effect:3.6.3 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
@@ -51,7 +51,7 @@ function ba_() {
                   -q -O -nowarn -S 3.7.2-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep org.typelevel::cats-effect:3.6.2 \
+                  --dep org.typelevel::cats-effect:3.6.3 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
                   ${args#?} \
