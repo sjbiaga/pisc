@@ -208,7 +208,7 @@ abstract class Encoding extends Calculus:
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
          | "exclude" | "include"
-         | "parallelism" | "snapshot"
+         | "snapshot"
          | "traces" => true
       case _ => false
     }
@@ -217,8 +217,8 @@ abstract class Encoding extends Calculus:
       _dir.get._2 match
         case it: String =>
           it.toLowerCase match
-            case "0" | "off" | "false" => false
-            case "1" | "on" | "true" => true
+            case "0" | "off" | "false" | "no" | "n" => false
+            case "1" | "on" | "true" | "yes" | "y" => true
             case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
         case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
 
@@ -267,9 +267,6 @@ abstract class Encoding extends Calculus:
         case "include" =>
           _exclude = !boolean
 
-        case "parallelism" =>
-          _par = 1 max number.toInt
-
         case "snapshot" =>
           _snapshot = boolean
 
@@ -293,7 +290,6 @@ abstract class Encoding extends Calculus:
               _dirs ::= Map("errors" -> _werr,
                             "duplications" -> _dups,
                             "exclude" -> _exclude,
-                            "parallelism" -> _par,
                             "snapshot" -> _snapshot,
                             "traces" -> _traces)
           catch _ =>
@@ -302,7 +298,6 @@ abstract class Encoding extends Calculus:
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
-                case it @ "parallelism" => it -> _par
                 case it @ "snapshot" => it -> _snapshot
                 case it @ "traces" => it -> _traces
               }
@@ -315,7 +310,6 @@ abstract class Encoding extends Calculus:
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
               case ("exclude", it: Boolean) => _exclude = it
-              case ("parallelism", it: Int) => _par = it
               case ("snapshoth", it: Boolean) => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
               case _ => ???
@@ -676,8 +670,8 @@ object Encoding:
               it.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))(it.id)
             case it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code]) =>
               it.copy(channel = renamed(ch), code = recoded(free))(it.id)
-            case it @ ζ(_, name, _, _) =>
-              it.copy(name = renamed(Symbol(name)).asSymbol.name)(it.id)
+            case it @ ζ(_, name, _, _, given Option[Code]) =>
+              it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
             case it => it
           }
           val endʹ = rename(end)
@@ -715,8 +709,8 @@ object Encoding:
           val π = it.copy(channel = renamed(ch), code = recoded(free))(it.id)
           `!`(Some(π), rename(sum))
 
-        case !(Some(it @ ζ(_, name, _, _)), sum) =>
-          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name)(it.id)
+        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
           `!`(Some(ζ), rename(sum))
 
         case it @ !(_, sum) =>

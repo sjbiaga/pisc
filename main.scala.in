@@ -34,33 +34,31 @@ import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode, Deferred, Ref }
 import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
 
 import `Π-loop`.*
+import `Π-dump`.*
 import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 
 object App extends IOApp:
 
-  private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, snapshot: Boolean, args: List[String])(% : %, / : /, * : *, ! : !, & : &, ^ : ^): IO[ExitCode] =
+  private def run(snapshot: Boolean, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism, snapshot)(using %, !, &, ^, *)(π.`π-wand`).background
+        _ <- loop(snapshot, started)(using %, !, &, ^, -, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
+        _ <- dump(snapshot)(using %, !, -).background
       yield
         ()
     ).use { _ =>
       for
         (lo, tree) <- sΠ.`][`()
-        _          <- π.`π-supervised`(π.Main(lo)(args*)(using π.`π-uuid`)(using %, /, { () => *.offer(()) })(using tree, ^))
+        _          <- π.`π-supervised`(π.Main(lo)(args*)(using π.`π-uuid`)(using %, /, *.offer(()))(using tree, ^))
         exitcode   <- !.get
       yield
         exitcode
     }
 
   override def run(args: List[String]): IO[ExitCode] =
-    val p = if sys.Prop.IntProp(bacsp).isSet
-            then sys.Prop.IntProp(bacsp).value
-            else π.`π-parallelism`
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-snapshot`
@@ -68,11 +66,13 @@ object App extends IOApp:
       % <- IO.ref(Map[String, Int | +]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Queue.unbounded[IO, Unit]
+      - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[IO, (String, (String, String))], Deferred[IO, (String, (String, String))]))]
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
+      n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, s, args)(%, /, *, !, &, ^)
+      x <- run(s, n, args)(%, /, *, -, !, &, ^)
     yield
       x
 

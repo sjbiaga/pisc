@@ -2,8 +2,8 @@
 
 ⟦ traces = console ⟧
 
-C(x) = ( ! .exit x. τ/*println("exited")*/. ) | ( ! .enter x. τ/*println("entered")*/. )
+C(x) = ( ! .exit x /*println("exited")*/. ) | ( ! .enter x /*println("entered")*/. )
 
-P(x) = ( ! .expel x. τ/*println("expelled")*/. ) | ( ! .accept x. τ/*println("accepted")*/. )
+P(x) = ( ! .expel x /*println("expelled")*/. ) | ( ! .accept x /*println("accepted")*/. )
 
 Main = ν(x) "p"[ "c"[ C(x) ] | P(x) ]

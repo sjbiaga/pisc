@@ -153,12 +153,32 @@ object Program:
                     ) :: Nil) :: Nil)
               )
 
-        case it @ ζ(cap, name, _, r) =>
-          `*.flatMap { null else … }`(υidυ,
-                                      Term.Apply(
-                                        Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
-                                        Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
-                                      *)
+        case it @ ζ(cap, name, _, r, code) =>
+          code match
+            case Some((Left(enums), _)) =>
+              val term = `for * yield ()`(enums*)
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                                            Term.ArgClause(term::Nil)),
+                                          *)
+            case Some((Right(term), _)) =>
+              val code = `for * yield ()`(`_ <- IO { * }`(term))
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                                            Term.ArgClause(code::Nil)),
+                                          *)
+            case _ =>
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                                            Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                                          *)
 
         case _ => ??? // caught by parser
 
@@ -376,15 +396,11 @@ object Program:
       val id = new helper.υidυ
 
       ( prog.head match
-          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
-      ) ::
-      ( prog.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
             Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot).toString
       ) ::
       prog
-        .tail.tail
+        .tail
         .map(_ -> _.generate(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)
