@@ -211,8 +211,8 @@ abstract class Encoding extends Calculus:
       _dir.get._2 match
         case it: String =>
           it.toLowerCase match
-            case "0" | "off" | "false" => false
-            case "1" | "on" | "true" => true
+            case "0" | "off" | "false" | "no" | "n" => false
+            case "1" | "on" | "true" | "yes" | "y" => true
             case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
         case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
 
