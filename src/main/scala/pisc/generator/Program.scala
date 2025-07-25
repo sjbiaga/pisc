@@ -121,7 +121,12 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { (c, n) => `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Lit.Int(c) :: Nil))) }.toList
+          * = names.map {
+            case (Some(c), n) =>
+              `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Term.Apply(\("Some"), Term.ArgClause(Lit.Int(c) :: Nil)) :: Nil)))
+            case (_, n) =>
+              `* <- *`(n -> Term.Apply(\("ν"), Term.ArgClause(Term.Name("None") :: Nil)))
+          }.toList
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
@@ -296,7 +301,7 @@ object Program:
                     then
                       _sum
                     else
-                      `+`(∥(`.`(_sum, ν(variables.drop(n).map(Int.MaxValue -> _.name).toSeq*))))
+                      `+`(∥(`.`(_sum, ν(variables.drop(n).map(None -> _.name).toSeq*))))
 
           * = ** ::: sum.generate()
 

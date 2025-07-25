@@ -220,7 +220,7 @@ object Calculus:
 
   enum Pre:
 
-    case ν(cap_names: (Int, String)*) // forcibly
+    case ν(cap_names: (Option[Int], String)*) // forcibly
 
     case τ(code: Option[Code])
 

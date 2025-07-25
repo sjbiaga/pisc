@@ -28,9 +28,9 @@
 
 package object Π:
 
-  import _root_.cats.effect.IO
+  import _root_.cats.effect.{ Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Queue, Supervisor }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Supervisor }
 
   import `Π-magic`.*
 
@@ -58,10 +58,11 @@ package object Π:
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
           q <- if capacity eq None
-               then Queue.unbounded[IO, Any]
-               else Queue.bounded[IO, Any](capacity.get)
+               then Queue.unbounded[IO, (Any, CyclicBarrier[IO])]
+               else Queue.bounded[IO, (Any, CyclicBarrier[IO])](capacity.get)
+          ref <- Ref.of[IO, ><](><(q, false))
         yield
-          f(q)
+          f(ref)
       ).flatten
 
 
@@ -76,11 +77,11 @@ package object Π:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    private def q = `()`[><]
+    private def ref = `()`[>*<]
 
     def ====(that: `()`) =
       try
-        this.q eq that.q
+        this.ref eq that.ref
       catch
         case _ =>
           this.name == that.name
@@ -92,43 +93,71 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(q)
+    def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(ref)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = ><(value.name)(q)(code)
+    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = ><(value.name)(ref)(code)
 
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = ><()(q).map(new `()`(_))
+    def apply(): IO[`()`] = ><()(ref).map(new `()`(_))
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => IO[T]): IO[`()`] = ><()(q)(code).map(new `()`(_))
+    def apply[T]()(code: T => IO[T]): IO[`()`] = ><()(ref)(code).map(new `()`(_))
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    type >< = Queue[IO, Any]
+    final case class ><(queue: Queue[IO, (Any, CyclicBarrier[IO])], stop: Boolean)
+
+    type >*< = Ref[IO, ><]
 
     object >< :
 
-      inline def apply(name: Any)(`>Q`: ><): IO[Option[Unit]] =
-        `>Q`.offer(name).as(Some(()))
+      def apply(name: Any)(`>R`: >*<): IO[Option[Unit]] =
+        CyclicBarrier[IO](2).flatMap { b2 =>
+          `>R`.flatModify { case it @ ><(q, _) =>
+            it -> q.offer(name -> b2)
+          } >> b2.await >>
+          `>R`.modify { case it @ ><(_, stop) =>
+            it -> (if stop then None else Some(()))
+          }
+        }
 
-      inline def apply(name: Any)(`>Q`: ><)(code: => IO[Any]): IO[Option[Unit]] =
-        `>Q`.offer(name).as(Some(())) <* exec(code)
+      def apply(name: Any)(`>R`: >*<)(code: => IO[Any]): IO[Option[Unit]] =
+        CyclicBarrier[IO](2).flatMap { b2 =>
+          `>R`.flatModify { case it @ ><(q, _) =>
+            it -> q.offer(name -> b2)
+          } >> exec(code) >> b2.await >>
+          `>R`.modify { case it @ ><(_, stop) =>
+            it -> (if stop then None else Some(()))
+          }
+        }
 
-      inline def apply()(`<Q`: ><): IO[Any] =
-        `<Q`.take
+      def apply()(`<R`: >*<): IO[Any] =
+        `<R`.flatModify { case it @ ><(q, _) =>
+          it -> q.take
+        }.flatMap { (name, b2) =>
+          IO.pure(name) <* b2.await
+        }
 
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
-        `<Q`.take.flatMap {
-          case null => IO.pure(null)
-          case it: T => (code andThen exec)(it)
+      def apply[T]()(`<R`: >*<)(code: T => IO[T]): IO[Any] =
+        `<R`.flatModify { case it @ ><(q, _) =>
+          it -> q.take
+        }.flatMap {
+          case it @ (null, _) => IO.pure(it)
+          case (it: T, b2) => (code andThen exec)(it)
+                                .flatTap {
+                                  case null => `<R`.update(_.copy(stop = true))
+                                  case _ => IO.unit
+                                }.map(_ -> b2)
+        }.flatMap { (name, b2) =>
+          IO.pure(name) <* b2.await
         }

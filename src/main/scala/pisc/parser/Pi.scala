@@ -103,9 +103,9 @@ abstract class Pi extends Expression:
         π(ch, args, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ free &~ bound)
     }
 
-  def name_capacity: Parser[((λ, Int), Names)] =
+  def name_capacity: Parser[((λ, Option[Int]), Names)] =
     name ~ opt( capacity ) ^^ {
-      case n ~ c => (n._1, c.getOrElse(Int.MaxValue)) -> n._2
+      case n ~ c => (n._1, c) -> n._2
     }
 
   /** Capacity. */
