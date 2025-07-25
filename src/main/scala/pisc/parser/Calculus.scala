@@ -193,10 +193,9 @@ abstract class Calculus extends PolyadicPi:
         `(*)`(identifier, qual) -> Names()
     }
 
-  def name_capacity: Parser[((λ, Int), Names)] =
+  def name_capacity: Parser[((λ, Option[Int]), Names)] =
     name ~ opt(capacity) ^^ {
-      case n ~ Some(c) => (n._1, c) -> n._2
-      case n ~ _ => (n._1, Int.MaxValue) -> n._2
+      case n ~ c => (n._1, c) -> n._2
     }
 
   /** Capacity. */
@@ -231,7 +230,7 @@ object Calculus:
 
   enum Pre:
 
-    case ν(cap_names: (Int, String)*) // forcibly
+    case ν(cap_names: (Option[Int], String)*) // forcibly
 
     case τ(code: Option[Code])
 
