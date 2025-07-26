@@ -28,15 +28,14 @@
 
 package object sΠ:
 
-  import _root_.scala.collection.immutable.{ List, Map, Set }
+  import _root_.scala.collection.immutable.{ Map, Set }
 
   import _root_.cats.effect.{ IO, Deferred, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.Supervisor
+  import _root_.cats.effect.std.{ Queue, Supervisor }
 
-  import `Π-loop`.{ -, %, /, \ }
-  import `Π-magic`.><
-  export `Π-magic`.>*<
+  import `Π-loop`.{ <>, %, /, \ }
+  export `Π-magic`.><
   import `Π-stats`.Rate
 
 
@@ -61,7 +60,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): IO[Unit] =
-    `π-exclude`(Set.from(enabled)) >> \()
+    `π-exclude`(Set.from(enabled)) >> \
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): IO[Unit] =
@@ -93,9 +92,9 @@ package object sΠ:
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
-          ref <- Ref.of[IO, ><](><())
+          q <- Queue.unbounded[IO, Any]
         yield
-          f(ref)
+          f(q)
       ).flatten
 
 
@@ -110,22 +109,22 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[(Double, (-, -))]]
-        dummy_ref <- Ref.of[IO, ><](><())
-        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref, None, rate)))
-        opt       <- deferred.get
-        delay     <- ( if opt eq None
-                       then
-                         IO.pure(null: java.lang.Double)
-                       else
-                         val (delay, (b, b2)) = opt.get
-                         for
-                           _ <- b.await
-                           _ <- b2.await
-                         yield
-                           java.lang.Double(delay)
-                     )
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        dummy_q  <- Queue.unbounded[IO, Any]
+        _        <- /.offer(^ -> key -> (deferred -> (dummy_q, None, rate)))
+        opt      <- deferred.get
+        delay    <- ( if opt eq None
+                      then
+                        IO.pure(null: java.lang.Double)
+                      else
+                        val (delay, b, f) = opt.get
+                        for
+                          _ <- b.await
+                          _ <- f.join
+                        yield
+                          java.lang.Double(delay)
+                    )
       yield
         delay
 
@@ -134,11 +133,11 @@ package object sΠ:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = `()`[>*<]
+    private def q = `()`[><]
 
     def ====(that: `()`) =
       try
-        this.ref eq that.ref
+        this.q eq that.q
       catch
         case _ =>
           this.name == that.name
@@ -155,9 +154,21 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
-        delay    <- ><(key, value.name)(deferred)(ref)
+        deferred <- Deferred[IO, Option[<>]]
+        _        <- /.offer(^ -> key -> (deferred -> (q, Some(false), rate)))
+        opt      <- deferred.get
+        delay    <- ( if opt eq None
+                      then
+                        IO.pure(null: java.lang.Double)
+                      else
+                        val (delay, b, f) = opt.get
+                        for
+                          _ <- ><(value.name)(q)
+                          _ <- b.await
+                          _ <- f.join
+                        yield
+                          java.lang.Double(delay)
+                    )
       yield
         delay
 
@@ -170,9 +181,21 @@ package object sΠ:
                        ^ : String): IO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[(Double, (-, -))]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref, Some(false), rate)))
-        delay    <- ><(key, value.name)(code)(deferred)(ref)
+        deferred <- Deferred[IO, Option[<>]]
+        _        <- /.offer(^ -> key -> (deferred -> (q, Some(false), rate)))
+        opt      <- deferred.get
+        delay    <- ( if opt eq None
+                      then
+                        IO.pure(null: java.lang.Double)
+                      else
+                        val (delay, b, f) = opt.get
+                        for
+                          _ <- ><(value.name)(q)(code)
+                          _ <- b.await
+                          _ <- f.join
+                        yield
+                          java.lang.Double(delay)
+                    )
       yield
         delay
 
@@ -184,12 +207,24 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, java.lang.Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
-        (r, delay) <- ><(key)(deferred)(ref)
+        _             <- exclude(key)
+        deferred      <- Deferred[IO, Option[<>]]
+        _             <- /.offer(^ -> key -> (deferred -> (q, Some(true), rate)))
+        opt           <- deferred.get
+        (name, delay) <- ( if opt eq None
+                           then
+                             IO.pure((null: Any) -> (null: java.lang.Double))
+                           else
+                             val (delay, b, f) = opt.get
+                             for
+                               name <- ><()(q)
+                               _    <- b.await
+                               _    <- f.join
+                             yield
+                               name -> java.lang.Double(delay)
+                         )
       yield
-        new `()`(r) -> delay
+        new `()`(name) -> delay
 
     /**
       * positive prefix i.e. input
@@ -199,166 +234,42 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, java.lang.Double)] =
       for
-        _          <- exclude(key)
-        deferred   <- Deferred[IO, Option[(Double, (-, -))]]
-        _          <- /.offer(^ -> key -> (deferred -> (ref, Some(true), rate)))
-        (r, delay) <- ><(key)(code)(deferred)(ref)
+        _             <- exclude(key)
+        deferred      <- Deferred[IO, Option[<>]]
+        _             <- /.offer(^ -> key -> (deferred -> (q, Some(true), rate)))
+        opt           <- deferred.get
+        (name, delay) <- ( if opt eq None
+                           then
+                             IO.pure((null: Any) -> (null: java.lang.Double))
+                           else
+                             val (delay, b, f) = opt.get
+                             for
+                               name <- ><()(q)(code)
+                               _    <- b.await
+                               _    <- f.join
+                             yield
+                               name -> java.lang.Double(delay)
+                         )
       yield
-        new `()`(r) -> delay
+        new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    /**
-      * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
-      *
-      * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
-      */
-    /*
-     *
-     * Copyright (c) 2020 Luis Rodero-Merino
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at.
-     *
-     *     http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */
-
-    final case class ><(takers: List[Deferred[IO, Any]],
-                        offerers: List[(Any, Deferred[IO, Unit])])
-
-    type >*< = Ref[IO, ><]
+    type >< = Queue[IO, Any]
 
     object >< :
 
-      inline def apply(): >< = ><(Nil, Nil)
+      inline def apply(name: Any)(`>Q`: ><): IO[Unit] =
+        `>Q`.offer(name)
 
-      def apply(key: String, name: Any)
-               (deferred: Deferred[IO, Option[(Double, (-, -))]])
-               (`>R`: >*<): IO[java.lang.Double] =
-        for
-          opt <- deferred.get
-          del <- ( if opt eq None
-                   then
-                     IO.pure(null: java.lang.Double)
-                   else
-                     val (delay, (b, b2)) = opt.get
-                     for
-                       offerer <- Deferred[IO, Unit]
-                       _       <- IO.uncancelable { poll =>
-                                    `>R`.modify {
-                                      case it @ ><(takers, _) if takers.nonEmpty =>
-                                        val (taker, rest) = takers.head -> takers.tail
-                                        it.copy(takers = rest) -> taker.complete(name).void
-                                      case it =>
-                                        val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                                        it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
-                                    }.flatten
-                                  }
-                       _       <- b.await
-                       _       <- b2.await
-                     yield
-                       java.lang.Double(delay)
-                 )
-        yield
-          del
+      inline def apply(name: Any)(`>Q`: ><)(code: => IO[Any]): IO[Unit] =
+        `>Q`.offer(name) <* exec(code)
 
-      def apply(key: String, name: Any)(code: => IO[Any])
-               (deferred: Deferred[IO, Option[(Double, (-, -))]])
-               (`>R`: >*<): IO[java.lang.Double] =
-        for
-          opt <- deferred.get
-          del <- ( if opt eq None
-                   then
-                     IO.pure(null: java.lang.Double)
-                   else
-                     val (delay, (b, b2)) = opt.get
-                     for
-                       offerer <- Deferred[IO, Unit]
-                       _       <- IO.uncancelable { poll =>
-                                    `>R`.modify {
-                                      case it @ ><(takers, _) if takers.nonEmpty =>
-                                        val (taker, rest) = takers.head -> takers.tail
-                                        it.copy(takers = rest) -> taker.complete(name).void
-                                      case it =>
-                                        val cleanup = `>R`.update { it => it.copy(offerers = it.offerers.filter(_._2 ne offerer)) }
-                                        it.copy(offerers = name -> offerer :: it.offerers) -> poll(offerer.get).onCancel(cleanup)
-                                    }.flatten <* exec(code)
-                                  }
-                       _       <- b.await
-                       _       <- b2.await
-                     yield
-                       java.lang.Double(delay)
-                 )
-        yield
-          del
+      inline def apply()(`<Q`: ><): IO[Any] =
+        `<Q`.take
 
-      def apply(key: String)
-               (deferred: Deferred[IO, Option[(Double, (-, -))]])
-               (`<R`: >*<): IO[(Any, java.lang.Double)] =
-        for
-          opt  <- deferred.get
-          pair <- ( if opt eq None
-                    then
-                      IO.pure((null: Any) -> (null: java.lang.Double))
-                    else
-                      val (delay, (b, b2)) = opt.get
-                      for
-                        taker <- Deferred[IO, Any]
-                        name  <- IO.uncancelable { poll =>
-                                   `<R`.modify {
-                                     case it @ ><(_, offerers) if offerers.nonEmpty =>
-                                       val ((name, offerer), rest) = offerers.head -> offerers.tail
-                                       it.copy(offerers = rest) -> offerer.complete(()).as(name)
-                                     case it =>
-                                       val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                                       it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
-                                   }.flatten
-                                 }
-                        _     <- b.await
-                        _     <- b2.await
-                      yield
-                        name -> java.lang.Double(delay)
-                  )
-        yield
-          pair
-
-      def apply[T](key: String)(code: T => IO[T])
-                  (deferred: Deferred[IO, Option[(Double, (-, -))]])
-                  (`<R`: >*<): IO[(Any, java.lang.Double)] =
-        for
-          opt  <- deferred.get
-          pair <- ( if opt eq None
-                    then
-                      IO.pure((null: Any) -> (null: java.lang.Double))
-                    else
-                      val (delay, (b, b2)) = opt.get
-                      for
-                        taker <- Deferred[IO, Any]
-                        name  <- IO.uncancelable { poll =>
-                                   `<R`.modify {
-                                     case it @ ><(_, offerers) if offerers.nonEmpty =>
-                                       val ((name, offerer), rest) = offerers.head -> offerers.tail
-                                       it.copy(offerers = rest) -> offerer.complete(()).as(name)
-                                     case it =>
-                                       val cleanup = `<R`.update { it => it.copy(takers = it.takers.filter(_ ne taker)) }
-                                       it.copy(takers = taker :: it.takers) -> poll(taker.get).onCancel(cleanup)
-                                   }.flatten
-                                    .flatMap { case it: T => (code andThen exec)(it) }
-                                 }
-                        _     <- b.await
-                        _     <- b2.await
-                      yield
-                        name -> java.lang.Double(delay)
-                  )
-        yield
-          pair
+      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
+        `<Q`.take.flatMap { case it: T => (code andThen exec)(it) }
