@@ -33,8 +33,6 @@ import _root_.scala.concurrent.duration.*
 import _root_.breeze.stats.distributions.Exponential
 import _root_.breeze.stats.distributions.Rand.VariableSeed.*
 
-import _root_.cats.effect.{ IO, Ref }
-
 import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
 
 
@@ -72,9 +70,9 @@ package object `Π-stats`:
 
   def ∥(% : Map[String, (>*<, Option[Boolean], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (parallelism: Int, check: Boolean = false): List[(String, String, (Double, Double))] =
-                                                      // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
-                                                      // key1    key1|2   delay   duration
+       (check: Boolean = false): List[(String, String, (Double, Double))] =
+                                    // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
+                                    // key1    key1|2   delay   duration
 
     val mls = HashMap[(>*<, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -261,4 +259,3 @@ package object `Π-stats`:
     .filter(_._2)
     .map(_._1)
     .reverse
-    .take(parallelism)
