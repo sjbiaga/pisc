@@ -719,7 +719,7 @@ object StochasticPi:
             else if it.matches("^[ ]*@.*")
             then // Scala
               Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-            else // SPi
+            else // StochasticPi
               _cntr = Map(0 -> 0L)
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
