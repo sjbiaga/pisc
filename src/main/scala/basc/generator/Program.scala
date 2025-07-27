@@ -352,11 +352,15 @@ object Program:
       val id = new helper.υidυ
 
       ( prog.head match
+          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+      ) ::
+      ( prog.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
             Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot).toString
       ) ::
       prog
-        .tail
+        .tail.tail
         .map(_ -> _.generate(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)

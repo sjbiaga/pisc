@@ -208,7 +208,7 @@ abstract class Encoding extends Calculus:
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
          | "exclude" | "include"
-         | "snapshot"
+         | "parallelism" | "snapshot"
          | "traces" => true
       case _ => false
     }
@@ -267,6 +267,9 @@ abstract class Encoding extends Calculus:
         case "include" =>
           _exclude = !boolean
 
+        case "parallelism" =>
+          _par = 1 max number.toInt
+
         case "snapshot" =>
           _snapshot = boolean
 
@@ -290,6 +293,7 @@ abstract class Encoding extends Calculus:
               _dirs ::= Map("errors" -> _werr,
                             "duplications" -> _dups,
                             "exclude" -> _exclude,
+                            "parallelism" -> _par,
                             "snapshot" -> _snapshot,
                             "traces" -> _traces)
           catch _ =>
@@ -298,6 +302,7 @@ abstract class Encoding extends Calculus:
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
+                case it @ "parallelism" => it -> _par
                 case it @ "snapshot" => it -> _snapshot
                 case it @ "traces" => it -> _traces
               }
@@ -310,6 +315,7 @@ abstract class Encoding extends Calculus:
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
               case ("exclude", it: Boolean) => _exclude = it
+              case ("parallelism", it: Int) => _par = it
               case ("snapshoth", it: Boolean) => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
               case _ => ???

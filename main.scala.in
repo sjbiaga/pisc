@@ -40,11 +40,12 @@ import `Π-stats`.{ Rate, ∞, `ℝ⁺`, ⊤ }
 
 object App extends IOApp:
 
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(snapshot: Boolean, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
+  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop(snapshot, started)(using %, !, &, ^, -, *)(π.`π-wand`).background
+        _ <- loop(parallelism, snapshot, started)(using %, !, &, ^, -, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
         _ <- dump(snapshot)(using %, !, -).background
       yield
@@ -59,6 +60,9 @@ object App extends IOApp:
     }
 
   override def run(args: List[String]): IO[ExitCode] =
+    val p = if sys.Prop.IntProp(bacsp).isSet
+            then sys.Prop.IntProp(bacsp).value
+            else π.`π-parallelism`
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-snapshot`
@@ -72,7 +76,7 @@ object App extends IOApp:
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(s, n, args)(%, /, *, -, !, &, ^)
+      x <- run(p, s, n, args)(%, /, *, -, !, &, ^)
     yield
       x
 
