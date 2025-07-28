@@ -324,7 +324,6 @@ package object sΠ:
   /**
     * silent transition
     */
-
   object τ:
 
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
@@ -567,7 +566,6 @@ package object sΠ:
         timestamp     <- Clock[IO].monotonic.map(_.toNanos)
         _             <- /.offer(^ -> key -> (deferred -> (timestamp, (ref -> dir.ord, Some(true), rate))))
         opt           <- deferred.get
-        _             <- if opt eq None then IO.canceled else IO.unit
         (name, delay) <- ( if opt eq None
                            then
                              IO.pure((null: Any) -> (null: java.lang.Double))
@@ -709,7 +707,7 @@ package object sΠ:
                                      case Some(((taker, _), _)) =>
                                        taker.complete(name).void
                                      case _ =>
-                                       `2`.releaseN(2) >> poll(offerer.get)
+                                       poll(offerer.get)
                                  ).flatTap { _ =>
                                     for
                                       e_label <- `}{`(`)(`, snapshot)
