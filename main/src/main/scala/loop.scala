@@ -47,7 +47,7 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit])
+  type <> = (Double, Deferred[IO, Boolean], CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])
 
   type + = (Deferred[IO, Option[<>]], ((>*<, Int), Option[Boolean], Rate))
 
@@ -126,33 +126,32 @@ package object `Π-loop`:
       } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
+  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], stopped: Ref[IO, Long])
           (using % : %, ! : !, & : &, ^ : ^, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    %.flatModify { m =>
-      m -> started.get.map { n =>
-        if n > 0
-        || m.exists(_._2.isInstanceOf[Int])
-        then Map.empty -> false
+    %.modify { m =>
+      m -> (
+        if m.exists(_._2.isInstanceOf[Int])
+        then Map.empty -> { () => false }
         else m
              .map(_ -> _.asInstanceOf[+]._2)
              .toMap
-          -> m.forall(_._1.charAt(36) == '!')
-      }
+          -> { () => m.keys.forall(_.charAt(36) == '!') }
+      )
     } >>= {
       case (it, exit) =>
-        if !exit && it.isEmpty
+        if it.isEmpty && !exit()
         then
-          *.take >> loop(parallelism, snapshot, started)
+          *.take >> loop(parallelism, snapshot, started, stopped)
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
-              (started.get product *.size).flatMap { (n, m) =>
+              ((started.get product stopped.get).map(_ - _) product *.size).flatMap { (n, m) =>
                 if n + m == 0
                 then
                   this.exit(it.keys.toList)
                 else
-                  *.take >> loop(parallelism, snapshot, started)
+                  *.take >> loop(parallelism, snapshot, started, stopped)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -163,11 +162,14 @@ package object `Π-loop`:
                                     val ^| = key1.substring(0, 36)
                                     val ^^ = key2.substring(0, 36)
                                     for
+                                      n  <- Deferred[IO, Boolean]
+                                      b2 <- CyclicBarrier[IO](2)
                                       -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                       (d1, _) = p1
                                       (d2, _) = p2
+                                      _  <- sem.acquire
                                       _  <- discard(k1)(using ^|)
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)
@@ -175,23 +177,24 @@ package object `Π-loop`:
                                       fb <- ( for
                                                 _ <- --.await
                                                 _ <- ^.release
+                                                b <- n.get
+                                                _ <- if b then stopped.update(_ + 1) >> sem.release else IO.unit
                                                 _ <- --.await
                                                 _ <- enable(k1)
                                                 _ <- if k1 == k2 then IO.unit else enable(k2)
+                                                _ <- sem.release
                                                 _ <- started.update(_ - 1)
                                                 _ <- *.offer(())
                                               yield
                                                 ()
                                             ).start
-                                      _  <- sem.acquire
                                       _  <- ^.acquire
-                                      _  <- d1.complete(Some((delay, --, fb)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, --, fb)))
-                                      _  <- sem.release
+                                      _  <- d1.complete(Some((delay, n, b2, --, fb)))
+                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, n, b2, --, fb)))
                                     yield
                                       ()
                                   }
-                                } >> IO.cede >> loop(parallelism, snapshot, started)
+                                } >> IO.cede >> loop(parallelism, snapshot, started, stopped)
               }
     }
 

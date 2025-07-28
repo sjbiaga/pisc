@@ -43,9 +43,9 @@ object App extends IOApp:
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
+  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], stopped: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism, snapshot, started)(using %, !, &, ^, -, *)(π.`π-wand`).background
+        _ <- loop(parallelism, snapshot, started, stopped)(using %, !, &, ^, -, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
         _ <- dump(snapshot)(using %, !, -).background
       yield
@@ -74,9 +74,10 @@ object App extends IOApp:
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
       n <- IO.ref(0L)
+      m <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, s, n, args)(%, /, *, -, !, &, ^)
+      x <- run(p, s, n, m, args)(%, /, *, -, !, &, ^)
     yield
       x
 
