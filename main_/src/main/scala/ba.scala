@@ -324,7 +324,6 @@ package object sΠ:
   /**
     * silent transition
     */
-
   object τ:
 
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
@@ -666,7 +665,7 @@ package object sΠ:
                                      case Some(((taker, _), _)) =>
                                        taker.complete(name).void
                                      case _ =>
-                                       `2`.releaseN(2) >> poll(offerer.get)
+                                       poll(offerer.get)
                                  ).flatTap { _ =>
                                     for
                                       e_label <- `}{`(`)(`, snapshot)
