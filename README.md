@@ -50,7 +50,7 @@ The BNF formal grammar for processes is the following.
     LEAF           ::= "[" NAME ("="|"≠") NAME "]" CHOICE
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                     | "!" [ "." μ "." ] CHOICE
+                     | "!" PACE [ "." μ "." ] CHOICE
                      | [ LABEL ] "[" CHOICE "]"
                      | CAPITAL
                      | INVOCATION
@@ -70,11 +70,12 @@ The BNF formal grammar for prefixes is the following.
                      | ζ "."
                      | "ν" "(" NAMES ")"
     μ              ::= "τ" [ @ RATE ] [ EXPRESSION ]
-                     | [ $ ] NAME [ @ RATE ] "!" "{" NAME "}" [ EXPRESSION ]
+                     | [ $ ] NAME [ @ RATE ] "!" "{" ["ν"] NAME "}" [ EXPRESSION ]
                      | [ $ ] NAME [ @ RATE ] "?" "{" NAME "}" [ EXPRESSION ]
                      | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
     ζ              ::= ( "enter" | "accept" | "exit" | "expel" | "merge+" | "merge-" ) NAME [ @ RATE ]
     $              ::= "local" | "s2s" | "p2c" | "c2p"
+    PACE           ::= NATURAL_NUMBER [ "," TIME_UNIT ]
     EXPRESSION     ::= "/*" ... "*/"
 
 Lexically, `ident` is a channel name - (an identifier) starting with lowercase letter;

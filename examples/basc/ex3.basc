@@ -10,4 +10,4 @@ R = ν(x) "r"[ "+"[ merge+ x /*println("merged+")*/. ] | "-"[ merge- x /*println
 
 Main = P | Q | R
 
-⟦ snapshot = yes ⟧
+⟦ snapshot = n ⟧

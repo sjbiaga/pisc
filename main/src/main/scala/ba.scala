@@ -34,7 +34,7 @@ package object sΠ:
   import _root_.cats.syntax.traverse.*
   import _root_.cats.effect.{ IO, IOLocal, Deferred, FiberIO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ CyclicBarrier, MapRef, Semaphore, Supervisor, UUIDGen }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-magic`.><
@@ -205,6 +205,9 @@ package object sΠ:
     */
   object ν:
 
+    def apply(ref: Ref[IO, Map[Int, ><]]): MapRef[IO, Int, ><] =
+      { k => Ref.lens(ref)(_.get(k).get, m => v => m + (k -> v)) }
+
     type > = ((Deferred[IO, (Any, Boolean)], `)*(`), `π-$` | `π-ζ`)
 
     type < = (((Any, Deferred[IO, Boolean]), `)*(`), `π-$` | `π-ζ`)
@@ -223,7 +226,7 @@ package object sΠ:
                    )
                  }
         yield
-          f(ref)
+          f(this(ref))
       ).flatten
 
 
@@ -241,7 +244,7 @@ package object sΠ:
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[<>]]
         dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
-        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref -> -1, None, rate)))
+        _         <- /.offer(^ -> key -> (deferred -> (ν(dummy_ref) -> -1, None, rate)))
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, n,
@@ -437,7 +440,7 @@ package object sΠ:
 
     final case class ><(taker: Option[ν.>], offerer: Option[ν.<])
 
-    type >*< = Ref[IO, Map[Int, ><]]
+    type >*< = MapRef[IO, Int, ><]
 
     object >< :
 
@@ -450,7 +453,8 @@ package object sΠ:
                         dir_capʹ: `π-$` | `π-ζ`)
                        (using `][`: `][`): IO[Boolean] =
         (dir_cap, dir_capʹ) match
-          case (`π-local`, `π-local`)   => IO.pure(node == nodeʹ)
+          case (`π-local`, `π-local`)   =>
+            IO.pure(node == nodeʹ)
           case (`π-s2s`, `π-s2s`)
              | (`π-enter`, `π-accept`)
              | (`π-merge+`, `π-merge-`) =>
@@ -473,14 +477,14 @@ package object sΠ:
             node    <- `][`(`)(`)
             offerer <- Deferred[IO, Boolean]
             ord      = dir.ord
-            _       <- `>R`.flatModifyFull { (poll, m) =>
-                         m(ord).taker match
+            _       <- `>R`(ord).flatModifyFull { (poll, it) =>
+                         it.taker match
                            case Some(((taker, nodeʹ), dirʹ: `π-$`)) =>
-                             m + (ord -> m(ord).copy(taker = None)) ->
+                             it.copy(taker = None) ->
                              check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
                            case _ =>
-                             val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                             m + (ord -> m(ord).copy(offerer = Some(name -> offerer -> node -> dir))) ->
+                             val cleanup = `>R`(ord).update(_.copy(offerer = None))
+                             it.copy(offerer = Some(name -> offerer -> node -> dir)) ->
                              poll(offerer.get).onCancel(cleanup)
                        }.ifM(b.await >> n.complete(false),
                              b.await >> n.complete(true) >> IO.never)
@@ -496,14 +500,14 @@ package object sΠ:
             node    <- `][`(`)(`)
             offerer <- Deferred[IO, Boolean]
             ord      = dir.ord
-            _       <- `>R`.flatModifyFull { (poll, m) =>
-                         m(ord).taker match
+            _       <- `>R`(ord).flatModifyFull { (poll, it) =>
+                         it.taker match
                            case Some(((taker, nodeʹ), dirʹ: `π-$`)) =>
-                             m + (ord -> m(ord).copy(taker = None)) ->
+                             it.copy(taker = None) ->
                              check(node, nodeʹ, dir, dirʹ).flatMap { ok => taker.complete(name -> ok).as(ok) }
                            case _ =>
-                             val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                             m + (ord -> m(ord).copy(offerer = Some(name -> offerer -> node -> dir))) ->
+                             val cleanup = `>R`(ord).update(_.copy(offerer = None))
+                             it.copy(offerer = Some(name -> offerer -> node -> dir)) ->
                              poll(offerer.get).onCancel(cleanup)
                        }.ifM(b.await >> n.complete(false),
                              b.await >> n.complete(true) >> IO.never) >> exec(code)
@@ -518,14 +522,14 @@ package object sΠ:
             node  <- `][`(`)(`)
             taker <- Deferred[IO, (Any, Boolean)]
             ord    = dir.ord
-            name  <- `<R`.flatModifyFull { (poll, m) =>
-                       m(ord).offerer match
+            name  <- `<R`(ord).flatModifyFull { (poll, it) =>
+                       it.offerer match
                          case Some((((name, offerer), nodeʹ), dirʹ: `π-$`)) =>
-                           m + (ord -> m(ord).copy(offerer = None)) ->
+                           it.copy(offerer = None) ->
                            check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
                          case _ =>
-                           val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                           m + (ord -> m(ord).copy(taker = Some(taker -> node -> dir))) ->
+                           val cleanup = `<R`(ord).update(_.copy(taker = None))
+                           it.copy(taker = Some(taker -> node -> dir)) ->
                            poll(taker.get).onCancel(cleanup)
                      }.flatMap { (name, ok) =>
                        if ok then b.await >> n.complete(false) >> IO.pure(name)
@@ -543,14 +547,14 @@ package object sΠ:
             node  <- `][`(`)(`)
             taker <- Deferred[IO, (Any, Boolean)]
             ord    = dir.ord
-            name  <- `<R`.flatModifyFull { (poll, m) =>
-                       m(ord).offerer match
+            name  <- `<R`(ord).flatModifyFull { (poll, it) =>
+                       it.offerer match
                          case Some((((name, offerer), nodeʹ), dirʹ: `π-$`)) =>
-                           m + (ord -> m(ord).copy(offerer = None)) ->
+                           it.copy(offerer = None) ->
                            check(node, nodeʹ, dir, dirʹ).flatMap { ok => offerer.complete(ok).as(name -> ok) }
                          case _ =>
-                           val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                           m + (ord -> m(ord).copy(taker = Some(taker -> node -> dir))) ->
+                           val cleanup = `<R`(ord).update(_.copy(taker = None))
+                           it.copy(taker = Some(taker -> node -> dir)) ->
                            poll(taker.get).onCancel(cleanup)
                      }.flatMap { (name, ok) =>
                        if ok then b.await >> n.complete(false) >> IO.pure(name)
@@ -676,14 +680,14 @@ package object sΠ:
               node    <- `][`(`)(`)
               offerer <- Deferred[IO, Boolean]
               ord      = cap.ord
-              _       <- `>R`.flatModifyFull { (poll, m) =>
-                           m(ord).taker match
+              _       <- `>R`(ord).flatModifyFull { (poll, it) =>
+                           it.taker match
                              case Some(((taker, nodeʹ), capʹ: `π-ζ`)) =>
-                               (m + (ord -> m(ord).copy(taker = None))) ->
+                               it.copy(taker = None) ->
                                check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
                              case _ =>
-                               val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                               (m + (ord -> m(ord).copy(offerer = Some(() -> offerer -> node -> cap)))) ->
+                               val cleanup = `>R`(ord).update(_.copy(offerer = None))
+                               it.copy(offerer = Some(() -> offerer -> node -> cap)) ->
                                poll(offerer.get).onCancel(cleanup)
                          }.ifM(b2.await >> b.await >> n.complete(false),
                                b.await >> n.complete(true) >> IO.never)
@@ -699,14 +703,14 @@ package object sΠ:
               node    <- `][`(`)(`)
               offerer <- Deferred[IO, Boolean]
               ord      = cap.ord
-              _       <- `>R`.flatModifyFull { (poll, m) =>
-                           m(ord).taker match
+              _       <- `>R`(ord).flatModifyFull { (poll, it) =>
+                           it.taker match
                              case Some(((taker, nodeʹ), capʹ: `π-ζ`)) =>
-                               (m + (ord -> m(ord).copy(taker = None))) ->
+                               it.copy(taker = None) ->
                                check(node, nodeʹ, cap, capʹ).flatMap { ok => taker.complete(node -> ok).as(ok) }
                              case _ =>
-                               val cleanup = `>R`.update { m => m + (ord -> m(ord).copy(offerer = None)) }
-                               (m + (ord -> m(ord).copy(offerer = Some(() -> offerer -> node -> cap)))) ->
+                               val cleanup = `>R`(ord).update(_.copy(offerer = None))
+                               it.copy(offerer = Some(() -> offerer -> node -> cap)) ->
                                poll(offerer.get).onCancel(cleanup)
                          }.ifM(b2.await >> b.await >> n.complete(false),
                                b.await >> n.complete(true) >> IO.never) >> exec(code)
@@ -723,14 +727,14 @@ package object sΠ:
               node  <- `][`(`)(`)
               taker <- Deferred[IO, (Any, Boolean)]
               ord    = cap.ord
-              _     <- `<R`.flatModifyFull { (poll, m) =>
-                         m(ord).offerer match
+              _     <- `<R`(ord).flatModifyFull { (poll, it) =>
+                         it.offerer match
                            case Some((((_, offerer), nodeʹ), capʹ: `π-ζ`)) =>
-                             (m + (ord -> m(ord).copy(offerer = None))) ->
+                             it.copy(offerer = None) ->
                              check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
                            case _ =>
-                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                             (m + (ord -> m(ord).copy(taker = Some(taker -> node -> cap)))) ->
+                             val cleanup = `<R`(ord).update(_.copy(taker = None))
+                             it.copy(taker = Some(taker -> node -> cap)) ->
                              poll(taker.get).onCancel(cleanup)
                            }.flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
                             .ifM(b2.await >> b.await >> n.complete(false),
@@ -747,14 +751,14 @@ package object sΠ:
               node  <- `][`(`)(`)
               taker <- Deferred[IO, (Any, Boolean)]
               ord    = cap.ord
-              _     <- `<R`.flatModifyFull { (poll, m) =>
-                         m(ord).offerer match
+              _     <- `<R`(ord).flatModifyFull { (poll, it) =>
+                         it.offerer match
                            case Some((((_, offerer), nodeʹ), capʹ: `π-ζ`)) =>
-                             (m + (ord -> m(ord).copy(offerer = None))) ->
+                             it.copy(offerer = None) ->
                              check(node, nodeʹ, cap, capʹ).flatMap { ok => offerer.complete(ok).as(nodeʹ -> ok) }
                            case _ =>
-                             val cleanup = `<R`.update { m => m + (ord -> m(ord).copy(taker = None)) }
-                             (m + (ord -> m(ord).copy(taker = Some(taker -> node -> cap)))) ->
+                             val cleanup = `<R`(ord).update(_.copy(taker = None))
+                             it.copy(taker = Some(taker -> node -> cap)) ->
                              poll(taker.get).onCancel(cleanup)
                            }.flatMap { (nodeʹ, ok) => if ok then ζ(node, nodeʹ, cap) else IO.pure(ok) }
                             .ifM(b2.await >> b.await >> n.complete(false),

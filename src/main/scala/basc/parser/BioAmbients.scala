@@ -55,17 +55,21 @@ abstract class BioAmbients extends Expression:
         val rʹ = Some(r.getOrElse(None))
         τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free)
     } |
-    opt(dir) ~ name ~ opt("@"~>rate) ~ ("!"~>"{"~>name<~"}") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    opt(dir) ~ name ~ opt("@"~>rate) ~ ("!"~>"{"~>opt("ν")~name<~"}") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case _ ~ (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case d ~ (ch, name) ~ r ~  (arg, free) ~ Some((it, freeʹ)) =>
+      case _ ~ _ ~ _ ~ (Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
+        throw PrefixChannelParsingException(par)
+      case d ~ (ch, name) ~ r ~  (ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val dʹ = d.getOrElse(`$`.local)
         val rʹ = Some(r.getOrElse(None))
-        π(dʹ, ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case d ~ (ch, name) ~ r ~ (arg, free) ~ _ =>
+        val bound = ν.fold(Names())(_=>free)
+        π(dʹ, ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ free ++ freeʹ -- bound)
+      case d ~ (ch, name) ~ r ~ (ν ~ (arg, free)) ~ _ =>
         val dʹ = d.getOrElse(`$`.local)
         val rʹ = Some(r.getOrElse(None))
-        π(dʹ, ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free)
+        val bound = ν.fold(Names())(_=>free)
+        π(dʹ, ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ free -- bound)
     } |
     opt(dir) ~ name ~ opt("@"~>rate) ~ ("?"~>"{"~>nameʹ<~"}") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case _ ~ (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -163,6 +167,12 @@ abstract class BioAmbients extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Channel names start with lower case.
    * @return
@@ -219,6 +229,8 @@ abstract class BioAmbients extends Expression:
   protected var _traces: Option[Option[String]] = None
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -386,7 +398,7 @@ object BioAmbients:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `[]`(_, sum) =>
@@ -513,14 +525,14 @@ object BioAmbients:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          case !(Some(μ), sum) =>
+          case !(pace, Some(μ), sum) =>
             val (it, _) = sum.parse
-            (`!`(Some(μ), it), Actions(μ))
+            (`!`(pace, Some(μ), it), Actions(μ))
 
-          case !(_, sum) =>
+          case !(pace, _, sum) =>
             val τʹ: τ = τ
             def idʹ: String = '!' + τʹ.υidυ
-            `!`(Some(τʹ.copy()(idʹ)), sum).parse
+            `!`(pace, Some(τʹ.copy()(idʹ)), sum).parse
 
           case `[]`(label, sum) =>
             var (it, _) = sum.parse
@@ -616,7 +628,7 @@ object BioAmbients:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             t.enabled ++ f.map(_.enabled).getOrElse(nil)
 
-          case !(Some(μ), sum) =>
+          case !(_, Some(μ), sum) =>
             sum.split
             Actions(μ)
 
@@ -669,7 +681,7 @@ object BioAmbients:
                   Seq(ps(k) -> t, ps(k) -> f)
                 case ?:(_, t, _) =>
                   Seq(ps(k) -> t)
-                case !(Some(μ), _) =>
+                case !(_, Some(μ), _) =>
                   Seq(ps(k) -> μ)
                 case _: ! => ??? // impossible by 'parse'
                 case `[]`(_, sum) =>
@@ -686,7 +698,7 @@ object BioAmbients:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-          case !(Some(μ), sum) =>
+          case !(_, Some(μ), sum) =>
             sum.graph ++ Seq(μ -> μ, μ -> sum)
 
           case _: ! => ??? // impossible by 'parse'
@@ -710,7 +722,7 @@ object BioAmbients:
           case +(enabled, ps*) =>
             extension (self: String)
               def apply(c: String): Boolean =
-                var i = self.indexOf(",")
+                val i = self.indexOf(",")
                 if i < 0 then self.endsWith(c)
                 else self.substring(0, i).endsWith(c)
             (enabled.find(_("π")) zip enabled.find(_("ζ"))).nonEmpty || ps.exists(_.mixed)
@@ -724,7 +736,7 @@ object BioAmbients:
           case ?:(_, t, f) =>
             t.mixed || f.map(_.mixed).getOrElse(false)
 
-          case !(_, sum) =>
+          case !(_, _, sum) =>
             sum.mixed
 
           case `[]`(_, sum) =>
@@ -781,12 +793,14 @@ object BioAmbients:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _par = 9
       _snapshot = false
       _traces = None
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
+                       "paceunit" -> _paceunit,
                        "parallelism" -> _par,
                        "snapshot" -> _snapshot,
                        "traces" -> _traces))
