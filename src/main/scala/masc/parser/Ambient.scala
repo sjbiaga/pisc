@@ -64,6 +64,12 @@ abstract class Ambient extends Expression:
   def names: Parser[List[(String, Names)]] =
     rep1sep(name, ",")
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Ambient names start with lower case.
    * @return
@@ -100,6 +106,8 @@ abstract class Ambient extends Expression:
   protected var _dups: Boolean = false
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -192,7 +200,7 @@ object Ambient:
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = par.shallow)
 
         case it @ `[]`(_, par) =>
@@ -249,9 +257,11 @@ object Ambient:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude))
+                       "exclude" -> _exclude,
+                       "paceunit" -> _paceunit))
       eqtn = List()
       defn = Map()
       self = Set()

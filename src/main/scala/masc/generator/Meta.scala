@@ -129,6 +129,11 @@ object Meta:
                          Term.Apply(\("IO"),
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
+  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(Term.Select("IO", "sleep"),
+                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+
 
   @tailrec
   def `for * yield ()`(* : Enumerator*): Term =
@@ -156,7 +161,7 @@ object Meta:
       `for * yield ()`(`_ <- IO.unit`)
 
 
-  def `NonEmptyList( *, … ).parSequence`(* : Term*): Term =
+  def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
       case it => Some(it)

@@ -57,7 +57,7 @@ object Program:
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.generate :: _)
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -109,28 +109,32 @@ object Program:
 
         ////// REPLICATION /////////////////////////////////////////////////////
 
-        case !(Some(name), par) =>
+        case !(pace, Some(name), par) =>
           val υidυ = id
 
           val `!.(*).⋯` = `()`(name, None).generate :+ `_ <- *`(Term.Apply(\(υidυ),
                                                                            Term.ArgClause(\(name) :: Nil)))
 
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.(*).⋯`).getOrElse(`!.(*).⋯`)
+
           val it = Term.If(Term.ApplyUnary("!", name),
                            `IO.cede`,
-                           `NonEmptyList( *, … ).parSequence`(
+                           `List( *, … ).parSequence`(
                              par.generate,
-                             `!.(*).⋯`
+                             `!⋯`
                            )
                    )
 
           * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
 
-        case !(_, par) =>
+        case !(pace, _, par) =>
           val υidυ = id
 
-          val it = `NonEmptyList( *, … ).parSequence`(
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `_ <- *`(υidυ)).getOrElse(`_ <- *`(υidυ) :: Nil)
+
+          val it = `List( *, … ).parSequence`(
                      par.generate,
-                     `_ <- IO.unit` :: `_ <- *`(υidυ)
+                     `_ <- IO.unit` :: `!⋯`
                    )
 
           * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
@@ -143,7 +147,7 @@ object Program:
         case `[]`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ::: par.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -153,7 +157,7 @@ object Program:
         case `go.`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ::: par.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.generate))
 
         ////////////////////////////////////////////////////////////////// go //
 

@@ -76,11 +76,11 @@ abstract class Calculus extends Ambient:
     opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥() -> Names()) }
 
   def leaf(using Bindings, Duplications): Parser[(-, Names)] =
-    "!" ~> opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
-      case Some((it, bound)) ~ (par, free) =>
-        `!`(Some(it), par) -> (free &~ bound)
-      case None ~ (par, free) =>
-        `!`(None, par) -> free
+    "!"~> opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
+      case pace ~ Some((it, bound)) ~ (par, free) =>
+        `!`(pace, Some(it), par) -> (free &~ bound)
+      case pace ~ None ~ (par, free) =>
+        `!`(pace, None, par) -> free
     } |
     name ~ ("["~>parallel<~"]") ^^ { // ambient
       case (amb, name) ~ (par, free) =>
@@ -224,7 +224,7 @@ object Calculus:
 
     case <>(code: Option[Code], path: Ambient.AST*)
 
-    case !(guard: Option[String], par: AST.∥)
+    case !(pace: Option[(Long, String)], guard: Option[String], par: AST.∥)
 
     case `[]`(amb: String, par: AST.∥)
 
@@ -258,7 +258,7 @@ object Calculus:
 
       case <>(_, path*) => path.mkString("<", ". ", ">")
 
-      case !(guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
+      case !(_, guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 
       case `[]`(amb, ∅()) => amb + " [ ]"
       case `[]`(amb, par) => amb + " [ " + par + " ]"
@@ -349,12 +349,12 @@ object Calculus:
         case `.`(end, it*) =>
           `.`(end.flatten, it*)
 
-        case !(None, par) =>
+        case !(None, None, par) =>
           par.flatten match
-            case ∥(`.`(end: !)) => end
-            case it => `!`(None, it)
+            case ∥(`.`(end @ !(None, _, _))) => end
+            case it => `!`(None, None, it)
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = par.flatten)
 
         case `[]`(amb, par) =>
