@@ -98,7 +98,7 @@ object Ensure:
           t.recursive
           f.foreach(_.recursive)
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.recursive(stack.size)
 
         case `⟦⟧`(_, _, sum, _, _) =>
