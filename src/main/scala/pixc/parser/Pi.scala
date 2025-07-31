@@ -57,13 +57,17 @@ abstract class Pi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ ("<"~>opt(opt("ν")~name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = None, Some(it)) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = None, None) -> (Names(), name ++ free)
+      case _ ~ Some(Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
+        throw PrefixChannelParsingException(par)
+      case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ free ++ freeʹ -- bound)
+      case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, None) -> (bound, name ++ free -- bound)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
         π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
@@ -127,6 +131,12 @@ abstract class Pi extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Channel or transaction names start with lower case.
    * @return
@@ -164,6 +174,8 @@ abstract class Pi extends Expression:
   protected var _dups: Boolean = false
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -272,7 +284,7 @@ object Pi:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `⟦⟧`(_, _, sum, _, _, _) =>
@@ -469,19 +481,19 @@ object Pi:
           else
             congruent(lt -> rf.getOrElse(`+`())) && congruent(lf.getOrElse(`+`()) -> rt)
 
-        case (!(Some(π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _)), lsum)
-             ,!(Some(π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _)), rsum)) =>
+        case (!(_, Some(π(λ(lch: Symbol), λ(lpar: Symbol), Some(lcons), _)), lsum)
+             ,!(_, Some(π(λ(rch: Symbol), λ(rpar: Symbol), Some(rcons), _)), rsum)) =>
           val (ln, rn) = mark
           equal(lch, rch) && equalʹ(lpar, rpar) && lcons == rcons && congruent(lsum -> rsum) && backtrack(ln, rn)
 
-        case (!(Some(π(_, λ(_: Term), None, _)), _), _)
-           | (_, !(Some(π(_, λ(_: Term), None, _)), _)) => false
+        case (!(_, Some(π(_, λ(_: Term), None, _)), _), _)
+           | (_, !(_, Some(π(_, λ(_: Term), None, _)), _)) => false
 
-        case (!(Some(π(λ(lch: Symbol), λ(larg), None, _)), lsum)
-             ,!(Some(π(λ(rch: Symbol), λ(rarg), None, _)), rsum)) =>
+        case (!(_, Some(π(λ(lch: Symbol), λ(larg), None, _)), lsum)
+             ,!(_, Some(π(λ(rch: Symbol), λ(rarg), None, _)), rsum)) =>
           equal(lch, rch) && larg == rarg && congruent(lsum -> rsum)
 
-        case (!(_, lsum), !(_, rsum)) => congruent(lsum -> rsum)
+        case (!(_, _, lsum), !(_, _, rsum)) => congruent(lsum -> rsum)
 
         case (`⟦⟧`(Definition(lcode, _, lconstants, lvariables, _), _, lsum, _, lname, lassign)
              ,`⟦⟧`(Definition(rcode, _, rconstants, rvariables, _), _, rsum, _, rname, rassign))
@@ -560,9 +572,11 @@ object Pi:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude))
+                       "exclude" -> _exclude,
+                       "paceunit" -> _paceunit))
       eqtn = List()
       defn = Map()
       self = Set()

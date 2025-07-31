@@ -360,10 +360,6 @@ package object Π:
 
       inline def apply(): >< = ><(Nil, Nil)
 
-      import _root_.scala.util.Random
-
-      private val random = Random()
-
       def apply(name: Any, xa: `)(`)(`>R`: >*<)
                (implicit `1`: Semaphore[IO]): IO[Option[Unit]] =
         Deferred[IO, Option[Unit]].flatMap { offerer =>

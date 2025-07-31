@@ -103,7 +103,7 @@ object Ensure:
           t.recursive
           f.foreach(_.recursive)
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.recursive(stack.size)
 
         case `⟦⟧`(_, _, sum, _, _, _) =>
@@ -175,7 +175,7 @@ object Ensure:
         case ?:(_, t, f) =>
           t.replication && f.map(_.replication).getOrElse(true)
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.replication(true)
 
         case `⟦⟧`(_, _, sum, _, _, _) =>
@@ -228,7 +228,7 @@ object Ensure:
         case ?:(_, t, f) =>
           t.recursion && f.map(_.recursion).getOrElse(true)
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.recursion
 
         case `⟦⟧`(_, _, sum, _, _, _) =>
