@@ -284,7 +284,6 @@ package object sΠ:
   /**
     * silent transition
     */
-
   object τ:
 
     def apply(rate: Rate)(key: String)
