@@ -44,7 +44,7 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = (Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])
+  type <> = (Double, CyclicBarrier[IO], Boolean, Boolean, CyclicBarrier[IO], FiberIO[Unit], Deferred[IO, (String, (String, String))])
 
   type + = (Deferred[IO, Option[<>]], (Long, ((>*<, Int), Option[Boolean], Rate)))
 
@@ -105,7 +105,7 @@ package object `Π-loop`:
       IO.unit
 
 
-  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
+  def loop(parallelism: Int, snapshot: Boolean, anytime: Boolean, started: Ref[IO, Long])
           (using % : %, / : /, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -121,7 +121,7 @@ package object `Π-loop`:
       case (it, exit) =>
         if it.isEmpty && !exit()
         then
-          *.take >> loop(parallelism, snapshot, started)
+          *.take >> loop(parallelism, snapshot, anytime, started)
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
@@ -130,7 +130,7 @@ package object `Π-loop`:
                 then
                   -.offer(it.keys.toList)
                 else
-                  *.take >> loop(parallelism, snapshot, started)
+                  *.take >> loop(parallelism, snapshot, anytime, started)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -169,8 +169,8 @@ package object `Π-loop`:
                                               yield
                                                 ()
                                             ).start
-                                      _  <- d1.complete(Some((delay, b2, snapshot, --, fb, +)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, snapshot, --, fb, ++)))
+                                      _  <- d1.complete(Some((delay, b2, snapshot, anytime, --, fb, +)))
+                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, snapshot, anytime, --, fb, ++)))
                                       ts <- Clock[IO].monotonic.map(_.toNanos)
                                       no <- &.updateAndGet(_ + 1)
                                       _  <- tD.complete(ts)
@@ -179,7 +179,7 @@ package object `Π-loop`:
                                       ()
                                   }
                                 }
-              } >> IO.cede >> loop(parallelism, snapshot, started)
+              } >> IO.cede >> loop(parallelism, snapshot, anytime, started)
     }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
