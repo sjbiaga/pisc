@@ -93,29 +93,28 @@ abstract class Calculus extends PolyadicPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case Some(π @ (π(λ(ch: Symbol), Some(cons), _, _par*), _)) =>
-        if cons.nonEmpty
-        then
-          throw ConsGuardParsingException(cons, ch.name)
-        if _par.filter(_.isSymbol).exists(_.asSymbol == ch)
+    "!"~> opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
+      case _ ~ Some((π(λ(ch: Symbol), Some(cons), _, _*), _)) if cons.nonEmpty && cons != "ν" =>
+        throw ConsGuardParsingException(cons, ch.name)
+      case pace ~ Some(π @ (π(λ(ch: Symbol), Some(cons), _, params*), _)) =>
+        if params.filter(_.isSymbol).exists(_.asSymbol == ch) && cons != "ν"
         then
           warn(throw GuardParsingException(ch.name))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
           case (sum, free) =>
-            `!`(Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
+            `!`(pace, Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
         }
-      case Some(μ) =>
+      case pace ~ Some(μ) =>
         choice ^^ {
           case (sum, free) =>
-            `!`(Some(μ._1), sum) -> (free ++ μ._2._2)
+            `!`(pace, Some(μ._1), sum) -> (free ++ μ._2._2)
         }
-      case _ =>
+      case pace ~ _ =>
         choice ^^ {
           case (sum, free) =>
-            `!`(None, sum) -> free
+            `!`(pace, None, sum) -> free
         }
     } |
     capital |
@@ -240,7 +239,10 @@ object Calculus:
       case ν(cap_names*) => cap_names.map(_._2).mkString("ν(", ", ", ")")
       case π(channel, polarity, _, names*) =>
         if polarity.isDefined
-        then "" + channel + names.mkString(s"(${polarity.get}", ", ", s"${polarity.get}).")
+        then
+          if polarity.get != "ν"
+          then "" + channel + names.mkString(s"(${polarity.get}", ", ", ").")
+          else "" + channel + names.mkString("<ν", ", ", ">.")
         else "" + channel + names.mkString("<", ", ", ">.")
       case _ => "τ."
 
@@ -254,7 +256,7 @@ object Calculus:
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
-    case !(guard: Option[μ], sum: AST.+)
+    case !(pace: Option[(Long, String)], guard: Option[μ], sum: AST.+)
 
     case `⟦⟧`(definition: Definition,
               variables: Names,
@@ -292,7 +294,7 @@ object Calculus:
         else
           "if " + test + " " + t + " else " + f.get
 
-      case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(_, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
       case `⟦⟧`(definition, variables, sum, _, assignment) =>
         val vars = if (variables.isEmpty)
@@ -425,12 +427,12 @@ object Calculus:
         case ?:(cond, t, f) =>
           ?:(cond, t.flatten, f.map(_.flatten))
 
-        case !(None, sum) =>
+        case !(None, None, sum) =>
           sum.flatten match
-            case +(∥(`.`(end: !))) => end
-            case it => `!`(None, it)
+            case +(∥(`.`(end @ !(None, _, _)))) => end
+            case it => `!`(None, None, it)
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.flatten)
 
         case _ => ast

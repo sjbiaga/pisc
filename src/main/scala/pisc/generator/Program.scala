@@ -65,7 +65,7 @@ object Program:
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
-            `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
+            `_ <- *`(`List( *, … ).parSequence`(ios*))
           )
 
           semaphore
@@ -83,7 +83,7 @@ object Program:
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.generate() :: _)
 
-          val ** = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
+          val ** = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
@@ -141,28 +141,29 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), None, Some((Left(enums), _)), params*) =>
-          val code = `for * yield ()`(enums*)
+        case π(λ(Symbol(ch)), nu @ (None | Some("ν")), code, params*) =>
+          nu match
+            case None =>
+            case _ =>
+              * = ν(params.filter(_.isSymbol).map(None -> _.asSymbol.name)*).generate()
+
           val args = params.map(_.toTerm).toList
 
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(args)),
-                         Term.ArgClause(code::Nil)
-                       ))
-
-        case π(λ(Symbol(ch)), None, Some((Right(term), _)), params*) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          val args = params.map(_.toTerm).toList
-
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(\(ch), Term.ArgClause(args)),
-                         Term.ArgClause(code::Nil)
-                       ))
-
-        case π(λ(Symbol(ch)), None, _, params*) =>
-          val args = params.map(_.toTerm).toList
-
-          * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args)))
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * :+= `_ <- *`(Term.Apply(
+                               Term.Apply(\(ch), Term.ArgClause(args)),
+                               Term.ArgClause(expr::Nil)
+                             ))
+            case Some((Right(term), _)) =>
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              * :+= `_ <- *`(Term.Apply(
+                               Term.Apply(\(ch), Term.ArgClause(args)),
+                               Term.ArgClause(expr::Nil)
+                             ))
+            case _ =>
+              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args)))
 
         case π(λ(Symbol(ch)), Some(cons), code, params*) if cons.nonEmpty =>
           val args = params.map {
@@ -235,7 +236,37 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(Some(π @ π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
+        case !(pace, Some(π @ π(λ(Symbol(ch)), Some("ν"), _, params*)), sum) =>
+          val args = params.filter(_.isSymbol).map(_.asSymbol.name)
+
+          val υidυ = id
+          val υidυ2 = id
+
+          val `π.generate()` = π.generate() match
+            case ls =>
+              ls.drop(args.size) match
+                case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
+                  ls.take(args.size) ::: it.copy(pat = Pat.Var(υidυ2)) :: tl
+
+          val `!.π⋯` = `π.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
+                                                                            Type.ArgClause(Nil),
+                                                                            Term.ArgClause(\("None") :: Nil)),
+                                                            `IO.cede`,
+                                                            Term.Apply(\(υidυ),
+                                                                       Term.ArgClause(args.map(\(_)).toList)),
+                                                            Nil)
+                                                  }
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+
+          val it = `List( *, … ).parSequence`(
+                     sum.generate(),
+                     `!⋯`
+                   )
+
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
+
+        case !(pace, Some(π @ π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -246,6 +277,8 @@ object Program:
           val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, params.map(_.copy()(using None))*)
           val `!.π⋯` = πʹ.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
                                                             Term.ArgClause(params.map(_.asSymbol.name).map(\(_)).toList)))
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` = params.zipWithIndex.flatMap {
             case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
@@ -261,16 +294,16 @@ object Program:
           val it = Term.If(Term.ApplyUnary("!", args.head),
                            `IO.cede`,
                            Term.Block(`val` :::
-                             `NonEmptyList( *, … ).parSequence`(
+                             `List( *, … ).parSequence`(
                                sum.generate(),
-                               `!.π⋯`
+                               `!⋯`
                              ) :: Nil
                            )
                    )
 
           * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
 
-        case !(Some(μ), sum) =>
+        case !(pace, Some(μ), sum) =>
           val υidυ = id
           val υidυ2 = id
 
@@ -286,19 +319,23 @@ object Program:
                                                             Nil)
                                                   }
 
-          val it = `NonEmptyList( *, … ).parSequence`(
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+
+          val it = `List( *, … ).parSequence`(
                      sum.generate(),
-                     `!.μ⋯`
+                     `!⋯`
                    )
 
           * = `* <- *`(υidυ -> `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.μ⋯`
 
-        case !(_, sum) =>
+        case !(pace, _, sum) =>
           val υidυ = id
 
-          val it = `NonEmptyList( *, … ).parSequence`(
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `_ <- *`(υidυ)).getOrElse(`_ <- *`(υidυ) :: Nil)
+
+          val it = `List( *, … ).parSequence`(
                      sum.generate(),
-                     `_ <- IO.unit` :: `_ <- *`(υidυ)
+                     `_ <- IO.unit` :: `!⋯`
                    )
 
           * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)

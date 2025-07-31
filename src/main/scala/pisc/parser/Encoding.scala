@@ -203,7 +203,8 @@ abstract class Encoding extends Calculus:
 
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
-         | "exclude" | "include" => true
+         | "exclude" | "include"
+         | "paceunit" => true
       case _ => false
     }
 
@@ -238,19 +239,26 @@ abstract class Encoding extends Calculus:
         case "include" =>
           _exclude = !boolean
 
+        case "paceunit" =>
+          _paceunit = _dir.get._2 match
+            case it: String => it
+            case _ => throw DirectiveValueParsingException(_dir.get, "a time unit")
+
         case "push" =>
           try
             if boolean
             then
               _dirs ::= Map("errors" -> _werr,
+                            "duplications" -> _dups,
                             "exclude" -> _exclude,
-                            "duplications" -> _dups)
+                            "paceunit" -> _paceunit)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
+                case it @ "paceunit" => it -> _paceunit
               }
             }
 
@@ -261,6 +269,7 @@ abstract class Encoding extends Calculus:
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
               case ("exclude", it: Boolean) => _exclude = it
+              case ("paceunit", it: String) => _paceunit = it
               case _ => ???
             }
             _dirs = _dirs.tail
@@ -343,7 +352,7 @@ object Encoding:
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case ?:(_, t, f) => count(t); f.foreach(count)
-            case !(_, sum) => count(sum)
+            case !(_, _, sum) => count(sum)
             case it: `⟦⟧` if ids.contains(it.xid) =>
               duplications += it.xid -> (true -> duplications(it.xid)._2)
               count(it.sum)
@@ -368,7 +377,7 @@ object Encoding:
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case ?:(_, t, f) => reset(t); f.foreach(reset)
-          case !(_, sum) => reset(sum)
+          case !(_, _, sum) => reset(sum)
           case it: `⟦⟧` if ids.contains(it.xid) =>
             duplications += it.xid -> (false -> duplications(it.xid)._2)
             reset(it.sum)
@@ -545,7 +554,7 @@ object Encoding:
         case ?:(_, t, f) =>
           t.capitals ++ f.map(_.capitals).getOrElse(Names())
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.capitals
 
         case `⟦⟧`(_, _, sum, _, _) =>
@@ -605,8 +614,9 @@ object Encoding:
             case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
               val chʹ = renamed(ch)
               val namesʹ = names.map {
-                case par @ λ(Symbol("")) => par
+                case it @ λ(Symbol("")) => it
                 case λ(par: Symbol) => rebind(par)
+                case it => it
               }
               π(chʹ, cons, recoded(free), namesʹ*)
             case π(λ(ch: Symbol), None, given Option[Code], names*) =>
@@ -634,27 +644,30 @@ object Encoding:
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
 
-        case !(Some(it @ τ(given Option[Code])), sum) =>
-          `!`(Some(it.copy(code = recoded(free))), rename(sum))
+        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(code = recoded(free))), rename(sum))
 
-        case !(Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+        case !(pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
           val n = refresh.size
           given Names = Names(bound)
           val chʹ = renamed(ch)
-          val namesʹ = names.map(_.asSymbol).map(rebind(_))
+          val namesʹ = names.map {
+            case λ(arg: Symbol) => rebind(arg)
+            case it => it
+          }
           val it: π = π(chʹ, cons, recoded(free), namesʹ*)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(Some(it), sumʹ)
+          `!`(pace, Some(it), sumʹ)
 
-        case !(Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case !(pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => renamed(arg)
             case it => it
           }
-          `!`(Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
+          `!`(pace, Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = rename(sum))
 
         case it @ `⟦⟧`(Definition(_, term, _, _, _), variables, sum, xid, assignment) =>
