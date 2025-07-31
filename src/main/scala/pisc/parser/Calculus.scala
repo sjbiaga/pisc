@@ -99,11 +99,11 @@ abstract class Calculus extends StochasticPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case Some((π(λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty =>
+    "!"~> opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
+      case _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
-      case Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
-        if ch == par
+      case pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
+        if ch == par && cons != "ν"
         then
           warn(throw GuardParsingException(ch.name))
         val bound = π._2._1
@@ -116,9 +116,9 @@ abstract class Calculus extends StochasticPi:
                   def idʹ: String = '!' + π._1.υidυ
                   it.copy()(idʹ)
             }
-            `!`(Some(πʹ), sum) -> ((free &~ bound) ++ π._2._2)
+            `!`(pace, Some(πʹ), sum) -> ((free &~ bound) ++ π._2._2)
         }
-      case Some(μ) =>
+      case pace ~ Some(μ) =>
         choice ^^ {
           case (sum, free) =>
             val μʹ: μ = {
@@ -130,12 +130,12 @@ abstract class Calculus extends StochasticPi:
                   def idʹ: String = '!' + μ._1.υidυ
                   it.copy()(idʹ)
             }
-            `!`(Some(μʹ), sum) -> (free ++ μ._2._2)
+            `!`(pace, Some(μʹ), sum) -> (free ++ μ._2._2)
         }
-      case _ =>
+      case pace ~ _ =>
         choice ^^ {
           case (sum, free) =>
-            `!`(None, sum) -> free
+            `!`(pace, None, sum) -> free
         }
     } |
     capital |
@@ -248,7 +248,10 @@ object Calculus:
       case ν(names*) => names.mkString("ν(", ", ", ")")
       case π(channel, name, polarity, _, _) =>
         if polarity.isDefined
-        then "" + channel + s"${polarity.get}(" + name + ")."
+        then
+          if polarity.get != "ν"
+          then "" + channel + s"${polarity.get}(" + name + ")."
+          else "" + channel + "<ν" + name + ">."
         else "" + channel + "<" + name + ">."
       case _ => "τ."
 
@@ -263,7 +266,7 @@ object Calculus:
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
-    case !(guard: Option[μ], sum: AST.+)
+    case !(pace: Option[(Long, String)], guard: Option[μ], sum: AST.+)
 
     case `⟦⟧`(definition: Definition,
               variables: Names,
@@ -300,7 +303,7 @@ object Calculus:
         else
           "if " + test + " " + t + " else " + f.get
 
-      case !(guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(_, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
       case `⟦⟧`(definition, variables, sum, _, assignment) =>
         val vars = if (variables.isEmpty)
@@ -431,12 +434,12 @@ object Calculus:
         case ?:(cond, t, f) =>
           ?:(cond, t.flatten, f.map(_.flatten))
 
-        case !(None, sum) =>
+        case !(None, None, sum) =>
           sum.flatten match
-            case +(_, ∥(`.`(end: !))) => end
-            case it => `!`(None, it)
+            case +(_, ∥(`.`(end @ !(None, _, _)))) => end
+            case it => `!`(None, None, it)
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.flatten)
 
         case _ => ast
@@ -445,7 +448,7 @@ object Calculus:
 
       ast match
 
-        case `+`(_, ∥(`.`(!(Some(_), _)))) =>
+        case `+`(_, ∥(`.`(!(_, Some(_), _)))) =>
           ast.label("+0")
 
         case _ =>
@@ -508,11 +511,11 @@ object Calculus:
         case ?:(cond, t, _) =>
           ?:(cond, t.label(l), None)
 
-        case !(None, sum) =>
-          `!`(None, sum.label(l))
+        case !(pace, None, sum) =>
+          `!`(pace, None, sum.label(l))
 
-        case !(it, sum) =>
-          `!`(relabelledʹ(it), sum.label(l))
+        case !(pace, it, sum) =>
+          `!`(pace, relabelledʹ(it), sum.label(l))
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.label(l))

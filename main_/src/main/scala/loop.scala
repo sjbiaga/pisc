@@ -110,19 +110,18 @@ package object `Π-loop`:
   def loop(parallelism: Int, started: Ref[IO, Long])
           (using % : %, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    %.flatModify { m =>
-      m -> started.get.map { n =>
-        if n > 0
-        || m.exists(_._2.isInstanceOf[Int])
-        then Map.empty -> false
+    %.modify { m =>
+      m -> (
+        if m.exists(_._2.isInstanceOf[Int])
+        then Map.empty -> { () => false }
         else m
              .map(_ -> _.asInstanceOf[+]._2._2)
              .toMap
-          -> m.forall(_._1.charAt(36) == '!')
-      }
+          -> { () => m.keys.forall(_.charAt(36) == '!') }
+      )
     } >>= {
       case (it, exit) =>
-        if !exit && it.isEmpty
+        if it.isEmpty && !exit()
         then
           *.take >> loop(parallelism, started)
         else
@@ -149,6 +148,7 @@ package object `Π-loop`:
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                       (d1, (ts1, _)) = p1
                                       (d2, (ts2, _)) = p2
+                                      _  <- sem.acquire
                                       _  <- discard(k1)(using ^)
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)
@@ -162,19 +162,18 @@ package object `Π-loop`:
                                                 _  <- -.offer((no, ((ts1, ts2), ts), (k1, k2), (delay, duration)))
                                                 _  <- enable(k1)
                                                 _  <- if k1 == k2 then IO.unit else enable(k2)
+                                                _  <- sem.release
                                                 _  <- started.update(_ - 1)
                                                 _  <- *.offer(())
                                               yield
                                                 ()
                                             ).start
-                                      _  <- sem.acquire
                                       _  <- d1.complete(Some((delay, --, fb)))
                                       _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, --, fb)))
                                       ts <- Clock[IO].monotonic.map(_.toNanos)
                                       no <- &.updateAndGet(_ + 1)
                                       _  <- tD.complete(ts)
                                       _  <- nD.complete(no)
-                                      _  <- sem.release
                                     yield
                                       ()
                                   }

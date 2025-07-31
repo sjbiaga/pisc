@@ -55,15 +55,19 @@ abstract class StochasticPi extends Expression:
         val rʹ = Some(r.getOrElse(None))
         τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free)
     } |
-    name ~ opt("@"~>rate) ~ ("<"~>name<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ opt("@"~>rate) ~ ("<"~>opt("ν")~name<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ r ~  (arg, free) ~ Some((it, freeʹ)) =>
+      case _ ~ _ ~ (Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
+        throw PrefixChannelParsingException(par)
+      case (ch, name) ~ r ~  (ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val rʹ = Some(r.getOrElse(None))
-        π(ch, arg, polarity = None, rʹ, Some(it))(sπ_id) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ r ~ (arg, free) ~ _ =>
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ free ++ freeʹ -- bound)
+      case (ch, name) ~ r ~ (ν ~ (arg, free)) ~ _ =>
         val rʹ = Some(r.getOrElse(None))
-        π(ch, arg, polarity = None, rʹ, None)(sπ_id) -> (Names(), name ++ free)
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ free -- bound)
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -144,6 +148,12 @@ abstract class StochasticPi extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Channel names start with lower case.
    * @return
@@ -198,6 +208,8 @@ abstract class StochasticPi extends Expression:
   protected var _traces: Option[Option[String]] = None
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -350,7 +362,7 @@ object StochasticPi:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -474,14 +486,14 @@ object StochasticPi:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          case !(Some(μ), sum) =>
+          case !(pace, Some(μ), sum) =>
             val (it, _) = sum.parse
-            (`!`(Some(μ), it), Actions(μ))
+            (`!`(pace, Some(μ), it), Actions(μ))
 
-          case !(_, sum) =>
+          case !(pace, _, sum) =>
             val τʹ: τ = τ
             def idʹ: String = '!' + τʹ.υidυ
-            `!`(Some(τʹ.copy()(idʹ)), sum).parse
+            `!`(pace, Some(τʹ.copy()(idʹ)), sum).parse
 
           case `⟦⟧`(definition, variables, _sum, xid, assignment) =>
             val n = assignment.size
@@ -568,7 +580,7 @@ object StochasticPi:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             t.enabled ++ f.map(_.enabled).getOrElse(nil)
 
-          case !(Some(μ), sum) =>
+          case !(_, Some(μ), sum) =>
             sum.split
             Actions(μ)
 
@@ -617,7 +629,7 @@ object StochasticPi:
                   Seq(ps(k) -> t, ps(k) -> f)
                 case ?:(_, t, _) =>
                   Seq(ps(k) -> t)
-                case !(Some(μ), _) =>
+                case !(_, Some(μ), _) =>
                   Seq(ps(k) -> μ)
                 case _: ! => ??? // impossible by 'parse'
                 case `⟦⟧`(_, _, sum, _, _) =>
@@ -632,7 +644,7 @@ object StochasticPi:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-          case !(Some(μ), sum) =>
+          case !(_, Some(μ), sum) =>
             sum.graph ++ Seq(μ -> μ, μ -> sum)
 
           case _: ! => ??? // impossible by 'parse'
@@ -684,11 +696,13 @@ object StochasticPi:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _par = 9
       _traces = None
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
+                       "paceunit" -> _paceunit,
                        "parallelism" -> _par,
                        "traces" -> _traces))
       eqtn = List()
