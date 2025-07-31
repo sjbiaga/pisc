@@ -504,22 +504,22 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.replace, f.map(_.replace))
 
-        case !(Some(it @ τ(_, given Option[Code])), sum) =>
-          `!`(Some(it.copy(code = recoded)(it.id)), sum.replace)
+        case !(pace, Some(it @ τ(_, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(code = recoded)(it.id)), sum.replace)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), _, Some(_), _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), _, Some(_), _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)(it.id)), sum.replace)
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)(it.id)), sum.replace)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(channel = replaced(ch), code = recoded)(it.id)), sum.replace)
 
-        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(name = replaced(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.replace)
+        case !(pace, Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(name = replaced(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.replace)
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.replace)
 
         case it @ `[]`(_, sum) =>
@@ -580,7 +580,7 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.concatenate, f.map(_.concatenate))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.concatenate)
 
         case it @ `[]`(_, sum) =>
@@ -648,25 +648,25 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.update, f.map(_.update))
 
-        case !(Some(it @ τ(_, given Option[Code])), sum) =>
-          `!`(Some(it.copy(code = recoded)(it.id)), sum.update)
+        case !(pace, Some(it @ τ(_, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(code = recoded)(it.id)), sum.update)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
           given Bindings = Bindings(bindings)
           val chʹ = updated(ch)
           given_Bindings -= par
-          `!`(Some(it.copy(channel = chʹ, code = recoded)(it.id)), sum.update)
+          `!`(pace, Some(it.copy(channel = chʹ, code = recoded)(it.id)), sum.update)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)(it.id)), sum.update)
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)(it.id)), sum.update)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(channel = updated(ch), code = recoded)(it.id)), sum.update)
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(channel = updated(ch), code = recoded)(it.id)), sum.update)
 
-        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
-          `!`(Some(it.copy(name = updated(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.update)
+        case !(pace, Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(name = updated(Symbol(name)).asSymbol.name, code = recoded)(it.id)), sum.update)
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.update)
 
         case it @ `[]`(_, sum) =>

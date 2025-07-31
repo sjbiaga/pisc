@@ -208,6 +208,7 @@ abstract class Encoding extends Calculus:
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
          | "exclude" | "include"
+         | "paceunit"
          | "parallelism" | "snapshot"
          | "traces" => true
       case _ => false
@@ -267,6 +268,11 @@ abstract class Encoding extends Calculus:
         case "include" =>
           _exclude = !boolean
 
+        case "paceunit" =>
+          _paceunit = _dir.get._2 match
+            case it: String => it
+            case _ => throw DirectiveValueParsingException(_dir.get, "a time unit")
+
         case "parallelism" =>
           _par = 1 max number.toInt
 
@@ -293,6 +299,7 @@ abstract class Encoding extends Calculus:
               _dirs ::= Map("errors" -> _werr,
                             "duplications" -> _dups,
                             "exclude" -> _exclude,
+                            "paceunit" -> _paceunit,
                             "parallelism" -> _par,
                             "snapshot" -> _snapshot,
                             "traces" -> _traces)
@@ -302,6 +309,7 @@ abstract class Encoding extends Calculus:
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
+                case it @ "paceunit" => it -> _paceunit
                 case it @ "parallelism" => it -> _par
                 case it @ "snapshot" => it -> _snapshot
                 case it @ "traces" => it -> _traces
@@ -315,6 +323,7 @@ abstract class Encoding extends Calculus:
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
               case ("exclude", it: Boolean) => _exclude = it
+              case ("paceunit", it: String) => _paceunit = it
               case ("parallelism", it: Int) => _par = it
               case ("snapshoth", it: Boolean) => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
@@ -400,7 +409,7 @@ object Encoding:
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case ?:(_, t, f) => count(t); f.foreach(count)
-            case !(_, sum) => count(sum)
+            case !(_, _, sum) => count(sum)
             case `[]`(_, sum) => count(sum)
             case it: `⟦⟧` if ids.contains(it.xid) =>
               duplications += it.xid -> (true -> duplications(it.xid)._2)
@@ -426,7 +435,7 @@ object Encoding:
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case ?:(_, t, f) => reset(t); f.foreach(reset)
-          case !(_, sum) => reset(sum)
+          case !(_, _, sum) => reset(sum)
           case `[]`(_, sum) => reset(sum)
           case it: `⟦⟧` if ids.contains(it.xid) =>
             duplications += it.xid -> (false -> duplications(it.xid)._2)
@@ -604,7 +613,7 @@ object Encoding:
         case ?:(_, t, f) =>
           t.capitals ++ f.map(_.capitals).getOrElse(Names())
 
-        case !(_, sum) =>
+        case !(_, _, sum) =>
           sum.capitals
 
         case `[]`(_, sum) =>
@@ -696,30 +705,30 @@ object Encoding:
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
 
-        case !(Some(it @ τ(_, given Option[Code])), sum) =>
-          `!`(Some(it.copy(code = recoded(free))(it.id)), rename(sum))
+        case !(pace, Some(it @ τ(_, given Option[Code])), sum) =>
+          `!`(pace, Some(it.copy(code = recoded(free))(it.id)), rename(sum))
 
-        case !(Some(it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
           val n = refresh.size
           given Names = Names(bound)
           val π = it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))(it.id)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(Some(π), sumʹ)
+          `!`(pace, Some(π), sumʹ)
 
-        case !(Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
           val π = it.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))(it.id)
-          `!`(Some(π), rename(sum))
+          `!`(pace, Some(π), rename(sum))
 
-        case !(Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
+        case !(pace, Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
           val π = it.copy(channel = renamed(ch), code = recoded(free))(it.id)
-          `!`(Some(π), rename(sum))
+          `!`(pace, Some(π), rename(sum))
 
-        case !(Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
+        case !(pace, Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
           val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
-          `!`(Some(ζ), rename(sum))
+          `!`(pace, Some(ζ), rename(sum))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = rename(sum))
 
         case it @ `[]`(_, sum) =>

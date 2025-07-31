@@ -2,10 +2,10 @@
 
 ⟦ traces = console ⟧
 
-C(x) = exit x. τ/*println("exited")*/. s2s x?{y}. enter y. τ/*println("entered")*/.
+C(x) = exit x /*println("exited")*/. s2s x?{y}. enter y /*println("entered")*/.
 
-P(x) = expel x. τ/*println("expelled")*/. ν(y) s2s x!{y}. accept y. τ/*println("accepted")*/.
+P(x) = expel x /*println("expelled")*/. s2s x!{νy}. accept y /*println("accepted")*/.
 
-Main = ν(x) "p"[ "c"[ ! .c2p x?{y}/*IO.pure(_) <* IO.println("c2p")*/. C(y) ] | ν(y) ! .p2c x!{y}/*println("p2c")*/. P(y) ]
+Main = ν(x) "p"[ "c"[ ! 2 c2p x?{y}/*IO.pure(_) <* IO.println("c2p")*/. C(y) ] | ! 2 p2c x!{νy}/*println("p2c")*/. P(y) ]
 
 ⟦ snapshot = n ⟧

@@ -85,14 +85,15 @@ object App extends IOApp:
 object π:
 
   import _root_.java.util.UUID
-  import _root_.scala.Function.const
+
+  import _root_.scala.concurrent.duration.*
 
   import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
   import _root_.cats.effect.syntax.all.*
 
-  import eu.timepit.refined.*
+  import _root_.eu.timepit.refined.*
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
@@ -106,5 +107,5 @@ object π:
   def `π-supervised`(io: => IO[Any]): IO[Unit] =
     Supervisor[IO](await = true)
       .use(_.supervise(io))
-      .flatMap(_.join.flatMap(const(IO.unit)))
+      .flatMap(_.join.void)
 

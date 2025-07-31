@@ -73,34 +73,40 @@ object Program:
                                       *)
 
 
-        case it @ π(dir, λ(Symbol(ch)), arg, None, r, Some((Left(enums)), _)) =>
-          val code = `for * yield ()`(enums*)
-          `*.flatMap { null else … }`(υidυ,
-                                      Term.Apply(
-                                        Term.Apply(
-                                          Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
-                                        ),
-                                        Term.ArgClause(code::Nil)),
-                                      *)
+        case it @ π(dir, λ(Symbol(ch)), arg, None, r, code) =>
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
+                                            ),
+                                            Term.ArgClause(expr::Nil)),
+                                          *)
+            case Some((Right(term), _)) =>
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
+                                            ),
+                                            Term.ArgClause(expr::Nil)),
+                                          *)
+            case _ =>
+              `*.flatMap { null else … }`(υidυ,
+                                          Term.Apply(
+                                            Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                            Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                                          *)
 
-        case it @ π(dir, λ(Symbol(ch)), arg, None, r, Some((Right(term)), _)) =>
-          val code = `for * yield ()`(`_ <- IO { * }`(term))
-          `*.flatMap { null else … }`(υidυ,
-                                      Term.Apply(
-                                        Term.Apply(
-                                          Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
-                                        ),
-                                        Term.ArgClause(code::Nil)),
-                                      *)
-
-        case it @ π(dir, λ(Symbol(ch)), arg, None, r, _) =>
-          `*.flatMap { null else … }`(υidυ,
-                                      Term.Apply(
-                                        Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
-                                        Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
-                                      *)
+        case it @ π(_, _, λ(Symbol(par)), Some("ν"), _, _) =>
+          `for * yield ()`(
+            `* <- *`(par -> "ν"),
+            `_ <- *`(it.copy(polarity = None)(it.υidυ).generate(*))
+          )
 
         case it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code) =>
           val par = if λ.`type`.isDefined then id else arg
@@ -202,7 +208,7 @@ object Program:
         case it: + =>
           val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -215,7 +221,7 @@ object Program:
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.generate :: _)
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -290,7 +296,21 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(Some(π @ π(_, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
+        case !(pace, Some(π @ π(_, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _)), sum) =>
+          val υidυ = id
+
+          val `!.π⋯` = `_ <- *`(π.generate(`_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get))) :: Nil
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+
+          val it = `List( *, … ).parSequence`(
+                     sum.generate,
+                     `!⋯`
+                   )
+
+          * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+
+        case !(pace, Some(π @ π(_, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           val υidυ = id
@@ -299,7 +319,9 @@ object Program:
             def idʹ: String = π.υidυ
             π.copy(name = λ.copy()(using None))(idʹ)
           }
-          val `!.π⋯` = `_ <- *`(πʹ.generate(`_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)))
+          val `!.π⋯` = `_ <- *`(πʹ.generate(`_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get))) :: Nil
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` =
             λ.`type` match
@@ -310,22 +332,24 @@ object Program:
               case _ => Nil
 
           val it = Term.Block(`val` :::
-                              `NonEmptyList( *, … ).parSequence`(
+                              `List( *, … ).parSequence`(
                                 sum.generate,
-                                `!.π⋯`
+                                `!⋯`
                               ) :: Nil
                    )
 
           * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
 
-        case !(Some(μ), sum) =>
+        case !(pace, Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = `_ <- *`(μ.generate(`_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)))
+          val `!.μ⋯` = `_ <- *`(μ.generate(`_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get))) :: Nil
 
-          val it = `NonEmptyList( *, … ).parSequence`(
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+
+          val it = `List( *, … ).parSequence`(
                      sum.generate,
-                     `!.μ⋯`
+                     `!⋯`
                    )
 
           * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
@@ -344,7 +368,7 @@ object Program:
 
           val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
 
-          * = `_ <- *`(`NonEmptyList( *, … ).parSequence`(** ::: sum.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: sum.generate))
 
         ///////////////////////////////////////////////////////////// ambient //
 

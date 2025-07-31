@@ -6,6 +6,6 @@ C(x) = exit x /*println("exited")*/.
 
 P(x) = expel x /*println("expelled")*/.
 
-Main = ν(x) ! "p"[ "c"[ C(x) ] | P(x) ]
+Main = ν(x) ! 2 "p"[ "c"[ C(x) ] | P(x) ]
 
 ⟦ snapshot = n ⟧
