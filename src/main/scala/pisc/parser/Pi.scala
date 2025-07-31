@@ -54,13 +54,17 @@ abstract class Pi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name ~ ("<"~>opt(name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ ("<"~>opt(opt("ν")~name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, name) ~ Some((arg, free)) ~ Some((it, freeʹ)) =>
-        π(ch, arg, polarity = None, Some(it)) -> (Names(), name ++ free ++ freeʹ)
-      case (ch, name) ~ Some((arg, free)) ~ _ =>
-        π(ch, arg, polarity = None, None) -> (Names(), name ++ free)
+      case _ ~ Some(Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
+        throw PrefixChannelParsingException(par)
+      case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ free ++ freeʹ -- bound)
+      case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
+        val bound = ν.fold(Names())(_=>free)
+        π(ch, arg, polarity = ν, None) -> (bound, name ++ free -- bound)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
         π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
@@ -124,6 +128,12 @@ abstract class Pi extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Channel names start with lower case.
    * @return
@@ -160,6 +170,8 @@ abstract class Pi extends Expression:
   protected var _dups: Boolean = false
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -268,7 +280,7 @@ object Pi:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -319,9 +331,11 @@ object Pi:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude))
+                       "exclude" -> _exclude,
+                       "paceunit" -> _paceunit))
       eqtn = List()
       defn = Map()
       self = Set()

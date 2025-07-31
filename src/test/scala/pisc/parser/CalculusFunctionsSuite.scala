@@ -67,9 +67,9 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - directly - !!P -> !P") {
 
-    val `13` = `!`(None, `+`(∥(`.`(`!`(None, `+`(∥(`.`('P'))))))))
+    val `13` = `!`(None, None, `+`(∥(`.`(`!`(None, None, `+`(∥(`.`('P'))))))))
 
-    assertEquals(`13`.flatten, `!`(None, `+`(∥(`.`('P')))))
+    assertEquals(`13`.flatten, `!`(None, None, `+`(∥(`.`('P')))))
 
   }
 
@@ -117,7 +117,7 @@ class CalculusFunctionsSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = !!P") match
-          case Success((_, +(∥(`.`(!(_, +(∥(`.`(`(*)`("P", _))))))))), _) =>
+          case Success((_, +(∥(`.`(!(_, _, +(∥(`.`(`(*)`("P", _))))))))), _) =>
           case _ =>
             assert(false)
 

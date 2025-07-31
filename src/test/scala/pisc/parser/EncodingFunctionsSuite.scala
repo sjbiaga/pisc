@@ -51,7 +51,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `+`(∥(`.`('P')),
                    ∥(`.`('Q'),
                      `.`(?:(((λ(true), λ(false)), false),
-                            `+`(∥(`.`(`!`(None, `+`(∥(`.`('R'))))))),
+                            `+`(∥(`.`(`!`(None, None, `+`(∥(`.`('R'))))))),
                             Some(`+`(∥(`.`(`⟦⟧`(null, null, `+`(∥(`.`('S'),
                                                                   `.`(`{}`("T", Nil, true)),
                                                                   `.`(`(*)`("U", Nil)))),
@@ -426,7 +426,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - restriction - via refresh") {
 
     val `13` = `+`(∥(`.`(?:(((λ(true), λ(false)), false),
-                            `+`(∥(`.`(`!`(None, `+`()), ν("x")))),
+                            `+`(∥(`.`(`!`(None, None, `+`()), ν("x")))),
                             Some(`+`(∥(`.`(`(*)`("P", Nil)))))))))
 
     val id = new helper.υidυ
@@ -437,7 +437,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(true), λ(false)), false),
-                      +(∥(`.`(!(None, ∅()), ν("x_υ1υ")))),
+                      +(∥(`.`(!(_, None, ∅()), ν("x_υ1υ")))),
                       Some(+(∥(`.`(`(*)`("P", Nil))))))))) =>
       case _ =>
         assert(false)
@@ -447,7 +447,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - by restriction - via refresh") {
 
     val `13` = `+`(∥(`.`(?:(((λ(Symbol("x")), λ(Symbol("y"))), false),
-                            `+`(∥(`.`(`!`(Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`())))),
+                            `+`(∥(`.`(`!`(None, Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`())))),
                             Some(`+`(∥(`.`(`(*)`("P", Nil, λ(Symbol("x")), λ(Symbol("y")))))))),
                             ν("x", "y"))))
 
@@ -459,7 +459,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ"))), false),
-                      +(∥(`.`(!(Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
+                      +(∥(`.`(!(_, Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
                       Some(+(∥(`.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
                    ν("x_υ1υ", "y_υ2υ")))) =>
       case _ =>
