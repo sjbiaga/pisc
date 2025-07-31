@@ -32,9 +32,9 @@ package object sΠ:
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
-  import _root_.cats.effect.{ IO, IOLocal, Deferred, FiberIO, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Deferred, FiberIO, Poll, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ CyclicBarrier, MapRef, Semaphore, Supervisor, UUIDGen }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-magic`.><
@@ -205,6 +205,9 @@ package object sΠ:
     */
   object ν:
 
+    def apply(ref: Ref[IO, Map[Int, ><]]): MapRef[IO, Int, ><] =
+      { k => Ref.lens(ref)(_.get(k).get, m => v => m + (k -> v)) }
+
     type > = ((Deferred[IO, Any], (CyclicBarrier[IO], CyclicBarrier[IO], Ref[IO, Deferred[IO, `)*(`]])), `π-$` | `π-ζ`)
 
     type < = (((Any, Deferred[IO, Unit]), (CyclicBarrier[IO], CyclicBarrier[IO], Ref[IO, Deferred[IO, `)*(`]])), `π-$` | `π-ζ`)
@@ -223,7 +226,7 @@ package object sΠ:
                    )
                  }
         yield
-          f(ref)
+          f(this(ref))
       ).flatten
 
 
@@ -241,11 +244,11 @@ package object sΠ:
         _         <- exclude(key)
         deferred  <- Deferred[IO, Option[<>]]
         dummy_ref <- Ref.of[IO, Map[Int, ><]](Map.empty)
-        _         <- /.offer(^ -> key -> (deferred -> (dummy_ref -> -1, None, rate)))
+        _         <- /.offer(^ -> key -> (deferred -> (ν(dummy_ref) -> -1, None, rate)))
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, _,
-         b, f)     = opt.get
+         _, b, f)  = opt.get
         _         <- b.await
         _         <- f.join
       yield
@@ -299,15 +302,15 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, b2,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         _         <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
                        if polarity
-                       then ><.ζ.<(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2)(ref)
-                       else ><.ζ.>(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2)(ref)
+                       then ><.ζ.<(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2, a)(ref)
+                       else ><.ζ.>(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2, a)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -330,15 +333,15 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, b2,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         _         <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
                        if polarity
-                       then ><.ζ.<(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2)(code)(ref)
-                       else ><.ζ.>(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2)(code)(ref)
+                       then ><.ζ.<(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2, a)(code)(ref)
+                       else ><.ζ.>(`)(`, cap, nodeCB, nodeCB2, nodeR)(b2, a)(code)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -360,13 +363,13 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, _,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         _         <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
-                       ><.π(value.name, `)(`, dir, nodeCB, nodeCB2, nodeR)(ref)
+                       ><.π(value.name, `)(`, dir, nodeCB, nodeCB2, nodeR)(a)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -388,13 +391,13 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, _,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         _         <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
-                       ><.π(value.name, `)(`, dir, nodeCB, nodeCB2, nodeR)(code)(ref)
+                       ><.π(value.name, `)(`, dir, nodeCB, nodeCB2, nodeR)(a)(code)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -416,13 +419,13 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, _,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         name      <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
-                       ><.π(`)(`, dir, nodeCB, nodeCB2, nodeR)(ref)
+                       ><.π(`)(`, dir, nodeCB, nodeCB2, nodeR)(a)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -444,13 +447,13 @@ package object sΠ:
         opt       <- deferred.get
         _         <- if opt eq None then IO.canceled else IO.unit
         (delay, _,
-         b, f)     = opt.get
+         a, b, f)  = opt.get
         nodeCB    <- CyclicBarrier[IO](2)
         nodeCB2   <- CyclicBarrier[IO](2)
         nodeD     <- Deferred[IO, `)*(`]
         nodeR     <- Ref.of[IO, Deferred[IO, `)*(`]](nodeD)
         name      <- loop(`)(`, nodeCB, nodeCB2, nodeR).background.use { _ =>
-                       ><.π(`)(`, dir, nodeCB, nodeCB2, nodeR)(code)(ref)
+                       ><.π(`)(`, dir, nodeCB, nodeCB2, nodeR)(a)(code)(ref)
                      }
         _         <- b.await
         _         <- f.join
@@ -486,7 +489,7 @@ package object sΠ:
 
     final case class ><(takers: Queue[ν.>], offerers: Queue[ν.<])
 
-    type >*< = Ref[IO, Map[Int, ><]]
+    type >*< = MapRef[IO, Int, ><]
 
     object >< :
 
@@ -499,7 +502,8 @@ package object sΠ:
                         dir_capʹ: `π-$` | `π-ζ`)
                        (using `][`: `][`): IO[Boolean] =
         (dir_cap, dir_capʹ) match
-          case (`π-local`, `π-local`)   => IO.pure(node == nodeʹ)
+          case (`π-local`, `π-local`)   =>
+            IO.pure(node == nodeʹ)
           case (`π-s2s`, `π-s2s`)
              | (`π-enter`, `π-accept`)
              | (`π-merge+`, `π-merge-`) =>
@@ -516,6 +520,7 @@ package object sΠ:
 
         def apply(name: Any, `)(`: IOLocal[`)(`], dir: `π-$`,
                   nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                 (anytime: Boolean)
                  (using `][`)
                  (using `2`: Semaphore[IO])
                  (`>R`: >*<): IO[Unit] =
@@ -523,46 +528,54 @@ package object sΠ:
             offerer <- Deferred[IO, Unit]
             ord      = dir.ord
             _       <- {
-                         def loop: IO[Unit] =
-                           def take(node: `)*(`, head: Option[ν.>]): IO[Unit] =
-                             IO.uncancelable { poll =>
+                         def loop(firsttime: Boolean): IO[Unit] =
+                           def or(poll: Poll[IO], node: `)*(`, head: Option[ν.>]): IO[(Option[ν.>], Boolean)] =
+                             ( head match
+                                 case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
+                                   nodeCBʹ.await
+                                   *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
+                                   nodeCB2ʹ.await
+                                 case _ =>
+                                   IO.pure(true)
+                             ).ifM(
                                ( head match
-                                   case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
-                                     nodeCBʹ.await
-                                     *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
-                                     nodeCB2ʹ.await
+                                   case Some(((taker, _), _)) =>
+                                     taker.complete(name).void
                                    case _ =>
-                                     IO.pure(true)
-                               ).ifM(
-                                 ( head match
-                                     case Some(((taker, _), _)) =>
-                                       taker.complete(name).void
-                                     case _ =>
-                                       poll(offerer.get)
-                                 ).flatTap { _ => `2`.release },
-                                 `>R`.flatModify { m =>
-                                   val queue = m(ord).takers.enqueue(head.get)
-                                   m + (ord -> m(ord).copy(takers = queue)) ->
-                                   (`2`.releaseN(2) >> IO.cede >> loop)
-                                 }
-                               )
-                             }
-                           `>R`.flatModify { m =>
-                             m(ord).takers.dequeueOption match
-                               case Some((taker, queue)) =>
-                                 m + (ord -> m(ord).copy(takers = queue)) ->
-                                 (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(taker)))
+                                     poll(offerer.get)
+                               ).flatMap { _ => `2`.release.as(None -> false) },
+                               `2`.releaseN(2).as(head -> true)
+                             )
+                           `>R`(ord).flatModifyFull { (poll, it) =>
+                             it.takers.dequeueOption match
+                               case Some((head, queue)) =>
+                                 it.copy(takers = queue) ->
+                                 (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                               case _ if firsttime =>
+                                 val queue = it.offerers.enqueue(name -> offerer -> (nodeCB, nodeCB2, nodeR) -> dir)
+                                 it.copy(offerers = queue) -> or(poll, null, None)
                                case _ =>
-                                 val queue = m(ord).offerers.enqueue(name -> offerer -> (nodeCB, nodeCB2, nodeR) -> dir)
-                                 m + (ord -> m(ord).copy(offerers = queue)) -> IO.pure((null: `)*(`) -> None)
-                           }.flatMap(take.tupled)
-                         loop
-                     }
+                                 it -> IO.pure(None -> true)
+                           }.flatTap {
+                             case (Some(head), _) =>
+                               `>R`(ord).update { it =>
+                                 val queue = it.takers.enqueue(head)
+                                 it.copy(takers = queue)
+                               }
+                             case _ =>
+                               IO.unit
+                           }.flatMap {
+                             case (_, true) => IO.cede >> loop(anytime)
+                             case _ => IO.unit
+                           }
+                         loop(true)
+                       }
           yield
             ()
 
         def apply(name: Any, `)(`: IOLocal[`)(`], dir: `π-$`,
                   nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                 (anytime: Boolean)
                  (code: => IO[Any])
                  (using `][`)
                  (using `2`: Semaphore[IO])
@@ -571,46 +584,54 @@ package object sΠ:
             offerer <- Deferred[IO, Unit]
             ord      = dir.ord
             _       <- {
-                         def loop: IO[Unit] =
-                           def take(node: `)*(`, head: Option[ν.>]): IO[Unit] =
-                             IO.uncancelable { poll =>
+                         def loop(firsttime: Boolean): IO[Unit] =
+                           def or(poll: Poll[IO], node: `)*(`, head: Option[ν.>]): IO[(Option[ν.>], Boolean)] =
+                             ( head match
+                                 case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
+                                   nodeCBʹ.await
+                                   *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
+                                   nodeCB2ʹ.await
+                                 case _ =>
+                                   IO.pure(true)
+                             ).ifM(
                                ( head match
-                                   case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
-                                     nodeCBʹ.await
-                                     *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
-                                     nodeCB2ʹ.await
+                                   case Some(((taker, _), _)) =>
+                                     taker.complete(name).void
                                    case _ =>
-                                     IO.pure(true)
-                               ).ifM(
-                                 ( head match
-                                     case Some(((taker, _), _)) =>
-                                       taker.complete(name).void
-                                     case _ =>
-                                       poll(offerer.get)
-                                 ).flatTap { _ => `2`.release >> exec(code) },
-                                 `>R`.flatModify { m =>
-                                   val queue = m(ord).takers.enqueue(head.get)
-                                   m + (ord -> m(ord).copy(takers = queue)) ->
-                                   (`2`.releaseN(2) >> IO.cede >> loop)
-                                 }
-                               )
-                             }
-                           `>R`.flatModify { m =>
-                             m(ord).takers.dequeueOption match
-                               case Some((taker, queue)) =>
-                                 m + (ord -> m(ord).copy(takers = queue)) ->
-                                 (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(taker)))
+                                     poll(offerer.get)
+                               ).flatMap { _ => `2`.release.as(None -> false) <* exec(code) },
+                               `2`.releaseN(2).as(head -> true)
+                             )
+                           `>R`(ord).flatModifyFull { (poll, it) =>
+                             it.takers.dequeueOption match
+                               case Some((head, queue)) =>
+                                 it.copy(takers = queue) ->
+                                 (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                               case _ if firsttime =>
+                                 val queue = it.offerers.enqueue(name -> offerer -> (nodeCB, nodeCB2, nodeR) -> dir)
+                                 it.copy(offerers = queue) -> or(poll, null, None)
                                case _ =>
-                                 val queue = m(ord).offerers.enqueue(name -> offerer -> (nodeCB, nodeCB2, nodeR) -> dir)
-                                 m + (ord -> m(ord).copy(offerers = queue)) -> IO.pure((null: `)*(`) -> None)
-                           }.flatMap(take.tupled)
-                         loop
-                     }
+                                 it -> IO.pure(None -> true)
+                           }.flatTap {
+                             case (Some(head), _) =>
+                               `>R`(ord).update { it =>
+                                 val queue = it.takers.enqueue(head)
+                                 it.copy(takers = queue)
+                               }
+                             case _ =>
+                               IO.unit
+                           }.flatMap {
+                             case (_, true) => IO.cede >> loop(anytime)
+                             case _ => IO.unit
+                           }
+                         loop(true)
+                       }
           yield
             ()
 
         def apply(`)(`: IOLocal[`)(`], dir: `π-$`,
                   nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                 (anytime: Boolean)
                  (using `][`)
                  (using `2`: Semaphore[IO])
                  (`<R`: >*<): IO[Any] =
@@ -618,46 +639,54 @@ package object sΠ:
             taker   <- Deferred[IO, Any]
             ord      = dir.ord
             name    <- {
-                         def loop: IO[Any] =
-                           def offer(node: `)*(`, head: Option[ν.<]): IO[Any] =
-                             IO.uncancelable { poll =>
+                         def loop(firsttime: Boolean): IO[Any] =
+                           def or(poll: Poll[IO], node: `)*(`, head: Option[ν.<]): IO[((Option[ν.<], Boolean), Any)] =
+                             ( head match
+                                case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
+                                  nodeCBʹ.await
+                                  *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
+                                  nodeCB2ʹ.await
+                                case _ =>
+                                  IO.pure(true)
+                             ).ifM(
                                ( head match
-                                  case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
-                                    nodeCBʹ.await
-                                    *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
-                                    nodeCB2ʹ.await
-                                  case _ =>
-                                    IO.pure(true)
-                               ).ifM(
-                                 ( head match
-                                     case Some((((name, offerer), _), _)) =>
-                                       offerer.complete(()).as(name)
-                                     case _ =>
-                                       poll(taker.get)
-                                 ).flatTap { _ => `2`.release },
-                                 `<R`.flatModify { m =>
-                                   val queue = m(ord).offerers.enqueue(head.get)
-                                   m + (ord -> m(ord).copy(offerers = queue)) ->
-                                   (`2`.releaseN(2) >> IO.cede >> loop)
-                                 }
-                               )
-                             }
-                           `<R`.flatModify { m =>
-                             m(ord).offerers.dequeueOption match
-                               case Some((offerer, queue)) =>
-                                 m + (ord -> m(ord).copy(offerers = queue)) ->
-                                 (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(offerer)))
+                                   case Some((((name, offerer), _), _)) =>
+                                     offerer.complete(()).as(name)
+                                   case _ =>
+                                     poll(taker.get)
+                               ).flatMap { it => `2`.release.as(None -> false -> it) },
+                               `2`.releaseN(2).as(head -> true -> ())
+                             )
+                           `<R`(ord).flatModifyFull { (poll, it) =>
+                             it.offerers.dequeueOption match
+                               case Some((head, queue)) =>
+                                 it.copy(offerers = queue) ->
+                                 (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                               case _ if firsttime =>
+                                 val queue = it.takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> dir)
+                                 it.copy(takers = queue) -> or(poll, null, None)
                                case _ =>
-                                 val queue = m(ord).takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> dir)
-                                 m + (ord -> m(ord).copy(takers = queue)) -> IO.pure((null: `)*(`) -> None)
-                           }.flatMap(offer.tupled)
-                         loop
-                     }
+                                 it -> IO.pure(None -> true -> ())
+                           }.flatTap {
+                             case ((Some(head), _), _) =>
+                               `<R`(ord).update { it =>
+                                 val queue = it.offerers.enqueue(head)
+                                 it.copy(offerers = queue)
+                               }
+                             case _ =>
+                               IO.unit
+                           }.flatMap {
+                             case ((_, true), _) => IO.cede >> loop(anytime)
+                             case (_, it) => IO.pure(it)
+                           }
+                         loop(true)
+                       }
           yield
             name
 
         def apply[T](`)(`: IOLocal[`)(`], dir: `π-$`,
                      nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
+                    (anytime: Boolean)
                     (code: T => IO[T])
                     (using `][`)
                     (using `2`: Semaphore[IO])
@@ -666,41 +695,48 @@ package object sΠ:
             taker   <- Deferred[IO, Any]
             ord      = dir.ord
             name    <- {
-                         def loop: IO[Any] =
-                           def offer(node: `)*(`, head: Option[ν.<]): IO[Any] =
-                             IO.uncancelable { poll =>
+                         def loop(firsttime: Boolean): IO[Any] =
+                           def or(poll: Poll[IO], node: `)*(`, head: Option[ν.<]): IO[((Option[ν.<], Boolean), Any)] =
+                             ( head match
+                                case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
+                                  nodeCBʹ.await
+                                  *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
+                                  nodeCB2ʹ.await
+                                case _ =>
+                                  IO.pure(true)
+                             ).ifM(
                                ( head match
-                                  case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), dirʹ: `π-$`)) =>
-                                    nodeCBʹ.await
-                                    *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, dir, dirʹ))) <*
-                                    nodeCB2ʹ.await
-                                  case _ =>
-                                    IO.pure(true)
-                               ).ifM(
-                                 ( head match
-                                     case Some((((name, offerer), _), _)) =>
-                                       offerer.complete(()).as(name)
-                                     case _ =>
-                                       poll(taker.get)
-                                 ).flatMap { case it: T => `2`.release >> (code andThen exec)(it) },
-                                 `<R`.flatModify { m =>
-                                   val queue = m(ord).offerers.enqueue(head.get)
-                                   m + (ord -> m(ord).copy(offerers = queue)) ->
-                                   (`2`.releaseN(2) >> IO.cede >> loop)
-                                 }
-                               )
-                             }
-                           `<R`.flatModify { m =>
-                             m(ord).offerers.dequeueOption match
-                               case Some((offerer, queue)) =>
-                                 m + (ord -> m(ord).copy(offerers = queue)) ->
-                                 (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(offerer)))
+                                   case Some((((name, offerer), _), _)) =>
+                                     offerer.complete(()).as(name)
+                                   case _ =>
+                                     poll(taker.get)
+                               ).flatMap { case it: T => `2`.release.as(None -> false) product (code andThen exec)(it) },
+                               `2`.releaseN(2).as(head -> true -> ())
+                             )
+                           `<R`(ord).flatModifyFull { (poll, it) =>
+                             it.offerers.dequeueOption match
+                               case Some((head, queue)) =>
+                                 it.copy(offerers = queue) ->
+                                 (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                               case _ if firsttime =>
+                                 val queue = it.takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> dir)
+                                 it.copy(takers = queue) -> or(poll, null, None)
                                case _ =>
-                                 val queue = m(ord).takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> dir)
-                                 m + (ord -> m(ord).copy(takers = queue)) -> IO.pure((null: `)*(`) -> None)
-                           }.flatMap(offer.tupled)
-                         loop
-                     }
+                                 it -> IO.pure(None -> true -> ())
+                           }.flatTap {
+                             case ((Some(head), _), _) =>
+                               `<R`(ord).update { it =>
+                                 val queue = it.offerers.enqueue(head)
+                                 it.copy(offerers = queue)
+                               }
+                             case _ =>
+                               IO.unit
+                           }.flatMap {
+                             case ((_, true), _) => IO.cede >> loop(anytime)
+                             case (_, it) => IO.pure(it)
+                           }
+                         loop(true)
+                       }
           yield
             name
 
@@ -815,7 +851,7 @@ package object sΠ:
 
           def apply(`)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (b2: CyclicBarrier[IO])
+                   (b2: CyclicBarrier[IO], anytime: Boolean)
                    (using `][`)
                    (using `2`: Semaphore[IO])
                    (`>R`: >*<): IO[Unit] =
@@ -823,47 +859,54 @@ package object sΠ:
               offerer <- Deferred[IO, Unit]
               ord      = cap.ord
               _       <- {
-                           def loop: IO[Unit] =
-                             def take(node: `)*(`, head: Option[ν.>]): IO[Unit] =
-                               IO.uncancelable { poll =>
+                           def loop(firsttime: Boolean): IO[Unit] =
+                             def or(poll: Poll[IO], node: `)*(`, head: Option[ν.>]): IO[(Option[ν.>], Boolean)] =
+                               ( head match
+                                   case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                     nodeCBʹ.await
+                                     *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                     nodeCB2ʹ.await
+                                   case _ =>
+                                     IO.pure(true)
+                               ).ifM(
                                  ( head match
-                                     case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
-                                       nodeCBʹ.await
-                                       *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
-                                       nodeCB2ʹ.await
+                                     case Some(((taker, _), _)) =>
+                                       taker.complete(node).void
                                      case _ =>
-                                       IO.pure(true)
-                                 ).ifM(
-                                   ( head match
-                                       case Some(((taker, _), _)) =>
-                                         taker.complete(node).void
-                                       case _ =>
-                                         poll(offerer.get)
-                                   ).flatTap { _ => b2.await >> `2`.release },
-                                   `>R`.flatModify { m =>
-                                     val queue = m(ord).takers.enqueue(head.get)
-                                     m + (ord -> m(ord).copy(takers = queue)) ->
-                                     (`2`.releaseN(2) >> IO.cede >> loop)
-                                   }
-                                 )
-                               }
-                             `>R`.flatModify { m =>
-                               m(ord).takers.dequeueOption match
-                                 case Some((taker, queue)) =>
-                                   m + (ord -> m(ord).copy(takers = queue)) ->
-                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(taker)))
+                                       poll(offerer.get)
+                                 ).flatMap { _ => b2.await >> `2`.release.as(None -> false) },
+                                 `2`.releaseN(2).as(head -> true)
+                               )
+                             `>R`(ord).flatModifyFull { (poll, it) =>
+                               it.takers.dequeueOption match
+                                 case Some((head, queue)) =>
+                                   it.copy(takers = queue) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                                 case _ if firsttime =>
+                                   val queue = it.offerers.enqueue(() -> offerer -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   it.copy(offerers = queue) -> or(poll, null, None)
                                  case _ =>
-                                   val queue = m(ord).offerers.enqueue(() -> offerer -> (nodeCB, nodeCB2, nodeR) -> cap)
-                                   m + (ord -> m(ord).copy(offerers = queue)) -> IO.pure((null: `)*(`) -> None)
-                             }.flatMap(take.tupled)
-                           loop
-                       }
+                                   it -> IO.pure(None -> true)
+                             }.flatTap {
+                               case (Some(head), _) =>
+                                 `>R`(ord).update { it =>
+                                   val queue = it.takers.enqueue(head)
+                                   it.copy(takers = queue)
+                                 }
+                               case _ =>
+                                 IO.unit
+                             }.flatMap {
+                               case (_, true) => IO.cede >> loop(anytime)
+                               case _ => IO.unit
+                             }
+                           loop(true)
+                         }
             yield
               ()
 
           def apply(`)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (b2: CyclicBarrier[IO])
+                   (b2: CyclicBarrier[IO], anytime: Boolean)
                    (code: => IO[Any])
                    (using `][`)
                    (using `2`: Semaphore[IO])
@@ -872,41 +915,48 @@ package object sΠ:
               offerer <- Deferred[IO, Unit]
               ord      = cap.ord
               _       <- {
-                           def loop: IO[Unit] =
-                             def take(node: `)*(`, head: Option[ν.>]): IO[Unit] =
-                               IO.uncancelable { poll =>
+                           def loop(firsttime: Boolean): IO[Unit] =
+                             def or(poll: Poll[IO], node: `)*(`, head: Option[ν.>]): IO[(Option[ν.>], Boolean)] =
+                               ( head match
+                                   case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                     nodeCBʹ.await
+                                     *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                     nodeCB2ʹ.await
+                                   case _ =>
+                                     IO.pure(true)
+                               ).ifM(
                                  ( head match
-                                     case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
-                                       nodeCBʹ.await
-                                       *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
-                                       nodeCB2ʹ.await
+                                     case Some(((taker, _), _)) =>
+                                       taker.complete(node).void
                                      case _ =>
-                                       IO.pure(true)
-                                 ).ifM(
-                                   ( head match
-                                       case Some(((taker, _), _)) =>
-                                         taker.complete(node).void
-                                       case _ =>
-                                         poll(offerer.get)
-                                   ).flatTap { _ => b2.await >> `2`.release >> exec(code) },
-                                   `>R`.flatModify { m =>
-                                     val queue = m(ord).takers.enqueue(head.get)
-                                     m + (ord -> m(ord).copy(takers = queue)) ->
-                                     (`2`.releaseN(2) >> IO.cede >> loop)
-                                   }
-                                 )
-                               }
-                             `>R`.flatModify { m =>
-                               m(ord).takers.dequeueOption match
-                                 case Some((taker, queue)) =>
-                                   m + (ord -> m(ord).copy(takers = queue)) ->
-                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(taker)))
+                                       poll(offerer.get)
+                                 ).flatMap { _ => b2.await >> `2`.release.as(None -> false) <* exec(code) },
+                                 `2`.releaseN(2).as(head -> true)
+                               )
+                             `>R`(ord).flatModifyFull { (poll, it) =>
+                               it.takers.dequeueOption match
+                                 case Some((head, queue)) =>
+                                   it.copy(takers = queue) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                                 case _ if firsttime =>
+                                   val queue = it.offerers.enqueue(() -> offerer -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   it.copy(offerers = queue) -> or(poll, null, None)
                                  case _ =>
-                                   val queue = m(ord).offerers.enqueue(() -> offerer -> (nodeCB, nodeCB2, nodeR) -> cap)
-                                   m + (ord -> m(ord).copy(offerers = queue)) -> IO.pure((null: `)*(`) -> None)
-                             }.flatMap(take.tupled)
-                           loop
-                       }
+                                   it -> IO.pure(None -> true)
+                             }.flatTap {
+                               case (Some(head), _) =>
+                                 `>R`(ord).update { it =>
+                                   val queue = it.takers.enqueue(head)
+                                   it.copy(takers = queue)
+                                 }
+                               case _ =>
+                                 IO.unit
+                             }.flatMap {
+                               case (_, true) => IO.cede >> loop(anytime)
+                               case _ => IO.unit
+                             }
+                           loop(true)
+                         }
             yield
               ()
 
@@ -914,7 +964,7 @@ package object sΠ:
 
           def apply(`)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (b2: CyclicBarrier[IO])
+                   (b2: CyclicBarrier[IO], anytime: Boolean)
                    (using `][`)
                    (using `2`: Semaphore[IO])
                    (`<R`: >*<): IO[Unit] =
@@ -922,54 +972,61 @@ package object sΠ:
               taker   <- Deferred[IO, Any]
               ord      = cap.ord
               _       <- {
-                           def loop: IO[Unit] =
-                             def offer(node: `)*(`, head: Option[ν.<]): IO[Unit] =
-                               IO.uncancelable { poll =>
+                           def loop(firsttime: Boolean): IO[Unit] =
+                             def or(poll: Poll[IO], node: `)*(`, head: Option[ν.<]): IO[(Option[ν.<], Boolean)] =
+                               ( head match
+                                  case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                    nodeCBʹ.await
+                                    *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                    nodeCB2ʹ.await
+                                  case _ =>
+                                    IO.pure(true)
+                               ).ifM(
                                  ( head match
-                                    case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
-                                      nodeCBʹ.await
-                                      *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
-                                      nodeCB2ʹ.await
-                                    case _ =>
-                                      IO.pure(true)
-                                 ).ifM(
-                                   ( head match
-                                       case Some((((_, offerer), (nodeCBʹ, _, nodeRʹ)), _)) =>
-                                         nodeCBʹ.await
-                                         *> nodeRʹ.get.flatMap(_.get.flatMap(offerer.complete(()).as(_)))
-                                       case _ =>
-                                         poll(taker.get)
-                                   ).flatMap { nodeʹ =>
-                                     if node eq null
-                                     then
-                                       `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
-                                     else
-                                       ζ(node, nodeʹ, cap)
-                                   }.flatTap { _ => b2.await >> `2`.release },
-                                   `<R`.flatModify { m =>
-                                     val queue = m(ord).offerers.enqueue(head.get)
-                                     m + (ord -> m(ord).copy(offerers = queue)) ->
-                                     (`2`.releaseN(2) >> IO.cede >> loop)
-                                   }
-                                 )
-                               }
-                             `<R`.flatModify { m =>
-                               m(ord).offerers.dequeueOption match
-                                 case Some((offerer, queue)) =>
-                                   m + (ord -> m(ord).copy(offerers = queue)) ->
-                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(offerer)))
+                                     case Some((((_, offerer), (nodeCBʹ, _, nodeRʹ)), _)) =>
+                                       nodeCBʹ.await
+                                       *> nodeRʹ.get.flatMap(_.get.flatMap(offerer.complete(()).as(_)))
+                                     case _ =>
+                                       poll(taker.get)
+                                 ).flatMap { nodeʹ =>
+                                   if node eq null
+                                   then
+                                     `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
+                                   else
+                                     ζ(node, nodeʹ, cap)
+                                 }.flatMap { _ => b2.await >> `2`.release.as(None -> false) },
+                                 `2`.releaseN(2).as(head -> true)
+                               )
+                             `<R`(ord).flatModifyFull { (poll, it) =>
+                               it.offerers.dequeueOption match
+                                 case Some((head, queue)) =>
+                                   it.copy(offerers = queue) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                                 case _ if firsttime =>
+                                   val queue = it.takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   it.copy(takers = queue) -> or(poll, null, None)
                                  case _ =>
-                                   val queue = m(ord).takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> cap)
-                                   m + (ord -> m(ord).copy(takers = queue)) -> IO.pure((null: `)*(`) -> None)
-                             }.flatMap(offer.tupled)
-                           loop
-                       }
+                                   it -> IO.pure(None -> true)
+                             }.flatTap {
+                               case (Some(head), _) =>
+                                 `<R`(ord).update { it =>
+                                   val queue = it.offerers.enqueue(head)
+                                   it.copy(offerers = queue)
+                                 }
+                               case _ =>
+                                 IO.unit
+                             }.flatMap {
+                               case (_, true) => IO.cede >> loop(anytime)
+                               case _ => IO.unit
+                             }
+                           loop(true)
+                         }
             yield
               ()
 
           def apply(`)(`: IOLocal[`)(`], cap: `π-ζ`,
                     nodeCB: CyclicBarrier[IO], nodeCB2: CyclicBarrier[IO], nodeR: Ref[IO, Deferred[IO, `)*(`]])
-                   (b2: CyclicBarrier[IO])
+                   (b2: CyclicBarrier[IO], anytime: Boolean)
                    (code: => IO[Any])
                    (using `][`)
                    (using `2`: Semaphore[IO])
@@ -978,47 +1035,54 @@ package object sΠ:
               taker   <- Deferred[IO, Any]
               ord      = cap.ord
               _       <- {
-                           def loop: IO[Unit] =
-                             def offer(node: `)*(`, head: Option[ν.<]): IO[Unit] =
-                               IO.uncancelable { poll =>
+                           def loop(firsttime: Boolean): IO[Unit] =
+                             def or(poll: Poll[IO], node: `)*(`, head: Option[ν.<]): IO[(Option[ν.<], Boolean)] =
+                               ( head match
+                                  case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
+                                    nodeCBʹ.await
+                                    *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
+                                    nodeCB2ʹ.await
+                                  case _ =>
+                                    IO.pure(true)
+                               ).ifM(
                                  ( head match
-                                    case Some(((_, (nodeCBʹ, nodeCB2ʹ, nodeRʹ)), capʹ: `π-ζ`)) =>
-                                      nodeCBʹ.await
-                                      *> nodeRʹ.get.flatMap(_.get.flatMap(check(node, _, cap, capʹ))) <*
-                                      nodeCB2ʹ.await
-                                    case _ =>
-                                      IO.pure(true)
-                                 ).ifM(
-                                   ( head match
-                                       case Some((((_, offerer), (nodeCBʹ, _, nodeRʹ)), _)) =>
-                                         nodeCBʹ.await
-                                         *> nodeRʹ.get.flatMap(_.get.flatMap(offerer.complete(()).as(_)))
-                                       case _ =>
-                                         poll(taker.get)
-                                   ).flatMap { nodeʹ =>
-                                     if node eq null
-                                     then
-                                       `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
-                                     else
-                                       ζ(node, nodeʹ, cap)
-                                   }.flatTap { _ => b2.await >> `2`.release >> exec(code) },
-                                   `<R`.flatModify { m =>
-                                     val queue = m(ord).offerers.enqueue(head.get)
-                                     m + (ord -> m(ord).copy(offerers = queue)) ->
-                                     (`2`.releaseN(2) >> IO.cede >> loop)
-                                   }
-                                 )
-                               }
-                             `<R`.flatModify { m =>
-                               m(ord).offerers.dequeueOption match
-                                 case Some((offerer, queue)) =>
-                                   m + (ord -> m(ord).copy(offerers = queue)) ->
-                                   (`2`.acquireN(2) >> `][`(`)(`).map(_ -> Some(offerer)))
+                                     case Some((((_, offerer), (nodeCBʹ, _, nodeRʹ)), _)) =>
+                                       nodeCBʹ.await
+                                       *> nodeRʹ.get.flatMap(_.get.flatMap(offerer.complete(()).as(_)))
+                                     case _ =>
+                                       poll(taker.get)
+                                 ).flatMap { nodeʹ =>
+                                   if node eq null
+                                   then
+                                     `][`(`)(`).flatMap(ζ(_, nodeʹ, cap))
+                                   else
+                                     ζ(node, nodeʹ, cap)
+                                 }.flatMap { _ => b2.await >> `2`.release.as(None -> false) <* exec(code) },
+                                 `2`.releaseN(2).as(head -> true)
+                               )
+                             `<R`(ord).flatModifyFull { (poll, it) =>
+                               it.offerers.dequeueOption match
+                                 case Some((head, queue)) =>
+                                   it.copy(offerers = queue) ->
+                                   (`2`.acquireN(2) >> `][`(`)(`).flatMap(or(null, _, Some(head))))
+                                 case _ if firsttime =>
+                                   val queue = it.takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> cap)
+                                   it.copy(takers = queue) -> or(poll, null, None)
                                  case _ =>
-                                   val queue = m(ord).takers.enqueue(taker -> (nodeCB, nodeCB2, nodeR) -> cap)
-                                   m + (ord -> m(ord).copy(takers = queue)) -> IO.pure((null: `)*(`) -> None)
-                             }.flatMap(offer.tupled)
-                           loop
-                       }
+                                   it -> IO.pure(None -> true)
+                             }.flatTap {
+                               case (Some(head), _) =>
+                                 `<R`(ord).update { it =>
+                                   val queue = it.offerers.enqueue(head)
+                                   it.copy(offerers = queue)
+                                 }
+                               case _ =>
+                                 IO.unit
+                             }.flatMap {
+                               case (_, true) => IO.cede >> loop(anytime)
+                               case _ => IO.unit
+                             }
+                           loop(true)
+                         }
             yield
               ()

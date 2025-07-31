@@ -28,6 +28,7 @@ function ba() {
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
 #                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.deferred.get.anytime=false \
 }
 
 function ba_() {
@@ -58,6 +59,7 @@ function ba_() {
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
 #                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.deferred.get.anytime=false \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 

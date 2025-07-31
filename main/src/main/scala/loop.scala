@@ -47,7 +47,7 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >*< }
 
-  type <> = (Double, CyclicBarrier[IO], CyclicBarrier[IO], FiberIO[Unit])
+  type <> = (Double, CyclicBarrier[IO], Boolean, CyclicBarrier[IO], FiberIO[Unit])
 
   type + = (Deferred[IO, Option[<>]], ((>*<, Int), Option[Boolean], Rate))
 
@@ -124,7 +124,7 @@ package object `Π-loop`:
       } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
+  def loop(parallelism: Int, snapshot: Boolean, anytime: Boolean, started: Ref[IO, Long])
           (using % : %, / : /, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -140,7 +140,7 @@ package object `Π-loop`:
       case (it, exit) =>
         if it.isEmpty && !exit()
         then
-          *.take >> loop(parallelism, snapshot, started)
+          *.take >> loop(parallelism, snapshot, anytime, started)
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
@@ -149,7 +149,7 @@ package object `Π-loop`:
                 then
                   this.exit(it.keys.toList)
                 else
-                  *.take >> loop(parallelism, snapshot, started)
+                  *.take >> loop(parallelism, snapshot, anytime, started)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -181,13 +181,13 @@ package object `Π-loop`:
                                               yield
                                                 ()
                                             ).start
-                                      _  <- d1.complete(Some((delay, b2, --, fb)))
-                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, --, fb)))
+                                      _  <- d1.complete(Some((delay, b2, anytime, --, fb)))
+                                      _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, b2, anytime, --, fb)))
                                     yield
                                       ()
                                   }
                                 }
-              } >> IO.cede >> loop(parallelism, snapshot, started)
+              } >> IO.cede >> loop(parallelism, snapshot, anytime, started)
     }
 
   def poll(using % : %, / : /, * : *): IO[Unit] =
