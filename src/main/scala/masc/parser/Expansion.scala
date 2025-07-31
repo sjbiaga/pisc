@@ -489,7 +489,7 @@ object Expansion:
           }
           <>(recoded, path*)
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = par.replace)
 
         case `[]`(amb, par) =>
@@ -539,7 +539,7 @@ object Expansion:
         case `.`(end, it*) =>
           `.`(end.concatenate, it*)
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = par.concatenate)
 
         case it @ `[]`(_, par) =>
@@ -599,12 +599,12 @@ object Expansion:
           }
           <>(recoded, path*)
 
-        case it @ !(Some(name), par) =>
+        case it @ !(_, Some(name), par) =>
           given Bindings = Bindings(bindings)
           given_Bindings -= name
           it.copy(par = par.update)
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = par.update)
 
         case `[]`(amb, par) =>

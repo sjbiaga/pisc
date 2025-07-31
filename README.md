@@ -46,7 +46,7 @@ The BNF formal grammar for processes is the following.
     DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
     PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
-    LEAF           ::= "!" [ "." "(" NAME ")" "." ] PARALLEL
+    LEAF           ::= "!" PACE [ "." "(" NAME ")" "." ] PARALLEL
                      | NAME "[" PARALLEL "]"
                      | "<" CAPS ">" [ EXPRESSION ]
                      | "go" NAME "." PARALLEL
@@ -67,6 +67,7 @@ The BNF formal grammar for prefixes is the following.
                      | "ν" "(" NAMES ")"
                      | CAPS "."
                      | "(" NAME ")" [ EXPRESSION ] "."
+    PACE           ::= NATURAL_NUMBER [ "," TIME_UNIT ]
     EXPRESSION     ::= "/*" ... "*/"
 
 The BNF formal grammar for capabilities is the following.

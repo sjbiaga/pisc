@@ -199,7 +199,8 @@ abstract class Encoding extends Calculus:
 
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
-         | "exclude" | "include" => true
+         | "exclude" | "include"
+         | "paceunit" => true
       case _ => false
     }
 
@@ -234,19 +235,26 @@ abstract class Encoding extends Calculus:
         case "include" =>
           _exclude = !boolean
 
+        case "paceunit" =>
+          _paceunit = _dir.get._2 match
+            case it: String => it
+            case _ => throw DirectiveValueParsingException(_dir.get, "a time unit")
+
         case "push" =>
           try
             if boolean
             then
               _dirs ::= Map("errors" -> _werr,
+                            "duplications" -> _dups,
                             "exclude" -> _exclude,
-                            "duplications" -> _dups)
+                            "paceunit" -> _paceunit)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
                 case it @ "errors" => it -> _werr
                 case it @ "duplications" => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
+                case it @ "paceunit" => it -> _paceunit
               }
             }
 
@@ -257,6 +265,7 @@ abstract class Encoding extends Calculus:
               case ("errors", it: Boolean) => _werr = it
               case ("duplications", it: Boolean) => _dups = it
               case ("exclude", it: Boolean) => _exclude = it
+              case ("paceunit", it: String) => _paceunit = it
               case _ => ???
             }
             _dirs = _dirs.tail
@@ -337,7 +346,7 @@ object Encoding:
             case ∅() =>
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
-            case !(_, par) => count(par)
+            case !(_, _, par) => count(par)
             case `[]`(_, par) => count(par)
             case `go.`(_, par) => count(par)
             case it: `⟦⟧` if ids.contains(it.xid) =>
@@ -362,7 +371,7 @@ object Encoding:
           case ∅() =>
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
-          case !(_, par) => reset(par)
+          case !(_, _, par) => reset(par)
           case `[]`(_, par) => reset(par)
           case `go.`(_, par) => reset(par)
           case it: `⟦⟧` if ids.contains(it.xid) =>
@@ -533,7 +542,7 @@ object Encoding:
         case `.`(end, _*) =>
           end.capitals
 
-        case !(_, par) =>
+        case !(_, _, par) =>
           par.capitals
 
         case `[]`(_, par) =>
@@ -614,14 +623,14 @@ object Encoding:
           }
           <>(recoded(free), path*)
 
-        case !(Some(name), par) =>
+        case !(pace, Some(name), par) =>
           val n = refresh.size
           given Names = Names(bound)
-          val rep = `!`(Some(rebind(name)), rename(par))
+          val rep = `!`(pace, Some(rebind(name)), rename(par))
           refresh.dropInPlace(refresh.size - n)
           rep
 
-        case it @ !(_, par) =>
+        case it @ !(_, _, par) =>
           it.copy(par = rename(par))
 
         case `[]`(amb, par) =>
