@@ -57,7 +57,7 @@ package object Π:
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
-          q <- Queue.bounded[IO, Seq[Any]](1)
+          q <- Queue.synchronous[IO, Seq[Any]]
         yield
           f(q)
       ).flatten

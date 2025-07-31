@@ -54,17 +54,27 @@ abstract class PolyadicPi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name ~ opt(arity) ~ ("<"~>opt(names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+    name ~ opt(arity) ~ ("<"~>opt(opt("ν")~names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.filter(_._1.isSymbol).size > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+        throw PrefixUniquenessParsingException(ch.asSymbol, args.filter(_._1.isSymbol).map(_._1.asSymbol.name)*)
       case (ch, _) ~ None ~ None ~ _ =>
         throw PrefixArityParsingException(ch)
-      case (ch, _) ~ Some(arity) ~ Some(args) ~ _ =>
+      case (ch, _) ~ Some(arity) ~ Some(_ ~ args) ~ _ =>
         throw PrefixArityParsingExceptionʹ(ch, arity, args.size)
-      case (ch, name) ~ _ ~ Some(args) ~ Some((it, freeʹ)) =>
-        π(ch, polarity = None, Some(it), args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _) ++ freeʹ)
-      case (ch, name) ~ _ ~ Some(args) ~ _ =>
-        π(ch, polarity = None, None, args.map(_._1)*) -> (Names(), name ++ args.map(_._2).reduce(_ ++ _))
+      case (ch, name) ~ _ ~ Some(ν ~ args) ~ Some((it, freeʹ)) =>
+        val free = args.map(_._2).reduce(_ ++ _)
+        val bound = args.filter(_._1.isSymbol) match
+          case Nil => Names()
+          case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
+        π(ch, polarity = ν, Some(it), args.map(_._1)*) -> (bound, name ++ free ++ freeʹ -- bound)
+      case (ch, name) ~ _ ~ Some(ν ~ args) ~ _ =>
+        val free = args.map(_._2).reduce(_ ++ _)
+        val bound = args.filter(_._1.isSymbol) match
+          case Nil => Names()
+          case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
+        π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ free -- bound)
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
         π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
@@ -135,6 +145,12 @@ abstract class PolyadicPi extends Expression:
         (λ.copy()(using tpe), free)
     }
 
+  def pace: Parser[(Long, String)] =
+    wholeNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit =>
+        amount.toLong.abs -> unit.getOrElse(_paceunit)
+    }
+
   /**
    * Channel names start with lower case.
    * @return
@@ -175,6 +191,8 @@ abstract class PolyadicPi extends Expression:
   protected var _dups: Boolean = false
 
   protected var _exclude: Boolean = false
+
+  protected var _paceunit: String = null
 
   private[parser] var _id: helper.υidυ = null
 
@@ -293,7 +311,7 @@ object PolyadicPi:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, sum) =>
+        case it @ !(_, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -344,9 +362,11 @@ object PolyadicPi:
       _werr = errors
       _dups = false
       _exclude = false
+      _paceunit = "second"
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude))
+                       "exclude" -> _exclude,
+                       "paceunit" -> _paceunit))
       eqtn = List()
       defn = Map()
       self = Set()
