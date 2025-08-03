@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "3.7.2-RC2"
+ThisBuild / scalaVersion := "3.7.2"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -13,39 +13,39 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(main, main_)
   .settings(
-    name := "Stochastic π-Calculus[transactions]2Scala",
+    name := "Stochastic π-Calculus[bio-transactions]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.2",
+    crossScalaVersions ++= Seq("2.13.16", "3.7.2"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
 
 lazy val main = (project in file("main"))
   .settings(
-    name := "main Stochastic π-Calculus[transactions]2Scala",
+    name := "main Stochastic π-Calculus[bio-transactions]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.2",
+    crossScalaVersions ++= Seq("2.13.16", "3.7.2"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
 
 lazy val main_ = (project in file("main_"))
   .settings(
-    name := "main_ Stochastic π-Calculus[transactions]2Scala",
+    name := "main_ Stochastic π-Calculus[bio-transactions]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.2",
+    crossScalaVersions ++= Seq("2.13.16", "3.7.2"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
