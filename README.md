@@ -511,13 +511,19 @@ Branches
 
 - [π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/transactions)
 
+- [π-calculus with biological transactions async](https://github.com/sjbiaga/pisc/tree/transactions-async)
+
 - [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) using supervisor/`IO.canceled`
 
 - [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-flatMap) with `flatMap`s/`null` comparison
 
 - [Stochastic π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions) using supervisor/`IO.canceled`
 
+- [Stochastic π-calculus with biological transactions async](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions-async) using supervisor/`IO.canceled`
+
 - [Stochastic π-calculus with biological transactions](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions-flatMap) with `flatMap`s/`null` comparison
+
+- [Stochastic π-calculus with biological transactions async](https://github.com/sjbiaga/pisc/tree/stochastic-bio-transactions-flatMap-async) with `flatMap`s/`null` comparison
 
 - [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) using supervisor/`IO.canceled`
 
