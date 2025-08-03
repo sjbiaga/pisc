@@ -36,9 +36,9 @@ object App extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     for
-      semaphore  <- Semaphore[IO](1)
+      semaphore  <- Semaphore[IO](2)
       (id, tree) <- Π.`][`()
-      _          <- π.Main(id)(args*)(tree, semaphore)
+      _          <- π.Main(id)(args*)(using tree, semaphore)
     yield
       ExitCode.Success
 

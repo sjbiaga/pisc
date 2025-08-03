@@ -2,10 +2,13 @@
 
 ⟦⟧ =
 
-Main = ν(ch, tt, ff) ν(x12, x123) w⟦ start(t) ⟦ P2(x12) | P3(x123) ⟧ . P1(x12, x123, t)  \
-                                   | ch(b). ( [b = tt] t⟦ P2(x12) | P3(x123) ⟧ )         \
-                                   | (ch<tt>. + ch<ff>.)                                 \
-                                   ⟧
+Main = ν(x12, x123) w⟦ P(x12, x123) | Q(x12, x123) ⟧
+
+P(x12, x123) = start(t) ⟦ P2(x12) | P3(x123) ⟧ . P1(x12, x123, t)
+
+Q(x12, x123) = ν(ch) ( ch(b). ( [b = True] t⟦ P2(x12) | P3(x123) ⟧ )  \
+                     | (ch<True>. + ch<False>.)                       \
+                     )
 
 P1(x12, x123, t) = ν(z) τ/*println("P1")*/.x12<z>. x123<z>. τ/*println("ending")*/. end(t). τ/*println("ended")*/. Ppr
 

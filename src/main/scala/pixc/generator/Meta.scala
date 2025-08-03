@@ -74,9 +74,9 @@ object Meta:
       Type.ParamClause(Nil),
       Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(Type.Name("String"))), None) :: Nil, None) ::
-      Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), `:`("Semaphore", "IO"), None) ::
-                       Nil, Some(Mod.Implicit())) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Name("][")), None) ::
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), `:`("Semaphore", "IO"), None) ::
+                       Nil, Some(Mod.Using())) ::
       Nil
     ) :: Nil
 
@@ -89,9 +89,9 @@ object Meta:
                         .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
                         .toList,
                        None) ::
-      Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), `:`("Semaphore", "IO"), None) ::
-                       Nil, Some(Mod.Implicit())) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Name("][")), None) ::
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), `:`("Semaphore", "IO"), None) ::
+                       Nil, Some(Mod.Using())) ::
       Nil
     ) :: Nil
 
