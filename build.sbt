@@ -13,7 +13,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(main, main_)
   .settings(
-    name := "Stochastic π-Calculus[bio-transactions]2Scala",
+    name := "Stochastic π-Calculus[bio-transactions-async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
 
 lazy val main = (project in file("main"))
   .settings(
-    name := "main Stochastic π-Calculus[bio-transactions]2Scala",
+    name := "main Stochastic π-Calculus[bio-transactions-async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -39,7 +39,7 @@ lazy val main = (project in file("main"))
 
 lazy val main_ = (project in file("main_"))
   .settings(
-    name := "main_ Stochastic π-Calculus[bio-transactions]2Scala",
+    name := "main_ Stochastic π-Calculus[bio-transactions-async]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",

@@ -43,24 +43,21 @@ object App extends IOApp:
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
   private def run(parallelism: Int, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &): IO[ExitCode] =
-    for
-      s <- Semaphore[IO](1)
-      x <- ( for
-               _ <- loop(parallelism, started, s)(using %, !, &, -, *)(π.`π-wand`).background
-               _ <- poll(using %, /, *).background
-               _ <- dump(using %, !, -).background
-             yield
-               ()
-           ).use { _ =>
-             for
-               (id, tree) <- sΠ.`][`()
-               _          <- π.`π-supervised`(π.Main(id)(args*)(using π.`π-uuid`)(using tree, s, %, /, *.offer(())))
-               x          <- !.get
-             yield
-               x
-           }
-    yield
-      x
+    ( for
+        _ <- loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`).background
+        _ <- poll(using %, /, *).background
+        _ <- dump(using %, !, -).background
+      yield
+        ()
+    ).use { _ =>
+      for
+        semaphore  <- Semaphore[IO](2)
+        (id, tree) <- sΠ.`][`()
+        _          <- π.`π-supervised`(π.Main(id)(args*)(using π.`π-uuid`)(using tree, semaphore, %, /, *.offer(())))
+        x          <- !.get
+      yield
+        x
+    }
 
   override def run(args: List[String]): IO[ExitCode] =
     val p = if sys.Prop.IntProp(spicsp).isSet

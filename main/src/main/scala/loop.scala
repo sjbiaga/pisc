@@ -124,7 +124,7 @@ package object `Π-loop`:
       } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int, started: Ref[IO, Long], `1`: Semaphore[IO])
+  def loop(parallelism: Int, started: Ref[IO, Long])
           (using % : %, ! : !, & : &, - : -, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.modify { m =>
@@ -140,7 +140,7 @@ package object `Π-loop`:
       case (it, exit) =>
         if it.isEmpty && !exit()
         then
-          *.take >> loop(parallelism, started, `1`)
+          *.take >> loop(parallelism, started)
         else
           ∥(it)(`π-wand`._1)() match
             case Nil =>
@@ -149,7 +149,7 @@ package object `Π-loop`:
                 then
                   this.exit(it.keys.toList)
                 else
-                  *.take >> loop(parallelism, started, `1`)
+                  *.take >> loop(parallelism, started)
               }
             case nel =>
               Semaphore[IO](parallelism).flatMap { sem =>
@@ -172,7 +172,6 @@ package object `Π-loop`:
                                       _  <- started.update(_ + 1)
                                       fb <- ( for
                                                 _ <- --.await
-                                                _ <- `1`.release
                                                 _ <- enable(k1)
                                                 _ <- if k1 == k2 then IO.unit else enable(k2)
                                                 _ <- sem.release
@@ -181,13 +180,12 @@ package object `Π-loop`:
                                               yield
                                                 ()
                                             ).start
-                                      _  <- `1`.acquire
                                       _  <- d1.complete(Some((delay, --, fb)))
                                       _  <- if k1 == k2 then IO.unit else d2.complete(Some((delay, --, fb)))
                                     yield
                                       ()
                                   }
-                                } >> IO.cede >> loop(parallelism, started, `1`)
+                                } >> IO.cede >> loop(parallelism, started)
               }
     }
 
