@@ -27,7 +27,7 @@
  */
 
 package basc
-package generator
+package emitter
 
 import scala.meta.*
 import dialects.Scala3
@@ -40,7 +40,7 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String): List[Enumerator] =
+    def emit(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -51,10 +51,10 @@ object Program:
           * = `_ <- IO.unit`
 
         case +(_, operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: + =>
-          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -64,10 +64,10 @@ object Program:
         // COMPOSITION /////////////////////////////////////////////////////////
 
         case ∥(operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -77,7 +77,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.generate)
+          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -91,21 +91,21 @@ object Program:
         case it @ τ(r, Some((Left(enums)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
+                                    Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
           * :::= enums
 
         case it @ τ(r, Some((Right(term)), _)) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
+                                    Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
           * :+= `_ <- IO { * }`(term)
 
         case it @ τ(r, _) =>
           * = `_ <- *`(Term.Apply(
                          Term.Apply(\("τ"),
-                                    Term.ArgClause(rate(r.get)::Nil)),
+                                    Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)))
 
 
@@ -114,14 +114,14 @@ object Program:
             case None =>
             case _ =>
               val λ(Symbol(par)) = arg
-              * = ν(par).generate
+              * = ν(par).emit
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
-                                 Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                 Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
                                  Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                ),
                                Term.ArgClause(expr::Nil)
@@ -130,14 +130,14 @@ object Program:
               val expr = `for * yield ()`(`_ <- IO { * }`(term))
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
-                                 Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                 Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
                                  Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                ),
                                Term.ArgClause(expr::Nil)
                              ))
             case _ =>
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
                                Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                              ))
 
@@ -173,7 +173,7 @@ object Program:
               * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                        Term.Apply(
                                          Term.Apply(
-                                           Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                           Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                            Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                          ),
                                          Term.ArgClause(term::Nil)
@@ -181,7 +181,7 @@ object Program:
             case _ =>
               * = Enumerator.Generator(Pat.Tuple(List(Pat.Var(par), Pat.Wildcard())),
                                        Term.Apply(
-                                         Term.Apply(\(ch), Term.ArgClause(rate(r.get)::Nil)),
+                                         Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                          Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                        ))
 
@@ -201,7 +201,7 @@ object Program:
               val term = `for * yield ()`(enums*)
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
-                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
                              ),
                              Term.ArgClause(term::Nil)
@@ -210,14 +210,14 @@ object Program:
               val code = `for * yield ()`(`_ <- IO { * }`(term))
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
-                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
                              ),
                              Term.ArgClause(code::Nil)
                            ))
             case _ =>
               * = `_ <- *`(Term.Apply(
-                             Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
+                             Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
                            ))
 
@@ -229,9 +229,9 @@ object Program:
         case ?:(((lhs, rhs), mismatch), t, Some(f)) =>
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), f.generate, t.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), f.emit, t.emit))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.generate, f.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit, f.emit))
 
         case it: ?: =>
           def cases(sum: +): Term =
@@ -243,7 +243,7 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), `_ <- *`(`π-exclude`(t.enabled)))
               case _ =>
-                sum.generate
+                sum.emit
 
           * = `_ <- *`(cases(`+`(null, ∥(`.`(it)))))
 
@@ -255,12 +255,12 @@ object Program:
         case !(pace, Some(π @ π(_, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _)), sum) =>
           val υidυ = id
 
-          val `!.π⋯` = π.generate :+ `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
+          val `!.π⋯` = π.emit :+ `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate,
+                     sum.emit,
                      `!⋯`
                    )
 
@@ -275,7 +275,7 @@ object Program:
             def idʹ: String = π.υidυ
             π.copy(name = λ.copy()(using None))(idʹ)
           }
-          val `!.π⋯` = πʹ.generate :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
+          val `!.π⋯` = πʹ.emit :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -289,7 +289,7 @@ object Program:
 
           val it = Term.Block(`val` :::
                               `List( *, … ).parSequence`(
-                                sum.generate,
+                                sum.emit,
                                 `!⋯`
                               ) :: Nil
                    )
@@ -299,12 +299,12 @@ object Program:
         case !(pace, Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.generate :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
+          val `!.μ⋯` = μ.emit :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate,
+                     sum.emit,
                      `!⋯`
                    )
 
@@ -322,9 +322,9 @@ object Program:
             .map { it => Term.Apply(\("Some"), Term.ArgClause(Lit.String(it) :: Nil)) }
             .getOrElse(\("None"))
 
-          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
+          val ** = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: sum.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: sum.emit))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -346,7 +346,7 @@ object Program:
                     else
                       `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.generate
+          * = ** ::: sum.emit
 
         case _: `{}` => ???
 
@@ -361,7 +361,7 @@ object Program:
           * = `_ <- *`(Term.Apply(
                          Term.Apply(
                            Term.Apply(\(identifier),
-                                      Term.ArgClause(\(")(")::Nil)),
+                                      Term.ArgClause(\(")(") :: \("}{") :: Nil)),
                            Term.ArgClause(args)),
                          Term.ArgClause(\("π-uuid")::Nil, Some(Mod.Using()))))
 
@@ -385,6 +385,6 @@ object Program:
       ) ::
       prog
         .tail.tail
-        .map(_ -> _.generate(using id()))
+        .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)

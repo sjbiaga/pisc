@@ -31,7 +31,9 @@
 import _root_.scala.collection.immutable.Map
 
 import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode, Deferred, Ref }
-import _root_.cats.effect.std.{ Queue, Semaphore, Supervisor }
+import _root_.cats.effect.std.{ Queue, Supervisor }
+
+import _root_.io.github.timwspence.cats.stm.STM
 
 import `Π-loop`.*
 import `Π-dump`.*
@@ -43,18 +45,21 @@ object App extends IOApp:
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], stopped: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ^ : ^): IO[ExitCode] =
+  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &): IO[ExitCode] =
     ( for
-        _ <- loop(parallelism, snapshot, started, stopped)(using %, !, &, ^, -, *)(π.`π-wand`).background
+        _ <- loop(parallelism, snapshot, started)(using %, /, !, &, -, *)(π.`π-wand`).background
         _ <- poll(using %, /, *).background
         _ <- dump(snapshot)(using %, !, -).background
       yield
         ()
     ).use { _ =>
       for
-        (lo, tree) <- sΠ.`][`()
-        _          <- π.`π-supervised`(π.Main(lo)(args*)(using π.`π-uuid`)(using %, /, *.offer(()))(using tree, ^))
-        exitcode   <- !.get
+        stm         <- STM.runtime[IO]
+        wrapper      = new sΠ.`}{`(stm)
+        (lo, tree,
+         semaphore) <- wrapper.`][`()
+        _           <- π.`π-supervised`(π.Main(lo, wrapper)(args*)(using π.`π-uuid`)(using %, /, *.offer(()))(using tree, semaphore))
+        exitcode    <- !.get
       yield
         exitcode
     }
@@ -74,10 +79,8 @@ object App extends IOApp:
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
       n <- IO.ref(0L)
-      m <- IO.ref(0L)
-      ^ <- Semaphore[IO](1)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, s, n, m, args)(%, /, *, -, !, &, ^)
+      x <- run(p, s, n, args)(%, /, *, -, !, &)
     yield
       x
 
