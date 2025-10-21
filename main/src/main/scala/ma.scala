@@ -32,11 +32,41 @@ package object Π:
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.traverse.*
+
   import _root_.cats.effect.{ Deferred, IOLocal, IO, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Semaphore, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ Supervisor, UUIDGen }
 
-  import `Π-magic`.*
+  import _root_.io.github.timwspence.cats.stm.STM
+
+
+  /**
+    * Supervised [[code]].
+    * @param code
+    */
+  private def exec[T](code: => IO[T]): IO[T] =
+    Supervisor[IO](await = true)
+      .use(_.supervise(code))
+      .flatMap(_.join
+                .flatMap
+                { case Succeeded(it) => it
+                  case _ => IO(null.asInstanceOf[T]) }
+              )
+
+
+  /**
+    * restriction
+    */
+  object ν:
+
+    def map[B](f: `)(` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `)(` => IO[B]): IO[B] = f(`)(`(()))
+
+
+  /**
+    * silent transition
+    */
+  val τ = IO.unit
 
 
   /**
@@ -83,465 +113,445 @@ package object Π:
 
   final case class ζ(op: Option[`ζ-Op`], amb: Either[`)(`, `)(`], next: Option[ζ])
 
-  object ζ:
+  final class `}{`(val stm: STM[IO]):
 
-    private def remove_(node: `)*(`, sibling: `)*(`)
-                       (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
-                    it + (sibling -> (tree.copy(siblings = siblings - node), heth))
-                  }
+    import stm.*
 
-    private def remove(node: `)*(`, tree: `}{`)
-                      (implicit `][`: `][`): IO[Unit] =
-      val `}{`(_, root, _, siblings) = tree
-      `][`.update { it =>
-                    val (rtree, reth) = it(root)
-                    it + (root -> (rtree.copy(children = siblings), reth))
-                  } >> siblings.toList.traverse(remove_(node, _)).void
+    import `Π-magic`.*
 
-    private def insert_(node: `)*(`, child: `)*(`)
-                       (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree @ `}{`(_, _, _, siblings), heth) = it(child)
-                    it + (child -> (tree.copy(siblings = siblings + node), heth))
-                  }
+    object ζ:
 
-    private def insert(node: `)*(`, root: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
-      for
-        tree <- `][`.modify { it => it -> it(root)._1 }
-        _    <- tree.children.toList.traverse(insert_(node, _)).void
-        _    <- `][`.update { it =>
-                              val (ntree, neth) = it(node)
-                              val (rtree @ `}{`(_, _, children, _), reth) = it(root)
-                              it + (root -> (rtree.copy(children = children + node), reth))
-                                 + (node -> (ntree.copy(root = root, siblings = children), neth))
-                            }
-      yield
-        ()
+      private def remove(node: `)*(`, tree: `}{`)
+                        (using `][`: `][`): Txn[Unit] =
+        val `}{`(_, root, _, siblings) = tree
+        `][`.modify { it =>
+                      siblings.foldLeft {
+                        val (rtree, reth) = it(root)
+                        it + (root -> (rtree.copy(children = siblings), reth))
+                      } { (it, sibling) =>
+                        val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
+                        it + (sibling -> (tree.copy(siblings = siblings - node), heth))
+                      }
+                    }
 
-    private def update_(root: `)*(`, join: `)*(`, sibling: `)*(`)
-                       (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
-                    it + (sibling -> (tree.copy(siblings = siblings - root + join), heth))
-                  }
-
-    private def update(temp: `}{`, root: `)*(`, join: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree @ `}{`(_, _, children, _), reth) = it(temp.root)
-                    it + (temp.root -> (tree.copy(children = children - root + join), reth))
-                  } >> temp.siblings.toList.traverse(update_(root, join, _)).void
-
-    private def merge_(join: `)*(`, node: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree, heth) = it(node)
-                    it + (node -> (tree.copy(root = join), heth))
-                  }
-
-    private def merge__(siblings: Set[`)*(`], node: `)*(`)
-                       (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree, heth) = it(node)
-                    it + (node -> (tree.copy(siblings = tree.siblings ++ siblings), heth))
-                  }
-
-    private def merge(tree: `}{`, join: `)*(`)
-                     (implicit `][`: `][`): IO[Unit] =
-      val children = tree.children ++ tree.siblings
-      `][`.update { it =>
-                    val (temp, jeth) = it(join)
-                    it + (join -> (temp.copy(children = children), jeth))
-                  } >> children.toList.traverse(merge_(join, _)).void
-                    >> tree.siblings.toList.traverse(merge__(tree.children, _)).void
-                    >> tree.children.toList.traverse(merge__(tree.siblings, _)).void
-
-    private def ether(lhs: ><, rhs: ><): IO[><] =
-      val min = lhs.takers.size min rhs.offerers.size
-      if min == 0
-      then
-        IO.pure(><(lhs.takers, rhs.offerers))
-      else
-        (lhs.takers.take(min) zip rhs.offerers.take(min))
-          .traverse { (t, o) => t.complete(o._1).void >> o._2.complete(()).void }
-          .as(><(lhs.takers.drop(min), rhs.offerers.drop(min)))
-
-    def apply(`)(`: IOLocal[`)(`])(caps: ζ)
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] = caps match
-
-      case ζ(Some(op), Left(_amb), next) =>
-
-        val amb = try _amb.ζ.amb.right.get catch _ => _amb
-
-        assert(try { amb.ζ; false } catch _ => true)
-
-        op match
-
-          case `ζ-Op`.in =>
-            for
-              _       <- `1`.acquire
-              node    <- `)(`.get
-              blocked <- `][`.modify { it =>
-                                       val key = it.keys.find(_.contains(node)).get
-                                       val tree = it(key)._1
-                                       it -> !tree.siblings.exists(it(_)._1.amb eq amb)
-                                     }
-              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else {
-                           for
-                             (node, root, tree) <- `][`.modify { it =>
-                                                                 val key = it.keys.find(_.contains(node)).get
-                                                                 val tree = it(key)._1
-                                                                 val root = tree.siblings.find(it(_)._1.amb eq amb).get
-                                                                 it -> (key, root, tree)
-                                                               }
-                             _                  <- remove(node, tree)
-                             _                  <- insert(node, root)
-                             _                  <- `1`.release
-                           yield
-                             ()
-                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
-            yield
-              ()
-
-          case `ζ-Op`.out =>
-            for
-              _       <- `1`.acquire
-              node    <- `)(`.get
-              blocked <- `][`.modify { it =>
-                                       val key = it.keys.find(_.contains(node)).get
-                                       val tree = it(key)._1
-                                       it -> (it(tree.root)._1.amb ne amb)
-                                     }
-              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else {
-                           for
-                             (node, root, tree) <- `][`.modify { it =>
-                                                                 val key = it.keys.find(_.contains(node)).get
-                                                                 val tree = it(key)._1
-                                                                 it -> (key, it(tree.root)._1.root, tree)
-                                                               }
-                             _                  <- remove(node, tree)
-                             _                  <- insert(node, root)
-                             _                  <- `1`.release
-                           yield
-                             ()
-                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
-            yield
-              ()
-
-          case `ζ-Op`.open =>
-            for
-              _       <- `1`.acquire
-              root    <- `)(`.get
-              blocked <- `][`.modify { it =>
-                                       val key = it.keys.find(_.contains(root)).get
-                                       val tree = it(key)._1
-                                       it -> !tree.children.exists(it(_)._1.amb eq amb)
-                                     }
-              _       <- if blocked then `1`.release >> IO.cede >> this(`)(`)(caps)
-                         else {
-                           for
-                             (root, (temp, reth), node, (tree, neth)) <- `][`.modify { it =>
-                                                                                       val key = it.keys.find(_.contains(root)).get
-                                                                                       val v @ (tree, _) = it(key)
-                                                                                       val node = tree.children.find(it(_)._1.amb eq amb).get
-                                                                                       it -> (key, v, node, it(node))
-                                                                                     }
-                             _                                        <- remove(node, tree)
-                             rstate                                   <- reth.get
-                             nstate                                   <- neth.get
-                             state1                                   <- ether(rstate, nstate)
-                             state2                                   <- ether(nstate, rstate)
-                             jeth                                     <- Ref.of[IO, ><](><(state1.takers ++ state2.takers,
-                                                                                           state1.offerers ++ state2.offerers))
-                             join                                      = root ++ node
-                             _                                        <- `][`.update { _ - root - node + (join -> (temp, jeth)) }
-                             _                                        <- update(temp, root, join)
-                             _                                        <- merge(tree, join)
-                             _                                        <- `1`.release
-                           yield
-                             ()
-                         } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
-            yield
-              ()
-
-      case ζ(Some(_), _, _) => ??? // impossible by syntax
-
-      case ζ(_, Left(caps), next) =>
-
-        IO.unit >> this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
-
-      case _ => ???
-
-    def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
-      val amb = try _amb.ζ.amb.right.get catch _ => _amb
-      for
-        _       <- `1`.acquire
-        root    <- `)(`.get
-        blocked <- `][`.modify { it =>
-                                 val key = it.keys.find(_.contains(root)).get
-                                 val tree = it(key)._1
-                                 it -> !tree.children.exists(it(_)._1.amb eq amb)
+      private def insert(node: `)*(`, root: `)*(`)
+                        (using `][`: `][`): Txn[Unit] =
+        for
+          it  <- `][`.get
+          tree = it(root)._1
+          _   <- `][`.modify { tree.children.foldLeft(_) { (it, child) =>
+                                 val (tree @ `}{`(_, _, _, siblings), heth) = it(child)
+                                 it + (child -> (tree.copy(siblings = siblings + node), heth))
                                }
-        _       <- if blocked then `1`.release >> IO.cede >> this(`)(`, amb)
-                   else
-                     for
-                       uuid                  <- Π.`)(`()
-                       _                     <- `)(`.set(uuid)
-                       (node, v @ (tree, _)) <- `][`.modify { it =>
-                                                              val key = it.keys.find(_.contains(root)).get
-                                                              val node = it(key)._1.children.find(it(_)._1.amb eq amb).get
-                                                              it -> (node, it(node))
-                                                            }
-                       _                     <- remove(node, tree)
-                       join                   = node + uuid
-                       _                     <- `][`.update(_ - node + (join -> v))
-                       _                     <- insert(join, tree.root)
-                       _                     <- `1`.release
-                     yield
-                       ()
-      yield
-        ()
+                             }
+          _   <- `][`.modify { it =>
+                               val (ntree, neth) = it(node)
+                               val (rtree @ `}{`(_, _, children, _), reth) = it(root)
+                               it + (root -> (rtree.copy(children = children + node), reth))
+                                  + (node -> (ntree.copy(root = root, siblings = children), neth))
+                             }
+        yield
+          ()
 
+      private def update(temp: `}{`, root: `)*(`, join: `)*(`)
+                        (using `][`: `][`): Txn[Unit] =
+        `][`.modify { it =>
+                      temp.siblings.foldLeft {
+                        val (tree @ `}{`(_, _, children, _), reth) = it(temp.root)
+                        it + (temp.root -> (tree.copy(children = children - root + join), reth))
+                      } { (it, sibling) =>
+                        val (tree @ `}{`(_, _, _, siblings), heth) = it(sibling)
+                        it + (sibling -> (tree.copy(siblings = siblings - root + join), heth))
+                      }
+                    }
 
-  /**
-    * Ambients' trees' nodes.
-    */
-  final case class `}{`(amb: `)(`,
-                        root: `)*(`,
-                        children: Set[`)*(`],
-                        siblings: Set[`)*(`])
+      private def merge(tree: `}{`, join: `)*(`)
+                       (using `][`: `][`): Txn[Unit] =
+        val children = tree.children
+        val siblings = tree.siblings
+        `][`.modify { it =>
+                      children.foldLeft {
+                        siblings.foldLeft {
+                          (children ++ siblings).foldLeft {
+                            val (temp, jeth) = it(join)
+                            it + (join -> (temp.copy(children = children ++ siblings), jeth))
+                          } { (it, node) =>
+                            val (tree, heth) = it(node)
+                            it + (node -> (tree.copy(root = join), heth))
+                          }
+                        } { (it, node) =>
+                            val (tree, heth) = it(node)
+                            it + (node -> (tree.copy(siblings = tree.siblings ++ children), heth))
+                        }
+                      } { (it, node) =>
+                        val (tree, heth) = it(node)
+                        it + (node -> (tree.copy(siblings = tree.siblings ++ siblings), heth))
+                      }
+                    }
 
-  object `}{`:
-    private def apply_(node: `)*(`, child: `)*(`)
-                      (implicit `][`: `][`): IO[Unit] =
-      `][`.update { it =>
-                    val (tree @ `}{`(_, _, _, siblings), ceth) = it(child)
-                    it + (child -> (tree.copy(siblings = siblings + node), ceth))
+      private def ether(lhs: ><, rhs: ><): IO[><] =
+        val min = lhs.takers.size min rhs.offerers.size
+        if min == 0
+        then
+          IO.pure(><(lhs.takers, rhs.offerers))
+        else
+          (lhs.takers.take(min) zip rhs.offerers.take(min))
+            .traverse { (t, o) => t.complete(o._1).void >> o._2.complete(()).void }
+            .as(><(lhs.takers.drop(min), rhs.offerers.drop(min)))
+
+      def apply(`)(`: IOLocal[`)(`])(caps: ζ)
+               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+
+        caps match
+
+          case Π.ζ(Some(op), Left(_amb), next) =>
+
+            val amb = try _amb.ζ.amb.right.get catch _ => _amb
+
+            assert(try { amb.ζ; false } catch _ => true)
+
+            op match
+
+              case `ζ-Op`.in =>
+                { for
+                  key <- `)(`.get
+                  _   <- stm.commit {
+                    for
+                      _   <- `1`.acquire
+                      it  <- `][`.get
+                      _   <- stm.check { val node = it.keys.find(_.contains(key)).get
+                                         val tree = it(node)._1
+                                         tree.siblings.exists(it(_)._1.amb eq amb)
+                                       }
+                      node = it.keys.find(_.contains(key)).get
+                      tree = it(node)._1
+                      root = tree.siblings.find(it(_)._1.amb eq amb).get
+                      _   <- remove(node, tree)
+                      _   <- insert(node, root)
+                      _   <- `1`.release
+                    yield
+                      ()
                   }
+                  yield
+                    ()
+                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
-    def apply(`)(`: IOLocal[`)(`], amb: `)(`)
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[Unit] =
-      for
-        uuid     <- Π.`)(`()
-        node      = Set(uuid)
-        amb      <- IO { try amb.ζ.amb.right.get catch _ => amb }
-        _        <- `1`.acquire
-        root     <- `)(`.get
-        _        <- `)(`.set(uuid)
-        neth     <- Ref.of[IO, ><](><())
-        children <- `][`.modify { it =>
-                                  val key = it.keys.find(_.contains(root)).get
-                                  val (tree @ `}{`(_, _, children, _), reth) = it(key)
-                                  (it + (node -> (`}{`(amb, key, Set.empty, children), neth))
-                                      + (key  -> (tree.copy(children = children + node), reth))) -> children
-                                }
-        _        <- children.toList.traverse(apply_(node, _)).void
-        _        <- `1`.release
-      yield
-        ()
+              case `ζ-Op`.out =>
+                { for
+                  key <- `)(`.get
+                  _   <- stm.commit {
+                    for
+                      _   <- `1`.acquire
+                      it  <- `][`.get
+                      _   <- stm.check { val node = it.keys.find(_.contains(key)).get
+                                         val tree = it(node)._1
+                                         it(tree.root)._1.amb eq amb
+                                       }
+                      node = it.keys.find(_.contains(key)).get
+                      tree = it(node)._1
+                      root = it(tree.root)._1.root
+                      _   <- remove(node, tree)
+                      _   <- insert(node, root)
+                      _   <- `1`.release
+                    yield
+                      ()
+                  }
+                  yield
+                    ()
+                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
+              case `ζ-Op`.open =>
+                { for
+                  key    <- `)(`.get
+                  (r, n) <- stm.commit {
+                    for
+                      _           <- `1`.acquire
+                      it          <- `][`.get
+                      _           <- stm.check { val root = it.keys.find(_.contains(key)).get
+                                                 val tree = it(root)._1
+                                                 tree.children.exists(it(_)._1.amb eq amb)
+                                               }
+                      root         = it.keys.find(_.contains(key)).get
+                      (temp, reth) = it(root)
+                      node         = temp.children.find(it(_)._1.amb eq amb).get
+                      (tree, neth) = it(node)
+                    yield
+                      (root, temp, reth) ->
+                      (node, tree, neth)
+                  }
+                  (root, temp, reth) = r
+                  (node, tree, neth) = n
+                  rstate <- reth.get
+                  nstate <- neth.get
+                  state1 <- ether(rstate, nstate)
+                  state2 <- ether(nstate, rstate)
+                  jeth   <- Ref.of[IO, ><](><(state1.takers ++ state2.takers,
+                                              state1.offerers ++ state2.offerers))
+                  join    = root ++ node
+                  _      <- stm.commit {
+                    for
+                      _ <- remove(node, tree)
+                      _ <- `][`.modify { _ - root - node + (join -> (temp, jeth)) }
+                      _ <- update(temp, root, join)
+                      _ <- merge(tree, join)
+                      _ <- `1`.release
+                    yield
+                      ()
+                  }
+                  yield
+                    ()
+                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
 
-  /**
-    * Type of ambients' trees.
-    */
-  type `][` = Ref[IO, Map[`)*(`, (`}{`, >*<)]]
+          case Π.ζ(Some(_), _, _) => ??? // impossible by syntax
 
-  object `][`:
-    def apply(): IO[(IOLocal[`)(`], `][`)] =
-      for
-        eth  <- Ref.of[IO, ><](><())
-        amb   = `)(`(())
-        uuid <- `)(`()
-        root  = Set(uuid)
-        lo   <- IOLocal[`)(`](uuid)
-        map   = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
-        tree <- Ref.of[IO, Map[`)*(`, (`}{`, >*<)]](map)
-      yield
-        (lo, tree)
+          case Π.ζ(_, Left(caps), next) =>
+
+            IO.unit >> this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+
+          case _ => ???
+
+      def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
+               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+        val amb = try _amb.ζ.amb.right.get catch _ => _amb
+        for
+          key  <- `)(`.get
+          uuid <- Π.`)(`()
+          _    <- stm.commit {
+            for
+              _   <- `1`.acquire
+              it  <- `][`.get
+              _   <- stm.check { val root = it.keys.find(_.contains(key)).get
+                                 val tree = it(root)._1
+                                 tree.children.exists(it(_)._1.amb eq amb)
+                               }
+              root = it.keys.find(_.contains(key)).get
+              temp = it(root)._1
+              node = temp.children.find(it(_)._1.amb eq amb).get
+              tree = it(node)._1
+              _   <- remove(node, tree)
+              join = node + uuid
+              _   <- `][`.modify(_ - node + (join -> it(node)))
+              _   <- insert(join, tree.root)
+            yield
+              ()
+          }
+          _    <- `)(`.set(uuid)
+          _    <- stm.commit { `1`.release }
+        yield
+          ()
+
 
     /**
-      * Return the [[>*<]] ether for this [[IOLocal]].
-      * Note that the semaphore is acquired and not yet released,
-      * but its release delayed until input/output action.
+      * Ambients' trees' nodes.
       */
-    def apply(`)(`: IOLocal[`)(`])
-             (implicit `][`: `][`, `1`: Semaphore[IO]): IO[>*<] =
-      for
-        _    <- `1`.acquire
-        node <- `)(`.get
-        neth <- `][`.modify { it =>
-                              val key = it.keys.find(_.contains(node)).get
-                              it -> it(key)._2
-                            }
-      yield
-        neth
+    final case class `}{`(amb: `)(`,
+                          root: `)*(`,
+                          children: Set[`)*(`],
+                          siblings: Set[`)*(`])
 
+    object `}{`:
 
-  /**
-    * Supervised [[code]].
-    * @param code
-    */
-  private def exec[T](code: => IO[T]): IO[T] =
-    Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case _ => IO(null.asInstanceOf[T]) }
-              )
+      def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
+               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+        val amb = try _amb.ζ.amb.right.get catch _ => _amb
+        for
+          uuid <- Π.`)(`()
+          node  = Set(uuid)
+          neth <- Ref.of[IO, ><](><())
+          key  <- `)(`.get
+          _    <- stm.commit {
+            for
+              _ <- `1`.acquire
+              _ <- `][`.modify { it =>
+                                 val root = it.keys.find(_.contains(key)).get
+                                 val (tree @ `}{`(_, _, children, _), reth) = it(root)
+                                 children.foldLeft {
+                                   it + (node -> (`}{`(amb, root, Set.empty, children), neth))
+                                      + (root -> (tree.copy(children = children + node), reth))
+                                 } { (it, child) =>
+                                   val (tree @ `}{`(_, _, _, siblings), ceth) = it(child)
+                                   it + (child -> (tree.copy(siblings = siblings + node), ceth))
+                                 }
+                               }
+            yield
+              ()
+          }
+          _    <- `)(`.set(uuid)
+          _    <- stm.commit { `1`.release }
+        yield
+          ()
 
-
-  /**
-    * restriction
-    */
-  object ν:
-
-    def map[B](f: `)(` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `)(` => IO[B]): IO[B] = f(`)(`(()))
-
-
-  /**
-    * silent transition
-    */
-  val τ = IO.unit
-
-
-  /**
-    * output
-    */
-  object <> :
-
-     def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])
-              (using `][`, Semaphore[IO]): IO[Unit] =
-       for
-         `>R` <- `][`(`)(`)
-         _    <- ><(wrap)(`>R`)
-       yield
-         ()
-
-     def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])(code: => IO[Any])
-              (using `][`, Semaphore[IO]): IO[Unit] =
-       for
-         `>R` <- `][`(`)(`)
-         _    <- ><(wrap)(code)(`>R`)
-       yield
-         ()
-
-  /**
-    * input
-    */
-  object `()`:
-
-    def apply(`)(`: IOLocal[`)(`])
-             (using `][`, Semaphore[IO]): IO[`)(`] =
-       for
-         `<R` <- `][`(`)(`)
-         name <- ><()(`<R`)
-       yield
-         name
-
-    def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
-                (using `][`, Semaphore[IO]): IO[`)(`] =
-       for
-         `<R` <- `][`(`)(`)
-         name <- ><()(code)(`<R`)
-       yield
-         name
-
-
-  object `Π-magic`:
 
     /**
-      * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
-      *
-      * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
+      * Type of ambients' trees.
       */
-    /*
-     *
-     * Copyright (c) 2020 Luis Rodero-Merino
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at.
-     *
-     *     http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */
+    type `][` = TVar[Map[`)*(`, (`}{`, >*<)]]
 
-    final case class ><(takers: Queue[Deferred[IO, `)(`]],
-                        offerers: Queue[(`)(`, Deferred[IO, Unit])])
+    object `][`:
+      def apply(): IO[(IOLocal[`)(`], `][`, TSemaphore)] =
+        for
+          eth  <- Ref.of[IO, ><](><())
+          amb   = `)(`(())
+          uuid <- `)(`()
+          root  = Set(uuid)
+          lo   <- IOLocal[`)(`](uuid)
+          map   = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
+          tree <- stm.commit { TVar.of[Map[`)*(`, (`}{`, >*<)]](map) }
+          sem  <- stm.commit { TSemaphore.make(1) }
+        yield
+          (lo, tree, sem)
+
+      /**
+        * Return the [[>*<]] ether for this [[IOLocal]].
+        * Note that the semaphore is acquired and not yet released,
+        * but its release delayed until input/output action.
+        */
+      def apply(`)(`: IOLocal[`)(`])
+               (using `][`: `][`, `1`: TSemaphore): IO[>*<] =
+        for
+          key  <- `)(`.get
+          neth <- stm.commit {
+            for
+              _   <- `1`.acquire
+              it  <- `][`.get
+              node = it.keys.find(_.contains(key)).get
+            yield
+              it(node)._2
+          }
+        yield
+          neth
+
 
     /**
-      * Type of ambients' ether.
+      * output
       */
-    type >*< = Ref[IO, ><]
+    object <> :
 
-    object >< :
+       def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])
+                (using `][`, TSemaphore): IO[Unit] =
+         for
+           `>R` <- `][`(`)(`)
+           _    <- ><(wrap)(`>R`)
+         yield
+           ()
 
-      inline def apply(): >< = ><(Queue.empty, Queue.empty)
+       def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])(code: => IO[Any])
+                (using `][`, TSemaphore): IO[Unit] =
+         for
+           `>R` <- `][`(`)(`)
+           _    <- ><(wrap)(code)(`>R`)
+         yield
+           ()
 
-      def apply(wrap: `)(`)(`>R`: Ref[IO, ><])
-               (implicit `1`: Semaphore[IO]): IO[Unit] =
-        Deferred[IO, Unit].flatMap { offerer =>
-          `>R`.flatModifyFull { (poll, it) =>
-            it.takers.dequeueOption match
-              case Some((taker, queue)) =>
-                it.copy(takers = queue) -> (taker.complete(wrap).void <* `1`.release)
-              case _ =>
-                val queue = it.offerers.enqueue(wrap -> offerer)
-                it.copy(offerers = queue) -> poll(`1`.release *> offerer.get)
+    /**
+      * input
+      */
+    object `()`:
+
+      def apply(`)(`: IOLocal[`)(`])
+               (using `][`, TSemaphore): IO[`)(`] =
+         for
+           `<R` <- `][`(`)(`)
+           name <- ><()(`<R`)
+         yield
+           name
+
+      def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
+                  (using `][`, TSemaphore): IO[`)(`] =
+         for
+           `<R` <- `][`(`)(`)
+           name <- ><()(code)(`<R`)
+         yield
+           name
+
+
+    object `Π-magic`:
+
+      /**
+        * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
+        *
+        * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
+        */
+      /*
+       *
+       * Copyright (c) 2020 Luis Rodero-Merino
+       *
+       * Licensed under the Apache License, Version 2.0 (the "License");
+       * you may not use this file except in compliance with the License.
+       * You may obtain a copy of the License at.
+       *
+       *     http://www.apache.org/licenses/LICENSE-2.0
+       *
+       * Unless required by applicable law or agreed to in writing, software
+       * distributed under the License is distributed on an "AS IS" BASIS,
+       * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       * See the License for the specific language governing permissions and
+       * limitations under the License.
+       */
+
+      final case class ><(takers: Queue[Deferred[IO, `)(`]],
+                          offerers: Queue[(`)(`, Deferred[IO, Unit])])
+
+      /**
+        * Type of ambients' ether.
+        */
+      type >*< = Ref[IO, ><]
+
+      object >< :
+
+        inline def apply(): >< = ><(Queue.empty, Queue.empty)
+
+        def apply(wrap: `)(`)(`>R`: Ref[IO, ><])
+                 (using `1`: TSemaphore): IO[Unit] =
+          Deferred[IO, Unit].flatMap { offerer =>
+            `>R`.flatModifyFull { (poll, it) =>
+              it.takers.dequeueOption match
+                case Some((taker, queue)) =>
+                  it.copy(takers = queue) -> (taker.complete(wrap).void <* stm.commit { `1`.release })
+                case _ =>
+                  val queue = it.offerers.enqueue(wrap -> offerer)
+                  it.copy(offerers = queue) -> poll(stm.commit { `1`.release } *> offerer.get)
+            }
           }
-        }
 
-      def apply(wrap: `)(`)(code: => IO[Any])(`>R`: Ref[IO, ><])
-               (implicit `1`: Semaphore[IO]): IO[Unit] =
-        Deferred[IO, Unit].flatMap { offerer =>
-          `>R`.flatModifyFull { (poll, it) =>
-            it.takers.dequeueOption match
-              case Some((taker, queue)) =>
-                it.copy(takers = queue) -> (taker.complete(wrap).void <* `1`.release)
-              case _ =>
-                val queue = it.offerers.enqueue(wrap -> offerer)
-                it.copy(offerers = queue) -> poll(`1`.release *> offerer.get)
-          }
-        } <* exec(code)
+        def apply(wrap: `)(`)(code: => IO[Any])(`>R`: Ref[IO, ><])
+                 (using `1`: TSemaphore): IO[Unit] =
+          Deferred[IO, Unit].flatMap { offerer =>
+            `>R`.flatModifyFull { (poll, it) =>
+              it.takers.dequeueOption match
+                case Some((taker, queue)) =>
+                  it.copy(takers = queue) -> (taker.complete(wrap).void <* stm.commit { `1`.release })
+                case _ =>
+                  val queue = it.offerers.enqueue(wrap -> offerer)
+                  it.copy(offerers = queue) -> poll(stm.commit { `1`.release } *> offerer.get)
+            }
+          } <* exec(code)
 
-      def apply()(`<R`: Ref[IO, ><])
-                 (implicit `1`: Semaphore[IO]): IO[`)(`] =
-        Deferred[IO, `)(`].flatMap { taker =>
-          `<R`.flatModifyFull { (poll, it) =>
-            it.offerers.dequeueOption match
-              case Some(((name, offerer), queue)) =>
-                it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* `1`.release)
-              case _ =>
-                val queue = it.takers.enqueue(taker)
-                it.copy(takers = queue) -> poll(`1`.release *> taker.get)
+        def apply()(`<R`: Ref[IO, ><])
+                   (using `1`: TSemaphore): IO[`)(`] =
+          Deferred[IO, `)(`].flatMap { taker =>
+            `<R`.flatModifyFull { (poll, it) =>
+              it.offerers.dequeueOption match
+                case Some(((name, offerer), queue)) =>
+                  it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* stm.commit { `1`.release })
+                case _ =>
+                  val queue = it.takers.enqueue(taker)
+                  it.copy(takers = queue) -> poll(stm.commit { `1`.release } *> taker.get)
+            }
           }
-        }
 
-      def apply[T]()(code: T => IO[T])(`<R`: Ref[IO, ><])
-                    (implicit `1`: Semaphore[IO]): IO[`)(`] =
-        Deferred[IO, `)(`].flatMap { taker =>
-          `<R`.flatModifyFull { (poll, it) =>
-            it.offerers.dequeueOption match
-              case Some(((name, offerer), queue)) =>
-                it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* `1`.release)
-              case _ =>
-                val queue = it.takers.enqueue(taker)
-                it.copy(takers = queue) -> poll(`1`.release *> taker.get)
+        def apply[T]()(code: T => IO[T])(`<R`: Ref[IO, ><])
+                      (using `1`: TSemaphore): IO[`)(`] =
+          Deferred[IO, `)(`].flatMap { taker =>
+            `<R`.flatModifyFull { (poll, it) =>
+              it.offerers.dequeueOption match
+                case Some(((name, offerer), queue)) =>
+                  it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* stm.commit { `1`.release })
+                case _ =>
+                  val queue = it.takers.enqueue(taker)
+                  it.copy(takers = queue) -> poll(stm.commit { `1`.release } *> taker.get)
+            }
+          }.flatMap {
+            case null => IO.pure(null)
+            case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
           }
-        }.flatMap {
-          case null => IO.pure(null)
-          case it: T => (code andThen exec)(it).asInstanceOf[IO[`)(`]]
-        }

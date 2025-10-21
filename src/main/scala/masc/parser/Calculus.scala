@@ -282,7 +282,7 @@ object Calculus:
         s"""$identifier$ps{${pointers.mkString(", ")}}"""
 
       case `(*)`(identifier, qual, params*) =>
-        import generator.Meta.\
+        import emitter.Meta.\
         val args = params.map(\(_)).toList
         val term = qual match
           case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
