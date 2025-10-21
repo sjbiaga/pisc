@@ -35,7 +35,7 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Ambient
-import generator.Program
+import emitter.Program
 
 
 object Main:

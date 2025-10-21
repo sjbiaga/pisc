@@ -29,16 +29,18 @@
 //package main.scala.in
 
 import _root_.cats.effect.{ IO, IOApp, IOLocal, ExitCode }
-import _root_.cats.effect.std.Semaphore
+
+import _root_.io.github.timwspence.cats.stm.STM
 
 
 object App extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     for
-      semaphore  <- Semaphore[IO](1)
-      (lo, tree) <- Π.`][`()
-      _          <- π.Main(lo)(args*)(tree, semaphore)
+      stm             <- STM.runtime[IO]
+      wrapper          = Π.`}{`(stm)
+      (lo, tree, sem) <- wrapper.`][`()
+      _               <- π.Main(lo, wrapper)(args*)(using tree, sem)
     yield
       ExitCode.Success
 

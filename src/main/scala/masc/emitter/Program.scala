@@ -27,7 +27,7 @@
  */
 
 package masc
-package generator
+package emitter
 
 import scala.meta.*
 import dialects.Scala3
@@ -41,7 +41,7 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String): List[Enumerator] =
+    def emit(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -52,10 +52,10 @@ object Program:
           * = `_ <- IO.unit`
 
         case ∥(operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -65,7 +65,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.generate)
+          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -92,12 +92,12 @@ object Program:
 
         case `..`(path*) =>
           * = `_ <- *`(Term.Apply(
-                         Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: Nil)),
+                         Term.Apply(Term.Select("}{", "ζ"), Term.ArgClause(\(")(") :: Nil)),
                          Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)))
 
 
         case `()`(name, it) =>
-          val term = Term.Apply(\("()"), Term.ArgClause(\(")(") :: Nil))
+          val term = Term.Apply(Term.Select("}{", "()"), Term.ArgClause(\(")(") :: Nil))
           * = it match
                 case Some((Right(code), _)) =>
                   `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil)))
@@ -112,15 +112,15 @@ object Program:
         case !(pace, Some(name), par) =>
           val υidυ = id
 
-          val `!.(*).⋯` = `()`(name, None).generate :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                                           Term.ArgClause(\(name) :: Nil)))
+          val `!.(*).⋯` = `()`(name, None).emit :+ `_ <- *`(Term.Apply(\(υidυ),
+                                                                       Term.ArgClause(\(name) :: Nil)))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.(*).⋯`).getOrElse(`!.(*).⋯`)
 
           val it = Term.If(Term.ApplyUnary("!", name),
                            `IO.cede`,
                            `List( *, … ).parSequence`(
-                             par.generate,
+                             par.emit,
                              `!⋯`
                            )
                    )
@@ -133,7 +133,7 @@ object Program:
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `_ <- *`(υidυ)).getOrElse(`_ <- *`(υidυ) :: Nil)
 
           val it = `List( *, … ).parSequence`(
-                     par.generate,
+                     par.emit,
                      `_ <- IO.unit` :: `!⋯`
                    )
 
@@ -145,9 +145,9 @@ object Program:
         // AMBIENT /////////////////////////////////////////////////////////////
 
         case `[]`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
+          val ** = `_ <- *`(Term.Apply(Term.Select("}{", "}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.emit))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -155,9 +155,9 @@ object Program:
         // GO //////////////////////////////////////////////////////////////////
 
         case `go.`(amb, par) =>
-          val ** = `_ <- *`(Term.Apply(\("ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
+          val ** = `_ <- *`(Term.Apply(Term.Select("}{", "ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.generate))
+          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.emit))
 
         ////////////////////////////////////////////////////////////////// go //
 
@@ -174,7 +174,7 @@ object Program:
 
         case <>(it, path*) =>
           val term = Term.Apply(
-                       Term.Apply(\("<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)),
+                       Term.Apply(Term.Select("}{", "<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)),
                        Term.ArgClause(\(")(") :: Nil))
 
           * = it match
@@ -202,7 +202,7 @@ object Program:
                     else
                       ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
 
-          * = ** ::: par.generate
+          * = ** ::: par.emit
 
         case _: `{}` => ???
 
@@ -220,7 +220,7 @@ object Program:
 
           * :+= `_ <- *`(Term.Apply(
                            Term.Apply(term,
-                                      Term.ArgClause(\(")(")::Nil)),
+                                      Term.ArgClause(\(")(") :: \("}{") :: Nil)),
                            Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
@@ -232,4 +232,4 @@ object Program:
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
-      prog.map(_ -> _.generate(using id())).map(_.swap).map(defn(_)(_).toString)
+      prog.map(_ -> _.emit(using id())).map(_.swap).map(defn(_)(_).toString)

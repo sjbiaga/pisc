@@ -27,7 +27,7 @@
  */
 
 package masc
-package generator
+package emitter
 
 import scala.annotation.tailrec
 
@@ -62,28 +62,30 @@ object Meta:
   def `String*`(* : String) =
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
-      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
+      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                       Term.Param(Nil, \("}{"), Some(Type.Select("Π", Type.Name("}{"))), None) :: Nil,
+                       None) ::
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(Type.Name("String"))), None) :: Nil) ::
-      Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), Some(Type.Apply(Type.Name("Semaphore"),
-                                                                                 Type.ArgClause(Type.Name("IO") :: Nil))), None) ::
-                       Nil, Some(Mod.Implicit())) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", Type.Name("]["))), None) ::
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"), Type.Name("TSemaphore"))), None) :: Nil,
+                       Some(Mod.Using())) ::
       Nil
     ) :: Nil
 
   def `(…)`(* : String*) =
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
-      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
+      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                       Term.Param(Nil, \("}{"), Some(Type.Select("Π", Type.Name("}{"))), None) :: Nil,
+                       None) ::
       Term.ParamClause(*
                         .map(\(_))
                         .map(Term.Param(Nil, _, Some(Type.Name(")(")), None))
                         .toList,
                        None) ::
-      Term.ParamClause(Term.Param(Mod.Implicit() :: Nil, \("]["), Some(Type.Name("][")), None) ::
-                       Term.Param(Mod.Implicit() :: Nil, \("1"), Some(Type.Apply(Type.Name("Semaphore"),
-                                                                                 Type.ArgClause(Type.Name("IO") :: Nil))), None) ::
-                       Nil, Some(Mod.Implicit())) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", Type.Name("]["))), None) ::
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"), Type.Name("TSemaphore"))), None) :: Nil,
+                       Some(Mod.Using())) ::
       Nil
     ) :: Nil
 
@@ -203,7 +205,7 @@ object Meta:
 
 
   val `<>(null)`: Term =
-    Term.Apply(\("<>"),
+    Term.Apply(Term.Select("}{", "<>"),
                Term.ArgClause(Term.Apply(
                                 Term.Select("Π", ")("),
                                 Term.ArgClause(Lit.Null() :: Nil)
