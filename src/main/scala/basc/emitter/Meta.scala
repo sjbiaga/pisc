@@ -27,7 +27,7 @@
  */
 
 package basc
-package generator
+package emitter
 
 import scala.annotation.tailrec
 
@@ -46,8 +46,9 @@ object Meta:
                "Main",
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
-                 `String*`("args") :: `(using String)(using %, /, \\)(using ][, Semaphore[IO])`,
+                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                                  Term.Param(Nil, \("}{"), Some(Type.Name("}{")), None) :: Nil, None) ::
+                 `String*`("args") :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -58,8 +59,9 @@ object Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) :: Nil, None) ::
-                 `(…)`(params*) :: `(using String)(using %, /, \\)(using ][, Semaphore[IO])`,
+                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                                  Term.Param(Nil, \("}{"), Some(Type.Name("}{")), None) :: Nil, None) ::
+                 `(…)`(params*) :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -115,7 +117,7 @@ object Meta:
                     ,None)
 
 
-  val `(using String)(using %, /, \\)(using ][, Semaphore[IO])` =
+  val `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)` =
     Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Name("String")), None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(List("%", "/", "\\")
@@ -124,9 +126,9 @@ object Meta:
                                                None)
                        }
                     ,Some(Mod.Using())) ::
-    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Name("][")), None) ::
-                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Apply(Type.Name("Semaphore"),
-                                                                                      Type.ArgClause(Type.Name("IO") :: Nil))), None) :: Nil
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", Type.Name("]["))), None) ::
+                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"),
+                                                                                       Type.Name("TSemaphore"))), None) :: Nil
                     ,Some(Mod.Using())) ::
     Nil
 

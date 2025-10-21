@@ -41,7 +41,7 @@ import dialects.Scala3
 import parser.{ BioAmbients, Calculus }
 import BioAmbients.Actions
 import Calculus.{ `(*)`,  λ }
-import generator.Program
+import emitter.Program
 
 
 object Main:

@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / scalaVersion := "3.7.2-RC2"
+ThisBuild / scalaVersion := "3.7.4-RC1"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -18,8 +18,8 @@ lazy val root = (project in file("."))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.4-RC1",
+    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
@@ -31,10 +31,10 @@ lazy val main = (project in file("main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.4-RC1",
+    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
 
 lazy val main_ = (project in file("main_"))
@@ -44,10 +44,10 @@ lazy val main_ = (project in file("main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.2-RC2",
-    crossScalaVersions ++= Seq("2.13.16", "3.7.2-RC2"),
+    scalaVersion := "3.7.4-RC1",
+    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
 
 unmanagedSources / excludeFilter := "ba*.scala" || "dump*.scala" || "loop*.scala" || "stats*.scala" || "examples/*.scala"
