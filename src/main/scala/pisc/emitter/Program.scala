@@ -27,7 +27,7 @@
  */
 
 package pisc
-package generator
+package emitter
 
 import scala.meta.*
 import dialects.Scala3
@@ -40,7 +40,7 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String): List[Enumerator] =
+    def emit(using id: => String): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -51,10 +51,10 @@ object Program:
           * = `_ <- IO.unit`
 
         case +(_, operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: + =>
-          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -64,10 +64,10 @@ object Program:
         // COMPOSITION /////////////////////////////////////////////////////////
 
         case ∥(operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -77,7 +77,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.generate)
+          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -114,7 +114,7 @@ object Program:
             case None =>
             case _ =>
               val λ(Symbol(par)) = arg
-              * = ν(par).generate
+              * = ν(par).emit
 
           code match
             case Some((Left(enums), _)) =>
@@ -202,9 +202,9 @@ object Program:
         case ?:(((lhs, rhs), mismatch), t, Some(f)) =>
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), f.generate, t.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), f.emit, t.emit))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.generate, f.generate))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit, f.emit))
 
         case it: ?: =>
           def cases(sum: +): Term =
@@ -216,7 +216,7 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), `_ <- *`(`π-exclude`(t.enabled)))
               case _ =>
-                sum.generate
+                sum.emit
 
           * = `_ <- *`(cases(`+`(null, ∥(`.`(it)))))
 
@@ -228,12 +228,12 @@ object Program:
         case !(pace, Some(π @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _)), sum) =>
           val υidυ = id
 
-          val `!.π⋯` = π.generate :+ `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
+          val `!.π⋯` = π.emit :+ `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate,
+                     sum.emit,
                      `!⋯`
                    )
 
@@ -248,7 +248,7 @@ object Program:
             def idʹ: String = π.υidυ
             π.copy(name = λ.copy()(using None))(idʹ)
           }
-          val `!.π⋯` = πʹ.generate :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
+          val `!.π⋯` = πʹ.emit :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -262,7 +262,7 @@ object Program:
 
           val it = Term.Block(`val` :::
                               `List( *, … ).parSequence`(
-                                sum.generate,
+                                sum.emit,
                                 `!⋯`
                               ) :: Nil
                    )
@@ -272,12 +272,12 @@ object Program:
         case !(pace, Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.generate :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
+          val `!.μ⋯` = μ.emit :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate,
+                     sum.emit,
                      `!⋯`
                    )
 
@@ -305,7 +305,7 @@ object Program:
                     else
                       `+`(null, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.generate
+          * = ** ::: sum.emit
 
         case _: `{}` => ???
 
@@ -337,6 +337,6 @@ object Program:
       ) ::
       prog
         .tail
-        .map(_ -> _.generate(using id()))
+        .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)
