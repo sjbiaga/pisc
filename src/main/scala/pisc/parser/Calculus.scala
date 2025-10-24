@@ -33,7 +33,7 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.{ Term, Type }
 
-import generator.Meta.rateʹ
+import emitter.Meta.rateʹ
 
 import Expression.Code
 import StochasticPi.*
@@ -472,11 +472,9 @@ object Calculus:
         _.map {
           case it: τ =>
             it.copy()(idʹ(it.id, "τ", "", it.rate.get))
-          case it: π
-              if it.polarity.map(_.isEmpty).getOrElse(true) =>
-            val polarity = it.polarity.fold(false)(_ => true)
-            val name = it.channel.asSymbol.name
-            it.copy()(idʹ(it.id, name, polarity.toString, it.rate.get))
+          case it @ π(λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>
+            val polarity = it.polarity match { case Some("") => true case _ => false }
+            it.copy()(idʹ(it.id, name, polarity.toString, rate.get))
           case it => it
         }
 
