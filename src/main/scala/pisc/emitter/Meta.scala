@@ -27,7 +27,7 @@
  */
 
 package pisc
-package generator
+package emitter
 
 import scala.annotation.tailrec
 
