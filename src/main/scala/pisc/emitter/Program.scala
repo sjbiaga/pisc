@@ -27,7 +27,7 @@
  */
 
 package pisc
-package generator
+package emitter
 
 import scala.meta.*
 import dialects.Scala3
@@ -40,8 +40,8 @@ object Program:
 
   extension (node: Pre | AST)
 
-    def generate(using id: => String)
-                (implicit semaphore: Option[String] = None): List[Enumerator] =
+    def emit(using id: => String)
+            (implicit semaphore: Option[String] = None): List[Enumerator] =
       var * = List[Enumerator]()
 
       node match
@@ -56,12 +56,12 @@ object Program:
             .getOrElse(* :::= **)
 
         case +(operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: + =>
           implicit val sem = Some(id)
 
-          val ios = it.choices.foldRight(List[Term]())(_.generate :: _)
+          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val ** = List(
             `* <- Semaphore[IO](1)`(sem.get),
@@ -78,10 +78,10 @@ object Program:
         // COMPOSITION /////////////////////////////////////////////////////////
 
         case ∥(operand) =>
-          * = operand.generate
+          * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.generate() :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit() :: _)
 
           val ** = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -104,12 +104,12 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
-                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.generate())
+                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.emit())
 
           * = `_ <- *`(cases(`+`(∥(it))))
 
         case `.`(end, it*) =>
-          val ** = (it :+ end).foldLeft(*)(_ ::: _.generate())
+          val ** = (it :+ end).foldLeft(*)(_ ::: _.emit())
 
           semaphore
             .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
@@ -139,7 +139,7 @@ object Program:
           nu match
             case None =>
             case _ =>
-              * = ν(params.filter(_.isSymbol).map(_.asSymbol.name)*).generate()
+              * = ν(params.filter(_.isSymbol).map(_.asSymbol.name)*).emit()
 
           val args = params.map(_.toTerm).toList
 
@@ -217,13 +217,13 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          * = f.map(_.generate()).getOrElse(Nil)
+          * = f.map(_.emit()).getOrElse(Nil)
 
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.generate()))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.emit()))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.generate(), *))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit(), *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -236,25 +236,25 @@ object Program:
           val υidυ = id
           val υidυ2 = id
 
-          val `π.generate()` = π.generate() match
+          val `π.emit()` = π.emit() match
             case ls =>
               ls.drop(args.size) match
                 case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
                   ls.take(args.size) ::: it.copy(pat = Pat.Var(υidυ2)) :: tl
 
-          val `!.π⋯` = `π.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
-                                                                            Type.ArgClause(Nil),
-                                                                            Term.ArgClause(\("None") :: Nil)),
-                                                            `IO.cede`,
-                                                            Term.Apply(\(υidυ),
-                                                                       Term.ArgClause(args.map(\(_)).toList)),
-                                                            Nil)
-                                                  }
+          val `!.π⋯` = `π.emit()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
+                                                                        Type.ArgClause(Nil),
+                                                                        Term.ArgClause(\("None") :: Nil)),
+                                                        `IO.cede`,
+                                                        Term.Apply(\(υidυ),
+                                                                   Term.ArgClause(args.map(\(_)).toList)),
+                                                        Nil)
+                                              }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate(),
+                     sum.emit(),
                      `!⋯`
                    )
 
@@ -269,8 +269,8 @@ object Program:
           val υidυ = id
 
           val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, params.map(_.copy()(using None))*)
-          val `!.π⋯` = πʹ.generate() :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                            Term.ArgClause(params.map(_.asSymbol.name).map(\(_)).toList)))
+          val `!.π⋯` = πʹ.emit() :+ `_ <- *`(Term.Apply(\(υidυ),
+                                                        Term.ArgClause(params.map(_.asSymbol.name).map(\(_)).toList)))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -289,7 +289,7 @@ object Program:
                            `IO.cede`,
                            Term.Block(`val` :::
                              `List( *, … ).parSequence`(
-                               sum.generate(),
+                               sum.emit(),
                                `!⋯`
                              ) :: Nil
                            )
@@ -301,22 +301,22 @@ object Program:
           val υidυ = id
           val υidυ2 = id
 
-          val `μ.generate()` = μ.generate() match
+          val `μ.emit()` = μ.emit() match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               it.copy(pat = Pat.Var(υidυ2)) :: tl
 
-          val `!.μ⋯` = `μ.generate()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
-                                                                            Type.ArgClause(Nil),
-                                                                            Term.ArgClause(\("None") :: Nil)),
-                                                            `IO.cede`,
-                                                            υidυ,
-                                                            Nil)
-                                                  }
+          val `!.μ⋯` = `μ.emit()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
+                                                                        Type.ArgClause(Nil),
+                                                                        Term.ArgClause(\("None") :: Nil)),
+                                                        `IO.cede`,
+                                                        υidυ,
+                                                        Nil)
+                                              }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate(),
+                     sum.emit(),
                      `!⋯`
                    )
 
@@ -328,7 +328,7 @@ object Program:
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `_ <- *`(υidυ)).getOrElse(`_ <- *`(υidυ) :: Nil)
 
           val it = `List( *, … ).parSequence`(
-                     sum.generate(),
+                     sum.emit(),
                      `_ <- IO.unit` :: `!⋯`
                    )
 
@@ -354,7 +354,7 @@ object Program:
                     else
                       `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.generate()
+          * = ** ::: sum.emit()
 
         case _: `{}` => ???
 
@@ -382,6 +382,6 @@ object Program:
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
       prog
-        .map(_ -> _.generate(using id()))
+        .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)
