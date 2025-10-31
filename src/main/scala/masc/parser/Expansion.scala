@@ -68,7 +68,7 @@ abstract class Expansion extends Encoding:
   }
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
+              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
     var idx = -1
     val xid = χ_id
 
@@ -322,7 +322,7 @@ abstract class Expansion extends Encoding:
 
 
   protected def duplicated(xid: String)
-                          (using Bindings)
+                          (using Bindings, Int)
                           (using duplications: Duplications): Term => Unit =
 
     case _rhs @ (Term.Name(_) | Term.Placeholder()) =>
@@ -489,7 +489,7 @@ object Expansion:
           }
           <>(recoded, path*)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = par.replace)
 
         case `[]`(amb, par) =>
@@ -539,7 +539,7 @@ object Expansion:
         case `.`(end, it*) =>
           `.`(end.concatenate, it*)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = par.concatenate)
 
         case it @ `[]`(_, par) =>
@@ -599,12 +599,12 @@ object Expansion:
           }
           <>(recoded, path*)
 
-        case it @ !(_, Some(name), par) =>
+        case it @ !(_, _, Some(name), par) =>
           given Bindings = Bindings(bindings)
           given_Bindings -= name
           it.copy(par = par.update)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = par.update)
 
         case `[]`(amb, par) =>

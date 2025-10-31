@@ -90,7 +90,7 @@ object Ensure:
         case `.`(end, _*) =>
           end.recursive
 
-        case !(_, _, par) =>
+        case !(_, _, _, par) =>
           par.recursive(stack.size)
 
         case `[]`(_, par) =>

@@ -48,6 +48,7 @@ abstract class Calculus extends Ambient:
         _code = -1
         _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
+        given Int = 1
         parallel ^^ {
           case (_par, _free) =>
             val par = _par.flatten
@@ -59,12 +60,20 @@ abstract class Calculus extends Ambient:
         }
     }
 
-  def parallel(using Bindings, Duplications): Parser[(∥, Names)] =
-    rep1sep(sequential, "|") ^^ { _.unzip match
-      case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
+  def parallel(using Bindings, Duplications, Int): Parser[(∥, Names)] =
+    scale >> { scaling =>
+      val scalingʹ = scaling.abs
+      given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
+      rep1sep(sequential, "|") ^^ { _.unzip match
+        case (it, ns) =>
+          ∥(it*) -> ns.reduce(_ ++ _) match
+            case (∥(it*), names) =>
+              (0 until scalingʹ).foldLeft(∥(): ∥) { case (∥(itʹ*), _) => ∥((itʹ ++ it)*) } match
+                case par => par -> (if par.components.isEmpty then Names() else names)
+      }
     }
 
-  def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ ( leaf | parallelʹ ) ^^ {
       case (it, (bound, free)) ~ (end, freeʹ) =>
@@ -72,15 +81,15 @@ abstract class Calculus extends Ambient:
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
-  def parallelʹ(using Bindings, Duplications): Parser[(∥, Names)] =
+  def parallelʹ(using Bindings, Duplications, Int): Parser[(∥, Names)] =
     opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥() -> Names()) }
 
-  def leaf(using Bindings, Duplications): Parser[(-, Names)] =
-    "!"~> opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
-      case pace ~ Some((it, bound)) ~ (par, free) =>
-        `!`(pace, Some(it), par) -> (free &~ bound)
-      case pace ~ None ~ (par, free) =>
-        `!`(pace, None, par) -> free
+  def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
+    "!"~> scale ~ opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
+      case parallelism ~ pace ~ Some((it, bound)) ~ (par, free) =>
+        `!`(parallelism, pace, Some(it), par) -> (free &~ bound)
+      case parallelism ~ pace ~ None ~ (par, free) =>
+        `!`(parallelism, pace, None, par) -> free
     } |
     name ~ ("["~>parallel<~"]") ^^ { // ambient
       case (amb, name) ~ (par, free) =>
@@ -102,11 +111,11 @@ abstract class Calculus extends Ambient:
     invocation() |
     instantiation
 
-  def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def capital: Parser[(`{}`, Names)]
 
-  def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
+  def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
       case (it, _2) => _2.unzip match
         case (bs, names) =>
@@ -224,7 +233,10 @@ object Calculus:
 
     case <>(code: Option[Code], path: Ambient.AST*)
 
-    case !(pace: Option[(Long, String)], guard: Option[String], par: AST.∥)
+    case !(parallelism: Int,
+           pace: Option[(Long, String)],
+           guard: Option[String],
+           par: AST.∥)
 
     case `[]`(amb: String, par: AST.∥)
 
@@ -258,7 +270,7 @@ object Calculus:
 
       case <>(_, path*) => path.mkString("<", ". ", ">")
 
-      case !(_, guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
+      case !(_, _, guard, par) => "!" + guard.map(".(" + _ + ").").getOrElse("") + par
 
       case `[]`(amb, ∅()) => amb + " [ ]"
       case `[]`(amb, par) => amb + " [ " + par + " ]"
@@ -349,12 +361,12 @@ object Calculus:
         case `.`(end, it*) =>
           `.`(end.flatten, it*)
 
-        case !(None, None, par) =>
+        case !(-1, None, None, par) =>
           par.flatten match
-            case ∥(`.`(end @ !(None, _, _))) => end
-            case it => `!`(None, None, it)
+            case ∥(`.`(end: !)) => end
+            case it => `!`(-1, None, None, it)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = par.flatten)
 
         case `[]`(amb, par) =>

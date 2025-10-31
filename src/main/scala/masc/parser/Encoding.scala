@@ -68,6 +68,7 @@ abstract class Encoding extends Calculus:
           Directive()
           Success(Option.empty[Define], _)
         else
+          given Int = 1
           "="~> parallel ^^ {
             case (_par, _free) =>
               val par = _par.flatten
@@ -112,7 +113,7 @@ abstract class Encoding extends Calculus:
           }
     }
 
-  def instantiation(using bindings: Bindings, duplications: Duplications): Parser[(`⟦⟧`, Names)] =
+  def instantiation(using bindings: Bindings, duplications: Duplications, _sc: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear
@@ -162,7 +163,7 @@ abstract class Encoding extends Calculus:
     }
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
+              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def pointers: Parser[(List[String], Names)] =
     "{"~>names<~"}" ^^ { _.unzip match
@@ -346,7 +347,7 @@ object Encoding:
             case ∅() =>
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
-            case !(_, _, par) => count(par)
+            case !(_, _, _, par) => count(par)
             case `[]`(_, par) => count(par)
             case `go.`(_, par) => count(par)
             case it: `⟦⟧` if ids.contains(it.xid) =>
@@ -371,7 +372,7 @@ object Encoding:
           case ∅() =>
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
-          case !(_, _, par) => reset(par)
+          case !(_, _, _, par) => reset(par)
           case `[]`(_, par) => reset(par)
           case `go.`(_, par) => reset(par)
           case it: `⟦⟧` if ids.contains(it.xid) =>
@@ -455,8 +456,8 @@ object Encoding:
 
   final private class NoBPEx(name: String) extends Throwable(name)
 
-  case class UniquenessBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
-      extends BindingParsingException(code, nest, s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+  case class UniquenessBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean, how: String)
+      extends BindingParsingException(code, nest, s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, being $how""")
 
   case class NonParameterBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
@@ -542,7 +543,7 @@ object Encoding:
         case `.`(end, _*) =>
           end.capitals
 
-        case !(_, _, par) =>
+        case !(_, _, _, par) =>
           par.capitals
 
         case `[]`(_, par) =>
@@ -623,14 +624,15 @@ object Encoding:
           }
           <>(recoded(free), path*)
 
-        case !(pace, Some(name), par) =>
+        case !(parallelism, pace, Some(name), par) =>
           val n = refresh.size
           given Names = Names(bound)
-          val rep = `!`(pace, Some(rebind(name)), rename(par))
+          val nameʹ = rebind(name)
+          val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
-          rep
+          `!`(parallelism, pace, Some(nameʹ), parʹ)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = rename(par))
 
         case `[]`(amb, par) =>

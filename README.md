@@ -43,9 +43,9 @@ The BNF formal grammar for processes is the following.
     EQUATION       ::= INVOCATION "=" PARALLEL
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" PARALLEL
     DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
-    PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
+    PARALLEL       ::= [ SCALE ] SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
-    LEAF           ::= "!" PACE [ "." "(" NAME ")" "." ] PARALLEL
+    LEAF           ::= "!" [ SCALE ] [ PACE ] [ "." "(" NAME ")" "." ] PARALLEL
                      | NAME "[" PARALLEL "]"
                      | "<" CAPS ">" [ EXPRESSION ]
                      | "go" NAME "." PARALLEL
@@ -66,6 +66,7 @@ The BNF formal grammar for prefixes is the following.
                      | "ν" "(" NAMES ")"
                      | CAPS "."
                      | "(" NAME ")" [ EXPRESSION ] "."
+    SCALE          ::= NATURAL_NUMBER "*"
     PACE           ::= NATURAL_NUMBER [ "," TIME_UNIT ]
     EXPRESSION     ::= "/*" ... "*/"
 
