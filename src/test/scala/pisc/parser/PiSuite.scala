@@ -69,7 +69,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-uniqueness-hardcoded-binding") {
 
-    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, but is duplicated at nesting level #0 in the right hand side of encoding 1") {
+    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of encoding 1") {
       Main(getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(x). M{v}
@@ -81,7 +81,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-uniqueness-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, but is duplicated at nesting level #1 in the right hand side of encoding 3") {
+    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of encoding 3") {
       Main(getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
