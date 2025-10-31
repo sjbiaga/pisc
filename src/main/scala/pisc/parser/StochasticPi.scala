@@ -148,6 +148,9 @@ abstract class StochasticPi extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
+  def scale: Parser[Int] =
+    opt( wholeNumber <~ "*" ) ^^ { _.map(_.toInt.abs).getOrElse(-1) }
+
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
@@ -249,15 +252,16 @@ abstract class StochasticPi extends Expression:
 
   protected object BindingOccurrence:
     def apply(names: Names)
-             (using Bindings): Unit =
+             (using Bindings, Int): Unit =
       names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
-             (using bindings: Bindings): Unit =
+             (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
         case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -362,7 +366,7 @@ object StochasticPi:
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.shallow)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -486,14 +490,14 @@ object StochasticPi:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          case !(pace, Some(μ), sum) =>
+          case !(parallelism, pace, Some(μ), sum) =>
             val (it, _) = sum.parse
-            (`!`(pace, Some(μ), it), Actions(μ))
+            (`!`(parallelism, pace, Some(μ), it), Actions(μ))
 
-          case !(pace, _, sum) =>
+          case !(parallelism, pace, _, sum) =>
             val τʹ: τ = τ
             def idʹ: String = '!' + τʹ.υidυ
-            `!`(pace, Some(τʹ.copy()(idʹ)), sum).parse
+            `!`(parallelism, pace, Some(τʹ.copy()(idʹ)), sum).parse
 
           case `⟦⟧`(definition, variables, _sum, xid, assignment) =>
             val n = assignment.size
@@ -580,7 +584,7 @@ object StochasticPi:
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
             t.enabled ++ f.map(_.enabled).getOrElse(nil)
 
-          case !(_, Some(μ), sum) =>
+          case !(_, _, Some(μ), sum) =>
             sum.split
             Actions(μ)
 
@@ -629,7 +633,7 @@ object StochasticPi:
                   Seq(ps(k) -> t, ps(k) -> f)
                 case ?:(_, t, _) =>
                   Seq(ps(k) -> t)
-                case !(_, Some(μ), _) =>
+                case !(_, _, Some(μ), _) =>
                   Seq(ps(k) -> μ)
                 case _: ! => ??? // impossible by 'parse'
                 case `⟦⟧`(_, _, sum, _, _) =>
@@ -644,7 +648,7 @@ object StochasticPi:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-          case !(_, Some(μ), sum) =>
+          case !(_, _, Some(μ), sum) =>
             sum.graph ++ Seq(μ -> μ, μ -> sum)
 
           case _: ! => ??? // impossible by 'parse'
