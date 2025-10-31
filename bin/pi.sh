@@ -18,7 +18,7 @@ function pi() {
     done
     set ../pi.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.4-RC1 \
+                  -q -O -nowarn -S 3.7.4-RC3 \
                   --dep org.typelevel::cats-effect:3.7.0-RC1 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \
@@ -44,7 +44,7 @@ function pi_() {
     done
     set ../pi_.scala ${srcs#?}
     scala-cli run "$@" \
-                  -q -O -nowarn -S 3.7.4-RC1 \
+                  -q -O -nowarn -S 3.7.4-RC3 \
                   --dep org.typelevel::cats-effect:3.7.0-RC1 \
                   --dep eu.timepit::refined:0.11.3 \
                   -Dcats.effect.warnOnNonMainThreadDetected=false \

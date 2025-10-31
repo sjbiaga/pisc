@@ -69,7 +69,7 @@ abstract class Expansion extends Encoding:
 
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
+              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
     var idx = -1
     val xid = χ_id
 
@@ -331,7 +331,7 @@ abstract class Expansion extends Encoding:
 
 
   protected def duplicated(xid: String)
-                          (using Bindings)
+                          (using Bindings, Int)
                           (using duplications: Duplications): Term => Unit =
 
     case _rhs @ (Term.Name(_) | Term.Placeholder()) =>
@@ -502,19 +502,19 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.replace, f.map(_.replace))
 
-        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.replace)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), _, Some(_), given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, Some(_), given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)), sum.replace)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.replace)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -572,7 +572,7 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.concatenate, f.map(_.concatenate))
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.concatenate)
 
         case it @ `⟦⟧`(_, variables, _, _, _) =>
@@ -635,22 +635,22 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.update, f.map(_.update))
 
-        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(code = recoded)), sum.update)
+        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.update)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code])), sum) =>
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code])), sum) =>
           given Bindings = Bindings(bindings)
           val chʹ = updated(ch)
           given_Bindings -= par
-          `!`(pace, Some(it.copy(channel = chʹ, code = recoded)), sum.update)
+          `!`(parallelism, pace, Some(it.copy(channel = chʹ, code = recoded)), sum.update)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)), sum.update)
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)), sum.update)
 
-        case !(pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(channel = updated(ch), code = recoded)), sum.update)
+        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(channel = updated(ch), code = recoded)), sum.update)
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.update)
 
         case it @ `⟦⟧`(_, _, sum, _, assignment) =>

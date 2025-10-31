@@ -50,7 +50,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦⟧")
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧")
 
     interceptMessage[NoDefinitionException]("No definition for encoding 0") {
       `13`.test
@@ -63,7 +63,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         _code = -1
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦⟧{x}")
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧{x}")
       parseAll(definition, "⟦⟧ = ") match
         case Success(Some(it), _) =>
           defn(0) = it :: Nil
@@ -79,7 +79,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         _code = -1
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦ x<y>. 1 ⟧") match
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦ x<y>. 1 ⟧") match
           case Failure("No binding for x at nesting level #1", _) =>
           case _ =>
             assert(false)
@@ -95,12 +95,12 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦⟧") match
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧") match
           case Success((`⟦⟧`(Definition(0, None, _, _, ∅()), _, ∅(), _, _), _), _) =>
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)
-                           (using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
+                           (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
         new Parser[(`⟦⟧`, Names)]:
           override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
             Failure(null, _in)
@@ -116,7 +116,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦⟧") match
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧") match
           case Failure("An instantiation of a template is undefined", _) =>
           case _ =>
             assert(false)
@@ -135,7 +135,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦ Cons ⟧") match
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦ Cons ⟧") match
           case Failure("An instantiation of a template is undefined", _) =>
           case _ =>
             assert(false)
@@ -151,7 +151,7 @@ class ExpansionParserSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(instantiation(using Bindings(), Duplications()), "⟦ Nil ⟧") match
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦ Nil ⟧") match
           case Failure("An instantiation of a template is ambiguous", _) =>
           case _ =>
             assert(false)

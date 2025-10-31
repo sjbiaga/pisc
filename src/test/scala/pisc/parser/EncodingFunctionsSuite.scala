@@ -51,7 +51,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `+`(∥(`.`('P')),
                    ∥(`.`('Q'),
                      `.`(?:(((λ(true), λ(false)), false),
-                            `+`(∥(`.`(`!`(None, None, `+`(∥(`.`('R'))))))),
+                            `+`(∥(`.`(`!`(-1, None, None, `+`(∥(`.`('R'))))))),
                             Some(`+`(∥(`.`(`⟦⟧`(null, null, `+`(∥(`.`('S'),
                                                                   `.`(`{}`("T", Nil, true)),
                                                                   `.`(`(*)`("U", Nil)))),
@@ -426,7 +426,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - restriction - via refresh") {
 
     val `13` = `+`(∥(`.`(?:(((λ(true), λ(false)), false),
-                            `+`(∥(`.`(`!`(None, None, `+`()), ν("x")))),
+                            `+`(∥(`.`(`!`(-1, None, None, `+`()), ν("x")))),
                             Some(`+`(∥(`.`(`(*)`("P", Nil)))))))))
 
     val id = new helper.υidυ
@@ -437,7 +437,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(true), λ(false)), false),
-                      +(∥(`.`(!(_, None, ∅()), ν("x_υ1υ")))),
+                      +(∥(`.`(!(_, _, None, ∅()), ν("x_υ1υ")))),
                       Some(+(∥(`.`(`(*)`("P", Nil))))))))) =>
       case _ =>
         assert(false)
@@ -447,7 +447,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - by restriction - via refresh") {
 
     val `13` = `+`(∥(`.`(?:(((λ(Symbol("x")), λ(Symbol("y"))), false),
-                            `+`(∥(`.`(`!`(None, Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`())))),
+                            `+`(∥(`.`(`!`(-1, None, Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`())))),
                             Some(`+`(∥(`.`(`(*)`("P", Nil, λ(Symbol("x")), λ(Symbol("y")))))))),
                             ν("x", "y"))))
 
@@ -459,7 +459,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id())() match
       case +(∥(`.`(?:(((λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ"))), false),
-                      +(∥(`.`(!(_, Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
+                      +(∥(`.`(!(_, _, Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
                       Some(+(∥(`.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
                    ν("x_υ1υ", "y_υ2υ")))) =>
       case _ =>
@@ -477,6 +477,7 @@ class EncodingFunctionsSuite extends FunSuite:
           case Success(Some((_, definition @ Definition(_, _, _, _, ∅()))), _) =>
             given MutableList[(Symbol, λ)]()
             given Bindings()
+            given Int = 1
             given Names()
 
             given Map[String, λ | (+ | `⟦⟧`)]()
@@ -510,6 +511,7 @@ class EncodingFunctionsSuite extends FunSuite:
                                                                               π(λ(Symbol("y")), λ(Symbol("x")), None, None)))))))), _) =>
             given MutableList[(Symbol, λ)]()
             given Bindings = Bindings(it.bindings)
+            given Int = 1
             given Names()
 
             given Map[String, λ | (+ | `⟦⟧`)]()

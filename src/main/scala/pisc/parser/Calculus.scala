@@ -48,6 +48,7 @@ abstract class Calculus extends Pi:
         _code = -1
         _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
+        given Int = 1
         choice ^^ {
           case (_sum, _free) =>
             val sum = _sum.flatten
@@ -59,17 +60,33 @@ abstract class Calculus extends Pi:
         }
     }
 
-  def choice(using Bindings, Duplications): Parser[(+, Names)] =
-    rep1sep(parallel, "+") ^^ { _.unzip match
-      case (it, ns) => `+`(it*) -> ns.reduce(_ ++ _)
+  def choice(using Bindings, Duplications, Int): Parser[(+, Names)] =
+    scale >> { scaling =>
+      val scalingʹ = scaling.abs
+      given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
+      rep1sep(parallel, "+") ^^ { _.unzip match
+        case (it, ns) =>
+          `+`(it*) -> ns.reduce(_ ++ _) match
+            case (+(it*), names) =>
+              (0 until scalingʹ).foldLeft(`+`(): +) { case (+(itʹ*), _) => `+`((itʹ ++ it)*) } match
+                case sum => sum -> (if sum.choices.isEmpty then Names() else names)
+      }
     }
 
-  def parallel(using Bindings, Duplications): Parser[(∥, Names)] =
-    rep1sep(sequential, "|") ^^ { _.unzip match
-      case (it, ns) => ∥(it*) -> ns.reduce(_ ++ _)
+  def parallel(using Bindings, Duplications, Int): Parser[(∥, Names)] =
+    scale >> { scaling =>
+      val scalingʹ = scaling.abs
+      given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
+      rep1sep(sequential, "|") ^^ { _.unzip match
+        case (it, ns) =>
+          ∥(it*) -> ns.reduce(_ ++ _) match
+            case (∥(it*), names) =>
+              (0 until scalingʹ).foldLeft(∥(): ∥) { case (∥(itʹ*), _) => ∥((itʹ ++ it)*) } match
+                case par => par -> (if par.components.isEmpty then Names() else names)
+      }
     }
 
-  def sequential(using bindings: Bindings, _ds: Duplications): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ ( leaf | choiceʹ ) ^^ {
       case (it, (bound, free)) ~ (end, freeʹ) =>
@@ -77,10 +94,10 @@ abstract class Calculus extends Pi:
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
-  def choiceʹ(using Bindings, Duplications): Parser[(+, Names)] =
+  def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
     opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`() -> Names()) }
 
-  def leaf(using bindings: Bindings, _ds: Duplications): Parser[(-, Names)] =
+  def leaf(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -93,10 +110,10 @@ abstract class Calculus extends Pi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
+    "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
+      case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
-      case pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
+      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
         if ch == par && cons != "ν"
         then
           warn(throw GuardParsingException(ch.name))
@@ -104,28 +121,28 @@ abstract class Calculus extends Pi:
         BindingOccurrence(bound)
         choice ^^ {
           case (sum, free) =>
-            `!`(pace, Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
+            `!`(parallelism, pace, Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
         }
-      case pace ~ Some(μ) =>
+      case parallelism ~ pace ~ Some(μ) =>
         choice ^^ {
           case (sum, free) =>
-            `!`(pace, Some(μ._1), sum) -> (free ++ μ._2._2)
+            `!`(parallelism, pace, Some(μ._1), sum) -> (free ++ μ._2._2)
         }
-      case pace ~ _ =>
+      case parallelism ~ pace ~ _ =>
         choice ^^ {
           case (sum, free) =>
-            `!`(pace, None, sum) -> free
+            `!`(parallelism, pace, None, sum) -> free
         }
     } |
     capital |
     invocation() |
     instantiation
 
-  def instantiation(using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def capital: Parser[(`{}`, Names)]
 
-  def prefixes(using Bindings): Parser[(List[Pre], (Names, Names))] =
+  def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
       case (it, _2) => _2.unzip match
         case (bs, names) =>
@@ -143,7 +160,7 @@ abstract class Calculus extends Pi:
           it -> (bound, free)
     }
 
-  def prefix(using Bindings): Parser[(Pre, (Names, Names))] =
+  def prefix(using Bindings, Int): Parser[(Pre, (Names, Names))] =
     "ν"~>"("~>names<~")" ^^ { // restriction
       case it if !it.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
@@ -246,7 +263,10 @@ object Calculus:
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
 
-    case !(pace: Option[(Long, String)], guard: Option[μ], sum: AST.+)
+    case !(parallelism: Int,
+           pace: Option[(Long, String)],
+           guard: Option[μ],
+           sum: AST.+)
 
     case `⟦⟧`(definition: Definition,
               variables: Names,
@@ -284,7 +304,7 @@ object Calculus:
         else
           "if " + test + " " + t + " else " + f.get
 
-      case !(_, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(_, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
       case `⟦⟧`(definition, variables, sum, _, assignment) =>
         val vars = if (variables.isEmpty)
@@ -422,12 +442,12 @@ object Calculus:
         case ?:(cond, t, f) =>
           ?:(cond, t.flatten, f.map(_.flatten))
 
-        case !(None, None, sum) =>
+        case !(-1, None, None, sum) =>
           sum.flatten match
-            case +(∥(`.`(end @ !(None, _, _)))) => end
-            case it => `!`(None, None, it)
+            case +(∥(`.`(end: !))) => end
+            case it => `!`(-1, None, None, it)
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.flatten)
 
         case _ => ast
