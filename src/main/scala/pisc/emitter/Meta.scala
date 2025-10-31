@@ -209,11 +209,17 @@ object Meta:
                                      )
     )
 
-  def `* <- Semaphore[IO](1)`(* : String): Enumerator.Generator =
+  def `_ <- *.acquire`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+
+  def `_ <- *.release`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+
+  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*),
                          Term.Apply(Term.ApplyType(\("Semaphore"),
                                                    Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(1) :: Nil)
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
                          )
     )
 

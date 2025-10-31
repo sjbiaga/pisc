@@ -69,7 +69,7 @@ abstract class Expansion extends Encoding:
 
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)] =
+              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
     var idx = -1
     val xid = χ_id
 
@@ -331,7 +331,7 @@ abstract class Expansion extends Encoding:
 
 
   protected def duplicated(xid: String)
-                          (using Bindings)
+                          (using Bindings, Int)
                           (using duplications: Duplications): Term => Unit =
 
     case _rhs @ (Term.Name(_) | Term.Placeholder()) =>
@@ -504,20 +504,20 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.replace, f.map(_.replace))
 
-        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.replace)
 
-        case !(pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
-          `!`(pace, Some(π(replaced(ch), cons, recoded, names*)), sum.replace)
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+          `!`(parallelism, pace, Some(π(replaced(ch), cons, recoded, names*)), sum.replace)
 
-        case !(pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => replaced(arg)
             case it => it
           }
-          `!`(pace, Some(π(replaced(ch), None, recoded, namesʹ*)), sum.replace)
+          `!`(parallelism, pace, Some(π(replaced(ch), None, recoded, namesʹ*)), sum.replace)
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.replace)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
@@ -575,7 +575,7 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.concatenate, f.map(_.concatenate))
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.concatenate)
 
         case it @ `⟦⟧`(_, variables, _, _, _) =>
@@ -636,23 +636,23 @@ object Expansion:
         case ?:(cond, t, f) =>
           ?:(cond, t.update, f.map(_.update))
 
-        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(code = recoded)), sum.update)
+        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.update)
 
-        case !(pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
           given Bindings = Bindings(bindings)
           val chʹ = updated(ch)
           given_Bindings --= names.filter(_.isSymbol).map(_.asSymbol).filterNot(_.name.isEmpty)
-          `!`(pace, Some(π(chʹ, cons, recoded, names*)), sum.update)
+          `!`(parallelism, pace, Some(π(chʹ, cons, recoded, names*)), sum.update)
 
-        case !(pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => updated(arg)
             case it => it
           }
-          `!`(pace, Some(π(updated(ch), None, recoded, namesʹ*)), sum.update)
+          `!`(parallelism, pace, Some(π(updated(ch), None, recoded, namesʹ*)), sum.update)
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.update)
 
         case it @ `⟦⟧`(_, _, sum, _, assignment) =>
