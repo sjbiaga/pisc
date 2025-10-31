@@ -1,4 +1,4 @@
-/*
+l/*
  * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -68,6 +68,7 @@ abstract class Encoding extends Calculus:
           Directive()
           Success(Option.empty[Define], _)
         else
+          given Int = 1
           "="~> choice ^^ {
             case (_sum, _free) =>
               val sum = _sum.flatten
@@ -112,7 +113,7 @@ abstract class Encoding extends Calculus:
           }
     }
 
-  def instantiation(using bindings: Bindings, duplications: Duplications): Parser[(`⟦⟧`, Names)] =
+  def instantiation(using bindings: Bindings, duplications: Duplications, _sc: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear
@@ -162,7 +163,7 @@ abstract class Encoding extends Calculus:
     }
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications): Parser[(`⟦⟧`, Names)]
+              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def pointers: Parser[(List[Symbol], Names)] =
     "{"~>names<~"}" ^^ {
@@ -352,7 +353,7 @@ object Encoding:
             case ∥(it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case ?:(_, t, f) => count(t); f.foreach(count)
-            case !(_, _, sum) => count(sum)
+            case !(_, _, _, sum) => count(sum)
             case it: `⟦⟧` if ids.contains(it.xid) =>
               duplications += it.xid -> (true -> duplications(it.xid)._2)
               count(it.sum)
@@ -377,7 +378,7 @@ object Encoding:
           case ∥(it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case ?:(_, t, f) => reset(t); f.foreach(reset)
-          case !(_, _, sum) => reset(sum)
+          case !(_, _, _, sum) => reset(sum)
           case it: `⟦⟧` if ids.contains(it.xid) =>
             duplications += it.xid -> (false -> duplications(it.xid)._2)
             reset(it.sum)
@@ -462,8 +463,8 @@ object Encoding:
 
   final private class NoBPEx(name: String) extends Throwable(name)
 
-  case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, but is duplicated""")
+  case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean, how: String)
+      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, being $how""")
 
   case class NonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
@@ -554,7 +555,7 @@ object Encoding:
         case ?:(_, t, f) =>
           t.capitals ++ f.map(_.capitals).getOrElse(Names())
 
-        case !(_, _, sum) =>
+        case !(_, _, _, sum) =>
           sum.capitals
 
         case `⟦⟧`(_, _, sum, _, _) =>
@@ -644,10 +645,10 @@ object Encoding:
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
 
-        case !(pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(pace, Some(it.copy(code = recoded(free))), rename(sum))
+        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
+          `!`(parallelism, pace, Some(it.copy(code = recoded(free))), rename(sum))
 
-        case !(pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
           val n = refresh.size
           given Names = Names(bound)
           val chʹ = renamed(ch)
@@ -658,16 +659,16 @@ object Encoding:
           val it: π = π(chʹ, cons, recoded(free), namesʹ*)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(pace, Some(it), sumʹ)
+          `!`(parallelism, pace, Some(it), sumʹ)
 
-        case !(pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => renamed(arg)
             case it => it
           }
-          `!`(pace, Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
+          `!`(parallelism, pace, Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
 
-        case it @ !(_, _, sum) =>
+        case it @ !(_, _, _, sum) =>
           it.copy(sum = rename(sum))
 
         case it @ `⟦⟧`(Definition(_, term, _, _, _), variables, sum, xid, assignment) =>
