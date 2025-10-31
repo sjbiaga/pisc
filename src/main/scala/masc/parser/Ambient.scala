@@ -64,6 +64,9 @@ abstract class Ambient extends Expression:
   def names: Parser[List[(String, Names)]] =
     rep1sep(name, ",")
 
+  def scale: Parser[Int] =
+    opt( wholeNumber <~ "*" ) ^^ { _.map(_.toInt.abs).getOrElse(-1) }
+
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
@@ -140,15 +143,16 @@ abstract class Ambient extends Expression:
 
   protected object BindingOccurrence:
     def apply(names: Names)
-             (using Bindings): Unit =
+             (using Bindings, Int): Unit =
       names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
     def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
-             (using bindings: Bindings): Unit =
+             (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
         case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
+          if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
           bindings += name -> Occurrence(shadow, it.copy(binds = true))
-        case Some(Occurrence(_, Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
-          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded)
+        case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
         case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
           throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
         case Some(Occurrence(_, Position(_, false))) =>
@@ -200,7 +204,7 @@ object Ambient:
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
 
-        case it @ !(_, _, par) =>
+        case it @ !(_, _, _, par) =>
           it.copy(par = par.shallow)
 
         case it @ `[]`(_, par) =>

@@ -44,9 +44,9 @@ The BNF formal grammar for processes is the following.
     EQUATION       ::= INVOCATION "=" PARALLEL
     DEFINITION     ::= "⟦<CODE>" [ TEMPLATE ] "<CODE>⟧" PARAMS [ POINTERS ] "=" PARALLEL
     DIRECTIVE      ::= "⟦" KEY = ( VALUE | "(" VALUE { "," VALUE } ")" ) "⟧"
-    PARALLEL       ::= SEQUENTIAL { "|" SEQUENTIAL }
+    PARALLEL       ::= [ SCALE ] SEQUENTIAL { "|" SEQUENTIAL }
     SEQUENTIAL     ::= PREFIXES [ LEAF | "(" PARALLEL ")" ]
-    LEAF           ::= "!" PACE [ "." "(" NAME ")" "." ] PARALLEL
+    LEAF           ::= "!" [ SCALE ] [ PACE ] [ "." "(" NAME ")" "." ] PARALLEL
                      | NAME "[" PARALLEL "]"
                      | "<" CAPS ">" [ EXPRESSION ]
                      | "go" NAME "." PARALLEL
@@ -67,6 +67,7 @@ The BNF formal grammar for prefixes is the following.
                      | "ν" "(" NAMES ")"
                      | CAPS "."
                      | "(" NAME ")" [ EXPRESSION ] "."
+    SCALE          ::= NATURAL_NUMBER "*"
     PACE           ::= NATURAL_NUMBER [ "," TIME_UNIT ]
     EXPRESSION     ::= "/*" ... "*/"
 
@@ -340,7 +341,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
 
-    sbt:MobileAmbients2Scala> run ex
+    sbt:MobileAmbients[async]2Scala> run ex
 
 where `example/masc/ex.masc` contains the `Ambient Calculus` source (equations binding agents to process
 expressions).

@@ -109,35 +109,74 @@ object Program:
 
         ////// REPLICATION /////////////////////////////////////////////////////
 
-        case !(pace, Some(name), par) =>
+        case !(parallelism, pace, Some(name), par) =>
           val υidυ = id
 
-          val `!.(*).⋯` = `()`(name, None).emit :+ `_ <- *`(Term.Apply(\(υidυ),
+          var `!.(*).⋯` = `()`(name, None).emit :+ `_ <- *`(Term.Apply(\(υidυ),
                                                                        Term.ArgClause(\(name) :: Nil)))
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.(*).⋯`).getOrElse(`!.(*).⋯`)
+          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.(*).⋯`).getOrElse(`!.(*).⋯`)
 
-          val it = Term.If(Term.ApplyUnary("!", name),
-                           `IO.cede`,
-                           `List( *, … ).parSequence`(
-                             par.emit,
-                             `!⋯`
-                           )
-                   )
+          val sem = if parallelism < 0 then null else id
 
-          * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+          val it =
+            if parallelism < 0
+            then
+              Term.If(Term.ApplyUnary("!", name),
+                      `IO.cede`,
+                      `List( *, … ).parSequence`(
+                        par.emit,
+                        `!⋯`
+                      )
+                     )
+            else
+              `!.(*).⋯` = `_ <- *.acquire`(sem) :: `!.(*).⋯`
+              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
+              Term.If(Term.ApplyUnary("!", name),
+                      `IO.cede`,
+                      `List( *, … ).parSequence`(
+                        par.emit,
+                        `!⋯`
+                      )
+                     )
 
-        case !(pace, _, par) =>
+          if parallelism < 0
+          then
+            * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+          else
+            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+
+        case !(parallelism, pace, _, par) =>
           val υidυ = id
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `_ <- *`(υidυ)).getOrElse(`_ <- *`(υidυ) :: Nil)
+          var `!.⋯` = `_ <- *`(υidυ) :: Nil
 
-          val it = `List( *, … ).parSequence`(
-                     par.emit,
-                     `_ <- IO.unit` :: `!⋯`
-                   )
+          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 
-          * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `_ <- *`(υidυ)
+          val sem = if parallelism < 0 then null else id
+
+          val it =
+            if parallelism < 0
+            then
+              `List( *, … ).parSequence`(
+                par.emit,
+                `_ <- IO.unit` :: `!⋯`
+              )
+            else
+              `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
+              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
+              `List( *, … ).parSequence`(
+                par.emit :+ `_ <- *.release`(sem),
+                `_ <- IO.unit` :: `!⋯`
+              )
+
+          if parallelism < 0
+          then
+            * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.⋯`
+          else
+            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
+                `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 

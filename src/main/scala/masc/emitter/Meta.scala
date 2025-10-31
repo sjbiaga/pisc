@@ -163,6 +163,21 @@ object Meta:
       `for * yield ()`(`_ <- IO.unit`)
 
 
+  def `_ <- *.acquire`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+
+  def `_ <- *.release`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+
+  def `* <- Semaphore[IO](…)`(* : String, `…`: Int): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(*),
+                         Term.Apply(Term.ApplyType(\("Semaphore"),
+                                                   Type.ArgClause(Type.Name("IO") :: Nil)),
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
+                         )
+    )
+
+
   def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None

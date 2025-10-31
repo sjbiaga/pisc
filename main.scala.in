@@ -52,6 +52,7 @@ object π:
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
   import _root_.cats.effect.syntax.all.*
+  import _root_.cats.effect.std.Semaphore
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
