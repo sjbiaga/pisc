@@ -586,7 +586,11 @@ object Program:
               then
                 `!⋯` = `_ <- *.acquire`(sem.get) :: `!⋯`
 
-              val spawnʹ = spawn :+ `_ <- ctx.become(*)`(υidυʹʹ)
+              val ns = stat match
+                case Defn.Def(_, _, _, List(ps), _, _) => ps.map(_.name.value).toSeq
+                case _ => Nil
+
+              val spawnʹ = spawn.init :+ `_ <- ctx.become(*)`(υidυʹʹ, ns*)
 
               val codeʹ = `* <- *`(par, Term.Select(par, "get")) ::
                           `_ <- *` { `if * then … else …`(Term.ApplyUnary("!", par),
@@ -597,10 +601,6 @@ object Program:
               val statʹ = dfn(υidυʹ, Some(par), Term.Block(stat :: (codeʹ: Term) :: Nil))
 
               `!⋯` :+= `_ <- ctx.become(*)`(υidυʹ)
-
-              val ns = stat match
-                case Defn.Def(_, _, _, List(ps), _, _) => ps.map(_.name.value).toSeq
-                case _ => Nil
 
               val statʹʹ = dfn(υidυʹʹ, None, Term.Block(statʹ :: (`!⋯`: Term) :: Nil), ns*)
 
