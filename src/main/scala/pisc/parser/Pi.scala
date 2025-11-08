@@ -36,7 +36,7 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import emitter.Meta.`()(null)`
+import emitter.shared.Meta.`()(null)`
 
 import Pi.*
 import Calculus.*
@@ -176,6 +176,8 @@ abstract class Pi extends Expression:
 
   protected var _paceunit: String = null
 
+  protected var _scaling: Boolean = false
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _χ_id: helper.υidυ = null
@@ -272,11 +274,11 @@ object Pi:
 
         case ∅() => ast
 
-        case +(it*) =>
-          `+`(it.map(_.shallow)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.shallow)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.shallow)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.shallow)*)
 
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
@@ -336,10 +338,12 @@ object Pi:
       _dups = false
       _exclude = false
       _paceunit = "second"
+      _scaling = false
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
-                       "paceunit" -> _paceunit))
+                       "paceunit" -> _paceunit,
+                       "scaling" -> _scaling))
       eqtn = List()
       defn = Map()
       self = Set()

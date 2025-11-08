@@ -1,0 +1,9 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P = ν(a) !.a<a>.
+
+Q = ν(a) !.a(b).
+
+R = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+
+Main =

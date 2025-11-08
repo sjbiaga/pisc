@@ -43,23 +43,23 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - directly - ( P ) + Q -> P + Q") {
 
-    val `13` = `+`(∥(`.`(`+`(∥(`.`('P'))))), ∥(`.`('Q')))
+    val `13` = `+`(-1, ∥(-1, `.`(`+`(-1, ∥(-1, `.`('P'))))), ∥(-1, `.`('Q')))
 
-    assertEquals(`13`.flatten, `+`(∥(`.`('P')), ∥(`.`('Q'))))
+    assertEquals(`13`.flatten, `+`(-1, ∥(-1, `.`('P')), ∥(-1, `.`('Q'))))
 
   }
 
   test("flatten - directly - ( P ) | Q -> P | Q") {
 
-    val `13` = ∥(`.`(`+`(∥(`.`('P')))), `.`('Q'))
+    val `13` = ∥(-1, `.`(`+`(-1, ∥(-1, `.`('P')))), `.`('Q'))
 
-    assertEquals(`13`.flatten, ∥(`.`('P'), `.`('Q')))
+    assertEquals(`13`.flatten, ∥(-1, `.`('P'), `.`('Q')))
 
   }
 
   test("flatten - directly - τ. ( τ.P ) -> τ.τ.P") {
 
-    val `13` = `.`(`+`(∥(`.`('P', τ_))), τ_)
+    val `13` = `.`(`+`(-1, ∥(-1, `.`('P', τ_))), τ_)
 
     assertEquals(`13`.flatten, `.`('P', τ_, τ_))
 
@@ -67,9 +67,9 @@ class CalculusFunctionsSuite extends FunSuite:
 
   test("flatten - directly - !!P -> !P") {
 
-    val `13` = `!`(-1, None, None, `+`(∥(`.`(`!`(-1, None, None, `+`(∥(`.`('P'))))))))
+    val `13` = `!`(-1, None, None, `+`(-1, ∥(-1, `.`(`!`(-1, None, None, `+`(-1, ∥(-1, `.`('P'))))))))
 
-    assertEquals(`13`.flatten, `!`(-1, None, None, `+`(∥(`.`('P')))))
+    assertEquals(`13`.flatten, `!`(-1, None, None, `+`(-1, ∥(-1, `.`('P')))))
 
   }
 
@@ -78,7 +78,7 @@ class CalculusFunctionsSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = ( P + Q ) + R") match
-          case Success((_, +(∥(`.`(`(*)`("P", _))), ∥(`.`(`(*)`("Q", _))), ∥(`.`(`(*)`("R", _))))), _) =>
+          case Success((_, +(_, ∥(_, `.`(`(*)`("P", _))), ∥(_, `.`(`(*)`("Q", _))), ∥(_, `.`(`(*)`("R", _))))), _) =>
           case _ =>
             assert(false)
 
@@ -91,7 +91,7 @@ class CalculusFunctionsSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = ( P | Q ) | R") match
-          case Success((_, +(∥(`.`(`(*)`("P", _)), `.`(`(*)`("Q", _)), `.`(`(*)`("R", _))))), _) =>
+          case Success((_, +(_, ∥(_, `.`(`(*)`("P", _)), `.`(`(*)`("Q", _)), `.`(`(*)`("R", _))))), _) =>
           case _ =>
             assert(false)
 
@@ -104,7 +104,7 @@ class CalculusFunctionsSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = τ. ( τ.P )") match
-          case Success((_, +(∥(`.`(`(*)`("P", _), τ(_), τ(_))))), _) =>
+          case Success((_, +(_, ∥(_, `.`(`(*)`("P", _), τ(_), τ(_))))), _) =>
           case _ =>
             assert(false)
 
@@ -117,7 +117,7 @@ class CalculusFunctionsSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(equation, "Main = !!P") match
-          case Success((_, +(∥(`.`(!(_, _, _, +(∥(`.`(`(*)`("P", _))))))))), _) =>
+          case Success((_, +(_, ∥(_, `.`(!(_, _, _, +(_, ∥(_, `.`(`(*)`("P", _))))))))), _) =>
           case _ =>
             assert(false)
 

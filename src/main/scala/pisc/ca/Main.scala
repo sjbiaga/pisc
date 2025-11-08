@@ -27,6 +27,7 @@
  */
 
 package pisc
+package ca
 
 import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.StandardCharsets.UTF_8
@@ -35,7 +36,7 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Pi
-import emitter.Program
+import emitter.ca.Program
 
 
 object Main:
@@ -53,7 +54,8 @@ object Main:
       val pi = Pi.Main(in)
 
       try
-        source = Source.fromFile(s"$examples/pisc/$in")
+        val root = if arg.startsWith("test") then "test" else "pisc"
+        source = Source.fromFile(s"$examples/$root/$in")
         fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 

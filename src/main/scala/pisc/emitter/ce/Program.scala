@@ -28,20 +28,44 @@
 
 package pisc
 package emitter
+package ce
 
 import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
-import Meta.*
+import ce.Meta.*
 
 
 object Program:
 
-  extension (node: Pre | AST)
+  extension (node: Pre | AST)(using id: => String)
 
-    def emit(using id: => String)
-            (implicit semaphore: Option[String] = None): List[Enumerator] =
+    def emitʹ(implicit semaphore: Option[String]): List[Enumerator] =
+
+      node match
+
+        case ∥(_, operand) =>
+          operand.emitʹ
+
+        case it @ `.`(?:(_, _, None)) =>
+          def cases(sum: +): Term =
+            sum match
+              case +(_, ∥(_, `.`(?:(((lhs, rhs), mismatch), t, None)))) =>
+                if mismatch
+                then
+                  `if * then … else …`(====(lhs, rhs), Nil, cases(t))
+                else
+                  `if * then … else …`(====(lhs, rhs), cases(t), Nil)
+              case _ =>
+                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.emit)
+
+          `_ <- *`(cases(`+`(-1, ∥(-1, it))))
+
+        case _ => ???
+
+    def emit: List[Enumerator] =
+
       var * = List[Enumerator]()
 
       node match
@@ -49,71 +73,51 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          val ** = `_ <- IO.unit`
+          * = `_ <- IO.unit`
 
-          semaphore
-            .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* :::= **)
-
-        case +(operand) =>
+        case +(_, operand) =>
           * = operand.emit
 
-        case it: + =>
+        case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
-          val ** = List(
+          * = List(
             `* <- Semaphore[IO](…)`(sem.get),
             `_ <- *`(`List( *, … ).parSequence`(ios*))
           )
 
-          semaphore
-            .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* :::= **)
+        case it: + =>
+          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
+
+          val sem = id
+
+          * = List(
+            `* <- Semaphore[IO](…)`(sem),
+            `_ <- *`(`List( *, … ).parTraverse`(ios*)(sem))
+          )
 
         /////////////////////////////////////////////////////////// summation //
 
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(operand) =>
+        case ∥(_, operand) =>
           * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.emit() :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          val ** = `_ <- *`(`List( *, … ).parSequence`(ios*))
-
-          semaphore
-            .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* :::= **)
+          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
         ///////////////////////////////////////////////////////// composition //
 
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case it @ `.`(?:(_, _, None)) if semaphore.nonEmpty =>
-          def cases(sum: +): Term =
-            sum match
-              case +(∥(`.`(?:(((lhs, rhs), mismatch), t, None)))) =>
-                if mismatch
-                then
-                  `if * then … else …`(====(lhs, rhs), Nil, cases(t))
-                else
-                  `if * then … else …`(====(lhs, rhs), cases(t), Nil)
-              case _ =>
-                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.emit())
-
-          * = `_ <- *`(cases(`+`(∥(it))))
-
         case `.`(end, it*) =>
-          val ** = (it :+ end).foldLeft(*)(_ ::: _.emit())
-
-          semaphore
-            .map(* :+= `_ <- *.tryAcquire.ifM`(_, **))
-            .getOrElse(* :::= **)
+          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -140,7 +144,7 @@ object Program:
             case None =>
             case _ =>
               val λ(Symbol(par)) = arg
-              * = ν(par).emit()
+              * = ν(par).emit
 
           code match
             case Some((Left(enums), _)) =>
@@ -209,13 +213,13 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          * = f.map(_.emit()).getOrElse(Nil)
+          * = f.fold(Nil)(_.emit)
 
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.emit()))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.emit))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit(), *))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit, *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -224,20 +228,19 @@ object Program:
 
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
           val υidυ = id
-          val υidυ2 = id
+          val υidυʹ = id
 
-          val `π.emit()` = π.emit() match
+          val `π.emit` = π.emit match
             case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              hd :: it.copy(pat = Pat.Var(υidυ2)) :: tl
+              hd :: it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          var `!.π⋯` = `π.emit()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
-                                                                        Type.ArgClause(Nil),
-                                                                        Term.ArgClause(\("None") :: Nil)),
-                                                        `IO.cede`,
-                                                        Term.Apply(\(υidυ),
-                                                                   Term.ArgClause(\(par) :: Nil)),
-                                                        Nil)
-                                              }
+          var `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                                   Type.ArgClause(Nil),
+                                                                                   Term.ArgClause(\("None") :: Nil)),
+                                                                   `IO.cede`,
+                                                                   Term.Apply(\(υidυ),
+                                                                              Term.ArgClause(\(par) :: Nil)))
+                                            }
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -247,14 +250,14 @@ object Program:
             if parallelism < 0
             then
               `List( *, … ).parSequence`(
-                sum.emit(),
+                sum.emit,
                 `!⋯`
               )
             else
               `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
+                sum.emit :+ `_ <- *.release`(sem),
                 `!⋯`
               )
 
@@ -272,8 +275,8 @@ object Program:
 
           val πʹ = π.copy(name = λ.copy()(using None))
 
-          var `!.π⋯` = πʹ.emit() :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                        Term.ArgClause(\(arg) :: Nil)))
+          var `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ),
+                                                      Term.ArgClause(\(arg) :: Nil)))
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -294,7 +297,7 @@ object Program:
                       `IO.cede`,
                       Term.Block(`val` :+
                                  `List( *, … ).parSequence`(
-                                   sum.emit(),
+                                   sum.emit,
                                    `!⋯`
                                  ))
                      )
@@ -305,7 +308,7 @@ object Program:
                       `IO.cede`,
                       Term.Block(`val` :+
                                  `List( *, … ).parSequence`(
-                                   sum.emit() :+ `_ <- *.release`(sem),
+                                   sum.emit :+ `_ <- *.release`(sem),
                                    `!⋯`
                                  ))
                      )
@@ -319,19 +322,18 @@ object Program:
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
-          val υidυ2 = id
+          val υidυʹ = id
 
-          val `μ.emit()` = μ.emit() match
+          val `μ.emit` = μ.emit match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              it.copy(pat = Pat.Var(υidυ2)) :: tl
+              it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          var `!.μ⋯` = `μ.emit()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυ2), \("eq"),
-                                                                        Type.ArgClause(Nil),
-                                                                        Term.ArgClause(\("None") :: Nil)),
-                                                        `IO.cede`,
-                                                        υidυ,
-                                                        Nil)
-                                              }
+          var `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                                   Type.ArgClause(Nil),
+                                                                                   Term.ArgClause(\("None") :: Nil)),
+                                                                   `IO.cede`,
+                                                                   υidυ)
+                                            }
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
@@ -341,14 +343,14 @@ object Program:
             if parallelism < 0
             then
               `List( *, … ).parSequence`(
-                sum.emit(),
+                sum.emit,
                 `!⋯`
               )
             else
               `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
+                sum.emit :+ `_ <- *.release`(sem),
                 `!⋯`
               )
 
@@ -372,14 +374,14 @@ object Program:
             if parallelism < 0
             then
               `List( *, … ).parSequence`(
-                sum.emit(),
+                sum.emit,
                 `_ <- IO.unit` :: `!⋯`
               )
             else
               `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
+                sum.emit :+ `_ <- *.release`(sem),
                 `_ <- IO.unit` :: `!⋯`
               )
 
@@ -408,9 +410,9 @@ object Program:
                     then
                       _sum
                     else
-                      `+`(∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                      `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.emit()
+          * = ** ::: sum.emit
 
         case _: `{}` => ???
 

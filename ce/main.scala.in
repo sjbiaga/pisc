@@ -52,6 +52,8 @@ object π:
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
       self.parSequence.void
+    private[π] inline def πparTraverse(semaphore: Semaphore[IO]): IO[Unit] =
+      self.parTraverse_(semaphore.tryAcquire.ifM(_, IO.cede))
 
   import Π.*
 

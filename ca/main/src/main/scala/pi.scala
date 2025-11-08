@@ -29,8 +29,12 @@
 package object Π:
 
   import _root_.cats.effect.IO
+  import _root_.cats.effect.kernel.Deferred
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Queue, Supervisor }
+  import _root_.com.suprnation.actor.ActorContext
+  import _root_.com.suprnation.actor.ActorRef.ActorRef
+  import _root_.com.suprnation.actor.Actor.{ Actor, Receive }
 
   import `Π-magic`.*
 
@@ -54,12 +58,14 @@ package object Π:
     */
   object ν:
 
-    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] =
+    def map[B](f: ActorRef[IO, Request] => B)(using ActorContext[IO, Null, Any]): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: ActorRef[IO, Request] => IO[B])(using context: ActorContext[IO, Null, Any]): IO[B] =
       ( for
-          q <- Queue.synchronous[IO, Any]
+          q <- Queue.unbounded[IO, Any]
+          r <- Queue.unbounded[IO, (Deferred[IO, `()`], Option[Any => IO[Any]])]
+          a <- context.system.actorOf(νActor(q, r))
         yield
-          f(q)
+          f(a)
       ).flatten
 
 
@@ -74,11 +80,13 @@ package object Π:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    private def q = `()`[><]
+    import Request.*
+
+    private def a = `()`[><]
 
     def ====(that: `()`) =
       try
-        this.q eq that.q
+        this.a eq that.a
       catch
         case _ =>
           this.name == that.name
@@ -90,43 +98,62 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(q)
+    def apply(value: `()`): IO[Option[Unit]] = (a ! Output(value.name)).as(Some(()))
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = ><(value.name)(q)(code)
+    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = apply(value) <* exec(code)
 
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = ><()(q).map(new `()`(_))
+    def apply()(implicit sender: Option[ActorRef[IO, Nothing]]): IO[Unit] = a ! Input(None)
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => IO[T]): IO[`()`] = ><()(q)(code).map(new `()`(_))
+    def apply[T]()(code: T => IO[Any])(implicit sender: Option[ActorRef[IO, Nothing]]): IO[Unit] = a ! Input(Some(code.asInstanceOf[Any => IO[Any]]))
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    type >< = Queue[IO, Any]
+    enum Request:
+      case Input(code: Option[Any => IO[Any]])
+      case Output(name: Any)
 
-    object >< :
+    type >< = ActorRef[IO, Request]
 
-      inline def apply(name: Any)(`>Q`: ><): IO[Option[Unit]] =
-        `>Q`.offer(name).as(Some(()))
+    final class νActor(q: Queue[IO, Any], r: Queue[IO, (Deferred[IO, `()`], Option[Any => IO[Any]])]) extends Actor[IO, Request]:
 
-      inline def apply(name: Any)(`>Q`: ><)(code: => IO[Any]): IO[Option[Unit]] =
-        `>Q`.offer(name).as(Some(())) <* exec(code)
+      import Request.*
 
-      inline def apply()(`<Q`: ><): IO[Any] =
-        `<Q`.take
+      override def receive: Receive[IO, Request] =
 
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
-        `<Q`.take.flatMap {
-          case null => IO.pure(null)
-          case it: T => (code andThen exec)(it)
-        }
+        case Output(name) =>
+          for
+            opt <- r.tryTake
+            _   <- opt.fold(q.offer(name)) {
+                     case (deferred, Some(code)) if name != null =>
+                       (code andThen exec)(name).flatMap(`()` andThen deferred.complete)
+                     case (deferred, _) =>
+                       deferred.complete(`()`(name))
+                   }
+          yield
+            ()
+
+        case Input(code)  =>
+          for
+            deferred <- Deferred[IO, `()`]
+            opt      <- q.tryTake
+            _        <- opt.fold(r.offer(deferred -> code)) {
+                          case name if name != null && code.isDefined =>
+                            (code.get andThen exec)(name).flatMap(`()` andThen deferred.complete)
+                          case name =>
+                            deferred.complete(`()`(name))
+                        }
+            _        <- sender.get.widenRequest[Deferred[IO, `()`]] ! deferred
+          yield
+            ()

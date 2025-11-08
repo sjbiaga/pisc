@@ -5,17 +5,19 @@
 
 @import scala.util.control.TailCalls.{ done, tailcall, TailRec }
 
-Main = Fib(-1)
+Main = Fib
+
+Fib(n*) = τ /* _ <- IO { print("n = ") };               \
+              'n <- IO.blocking {                       \
+                      try                               \
+                        scala.io.StdIn.readLine.toLong  \
+                      catch _ => -1L                    \
+                    } */ .                              \
+          Fib(n)
 
 Fib(n) = ν(x)                                          \
        (                                               \
-       ( τ /* _ <- IO { print("n = ") };               \
-             'n <- IO.blocking {                       \
-                     try                               \
-                       scala.io.StdIn.readLine.toLong  \
-                     catch _ => -1L                    \
-                   } */ .                              \
-         x<n> .                                        \
+       ( x<n> .                                        \
          x(k: Long /**/) .                             \
          x</*                                          \
          {                                             \

@@ -66,10 +66,17 @@ abstract class Calculus extends Pi:
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
       rep1sep(parallel, "+") ^^ { _.unzip match
         case (it, ns) =>
-          `+`(it*) -> ns.reduce(_ ++ _) match
-            case (+(it*), names) =>
-              (0 until scalingʹ).foldLeft(`+`(): +) { case (+(itʹ*), _) => `+`((itʹ ++ it)*) } match
-                case sum => sum -> (if sum.choices.isEmpty then Names() else names)
+          if scalingʹ == 0
+          then
+            `+`(-1) -> Names()
+          else if _scaling
+          then
+            `+`(scaling, it*) -> ns.reduce(_ ++ _)
+          else
+            `+`(-1, it*) -> ns.reduce(_ ++ _) match
+              case (+(_, it*), names) =>
+                (0 until scalingʹ).foldLeft(`+`(-1): +) { case (+(_, itʹ*), _) => `+`(-1, (itʹ ++ it)*) } match
+                  case sum => sum -> names
       }
     }
 
@@ -79,10 +86,17 @@ abstract class Calculus extends Pi:
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
       rep1sep(sequential, "|") ^^ { _.unzip match
         case (it, ns) =>
-          ∥(it*) -> ns.reduce(_ ++ _) match
-            case (∥(it*), names) =>
-              (0 until scalingʹ).foldLeft(∥(): ∥) { case (∥(itʹ*), _) => ∥((itʹ ++ it)*) } match
-                case par => par -> (if par.components.isEmpty then Names() else names)
+          if scalingʹ == 0
+          then
+            ∥(-1, `.`(`+`(-1))) -> Names()
+          else if _scaling
+          then
+            ∥(scaling, it*) -> ns.reduce(_ ++ _)
+          else
+            ∥(-1, it*) -> ns.reduce(_ ++ _) match
+              case (∥(_, it*), names) =>
+                (0 until scalingʹ).foldLeft(∥(-1): ∥) { case (∥(_, itʹ*), _) => ∥(-1, (itʹ ++ it)*) } match
+                  case par => par -> names
       }
     }
 
@@ -95,7 +109,7 @@ abstract class Calculus extends Pi:
     }
 
   def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
-    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`() -> Names()) }
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`(-1) -> Names()) }
 
   def leaf(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
@@ -183,23 +197,29 @@ abstract class Calculus extends Pi:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>names<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~> names ~ opt(if equation then "*" else "") <~")" ) ^^ {
       case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(identifier, qual)
-      case _ ~ identifier ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
+      case _ ~ identifier ~ Some(params ~ _) if equation && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(identifier, params.filterNot(_._1.isSymbol).map(_._1)*)
-      case qual ~ "Self" ~ Some(params) =>
+      case qual ~ "Self" ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         self += _code
-        `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`("Self_" + _code, qual, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ "Self" ~ _ =>
         self += _code
         `(*)`("Self_" + _code, qual) -> Names()
-      case qual ~ identifier ~ Some(params) =>
+      case qual ~ identifier ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(identifier, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`(identifier, qual, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ identifier ~ _ =>
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
@@ -255,9 +275,9 @@ object Calculus:
 
   enum AST:
 
-    case +(choices: AST.∥ *)
+    case +(scaling: Int, choices: AST.∥ *)
 
-    case ∥(components: AST.`.`*)
+    case ∥(scaling: Int, components: AST.`.`*)
 
     case `.`(end: AST.+ | -, prefixes: Pre*)
 
@@ -285,9 +305,11 @@ object Calculus:
 
     override def toString: String = this match
       case ∅() => "()"
-      case +(choices*) => choices.mkString(" + ")
+      case +(-1, choices*) => choices.mkString(" + ")
+      case +(sc, choices*) => sc + " * " + choices.mkString(" + ")
 
-      case ∥(components*) => components.mkString(" | ")
+      case ∥(-1, components*) => components.mkString(" | ")
+      case ∥(sc, components*) => sc + " * " + components.mkString(" | ")
 
       case `.`(∅()) => "()"
       case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
@@ -323,7 +345,7 @@ object Calculus:
         s"""$identifier$ps{${pointers.map(_.name).mkString(", ")}}"""
 
       case `(*)`(identifier, qual, params*) =>
-        import emitter.Meta.\
+        import emitter.shared.Meta.\
         val args = params.map(_.toTerm).toList
         val term = qual match
           case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
@@ -399,8 +421,8 @@ object Calculus:
   extension (sum: +)
     @annotation.tailrec
     private def isVoid: Boolean = sum match
-      case +() => true
-      case +(∥(`.`(sum: +))) => sum.isVoid
+      case +(_) => true
+      case +(_, ∥(_, `.`(sum: +))) => sum.isVoid
       case _ => false
 
   extension [T <: AST](ast: T)
@@ -413,27 +435,27 @@ object Calculus:
 
         case ∅() => ast
 
-        case +(∥(`.`(sum: +)), it*) =>
+        case +(sc, ∥(-1|1, `.`(sum: +)), it*) =>
           val lhs = sum.flatten
-          val rhs = `+`(it*).flatten
-          `+`((lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid)*)
+          val rhs = `+`(-1, it*).flatten
+          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
 
-        case +(par, it*) =>
-          val lhs: + = `+`(par.flatten)
-          val rhs = `+`(it*).flatten
-          `+`((lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid)*)
+        case +(sc, par, it*) =>
+          val lhs: + = `+`(-1, par.flatten)
+          val rhs = `+`(-1, it*).flatten
+          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
 
-        case ∥(`.`(+(par)), it*) =>
+        case ∥(sc, `.`(+(-1|1, par)), it*) =>
           val lhs = par.flatten
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components)*)
+          val rhs = ∥(-1, it*).flatten
+          ∥(sc, (lhs.components ++ rhs.components)*)
 
-        case ∥(seq, it*) =>
-          val lhs: ∥ = ∥(seq.flatten)
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components)*)
+        case ∥(sc, seq, it*) =>
+          val lhs: ∥ = ∥(-1, seq.flatten)
+          val rhs = ∥(-1, it*).flatten
+          ∥(sc, (lhs.components ++ rhs.components)*)
 
-        case `.`(+(∥(`.`(end, ps*))), it*) =>
+        case `.`(+(-1|1, ∥(-1|1, `.`(end, ps*))), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
@@ -444,7 +466,7 @@ object Calculus:
 
         case !(-1, None, None, sum) =>
           sum.flatten match
-            case +(∥(`.`(end: !))) => end
+            case +(-1|1, ∥(-1|1, `.`(end: !))) => end
             case it => `!`(-1, None, None, it)
 
         case it @ !(_, _, _, sum) =>
