@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea])
+        -c[ea]|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -20,6 +20,15 @@ function pi() {
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        akka)
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.11
+                        --repo https://jitpack.io
+                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
+            ;;
+        pekko)
+            local deps='--dep com.typesafe.akka::akka-actor-typed:1.2.1'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -48,7 +57,7 @@ function pi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea])
+        -c[ea]|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -64,6 +73,15 @@ function pi_() {
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        akka)
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.11
+                        --repo https://jitpack.io
+                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
+            ;;
+        pekko)
+            local deps='--dep com.typesafe.akka::akka-actor-typed:1.2.1'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -92,7 +110,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -c[ea])
+        -c[ea]|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;

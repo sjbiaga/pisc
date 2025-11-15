@@ -146,6 +146,8 @@ Emitters
 
 - [Cats Actors](https://github.com/sjbiaga/pisc/tree/main-experimental/ca/README.md)
 
+- [Akka](https://github.com/sjbiaga/pisc/tree/main-experimental/akka/README.md)
+
 
 Branches
 --------

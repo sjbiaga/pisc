@@ -33,7 +33,7 @@ package ca
 import scala.meta.*
 import dialects.Scala3
 
-import parser.Calculus.{ λ, `(*)` }
+import parser.Calculus.`(*)`
 
 
 object Meta extends emitter.shared.effects.Meta:
@@ -159,33 +159,3 @@ object Meta extends emitter.shared.effects.Meta:
     } match
       case Nil => `IO.cede`
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
-
-/*
-  a<x>. ν(y). c(z). d<w>. e(u). P(y, z, u)
-  override def receive =
-    case _ =>
-      def _u1u(y: `()`) =
-        case _u2u =>
-          def _u3u(z: `()`) =
-            case _u4u =>
-              for
-                u    <- _u4u.get
-                _u5u <- system.actorOf(_u5u(y, z, u))
-                _    <- _u5u ! null
-              yield
-                ()
-          for
-            z <- _u2u.get
-            _ <- d(w)
-            _ <- e()
-            _ <- context.become(_u3u(z), true)
-          yield
-            ()
-      for
-        _ <- a(x)
-        y <- ν
-        _ <- c()
-        _ <- context.become(_u1u(y), true)
-      yield
-        ()
-*/

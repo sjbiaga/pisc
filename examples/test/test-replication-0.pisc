@@ -1,9 +1,23 @@
 # -*- indent-tabs-mode: nil; -*-
 
+O = !
+
+OO = ν(a) !
+
+OOO = ν(a) !OOO
+
 P = ν(a) !.a<a>.
 
-Q = ν(a) !.a(b).
+PP = ν(a) !.a<a>.PP
 
-R = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+Q = ν(a) !.a<νb>.
+
+QQ(x) = ν(a) !.a<νb>.QQ(b)
+
+R = ν(a) !.a(b).
+
+RR(x) = ν(a) !.a(b).RR(b)
+
+RRR = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
 
 Main =

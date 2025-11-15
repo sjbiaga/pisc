@@ -29,7 +29,7 @@
 package pisc
 package emitter
 package shared
-package effects
+package actors
 
 import scala.annotation.tailrec
 
@@ -45,26 +45,24 @@ abstract trait Meta extends shared.Meta:
 
   implicit def \(* : List[Enumerator]): Term =
     if *.nonEmpty then `for * yield ()`(* *)
-    else \(`_ <- IO.unit`)
+    else \(`_ <- Future.unit`)
 
-  val `: IO[Any]` = `:`("IO", "Any")
+  val `: Future[Any]` = `:`("Future", "Any")
 
-  val `_ <- IO.unit` = `_ <- IO.*`("unit")
+  val `_ <- Future.unit` = `_ <- Future.*`("unit")
 
-  val `IO.cede` = Term.Select("IO", "cede")
+  val `Future.unit` = Term.Select("Future", "unit")
 
-  def `_ <- IO.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
+  def `_ <- Future.*`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select("Future", *))
 
-  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
+  def `_ <- Future { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
-                         Term.Apply(\("IO"),
+                         Term.Apply(\("Future"),
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
-  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(),
-                         Term.Apply(Term.Select("IO", "sleep"),
-                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+  def `sleep(*.…)`(* : Long, `…`: String) =
+    Term.Apply(\("πsleep"), Term.ArgClause(Lit.Long(*) :: \(`…`.toUpperCase) :: Nil))
 
 
   @tailrec
@@ -73,7 +71,7 @@ abstract trait Meta extends shared.Meta:
     then
       if !(*.head.isInstanceOf[Enumerator.Generator])
       then
-        `for * yield ()`((`_ <- IO.unit` +: *)*)
+        `for * yield ()`((`_ <- Future.unit` +: *)*)
       else if *.size == 1
       then
         *.head match
@@ -85,27 +83,20 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit" | "cede"))) =>
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("Future"), Term.Name("unit"))) =>
             `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
-      `for * yield ()`(`_ <- IO.unit`)
+      `for * yield ()`(`_ <- Future.unit`)
 
 
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+  def `*.acquire`(* : String) = Term.Select(*, "acquire")
 
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+  def `*.release`(* : String) = Term.Select(*, "release")
 
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )
+  def `* = Semaphore(…)`(* : String, `…`: Int = 1): Stat =
+    Defn.Val(Nil, `* <- …`(*) :: Nil, None, Term.Apply(\("πSem"), Term.ArgClause(Lit.Int(`…`) :: Nil)))
 
 
 object Meta extends Meta:

@@ -3,6 +3,8 @@ import sbt._
 object Dependencies {
   lazy val catseffect = "org.typelevel" %% "cats-effect" % "3.7.0-RC1"
   lazy val catsactors = "com.github.suprnation.cats-actors" %% "cats-actors" % "2.0.1"
+  lazy val akka = "com.typesafe.akka" %% "akka-actor-typed" % "2.10.11"
+  lazy val pekko = "org.apache.pekko" %% "pekko-actor-typed" % "1.2.1"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
   lazy val scalameta = "org.scalameta" %% "scalameta" % "4.14.1"
   lazy val munit = "org.scalameta" %% "munit" % "1.2.1"

@@ -68,6 +68,9 @@ abstract trait Meta:
   def `* <- *`(* : (String, Term)): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*._1), *._2)
 
+  def `* = *`(* : (String, Term)): Enumerator.Val =
+    Enumerator.Val(`* <- …`(*._1), *._2)
+
   def `* = *: *`(* : (String, String, Type)): Enumerator.Val =
     Enumerator.Val(Pat.Typed(Pat.Var(*._1), *._3),
                    Term.ApplyType(
@@ -115,6 +118,9 @@ abstract trait Meta:
 
   def `_ <- *`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), *)
+
+  def `_ = *`(* : Term): Enumerator.Val =
+    Enumerator.Val(`* <- …`(), *)
 
 
   def `if * then … else …`(* : Term, `…`: Term*): Term.If =

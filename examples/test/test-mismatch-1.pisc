@@ -1,0 +1,21 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P = [1 = 1]P
+
+PP = ν(x) x<x>. [1 = 1]PP
+
+PPP = ν(x) x<x>. x(y). [1 = 1]PPP
+
+Q = [1 = 1][2 = 2]Q
+
+QQ = ν(x) x<x>. [1 = 1][2 = 2]QQ
+
+QQQ = ν(x) x<x>. x(y). [1 = 1][2 = 2]QQQ
+
+R = if 0 = 0 then P else Q
+
+RR = ν(x) x<x>. if 0 = 0 then P else Q
+
+RRR = ν(x) x<x>. x(y). if 0 = 0 then P else Q
+
+Main =

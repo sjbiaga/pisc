@@ -62,7 +62,7 @@ object Program:
 
                       val υidυ = id
 
-                      val code = `* <- sys.actorOf(…)`(υidυ, name) :: `_ <- * ! null`(υidυ) :: `_ <- self.stop`
+                      val code = `* <- sys.actorOf(…)`(υidυ, name) :: `_ <- * ! null`(υidυ) :: `_ <- self.stop` :: Nil
 
                       if mismatch
                       then

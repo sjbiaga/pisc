@@ -1,0 +1,356 @@
+/*
+ * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+package pisc
+package emitter
+package akka
+
+import annotation.tailrec
+
+import scala.collection.mutable.{ HashMap => Mapʹ, HashSet => Setʹ }
+
+import scala.meta.*
+import dialects.Scala3
+
+import parser.Calculus.`(*)`
+import akka.Meta.*
+
+
+object Optimizer:
+
+  final case class Ref1(to: String | `(*)`, out: Boolean)
+
+  def release(using String): Term => Term =
+
+    case Term.Block(stats) =>
+
+      val statsʹ = stats.init
+
+      stats.last match
+
+        case Term.If(cond @ Term.ApplyInfix(_, Term.Name("===="), _, _), t, f) =>
+
+          Term.Block(statsʹ :+ Term.If(cond, release(t), release(f)))
+
+        case Term.If(cond, t, f) =>
+
+          Term.Block(statsʹ :+ Term.If(cond, release(t), f))
+
+        case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                        Term.PartialFunction(hd :: tl) :: Nil) =>
+
+          val it = Term.Apply(Term.Select("Behaviors", "receive"),
+                              Term.ArgClause(Term.PartialFunction(hd.copy(body = release(hd.body)) :: tl) :: Nil))
+
+          Term.Block(statsʹ :+ it)
+
+        case it: Term.Apply =>
+
+          val df = statsʹ.last match
+
+            case it: Defn.Def =>
+
+              it.copy(body = release(it.body))
+
+          Term.Block(statsʹ.init :+ df :+ it)
+
+        case it =>
+
+          Term.Block(statsʹ :+ `*.release`(summon[String]) :+ it)
+
+  extension (self: Defn.Def)
+
+    def optimize1(using opt1: Mapʹ[String, List[String] | Ref1]): (Option[Defn.Def], Boolean) =
+
+      self match
+
+        case Defn.Def(_, Term.Name(name), _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), body) =>
+
+          { val it = opt1.get(name); opt1 -= name; it } match
+
+            case Some(names: List[String]) if names.nonEmpty =>
+
+              val bodyʹ =
+
+                body match
+
+                  case Term.Block(stats) =>
+
+                    Term.Block {
+
+                      names.foldLeft(stats) { (stats, name) =>
+
+                        @tailrec
+                        def find(name: String, stats: List[Stat]): Option[Term.Apply] =
+
+                          stats.last match
+
+                            case Defn.Def(_, Term.Name(`name`), _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), Term.Block(body)) =>
+
+                              body.last match
+
+                                case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                            Term.PartialFunction(
+                                              Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                  Type.Name("Π") :: Nil)) ::
+                                                             Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
+                                                   None,
+                                                   Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), Term.Block(stats), _) :: Nil)) :: Nil) :: Nil) =>
+
+                                  stats.head match
+
+                                    case Defn.Val(Nil, _, None,
+                                                  Term.Apply(Term.Select(Term.Name("given_ActorContext_Π"),
+                                                                         Term.Name("spawnAnonymous")), (it @ Term.Apply(Term.Name(identifier), _)) :: Nil)) =>
+                                      opt1(name) match
+                                        case Ref1(`(*)`(`identifier`, _, _*), _) => Some(it)
+
+                                case Term.Apply(Term.Name(name), _) =>
+
+                                  find(name, body.init)
+
+                                case _ => // prefixes w/o guarded replication
+
+                                  None
+
+                            case it =>
+
+                              find(name, stats.init)
+
+                        def replace(stats: List[Stat], app: Term.Apply): List[Stat] =
+
+                          def replaceʹ(stats: List[Stat]): Option[List[Stat]] =
+
+                            if stats.isEmpty
+                            then
+                              None
+
+                            else
+                              stats.head match
+
+                                case it @ Defn.Val(Nil, _, None,
+                                                   Term.Apply(Term.Select(Term.Name("given_ActorContext_Π"),
+                                                                          Term.Name("spawnAnonymous")), Term.Apply(Term.Name(`name`), _) :: _)) =>
+
+                                  Some(it.copy(rhs = Term.Apply(Term.Select("given_ActorContext_Π", "spawnAnonymous"),
+                                                                Term.ArgClause(app :: Nil))) :: stats.tail)
+
+                                case it @ Term.If(Term.ApplyInfix(_, Term.Name("===="), _, _), Term.Block(t), Term.Block(f)) =>
+                                  replaceʹ(stats.tail).map(it :: _)
+                                    .orElse(replaceʹ(t).map { t => it.copy(thenp = Term.Block(t)) :: stats.tail })
+                                    .orElse(replaceʹ(f).map { f => it.copy(elsep = Term.Block(f)) :: stats.tail })
+
+                                case it @ Term.If(_, Term.Block(t), _) =>
+                                  replaceʹ(stats.tail).map(it :: _)
+                                    .orElse(replaceʹ(t).map { t => it.copy(thenp = Term.Block(t)) :: stats.tail })
+
+                                case it =>
+                                  replaceʹ(stats.tail).map(it :: _)
+
+                          stats.last match
+
+                            case it @ Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                                 Term.PartialFunction(
+                                                   Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                       Type.Name("Π") :: Nil)) ::
+                                                                  Pat.Extract(Term.Name("Right"), Pat.Var(Term.Name("it")) :: Nil) :: Nil), None, _) :: _) :: Nil) => // guarded replication
+
+                              stats.init.last match
+
+                                case df @ Defn.Def(_, _, _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), Term.Block(body)) =>
+
+                                  stats.init.init :+ df.copy(body = Term.Block(replace(body, app))) :+ it
+
+                            case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                            Term.PartialFunction(
+                                              Case(pat @ Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                        Type.Name("Π") :: Nil)) :: _),
+                                                   None,
+                                                   Term.Block((stat @ Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it: Term.Block, _)) :: Nil)) :: tl) :: Nil) =>
+
+                              val `if` = stat.copy(thenp = Term.Block(replaceʹ(it.stats).get))
+
+                              stats.init :+ Term.Apply(Term.Select("Behaviors", "receive"),
+                                                       Term.ArgClause(Term.PartialFunction(Case(pat, None, Term.Block(`if` :: Nil)) :: tl) :: Nil))
+
+                            case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                            Term.PartialFunction(
+                                              Case(pat @ Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                        Type.Name("Π") :: Nil)) :: _),
+                                                   None,
+                                                   (it: Term.Block)) :: Nil) :: Nil) => // guarded replication
+
+                              val itʹ = Term.Block(replaceʹ(it.stats).get)
+
+                              stats.init :+ Term.Apply(Term.Select("Behaviors", "receive"),
+                                                       Term.ArgClause(Term.PartialFunction(Case(pat, None, itʹ) :: Nil) :: Nil))
+
+                            case it @ Term.Apply(_, _) =>
+                              replace(stats.init, app) :+ it
+
+                        find(name, stats.init).map(replace(stats, _)).getOrElse(stats)
+
+                      }.flatMap {
+                        case it: Defn.Def => it.optimize1._1
+                        case it => Some(it)
+                      }
+
+                    }
+
+              Some(self.copy(body = bodyʹ)) -> true
+
+            case Some(Ref1(nameʹ: String, out)) =>
+              opt1 -= nameʹ
+              (if out then None else Some(self)) -> true
+
+            case Some(Ref1(_: `(*)`, out)) =>
+              (if out then None else Some(self)) -> true
+
+            case _ =>
+
+              var optimized = false
+
+              val bodyʹ =
+
+                body match
+
+                  case Term.Block(stats) =>
+
+                    val statsʹ = stats.flatMap {
+                      case it: Defn.Def =>
+                        val (df, opt) = it.optimize1
+                        optimized ||= opt
+                        df
+                      case it => Some(it)
+                    }
+
+                    if optimized then Term.Block(statsʹ)
+                    else body
+
+                  case _ => body // cases sum
+
+              ( if optimized
+                then Some(self.copy(body = bodyʹ))
+                else Some(self)
+              ) -> optimized
+
+        case _ => Some(self) -> false
+
+    def optimize2(using opt2: Setʹ[String]): (Defn.Def, Boolean) =
+
+      self match
+
+        case Defn.Def(_, Term.Name(name), _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), body) =>
+
+          var optimized = false
+
+          val bodyʹ =
+
+            if opt2.contains(name)
+            then
+
+              opt2 -= name
+
+              body match
+
+                case Term.Block(stats) =>
+
+                  stats.last match
+
+                    case Term.Apply(Term.Name(nameʹ), _) => opt2 += nameʹ
+
+                    case _ =>
+
+                case _ => // cases sum
+
+              body match
+
+                case Term.Block(stats) =>
+
+                  val statsʹ = stats.map {
+                    case it: Defn.Def =>
+                      val (df, opt) = it.optimize2
+                      optimized ||= opt
+                      df
+                    case it => it
+                  }
+
+                  if optimized
+                  then Term.Block(statsʹ)
+                  else body
+
+                case _ => body // cases sum
+
+            else
+
+              body match
+
+                case Term.Block(stats) =>
+
+                  val statsʹ = stats.init.map {
+                    case it: Defn.Def =>
+                      val (df, opt) = it.optimize2
+                      optimized ||= opt
+                      df
+                    case it => it
+                  }
+
+                  val recv =
+
+                    stats.last match
+
+                      case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                      Term.PartialFunction(
+                                        Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                            Type.Name("Π") :: Nil)) ::
+                                                       Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
+                                             None,
+                                             Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it, _) :: Nil)) :: Nil) :: Nil) =>
+
+                        optimized ||= true
+
+                        Term.Apply(Term.Select("Behaviors", "receive"),
+                                   Term.ArgClause(Term.PartialFunction(
+                                                    Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                        Type.ArgClause(Type.Name("Π") :: Nil))) ::
+                                                                   Pat.Wildcard() :: Nil),
+                                                         None,
+                                                         Term.Block(it :: Nil)) :: Nil) :: Nil))
+
+                      case it => it
+
+                  if optimized
+                  then Term.Block(statsʹ :+ recv)
+                  else body
+
+          ( if optimized
+            then self.copy(body = bodyʹ)
+            else self
+          ) -> optimized
+
+        case _ => self -> false

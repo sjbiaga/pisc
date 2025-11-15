@@ -173,9 +173,9 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
     ./examples $ pio -ce ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `run` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> run ex
+    sbt:π-Calculus[experimental]2Scala> pin -ce ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

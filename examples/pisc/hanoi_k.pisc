@@ -4,7 +4,7 @@
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 
-@val ! : String => IO[String] = { _ => IO.canceled.as("") }
+@val ! : String => Future[String] = { _ => Future.successful(null) }
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \
@@ -13,17 +13,19 @@ Main = ν(a,b,c)      \
      | Hanoi(a,b,c)  \
      )
 
-Hanoi(a,b,c,n*) = ν(w)                                        \
-                ( τ/* _ <- IO.print("n = ");                  \
-                     'n <- IO.blocking {                      \
-                             try                              \
-                               scala.io.StdIn.readLine.toInt  \
-                             catch _ => -1                    \
-                           }                                  \
-                    */.                                       \
-                  Hanoi(a,b,c,n,w)                            \
-                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
-                  τ/*println(s"#${'w} moves")*/.              \
+Hanoi(a,b,c,n*) = ν(w, stdin)                                   \
+                ( (                                             \
+                  ( τ/* _ <- Future { print("n = ") };          \
+                       'n <- Future {                           \
+                               try                              \
+                                 scala.io.StdIn.readLine.toInt  \
+                               catch _ => -1                    \
+                             }                                  \
+                      */. stdin<n>.                             \
+                  ) | stdin(n). Hanoi(a,b,c,n,w)                \
+                  )                                             \
+                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.        \
+                  τ/*println(s"#${'w} moves")*/.                \
                 )
 
 
