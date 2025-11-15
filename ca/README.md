@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC (experimental/unmaintained)
+==================================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.

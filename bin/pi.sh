@@ -22,7 +22,7 @@ function pi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
+            local deps='--repo https://repo.akka.io/TODO/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.11
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
@@ -75,7 +75,7 @@ function pi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
+            local deps='--repo https://repo.akka.io/TODO/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.11
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'

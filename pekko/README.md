@@ -25,7 +25,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `akka` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
+The root project folder `pekko` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
@@ -35,15 +35,15 @@ To get and run the examples, one can `source` the functions from `bin/pi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -akka ex.scala
+    ./examples $ pi -pekko ex.scala
 
 or - if stopping output prefix replication -, add an underscore:
 
-    ./examples $ pi_ -akka ex.scala
+    ./examples $ pi_ -pekko ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ pio -akka ex
+    ./examples $ pio -pekko ex
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
@@ -56,6 +56,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -akka --interactive ex1.scala ex2.scala
+    ./examples $ pi -pekko --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

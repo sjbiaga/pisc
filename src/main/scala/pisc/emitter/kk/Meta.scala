@@ -28,7 +28,7 @@
 
 package pisc
 package emitter
-package akka
+package kk
 
 import scala.meta.*
 import dialects.Scala3

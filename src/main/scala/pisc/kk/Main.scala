@@ -27,7 +27,7 @@
  */
 
 package pisc
-package akka
+package kk
 
 import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.StandardCharsets.UTF_8
@@ -36,7 +36,7 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Pi
-import emitter.akka.Program
+import emitter.kk.Program
 
 
 object Main:

@@ -109,6 +109,32 @@ lazy val `akka-main_` = (project in file("akka/main_"))
     libraryDependencies ++= Seq(akka, munit % Test)
   )
 
+lazy val `pekko-main` = (project in file("pekko/main"))
+  .settings(
+    name := "pekko π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.7.4-RC3",
+    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(pekko, munit % Test)
+  )
+
+lazy val `pekko-main_` = (project in file("pekko/main_"))
+  .settings(
+    name := "pekko_ π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.7.4-RC3",
+    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(pekko, munit % Test)
+  )
+
 unmanagedSources / excludeFilter := "c[ea]/pi*.scala" || "*[ae][kk][ao]/pi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info

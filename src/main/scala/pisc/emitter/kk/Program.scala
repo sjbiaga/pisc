@@ -28,7 +28,7 @@
 
 package pisc
 package emitter
-package akka
+package kk
 
 import scala.collection.mutable.{ ListBuffer => Listʹ, HashMap => Mapʹ, HashSet => Setʹ }
 
@@ -36,7 +36,7 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
-import akka.Meta.*
+import kk.Meta.*
 
 
 object Program:

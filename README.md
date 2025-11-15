@@ -148,6 +148,8 @@ Emitters
 
 - [Akka](https://github.com/sjbiaga/pisc/tree/main-experimental/akka/README.md)
 
+- [Pekko](https://github.com/sjbiaga/pisc/tree/main-experimental/pekko/README.md)
+
 
 Branches
 --------
