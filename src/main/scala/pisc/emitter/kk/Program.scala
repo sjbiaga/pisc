@@ -735,13 +735,14 @@ object Program:
       val id = new helper.υidυ
       given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
+        .zipWithIndex
         .map {
-          case (bind, ∅()) =>
-            opt.__1 += bind.identifier -> Mapʹ()
+          case ((bind, ∅()), k) =>
+            opt.__1 += (bind.identifier + k) -> Mapʹ()
             opt._2 += bind.identifier
-            dfn(Nil, Nil)(bind)
-          case (bind, sum) =>
-            opt.__1 += bind.identifier -> Mapʹ()
+            k -> dfn(Nil, Nil)(bind)
+          case ((bind, sum), k) =>
+            opt.__1 += (bind.identifier + k) -> Mapʹ()
             given Listʹ[String]()
             val defn = sum.generate(using id())._1.get
             val υidυ = id()
@@ -750,8 +751,8 @@ object Program:
               `* ! Left(None)`(υidυ) :: Nil
             opt._1(bind.identifier) = given_Listʹ_String.toList
             opt._2 += bind.identifier
-            dfn(defn :: Nil, recv)(bind)
+            k -> dfn(defn :: Nil, recv)(bind)
         }
-        .flatMap { it => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value))._1 else Some(it) }
+        .flatMap { (k, it) => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value + k))._1 else Some(it) }
         .map { it => if optLevel > 1 then it.optimize2(using opt._2)._1 else it }
         .map(_.toString)
