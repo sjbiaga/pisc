@@ -32,7 +32,7 @@ package kk
 
 import annotation.tailrec
 
-import scala.collection.mutable.{ HashMap => Mapʹ, HashSet => Setʹ }
+import scala.collection.mutable.{ LinkedHashMap => Mapʹ, HashSet => Setʹ }
 
 import scala.meta.*
 import dialects.Scala3
@@ -44,6 +44,9 @@ import kk.Meta.*
 object Optimizer:
 
   final case class Ref1(to: String | `(*)`, out: Boolean)
+
+  final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | Ref1]], _2: Setʹ[String]):
+    def _1 = __1.last._2
 
   def release(using String): Term => Term =
 

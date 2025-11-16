@@ -49,12 +49,13 @@ abstract trait Meta extends shared.Meta:
 
   val `: Future[Any]` = `:`("Future", "Any")
 
-  val `_ <- Future.unit` = `_ <- Future.*`("unit")
+  val `_ <- Future.unit` =
+    Enumerator.Generator(`* <- …`(), Term.Select("Future", "unit"))
 
   val `Future.unit` = Term.Select("Future", "unit")
 
-  def `_ <- Future.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select("Future", *))
+  def `* <- Future.successful(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 ->Term.Apply(Term.Select("Future", "successful"), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- Future { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),

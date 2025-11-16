@@ -30,8 +30,6 @@ package pisc
 package emitter
 package shared
 
-import scala.annotation.tailrec
-
 import scala.meta.*
 import dialects.Scala3
 

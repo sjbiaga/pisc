@@ -30,7 +30,7 @@ package pisc
 package emitter
 package kk
 
-import scala.collection.mutable.{ ListBuffer => Listʹ, HashMap => Mapʹ, HashSet => Setʹ }
+import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ, HashSet => Setʹ }
 
 import scala.meta.*
 import dialects.Scala3
@@ -41,11 +41,11 @@ import kk.Meta.*
 
 object Program:
 
-  import Optimizer.Ref1
+  import Optimizer.{ Ref1, Opt }
 
   extension (self: AST)(using id: => String)
 
-    def generateʹ(using opt1: Mapʹ[String, List[String] | Ref1], opt2: Setʹ[String]): (Stat, Defn.Def) =
+    def generateʹ(using opt: Opt): (Stat, Defn.Def) =
 
       self match
 
@@ -94,12 +94,12 @@ object Program:
 
                     val name = defn.name.value
 
-                    opt1.get(name) match
+                    opt._1.get(name) match
 
-                      case Some(Ref1(nameʹ: String, _)) => (opt1 -= name) -= nameʹ
+                      case Some(Ref1(nameʹ: String, _)) => (opt._1 -= name) -= nameʹ
                       case _ =>
 
-                    opt2 += name
+                    opt._2 += name
 
                     Left(defn)
 
@@ -113,8 +113,7 @@ object Program:
 
           stat -> dfn(name, recv :: Nil)
 
-    def generate(using opt1: Mapʹ[String, List[String] | Ref1], opt2: Setʹ[String])
-                (using collect1: Listʹ[String])
+    def generate(using opt: Opt, collect1: Listʹ[String])
                 (implicit semaphore: Option[String] = None): (Option[Defn.Def], Int) =
 
       self match
@@ -131,7 +130,7 @@ object Program:
 
           val names = defs.map(_._2.name.value)
 
-          opt2 ++= names
+          opt._2 ++= names
 
           val υidυs = names.map(_ => id)
 
@@ -155,8 +154,8 @@ object Program:
 
           var names = defs.map(_.name.value)
 
-          opt1 += name -> given_Listʹ_String.toList
-          opt2 ++= names
+          opt._1 += name -> given_Listʹ_String.toList
+          opt._2 ++= names
 
           it.scaling match
             case -1|1 =>
@@ -188,7 +187,7 @@ object Program:
             case (Some(it: Defn.Def), parallelism) =>
               val name = "par" + id
 
-              opt1 += name -> given_Listʹ_String.toList
+              opt._1 += name -> given_Listʹ_String.toList
 
               val υidυ = id
 
@@ -207,7 +206,7 @@ object Program:
 
           val name = "par2" + id
 
-          opt1 += name -> given_Listʹ_String.toList
+          opt._1 += name -> given_Listʹ_String.toList
 
           val args = defs.flatMap {
             case (_, -1) =>
@@ -263,18 +262,18 @@ object Program:
                 assignment.map(_._1.name).toSeq
               case _ => Nil
             }
-          val ns = nsʹ ++ ps.flatMap {
+          val ns = nsʹ ++ Set.from(ps.flatMap {
             case ν(names*) => names
             case π(_, λ(Symbol(arg)), Some(_), _) => Some(arg)
             case π(_, λ(params: List[`λ`]), Some(_), _) => params.map(_.asSymbol.name).filter(_.nonEmpty)
             case _ => Nil
-          }
+          }).toSeq
           val block =
             given Listʹ[String]()
             given List[Stat] = `Behaviors.stopped` :: Nil
             val loop = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
             end.emit(loop) { `null` ?=> (body, term) =>
-              opt1 += name -> given_Listʹ_String.toList
+              opt._1 += name -> given_Listʹ_String.toList
               val recv =
                 if term ne null
                 then
@@ -300,7 +299,7 @@ object Program:
 
           val recv = if semaphore.isDefined then Optimizer.release(using semaphore.get)(block) else block
 
-          val defn = dfn(id, recv :: Nil)
+          val defn = dfn(id, recv :: Nil) //(using if code.isEmpty then Mod.Inline() :: Nil else Nil) // FIXME: 
 
           end match {
 
@@ -319,12 +318,12 @@ object Program:
 
                 case Term.Apply(Term.Name(name), _) =>
 
-                  opt1 += defn.name.value -> Ref1(name, code.isEmpty)
-                  opt1 += name -> Ref1(it, code.isEmpty)
+                  opt._1 += defn.name.value -> Ref1(name, code.isEmpty)
+                  opt._1 += name -> Ref1(it, code.isEmpty)
 
                 case _ =>
 
-                  opt1 += defn.name.value -> Ref1(it, code.isEmpty)
+                  opt._1 += defn.name.value -> Ref1(it, code.isEmpty)
 
               Some(defn) -> -1
 
@@ -336,8 +335,7 @@ object Program:
 
         //////////////////////////////////////////////////////////// sequence //
 
-    def emit(using Mapʹ[String, List[String] | Ref1], Setʹ[String])
-            (using Listʹ[String], List[Stat])
+    def emit(using Opt, Listʹ[String], List[Stat])
             (loop: Term)
             (make: List[Stat] ?=> (List[Stat], Term) => Term): Term =
 
@@ -639,7 +637,7 @@ object Program:
 
         case ν(names*) =>
           ** = names.map(_ => id)
-          * = names.zipWithIndex.map { (it, i) => `* = *`(it -> **(i)) }.toList
+          * = names.zipWithIndex.map { (it, i) =>  `* <- Future.successful(*)`(it -> **(i)) }.toList
 
         case τ(Some((Left(enums), _))) =>
           * :+= `_ <- *`("τ")
@@ -728,31 +726,32 @@ object Program:
       (**, *)
 
 
-  final class Main(opt: Int):
-    require(0 <= opt && opt <= 2)
+  final class Main(optLevel: Int):
+    require(0 <= optLevel && optLevel <= 2)
 
     import Optimizer.*
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
-      given opt1: Mapʹ[String, List[String] | Ref1] = Mapʹ()
-      given opt2: Setʹ[String] = Setʹ()
+      given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
         .map {
           case (bind, ∅()) =>
-            opt2 += bind.identifier
+            opt.__1 += bind.identifier -> Mapʹ()
+            opt._2 += bind.identifier
             dfn(Nil, Nil)(bind)
           case (bind, sum) =>
+            opt.__1 += bind.identifier -> Mapʹ()
             given Listʹ[String]()
             val defn = sum.generate(using id())._1.get
             val υidυ = id()
             val recv =
               `* = gACΠ.spawnAnonymous(…)`(υidυ, defn.name.value) ::
               `* ! Left(None)`(υidυ) :: Nil
-            opt1(bind.identifier) = given_Listʹ_String.toList
-            opt2 += bind.identifier
+            opt._1(bind.identifier) = given_Listʹ_String.toList
+            opt._2 += bind.identifier
             dfn(defn :: Nil, recv)(bind)
         }
-        .flatMap { it => if opt > 0 then it.optimize1._1 else Some(it) }
-        .map { it => if opt > 1 then it.optimize2._1 else it }
+        .flatMap { it => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value))._1 else Some(it) }
+        .map { it => if optLevel > 1 then it.optimize2(using opt._2)._1 else it }
         .map(_.toString)
