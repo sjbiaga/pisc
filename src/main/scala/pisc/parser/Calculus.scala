@@ -419,10 +419,9 @@ object Calculus:
   // functions
 
   extension (sum: +)
-    @annotation.tailrec
     private def isVoid: Boolean = sum match
       case +(_) => true
-      case +(_, ∥(_, `.`(sum: +))) => sum.isVoid
+      case +(_, it*) => it.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
       case _ => false
 
   extension [T <: AST](ast: T)
@@ -433,7 +432,8 @@ object Calculus:
 
       ast match
 
-        case ∅() => ast
+        case ∅() =>
+          `+`(-1)
 
         case +(sc, ∥(-1|1, `.`(sum: +)), it*) =>
           val lhs = sum.flatten

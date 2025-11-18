@@ -90,12 +90,12 @@ object Meta extends emitter.shared.actors.Meta:
 
   def `* ! Left(None)`(* : Term) =
     Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil),
-                    Term.ArgClause(Term.Apply(\("Left"), Term.ArgClause(\("None") :: Nil)) :: Nil))
+                    Term.ArgClause(Term.Apply(\("Left"), Term.ArgClause("None" :: Nil)) :: Nil))
 
   val `self ! Left(None)` = `* ! Left(None)`(Term.Select("given_ActorContext_Π", "self"))
 
   def `* ! Left(it)`(* : Term) =
-    Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil), Term.ArgClause(\("it") :: Nil))
+    Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil), Term.ArgClause("it" :: Nil))
 
   val `Behaviors.empty` = Term.Select("Behaviors", "empty")
 
@@ -117,11 +117,10 @@ object Meta extends emitter.shared.actors.Meta:
       Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(\(_)).toList)), "πforeach"), Term.ArgClause(Nil))
 
 
-  private def `pipeToSelf { for * yield Right(⋯) } (_.get)`(* : List[Enumerator], `…`: String*)(** : Option[Term => Term])(using νs: Seq[String]): Term =
+  private def `pipeToSelf { for * yield Right(⋯) } (_.get)`(* : List[Enumerator], `…`: Term.Apply)(** : Option[Term => Term])(using νs: Seq[String]): Term =
     `for * yield ()`(* *) match
       case it: Term.ForYield =>
-        val term = Term.Apply(\(`…`.head), Term.ArgClause(`…`.tail.map(\(_)).toList))
-        val body = Term.Apply(\("Right"), Term.ArgClause(**.fold(term)(_(term)) :: Nil))
+        val body = Term.Apply(\("Right"), Term.ArgClause(**.fold(`…`)(_(`…`)) :: Nil))
         val block =
           if νs.isEmpty
           then it.copy(body = body)
@@ -132,9 +131,9 @@ object Meta extends emitter.shared.actors.Meta:
                               Term.ArgClause(block :: Nil)),
                    Term.ArgClause(Term.AnonymousFunction(Term.Select(Term.Placeholder(), "get")) :: Nil))
       case _ =>
-        `pipeToSelf { for * yield Right(⋯) } (_.get)`(`_ <- Future.unit` :: *, `…`*)(**)
+        `pipeToSelf { for * yield Right(⋯) } (_.get)`(`_ <- Future.unit` :: *, `…`)(**)
 
-  def `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(* : List[Enumerator], `…`: String*)(** : Option[Term => Term] = None)(using Seq[String]) =
+  def `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(* : List[Enumerator], `…`: Term.Apply)(** : Option[Term => Term] = None)(using Seq[String]) =
     Term.Apply(Term.Select("Behaviors", "receive"),
                Term.ArgClause(Term.PartialFunction(
                                 Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
@@ -147,7 +146,7 @@ object Meta extends emitter.shared.actors.Meta:
                                                Pat.Wildcard() :: Nil),
                                      None,
                                      Term.Block(Defn.GivenAlias(Nil, Name.Anonymous(), Nil, Type.Name("ExecutionContext"), Term.Select(Term.Name("given_ActorContext_Π"), Term.Name("executionContext"))) ::
-                                                `pipeToSelf { for * yield Right(⋯) } (_.get)`(*, `…`*)(**) ::
+                                                `pipeToSelf { for * yield Right(⋯) } (_.get)`(*, `…`)(**) ::
                                                 `Behaviors.same` :: Nil)) :: Nil
                               ) :: Nil))
 
@@ -157,16 +156,6 @@ object Meta extends emitter.shared.actors.Meta:
                                 Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                     Type.ArgClause(Type.Name("Π") :: Nil))) ::
                                                Pat.Wildcard() :: Nil),
-                                     None,
-                                     Term.Block(*)) :: Nil
-                              ) :: Nil))
-
-  def `Behaviors.receive { case Left(it) => * }`(* : List[Stat]) =
-    Term.Apply(Term.Select("Behaviors", "receive"),
-               Term.ArgClause(Term.PartialFunction(
-                                Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                    Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                               Pat.Extract(\("Left"), Pat.ArgClause(Pat.Var("it") :: Nil)) :: Nil),
                                      None,
                                      Term.Block(*)) :: Nil
                               ) :: Nil))
@@ -216,3 +205,42 @@ object Meta extends emitter.shared.actors.Meta:
                                                         Term.Block(* :+ `Behaviors.empty`),
                                                         Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
                               ) :: Nil))
+
+
+  def release(using String): Term => Term =
+
+    case Term.Block(stats) =>
+
+      val statsʹ = stats.init
+
+      stats.last match
+
+        case Term.If(cond @ Term.ApplyInfix(_, Term.Name("===="), _, _), t, f) =>
+
+          Term.Block(statsʹ :+ Term.If(cond, release(t), release(f)))
+
+        case Term.If(cond, t, f) =>
+
+          Term.Block(statsʹ :+ Term.If(cond, release(t), f))
+
+        case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                        Term.PartialFunction(hd :: tl) :: Nil) =>
+
+          val it = Term.Apply(Term.Select("Behaviors", "receive"),
+                              Term.ArgClause(Term.PartialFunction(hd.copy(body = release(hd.body)) :: tl) :: Nil))
+
+          Term.Block(statsʹ :+ it)
+
+        case it: Term.Apply =>
+
+          val df = statsʹ.last match
+
+            case it: Defn.Def =>
+
+              it.copy(body = release(it.body))
+
+          Term.Block(statsʹ.init :+ df :+ it)
+
+        case it =>
+
+          Term.Block(statsʹ :+ `*.release`(summon[String]) :+ it)

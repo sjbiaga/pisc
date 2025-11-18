@@ -48,53 +48,15 @@ object Optimizer:
   final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | Ref1]], _2: Setʹ[String]):
     def _1 = __1.last._2
 
-  def release(using String): Term => Term =
-
-    case Term.Block(stats) =>
-
-      val statsʹ = stats.init
-
-      stats.last match
-
-        case Term.If(cond @ Term.ApplyInfix(_, Term.Name("===="), _, _), t, f) =>
-
-          Term.Block(statsʹ :+ Term.If(cond, release(t), release(f)))
-
-        case Term.If(cond, t, f) =>
-
-          Term.Block(statsʹ :+ Term.If(cond, release(t), f))
-
-        case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
-                        Term.PartialFunction(hd :: tl) :: Nil) =>
-
-          val it = Term.Apply(Term.Select("Behaviors", "receive"),
-                              Term.ArgClause(Term.PartialFunction(hd.copy(body = release(hd.body)) :: tl) :: Nil))
-
-          Term.Block(statsʹ :+ it)
-
-        case it: Term.Apply =>
-
-          val df = statsʹ.last match
-
-            case it: Defn.Def =>
-
-              it.copy(body = release(it.body))
-
-          Term.Block(statsʹ.init :+ df :+ it)
-
-        case it =>
-
-          Term.Block(statsʹ :+ `*.release`(summon[String]) :+ it)
-
   extension (self: Defn.Def)
 
-    def optimize1(using opt1: Mapʹ[String, List[String] | Ref1]): (Option[Defn.Def], Boolean) =
+    def optimize1(using opt: Mapʹ[String, List[String] | Ref1]): (Option[Defn.Def], Boolean) =
 
       self match
 
         case Defn.Def(_, Term.Name(name), _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), body) =>
 
-          { val it = opt1.get(name); opt1 -= name; it } match
+          { val it = opt.get(name); opt -= name; it } match
 
             case Some(names: List[String]) if names.nonEmpty =>
 
@@ -130,7 +92,7 @@ object Optimizer:
                                     case Defn.Val(Nil, _, None,
                                                   Term.Apply(Term.Select(Term.Name("given_ActorContext_Π"),
                                                                          Term.Name("spawnAnonymous")), (it @ Term.Apply(Term.Name(identifier), _)) :: Nil)) =>
-                                      opt1(name) match
+                                      opt(name) match
                                         case Ref1(`(*)`(`identifier`, _, _*), _) => Some(it)
 
                                 case Term.Apply(Term.Name(name), _) =>
@@ -228,7 +190,7 @@ object Optimizer:
               Some(self.copy(body = bodyʹ)) -> true
 
             case Some(Ref1(nameʹ: String, out)) =>
-              opt1 -= nameʹ
+              opt -= nameʹ
               (if out then None else Some(self)) -> true
 
             case Some(Ref1(_: `(*)`, out)) =>
@@ -264,7 +226,7 @@ object Optimizer:
 
         case _ => Some(self) -> false
 
-    def optimize2(using opt2: Setʹ[String]): (Defn.Def, Boolean) =
+    def optimize2(using opt: Setʹ[String]): (Defn.Def, Boolean) =
 
       self match
 
@@ -274,10 +236,8 @@ object Optimizer:
 
           val bodyʹ =
 
-            if opt2.contains(name)
+            if opt.contains(name)
             then
-
-              opt2 -= name
 
               body match
 
@@ -285,7 +245,7 @@ object Optimizer:
 
                   stats.last match
 
-                    case Term.Apply(Term.Name(nameʹ), _) => opt2 += nameʹ
+                    case Term.Apply(Term.Name(nameʹ), _) => opt += nameʹ
 
                     case _ =>
 

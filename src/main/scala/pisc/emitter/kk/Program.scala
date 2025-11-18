@@ -35,6 +35,7 @@ import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ, 
 import scala.meta.*
 import dialects.Scala3
 
+import parser.-
 import parser.Calculus.*
 import kk.Meta.*
 
@@ -242,70 +243,72 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, ps*) =>
-          val name = "nest" + id
-
-          var sem: String = null
-
           val ts = ps.foldRight(List[(Seq[String], List[Enumerator])]())(_.emit :: _)
 
           given Seq[String] = ts.flatMap(_._1)
 
           var code = ts.flatMap(_._2)
-          val nsʹ =
-            end match {
-              case `⟦⟧`(_, _, _, _, assignment) =>
-                code = code ::: assignment
-                  .map(_.name -> _.name)
-                  .map(Pat.Var(_) -> _)
-                  .map(Enumerator.Val(_, _))
-                  .toList
-                assignment.map(_._1.name).toSeq
-              case _ => Nil
-            }
-          val ns = nsʹ ++ Set.from(ps.flatMap {
+          var ns = ps.flatMap {
             case ν(names*) => names
             case π(_, λ(Symbol(arg)), Some(_), _) => Some(arg)
             case π(_, λ(params: List[`λ`]), Some(_), _) => params.map(_.asSymbol.name).filter(_.nonEmpty)
             case _ => Nil
-          }).toSeq
-          val block =
-            given Listʹ[String]()
-            given List[Stat] = `Behaviors.stopped` :: Nil
-            val loop = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
-            end.emit(loop) { `null` ?=> (body, term) =>
-              opt._1 += name -> given_Listʹ_String.toList
-              val recv =
-                if term ne null
-                then
+          }.toSet.toSeq
+
+          end match {
+            case `⟦⟧`(_, _, _, _, assignment) =>
+              code ++= assignment
+                .map(_.name -> _.name)
+                .map(Pat.Var(_) -> _)
+                .map(Enumerator.Val(_, _))
+              ns ++= assignment.map(_._1.name)
+            case _ =>
+          }
+
+          var block: Term.Block = null
+
+          implicit var sem: Option[String] = None
+
+          given Listʹ[String]()
+
+          val name = "nest" + id
+          val thunk = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
+
+          end.scheme(thunk) { (stats, |) => semʹ ?=>
+            val recv =
+              | match
+                case spawn: Term.Apply =>
                   val υidυ = id
-                  `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(`* = gACΠ.spawnAnonymous(…)`(υidυ, term) :: `* ! Left(None)`(υidυ) :: Nil)
-                else
-                  `null` match
-                    case  (it @ Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")), _)) :: Term.Select(Term.Name("Behaviors"), _) :: Nil =>
-                      it
-                    case it =>
-                      `Behaviors.receive { case Left(it) => if it * else stopped }`(it)
-              val bodyʹ = dfn(name, Term.Block(body :+ recv), ns*)
-              val recvʹ =
-                if code.isEmpty
-                then
-                  loop
-                else
-                  `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(code, (name +: ns)*)()
-              Term.Block(bodyʹ :: recvʹ :: Nil)
-            } match
-              case Term.Tuple(Term.Name(semʹ) :: it :: Nil) => sem = semʹ; it
-              case it                                       => it
+                  val body = `* = gACΠ.spawnAnonymous(…)`(υidυ, spawn) :: `* ! Left(None)`(υidυ) :: Nil
+                  `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(body)
+                case (it @ Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")), _)) :: Nil => it
+                case body: List[Stat] =>
+                  `Behaviors.receive { case Left(it) => if it * else stopped }`(body)
 
-          val recv = if semaphore.isDefined then Optimizer.release(using semaphore.get)(block) else block
+            val statsʹ = dfn(name, Term.Block(stats :+ recv), ns*) :: Nil
 
-          val defn = dfn(id, recv :: Nil) //(using if code.isEmpty then Mod.Inline() :: Nil else Nil) // FIXME: 
+            val recvʹ =
+              if code.isEmpty
+              then
+                thunk
+              else
+                `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(code, thunk)()
+
+            block = Term.Block(statsʹ :+ recvʹ)
+            sem = semʹ
+          }
+
+          opt._1 += name -> given_Listʹ_String.toList
+
+          val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
+
+          val defn = dfn(id, recv :: Nil)
 
           end match {
 
-            case !(parallelism, _, _, _) if parallelism >= 0 =>
+            case !(parallelism, _, _, _) if sem.isDefined =>
 
-              val defnʹ = defn.copy(paramss = Term.ParamClause(Term.Param(Nil, sem,
+              val defnʹ = defn.copy(paramss = Term.ParamClause(Term.Param(Nil, sem.get,
                                                                           Some(Type.Name("πSem")),
                                                                           None) :: Nil) :: Nil)
               Some(defnʹ) -> parallelism
@@ -335,9 +338,22 @@ object Program:
 
         //////////////////////////////////////////////////////////// sequence //
 
-    def emit(using Opt, Listʹ[String], List[Stat])
-            (loop: Term)
-            (make: List[Stat] ?=> (List[Stat], Term) => Term): Term =
+  extension (self: + | -)(using id: => String)
+
+    def scheme(using Opt, Option[String], Listʹ[String])
+              (behavior: Term.Apply)
+              (callback: (List[Stat], Term.Apply | List[Stat]) => Option[String] ?=> Unit): Unit =
+
+      extension (self: Option[Defn.Def])
+
+        def spawn(stats: Stat*)(args: Term*) =
+          self
+            .map(_.name.value).map(\(_))
+            .map(Term.Apply(_, Term.ArgClause(args.toList)))
+            .fold(stats.toList) { it =>
+              val υidυ = id
+              `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(None)`(υidυ) :: `Behaviors.empty` :: Nil
+            }
 
       self match
 
@@ -345,13 +361,13 @@ object Program:
 
         case ∅() =>
 
-          make(Lit.Unit() :: Nil, null)
+          callback(Lit.Unit() :: Nil, `Behaviors.stopped` :: Nil)
 
         case it: + =>
 
           val defn = it.generate._1.get
 
-          make(defn :: Nil, Term.Apply(\(defn.name.value), Term.ArgClause(Nil)))
+          callback(defn :: Nil, Term.Apply(\(defn.name.value), Term.ArgClause(Nil)))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -359,28 +375,21 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          val (defn, defnʹ) = t.generate._1 -> f.flatMap(_.generate._1)
+          val (tʹ, fʹ) = t.generate._1 -> f.flatMap(_.generate._1)
 
-          val υidυ = id
-
-          val tʹ = defn.fold(`Behaviors.stopped` :: Nil) { it =>
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(Nil))) :: `* ! Left(None)`(υidυ) :: `Behaviors.empty` :: Nil
-          }
-
-          val fʹ = defnʹ.fold(`Behaviors.stopped` :: Nil) { it =>
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(Nil))) :: `* ! Left(None)`(υidυ) :: `Behaviors.empty` :: Nil
-          }
+          val tʹʹ = tʹ.spawn(`Behaviors.stopped`)()
+          val fʹʹ = fʹ.spawn(`Behaviors.stopped`)()
 
           val `if` =
             if mismatch
             then
-              `if * then … else …`(====(lhs, rhs), Term.Block(fʹ), Term.Block(tʹ))
+              `if * then … else …`(====(lhs, rhs), Term.Block(fʹʹ), Term.Block(tʹʹ))
             else
-              `if * then … else …`(====(lhs, rhs), Term.Block(tʹ), Term.Block(fʹ))
+              `if * then … else …`(====(lhs, rhs), Term.Block(tʹʹ), Term.Block(fʹʹ))
 
-          given List[Stat] = `if` :: Nil
+          val defs = (tʹ zip fʹ).map(_ :: _ :: Nil).orElse(tʹ.orElse(fʹ).map(_ :: Nil))
 
-          make(defn.getOrElse(Lit.Unit()) :: defnʹ.getOrElse(Lit.Unit()) :: Nil, null)
+          callback(defs.getOrElse(Lit.Unit() :: Nil), `if` :: Nil)
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
@@ -393,12 +402,7 @@ object Program:
 
           val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, \(par), Some(Type.Name("()")), None) :: Nil)))
 
-          var `!⋯` = defn.fold(Nil) { it =>
-            val υidυ = id
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(\(par) :: Nil))) :: `* ! Left(None)`(υidυ) :: Nil
-          }
-
-          `!⋯` :+= `self ! Left(None)`
+          var `!⋯` = defn.spawn()(par) :+ `self ! Left(None)`
 
           if pace.isDefined
           then
@@ -413,35 +417,28 @@ object Program:
               `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
 
           val υidυ = id
-          val υidυʹ = "emit" + id
+          val υidυʹ = "emitν" + id
 
           π.emit match
 
-            case (given Seq[String], code) =>
+            case (given Seq[String], enums) =>
 
-              val `π.emit` = code match
+              val `π.emit` = enums match
                 case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
                   hd :: it.copy(pat = Pat.Var(υidυ)) :: tl
 
               val `yield`: Term => Term = `if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
                                                                                Type.ArgClause(Nil),
-                                                                               Term.ArgClause(\("None") :: Nil)),
+                                                                               Term.ArgClause("None" :: Nil)),
                                                                `Behaviors.stopped`,
                                                                _)
 
-              val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ loop)
+              val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
               val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
-              val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`π.emit`, υidυʹ, par)(Some(`yield`))
+              val call = Term.Apply(\(υidυʹ), Term.ArgClause(par :: Nil))
+              val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`π.emit`, call)(Some(`yield`))
 
-              given List[Stat] = recv :: `Behaviors.same` :: Nil
-
-              val term = make(defn.getOrElse(Lit.Unit()) :: body :: Nil, null)
-
-              if parallelism < 0
-              then
-                term
-              else
-                Term.Tuple(List(\(sem.get), term))
+              callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
 
         case !(parallelism, pace, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
 
@@ -449,12 +446,7 @@ object Program:
 
           val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, \(arg), Some(Type.Name("()")), None) :: Nil)))
 
-          var `!⋯` = defn.fold(Nil) { it =>
-            val υidυ = id
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(\(arg) :: Nil))) :: `* ! Left(None)`(υidυ) :: Nil
-          }
-
-          `!⋯` :+= `self ! Left(None)`
+          var `!⋯` = defn.spawn()(arg) :+ `self ! Left(None)`
 
           if pace.isDefined
           then
@@ -469,7 +461,7 @@ object Program:
               `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
 
           val υidυ = id
-          val υidυʹ = "emit" + id
+          val υidυʹ = "emitπ" + id
 
           val par = if λ.`type`.isDefined then id else arg
 
@@ -490,31 +482,19 @@ object Program:
                                                                    Term.Block(`val` :+ it))
                                       }
 
-          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ loop)
+          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
           val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`πʹ.emit`, υidυʹ, arg)(Some(`yield`))(using Nil)
+          val call = Term.Apply(\(υidυʹ), Term.ArgClause(arg :: Nil))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`πʹ.emit`, call)(Some(`yield`))(using Nil)
 
-          given List[Stat] = recv :: `Behaviors.same` :: Nil
-
-          val term = make(defn.getOrElse(Lit.Unit()) :: body :: Nil, null)
-
-          if parallelism < 0
-          then
-            term
-          else
-            Term.Tuple(List(\(sem.get), term))
+          callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
 
         case !(parallelism, pace, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
           val defn = sum.generate._1
 
-          var `!⋯` = defn.fold(Nil) { it =>
-            val υidυ = id
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(Nil))) :: `* ! Left(None)`(υidυ) :: Nil
-          }
-
-          `!⋯` :+= `self ! Left(None)`
+          var `!⋯` = defn.spawn()() :+ `self ! Left(None)`
 
           if pace.isDefined
           then
@@ -529,7 +509,7 @@ object Program:
               `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
 
           val υidυ = id
-          val υidυʹ = "emit2" + id
+          val υidυʹ = "emitμ" + id
 
           val `μ.emit` = μ.emit._2 match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
@@ -537,23 +517,16 @@ object Program:
 
           val `yield`: Term => Term = `if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
                                                                            Type.ArgClause(Nil),
-                                                                           Term.ArgClause(\("None") :: Nil)),
+                                                                           Term.ArgClause("None" :: Nil)),
                                                            `Behaviors.stopped`,
                                                            _)
 
-          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ loop)
+          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
           val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`μ.emit`, υidυʹ)(Some(`yield`))(using Nil)
+          val call = Term.Apply(\(υidυʹ), Term.ArgClause(Nil))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`μ.emit`, call)(Some(`yield`))(using Nil)
 
-          given List[Stat] = recv :: `Behaviors.same` :: Nil
-
-          val term = make(defn.getOrElse(Lit.Unit()) :: body :: Nil, null)
-
-          if parallelism < 0
-          then
-            term
-          else
-            Term.Tuple(List(\(sem.get), term))
+          callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
 
         case !(parallelism, pace, _, sum) =>
 
@@ -561,12 +534,7 @@ object Program:
 
           val defn = sum.generate._1
 
-          var `!⋯` = defn.fold(Nil) { it =>
-            val υidυ = id
-            `* = gACΠ.spawnAnonymous(…)`(υidυ, Term.Apply(\(it.name.value), Term.ArgClause(Nil))) :: `* ! Left(None)`(υidυ) :: Nil
-          }
-
-          `!⋯` :+= `self ! Left(None)`
+          var `!⋯` = defn.spawn()() :+ `self ! Left(None)`
 
           if pace.isDefined
           then
@@ -580,15 +548,7 @@ object Program:
             else
               `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
 
-          given List[Stat] = `!⋯` :+ `Behaviors.same`
-
-          val term = make(defn.getOrElse(Lit.Unit()) :: Nil, null)
-
-          if parallelism < 0
-          then
-            term
-          else
-            Term.Tuple(List(\(sem.get), term))
+          callback(defn.getOrElse(Lit.Unit()) :: Nil, `!⋯` :+ `Behaviors.same`)
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -598,17 +558,18 @@ object Program:
         case `⟦⟧`(_, variables, _sum, _, assignment) =>
           val n = assignment.size
 
-          val sum = if (variables.size == n)
-                    then
-                      _sum
-                    else
-                      `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+          val sum: + = if (variables.size == n)
+                       then
+                         _sum
+                       else
+                         `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          sum.emit(null)(make)
+          sum.scheme(null)(callback)
 
         case _: `{}` => ???
 
         /////////////////////////////////////////////////////// instantiation //
+
 
         // INVOCATION //////////////////////////////////////////////////////////
 
@@ -619,7 +580,7 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          make(Lit.Unit() :: Nil, Term.Apply(term, Term.ArgClause(args)))
+          callback(Lit.Unit() :: Nil, Term.Apply(term, Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 

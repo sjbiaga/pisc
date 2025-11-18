@@ -1,7 +1,7 @@
 import Dependencies._
 import CommandPin._
 
-ThisBuild / scalaVersion := "3.7.4-RC3"
+ThisBuild / scalaVersion := "3.7.4"
 
 //val akkaSecureToken = "TODO"
 
@@ -24,8 +24,8 @@ lazy val root = (project in file("."))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += pin,
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
@@ -38,8 +38,8 @@ lazy val `ce-main` = (project in file("ce/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catseffect, munit % Test)
   )
@@ -51,8 +51,8 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catseffect, munit % Test)
   )
@@ -64,8 +64,8 @@ lazy val `ca-main` = (project in file("ca/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catsactors, munit % Test)
   )
@@ -77,8 +77,8 @@ lazy val `ca-main_` = (project in file("ca/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catsactors, munit % Test)
   )
@@ -90,8 +90,8 @@ lazy val `akka-main` = (project in file("akka/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(akka, munit % Test)
   )
@@ -103,8 +103,8 @@ lazy val `akka-main_` = (project in file("akka/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(akka, munit % Test)
   )
@@ -116,8 +116,8 @@ lazy val `pekko-main` = (project in file("pekko/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(pekko, munit % Test)
   )
@@ -129,8 +129,8 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(pekko, munit % Test)
   )

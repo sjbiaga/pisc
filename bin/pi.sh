@@ -28,7 +28,7 @@ function pi() {
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
             ;;
         pekko)
-            local deps='--dep com.typesafe.akka::akka-actor-typed:1.2.1'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.2.1'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -47,7 +47,7 @@ function pi() {
     done
     set ../${emit}/pi.scala ${srcs#?}
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.7.4-RC3 \
+                  -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -81,7 +81,7 @@ function pi_() {
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
             ;;
         pekko)
-            local deps='--dep com.typesafe.akka::akka-actor-typed:1.2.1'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.2.1'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -100,7 +100,7 @@ function pi_() {
     done
     set ../${emit}/pi_.scala ${srcs#?}
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.7.4-RC3 \
+                  -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
