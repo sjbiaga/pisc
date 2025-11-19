@@ -344,27 +344,64 @@ object Program:
               (behavior: Term.Apply)
               (callback: (List[Stat], Term.Apply | List[Stat]) => Option[String] ?=> Unit): Unit =
 
-      extension (self: Option[Defn.Def])
+      extension (defn: Option[Defn.Def])
 
-        def spawn(stats: Stat*)(args: Term*) =
-          self
+        private def spawn(stats: Stat*)(args: Term*)(statsʹ: Stat*) =
+          defn
             .map(_.name.value).map(\(_))
             .map(Term.Apply(_, Term.ArgClause(args.toList)))
             .fold(stats.toList) { it =>
               val υidυ = id
-              `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(None)`(υidυ) :: `Behaviors.empty` :: Nil
+              `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(None)`(υidυ) :: statsʹ.toList
             }
+
+        def spawning(param: Term*)(implicit sem: Option[String]) =
+          self match
+            case !(_, pace, Some(_), _) =>
+              var `!⋯` = spawn()(param*)() :+ `self ! Left(None)` :+ behavior
+
+              if pace.isDefined
+              then
+                `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
+
+              if sem.isDefined
+              then
+                if defn.isDefined
+                then
+                  `!⋯` = `*.acquire`(sem.get) :: `!⋯`
+                else
+                  `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
+
+              `!⋯`
+
+            case !(_, pace, _, _) =>
+              var `!⋯` = spawn()()() :+ `self ! Left(None)` :+ `Behaviors.same`
+
+              if pace.isDefined
+              then
+                `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
+
+              if sem.isDefined
+              then
+                if defn.isDefined
+                then
+                  `!⋯` = `*.acquire`(sem.get) :: `!⋯`
+                else
+                  `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
+
+              `!⋯`
+
+            case _ =>
+              spawn(`Behaviors.stopped`)()(`Behaviors.empty`)
 
       self match
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-
           callback(Lit.Unit() :: Nil, `Behaviors.stopped` :: Nil)
 
         case it: + =>
-
           val defn = it.generate._1.get
 
           callback(defn :: Nil, Term.Apply(\(defn.name.value), Term.ArgClause(Nil)))
@@ -377,8 +414,7 @@ object Program:
         case ?:(((lhs, rhs), mismatch), t, f) =>
           val (tʹ, fʹ) = t.generate._1 -> f.flatMap(_.generate._1)
 
-          val tʹʹ = tʹ.spawn(`Behaviors.stopped`)()
-          val fʹʹ = fʹ.spawn(`Behaviors.stopped`)()
+          val (tʹʹ, fʹʹ) = tʹ.spawning() -> fʹ.spawning()
 
           val `if` =
             if mismatch
@@ -396,32 +432,15 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
-
+        case !(parallelism, _, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
-          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, \(par), Some(Type.Name("()")), None) :: Nil)))
-
-          var `!⋯` = defn.spawn()(par) :+ `self ! Left(None)`
-
-          if pace.isDefined
-          then
-            `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
-
-          if parallelism >= 0
-          then
-            if defn.isDefined
-            then
-              `!⋯` = `*.acquire`(sem.get) :: `!⋯`
-            else
-              `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
-
-          val υidυ = id
-          val υidυʹ = "emitν" + id
+          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, par, Some(Type.Name("()")), None) :: Nil)))
 
           π.emit match
 
             case (given Seq[String], enums) =>
+              val υidυ = id
 
               val `π.emit` = enums match
                 case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
@@ -433,41 +452,26 @@ object Program:
                                                                `Behaviors.stopped`,
                                                                _)
 
-              val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
-              val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
-              val call = Term.Apply(\(υidυʹ), Term.ArgClause(par :: Nil))
-              val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`π.emit`, call)(Some(`yield`))
+              val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning(par))
+              val υidυʹ = "emitν" + id
+              val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
+              val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(par :: Nil))
+              val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`π.emit`, thunk)(Some(`yield`))
 
-              callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
+              callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
 
-        case !(parallelism, pace, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
-
+        case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
-          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, \(arg), Some(Type.Name("()")), None) :: Nil)))
-
-          var `!⋯` = defn.spawn()(arg) :+ `self ! Left(None)`
-
-          if pace.isDefined
-          then
-            `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
-
-          if parallelism >= 0
-          then
-            if defn.isDefined
-            then
-              `!⋯` = `*.acquire`(sem.get) :: `!⋯`
-            else
-              `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
-
-          val υidυ = id
-          val υidυʹ = "emitπ" + id
+          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, arg, Some(Type.Name("()")), None) :: Nil)))
 
           val par = if λ.`type`.isDefined then id else arg
 
           val πʹ = π.copy(name = λ.copy()(using None))
 
-          val `πʹ.emit` = πʹ.emit._2
+          val `πʹ.emit` = πʹ.emit._2 match
+            case (it: Enumerator.Generator) :: tl =>
+              it.copy(pat = Pat.Var(par)) :: tl
 
           val `val` =
             λ.`type` match
@@ -482,34 +486,20 @@ object Program:
                                                                    Term.Block(`val` :+ it))
                                       }
 
-          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
-          val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
-          val call = Term.Apply(\(υidυʹ), Term.ArgClause(arg :: Nil))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`πʹ.emit`, call)(Some(`yield`))(using Nil)
+          val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning(arg))
+          val υidυʹ = "emitπ" + id
+          val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil), arg)
+          val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(arg :: Nil))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`πʹ.emit`, thunk)(Some(`yield`))(using Nil)
 
-          callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
+          callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
 
-        case !(parallelism, pace, Some(μ), sum) =>
+        case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
           val defn = sum.generate._1
 
-          var `!⋯` = defn.spawn()() :+ `self ! Left(None)`
-
-          if pace.isDefined
-          then
-            `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
-
-          if parallelism >= 0
-          then
-            if defn.isDefined
-            then
-              `!⋯` = `*.acquire`(sem.get) :: `!⋯`
-            else
-              `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
-
           val υidυ = id
-          val υidυʹ = "emitμ" + id
 
           val `μ.emit` = μ.emit._2 match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
@@ -521,34 +511,20 @@ object Program:
                                                            `Behaviors.stopped`,
                                                            _)
 
-          val recvʹ = `Behaviors.receive { case _ => * }`(`!⋯` :+ behavior)
-          val body = dfn(υidυʹ, Term.Block(recvʹ :: Nil))
-          val call = Term.Apply(\(υidυʹ), Term.ArgClause(Nil))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`μ.emit`, call)(Some(`yield`))(using Nil)
+          val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning())
+          val υidυʹ = "emitμ" + id
+          val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil))
+          val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(Nil))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`μ.emit`, thunk)(Some(`yield`))(using Nil)
 
-          callback(defn.getOrElse(Lit.Unit()) :: body :: Nil, recv :: Nil)
+          callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
 
-        case !(parallelism, pace, _, sum) =>
-
+        case !(parallelism, _, _, sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
           val defn = sum.generate._1
 
-          var `!⋯` = defn.spawn()() :+ `self ! Left(None)`
-
-          if pace.isDefined
-          then
-            `!⋯` = pace.map(`sleep(*.…)`(_, _) :: `!⋯`).get
-
-          if sem.isDefined
-          then
-            if defn.isDefined
-            then
-              `!⋯` = `*.acquire`(sem.get) :: `!⋯`
-            else
-              `!⋯` = `*.acquire`(sem.get) :: `*.release`(sem.get) :: `!⋯`
-
-          callback(defn.getOrElse(Lit.Unit()) :: Nil, `!⋯` :+ `Behaviors.same`)
+          callback(defn.getOrElse(Lit.Unit()) :: Nil, defn.spawning())
 
         ///////////////////////////////////////////////////////// replication //
 

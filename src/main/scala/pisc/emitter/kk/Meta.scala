@@ -54,17 +54,16 @@ object Meta extends emitter.shared.actors.Meta:
                  Type.ParamClause(Nil),
                  Term.ParamClause(params
                                     .map(_.asSymbol.name)
-                                    .map(\(_))
                                     .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
                                     .toList) :: Nil) :: Nil,
                `: Behavior[Π]`,
                Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
 
-  def dfn(υidυ: String, body: List[Stat])(using mods: List[Mod] = Nil) =
+  def dfn(υidυ: String, body: List[Stat]) =
     val bodyʹ = body match
       case (it: Term) :: Nil => it
       case _ => Term.Block(body)
-    Defn.Def(mods, υidυ, `(…)`(), `: Behavior[Π]`, bodyʹ)
+    Defn.Def(Nil, υidυ, `(…)`(), `: Behavior[Π]`, bodyʹ)
 
   def dfn(υidυ: String, body: Term, args: String*) =
     Defn.Def(Nil, υidυ, `(…)`(args*), `: Behavior[Π]`, body)
@@ -73,7 +72,6 @@ object Meta extends emitter.shared.actors.Meta:
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
       Term.ParamClause(*
-                        .map(\(_))
                         .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
                         .toList,
                        None) :: Nil

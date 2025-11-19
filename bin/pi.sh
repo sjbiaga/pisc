@@ -23,7 +23,7 @@ function pi() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/TODO/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.11
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.12
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
             ;;
@@ -76,7 +76,7 @@ function pi_() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/TODO/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.11
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.12
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
             ;;

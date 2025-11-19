@@ -61,7 +61,6 @@ object Meta extends emitter.shared.effects.Meta:
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
       Term.ParamClause(*
-                        .map(\(_))
                         .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
                         .toList,
                        None) :: Nil
