@@ -56,6 +56,9 @@ abstract trait Meta extends shared.Meta:
   def `_ <- IO.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
 
+  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 ->Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
+
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("IO"),

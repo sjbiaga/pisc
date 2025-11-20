@@ -326,6 +326,7 @@ class EncodingParserSuite extends FunSuite:
 object EncodingParserSuite:
 
   abstract class EncodingParserTest extends Expansion:
+    override protected val emitter: Emitter = null
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
 

@@ -594,29 +594,42 @@ object Program:
 
 
         case π(λ(Symbol(ch)), arg, nu @ (None | Some("ν")), code) =>
-          nu match
-            case None =>
-            case _ =>
-              val λ(Symbol(par)) = arg
-              val (ns, ls) = ν(par).emit
-              ** = ns
-              * = ls
+          val argʹ =
+            nu match
+              case None =>
+                arg
+              case _ =>
+                val λ(Symbol(par)) = arg
+                val parʹ = if ch == par then id else par
+                val (ns, ls) = ν(parʹ).emit
+                ** = ns
+                * = ls
+                λ(Symbol(parʹ))
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
               val expr = `for * yield ()`(`_ <- Future { * }`(term))
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
                                Term.ArgClause(expr::Nil)
                              ))
             case _ =>
-              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm::Nil)))
+              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)))
+
+          nu match
+            case None =>
+            case _ =>
+              val λ(Symbol(par)) = arg
+              if ch == par
+              then
+                val λ(Symbol(parʹ)) = argʹ
+                * :+= `* <- Future.successful(*)`(par -> parʹ)
 
         case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), code) =>
           val args = params.map {

@@ -59,8 +59,6 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(ch)
       case _ ~ Some(Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
-      case (λ(Symbol(ch)), _) ~ Some(Some(_) ~ (λ(Symbol(par)), _)) ~ _ if ch == par =>
-        throw PrefixBoundOutputParsingException(ch)
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val bound = ν.fold(Names())(_=>free)
         π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ free ++ freeʹ -- bound)
@@ -257,9 +255,6 @@ object Pi:
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
-
-  case class PrefixBoundOutputParsingException(name: String)
-      extends PrefixParsingException(s"$name is both the channel name and the new parameter name in a bound output")
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")

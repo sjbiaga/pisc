@@ -128,7 +128,7 @@ abstract class Calculus extends Pi:
       case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
-        if ch == par
+        if ch == par && cons != "ν"
         then
           emitter match
             case Emitter.kk =>

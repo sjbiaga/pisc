@@ -518,6 +518,7 @@ object PiParserSuite:
   import scala.util.parsing.combinator.pisc.parser.Expansion
 
   abstract class PiParserTest extends Expansion:
+    override protected val emitter: Emitter = null
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
 
