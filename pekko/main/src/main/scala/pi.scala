@@ -32,12 +32,10 @@ package object Π:
   import _root_.java.util.concurrent.atomic.AtomicBoolean
   import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
   import _root_.scala.collection.immutable.Queue
-  import _root_.org.apache.pekko.actor.typed.scaladsl.{ ActorContext, Behaviors }
+  import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
   import _root_.org.apache.pekko.actor.typed.{ ActorRef, Behavior }
 
   import `Π-magic`.*
-
-  type Π = Either[Option[AtomicBoolean], Behavior[Π]]
 
 
   /**

@@ -69,7 +69,7 @@ abstract class Calculus extends Pi:
           if scalingʹ == 0
           then
             `+`(-1) -> Names()
-          else if _scaling
+          else if _scaling && emitter != Emitter.ce
           then
             `+`(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -89,7 +89,7 @@ abstract class Calculus extends Pi:
           if scalingʹ == 0
           then
             ∥(-1, `.`(`+`(-1))) -> Names()
-          else if _scaling
+          else if _scaling && emitter != Emitter.ce
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -128,9 +128,11 @@ abstract class Calculus extends Pi:
       case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
-        if ch == par && cons != "ν"
+        if ch == par
         then
-          warn(throw GuardParsingException(ch.name))
+          emitter match
+            case Emitter.kk =>
+            case _ => warn(throw GuardParsingException(ch.name))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {

@@ -2,20 +2,22 @@
 
 P = [1 = 1]P
 
-PP = ν(x) x<x>. [1 = 1]PP
+P' = ν(x) x<x>. [1 = 1]P'
 
-PPP = ν(x) x<x>. x(y). [1 = 1]PPP
+P" = ν(x) x<x>. x(y). [1 = 1]P"
 
 Q = [1 = 1][2 = 2]Q
 
-QQ = ν(x) x<x>. [1 = 1][2 = 2]QQ
+Q' = ν(x) x<x>. [1 = 1][2 = 2]Q'
 
-QQQ = ν(x) x<x>. x(y). [1 = 1][2 = 2]QQQ
+Q" = ν(x) x<x>. x(y). [1 = 1][2 = 2]Q"
 
 R = if 0 = 0 then P else Q
 
-RR = ν(x) x<x>. if 0 = 0 then P else Q
+R' = ν(x) x<x>. if 0 = 0 then P else Q
 
-RRR = ν(x) x<x>. x(y). if 0 = 0 then P else Q
+R" = ν(x) x<x>. x(y). if 0 = 0 then P else Q
+
+S(x) = ν(y) x<y>. y<νz>. if True = False then S(y) else S(z)
 
 Main =

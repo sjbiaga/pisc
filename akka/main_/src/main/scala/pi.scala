@@ -29,15 +29,12 @@
 package object Π:
 
   import _root_.scala.util.{ Success, Try }
-  import _root_.java.util.concurrent.atomic.AtomicBoolean
   import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
   import _root_.scala.collection.immutable.Queue
-  import _root_.akka.actor.typed.scaladsl.{ ActorContext, Behaviors }
+  import _root_.akka.actor.typed.scaladsl.Behaviors
   import _root_.akka.actor.typed.{ ActorRef, Behavior }
 
   import `Π-magic`.*
-
-  type Π = Either[Option[AtomicBoolean], Behavior[Π]]
 
 
   /**
@@ -84,9 +81,9 @@ package object Π:
              (using ExecutionContext): Future[Option[Unit]] =
       for
         _      <- Future.unit
-        stop    = Promise[Boolean]
-        _       = a ! Output(stop, value.name)
-        stop   <- stop.future
+        promise = Promise[Boolean]
+        _       = a ! Output(promise, value.name)
+        stop   <- promise.future
       yield
         if stop then None else Some(())
 

@@ -59,6 +59,8 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(ch)
       case _ ~ Some(Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
         throw PrefixChannelParsingException(par)
+      case (λ(Symbol(ch)), _) ~ Some(Some(_) ~ (λ(Symbol(par)), _)) ~ _ if ch == par =>
+        throw PrefixBoundOutputParsingException(ch)
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val bound = ν.fold(Names())(_=>free)
         π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ free ++ freeʹ -- bound)
@@ -146,6 +148,8 @@ abstract class Pi extends Expression:
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
+  protected val emitter: Emitter
+
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -230,6 +234,8 @@ object Pi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
+  enum Emitter { case ce, ca, kk }
+
   type Names = Set[Symbol]
 
   object Names:
@@ -251,6 +257,9 @@ object Pi:
 
   case class PrefixChannelParsingException(name: λ)
       extends PrefixParsingException(s"${name.`val`} is not a channel name but a ${name.kind}")
+
+  case class PrefixBoundOutputParsingException(name: String)
+      extends PrefixParsingException(s"$name is both the channel name and the new parameter name in a bound output")
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
@@ -298,7 +307,8 @@ object Pi:
         case _ => ast
 
 
-  final class Main(override protected val in: String) extends Expansion:
+  final class Main(override protected val emitter: Emitter,
+                   override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }

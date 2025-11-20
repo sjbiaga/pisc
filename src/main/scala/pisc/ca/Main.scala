@@ -51,7 +51,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val pi = Pi.Main(in)
+      val pi = Pi.Main(Pi.Emitter.ca, in)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"

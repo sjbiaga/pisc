@@ -37,9 +37,9 @@ object App:
 
   private def apply(args: Array[String]): Behavior[Unit] =
     Behaviors.setup[Unit] { context =>
-      val main = context.spawnAnonymous[Π.Π](π.Main(args.toList))
+      val main = context.spawnAnonymous(π.Main(args.toList))
       Behaviors.receiveMessage { _ =>
-        main ! Left(None)
+        main ! π.πNone
         Behaviors.empty
       }
     }
@@ -64,8 +64,6 @@ object π:
 
   import _root_.eu.timepit.refined.*
 
-  import Π.*
-
   private lazy val πSleepSem = πSem(0)
   def πsleep(pace: Long, unit: TimeUnit) = πSleepSem.tryAcquire(pace, unit)
 
@@ -77,8 +75,14 @@ object π:
   val MICROSECOND = MICROSECONDS
   val NANOSECOND  = NANOSECONDS
 
+  type Π = Either[Option[πAB], Behavior[Π]]
+
+  val πNone: Π = Left(None)
+
   extension (self: πLs[ActorRef[Π]])
     private[π] inline def πforeach(it: Option[πAB] = None): Unit =
       self.foreach(_ ! Left(it))
+
+  import Π.*
 
 

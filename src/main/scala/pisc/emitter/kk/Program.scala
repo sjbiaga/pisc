@@ -271,10 +271,15 @@ object Program:
 
           given Listʹ[String]()
 
-          val name = "nest" + id
-          val thunk = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
+          val behavior =
+            end match {
+              case !(_, _, Some(_), _) => "thunk" + id
+              case _ => "_"
+            }
 
-          end.scheme(thunk) { (stats, |) => semʹ ?=>
+          end.scheme(behavior) { (stats, |) => semʹ ?=>
+            require(stats.nonEmpty)
+
             val recv =
               | match
                 case spawn: Term.Apply =>
@@ -285,7 +290,16 @@ object Program:
                 case body: List[Stat] =>
                   `Behaviors.receive { case Left(it) => if it * else stopped }`(body)
 
-            val statsʹ = dfn(name, Term.Block(stats :+ recv), ns*) :: Nil
+            val name = "scheme" + id
+            val thunk = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
+
+            val statsʹ =
+              end match {
+                case !(_, _, Some(_), _) =>
+                  dfn(name, Term.Block(`def * = …`(behavior, thunk) :: (stats :+ recv)), ns*) :: Nil
+                case _ =>
+                  dfn(name, Term.Block(stats :+ recv), ns*) :: Nil
+              }
 
             val recvʹ =
               if code.isEmpty
@@ -296,9 +310,9 @@ object Program:
 
             block = Term.Block(statsʹ :+ recvʹ)
             sem = semʹ
-          }
 
-          opt._1 += name -> given_Listʹ_String.toList
+            opt._1 += name -> given_Listʹ_String.toList
+          }
 
           val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
 
@@ -341,21 +355,21 @@ object Program:
   extension (self: + | -)(using id: => String)
 
     def scheme(using Opt, Option[String], Listʹ[String])
-              (behavior: Term.Apply)
+              (behavior: Term.Name)
               (callback: (List[Stat], Term.Apply | List[Stat]) => Option[String] ?=> Unit): Unit =
 
       extension (defn: Option[Defn.Def])
 
-        private def spawn(stats: Stat*)(args: Term*)(statsʹ: Stat*) =
+        private def spawn(stats: Stat*)(param: Term.Name*)(statsʹ: Stat*) =
           defn
             .map(_.name.value).map(\(_))
-            .map(Term.Apply(_, Term.ArgClause(args.toList)))
+            .map(Term.Apply(_, Term.ArgClause(param.toList)))
             .fold(stats.toList) { it =>
               val υidυ = id
               `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(None)`(υidυ) :: statsʹ.toList
             }
 
-        def spawning(param: Term*)(implicit sem: Option[String]) =
+        def spawning(param: Term.Name*)(implicit sem: Option[String]) =
           self match
             case !(_, pace, Some(_), _) =>
               var `!⋯` = spawn()(param*)() :+ `self ! Left(None)` :+ behavior
@@ -393,6 +407,20 @@ object Program:
 
             case _ =>
               spawn(`Behaviors.stopped`)()(`Behaviors.empty`)
+
+      extension (self: List[Enumerator])
+
+        def pipeToSelf(defnʹ: Option[Defn.Def], param: Term.Name*)
+                      (`yield`: Term => Term)
+                      (using Seq[String]) =
+
+          val recvʹ = `Behaviors.receive { case _ => * }`(defnʹ.spawning(param*))
+          val υidυ = "pipe" + id
+          val defn = dfn(υidυ, Term.Block(recvʹ :: Nil), param.map(_.value)*)
+          val thunk = Term.Apply(\(υidυ), Term.ArgClause(param.toList))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(self, thunk)(Some(`yield`))
+
+          callback(defnʹ.getOrElse(Lit.Unit()) :: defn :: Nil, recv :: Nil)
 
       self match
 
@@ -446,19 +474,11 @@ object Program:
                 case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
                   hd :: it.copy(pat = Pat.Var(υidυ)) :: tl
 
-              val `yield`: Term => Term = `if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
-                                                                               Type.ArgClause(Nil),
-                                                                               Term.ArgClause("None" :: Nil)),
-                                                               `Behaviors.stopped`,
-                                                               _)
-
-              val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning(par))
-              val υidυʹ = "emitν" + id
-              val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil), par)
-              val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(par :: Nil))
-              val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`π.emit`, thunk)(Some(`yield`))
-
-              callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
+              `π.emit`.pipeToSelf(defn, par)(`if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
+                                                                                  Type.ArgClause(Nil),
+                                                                                  Term.ArgClause("None" :: Nil)),
+                                                                  `Behaviors.stopped`,
+                                                                  _))
 
         case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
@@ -481,18 +501,10 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val `yield`: Term => Term = { it => `if * then … else …`(Term.ApplyUnary("!", par),
-                                                                   `Behaviors.stopped`,
-                                                                   Term.Block(`val` :+ it))
-                                      }
-
-          val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning(arg))
-          val υidυʹ = "emitπ" + id
-          val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil), arg)
-          val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(arg :: Nil))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`πʹ.emit`, thunk)(Some(`yield`))(using Nil)
-
-          callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
+          `πʹ.emit`.pipeToSelf(defn, arg) { it => `if * then … else …`(Term.ApplyUnary("!", par),
+                                                                       `Behaviors.stopped`,
+                                                                       Term.Block(`val` :+ it))
+                                          } (using Nil)
 
         case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
@@ -505,19 +517,12 @@ object Program:
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               it.copy(pat = Pat.Var(υidυ)) :: tl
 
-          val `yield`: Term => Term = `if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
-                                                                           Type.ArgClause(Nil),
-                                                                           Term.ArgClause("None" :: Nil)),
-                                                           `Behaviors.stopped`,
-                                                           _)
-
-          val recvʹ = `Behaviors.receive { case _ => * }`(defn.spawning())
-          val υidυʹ = "emitμ" + id
-          val defnʹ = dfn(υidυʹ, Term.Block(recvʹ :: Nil))
-          val thunk = Term.Apply(\(υidυʹ), Term.ArgClause(Nil))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(`μ.emit`, thunk)(Some(`yield`))(using Nil)
-
-          callback(defn.getOrElse(Lit.Unit()) :: defnʹ :: Nil, recv :: Nil)
+          `μ.emit`.pipeToSelf(defn)(`if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
+                                                                         Type.ArgClause(Nil),
+                                                                         Term.ArgClause("None" :: Nil)),
+                                                         `Behaviors.stopped`,
+                                                         _)
+                                   ) (using Nil)
 
         case !(parallelism, _, _, sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)

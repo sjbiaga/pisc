@@ -103,7 +103,7 @@ object Optimizer:
 
                                   None
 
-                            case it =>
+                            case _ =>
 
                               find(name, stats.init)
 

@@ -87,8 +87,7 @@ object Meta extends emitter.shared.actors.Meta:
     `* = gACΠ.spawnAnonymous(…)`(*, Term.Apply(\(**), Term.ArgClause(`…`.map(\(_)).toList)))
 
   def `* ! Left(None)`(* : Term) =
-    Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil),
-                    Term.ArgClause(Term.Apply(\("Left"), Term.ArgClause("None" :: Nil)) :: Nil))
+    Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil), Term.ArgClause("πNone" :: Nil))
 
   val `self ! Left(None)` = `* ! Left(None)`(Term.Select("given_ActorContext_Π", "self"))
 

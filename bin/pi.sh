@@ -9,6 +9,7 @@ function pi() {
             shift
             ;;
         *)
+            return
             ;;
     esac
     case "$emit" in
@@ -22,7 +23,7 @@ function pi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/TODO/secure
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.12
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
@@ -62,6 +63,7 @@ function pi_() {
             shift
             ;;
         *)
+            return
             ;;
     esac
     case "$emit" in
@@ -75,7 +77,7 @@ function pi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/TODO/secure
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.12
                         --repo https://jitpack.io
                         --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
@@ -115,6 +117,7 @@ function pio() {
             shift
             ;;
         *)
+            return
             ;;
     esac
     while [ $# -gt 0 ]

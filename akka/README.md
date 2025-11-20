@@ -49,12 +49,14 @@ the `pipeToSelf` method on the `ActorContext`, but what is the result? Especiall
 if there are new names introduced by the for-comprehension, these must be available
 to the leaf expression. Thus the result is the next behavior of the current actor,
 received as message wrapped in `Right` - the result of `pipeToSelf` -, that has
-captured all the new names when the prefixes end. For instance, `Q = ν(x) x(x). P(x)`
-generates this code:
+captured all the new names when the prefixes end.
+
+For instance, equation `Q = ν(x) x(x). P(x)` generates this code:
+
 
     01 def Q(): Behavior[Π] = {
     02   def _υ4υ(): Behavior[Π] = {
-    03     def _υ1υ(x: `()`): Behavior[Π] = {
+    03     def _υ2υ(x: `()`): Behavior[Π] = {
     04       ()
     05       Behaviors.receive {
     06         case (given ActorContext[Π], _) => {
@@ -71,11 +73,11 @@ generates this code:
     17       case (given ActorContext[Π], _)         =>
     18         given ExecutionContext = given_ActorContext_Π.executionContext
     19         given_ActorContext_Π.pipeToSelf {
-    20           val _υ2υ = given_ActorContext_Π.spawnAnonymous(ν())
+    20           val _υ1υ = given_ActorContext_Π.spawnAnonymous(ν())
     21           for {
-    22             x <- Future.successful(_υ2υ)
+    22             x <- Future.successful(_υ1υ)
     23             x <- x()
-    24           } yield Right(_υ1υ(x))
+    24           } yield Right(_υ2υ(x))
     25         }(_.get)
     26         Behaviors.same
     27     }
@@ -111,15 +113,15 @@ then an actor assigned to `_υ5υ` is spawned and sent the message `Left(None)`.
 behavior is defined in `lines #13-#27`, which corresponds to the prefixes `ν(x) x(x).`
 (the creation of a new name `x` followed by a input on channel `x`).
 
-Note how the new name `x` corresponds to an actor (assigned to `_υ2υ`) spawned in
+Note how the new name `x` corresponds to an actor (assigned to `_υ1υ`) spawned in
 `line #20` with the behavior `ν()`: this is how channels are implemented at [runtime](#runtime),
 as special actors with two queues, for output and input. In `line #22`, the new name
-`x` is introduced as an alias for the freshly spawned actor `_υ2υ` (this is also done
+`x` is introduced as an alias for the freshly spawned actor `_υ1υ` (this is also done
 using a generator rather than an assignment in the for-comprehension). In `line #23`
 the introduction of `x` is pending on the input on channel `x` (both have the same name,
 which is perfectly legal in Scala). When input is available, the for-comprehension will
-yield `Right(_υ1υ(x))`: this is a message that the current actor will send to itself,
-which wraps in a `Right` the `Behavior` returned from `_υ1υ(x)` - where (the last) `x`
+yield `Right(_υ2υ(x))`: this is a message that the current actor will send to itself,
+which wraps in a `Right` the `Behavior` returned from `_υ2υ(x)` - where (the last) `x`
 is captured by `lines #04-#11`. Because of `line #26`, the current actor will promptly
 receive this latter message in the _same_ `PartialFunction` from lines `#14-#26`. The
 case matched though this time is in `lines #14-#16`: the current actor continues just
@@ -132,22 +134,22 @@ Let us change a bit the agent `Q`'s definition to `Q' = ν(x) x(y). ( P(x) | P(y
 leaf is now a composition (in fact a summation with a single operand, the composition):
 
     def `Q'`(): Behavior[Π] = {
-      def _υdυ(): Behavior[Π] = {
-        def _υ1υ(x: `()`, y: `()`): Behavior[Π] = {
-          def _υ9υ(): Behavior[Π] = {
+      def _υiυ(): Behavior[Π] = {
+        def _υ7υ(x: `()`, y: `()`): Behavior[Π] = {
+          def _υeυ(): Behavior[Π] = {
             Behaviors.receive {
               case (given ActorContext[Π], _) => {
-                val _υaυ = given_ActorContext_Π.spawnAnonymous(P(x))
-                val _υbυ = given_ActorContext_Π.spawnAnonymous(P(y))
-                πLs(_υaυ, _υbυ).πforeach()
+                val _υfυ = given_ActorContext_Π.spawnAnonymous(P(x))
+                val _υgυ = given_ActorContext_Π.spawnAnonymous(P(y))
+                πLs(_υfυ, _υgυ).πforeach()
                 Behaviors.empty
               }
             }
           }
           Behaviors.receive {
             case (given ActorContext[Π], _) => {
-              val _υcυ = given_ActorContext_Π.spawnAnonymous(_υ9υ())
-              _υcυ ! Left(None)
+              val _υhυ = given_ActorContext_Π.spawnAnonymous(_υeυ())
+              _υhυ ! Left(None)
               Behaviors.empty
             }
           }
@@ -159,19 +161,19 @@ leaf is now a composition (in fact a summation with a single operand, the compos
           case (given ActorContext[Π], _)         =>
             given ExecutionContext = given_ActorContext_Π.executionContext
             given_ActorContext_Π.pipeToSelf {
-              val _υ2υ = given_ActorContext_Π.spawnAnonymous(ν())
+              val _υ6υ = given_ActorContext_Π.spawnAnonymous(ν())
               for {
-                x <- Future.successful(_υ2υ)
+                x <- Future.successful(_υ6υ)
                 y <- x()
-              } yield Right(_υ1υ(x, y))
+              } yield Right(_υ7υ(x, y))
             }(_.get)
             Behaviors.same
         }
       }
       Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
         if (it.fold(true)(_.compareAndSet(false, true))) {
-          val _υeυ = given_ActorContext_Π.spawnAnonymous(_υdυ())
-          _υeυ ! Left(None)
+          val _υjυ = given_ActorContext_Π.spawnAnonymous(_υiυ())
+          _υjυ ! Left(None)
           Behaviors.empty
         } else {
           Behaviors.stopped
@@ -311,8 +313,9 @@ There are seven cases of code generation:
 This method invokes `generate` recursively (which in turn may invoke `scheme`).
 It has two parameters:
 
-1. `behavior: Term.Apply` - this is a thunk to a method used solely by guarded replication
-   leaves to repeat their behavior after the prefixes and just before the guard
+1. `behavior: Term.Name` - this is a (parameterless `def` which returns a) thunk: a closure
+   to a method used solely by guarded replication leaves to repeat their behavior
+   after the prefixes and just before the guard
 
 1. `callback: (List[Stat], Term.Apply | List[Stat]) => Unit` this is a function which
    must be called once, that captures the body of the definition returned by `generate`
@@ -337,7 +340,7 @@ It has two parameters:
 There are nine cases - of which four are replication - that are "code generation schemes":
 
 1. inaction - the `generate`d definition has no nested methods (but `Lit.Unit()` is used
-   instead), and the second argument is in case 3: a single `Behaviors.stopped`.
+   instead), and the second argument is in case 3: a single `Behaviors.stopped` statement.
 
 1. summation - the defintion `generate`d from the summation is the only nested method,
    and so the second argument is in case 1: a thunk to the behavior returned by the
@@ -351,23 +354,366 @@ There are nine cases - of which four are replication - that are "code generation
    in case 3. The first argument will be at most two nested `generate`d methods, or else
    `Lit.Unit()`.
 
+   For example, for the agent `R = if True = False then P else Q`, the optimized
+   program - up to renaming - is the following:
+
+       def R(): Behavior[Π] = {
+         def _υtυ(): Behavior[Π] = {
+           def _υkυ(): Behavior[Π] = {
+             Behaviors.receive {
+               case (given ActorContext[Π], _) => {
+                 if (true ==== false) {
+                   val _υrυ = given_ActorContext_Π.spawnAnonymous(P())
+                   _υrυ ! Left(None)
+                   Behaviors.empty
+                 } else {
+                   val _υsυ = given_ActorContext_Π.spawnAnonymous(Q())
+                   _υsυ ! Left(None)
+                   Behaviors.empty
+                 }
+               }
+             }
+           }
+           _υkυ()
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υuυ = given_ActorContext_Π.spawnAnonymous(_υtυ())
+             _υuυ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
+
+   If, for instance, we introduce some prefixes so that `R` becomes the agent
+   `R'(x) = ν(y) x<y>. y<νz>. if True = False then P(y) else Q(z)`, we get the
+   following optimized output:
+
+       def `R'`(x: `()`): Behavior[Π] = {
+         def _υGυ(): Behavior[Π] = {
+           def _υxυ(y: `()`, z: `()`): Behavior[Π] = {
+             Behaviors.receive {
+               case (given ActorContext[Π], _) => {
+                 if (true ==== false) {
+                   val _υEυ = given_ActorContext_Π.spawnAnonymous(P(y))
+                   _υEυ ! Left(None)    // line#08
+                   Behaviors.empty
+                 } else {
+                   val _υFυ = given_ActorContext_Π.spawnAnonymous(Q(z))
+                   _υFυ ! Left(None)    // line #12
+                   Behaviors.empty
+                 }
+               }
+             }
+           }
+           Behaviors.receive {
+             case (given ActorContext[Π], Right(it)) =>
+               given_ActorContext_Π.self ! Left(None)
+               it                                // line #21
+             case (given ActorContext[Π], _)         =>
+               given ExecutionContext = given_ActorContext_Π.executionContext
+               given_ActorContext_Π.pipeToSelf {
+                 val _υwυ = given_ActorContext_Π.spawnAnonymous(ν())
+                 val _υvυ = given_ActorContext_Π.spawnAnonymous(ν())
+                 for {
+                   y <- Future.successful(_υwυ)
+                   _ <- x(y)
+                   z <- Future.successful(_υvυ)
+                   _ <- y(z)
+                 } yield Right(_υxυ(y, z)) // line #32
+               }(_.get)
+               Behaviors.same
+           }
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υHυ = given_ActorContext_Π.spawnAnonymous(_υGυ())
+             _υHυ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
+
+   Notice how the behavior _after_ the prefixes is captured in `line #32` (by the
+   method, in `line #03`, whom all bound names - `y` and `z` - are passed to), becomes
+   in `line #21`, and actually computes in the `if` which either spawns `P(y)` in
+   `line #08` or else `Q(z)` in `line #12`.
+
 1. unguarded replication - in this simplest case of a replication leaf, the second
    argument - in case 3 - to the callback ends with `Behaviors.same`, after it sends
    the message `Left(None)` to itself in order to replicate. If there is a nested
    definition `generate`d, prior this is spawned and the resulting actor sent the
-   message `Left(None)`.
+   message `Left(None)`. If a parallelism is specified, the latter generation
+   process is parameterized with a fresh semapohore: it will be released somewhere
+   in the nested `generate`d definition, but it is acquired with each receipt of
+   a (recurrent) "replication message".
 
-1. guarded replication with bound output guard -
+   For example, the process `R = ! 2 * if True = False then P else Q` `generate`s
+   the following optimized code:
 
-1. guarded replication with input guard
-1. guarded replication with output guard
+       def R(): Behavior[Π] = {
+         def _υWυ(): Behavior[Π] = {
+           def _υVυ(_υJυ: πSem): Behavior[Π] = {
+             def _υIυ(): Behavior[Π] = {
+               def _υTυ(): Behavior[Π] = {
+                 def _υKυ(): Behavior[Π] = {
+                   Behaviors.receive {
+                     case (given ActorContext[Π], _) => {
+                       if (true ==== false) {
+                         val _υRυ = given_ActorContext_Π.spawnAnonymous(P())
+                         _υRυ ! Left(None)
+                         _υJυ.release    // line #12
+                         Behaviors.empty
+                       } else {
+                         val _υSυ = given_ActorContext_Π.spawnAnonymous(Q())
+                         _υSυ ! Left(None)
+                         _υJυ.release    // line #17
+                         Behaviors.empty
+                       }
+                     }
+                   }
+                 }
+                 _υKυ()
+               }
+               Behaviors.receive {
+                 case (given ActorContext[Π], _) => {
+                   _υJυ.acquire                      // line #27
+                   val _υUυ = given_ActorContext_Π.spawnAnonymous(_υTυ())
+                   _υUυ ! Left(None)
+                   given_ActorContext_Π.self ! Left(None) // line #30
+                   Behaviors.same
+                 }
+               }
+             }
+             _υIυ()
+           }
+           Behaviors.receive {
+             case (given ActorContext[Π], _) => {
+               val _υYυ = πSem(2)
+               val _υXυ = given_ActorContext_Π.spawnAnonymous(_υVυ(_υYυ)) // line #40
+               πLs(_υXυ).πforeach()
+               Behaviors.empty
+             }
+           }
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υZυ = given_ActorContext_Π.spawnAnonymous(_υWυ())
+             _υZυ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
 
-1. (macro) instantiation
-1. invocation
+   The replication in `R` occurs in `line #30`, just after acquiring the 2-permits
+   semaphore in `line #27`, semaphore which is passed from `line #40` and released
+   in either the `if` branch in `line #12` or in the `else` branch in `line #17`,
+   as soon as and wherever the code issued by the replication is done.
 
-#### inaction
+1. guarded replication with (silent prefix or) output guard - the code for the guard
+   is [`emit`](#emit)ted, and the result of this `Future` is sent as a message to self
+   via `pipeToSelf`. But the (successful) value of this `Future` - as a behavior - is
+   that from a call to a inner nested method that spawns the code `generate`d for the
+   replicated expression: this is how we spawn this actor with each replication.
+   Now, in order to replicate - besides spawning this actor -, we would `pipeToSelf`
+   a new `Future` again - the very outer method to which we have a "forward reference"
+   as the first argument to the `scheme`. So - in the inner nested method - it is used
+   as the becoming behavior, just after sending to self a `Left(None)` dummy message.
+
+   For example, the equation `P(a) = !.a<a>.` `generate`s the following code:
+
+       def P(a: `()`): Behavior[Π] = {
+         def _υ05υ(): Behavior[Π] = {
+           def outer_υ01υ(): Behavior[Π] = {
+             def thunk_υ02υ = outer_υ01υ()
+             ()
+             def inner_υ04υ(): Behavior[Π] = {
+               Behaviors.receive { case (given ActorContext[Π], _) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 thunk_υ02υ // line #09
+               }
+             }
+             Behaviors.receive {
+               case (given ActorContext[Π], Right(it)) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 it                   // line #15
+               case (given ActorContext[Π], _)         =>
+                 given ExecutionContext = given_ActorContext_Π.executionContext
+                 given_ActorContext_Π.pipeToSelf(
+                   for (_υ03υ <- a(a))
+                     yield Right(
+                       if (_υ03υ eq None)
+                         Behaviors.stopped
+                       else
+                         inner_υ04υ() // line #24
+                     )
+                 )(_.get)
+                 Behaviors.same
+             }
+           }
+           outer_υ01υ() // line #30
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υ06υ = given_ActorContext_Π.spawnAnonymous(_υ05υ())
+             _υ06υ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
 
 
+   The agent `P(a)` starts directly (without prefixes) a replication, so in `line #30`
+   the behavior is returned without ado. Observe that there are other two nested methods,
+   an "outer" one and an "inner" one. The outer nested method corresponds to the output
+   guard, and in `line #24` - and thereafter in `line #15` -, changes the behavior to the
+   inner method, which, because of the inaction, merely reverts the behavior - in
+   `line #09` - back to the outer method, ready for the guard again.
+
+1. guarded replication with bound output guard - similar to 5.
+
+   For example, the equation `Q = ν(a) !.a<νb>.` `generate`s the following code:
+
+       def Q(): Behavior[Π] = {
+         def _υ0dυ(): Behavior[Π] = {
+           def outer_υ08υ(a: `()`): Behavior[Π] = { // line #03
+             def thunk_υ09υ = outer_υ08υ(a)
+             ()
+             def inner_υ0cυ(b: `()`): Behavior[Π] = { // line #06
+               Behaviors.receive { case (given ActorContext[Π], _) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 thunk_υ09υ // line #09
+               }
+             }
+             Behaviors.receive {
+               case (given ActorContext[Π], Right(it)) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 it // line #15
+               case (given ActorContext[Π], _)         =>
+                 given ExecutionContext = given_ActorContext_Π.executionContext
+                 given_ActorContext_Π.pipeToSelf {
+                   val _υ0aυ = given_ActorContext_Π.spawnAnonymous(ν())
+                   for {
+                     b     <- Future.successful(_υ0aυ)
+                     _υ0bυ <- a(b)
+                   } yield Right(
+                     if (_υ0bυ eq None)
+                       Behaviors.stopped
+                     else
+                       inner_υ0cυ(b) // line #27
+                   )
+                 }(_.get)
+                 Behaviors.same
+             }
+           }
+           Behaviors.receive { // line #33
+             case (given ActorContext[Π], Right(it)) =>
+               given_ActorContext_Π.self ! Left(None)
+               it // line #36
+             case (given ActorContext[Π], _)         =>
+               given ExecutionContext = given_ActorContext_Π.executionContext
+               given_ActorContext_Π.pipeToSelf {
+                 val _υ07υ = given_ActorContext_Π.spawnAnonymous(ν())
+                 for (a <- Future.successful(_υ07υ))
+                   yield Right(outer_υ08υ(a)) // line #42
+               }(_.get)
+               Behaviors.same
+           } // line #45
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υ0eυ = given_ActorContext_Π.spawnAnonymous(_υ0dυ())
+             _υ0eυ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
+
+   This time the agent `Q` starts with a prefix (a new name), and so `lines #33-#45`
+   compose these prefixes into a `Future`, result of which is the behavior from
+   `line #42` and then `line #36`: the "outer" method from `line #03`. This in turn
+   composes a `Future` from the guard, result of which is the behavior from `line #27`
+   and then `line #15`: the "inner" method from `line #06`. The latter, because of
+   the inaction, then sends itself a repeating dummy mesage, and reverts the behavior - in
+   `line #09` - back to the former, ready for the guard again.
+
+   Had we used the expression `ν(b) !.a<νb>.` instead, although the `b` in the bound
+   output guard clobbers the `b` from the new name prefix, it would still be all right
+   because in `line #09` we would use a "thunk" (which would capture the parameter `b`
+   from `line #03`) instead of the presumed `outer_υ08υ(b)` (when `b` would be
+   the parameter from `line #06`, not `line #03`).
+
+1. guarded replication with input guard - similar to 5.
+
+   For example, the equation `R = ν(a) !.a(b).` `generate`s the following code:
+
+       def R(): Behavior[Π] = {
+         def _υ0jυ(): Behavior[Π] = {
+           def outer_υ0gυ(a: `()`): Behavior[Π] = {
+             def thunk_υ0hυ = outer_υ0gυ(a)
+             ()
+             def inner_υ0iυ(b: `()`): Behavior[Π] = {
+               Behaviors.receive { case (given ActorContext[Π], _) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 thunk_υ0hυ
+               }
+             }
+             Behaviors.receive {
+               case (given ActorContext[Π], Right(it)) =>
+                 given_ActorContext_Π.self ! Left(None)
+                 it
+               case (given ActorContext[Π], _)         =>
+                 given ExecutionContext = given_ActorContext_Π.executionContext
+                 given_ActorContext_Π.pipeToSelf(
+                   for (b <- a())
+                     yield Right(
+                       if (!b)
+                         Behaviors.stopped
+                       else {
+                         inner_υ0iυ(b)
+                       }
+                     )
+                 )(_.get)
+                 Behaviors.same
+             }
+           }
+           Behaviors.receive {
+             case (given ActorContext[Π], Right(it)) =>
+               given_ActorContext_Π.self ! Left(None)
+               it
+             case (given ActorContext[Π], _)         =>
+               given ExecutionContext = given_ActorContext_Π.executionContext
+               given_ActorContext_Π.pipeToSelf {
+                 val _υ0fυ = given_ActorContext_Π.spawnAnonymous(ν())
+                 for (a <- Future.successful(_υ0fυ))
+                   yield Right(outer_υ0gυ(a))
+               }(_.get)
+               Behaviors.same
+           }
+         }
+         Behaviors.receive { case (given ActorContext[Π], Left(it)) =>
+           if (it.fold(true)(_.compareAndSet(false, true))) {
+             val _υ0kυ = given_ActorContext_Π.spawnAnonymous(_υ0jυ())
+             _υ0kυ ! Left(None)
+             Behaviors.empty
+           } else {
+             Behaviors.stopped
+           }
+         }
+       }
+
+1. macro instantiation
+1. agent invocation
 
 ### generateʹ
 
@@ -414,7 +760,7 @@ To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the 
 
     sbt:π-Calculus[experimental]2Scala> pin -kk ex
 
-Or, if you suspect the [optimizer](#optimizer) is buggy, try disabling it:
+Or, if you wish to disable the [optimizer](#optimizer):
 
     sbt:π-Calculus[experimental]2Scala> pin -kk -O0 ex
 

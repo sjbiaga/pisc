@@ -2,22 +2,24 @@
 
 O = !
 
-OO = ν(a) !
+O' = ν(a) !
 
-OOO = ν(a) !OOO
+O" = ν(a) !O"
 
 P = ν(a) !.a<a>.
 
-PP = ν(a) !.a<a>.PP
+P' = ν(a) !.a<a>.P'
 
 Q = ν(a) !.a<νb>.
 
-QQ(x) = ν(a) !.a<νb>.QQ(b)
+Q'(x) = ν(a) !.a<νb>.Q'(b)
 
 R = ν(a) !.a(b).
 
-RR(x) = ν(a) !.a(b).RR(b)
+R'(x) = ν(a) !.a(b : List[Int] /**/).R'(b)
 
-RRR = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+R" = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+
+S(b) = ν(a) ! .a(a). S(a)
 
 Main =

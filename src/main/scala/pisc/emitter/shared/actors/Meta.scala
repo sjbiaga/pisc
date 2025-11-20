@@ -92,6 +92,10 @@ abstract trait Meta extends shared.Meta:
       `for * yield ()`(`_ <- Future.unit`)
 
 
+  def `def * = …`(* : String, `…`: Term): Stat =
+    Defn.Def(Nil, *, Nil, None, `…`)
+
+
   def `*.acquire`(* : String) = Term.Select(*, "acquire")
 
   def `*.release`(* : String) = Term.Select(*, "release")
