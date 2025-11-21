@@ -23,13 +23,11 @@ function pi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.12
-                        --repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
+            local deps='--repo https://repo.akka.io/TODO/secure
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.12'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.2.1'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -46,7 +44,7 @@ function pi() {
         args="$args $1"
         shift
     done
-    set ../${emit}/pi.scala ${srcs#?}
+    set ${srcs#?} ../${emit}/pi.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -77,13 +75,11 @@ function pi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.12
-                        --repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1'
+            local deps='--repo https://repo.akka.io/TODO/secure
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.12'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.2.1'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -100,7 +96,7 @@ function pi_() {
         args="$args $1"
         shift
     done
-    set ../${emit}/pi_.scala ${srcs#?}
+    set ${srcs#?} ../${emit}/pi_.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \

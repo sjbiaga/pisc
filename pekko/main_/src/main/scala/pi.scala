@@ -44,9 +44,9 @@ package object Π:
   object ν:
 
     def apply(): Behavior[Request] =
-      val q = Queue.empty[(Promise[Boolean], Any)]
-      val r = Queue.empty[(Promise[`()`], Option[Any => Future[Any]])]
-      νActor(q, r)
+      val i = Queue.empty[Request.Input]
+      val o = Queue.empty[Request.Output]
+      νActor(i, o)
 
 
   /**
@@ -81,10 +81,10 @@ package object Π:
     def apply(value: `()`)
              (using ExecutionContext): Future[Option[Unit]] =
       for
-        _      <- Future.unit
-        promise = Promise[Boolean]
-        _       = a ! Output(promise, value.name)
-        stop   <- promise.future
+        _    <- Future.unit
+        stop  = Promise[Boolean]
+        _     = a ! Output(value.name, null, None, stop)
+        stop <- stop.future
       yield
         if stop then None else Some(())
 
@@ -94,10 +94,14 @@ package object Π:
     def apply(value: `()`)(code: => Future[Any])
              (using ExecutionContext): Future[Option[Unit]] =
       for
-        r <- apply(value)
-        _ <- code
+        _      <- Future.unit
+        promise = Promise[Unit]
+        stop    = Promise[Boolean]
+        _       = a ! Output(value.name, promise, Some(code), stop)
+        _      <- promise.future
+        stop   <- stop.future
       yield
-        r
+        if stop then None else Some(())
 
     /**
       * positive prefix i.e. input
@@ -129,45 +133,55 @@ package object Π:
 
   private object `Π-magic`:
 
+    import Request.*
+
     enum Request:
+      private[`Π-magic`] case Execute(promise: Promise[Unit])
       private[`Π-magic`] case Compute(promise: Promise[`()`], result: Try[Any], stop: Promise[Boolean])
-      case Input(promise: Promise[`()`], code: Option[Any => Future[Any]])
-      case Output(stop: Promise[Boolean], name: Any)
+      case Input(wrap: Promise[`()`], code: Option[Any => Future[Any]])
+      case Output(name: Any, done: Promise[Unit], exec: Option[Future[Any]], stop: Promise[Boolean])
 
     type >< = ActorRef[Request]
 
-    def νActor(q: Queue[(Promise[Boolean], Any)], r: Queue[(Promise[`()`], Option[Any => Future[Any]])]): Behavior[Request] =
-      import Request.*
+    def νActor(i: Queue[Input], o: Queue[Output]): Behavior[Request] =
 
       Behaviors.receive[Request] {
 
-        case (_, Compute(promise, result, stop)) =>
+        case (_, Execute(promise))                          =>
+          promise.success(())
+          Behaviors.same
+
+        case (_, Compute(promise, result, stop))            =>
           promise.success(result.fold(_ => `()`(null), `()`))
           stop.success(result.fold(_ => true, _ == null))
           Behaviors.same
 
-        case (context, Output(stop, name)) =>
+        case (context, it @ Output(name, done, exec, stop)) =>
 
-          r.dequeueOption.fold(νActor(q.enqueue(stop -> name), r)) {
-            case ((promise, Some(code)), r) if name != null =>
-              context.pipeToSelf(code(name))(Compute(promise, _, stop))
-              νActor(q, r)
-            case ((promise, _), r) =>
-              promise.success(`()`(name))
+          i.dequeueOption.fold(νActor(i, o.enqueue(it))) {
+            case (Input(wrap, Some(code)), i) if name != null =>
+              context.pipeToSelf(code(name))(Compute(wrap, _, stop))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
+            case (Input(wrap, _), i)                          =>
+              wrap.success(`()`(name))
               stop.success(name == null)
-              νActor(q, r)
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
           }
 
-        case (context, Input(promise, code))  =>
+        case (context, it @ Input(wrap, code))              =>
 
-          q.dequeueOption.fold(νActor(q, r.enqueue(promise -> code))) {
-            case ((stop, name), q) if name != null && code.isDefined =>
-              context.pipeToSelf(code.get(name))(Compute(promise, _, stop))
-              νActor(q, r)
-            case ((stop, name), q) =>
-              promise.success(`()`(name))
+          o.dequeueOption.fold(νActor(i.enqueue(it), o)) {
+            case (Output(name, done, exec, stop), o) if name != null && code.isDefined =>
+              context.pipeToSelf(code.get(name))(Compute(wrap, _, stop))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
+            case (Output(name, done, exec, stop), o)                                   =>
+              wrap.success(`()`(name))
               stop.success(name == null)
-              νActor(q, r)
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
           }
 
       }

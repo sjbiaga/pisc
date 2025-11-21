@@ -412,7 +412,8 @@ object Program:
 
         def pipeToSelf(defnʹ: Option[Defn.Def], param: Term.Name*)
                       (`yield`: Term => Term)
-                      (using Seq[String]) =
+                      (using Seq[String])
+                      (using Option[String]) =
 
           val recvʹ = `Behaviors.receive { case _ => * }`(defnʹ.spawning(param*))
           val υidυ = "pipe" + id

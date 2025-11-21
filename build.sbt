@@ -135,7 +135,7 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
     libraryDependencies ++= Seq(pekko, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "c[ea]/pi*.scala" || "*[ae][kk][ao]/pi*.scala" || "examples/*.scala"
+unmanagedSources / excludeFilter := "c[ea]/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

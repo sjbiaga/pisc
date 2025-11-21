@@ -441,7 +441,7 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * :+= `_ <- *`(Term.Apply(term, Term.ArgClause(args)))
+          * = `_ <- *`(Term.Apply(term, Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 

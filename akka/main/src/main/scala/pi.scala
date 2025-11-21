@@ -43,9 +43,9 @@ package object Π:
   object ν:
 
     def apply(): Behavior[Request] =
-      val q = Queue.empty[Any]
-      val r = Queue.empty[(Promise[`()`], Option[Any => Future[Any]])]
-      νActor(q, r)
+      val i = Queue.empty[Request.Input]
+      val o = Queue.empty[Request.Output]
+      νActor(i, o)
 
 
   /**
@@ -79,14 +79,20 @@ package object Π:
       */
     def apply(value: `()`)
              (using ExecutionContext): Future[Option[Unit]] =
-      Future.successful(a ! Output(value.name)).map(_ => Some(()))
+      Future.successful(a ! Output(value.name, null, None)).map(_ => Some(()))
 
     /**
       * negative prefix i.e. output
       */
     def apply(value: `()`)(code: => Future[Any])
              (using ExecutionContext): Future[Option[Unit]] =
-      apply(value).flatMap(_ => code).map(_ => Some(()))
+      for
+        _      <- Future.unit
+        promise = Promise[Unit]
+        _       = a ! Output(value.name, promise, Some(code))
+        _      <- promise.future
+      yield
+        Some(())
 
     /**
       * positive prefix i.e. input
@@ -118,42 +124,52 @@ package object Π:
 
   private object `Π-magic`:
 
+    import Request.*
+
     enum Request:
+      private[`Π-magic`] case Execute(promise: Promise[Unit])
       private[`Π-magic`] case Compute(promise: Promise[`()`], result: Try[Any])
-      case Input(promise: Promise[`()`], code: Option[Any => Future[Any]])
-      case Output(name: Any)
+      case Input(wrap: Promise[`()`], code: Option[Any => Future[Any]])
+      case Output(name: Any, done: Promise[Unit], exec: Option[Future[Any]])
 
     type >< = ActorRef[Request]
 
-    def νActor(q: Queue[Any], r: Queue[(Promise[`()`], Option[Any => Future[Any]])]): Behavior[Request] =
-      import Request.*
+    def νActor(i: Queue[Input], o: Queue[Output]): Behavior[Request] =
 
       Behaviors.receive[Request] {
 
-        case (_, Compute(promise, result)) =>
+        case (_, Execute(promise))                    =>
+          promise.success(())
+          Behaviors.same
+
+        case (_, Compute(promise, result))            =>
           promise.success(result.fold(_ => `()`(null), `()`))
           Behaviors.same
 
-        case (context, Output(name)) =>
+        case (context, it @ Output(name, done, exec)) =>
 
-          r.dequeueOption.fold(νActor(q.enqueue(name), r)) {
-            case ((promise, Some(code)), r) if name != null =>
-              context.pipeToSelf(code(name))(Compute(promise, _))
-              νActor(q, r)
-            case ((promise, _), r) =>
-              promise.success(`()`(name))
-              νActor(q, r)
+          i.dequeueOption.fold(νActor(i, o.enqueue(it))) {
+            case (Input(wrap, Some(code)), i) if name != null =>
+              context.pipeToSelf(code(name))(Compute(wrap, _))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
+            case (Input(wrap, _), i)                          =>
+              wrap.success(`()`(name))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
           }
 
-        case (context, Input(promise, code))  =>
+        case (context, it @ Input(wrap, code))        =>
 
-          q.dequeueOption.fold(νActor(q, r.enqueue(promise -> code))) {
-            case (name, q) if name != null && code.isDefined =>
-              context.pipeToSelf(code.get(name))(Compute(promise, _))
-              νActor(q, r)
-            case (name, q) =>
-              promise.success(`()`(name))
-              νActor(q, r)
+          o.dequeueOption.fold(νActor(i.enqueue(it), o)) {
+            case (Output(name, done, exec), o) if name != null && code.isDefined =>
+              context.pipeToSelf(code.get(name))(Compute(wrap, _))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
+            case (Output(name, done, exec), o)                                   =>
+              wrap.success(`()`(name))
+              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
+              νActor(i, o)
           }
 
       }

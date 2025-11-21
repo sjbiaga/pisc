@@ -289,7 +289,7 @@ abstract class Encoding extends Calculus:
             this()
             _dir = dir
 
-        case _ => throw DirectiveKeyParsingException(_dir.get)
+        case _              => throw DirectiveKeyParsingException(_dir.get)
 
 
 object Encoding:
