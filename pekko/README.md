@@ -525,6 +525,8 @@ There are nine cases - of which four are replication - that are "code generation
    a new `Future` again - the very outer method to which we have a "forward reference"
    as the first argument to the `scheme`. So - in the inner nested method - it is used
    as the becoming behavior, just after sending to self a `Left(None)` dummy message.
+   The second argument to the callback is in case 2: an existing `Behaviors.receive`
+   block.
 
    For example, the equation `P(a) = !.a<a>.` `generate`s the following code:
 
@@ -659,13 +661,13 @@ There are nine cases - of which four are replication - that are "code generation
 
        def R(): Behavior[Π] = {
          def _υ0jυ(): Behavior[Π] = {
-           def outer_υ0gυ(a: `()`): Behavior[Π] = {
-             def thunk_υ0hυ = outer_υ0gυ(a)
+           def outer_υ0iυ(a: `()`): Behavior[Π] = {
+             def thunk_υ0gυ = outer_υ0iυ(a)
              ()
-             def inner_υ0iυ(b: `()`): Behavior[Π] = {
+             def inner_υ0hυ(b: `()`): Behavior[Π] = {
                Behaviors.receive { case (given ActorContext[Π], _) =>
                  given_ActorContext_Π.self ! Left(None)
-                 thunk_υ0hυ
+                 thunk_υ0gυ // line #09
                }
              }
              Behaviors.receive {
@@ -675,12 +677,12 @@ There are nine cases - of which four are replication - that are "code generation
                case (given ActorContext[Π], _)         =>
                  given ExecutionContext = given_ActorContext_Π.executionContext
                  given_ActorContext_Π.pipeToSelf(
-                   for (b <- a())
+                   for (b <- a()) // line 19
                      yield Right(
-                       if (!b)
+                       if (!b) // line #21
                          Behaviors.stopped
                        else {
-                         inner_υ0iυ(b)
+                         inner_υ0hυ(b)
                        }
                      )
                  )(_.get)
@@ -696,7 +698,7 @@ There are nine cases - of which four are replication - that are "code generation
                given_ActorContext_Π.pipeToSelf {
                  val _υ0fυ = given_ActorContext_Π.spawnAnonymous(ν())
                  for (a <- Future.successful(_υ0fυ))
-                   yield Right(outer_υ0gυ(a))
+                   yield Right(outer_υ0iυ(a))
                }(_.get)
                Behaviors.same
            }
@@ -712,8 +714,22 @@ There are nine cases - of which four are replication - that are "code generation
          }
        }
 
+   It is obvious that most of the code is the same with the example at 6, except
+   for `line #19`: this corresponds there with two generators instead of one here.
+   The test in `line #21` is different too, here being a check for `null` of the input
+   name/value, while there being a comparison with `None` of the return value of
+   the method that does the output. But the idea is the same: an outer and an inner,
+   both nested, methods, the former corresponding to the behavior of the actor just
+   after the prefixes, i.e., the replication itself, while the latter corresponding
+   to the behavior after the input guard, when the actor sends itself a dummy message
+   in order to continue replicating, just after spawning the actor for the replicated
+   behavior, which in this case is none at all, because of the inaction. To continue
+   from the input guard (again), the behavior is reverted back to the outer method,
+   using its thunk in `line #09`.
+
 1. macro instantiation
-1. agent invocation
+
+1. agent invocation -
 
 ### generateʹ
 

@@ -17,7 +17,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `ca-main`, `ca-main_`, `akka-main`, `akka-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `ca-main`, `ca-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`)
   .settings(
     name := "π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
