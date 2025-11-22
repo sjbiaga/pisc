@@ -80,7 +80,7 @@ package object Π:
       */
     def apply(value: `()`)
              (using ExecutionContext): Future[Option[Unit]] =
-      Future.successful(a ! Output(value.name, null, None)).map(_ => Some(()))
+      Future { a ! Output(value.name, null, None) }.map(_ => Some(()))
 
     /**
       * negative prefix i.e. output
@@ -90,7 +90,7 @@ package object Π:
       for
         _      <- Future.unit
         promise = Promise[Unit]
-        _       = a ! Output(value.name, promise, Some(code))
+        _      <- Future { a ! Output(value.name, promise, Some(code)) }
         _      <- promise.future
       yield
         Some(())
@@ -102,7 +102,7 @@ package object Π:
       for
         _      <- Future.unit
         promise = Promise[`()`]
-        _       = a ! Input(promise, None)
+        _      <- Future { a ! Input(promise, None) }
         name   <- promise.future
       yield
         name
@@ -115,7 +115,7 @@ package object Π:
       for
         _      <- Future.unit
         promise = Promise[`()`]
-        _       = a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]]))
+        _      <- Future { a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]])) }
         name   <- promise.future
       yield
         name

@@ -58,13 +58,9 @@ object CommandPin {
     val runKey = currentRef / Compile / run
 
     val (overrideSettings, runArguments) =
-      pisc.headOption.map(_.toLowerCase) match {
-        case Some("-kk") =>
-          Seq(currentRef / Compile / mainClass := Some("pisc.kk.Main")) -> pisc.tail
-        case Some("-ca") =>
-          Seq(currentRef / Compile / mainClass := Some("pisc.ca.Main")) -> pisc.tail
-        case Some("-ce") =>
-          Seq(currentRef / Compile / mainClass := Some("pisc.ce.Main")) -> pisc.tail
+      pisc.headOption.map(_.tail.toLowerCase) match {
+        case Some(it) =>
+          Seq(currentRef / Compile / mainClass := Some(s"pisc.$it.Main")) -> pisc.tail
         case _ =>
           Seq(currentRef / Compile / mainClass := Some("pisc.ce.Main")) -> pisc
       }
