@@ -33,31 +33,8 @@ package kk
 import scala.meta.*
 import dialects.Scala3
 
-import parser.Calculus.`(*)`
-
 
 object Meta extends emitter.shared.actors.Meta:
-
-  def dfn(body: List[Stat], recv: List[Stat]): `(*)` => Defn.Def =
-    case `(*)`("Main", _) =>
-      Defn.Def(Nil,
-               "Main",
-               Member.ParamClauseGroup(
-                 Type.ParamClause(Nil),
-                 Term.ParamClause(Term.Param(Nil, "args", `:`("List", "String"), None) :: Nil) :: Nil) :: Nil,
-               `: Behavior[Π]`,
-               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
-    case `(*)`(identifier, _, params*) =>
-      Defn.Def(Nil,
-               identifier,
-               Member.ParamClauseGroup(
-                 Type.ParamClause(Nil),
-                 Term.ParamClause(params
-                                    .map(_.asSymbol.name)
-                                    .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
-                                    .toList) :: Nil) :: Nil,
-               `: Behavior[Π]`,
-               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
 
   def dfn(υidυ: String, body: List[Stat]) =
     val bodyʹ = body match
@@ -68,16 +45,6 @@ object Meta extends emitter.shared.actors.Meta:
   def dfn(υidυ: String, body: Term, args: String*) =
     Defn.Def(Nil, υidυ, `(…)`(args*), `: Behavior[Π]`, body)
 
-  private def `(…)`(* : String*) =
-    Member.ParamClauseGroup(
-      Type.ParamClause(Nil),
-      Term.ParamClause(*
-                        .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
-                        .toList,
-                       None) :: Nil
-    ) :: Nil
-
-  private val `: Behavior[Π]` = `:`("Behavior", "Π")
 
   def `* = gACΠ.spawnAnonymous(…)`(* : String, `…`: Term): Stat =
     Defn.Val(Nil, `* <- …`(*) :: Nil, None, Term.Apply(Term.Select("given_ActorContext_Π", "spawnAnonymous"),
@@ -86,6 +53,7 @@ object Meta extends emitter.shared.actors.Meta:
   def `* = gACΠ.spawnAnonymous(…)`(* : String, ** : String, `…`: String*): Stat =
     `* = gACΠ.spawnAnonymous(…)`(*, Term.Apply(\(**), Term.ArgClause(`…`.map(\(_)).toList)))
 
+
   def `* ! Left(None)`(* : Term) =
     Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil), Term.ArgClause("πNone" :: Nil))
 
@@ -93,14 +61,6 @@ object Meta extends emitter.shared.actors.Meta:
 
   def `* ! Left(it)`(* : Term) =
     Term.ApplyInfix(*, \("!"), Type.ArgClause(Nil), Term.ArgClause("it" :: Nil))
-
-  val `Behaviors.empty` = Term.Select("Behaviors", "empty")
-
-  val `Behaviors.same` = Term.Select("Behaviors", "same")
-
-  val `Behaviors.stopped` = Term.Select("Behaviors", "stopped")
-
-  val `Behaviors.ignore` = Term.Select("Behaviors", "ignore")
 
 
   def `List( *, … ).foreach`(* : String*)(`…`: Boolean = false): Term.Apply =
@@ -188,20 +148,6 @@ object Meta extends emitter.shared.actors.Meta:
                                   ) :: Nil))
       case _ =>
         `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(*)
-
-  def `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(* : List[Stat]) =
-    Term.Apply(Term.Select("Behaviors", "receive"),
-               Term.ArgClause(Term.PartialFunction(
-                                Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                    Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                               Pat.Extract(\("Left"), Pat.ArgClause(Pat.Var("it") :: Nil)) :: Nil),
-                                     None,
-                                     Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select("it", "fold"),
-                                                                              Term.ArgClause(Lit.Boolean(true) :: Nil)),
-                                                                   Term.ArgClause(Term.AnonymousFunction(Term.Apply(Term.Select(Term.Placeholder(), "compareAndSet"), Term.ArgClause(Lit.Boolean(false) :: Lit.Boolean(true) :: Nil))) :: Nil)),
-                                                        Term.Block(* :+ `Behaviors.empty`),
-                                                        Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
-                              ) :: Nil))
 
 
   def release(using String): Term => Term =

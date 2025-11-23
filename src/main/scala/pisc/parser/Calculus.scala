@@ -128,11 +128,11 @@ abstract class Calculus extends Pi:
       case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
-        if ch == par && cons != "ν"
+        if ch == par
         then
           emitter match
             case Emitter.kk =>
-            case _ => warn(throw GuardParsingException(ch.name))
+            case _ => warn(throw GuardParsingException(ch.name, cons.isEmpty))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -411,8 +411,8 @@ object Calculus:
   case class PrefixChannelsParsingException(names: λ*)
       extends PrefixParsingException(s"""${names.mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}""")
 
-  case class GuardParsingException(name: String)
-      extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
+  case class GuardParsingException(name: String, input: Boolean)
+      extends PrefixParsingException(s"""$name is both the channel name and ${if input then "the binding parameter name in an input guard" else "the new name in a bound output guard"}""")
 
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")

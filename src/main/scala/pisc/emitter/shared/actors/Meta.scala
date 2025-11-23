@@ -36,6 +36,8 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
+import parser.Calculus.`(*)`
+
 
 abstract trait Meta extends shared.Meta:
 
@@ -47,20 +49,50 @@ abstract trait Meta extends shared.Meta:
     if *.nonEmpty then `for * yield ()`(* *)
     else \(`_ <- Future.unit`)
 
-  val `: Future[Any]` = `:`("Future", "Any")
-
   val `_ <- Future.unit` =
     Enumerator.Generator(`* <- …`(), Term.Select("Future", "unit"))
 
   val `Future.unit` = Term.Select("Future", "unit")
 
   def `* <- Future.successful(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 ->Term.Apply(Term.Select("Future", "successful"), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select("Future", "successful"), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- Future { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
                          Term.Apply(\("Future"),
                                     Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+
+
+  def dfn(body: List[Stat], recv: List[Stat]): `(*)` => Defn.Def =
+    case `(*)`("Main", _) =>
+      Defn.Def(Nil,
+               "Main",
+               Member.ParamClauseGroup(
+                 Type.ParamClause(Nil),
+                 Term.ParamClause(Term.Param(Nil, "args", `:`("List", "String"), None) :: Nil) :: Nil) :: Nil,
+               `: Behavior[Π]`,
+               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
+    case `(*)`(identifier, _, params*) =>
+      Defn.Def(Nil,
+               identifier,
+               Member.ParamClauseGroup(
+                 Type.ParamClause(Nil),
+                 `(…)`(params.map(_.asSymbol.name)*).head.paramClauses
+               ) :: Nil,
+               `: Behavior[Π]`,
+               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
+
+  protected def `(…)`(* : String*) =
+    Member.ParamClauseGroup(
+      Type.ParamClause(Nil),
+      Term.ParamClause(*
+                        .map(Term.Param(Nil, _, Some(Type.Name("()")), None))
+                        .toList,
+                       None) :: Nil
+    ) :: Nil
+
+  protected val `: Behavior[Π]` = `:`("Behavior", "Π")
+
 
   def `sleep(*.…)`(* : Long, `…`: String) =
     Term.Apply(\("πsleep"), Term.ArgClause(Lit.Long(*) :: \(`…`.toUpperCase) :: Nil))
@@ -102,6 +134,30 @@ abstract trait Meta extends shared.Meta:
 
   def `* = Semaphore(…)`(* : String, `…`: Int = 1): Stat =
     Defn.Val(Nil, `* <- …`(*) :: Nil, None, Term.Apply(\("πSem"), Term.ArgClause(Lit.Int(`…`) :: Nil)))
+
+
+  val `Behaviors.empty` = Term.Select("Behaviors", "empty")
+
+  val `Behaviors.same` = Term.Select("Behaviors", "same")
+
+  val `Behaviors.stopped` = Term.Select("Behaviors", "stopped")
+
+  val `Behaviors.ignore` = Term.Select("Behaviors", "ignore")
+
+
+  def `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(* : List[Stat]) =
+    Term.Apply(Term.Select("Behaviors", "receive"),
+               Term.ArgClause(Term.PartialFunction(
+                                Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                    Type.ArgClause(Type.Name("Π") :: Nil))) ::
+                                               Pat.Extract(\("Left"), Pat.ArgClause(Pat.Var("it") :: Nil)) :: Nil),
+                                     None,
+                                     Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select("it", "fold"),
+                                                                              Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                                                   Term.ArgClause(Term.AnonymousFunction(Term.Apply(Term.Select(Term.Placeholder(), "compareAndSet"), Term.ArgClause(Lit.Boolean(false) :: Lit.Boolean(true) :: Nil))) :: Nil)),
+                                                        Term.Block(* :+ `Behaviors.empty`),
+                                                        Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
+                              ) :: Nil))
 
 
 object Meta extends Meta:
