@@ -583,11 +583,11 @@ object Program:
           * = names.zipWithIndex.map { (it, i) =>  `* <- Future.successful(*)`(it -> **(i)) }.toList
 
         case τ(Some((Left(enums), _))) =>
-          * :+= `_ <- *`("τ")
-          * :::= enums
+          * = `_ <- *`("τ")
+          * = * ::: enums
 
         case τ(Some((Right(term), _))) =>
-          * :+= `_ <- *`("τ")
+          * = `_ <- *`("τ")
           * :+= `_ <- Future { * }`(term)
 
         case τ(_) =>

@@ -8,8 +8,10 @@ function pi() {
             local emit="${1#?}"
             shift
             ;;
-        *)
+        -*)
             return
+            ;;
+        *)
             ;;
     esac
     case "$emit" in
@@ -23,7 +25,7 @@ function pi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/TODO/secure
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.12'
             ;;
         pekko)
@@ -60,8 +62,10 @@ function pi_() {
             local emit="${1#?}"
             shift
             ;;
-        *)
+        -*)
             return
+            ;;
+        *)
             ;;
     esac
     case "$emit" in
@@ -75,7 +79,7 @@ function pi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
-            local deps='--repo https://repo.akka.io/TODO/secure
+            local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.12'
             ;;
         pekko)
@@ -112,8 +116,10 @@ function pio() {
             local emit="${1#?}"
             shift
             ;;
-        *)
+        -*)
             return
+            ;;
+        *)
             ;;
     esac
     while [ $# -gt 0 ]

@@ -697,11 +697,11 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
         case τ(Some((Left(enums), _))) =>
-          * :+= `_ <- *`("τ")
-          * :::= enums
+          * = `_ <- *`("τ")
+          * = * ::: enums
 
         case τ(Some((Right(term), _))) =>
-          * :+= `_ <- *`("τ")
+          * = `_ <- *`("τ")
           * :+= `_ <- IO { * }`(term)
 
         case τ(_) =>
