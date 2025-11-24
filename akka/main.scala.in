@@ -42,24 +42,27 @@ object App:
   import `Π-loop`.{ +, Loop }
   import π.{ `π-main`, `π-uuid`, `π-wand`, Main }
 
-  private def apply(args: Array[String]): Behavior[Unit] =
+  private def apply(args: Array[String]): Behavior[Either[Unit, Unit]] =
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
-    Behaviors.setup[Unit] { context =>
+    Behaviors.setup[Either[Unit, Unit]] { context =>
       val % : Map[String, Int | +] = `π-main`.foldLeft(Map.empty)(_.updated(_, 1))
       val dump = context.spawnAnonymous(Dump())
       val loop = context.spawnAnonymous(Loop(1 max p)(dump)(%))
       val main = context.spawnAnonymous(Main(args.toList)(using `π-uuid`)(using loop))
-      Behaviors.receiveMessage { _ =>
-        main ! π.πNone
-        Behaviors.empty
+      Behaviors.receiveMessage {
+        case Left(_) =>
+          main ! π.πNone
+          Behaviors.same
+        case Right(_) =>
+          Behaviors.stopped
       }
     }
 
   def main(args: Array[String]): Unit =
-    val system = ActorSystem[Unit](this(args), "StochasticPi")
-    system ! ()
+    val system = ActorSystem[Either[Unit, Unit]](this(args), "StochasticPi")
+    system ! Left(())
 
 
 object π:

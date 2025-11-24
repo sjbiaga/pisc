@@ -59,7 +59,7 @@ package object `Π-loop`:
 
       Behaviors.receive[Loop] {
 
-        case (_, Trigger) =>
+        case (context, Trigger) =>
 
           if %.exists(_._2.isInstanceOf[Int])
           then
@@ -94,6 +94,7 @@ package object `Π-loop`:
                    }
                 then
                   %.keys.foreach(%(_).asInstanceOf[+]._1.success(None))
+                  context.system.unsafeUpcast[Either[Unit, Unit]] ! Right(())
                   Behaviors.stopped
 
                 else
@@ -152,6 +153,8 @@ package object `Π-loop`:
                                 if k1 != k2 then p2.success(Some((delay)))
                               }
                   }
+
+                context.self ! Trigger
 
                 Loop(parallelism)(dump)(m)
 

@@ -61,7 +61,7 @@ package object `Π-loop`:
 
       Behaviors.receive[Loop] {
 
-        case (_, Trigger) =>
+        case (context, Trigger) =>
 
           if %.exists(_._2.isInstanceOf[Int])
           then
@@ -156,6 +156,8 @@ package object `Π-loop`:
                                 dump ! (no, ((ts1, ts2), System.nanoTime), (k1, k2), (delay, duration))
                               }
                   }
+
+                context.self ! Trigger
 
                 Loop(parallelism)(dump)(m)
 

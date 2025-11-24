@@ -64,15 +64,16 @@ package object `Π-dump`:
 
     def apply(): Behavior[-] =
 
-      Behaviors.receiveMessage[-] {
+      Behaviors.receive[-] {
 
-        case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration)) =>
+        case (_, (no, ((ts1, ts2), ts), (k1, k2), (delay, duration))) =>
           record(no, ts1, ts, delay, duration)(k1)
           if k1 != k2 then record(no, ts2, ts, delay, duration)(k2)
           Behaviors.same
 
-        case it: Map[String, Int | +] =>
+        case (context, it: Map[String, Int | +]) =>
           it.keys.foreach(it(_).asInstanceOf[+]._1.success(None))
+          context.system.unsafeUpcast[Either[Unit, Unit]] ! Right(())
           Behaviors.stopped
 
       }
