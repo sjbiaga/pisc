@@ -1,0 +1,25 @@
+# -*- indent-tabs-mode: nil; -*-
+
+O = !
+
+O' = ν(a) !
+
+O" = ν(a) !O"
+
+P = ν(a) !.a<a>.
+
+P' = ν(a) !.a<a>.P'
+
+Q = ν(a) !.a<νb>.
+
+Q'(x) = ν(a) !.a<νb>.Q'(b)
+
+R = ν(a) !.a(b).
+
+R'(x) = ν(a) !.a(b : List[Int] /**/).R'(b)
+
+R" = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+
+S(b) = ν(a) ! .a(a). S(a)
+
+Main =

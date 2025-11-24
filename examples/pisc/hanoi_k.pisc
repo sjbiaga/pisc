@@ -1,0 +1,47 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ pi_ hanoi.scala
+
+@given Conversion[`()`, Int] = _.`()`[Int]
+
+@val ! : String => Future[String] = { _ => Future.successful(null) }
+
+Main = ν(a,b,c)      \
+     ( (!.a<"a">.)   \
+     | (!.b<"b">.)   \
+     | (!.c<"c">.)   \
+     | Hanoi(a,b,c)  \
+     )
+
+Hanoi(a,b,c,n*) = ν(w, stdin)                                   \
+                ( (                                             \
+                  ( τ/* _ <- Future { print("n = ") };          \
+                       'n <- Future {                           \
+                               try                              \
+                                 scala.io.StdIn.readLine.toInt  \
+                               catch _ => -1                    \
+                             }                                  \
+                      */. stdin<n>.                             \
+                  ) | stdin(n). Hanoi(a,b,c,n,w)                \
+                  )                                             \
+                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.        \
+                  τ/*println(s"#${'w} moves")*/.                \
+                )
+
+
+Move(from,to,z) = from(x).to(y).                    \
+                  τ/*println(s"${'x} -> ${'y}")*/.  \
+                                z</*1*/>.
+
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
+                   else ν(x)                                     \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                  \
+                      | x(x). ν(y)                               \
+                              ( Move(a,c,y)                      \
+                              | y(y). ν(z)                       \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)  \
+                                      | z(z).w</*'x+'y+'z*/>.    \
+                                      )                          \
+                              )                                  \
+                      )

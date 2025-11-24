@@ -1,0 +1,9 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
+
+P(x) =
+
+Q = ν(a) a<νb>. ⟦ P(){} ^ P(){} ⟧{a,b}
+
+Main =

@@ -1,0 +1,7 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P(y, z, u) =
+
+Q(a, c, d, e, x, w) = a<x>. ν(y) c(z : List[Int] /**/). z::(h,). d<w>. e(u). P(y, z, u)
+
+Main =

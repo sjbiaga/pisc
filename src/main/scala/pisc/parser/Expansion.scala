@@ -470,11 +470,11 @@ object Expansion:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(_.replace)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.replace)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.replace)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.replace)*)
 
         case `.`(end, _it*) =>
           val it = _it.map {
@@ -560,11 +560,11 @@ object Expansion:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(_.concatenate)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.concatenate)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.concatenate)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.concatenate)*)
 
         case `.`(end, it*) =>
           `.`(end.concatenate, it*)
@@ -593,11 +593,11 @@ object Expansion:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(_.update)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.update)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.update)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.update)*)
 
         case `.`(end, _it*) =>
           given Bindings = Bindings(bindings)

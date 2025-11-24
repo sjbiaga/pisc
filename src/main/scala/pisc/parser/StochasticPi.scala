@@ -33,7 +33,6 @@ import scala.io.Source
 
 import scala.collection.mutable.{
   LinkedHashMap => Map,
-  ListBuffer => MutableList,
   LinkedHashSet => Set
 }
 
@@ -180,6 +179,8 @@ abstract class StochasticPi extends Expression:
           throw WholeNumberFormatException("be a Long", t)
     }
 
+  protected val emitter: Emitter
+
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -213,6 +214,8 @@ abstract class StochasticPi extends Expression:
   protected var _exclude: Boolean = false
 
   protected var _paceunit: String = null
+
+  protected var _scaling: Boolean = false
 
   private[parser] var _id: helper.υidυ = null
 
@@ -273,6 +276,8 @@ object StochasticPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
+  enum Emitter { case ce, cef, kk }
+
   type Actions = Set[String]
 
   object Actions:
@@ -297,9 +302,13 @@ object StochasticPi:
         case it: Act => Some(it.rate.isDefined)
         case _ => Some(false)
 
-  trait Sum:
-    val enabled: Actions
-
+  trait Sum { this: + =>
+    private var _enabled: Actions = null
+    inline def enabled: Actions = _enabled
+    inline def enabled_=(enabled: Actions): + =
+      _enabled = enabled
+      this
+  }
 
   type Names = Set[Symbol]
 
@@ -354,11 +363,11 @@ object StochasticPi:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(_.shallow)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.shallow)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.shallow)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.shallow)*)
 
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
@@ -372,13 +381,14 @@ object StochasticPi:
         case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, (params ++ pointers.map(λ(_)))*)
+        case `{}`(id, pointers, true, params*) =>
+          `(*)`(id, (params ++ pointers.map(λ(_)))*)
 
         case _ => ast
 
 
-  final class Main(override protected val in: String) extends Expansion:
+  final class Main(override protected val emitter: Emitter,
+                   override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -429,29 +439,34 @@ object StochasticPi:
 
         def insert_+(sum: +): + =
           val (seq, enabled) = insert[`.`](sum)
-          `+`(enabled, ∥(seq))
+          `+`(-1, ∥(-1, seq)).enabled = enabled
 
         ast match
 
-          case ∅() => (ast, nil)
+          case ∅() =>
+
+            ast match
+
+               case it: + =>
+                 (it.enabled = nil, it.enabled)
 
           case it: + =>
-            val sum = it.choices.foldLeft(`+`(nil)) {
+            val sum = it.choices.foldLeft(`+`(it.scaling).enabled = nil) {
               case (sum: +, par) =>
                 val (parʹ, enabledʹ) = par.parse
                 assert(enabledʹ.nonEmpty)
                 assert((sum.enabled & enabledʹ).isEmpty)
-                (`+`(sum.enabled ++ enabledʹ, (sum.choices :+ parʹ)*))
+                `+`(sum.scaling, (sum.choices :+ parʹ)*).enabled = sum.enabled ++ enabledʹ
             }
             (sum, sum.enabled)
 
           case it: ∥ =>
-            val (par, enabled) = it.components.foldLeft((∥(), nil)) {
+            val (par, enabled) = it.components.foldLeft((∥(it.scaling), nil)) {
               case ((par: ∥, enabled), seq) =>
                 val (seqʹ, enabledʹ) = seq.parse
                 assert(enabledʹ.nonEmpty)
                 assert((enabled & enabledʹ).isEmpty)
-                (∥((par.components :+ seqʹ)*), enabled ++ enabledʹ)
+                (∥(par.scaling, (par.components :+ seqʹ)*), enabled ++ enabledʹ)
             }
             (par, enabled)
 
@@ -507,7 +522,7 @@ object StochasticPi:
               then
                 _sum
               else
-                `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
             var (it, _) = sum.parse
 
@@ -527,11 +542,11 @@ object StochasticPi:
 
           case ∅() => nil
 
-          case +(enabled, par) =>
+          case it @ +(_, par) =>
             par.split
-            enabled
+            it.enabled
 
-          case +(enabled, ps*) =>
+          case it @ +(_, ps*) =>
             val ls = ps.map(_.split)
             var ts = ls.take(0)
             var ds = ls.drop(1)
@@ -552,9 +567,9 @@ object StochasticPi:
               ds = ds.drop(1)
             }
 
-            enabled
+            it.enabled
 
-          case ∥(ss*) =>
+          case ∥(_, ss*) =>
             ss.map(_.split).reduce(_ ++ _)
 
           case `.`(_: `(*)`, ps*) =>
@@ -607,7 +622,7 @@ object StochasticPi:
           case +(_, ps*) =>
             ps.map(_.graph).reduce(_ ++ _)
 
-          case ∥(ss*) =>
+          case ∥(_, ss*) =>
             ss.map(_.graph).reduce(_ ++ _)
 
           case `.`(end, ps*) =>
@@ -701,12 +716,14 @@ object StochasticPi:
       _dups = false
       _exclude = false
       _paceunit = "second"
+      _scaling = false
       _par = 9
       _traces = None
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
+                       "scaling" -> _scaling,
                        "parallelism" -> _par,
                        "traces" -> _traces))
       eqtn = List()
@@ -775,10 +792,10 @@ object StochasticPi:
           else
             r
         ).filter {
-          case Right((`(*)`(s"Self_$n", _, _*), _))
+          case Right((`(*)`(s"Self_$n", _*), _))
               if { try { n.toInt; true } catch _ => false } =>
             self.contains(n.toInt)
           case _ => true
         }
 
-      Right(`(*)`(null, λ(Lit.Int(_par))), `+`(nil)) :: prog
+      Right(`(*)`(null, λ(Lit.Int(_par))), `+`(-1)) :: prog

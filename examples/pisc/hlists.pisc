@@ -1,0 +1,20 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ spi hlists.scala --dep com.chuusai:shapeless_2.13:2.3.13 -- 1 2 3 5 7
+
+@import shapeless.*
+
+Main = ν(ch)                                                             \
+     ( Client(ch, /*args.map(_.toInt).foldRight(HNil: HList)(_ :: _)*/)  \
+     | Server(ch)                                                        \
+     )
+
+Client(ch, l) = ch<l>.
+
+Server(ch) = !.ch(list: HList /**/).                   \
+             if /*'list ne HNil*/ = True               \
+             then                                      \
+               list::(head, tail) /*println('head)*/.  \
+               ch<tail>.                               \
+             else                                      \
+               ch<>.

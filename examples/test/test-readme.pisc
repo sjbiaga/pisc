@@ -1,0 +1,25 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P(x) =
+
+Q = ν(x) x(y). ν(z) P(x)
+
+# Q' = ν(x) x(y). ( P(x) | P(y) )
+
+# R = if True = False then P(True) else Q
+
+# R'(x) = ν(y) x<y>. y<νz>. if True = False then P(y) else P(z)
+
+# R" = ! 2 * if True = False then Q else Q'
+
+# P'(a) = !.a<a>.
+
+# Q" = ν(a) !.a<νb>.
+
+# R"' = ν(a) !.a(b).
+
+# Q"' = ν(a) τ. !.a<νb>. ( Q" + Q"' )
+
+# Q""(a) =  Q" + Q""(a) + !.a<νb>.
+
+Main =

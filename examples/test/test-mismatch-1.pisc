@@ -1,0 +1,23 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P = [1 = 1]P
+
+P' = ν(x) x<x>. [1 = 1]P'
+
+P" = ν(x) x<x>. x(y). [1 = 1]P"
+
+Q = [1 = 1][2 = 2]Q
+
+Q' = ν(x) x<x>. [1 = 1][2 = 2]Q'
+
+Q" = ν(x) x<x>. x(y). [1 = 1][2 = 2]Q"
+
+R = if 0 = 0 then P else Q
+
+R' = ν(x) x<x>. if 0 = 0 then P else Q
+
+R" = ν(x) x<x>. x(y). if 0 = 0 then P else Q
+
+S(x) = ν(y) x<y>. y<νz>. if True = False then S(y) else S(z)
+
+Main =

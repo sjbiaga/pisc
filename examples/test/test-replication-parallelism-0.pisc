@@ -1,0 +1,15 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ scaling = true ⟧
+
+O = ν(a) ! 2 * 1,second
+
+OO = ν(a) ! 2 * 1,second OO
+
+# P = ν(a) !.a<a>.
+
+# Q = ν(a) !.a(b).
+
+# R = ν(a,b) ( (!.a<a>.) | (!.b<b>.) )
+
+Main =

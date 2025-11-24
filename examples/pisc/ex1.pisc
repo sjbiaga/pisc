@@ -1,1 +1,9 @@
-Main = ν(x)((!.x@∞<5>.τ/*println("out 5")*/.x@∞(z).τ/*println(s"in ${'z}")*/.) | x@∞(z).)
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ traces = 1 ⟧
+
+Main = ν(x) ( (!.x<νy>.τ/*println("out")*/.) | (!.x(y).τ/*println("in")*/.) )
+
+# Main = ν(x)ν(y)(x<y>. | x(z).(([y=z]()) | (([x = y][y = x][y ≠ z](τ. | τ/*println(1)*/.)) + ([x = y][y = z]τ/*println(2)*/.) + ([y ≠ z][x = y]τ/*println(3)*/.) + ([y = z]τ/*println(4)*/.)) ))
+
+# Main = ν(x)((!.x@∞<5>.τ/*println("out 5")*/.x@∞(z).τ/*println(s"in ${'z}")*/.) | x@∞(z).)

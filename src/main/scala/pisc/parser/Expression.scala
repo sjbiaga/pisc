@@ -429,7 +429,7 @@ object Expression:
               case null =>
                 updating match
                   case null =>
-                    sm.Term.Name(name) -> Set(free)
+                    sm.Pat.Var(sm.Term.Name(name)) -> Set(free)
                   case given Bindings =>
                     sm.Lit.Symbol(updated(free).asSymbol) -> Names()
               case given Substitution =>

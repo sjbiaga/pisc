@@ -10,21 +10,21 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-Main = ν(stdin, stdout) Greeter(stdin, stdout, "")
+Main = ν(stdin, stdout) Greeter(stdin, stdout)
 
-Greeter(stdin, stdout, line) = \
-                             ( stdout<"What's your name?">.stdin(name). \
-                                                                        if /* 'name.isBlank */ = True \
-                                                                        then Greeter(stdin, stdout, line) \
-                                                                        else Chooser(stdout, name) \
-                             ) \
-                             | \
-                             ( stdout(prompt) /* nl */. \
-                               τ /* _    <- IO { print('prompt) }; \
-                                   'line <- IO.blocking { scala.io.StdIn.readLine } */. \
-                               stdin<line>.stdout(greet) /* nl */. \
-                               τ/*print('greet)*/. \
-                             )
+Greeter(stdin, stdout, line*) = \
+                              ( stdout<"What's your name?">.stdin(name). \
+                                                                         if /* 'name.isBlank */ = True \
+                                                                         then Greeter(stdin, stdout) \
+                                                                         else Chooser(stdout, name) \
+                              ) \
+                              | \
+                              ( stdout(prompt) /* nl */. \
+                                τ /* _    <- IO { print('prompt) }; \
+                                    'line <- IO.blocking { scala.io.StdIn.readLine } */. \
+                                stdin<line>.stdout(greet) /* nl */. \
+                                τ/*print('greet)*/. \
+                              )
 
 Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
                       + τ@r.Greeter"(stdout, name)  \

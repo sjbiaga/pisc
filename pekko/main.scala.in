@@ -1,0 +1,108 @@
+/*
+ * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+//package main.scala.in
+
+import _root_.org.apache.pekko.actor.typed.ActorSystem
+import _root_.org.apache.pekko.actor.typed.Behavior
+import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
+
+
+object App:
+
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
+
+  import _root_.scala.collection.immutable.Map
+  import `Π-dump`.Dump
+  import `Π-loop`.{ +, Loop }
+  import π.{ `π-main`, `π-uuid`, `π-wand`, Main }
+
+  private def apply(args: Array[String]): Behavior[Unit] =
+    val p = if sys.Prop.IntProp(spicsp).isSet
+            then sys.Prop.IntProp(spicsp).value
+            else π.`π-parallelism`
+    Behaviors.setup[Unit] { context =>
+      val % : Map[String, Int | +] = `π-main`.foldLeft(Map.empty)(_.updated(_, 1))
+      val dump = context.spawnAnonymous(Dump())
+      val loop = context.spawnAnonymous(Loop(1 max p)(dump)(%))
+      val main = context.spawnAnonymous(Main(args.toList)(using `π-uuid`)(using loop))
+      Behaviors.receiveMessage { _ =>
+        main ! π.πNone
+        Behaviors.empty
+      }
+    }
+
+  def main(args: Array[String]): Unit =
+    val system = ActorSystem[Unit](this(args), "StochasticPi")
+    system ! ()
+
+
+object π:
+
+  import _root_.java.util.UUID
+
+  import _root_.java.util.concurrent.{ Semaphore => πSem }
+  import _root_.java.util.concurrent.atomic.{ AtomicBoolean => πAB }
+  import _root_.java.util.concurrent.TimeUnit
+  import _root_.java.util.concurrent.TimeUnit.*
+
+  import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.scala.concurrent.{ ExecutionContext, Future }
+
+  import _root_.org.apache.pekko.actor.typed.scaladsl.ActorContext
+  import _root_.org.apache.pekko.actor.typed.ActorRef
+
+  import _root_.eu.timepit.refined.*
+
+  private lazy val πSleepSem = πSem(0)
+  def πsleep(pace: Long, unit: TimeUnit) = πSleepSem.tryAcquire(pace, unit)
+
+  val DAY         = DAYS
+  val MINUTE      = MINUTES
+  val HOUR        = HOURS
+  val SECOND      = SECONDS
+  val MILLISECOND = MILLISECONDS
+  val MICROSECOND = MICROSECONDS
+  val NANOSECOND  = NANOSECONDS
+
+  type Π = Either[Option[πAB], Behavior[Π]]
+
+  val πNone: Π = Left(None)
+
+  extension (self: πLs[ActorRef[Π]])
+    private[π] inline def πforeach(it: Option[πAB] = None): Unit =
+      self.foreach(_ ! Left(it))
+
+  import sΠ.*
+
+  def `π-uuid` = UUID.randomUUID.toString
+
+  import `Π-loop`.%
+  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+
+

@@ -1,0 +1,15 @@
+# -*- indent-tabs-mode: nil; -*-
+
+⟦ scaling = true ⟧
+
+P(x) = 1 * 2 * x<νy>. P(y)
+
+Q(x) = x<x>. ! .x<νy>. Q(y)
+
+# P(x) = x<x>. ! ( P(x) + P(x) )
+
+# P(y, z, u) =
+
+# Q(a, c, d, e, x, w) = a<x>. ν(y) c(z : List[Int] /**/). z::(h,). d<w>. e(u). ( z(f). P(y, f, u) | y(g). P(g, z, u) )
+
+Main =
