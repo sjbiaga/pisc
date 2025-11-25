@@ -1,6 +1,7 @@
 import Dependencies._
+import CommandBAin._
 
-ThisBuild / scalaVersion := "3.7.4-RC3"
+ThisBuild / scalaVersion := "3.7.4"
 
 Global / resolvers += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
@@ -11,46 +12,73 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(main, main_)
+  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`)
   .settings(
-    name := "BioAmbients2Scala",
+    name := "BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    commands += bain,
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
 
-lazy val main = (project in file("main"))
+lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "main BioAmbients2Scala",
+    name := "ce main BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
 
-lazy val main_ = (project in file("main_"))
+lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
-    name := "main_ BioAmbients2Scala",
+    name := "ce main_ BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.7.4-RC3",
-    crossScalaVersions ++= Seq("2.13.17", "3.7.4-RC3"),
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ba*.scala" || "dump*.scala" || "loop*.scala" || "stats*.scala" || "examples/*.scala"
+lazy val `cef-main` = (project in file("cef/main"))
+  .settings(
+    name := "cef main BioAmbients[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
+  )
+
+lazy val `cef-main_` = (project in file("cef/main_"))
+  .settings(
+    name := "cef main_ BioAmbients[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.7.4",
+    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "ce*/*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

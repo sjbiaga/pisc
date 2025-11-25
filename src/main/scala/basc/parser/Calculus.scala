@@ -33,7 +33,7 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 
 import scala.meta.{ Term, Type }
 
-import emitter.Meta.rateʹ
+import emitter.shared.Meta.rateʹ
 
 import Expression.Code
 import BioAmbients.*
@@ -72,10 +72,17 @@ abstract class Calculus extends BioAmbients:
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
       rep1sep(parallel, "+") ^^ { _.unzip match
         case (it, ns) =>
-          `+`(nil, it*) -> ns.reduce(_ ++ _) match
-            case (+(_, it*), names) =>
-              (0 until scalingʹ).foldLeft(`+`(nil): +) { case (+(_, itʹ*), _) => `+`(nil, (itʹ ++ it)*) } match
-                case sum => sum -> (if sum.choices.isEmpty then Names() else names)
+          if scalingʹ == 0
+          then
+            `+`(-1) -> Names()
+          else if _scaling && emitter == Emitter.kk
+          then
+            `+`(scaling, it*) -> ns.reduce(_ ++ _)
+          else
+            `+`(-1, it*) -> ns.reduce(_ ++ _) match
+              case (+(_, it*), names) =>
+                (0 until scalingʹ).foldLeft(`+`(-1): +) { case (+(_, itʹ*), _) => `+`(-1, (itʹ ++ it)*) } match
+                  case sum => sum -> names
       }
     }
 
@@ -85,10 +92,17 @@ abstract class Calculus extends BioAmbients:
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
       rep1sep(sequential, "|") ^^ { _.unzip match
         case (it, ns) =>
-          ∥(it*) -> ns.reduce(_ ++ _) match
-            case (∥(it*), names) =>
-              (0 until scalingʹ).foldLeft(∥(): ∥) { case (∥(itʹ*), _) => ∥((itʹ ++ it)*) } match
-                case par => par -> (if par.components.isEmpty then Names() else names)
+          if scalingʹ == 0
+          then
+            ∥(-1, `.`(`+`(-1))) -> Names()
+          else if _scaling && emitter == Emitter.kk
+          then
+            ∥(scaling, it*) -> ns.reduce(_ ++ _)
+          else
+            ∥(-1, it*) -> ns.reduce(_ ++ _) match
+              case (∥(_, it*), names) =>
+                (0 until scalingʹ).foldLeft(∥(-1): ∥) { case (∥(_, itʹ*), _) => ∥(-1, (itʹ ++ it)*) } match
+                  case par => par -> names
       }
     }
 
@@ -101,7 +115,7 @@ abstract class Calculus extends BioAmbients:
     }
 
   def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
-    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`(nil) -> Names()) }
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`(-1) -> Names()) }
 
   def leaf(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
@@ -120,9 +134,11 @@ abstract class Calculus extends BioAmbients:
       case _ ~ _ ~ Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
-        if ch == par && cons != "ν"
+        if ch == par
         then
-          warn(throw GuardParsingException(ch.name))
+          emitter match
+            case Emitter.kk =>
+            case _ => warn(throw GuardParsingException(ch.name, cons.isEmpty))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -215,21 +231,27 @@ abstract class Calculus extends BioAmbients:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    IDENT ~ opt( "("~>names<~")" ) ^^ {
-      case identifier ~ Some(params) if equation && !params.forall(_._1.isSymbol) =>
+    IDENT ~ opt( "("~> names ~ opt(if equation then "*" else "") <~")" ) ^^ {
+      case identifier ~ Some(params ~ _) if equation && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(identifier, params.filterNot(_._1.isSymbol).map(_._1)*)
-      case "Self" ~ Some(params) =>
+      case "Self" ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         self += _code
-        `(*)`("Self_" + _code, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`("Self_" + _code, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case "Self" ~ _ =>
         self += _code
         `(*)`("Self_" + _code) -> Names()
-      case identifier ~ Some(params) =>
+      case identifier ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(identifier, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`(identifier, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case identifier ~ _ =>
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
@@ -297,10 +319,9 @@ object Calculus:
 
   enum AST:
 
-    case +(override val enabled: Actions,
-           choices: AST.∥ *) extends AST with Sum
+    case +(scaling: Int, choices: AST.∥ *) extends AST with Sum
 
-    case ∥(components: AST.`.`*)
+    case ∥(scaling: Int, components: AST.`.`*)
 
     case `.`(end: AST.+ | -, prefixes: Pre*)
 
@@ -331,7 +352,7 @@ object Calculus:
       case ∅() => "()"
       case +(_, choices*) => choices.mkString(" + ")
 
-      case ∥(components*) => components.mkString(" | ")
+      case ∥(_, components*) => components.mkString(" | ")
 
       case `.`(∅()) => "()"
       case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
@@ -427,8 +448,8 @@ object Calculus:
   case class PrefixChannelsParsingException(names: λ*)
       extends PrefixParsingException(s"""${names.mkString(", ")} are not channel names but ${names.map(_.kind).mkString(", ")}""")
 
-  case class GuardParsingException(name: String)
-      extends PrefixParsingException(s"$name is both the channel name and the binding parameter name in an input guard")
+  case class GuardParsingException(name: String, input: Boolean)
+      extends PrefixParsingException(s"""$name is both the channel name and ${if input then "the binding parameter name in an input guard" else "the new name in a bound output guard"}""")
 
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
@@ -440,10 +461,9 @@ object Calculus:
   // functions
 
   extension (sum: +)
-    @annotation.tailrec
     def isVoid: Boolean = sum match
       case +(_) => true
-      case +(_, ∥(`.`(sum: +))) => sum.isVoid
+      case +(_, it*) => it.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
       case _ => false
 
   extension [T <: AST](ast: T)
@@ -454,29 +474,30 @@ object Calculus:
 
       ast match
 
-        case ∅() => ast
+        case ∅() =>
+          `+`(-1)
 
-        case +(_, ∥(`.`(sum: +)), it*) =>
+        case +(sc, ∥(-1|1, `.`(sum: +)), it*) =>
           val lhs = sum.flatten
-          val rhs = `+`(nil, it*).flatten
-          `+`(nil, (lhs.choices ++ rhs.choices).filterNot(`+`(nil, _).isVoid)*)
+          val rhs = `+`(-1, it*).flatten
+          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
 
-        case +(_, par, it*) =>
-          val lhs: + = `+`(nil, par.flatten)
-          val rhs = `+`(nil, it*).flatten
-          `+`(nil, (lhs.choices ++ rhs.choices).filterNot(`+`(nil, _).isVoid)*)
+        case +(sc, par, it*) =>
+          val lhs: + = `+`(-1, par.flatten)
+          val rhs = `+`(-1, it*).flatten
+          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
 
-        case ∥(`.`(+(_, par)), it*) =>
+        case ∥(sc, `.`(+(-1|1, par)), it*) =>
           val lhs = par.flatten
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components)*)
+          val rhs = ∥(-1, it*).flatten
+          ∥(sc, (lhs.components ++ rhs.components)*)
 
-        case ∥(seq, it*) =>
-          val lhs: ∥ = ∥(seq.flatten)
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components)*)
+        case ∥(sc, seq, it*) =>
+          val lhs: ∥ = ∥(-1, seq.flatten)
+          val rhs = ∥(-1, it*).flatten
+          ∥(sc, (lhs.components ++ rhs.components)*)
 
-        case `.`(+(_, ∥(`.`(end, ps*))), it*) =>
+        case `.`(+(-1|1, ∥(-1|1, `.`(end, ps*))), it*) =>
           `.`(end, (it ++ ps)*).flatten
 
         case `.`(end, it*) =>
@@ -487,7 +508,7 @@ object Calculus:
 
         case !(-1, None, None, sum) =>
           sum.flatten match
-            case +(_, ∥(`.`(end: !))) => end
+            case +(-1|1, ∥(-1|1, `.`(end: !))) => end
             case it => `!`(-1, None, None, it)
 
         case it @ !(_, _, _, sum) =>
@@ -502,7 +523,7 @@ object Calculus:
 
       ast match
 
-        case `+`(_, ∥(`.`(!(_, _, Some(_), _)))) =>
+        case `+`(_, ∥(_, `.`(!(_, _, Some(_), _)))) =>
           ast.label("+0")
 
         case _ =>
@@ -541,19 +562,19 @@ object Calculus:
 
         case ∅() => ast
 
-        case +(_, ∥(it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
-          `+`(nil, ∥(it.label(l)))
+        case +(sc, ∥(scʹ, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
+          `+`(sc, ∥(scʹ, it.label(l)))
 
-        case +(_, ∥(it*)) =>
+        case +(sc, ∥(scʹ, it*)) =>
           import Par.*
-          `+`(nil, ∥(it.zipWithIndex.map(_.label(_))*))
+          `+`(sc, ∥(scʹ, it.zipWithIndex.map(_.label(_))*))
 
-        case +(_, it*) =>
+        case +(sc, it*) =>
           import Sum.*
-          `+`(nil, it.zipWithIndex.map(_.label(_))*)
+          `+`(sc, it.zipWithIndex.map(_.label(_))*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.label(l))*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.label(l))*)
 
         case `.`(end, it*) =>
           `.`(end.label(l), relabelled(it)*)

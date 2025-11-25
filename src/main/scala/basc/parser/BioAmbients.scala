@@ -33,7 +33,6 @@ import scala.io.Source
 
 import scala.collection.mutable.{
   LinkedHashMap => Map,
-  ListBuffer => MutableList,
   LinkedHashSet => Set
 }
 
@@ -199,6 +198,8 @@ abstract class BioAmbients extends Expression:
           throw WholeNumberFormatException("be a Long", t)
     }
 
+  protected val emitter: Emitter
+
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -234,6 +235,8 @@ abstract class BioAmbients extends Expression:
   protected var _exclude: Boolean = false
 
   protected var _paceunit: String = null
+
+  protected var _scaling: Boolean = false
 
   private[parser] var _id: helper.υidυ = null
 
@@ -301,6 +304,8 @@ object BioAmbients:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
+  enum Emitter { case ce, cef, kk }
+
   type Actions = Set[String]
 
   object Actions:
@@ -325,8 +330,13 @@ object BioAmbients:
         case it: Act => Some(it.rate.isDefined)
         case _ => Some(false)
 
-  trait Sum:
-    val enabled: Actions
+  trait Sum { this: + =>
+    private var _enabled: Actions = null
+    inline def enabled: Actions = _enabled
+    inline def enabled_=(enabled: Actions): + =
+      _enabled = enabled
+      this
+  }
 
 
   type Names = Set[Symbol]
@@ -390,11 +400,11 @@ object BioAmbients:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(_.shallow)*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(_.shallow)*)
 
-        case ∥(it*) =>
-          ∥(it.map(_.shallow)*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(_.shallow)*)
 
         case `.`(end, it*) =>
           `.`(end.shallow, it*)
@@ -417,7 +427,8 @@ object BioAmbients:
         case _ => ast
 
 
-  final class Main(override protected val in: String) extends Expansion:
+  final class Main(override protected val emitter: Emitter,
+                   override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -468,29 +479,34 @@ object BioAmbients:
 
         def insert_+(sum: +): + =
           val (seq, enabled) = insert[`.`](sum)
-          `+`(enabled, ∥(seq))
+          `+`(-1, ∥(-1, seq)).enabled = enabled
 
         ast match
 
-          case ∅() => (ast, nil)
+          case ∅() =>
+
+            ast match
+
+               case it: + =>
+                 (it.enabled = nil, it.enabled)
 
           case it: + =>
-            val sum = it.choices.foldLeft(`+`(nil)) {
+            val sum = it.choices.foldLeft(`+`(it.scaling).enabled = nil) {
               case (sum: +, par) =>
                 val (parʹ, enabledʹ) = par.parse
                 assert(enabledʹ.nonEmpty)
                 assert((sum.enabled & enabledʹ).isEmpty)
-                (`+`(sum.enabled ++ enabledʹ, (sum.choices :+ parʹ)*))
+                `+`(sum.scaling, (sum.choices :+ parʹ)*).enabled = sum.enabled ++ enabledʹ
             }
             (sum, sum.enabled)
 
           case it: ∥ =>
-            val (par, enabled) = it.components.foldLeft((∥(), nil)) {
+            val (par, enabled) = it.components.foldLeft((∥(it.scaling), nil)) {
               case ((par: ∥, enabled), seq) =>
                 val (seqʹ, enabledʹ) = seq.parse
                 assert(enabledʹ.nonEmpty)
                 assert((enabled & enabledʹ).isEmpty)
-                (∥((par.components :+ seqʹ)*), enabled ++ enabledʹ)
+                (∥(par.scaling, (par.components :+ seqʹ)*), enabled ++ enabledʹ)
             }
             (par, enabled)
 
@@ -555,7 +571,7 @@ object BioAmbients:
               then
                 _sum
               else
-                `+`(nil, ∥(`.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
             var (it, _) = sum.parse
 
@@ -575,11 +591,11 @@ object BioAmbients:
 
           case ∅() => nil
 
-          case +(enabled, par) =>
+          case it @ +(_, par) =>
             par.split
-            enabled
+            it.enabled
 
-          case +(enabled, ps*) =>
+          case it @ +(_, ps*) =>
             val ls = ps.map(_.split)
             var ts = ls.take(0)
             var ds = ls.drop(1)
@@ -600,9 +616,9 @@ object BioAmbients:
               ds = ds.drop(1)
             }
 
-            enabled
+            it.enabled
 
-          case ∥(ss*) =>
+          case ∥(_, ss*) =>
             ss.map(_.split).reduce(_ ++ _)
 
           case `.`(_: `(*)`, ps*) =>
@@ -659,7 +675,7 @@ object BioAmbients:
           case +(_, ps*) =>
             ps.map(_.graph).reduce(_ ++ _)
 
-          case ∥(ss*) =>
+          case ∥(_, ss*) =>
             ss.map(_.graph).reduce(_ ++ _)
 
           case `.`(end, ps*) =>
@@ -723,15 +739,15 @@ object BioAmbients:
 
           case ∅() => false
 
-          case +(enabled, ps*) =>
+          case it @ +(_, ps*) =>
             extension (self: String)
               def apply(c: String): Boolean =
                 val i = self.indexOf(",")
                 if i < 0 then self.endsWith(c)
                 else self.substring(0, i).endsWith(c)
-            (enabled.find(_("π")) zip enabled.find(_("ζ"))).nonEmpty || ps.exists(_.mixed)
+            (it.enabled.find(_("π")) zip it.enabled.find(_("ζ"))).nonEmpty || ps.exists(_.mixed)
 
-          case ∥(ss*) =>
+          case ∥(_, ss*) =>
             ss.exists(_.mixed)
 
           case `.`(end, _*) =>
@@ -798,6 +814,7 @@ object BioAmbients:
       _dups = false
       _exclude = false
       _paceunit = "second"
+      _scaling = false
       _par = 9
       _snapshot = false
       _traces = None
@@ -805,6 +822,7 @@ object BioAmbients:
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
+                       "scaling" -> _scaling,
                        "parallelism" -> _par,
                        "snapshot" -> _snapshot,
                        "traces" -> _traces))
@@ -875,11 +893,11 @@ object BioAmbients:
           else
             r
         ).filter {
-          case Right((`(*)`(s"Self_$n", _, _*), _))
+          case Right((`(*)`(s"Self_$n", _*), _))
               if { try { n.toInt; true } catch _ => false } =>
             self.contains(n.toInt)
           case _ => true
         }
 
-      Right((`(*)`(null, λ(Lit.Int(_par))), `+`(nil)): Bind) ::
-      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(nil)): Bind) :: prog
+      Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
+      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(-1)): Bind) :: prog

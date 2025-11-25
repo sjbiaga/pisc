@@ -75,7 +75,7 @@ abstract class Encoding extends Calculus:
               val free = _free ++ sum.capitals
               val (constantsʹ, variablesʹ, bindingsʹ, sumʹ) =
                 sum match
-                  case +(_, ∥(`.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, _, assignmentʹ))))
+                  case +(sc, ∥(scʹ, `.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, _, assignmentʹ))))
                       if assignmentʹ.size < variablesʹ.size =>
                     val constantsʹʹ = constantsʹ &~ constants
                     val pointersʹ = variablesʹ.map(_.name.replaceAll("_υ.*υ", "")).map(Symbol(_))
@@ -92,7 +92,7 @@ abstract class Encoding extends Calculus:
                       bound ++= boundʹ
                       val bindingsʹ = boundʹ.map(_ -> Occurrence(None, pos()))
                       val expʹ: `⟦⟧` = exp.copy(assignment = assignmentʹʹ)
-                      val sumʹ: `+` = `+`(nil, (∥(`.`(expʹ))))
+                      val sumʹ: `+` = `+`(sc, (∥(scʹ, `.`(expʹ))))
                       (constants ++ constantsʹʹ, variables ++ pointersʹʹ, given_Bindings ++ bindingsʹ, sumʹ)
                   case _ =>
                     (constants, variables, given_Bindings, sum)
@@ -115,7 +115,7 @@ abstract class Encoding extends Calculus:
                 Definition(_code, term, constants, variables, sum)
               }
           }
-      }
+    }
 
   def instantiation(using bindings: Bindings, duplications: Duplications, _scale: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
@@ -204,15 +204,17 @@ abstract class Encoding extends Calculus:
     private def canonical: String => String =
       case "werr" => "errors"
       case "dups" => "duplications"
-      case it => it
+      case it     => it
 
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
          | "exclude" | "include"
          | "paceunit"
-         | "parallelism" | "snapshot"
+         | "scaling"
+         | "parallelism"
+         | "snapshot"
          | "traces" => true
-      case _ => false
+      case _        => false
     }
 
     private def boolean: Boolean =
@@ -220,9 +222,9 @@ abstract class Encoding extends Calculus:
         case it: String =>
           it.toLowerCase match
             case "0" | "off" | "false" | "no" | "n" => false
-            case "1" | "on" | "true" | "yes" | "y" => true
-            case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
-        case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
+            case "1" | "on" | "true" | "yes" | "y"  => true
+            case _                                  => throw DirectiveValueParsingException(_dir.get, "a boolean")
+        case _          => throw DirectiveValueParsingException(_dir.get, "a boolean")
 
     private def number: Double =
       _dir.get._2 match
@@ -236,51 +238,54 @@ abstract class Encoding extends Calculus:
     private def file: Option[String] =
       _dir.get._2 match
         case it: String if it.toLowerCase == "console" => None
-        case _: String => Some(string("<console> or a filename"))
-        case _ => throw DirectiveValueParsingException(_dir.get, "<console> or a filename")
+        case _: String                                 => Some(string("<console> or a filename"))
+        case _                                         => throw DirectiveValueParsingException(_dir.get, "<console> or a filename")
 
     private def keys: Set[String] =
       _dir.get._2 match
-        case it: String if key(it) => Set(canonical(it))
+        case it: String if key(it)              => Set(canonical(it))
         case it: List[String] if it.forall(key) => Set.from(it.map(canonical))
-        case _ => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
+        case _                                  => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
 
     private def string(`type`: String = "a string"): String =
       _dir.get._2 match
         case it: String
-            if (it.startsWith("\"") ||  it.startsWith("'"))
+            if (it.startsWith("\"") || it.startsWith("'"))
             && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
           it.substring(1, it.length-1)
-        case _ => throw DirectiveValueParsingException(_dir.get, s"${`type`}")
+        case _                                                   => throw DirectiveValueParsingException(_dir.get, s"${`type`}")
 
     def apply(): Unit =
 
       canonical(_dir.get._1.toLowerCase) match
 
-        case "errors" =>
+        case "errors"       =>
           _werr = boolean
 
         case "duplications" =>
           _dups = boolean
 
-        case "exclude" =>
+        case "exclude"      =>
           _exclude = boolean
 
-        case "include" =>
+        case "include"      =>
           _exclude = !boolean
 
-        case "paceunit" =>
+        case "paceunit"     =>
           _paceunit = _dir.get._2 match
             case it: String => it
-            case _ => throw DirectiveValueParsingException(_dir.get, "a time unit")
+            case _          => throw DirectiveValueParsingException(_dir.get, "a time unit")
 
-        case "parallelism" =>
+        case "scaling"      =>
+          _scaling = boolean
+
+        case "parallelism"  =>
           _par = 1 max number.toInt
 
         case "snapshot" =>
           _snapshot = boolean
 
-        case "traces" =>
+        case "traces"       =>
           try
             if boolean
             then
@@ -293,7 +298,7 @@ abstract class Encoding extends Calculus:
              catch _ =>
                throw DirectiveValueParsingException(_dir.get, "a boolean, <console> or a filename")
 
-        case "push" =>
+        case "push"         =>
           try
             if boolean
             then
@@ -301,34 +306,37 @@ abstract class Encoding extends Calculus:
                             "duplications" -> _dups,
                             "exclude" -> _exclude,
                             "paceunit" -> _paceunit,
+                            "scaling" -> _scaling,
                             "parallelism" -> _par,
                             "snapshot" -> _snapshot,
                             "traces" -> _traces)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
-                case it @ "errors" => it -> _werr
-                case it @ "duplications" => it -> _dups
+                case it @ "errors"         => it -> _werr
+                case it @ "duplications"   => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
-                case it @ "paceunit" => it -> _paceunit
-                case it @ "parallelism" => it -> _par
-                case it @ "snapshot" => it -> _snapshot
-                case it @ "traces" => it -> _traces
+                case it @ "paceunit"       => it -> _paceunit
+                case it @ "scaling"        => it -> _scaling
+                case it @ "parallelism"    => it -> _par
+                case it @ "snapshot"       => it -> _snapshot
+                case it @ "traces"         => it -> _traces
               }
             }
 
-        case "pop" =>
+        case "pop"          =>
           if boolean
           then
             _dirs.head.foreach {
-              case ("errors", it: Boolean) => _werr = it
+              case ("errors", it: Boolean)       => _werr = it
               case ("duplications", it: Boolean) => _dups = it
-              case ("exclude", it: Boolean) => _exclude = it
-              case ("paceunit", it: String) => _paceunit = it
-              case ("parallelism", it: Int) => _par = it
-              case ("snapshoth", it: Boolean) => _snapshot = it
+              case ("exclude", it: Boolean)      => _exclude = it
+              case ("paceunit", it: String)      => _paceunit = it
+              case ("scaling", it: Boolean)      => _scaling = it
+              case ("parallelism", it: Int)      => _par = it
+              case ("snapshot", it: Boolean)     => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
-              case _ => ???
+              case _                             => ???
             }
             _dirs = _dirs.tail
 
@@ -339,7 +347,7 @@ abstract class Encoding extends Calculus:
             this()
             _dir = dir
 
-        case _ => throw DirectiveKeyParsingException(_dir.get)
+        case _              => throw DirectiveKeyParsingException(_dir.get)
 
 
 object Encoding:
@@ -407,7 +415,7 @@ object Encoding:
           lazy val count: AST => Unit =
             case ∅() =>
             case +(_, it*) => it.foreach(count)
-            case ∥(it*) => it.foreach(count)
+            case ∥(_, it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case ?:(_, t, f) => count(t); f.foreach(count)
             case !(_, _, _, sum) => count(sum)
@@ -433,7 +441,7 @@ object Encoding:
         lazy val reset: AST => Unit =
           case ∅() =>
           case +(_, it*) => it.foreach(reset)
-          case ∥(it*) => it.foreach(reset)
+          case ∥(_, it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case ?:(_, t, f) => reset(t); f.foreach(reset)
           case !(_, _, _, sum) => reset(sum)
@@ -606,7 +614,7 @@ object Encoding:
 
         case +(_, it*) => it.map(_.capitals).reduce(_ ++ _)
 
-        case ∥(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case ∥(_, it*) => it.map(_.capitals).reduce(_ ++ _)
 
         case `.`(end, _*) =>
           end.capitals
@@ -659,11 +667,11 @@ object Encoding:
 
         case ∅() => ast
 
-        case +(_, it*) =>
-          `+`(nil, it.map(rename(_))*)
+        case +(sc, it*) =>
+          `+`(sc, it.map(rename(_))*)
 
-        case ∥(it*) =>
-          ∥(it.map(rename(_))*)
+        case ∥(sc, it*) =>
+          ∥(sc, it.map(rename(_))*)
 
         case `.`(end, _it*) =>
           val n = refresh.size
