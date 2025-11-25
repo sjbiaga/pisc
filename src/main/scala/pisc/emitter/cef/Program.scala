@@ -51,12 +51,12 @@ object Program:
 
         // PREFIXES ////////////////////////////////////////////////////////////
 
-        case it @ τ(r, Some((Left(enums)), _)) =>
+        case it @ τ(r, Some((Left(enums), _))) =>
           `*.flatMap { null else … }`(Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
                                                  Term.ArgClause(Lit.String(it.υidυ)::Nil)),
                                       enums ::: *)
 
-        case it @ τ(r, Some((Right(term)), _)) =>
+        case it @ τ(r, Some((Right(term), _))) =>
           `*.flatMap { null else … }`(Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
                                                  Term.ArgClause(Lit.String(it.υidυ)::Nil)),
                                       `_ <- IO { * }`(term) :: *)

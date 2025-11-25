@@ -35,8 +35,6 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
-import parser.Calculus.`(*)`
-
 
 object Meta extends emitter.shared.effects.Meta:
 
