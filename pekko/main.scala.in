@@ -53,6 +53,7 @@ object App:
       val main = context.spawnAnonymous(Main(args.toList)(using `π-uuid`)(using loop))
       Behaviors.receiveMessage {
         case Left(_) =>
+          loop ! Loop.Trigger
           main ! π.πNone
           Behaviors.same
         case Right(_) =>

@@ -43,7 +43,7 @@ import kk.Meta.*
 
 object Program:
 
-  import Optimizer.{ Ref1, Opt }
+  import Optimize.{ Ref1, Opt }
 
   extension (self: AST)(using id: => String)
 
@@ -131,8 +131,6 @@ object Program:
           val name = "sum_cases" + id
 
           val names = defs.map(_._2.name.value)
-
-          opt._2 ++= names
 
           val υidυs = names.map(_ => id)
 
@@ -318,9 +316,9 @@ object Program:
                 thunk
               else if i < 0
               then
-                `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(code, thunk)()
+                `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(*); same else stopped }`(code, thunk)
               else
-                `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(code, thunk)
+                `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(for _υ <- * yield _υ); same else stopped }`(code, thunk)
 
             block = Term.Block(statsʹ :+ recvʹ)
             sem = semʹ
@@ -330,7 +328,7 @@ object Program:
 
           val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
 
-          val defn = dfn(id, recv :: Nil)
+          val defn = dfn("seq" + id, recv :: Nil)
 
           end match {
 
@@ -433,7 +431,7 @@ object Program:
           val υidυ = "pipe" + id
           val defn = dfn(υidυ, Term.Block(recvʹ :: Nil), param.map(_.value)*)
           val thunk = Term.Apply(\(υidυ), Term.ArgClause(param.toList))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(self, `yield`(thunk))
+          val recv = `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(for _υ <- * yield _υ); same else stopped }`(self, `yield`(thunk))
 
           callback(defnʹ.getOrElse(Lit.Unit()) :: defn :: Nil, recv :: Nil)
 
@@ -509,7 +507,7 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          `πʹ.emit`.pipeToSelf(defn, arg) { it => Term.Block(`val` :+ it) } (using Nil)
+          `πʹ.emit`.pipeToSelf(defn, arg){ it => Term.Block(`val` :+ it) }(using Nil)
 
         case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
@@ -789,7 +787,7 @@ object Program:
   final class Main(optLevel: Int):
     require(0 <= optLevel && optLevel <= 2)
 
-    import Optimizer.*
+    import Optimize.*
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ

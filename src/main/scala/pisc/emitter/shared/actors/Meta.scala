@@ -52,6 +52,7 @@ abstract trait Meta extends shared.Meta:
 
   val `Future.unit` = Term.Select("Future", "unit")
 
+
   val `_ <- Future.unit` =
     Enumerator.Generator(`* <- …`(), `Future.unit`)
 

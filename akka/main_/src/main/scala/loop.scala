@@ -46,7 +46,7 @@ package object `Π-loop`:
 
   enum Loop:
 
-    private case Trigger
+    case Trigger
     case Enqueue(^ : String, key: String, it: +)
     case Exclude(enabled: `Π-Set`[String])
 
