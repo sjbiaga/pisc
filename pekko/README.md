@@ -737,6 +737,20 @@ There are nine cases - of which four are replication - that are "code generation
 Optimizer
 ---------
 
+There are two phases to the optimizer. Phase 1 is due to the fact that the generator
+issues an extra method for each agent invocation: in some cases - when the invocation
+is not preceded by prefixes - the call to this extra method can be replaced with the
+invocation (the direct call to the agent), and the method removed. Phase 2 succeeds
+phase 1, and is based on the fact that the code is generated uniformly whether or not
+an expression is part of a summation; indifferently, the receive blocks `fold` an
+optional atomic boolean: this must not be the case except when the methods are actually
+invoked as part of a summation. Particularly for "cases sum", these methods which are
+invoked as part of a summation do not themselves `fold` an atomic boolean, they simply
+perform (nested) case analysis and only on the exact (mis)match further invoke the actual
+method which must `fold` an atomic boolean: therefore, this situation is handled separately,
+and strictly those methods further invoked are optimized in phase 2, not the proxy methods
+which perform case analysis.
+
 
 Runtime
 -------

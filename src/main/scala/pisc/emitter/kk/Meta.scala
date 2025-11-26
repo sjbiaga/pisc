@@ -74,10 +74,10 @@ object Meta extends emitter.shared.actors.Meta:
       Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.map(\(_)).toList)), "πforeach"), Term.ArgClause(Nil))
 
 
-  private def `pipeToSelf { for * yield Right(⋯) } (_.get)`(* : List[Enumerator], `…`: Term.Apply)(** : Option[Term => Term])(using νs: Seq[String]): Term =
+  private def `pipeToSelf { for * yield Right(⋯) } (_.get)`(* : List[Enumerator], `…`: Term)(using νs: Seq[String]): Term =
     `for * yield ()`(* *) match
       case it: Term.ForYield =>
-        val body = Term.Apply(\("Right"), Term.ArgClause(**.fold(`…`)(_(`…`)) :: Nil))
+        val body = Term.Apply(\("Right"), Term.ArgClause(`…` :: Nil))
         val block =
           if νs.isEmpty
           then it.copy(body = body)
@@ -88,9 +88,9 @@ object Meta extends emitter.shared.actors.Meta:
                               Term.ArgClause(block :: Nil)),
                    Term.ArgClause(Term.AnonymousFunction(Term.Select(Term.Placeholder(), "get")) :: Nil))
       case _ =>
-        `pipeToSelf { for * yield Right(⋯) } (_.get)`(`_ <- Future.unit` :: *, `…`)(**)
+        `pipeToSelf { for * yield Right(⋯) } (_.get)`(`_ <- Future.unit` :: *, `…`)
 
-  def `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(* : List[Enumerator], `…`: Term.Apply)(** : Option[Term => Term] = None)(using Seq[String]) =
+  def `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(*); same else stopped }`(* : List[Enumerator], `…`: Term)(using Seq[String]) =
     Term.Apply(Term.Select("Behaviors", "receive"),
                Term.ArgClause(Term.PartialFunction(
                                 Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
@@ -100,11 +100,15 @@ object Meta extends emitter.shared.actors.Meta:
                                      Term.Block(`self ! Left(None)` :: \("it") :: Nil)) ::
                                 Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                     Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                               Pat.Wildcard() :: Nil),
+                                               Pat.Extract(\("Left"), Pat.ArgClause(Pat.Var("it") :: Nil)) :: Nil),
                                      None,
-                                     Term.Block(Defn.GivenAlias(Nil, Name.Anonymous(), Nil, Type.Name("ExecutionContext"), Term.Select(Term.Name("given_ActorContext_Π"), Term.Name("executionContext"))) ::
-                                                `pipeToSelf { for * yield Right(⋯) } (_.get)`(*, `…`)(**) ::
-                                                `Behaviors.same` :: Nil)) :: Nil
+                                     Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select("it", "fold"),
+                                                                              Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                                                   Term.ArgClause(Term.AnonymousFunction(Term.Apply(Term.Select(Term.Placeholder(), "compareAndSet"), Term.ArgClause(Lit.Boolean(false) :: Lit.Boolean(true) :: Nil))) :: Nil)),
+                                                        Term.Block(Defn.GivenAlias(Nil, Name.Anonymous(), Nil, Type.Name("ExecutionContext"), Term.Select(Term.Name("given_ActorContext_Π"), Term.Name("executionContext"))) ::
+                                                                   `pipeToSelf { for * yield Right(⋯) } (_.get)`(*, `…`) ::
+                                                                   `Behaviors.same` :: Nil),
+                                                        Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
                               ) :: Nil))
 
   def `Behaviors.receive { case _ => * }`(* : List[Stat]) =

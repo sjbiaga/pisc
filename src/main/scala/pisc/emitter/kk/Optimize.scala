@@ -41,7 +41,7 @@ import parser.Calculus.`(*)`
 import kk.Meta.*
 
 
-object Optimizer:
+object Optimize:
 
   final case class Ref1(to: String | `(*)`, out: Boolean)
 
@@ -249,8 +249,6 @@ object Optimizer:
 
                     case _ =>
 
-                case _ => // cases sum
-
               body match
 
                 case Term.Block(stats) =>
@@ -266,8 +264,6 @@ object Optimizer:
                   if optimized
                   then Term.Block(statsʹ)
                   else body
-
-                case _ => body // cases sum
 
             else
 
@@ -295,11 +291,31 @@ object Optimizer:
                                              None,
                                              Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it, _) :: Nil)) :: Nil) :: Nil) =>
 
-                        optimized ||= true
+                        optimized = true
 
                         Term.Apply(Term.Select("Behaviors", "receive"),
                                    Term.ArgClause(Term.PartialFunction(
                                                     Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                                        Type.ArgClause(Type.Name("Π") :: Nil))) ::
+                                                                   Pat.Wildcard() :: Nil),
+                                                         None,
+                                                         Term.Block(it :: Nil)) :: Nil) :: Nil))
+
+                      case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
+                                      Term.PartialFunction(
+                                        pat
+                                     :: Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
+                                                                            Type.Name("Π") :: Nil)) ::
+                                                       Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
+                                             None,
+                                             Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it, _) :: Nil)) :: Nil) :: Nil) =>
+
+                        optimized = true
+
+                        Term.Apply(Term.Select("Behaviors", "receive"),
+                                   Term.ArgClause(Term.PartialFunction(
+                                                    pat
+                                                 :: Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                                         Type.ArgClause(Type.Name("Π") :: Nil))) ::
                                                                    Pat.Wildcard() :: Nil),
                                                          None,
@@ -310,6 +326,8 @@ object Optimizer:
                   if optimized
                   then Term.Block(statsʹ :+ recv)
                   else body
+
+                case _ => body // cases sum
 
           ( if optimized
             then self.copy(body = bodyʹ)

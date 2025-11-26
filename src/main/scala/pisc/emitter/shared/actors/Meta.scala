@@ -49,6 +49,7 @@ abstract trait Meta extends shared.Meta:
     if *.nonEmpty then `for * yield ()`(* *)
     else \(`_ <- Future.unit`)
 
+
   val `_ <- Future.unit` =
     Enumerator.Generator(`* <- …`(), Term.Select("Future", "unit"))
 
@@ -158,9 +159,3 @@ abstract trait Meta extends shared.Meta:
                                                         Term.Block(* :+ `Behaviors.empty`),
                                                         Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
                               ) :: Nil))
-
-
-object Meta extends Meta:
-
-  val `()(null)`: Term =
-    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil))

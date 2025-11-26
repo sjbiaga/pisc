@@ -1,0 +1,9 @@
+# -*- indent-tabs-mode: nil; -*-
+
+P(a) = ([1 = 1]a<νb>.P(b)) + ([2 = 2]a(b).P(b))
+
+Q(a) = (!.a<νb>.Q(b)) + (!.a(b).Q(b))
+
+R(a) = (!.a<νb>.Q(b)) | (!.a(b).R(b))
+
+Main =

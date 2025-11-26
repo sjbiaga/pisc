@@ -47,11 +47,13 @@ abstract trait Meta extends shared.Meta:
     if *.nonEmpty then `for * yield ()`(* *)
     else \(`_ <- IO.unit`)
 
+
   val `: IO[Any]` = `:`("IO", "Any")
 
   val `_ <- IO.unit` = `_ <- IO.*`("unit")
 
   val `IO.cede` = Term.Select("IO", "cede")
+
 
   def `_ <- IO.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
@@ -109,9 +111,3 @@ abstract trait Meta extends shared.Meta:
                                     Term.ArgClause(Lit.Int(`…`) :: Nil)
                          )
     )
-
-
-object Meta extends Meta:
-
-  val `()(null)`: Term =
-    Term.Apply(\("()"), Term.ArgClause(Lit.Null() :: Nil))
