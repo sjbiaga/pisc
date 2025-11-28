@@ -54,7 +54,7 @@ object App:
       Behaviors.receiveMessage {
         case Left(_) =>
           loop ! Loop.Trigger
-          main ! π.πNone
+          main ! π.πUnit
           Behaviors.same
         case Right(_) =>
           Behaviors.stopped
@@ -94,13 +94,13 @@ object π:
   val MICROSECOND = MICROSECONDS
   val NANOSECOND  = NANOSECONDS
 
-  type Π = Either[Option[πAB], Behavior[Π]]
+  type Π = Either[Unit, Behavior[Π]]
 
-  val πNone: Π = Left(None)
+  val πUnit: Π = Left(())
 
   extension (self: πLs[ActorRef[Π]])
-    private[π] inline def πforeach(it: Option[πAB] = None): Unit =
-      self.foreach(_ ! Left(it))
+    private[π] inline def πforeach: Unit =
+      self.foreach(_ ! πUnit)
 
   import sΠ.*
 

@@ -52,9 +52,13 @@ package object sΠ:
   private def exclude(key: String)
                      (using % : %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]) =
-    if `π-elvis`.contains(key)
-    then
-      % ! Exclude(`π-elvis`(key))
+    `π-elvis`.get(key) match
+      case Some(it) if it.nonEmpty => % ! Exclude(it)
+      case _ =>
+
+  inline def `π-exclude`(enabled: String*)
+                        (using % : %) =
+    if enabled.nonEmpty then % ! Exclude(Set.from(enabled))
 
 
   /**

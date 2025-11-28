@@ -30,7 +30,7 @@ package pisc
 package emitter
 package kk
 
-import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ, HashSet => Setʹ }
+import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ }
 
 import scala.meta.*
 import dialects.Scala3
@@ -43,7 +43,7 @@ import kk.Meta.*
 
 object Program:
 
-  import Optimize.{ Ref1, Opt }
+  import Optimize.Opt
 
   extension (self: AST)(using id: => String)
 
@@ -59,31 +59,42 @@ object Program:
             sum match
               case +(-1, ∥(-1, `.`(?:(((lhs, rhs), mismatch), t, None)))) =>
 
+                val `else` = Term.Block(`π-exclude`(t.enabled) :: `Behaviors.ignore` :: Nil)
+
                 Right {
                   cases(t) match
 
                     case Left(Lit.Unit()) =>
 
-                      `if * then … else …`(====(lhs, rhs), `Behaviors.ignore`, `Behaviors.ignore`) -> Lit.Unit()
+                      ( if mismatch
+                        then
+                          `if * then … else …`(====(lhs, rhs), `else`, `Behaviors.ignore`)
+                        else
+                          `if * then … else …`(====(lhs, rhs), `Behaviors.ignore`, `else`)
+                      ) -> Lit.Unit()
 
                     case Left(defn: Defn.Def) =>
 
                       val term = Term.Apply(defn.name, Term.ArgClause(Nil))
 
+                      val `if` = Term.Block(term :: Nil)
+
                       ( if mismatch
                         then
-                          `if * then … else …`(====(lhs, rhs), `Behaviors.ignore`, Term.Block(term :: Nil))
+                          `if * then … else …`(====(lhs, rhs), `else`, `if`)
                         else
-                          `if * then … else …`(====(lhs, rhs), Term.Block(term :: Nil), `Behaviors.ignore`)
+                          `if * then … else …`(====(lhs, rhs), `if`, `else`)
                       ) -> defn
 
                     case Right((term, stat)) =>
 
+                      val `if` = Term.Block(term :: Nil)
+
                       ( if mismatch
                         then
-                          `if * then … else …`(====(lhs, rhs), `Behaviors.ignore`, Term.Block(term :: Nil))
+                          `if * then … else …`(====(lhs, rhs), `else`, `if`)
                         else
-                          `if * then … else …`(====(lhs, rhs), Term.Block(term :: Nil), `Behaviors.ignore`)
+                          `if * then … else …`(====(lhs, rhs), `if`, `else`)
                       ) -> stat
                 }
 
@@ -98,10 +109,8 @@ object Program:
 
                     opt._1.get(name) match
 
-                      case Some(Ref1(nameʹ: String, _)) => (opt._1 -= name) -= nameʹ
+                      case Some(nameʹ: String) => (opt._1 -= name) -= nameʹ
                       case _ =>
-
-                    opt._2 += name
 
                     Left(defn)
 
@@ -125,8 +134,8 @@ object Program:
         case ∅() =>
           None -> -1
 
-        case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
-          val defs = it.choices.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
+        case +(-1, it*) if it.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
+          val defs = it.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
 
           val name = "sum_cases" + id
 
@@ -136,11 +145,11 @@ object Program:
 
           val stats = (υidυs zip names).map(`* = gACΠ.spawnAnonymous(…)`(_, _))
 
-          val recv = stats :+ `List( *, … ).foreach`(υidυs*)(true)
+          val recv = stats :+ `List( *, … ).foreach`(υidυs*)
 
           val defsʹ = defs.flatMap(_.productIterator.toList).asInstanceOf[List[Stat]]
 
-          Some(dfn(name, defsʹ :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped } (release?)`(recv))) -> -1
+          Some(dfn(name, defsʹ :+ `Behaviors.receive { case _ => *; empty } (release?)`(recv))) -> -1
 
         case +(-1|1, operand) =>
           operand.generate
@@ -155,7 +164,6 @@ object Program:
           var names = defs.map(_.name.value)
 
           opt._1 += name -> given_Listʹ_String.toList
-          opt._2 ++= names
 
           it.scaling match
             case -1|1 =>
@@ -166,9 +174,9 @@ object Program:
 
           val stats = (υidυs zip names).map(`* = gACΠ.spawnAnonymous(…)`(_, _))
 
-          val recv = stats :+ `List( *, … ).foreach`(υidυs*)(true)
+          val recv = stats :+ `List( *, … ).foreach`(υidυs*)
 
-          Some(dfn(name, defs :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped } (release?)`(recv))) -> -1
+          Some(dfn(name, defs :+ `Behaviors.receive { case _ => *; empty } (release?)`(recv))) -> -1
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -191,13 +199,13 @@ object Program:
 
               val υidυ = id
 
-              val sem = "∥1" + id
+              val sem = "sem1" + id
 
               val stats = `* = Semaphore(…)`(sem, parallelism) :: `* = gACΠ.spawnAnonymous(…)`(υidυ, it.name.value, sem) :: Nil
 
-              val recv = stats :+ `List( *, … ).foreach`(υidυ)()
+              val recv = stats :+ `List( *, … ).foreach`(υidυ)
 
-              Some(dfn(name, it :: `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv) :: Nil)) -> -1
+              Some(dfn(name, it :: `Behaviors.receive { case _ => *; empty }`(recv) :: Nil)) -> -1
 
         case it: ∥ =>
           given Listʹ[String]()
@@ -232,9 +240,9 @@ object Program:
                 `* = gACΠ.spawnAnonymous(…)`(υidυ, name) :: Nil
           }
 
-          val recv = stats :+ `List( *, … ).foreach`(υidυs*)()
+          val recv = stats :+ `List( *, … ).foreach`(υidυs*)
 
-          Some(dfn(name, defs.map(_._1.get) :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped } (release?)`(recv))) -> -1
+          Some(dfn(name, defs.map(_._1.get) :+ `Behaviors.receive { case _ => *; empty } (release?)`(recv))) -> -1
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -264,10 +272,16 @@ object Program:
 
           end match {
             case `⟦⟧`(_, _, _, _, assignment) =>
-              code ++= assignment
+              val `vals` = assignment
                 .map(_.name -> _.name)
                 .map(Pat.Var(_) -> _)
                 .map(Enumerator.Val(_, _))
+                .toList
+              if i < 0 || `vals`.isEmpty
+              then
+                code ++= `vals`
+              else
+                code = code.init :+ patch(code.last, `vals`)
               ns ++= assignment.map(_._1.name)
             case _ =>
           }
@@ -277,6 +291,8 @@ object Program:
           implicit var sem: Option[String] = None
 
           given Listʹ[String]()
+
+          val name = "scheme_" + end.ordinal + "_" + code.size + id
 
           val behavior =
             end match {
@@ -291,13 +307,12 @@ object Program:
               | match
                 case spawn: Term.Apply =>
                   val υidυ = id
-                  val body = `* = gACΠ.spawnAnonymous(…)`(υidυ, spawn) :: `* ! Left(None)`(υidυ) :: Nil
-                  `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(body)
+                  val body = `* = gACΠ.spawnAnonymous(…)`(υidυ, spawn) :: `* ! Left(())`(υidυ) :: Nil
+                  `Behaviors.receive { case _ => *; empty }`(body)
                 case (it @ Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")), _)) :: Nil => it
                 case body: List[Stat] =>
-                  `Behaviors.receive { case Left(it) => if it * else stopped }`(body)
+                  `Behaviors.receive { case _ => * }`(body)
 
-            val name = "scheme" + id
             val thunk = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
 
             val statsʹ =
@@ -316,15 +331,15 @@ object Program:
                 thunk
               else if i < 0
               then
-                `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(*); same else stopped }`(code, thunk)
+                `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(*); same }`(code, thunk)
               else
-                `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(for _υ <- * yield _υ); same else stopped }`(code, thunk)
+                `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(code, thunk)
 
             block = Term.Block(statsʹ :+ recvʹ)
             sem = semʹ
-
-            opt._1 += name -> given_Listʹ_String.toList
           }
+
+          opt._1 += name -> given_Listʹ_String.toList
 
           val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
 
@@ -339,20 +354,11 @@ object Program:
                                                                           None) :: Nil) :: Nil)
               Some(defnʹ) -> parallelism
 
-            case it: `(*)` =>
+            case it: `(*)` if code.isEmpty =>
 
               collect1 += defn.name.value
 
-              defn.body.asInstanceOf[Term.Block].stats.last match
-
-                case Term.Apply(Term.Name(name), _) =>
-
-                  opt._1 += defn.name.value -> Ref1(name, code.isEmpty)
-                  opt._1 += name -> Ref1(it, code.isEmpty)
-
-                case _ =>
-
-                  opt._1 += defn.name.value -> Ref1(it, code.isEmpty)
+              (opt._1 += defn.name.value -> name) += name -> it
 
               Some(defn) -> -1
 
@@ -378,13 +384,13 @@ object Program:
             .map(Term.Apply(_, Term.ArgClause(param.toList)))
             .fold(stats.toList) { it =>
               val υidυ = id
-              `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(None)`(υidυ) :: statsʹ.toList
+              `* = gACΠ.spawnAnonymous(…)`(υidυ, it) :: `* ! Left(())`(υidυ) :: statsʹ.toList
             }
 
         def spawning(param: Term.Name*)(implicit sem: Option[String]) =
           self match
             case !(_, pace, Some(_), _) =>
-              var `!⋯` = spawn()(param*)() :+ `self ! Left(None)` :+ behavior
+              var `!⋯` = spawn()(param*)() :+ `self ! Left(())` :+ behavior
 
               if pace.isDefined
               then
@@ -401,7 +407,7 @@ object Program:
               `!⋯`
 
             case !(_, pace, _, _) =>
-              var `!⋯` = spawn()()() :+ `self ! Left(None)` :+ `Behaviors.same`
+              var `!⋯` = spawn()()() :+ `self ! Left(())` :+ `Behaviors.same`
 
               if pace.isDefined
               then
@@ -431,7 +437,7 @@ object Program:
           val υidυ = "pipe" + id
           val defn = dfn(υidυ, Term.Block(recvʹ :: Nil), param.map(_.value)*)
           val thunk = Term.Apply(\(υidυ), Term.ArgClause(param.toList))
-          val recv = `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(for _υ <- * yield _υ); same else stopped }`(self, `yield`(thunk))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(self, `yield`(thunk))
 
           callback(defnʹ.getOrElse(Lit.Unit()) :: defn :: Nil, recv :: Nil)
 
@@ -792,7 +798,7 @@ object Program:
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
 
-      given opt: Opt = Opt(Mapʹ(), Setʹ())
+      given opt: Opt = Opt(Mapʹ())
 
       ( prog.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
@@ -804,7 +810,6 @@ object Program:
         .map {
           case ((bind, ∅()), k) =>
             opt.__1 += (bind.identifier + k) -> Mapʹ()
-            opt._2 += bind.identifier
             k -> dfn(Nil, Nil)(bind)
           case ((bind, sum), k) =>
             opt.__1 += (bind.identifier + k) -> Mapʹ()
@@ -813,11 +818,9 @@ object Program:
             val υidυ = id()
             val recv =
               `* = gACΠ.spawnAnonymous(…)`(υidυ, defn.name.value) ::
-              `* ! Left(None)`(υidυ) :: Nil
+              `* ! Left(())`(υidυ) :: Nil
             opt._1(bind.identifier) = given_Listʹ_String.toList
-            opt._2 += bind.identifier
             k -> dfn(defn :: Nil, recv)(bind)
         }
         .flatMap { (k, it) => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value + k))._1 else Some(it) }
-        .map { it => if optLevel > 1 then it.optimize2(using opt._2)._1 else it }
         .map(_.toString)

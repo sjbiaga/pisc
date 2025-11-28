@@ -25,7 +25,7 @@ object CommandSPin {
       fileExamples().map(_.stripSuffix(".pisc")).toSeq
     }
 
-    val opts = Map("-ce" -> Nil, "-cef" -> Nil, "-kk" -> (0 to 2).map("-O" + _))
+    val opts = Map("-ce" -> Nil, "-cef" -> Nil, "-kk" -> (0 to 1).map("-O" + _))
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {

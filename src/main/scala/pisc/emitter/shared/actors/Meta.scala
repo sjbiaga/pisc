@@ -73,7 +73,7 @@ abstract trait Meta extends shared.Meta:
                  Type.ParamClause(Nil),
                  Term.ParamClause(Term.Param(Nil, "args", `:`("List", "String"), None) :: Nil) :: `(using String)(using %)`) :: Nil,
                `: Behavior[Π]`,
-               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
+               Term.Block(body :+ `Behaviors.receive { case _ => *; empty }`(recv)))
     case `(*)`(identifier, params*) =>
       Defn.Def(Nil,
                identifier,
@@ -82,7 +82,7 @@ abstract trait Meta extends shared.Meta:
                  `(…)`(params.map(_.asSymbol.name)*).head.paramClauses ::: `(using String)(using %)`
                ) :: Nil,
                `: Behavior[Π]`,
-               Term.Block(body :+ `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(recv)))
+               Term.Block(body :+ `Behaviors.receive { case _ => *; empty }`(recv)))
 
   protected def `(…)`(* : String*) =
     Member.ParamClauseGroup(
@@ -203,16 +203,12 @@ abstract trait Meta extends shared.Meta:
   val `Behaviors.ignore` = Term.Select("Behaviors", "ignore")
 
 
-  def `Behaviors.receive { case Left(it) => if it *; empty else stopped }`(* : List[Stat]) =
+  def `Behaviors.receive { case _ => *; empty }`(* : List[Stat]) =
     Term.Apply(Term.Select("Behaviors", "receive"),
                Term.ArgClause(Term.PartialFunction(
                                 Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                     Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                               Pat.Extract(\("Left"), Pat.ArgClause(Pat.Var("it") :: Nil)) :: Nil),
+                                               Pat.Wildcard() :: Nil),
                                      None,
-                                     Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select("it", "fold"),
-                                                                              Term.ArgClause(Lit.Boolean(true) :: Nil)),
-                                                                   Term.ArgClause(Term.AnonymousFunction(Term.Apply(Term.Select(Term.Placeholder(), "compareAndSet"), Term.ArgClause(Lit.Boolean(false) :: Lit.Boolean(true) :: Nil))) :: Nil)),
-                                                        Term.Block(* :+ `Behaviors.empty`),
-                                                        Term.Block(`Behaviors.stopped` :: Nil)) :: Nil)) :: Nil
+                                     Term.Block(* :+ `Behaviors.empty`)) :: Nil
                               ) :: Nil))

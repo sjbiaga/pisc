@@ -33,6 +33,7 @@ package shared
 import scala.meta.*
 import dialects.Scala3
 
+import parser.StochasticPi.Actions
 import parser.Calculus.λ
 
 
@@ -173,6 +174,11 @@ abstract trait Meta:
                "value"
              )
     )
+
+
+  def `π-exclude`(enabled: Actions): Term =
+    Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))
 
 
 object Meta extends Meta:

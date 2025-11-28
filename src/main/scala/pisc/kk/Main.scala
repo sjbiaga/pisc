@@ -45,7 +45,7 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    var opt = 2
+    var opt = 1
 
     def pin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
@@ -107,10 +107,10 @@ object Main extends helper.Main:
         if source ne null then source.close()
 
     args.foreach {
-      case "-O" => opt = 2
+      case "-O" => opt = 1
       case it if it.startsWith("-O") =>
         val arg = it.substring(2)
-        try opt = arg.toInt min 2 max 0
-        catch _ => { opt = 2; pin(arg) }
+        try opt = arg.toInt min 1 max 0
+        catch _ => { opt = 1; pin(arg) }
       case it => pin(it)
     }

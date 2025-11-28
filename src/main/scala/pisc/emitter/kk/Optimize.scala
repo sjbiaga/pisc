@@ -32,7 +32,7 @@ package kk
 
 import annotation.tailrec
 
-import scala.collection.mutable.{ LinkedHashMap => Mapʹ, HashSet => Setʹ }
+import scala.collection.mutable.{ LinkedHashMap => Mapʹ }
 
 import scala.meta.*
 import dialects.Scala3
@@ -43,14 +43,12 @@ import kk.Meta.*
 
 object Optimize:
 
-  final case class Ref1(to: String | `(*)`, out: Boolean)
-
-  final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | Ref1]], _2: Setʹ[String]):
+  final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | String | `(*)`]]):
     def _1 = __1.last._2
 
   extension (self: Defn.Def)
 
-    def optimize1(using opt: Mapʹ[String, List[String] | Ref1]): (Option[Defn.Def], Boolean) =
+    def optimize1(using opt: Mapʹ[String, List[String] | String | `(*)`]): (Option[Defn.Def], Boolean) =
 
       self match
 
@@ -71,7 +69,7 @@ object Optimize:
                       names.foldLeft(stats) { (stats, name) =>
 
                         @tailrec
-                        def find(name: String, stats: List[Stat]): Option[Term.Apply] =
+                        def find(name: String, stats: List[Stat]): Term.Apply =
 
                           stats.last match
 
@@ -83,9 +81,9 @@ object Optimize:
                                             Term.PartialFunction(
                                               Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                                   Type.Name("Π") :: Nil)) ::
-                                                             Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
+                                                             Pat.Wildcard() :: Nil),
                                                    None,
-                                                   Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), Term.Block(stats), _) :: Nil)) :: Nil) :: Nil) =>
+                                                   Term.Block(stats)) :: Nil) :: Nil) =>
 
                                   stats.head match
 
@@ -93,15 +91,11 @@ object Optimize:
                                                   Term.Apply(Term.Select(Term.Name("given_ActorContext_Π"),
                                                                          Term.Name("spawnAnonymous")), (it @ Term.Apply(Term.Name(identifier), _)) :: Nil)) =>
                                       opt(name) match
-                                        case Ref1(`(*)`(`identifier`, _, _*), _) => Some(it)
+                                        case `(*)`(`identifier`, _, _*) => it
 
                                 case Term.Apply(Term.Name(name), _) =>
 
                                   find(name, body.init)
-
-                                case _ => // prefixes w/o guarded replication
-
-                                  None
 
                             case _ =>
 
@@ -130,10 +124,6 @@ object Optimize:
                                     .orElse(replaceʹ(t).map { t => it.copy(thenp = Term.Block(t)) :: stats.tail })
                                     .orElse(replaceʹ(f).map { f => it.copy(elsep = Term.Block(f)) :: stats.tail })
 
-                                case it @ Term.If(_, Term.Block(t), _) =>
-                                  replaceʹ(stats.tail).map(it :: _)
-                                    .orElse(replaceʹ(t).map { t => it.copy(thenp = Term.Block(t)) :: stats.tail })
-
                                 case it =>
                                   replaceʹ(stats.tail).map(it :: _)
 
@@ -143,7 +133,7 @@ object Optimize:
                                                  Term.PartialFunction(
                                                    Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                                        Type.Name("Π") :: Nil)) ::
-                                                                  Pat.Extract(Term.Name("Right"), Pat.Var(Term.Name("it")) :: Nil) :: Nil), None, _) :: _) :: Nil) => // guarded replication
+                                                                  Pat.Extract(Term.Name("Right"), Pat.Var(Term.Name("it")) :: Nil) :: Nil), None, _) :: _) :: Nil) =>
 
                               stats.init.last match
 
@@ -156,29 +146,17 @@ object Optimize:
                                               Case(pat @ Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
                                                                                         Type.Name("Π") :: Nil)) :: _),
                                                    None,
-                                                   Term.Block((stat @ Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it: Term.Block, _)) :: Nil)) :: tl) :: Nil) =>
-
-                              val `if` = stat.copy(thenp = Term.Block(replaceʹ(it.stats).get))
-
-                              stats.init :+ Term.Apply(Term.Select("Behaviors", "receive"),
-                                                       Term.ArgClause(Term.PartialFunction(Case(pat, None, Term.Block(`if` :: Nil)) :: tl) :: Nil))
-
-                            case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
-                                            Term.PartialFunction(
-                                              Case(pat @ Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                                        Type.Name("Π") :: Nil)) :: _),
-                                                   None,
-                                                   (it: Term.Block)) :: Nil) :: Nil) => // guarded replication
+                                                   (it: Term.Block)) :: Nil) :: Nil) =>
 
                               val itʹ = Term.Block(replaceʹ(it.stats).get)
 
                               stats.init :+ Term.Apply(Term.Select("Behaviors", "receive"),
                                                        Term.ArgClause(Term.PartialFunction(Case(pat, None, itʹ) :: Nil) :: Nil))
 
-                            case it @ Term.Apply(_, _) =>
+                            case it: Term.Apply =>
                               replace(stats.init, app) :+ it
 
-                        find(name, stats.init).map(replace(stats, _)).getOrElse(stats)
+                        replace(stats, find(name, stats.init))
 
                       }.flatMap {
                         case it: Defn.Def => it.optimize1._1
@@ -189,12 +167,12 @@ object Optimize:
 
               Some(self.copy(body = bodyʹ)) -> true
 
-            case Some(Ref1(nameʹ: String, out)) =>
+            case Some(nameʹ: String) =>
               opt -= nameʹ
-              (if out then None else Some(self)) -> true
+              None -> true
 
-            case Some(Ref1(_: `(*)`, out)) =>
-              (if out then None else Some(self)) -> true
+            case Some(_: `(*)`) =>
+              None -> true
 
             case _ =>
 
@@ -225,113 +203,3 @@ object Optimize:
               ) -> optimized
 
         case _ => Some(self) -> false
-
-    def optimize2(using opt: Setʹ[String]): (Defn.Def, Boolean) =
-
-      self match
-
-        case Defn.Def(_, Term.Name(name), _, _, Some(Type.Apply(Type.Name("Behavior"), Type.Name("Π") :: Nil)), body) =>
-
-          var optimized = false
-
-          val bodyʹ =
-
-            if opt.contains(name)
-            then
-
-              body match
-
-                case Term.Block(stats) =>
-
-                  stats.last match
-
-                    case Term.Apply(Term.Name(nameʹ), _) => opt += nameʹ
-
-                    case _ =>
-
-              body match
-
-                case Term.Block(stats) =>
-
-                  val statsʹ = stats.map {
-                    case it: Defn.Def =>
-                      val (df, opt) = it.optimize2
-                      optimized ||= opt
-                      df
-                    case it => it
-                  }
-
-                  if optimized
-                  then Term.Block(statsʹ)
-                  else body
-
-            else
-
-              body match
-
-                case Term.Block(stats) =>
-
-                  val statsʹ = stats.init.map {
-                    case it: Defn.Def =>
-                      val (df, opt) = it.optimize2
-                      optimized ||= opt
-                      df
-                    case it => it
-                  }
-
-                  val recv =
-
-                    stats.last match
-
-                      case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
-                                      Term.PartialFunction(
-                                        Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                            Type.Name("Π") :: Nil)) ::
-                                                       Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
-                                             None,
-                                             Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it, _) :: Nil)) :: Nil) :: Nil) =>
-
-                        optimized = true
-
-                        Term.Apply(Term.Select("Behaviors", "receive"),
-                                   Term.ArgClause(Term.PartialFunction(
-                                                    Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                                        Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                                                   Pat.Wildcard() :: Nil),
-                                                         None,
-                                                         Term.Block(it :: Nil)) :: Nil) :: Nil))
-
-                      case Term.Apply(Term.Select(Term.Name("Behaviors"), Term.Name("receive")),
-                                      Term.PartialFunction(
-                                        pat
-                                     :: Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                            Type.Name("Π") :: Nil)) ::
-                                                       Pat.Extract(Term.Name("Left"), Pat.Var(Term.Name("it")) :: Nil) :: Nil),
-                                             None,
-                                             Term.Block(Term.If(Term.Apply(Term.Apply(Term.Select(Term.Name("it"), Term.Name("fold")), _), _), it, _) :: Nil)) :: Nil) :: Nil) =>
-
-                        optimized = true
-
-                        Term.Apply(Term.Select("Behaviors", "receive"),
-                                   Term.ArgClause(Term.PartialFunction(
-                                                    pat
-                                                 :: Case(Pat.Tuple(Pat.Given(Type.Apply(Type.Name("ActorContext"),
-                                                                                        Type.ArgClause(Type.Name("Π") :: Nil))) ::
-                                                                   Pat.Wildcard() :: Nil),
-                                                         None,
-                                                         Term.Block(it :: Nil)) :: Nil) :: Nil))
-
-                      case it => it
-
-                  if optimized
-                  then Term.Block(statsʹ :+ recv)
-                  else body
-
-                case _ => body // cases sum
-
-          ( if optimized
-            then self.copy(body = bodyʹ)
-            else self
-          ) -> optimized
-
-        case _ => self -> false

@@ -36,7 +36,6 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
-import parser.StochasticPi.Actions
 import parser.Calculus.`(*)`
 
 
@@ -212,8 +211,3 @@ abstract trait Meta extends shared.Meta:
                  ) :: Nil
                )
     )
-
-
-  def `π-exclude`(enabled: Actions): Term =
-    Term.Apply(\("π-exclude"),
-               Term.ArgClause(enabled.map(Lit.String(_)).toList))
