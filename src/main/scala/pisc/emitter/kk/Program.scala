@@ -42,7 +42,7 @@ import kk.Meta.*
 
 object Program:
 
-  import Optimize.{ Ref1, Opt }
+  import Optimize.Opt
 
   extension (self: AST)(using id: => String)
 
@@ -97,7 +97,7 @@ object Program:
 
                     opt._1.get(name) match
 
-                      case Some(Ref1(nameʹ: String, _)) => (opt._1 -= name) -= nameʹ
+                      case Some(nameʹ: String) => (opt._1 -= name) -= nameʹ
                       case _ =>
 
                     opt._2 += name
@@ -124,8 +124,8 @@ object Program:
         case ∅() =>
           None -> -1
 
-        case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
-          val defs = it.choices.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
+        case +(-1, it*) if it.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
+          val defs = it.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
 
           val name = "sum_cases" + id
 
@@ -190,7 +190,7 @@ object Program:
 
               val υidυ = id
 
-              val sem = "∥1" + id
+              val sem = "sem1" + id
 
               val stats = `* = Semaphore(…)`(sem, parallelism) :: `* = gACΠ.spawnAnonymous(…)`(υidυ, it.name.value, sem) :: Nil
 
@@ -269,6 +269,8 @@ object Program:
 
           given Listʹ[String]()
 
+          val name = "scheme_" + end.ordinal + "_" + code.size + id
+
           val behavior =
             end match {
               case !(_, _, Some(_), _) => "thunk" + id
@@ -288,7 +290,6 @@ object Program:
                 case body: List[Stat] =>
                   `Behaviors.receive { case Left(it) => if it * else stopped }`(body)
 
-            val name = "scheme" + id
             val thunk = Term.Apply(\(name), Term.ArgClause(ns.map(\(_)).toList))
 
             val statsʹ =
@@ -308,9 +309,9 @@ object Program:
 
             block = Term.Block(statsʹ :+ recvʹ)
             sem = semʹ
-
-            opt._1 += name -> given_Listʹ_String.toList
           }
+
+          opt._1 += name -> given_Listʹ_String.toList
 
           val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
 
@@ -325,20 +326,11 @@ object Program:
                                                                           None) :: Nil) :: Nil)
               Some(defnʹ) -> parallelism
 
-            case it: `(*)` =>
+            case it: `(*)` if code.isEmpty =>
 
               collect1 += defn.name.value
 
-              defn.body.asInstanceOf[Term.Block].stats.last match
-
-                case Term.Apply(Term.Name(name), _) =>
-
-                  opt._1 += defn.name.value -> Ref1(name, code.isEmpty)
-                  opt._1 += name -> Ref1(it, code.isEmpty)
-
-                case _ =>
-
-                  opt._1 += defn.name.value -> Ref1(it, code.isEmpty)
+              (opt._1 += defn.name.value -> name) += name -> it
 
               Some(defn) -> -1
 

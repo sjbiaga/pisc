@@ -43,14 +43,12 @@ import kk.Meta.*
 
 object Optimize:
 
-  final case class Ref1(to: String | `(*)`, out: Boolean)
-
-  final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | Ref1]], _2: Setʹ[String]):
+  final case class Opt(__1: Mapʹ[String, Mapʹ[String, List[String] | String | `(*)`]], _2: Setʹ[String]):
     def _1 = __1.last._2
 
   extension (self: Defn.Def)
 
-    def optimize1(using opt: Mapʹ[String, List[String] | Ref1]): (Option[Defn.Def], Boolean) =
+    def optimize1(using opt: Mapʹ[String, List[String] | String | `(*)`]): (Option[Defn.Def], Boolean) =
 
       self match
 
@@ -71,7 +69,7 @@ object Optimize:
                       names.foldLeft(stats) { (stats, name) =>
 
                         @tailrec
-                        def find(name: String, stats: List[Stat]): Option[Term.Apply] =
+                        def find(name: String, stats: List[Stat]): Term.Apply =
 
                           stats.last match
 
@@ -93,15 +91,11 @@ object Optimize:
                                                   Term.Apply(Term.Select(Term.Name("given_ActorContext_Π"),
                                                                          Term.Name("spawnAnonymous")), (it @ Term.Apply(Term.Name(identifier), _)) :: Nil)) =>
                                       opt(name) match
-                                        case Ref1(`(*)`(`identifier`, _, _*), _) => Some(it)
+                                        case `(*)`(`identifier`, _, _*) => it
 
                                 case Term.Apply(Term.Name(name), _) =>
 
                                   find(name, body.init)
-
-                                case _ => // prefixes w/o guarded replication
-
-                                  None
 
                             case _ =>
 
@@ -178,7 +172,7 @@ object Optimize:
                             case it @ Term.Apply(_, _) =>
                               replace(stats.init, app) :+ it
 
-                        find(name, stats.init).map(replace(stats, _)).getOrElse(stats)
+                        replace(stats, find(name, stats.init))
 
                       }.flatMap {
                         case it: Defn.Def => it.optimize1._1
@@ -189,12 +183,12 @@ object Optimize:
 
               Some(self.copy(body = bodyʹ)) -> true
 
-            case Some(Ref1(nameʹ: String, out)) =>
+            case Some(nameʹ: String) =>
               opt -= nameʹ
-              (if out then None else Some(self)) -> true
+              None -> true
 
-            case Some(Ref1(_: `(*)`, out)) =>
-              (if out then None else Some(self)) -> true
+            case Some(_: `(*)`) =>
+              None -> true
 
             case _ =>
 

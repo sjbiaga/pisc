@@ -740,9 +740,9 @@ Optimizer
 There are two phases to the optimizer. Phase 1 is due to the fact that the generator
 issues an extra method for each agent invocation: in some cases - when the invocation
 is not preceded by prefixes - the call to this extra method can be replaced with the
-invocation (the direct call to the agent), and the method removed. Phase 2 succeeds
-phase 1, and is based on the fact that the code is generated uniformly whether or not
-an expression is part of a summation; indifferently, the receive blocks `fold` an
+invocation (the direct call to the agent), and this method removed. Phase 2 succeeds
+phase 1, and is based on the fact that the code is alas generated uniformly whether
+an expression is part of a summation or not; indifferently, the receive block `fold`s an
 optional atomic boolean: this must not be the case except when the methods are actually
 invoked as part of a summation. Particularly for "cases sum", these methods which are
 invoked as part of a summation do not themselves `fold` an atomic boolean, they simply
@@ -750,6 +750,47 @@ perform (nested) case analysis and only on the exact (mis)match further invoke t
 method which must `fold` an atomic boolean: therefore, this situation is handled separately,
 and strictly those methods further invoked are optimized in phase 2, not the proxy methods
 which perform case analysis.
+
+There are two steps to each phase: the collection of data and the optimization itself. The
+former occurs during code generation. The latter - just before the generated program is
+converted to `String`, so while it is still a representation as `Scalameta` trees.
+
+The simplest collection of data is for phase 2: for a non-unary summation, it marks the
+names of the methods generated for each operand of the summation (because of `flatten`ing,
+there is such a method for each operand), unless it is a "cases sum", when these methods
+would be just proxies, so it marks instead the method indirectly associated with each proxy.
+
+The marked methods do not get optimized in phase 2. However, there is still a potential for
+correction, when the operand is a leaf with no prefixes; in this case, the behavior method,
+rather than receiving a message itself, returns the behavior of another method instead,
+by calling it: during the second step of phase 2, and unless phase 1 has removed it, the
+called method's name is marked for exemption from phase 2 optimization, because the call
+to it is detected (as part of phase 2 optimization). The (behavior) methods corresponding
+to agents are exempted from phase 2 optimization.
+
+The collection of data for phase 1 is more complex. It is a mutable map, one for each
+equation. In five cases yet to be explained (summation, unary or non-unary composition,
+sequence, and equation), it maps the name of a (behavior) method currently generated
+to a list of all names of the (behavior) methods corresponding to agent invocations,
+encountered before any of the five cases reoccurs again.
+
+In order to do this, the [`generate`](#generate) method has a `collect1` parameter
+that is a mutable list, appended exactly the names of the generated (behavior) methods
+corresponding strictly to agent invocations: this is the case of an agent invocation
+leaf when the code is generated for a sequence with this leaf. But the values in the
+mutable map may also be indirect references to methods. Thus, in order to replace
+a method call with an agent invocation, we must first have a name of this method;
+second, we use the indirect reference; third, having a direct reference, we pattern
+match and discover how the invocation takes place.
+
+These three steps are referred to as `find`ing the invocation. Last, we `replace`
+the call to the method we have a name for with the agent invocation.
+
+On the other hand, we must also remove methods during phase 1, which is why the
+receiver of `optimize1` is a `Scalameta` `Defn.Def`, while its return type is an
+`Option[Defn.Def]`: it suffices to `flatMap` the method definitions resulting from
+code generation using an `Option[Defn.Def]` as target type of the `flatMap` function,
+in order to filter out those methods for which `optimize1` returns `None`.
 
 
 Runtime
