@@ -499,11 +499,9 @@ object Program:
               it.copy(paramss = List(argsʹ.toList), body = Term.Block(`val` ::: stats))
           }
 
-          val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, params.map(_.copy()(using None))*)
+          val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, args.map(Symbol(_)).map(λ(_))*)
 
-          val `πʹ.emit` = πʹ.emit._2 match
-            case (it: Enumerator.Generator) :: tl =>
-              it.copy(pat = `Seq(*) <- …`(args*)) :: tl
+          val `πʹ.emit` = πʹ.emit._2
 
           `πʹ.emit`.pipeToSelf(defn, args.map(\(_))*)(`if * then … else …`(Term.ApplyUnary("!", args.head),
                                                                            `Behaviors.stopped`,
