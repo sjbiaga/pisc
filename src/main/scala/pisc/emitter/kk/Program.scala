@@ -429,7 +429,6 @@ object Program:
       extension (self: List[Enumerator])
 
         def pipeToSelf(defnʹ: Option[Defn.Def], param: Term.Name*)
-                      (`yield`: Term => Term)
                       (using Seq[String])
                       (using Option[String]) =
 
@@ -437,7 +436,7 @@ object Program:
           val υidυ = "pipe" + id
           val defn = dfn(υidυ, Term.Block(recvʹ :: Nil), param.map(_.value)*)
           val thunk = Term.Apply(\(υidυ), Term.ArgClause(param.toList))
-          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(self, `yield`(thunk))
+          val recv = `Behaviors.receive { case Right(it) => it case _ => pipeToSelf(for _υ <- * yield _υ); same }`(self, thunk)
 
           callback(defnʹ.getOrElse(Lit.Unit()) :: defn :: Nil, recv :: Nil)
 
@@ -489,31 +488,37 @@ object Program:
             case (given Seq[String], enums) =>
               val `π.emit` = enums
 
-              `π.emit`.pipeToSelf(defn, par)(identity)
+              `π.emit`.pipeToSelf(defn, par)
 
         case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
-          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, arg, Some(Type.Name("()")), None) :: Nil)))
-
           val par = if λ.`type`.isDefined then id else arg
+
+          val defn = sum.generate._1.map {
+            case it @ Defn.Def(_, _, _, _, _, Term.Block(stats)) =>
+
+              val `val` =
+                λ.`type` match
+                  case Some((tpe, Some(refined))) =>
+                    `val * = *: * …`(arg, par, tpe, refined) :: Nil
+                  case Some((tpe, _)) =>
+                    `val * = *: *`(arg, par, tpe) :: Nil
+                  case _ => Nil
+
+              val parʹ = Term.Param(Nil, par, Some(Type.Name("()")), None)
+
+              it.copy(paramss = List(parʹ :: Nil), body = Term.Block(`val` ::: stats))
+          }
 
           val πʹ = {
             def idʹ: String = π.υidυ
-            π.copy(name = λ.copy()(using None))(idʹ)
+            π.copy(name = λ.copy(`val` = Symbol(par))(using None))(idʹ)
           }
 
           val `πʹ.emit` = πʹ.emitʹ(Nil)._2
 
-          val `val` =
-            λ.`type` match
-              case Some((tpe, Some(refined))) =>
-                `val * = *: * …`(arg, par, tpe, refined) :: Nil
-              case Some((tpe, _)) =>
-                `val * = *: *`(arg, par, tpe) :: Nil
-              case _ => Nil
-
-          `πʹ.emit`.pipeToSelf(defn, arg){ it => Term.Block(`val` :+ it) }(using Nil)
+          `πʹ.emit`.pipeToSelf(defn, par)(using Nil)
 
         case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
@@ -522,7 +527,7 @@ object Program:
 
           val `μ.emit` = μ.emitʹ(Nil)._2
 
-          `μ.emit`.pipeToSelf(defn)(identity)(using Nil)
+          `μ.emit`.pipeToSelf(defn)(using Nil)
 
         case _ : ! => ??? // caught by 'parse'
 
