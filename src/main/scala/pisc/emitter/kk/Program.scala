@@ -492,11 +492,9 @@ object Program:
               it.copy(paramss = List(parʹ :: Nil), body = Term.Block(`val` ::: stats))
           }
 
-          val πʹ = π.copy(name = λ.copy()(using None))
+          val πʹ = π.copy(name = λ.copy(`val` = Symbol(par))(using None))
 
-          val `πʹ.emit` = πʹ.emit._2 match
-            case (it: Enumerator.Generator) :: tl =>
-              it.copy(pat = Pat.Var(par)) :: tl
+          val `πʹ.emit` = πʹ.emit._2
 
           `πʹ.emit`.pipeToSelf(defn, par)(`if * then … else …`(Term.ApplyUnary("!", par),
                                                                `Behaviors.stopped`,
