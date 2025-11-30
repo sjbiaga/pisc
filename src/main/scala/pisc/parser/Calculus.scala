@@ -34,13 +34,13 @@ import scala.collection.mutable.{ LinkedHashSet => Set }
 import scala.meta.{ Term, Type }
 
 import Expression.Code
-import Pi.*
+import PolyadicPi.*
 import Calculus.*
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
 
 
-abstract class Calculus extends Pi:
+abstract class Calculus extends PolyadicPi:
 
   def equation(using Duplications): Parser[Bind] =
     invocation(true)<~"=" >> {
@@ -125,10 +125,10 @@ abstract class Calculus extends Pi:
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
     "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
+      case _ ~ _ ~ Some((π(λ(ch: Symbol), Some(cons), _, _*), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
-      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
-        if ch == par
+      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), Some(cons), _, params*), _)) =>
+        if params.filter(_.isSymbol).exists(_.asSymbol == ch)
         then
           emitter match
             case Emitter.kk =>
@@ -262,17 +262,17 @@ object Calculus:
 
     case τ(code: Option[Code])
 
-    case π(channel: λ, name: λ, polarity: Option[String], code: Option[Code])
+    case π(channel: λ, polarity: Option[String], code: Option[Code], names: λ*)
 
     override def toString: String = this match
       case ν(names*) => names.mkString("ν(", ", ", ")")
-      case π(channel, name, polarity, _) =>
+      case π(channel, polarity, _, names*) =>
         if polarity.isDefined
         then
           if polarity.get != "ν"
-          then "" + channel + s"${polarity.get}(" + name + ")."
-          else "" + channel + "<ν" + name + ">."
-        else "" + channel + "<" + name + ">."
+          then "" + channel + names.mkString(s"(${polarity.get}", ", ", ").")
+          else "" + channel + names.mkString("<ν", ", ", ">.")
+        else "" + channel + names.mkString("<", ", ", ">.")
       case _ => "τ."
 
   enum AST:
@@ -371,7 +371,6 @@ object Calculus:
       case _: Boolean => "True False"
       case _: String => "string literal"
       case _: Term => "Scalameta Term"
-      case _ => "polyadic names"
 
     def toTerm: Term =
       import scala.meta._
@@ -389,7 +388,6 @@ object Calculus:
       case it: Boolean => it.toString.capitalize
       case it: String => "\"" + it + "\""
       case it: Term => "/*" + it + "*/"
-      case it: List[`λ`] => it.mkString(", ")
 
 
   // exceptions

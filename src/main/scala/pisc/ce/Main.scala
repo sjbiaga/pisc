@@ -35,7 +35,7 @@ import java.nio.file.Paths
 
 import scala.io.Source
 
-import parser.Pi
+import parser.PolyadicPi
 import emitter.ce.Program
 
 
@@ -51,7 +51,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val pi = Pi.Main(Pi.Emitter.ce, in)
+      val pi = PolyadicPi.Main(PolyadicPi.Emitter.ce, in)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"

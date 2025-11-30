@@ -1,9 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# pi doobie.scala --dep com.github.javafaker:javafaker:1.0.2  \
-                  --dep org.tpolecat::doobie-hikari:1.0.0-RC9 \
-                  --dep org.tpolecat::doobie-h2:1.0.0-RC9     \
-                  -- 99
+# ppi doobie.scala --dep com.github.javafaker:javafaker:1.0.2  \
+                   --dep org.tpolecat::doobie-hikari:1.0.0-RC9 \
+                   --dep org.tpolecat::doobie-h2:1.0.0-RC9     \
+                   -- 99
 
 @import cats._
 @import cats.effect._
@@ -59,30 +59,30 @@
 
 @val f = Faker()
 
-@def cp = { val fa = f.aviation; fa.aircraft -> fa.airport }
-
 Main = Main(/*args.head.toInt.abs*/)
 
-@val ! : SS => IO[SS] =                 \
-  { case r @ (c, p) =>                  \
-     transactor                         \
-       .use(insert(c, p).transact[IO])  \
-       .as(r)                           \
+@val ! : Seq[Any] => IO[Seq[Any]] =        \
+  { case r @ Seq(c: String, p: String) =>  \
+     transactor                            \
+       .use(insert(c, p).transact[IO])     \
+       .as(r)                              \
   }
 
-Main(k) = ν(aaa)             \
-        ( (!.aaa(cp)/*!*/.)  \
-        | Fake(k, aaa)       \
+Main(k) = ν(aaa)               \
+        ( (!.aaa(c, p)/*!*/.)  \
+        | Fake(k, aaa)         \
         )
 
-Fake(k, aaa) = if k = /*0*/                                                          \
-               then aaa<>/*_ <- transactor                                           \
-                                  .use(select                                        \
-                                         .fold(()) { case (_, (c, p, b)) =>          \
-                                                     var w = "landed on";            \
-                                                     if b then w = "took off from";  \
-                                                     println(s"$c $w $p")            \
-                                                   }                                 \
-                                         .compile.drain.transact[IO]                 \
-                                  )*/.                                               \
-               else aaa</*cp*/>. Fake(/*'k-1*/, aaa)
+Fake(k, aaa) = if k = /*0*/                                                            \
+               then aaa#2<>/*_ <- transactor                                           \
+                                    .use(select                                        \
+                                           .fold(()) { case (_, (c, p, b)) =>          \
+                                                       var w = "landed on";            \
+                                                       if b then w = "took off from";  \
+                                                       println(s"$c $w $p")            \
+                                                     }                                 \
+                                           .compile.drain.transact[IO]                 \
+                                  )*/.                                                 \
+               else                                                                    \
+                 τ/*_ <- IO.unit; fa = f.aviation*/.                                   \
+                 aaa</*fa.aircraft*/, /*fa.airport*/>. Fake(/*'k-1*/, aaa)

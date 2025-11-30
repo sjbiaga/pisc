@@ -1,10 +1,10 @@
 #!/bin/bash
 
-function pi() {
+function ppi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -15,11 +15,6 @@ function pi() {
             ;;
     esac
     case "$emit" in
-        ca)
-            local deps='--repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
@@ -46,7 +41,7 @@ function pi() {
         args="$args $1"
         shift
     done
-    set ${srcs#?} ../${emit}/pi.scala
+    set ../$emit/ppi.scala ${srcs#?}
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -54,11 +49,11 @@ function pi() {
                   2>&1
 }
 
-function pi_() {
+function ppi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -69,11 +64,6 @@ function pi_() {
             ;;
     esac
     case "$emit" in
-        ca)
-            local deps='--repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
@@ -100,7 +90,7 @@ function pi_() {
         args="$args $1"
         shift
     done
-    set ${srcs#?} ../${emit}/pi_.scala
+    set ../$emit/ppi_.scala ${srcs#?}
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.7.4 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -108,11 +98,11 @@ function pi_() {
                   2>&1
 }
 
-function pio() {
+function ppio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -131,4 +121,4 @@ function pio() {
     done
 }
 
-export -f pio pi pi_
+export -f ppio ppi ppi_

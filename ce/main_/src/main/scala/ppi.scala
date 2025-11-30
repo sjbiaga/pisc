@@ -28,13 +28,9 @@
 
 package object Π:
 
-  import _root_.cats.effect.IO
-  import _root_.cats.effect.kernel.Deferred
+  import _root_.cats.effect.{ Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Queue, Supervisor }
-  import _root_.com.suprnation.actor.ActorContext
-  import _root_.com.suprnation.actor.ActorRef.ActorRef
-  import _root_.com.suprnation.actor.Actor.{ Actor, Receive }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Supervisor }
 
   import `Π-magic`.*
 
@@ -58,14 +54,13 @@ package object Π:
     */
   object ν:
 
-    def map[B](f: ActorRef[IO, Request] => B)(using ActorContext[IO, Null, Any]): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: ActorRef[IO, Request] => IO[B])(using context: ActorContext[IO, Null, Any]): IO[B] =
+    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
+    def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
-          q <- Queue.unbounded[IO, Any]
-          r <- Queue.unbounded[IO, (Deferred[IO, `()`], Option[Any => IO[Any]])]
-          a <- context.system.actorOf(νActor(q, r))
+          q <- Queue.synchronous[IO, (Seq[Any], CyclicBarrier[IO])]
+          ref <- Ref.of[IO, ><](><(q, false))
         yield
-          f(a)
+          f(ref)
       ).flatten
 
 
@@ -80,13 +75,11 @@ package object Π:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    import Request.*
-
-    private def a = `()`[><]
+    private def ref = `()`[>*<]
 
     def ====(that: `()`) =
       try
-        this.a eq that.a
+        this.ref eq that.ref
       catch
         case _ =>
           this.name == that.name
@@ -98,62 +91,71 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Option[Unit]] = (a ! Output(value.name)).as(Some(()))
+    def apply(value: `()`*): IO[Option[Unit]] = ><(value.map(_.name))(ref)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = apply(value) <* exec(code)
+    def apply(value: `()`*)(code: => IO[Any]): IO[Option[Unit]] = ><(value.map(_.name))(ref)(code)
 
     /**
       * positive prefix i.e. input
       */
-    def apply()(implicit sender: Option[ActorRef[IO, Nothing]]): IO[Unit] = a ! Input(None)
+    def apply(): IO[Seq[`()`]] = ><()(ref).map(_.map(new `()`(_)))
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => IO[Any])(implicit sender: Option[ActorRef[IO, Nothing]]): IO[Unit] = a ! Input(Some(code.asInstanceOf[Any => IO[Any]]))
+    def apply()(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[`()`]] = ><()(ref)(code).map(_.map(new `()`(_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    enum Request:
-      case Input(code: Option[Any => IO[Any]])
-      case Output(name: Any)
+    final case class ><(queue: Queue[IO, (Seq[Any], CyclicBarrier[IO])], stop: Boolean)
 
-    type >< = ActorRef[IO, Request]
+    type >*< = Ref[IO, ><]
 
-    final class νActor(q: Queue[IO, Any], r: Queue[IO, (Deferred[IO, `()`], Option[Any => IO[Any]])]) extends Actor[IO, Request]:
+    object >< :
 
-      import Request.*
+      def apply(names: Seq[Any])(`>R`: >*<): IO[Option[Unit]] =
+        CyclicBarrier[IO](2).flatMap { b2 =>
+          `>R`.flatModify { case it @ ><(q, _) =>
+            it -> q.offer(names -> b2)
+          } >> b2.await >>
+          `>R`.modify { case it @ ><(_, stop) =>
+            it -> (if stop then None else Some(()))
+          }
+        }
 
-      override def receive: Receive[IO, Request] =
+      def apply(names: Seq[Any])(`>R`: >*<)(code: => IO[Any]): IO[Option[Unit]] =
+        CyclicBarrier[IO](2).flatMap { b2 =>
+          `>R`.flatModify { case it @ ><(q, _) =>
+            it -> q.offer(names -> b2)
+          } >> exec(code) >> b2.await >>
+          `>R`.modify { case it @ ><(_, stop) =>
+            it -> (if stop then None else Some(()))
+          }
+        }
 
-        case Output(name) =>
-          for
-            opt <- r.tryTake
-            _   <- opt.fold(q.offer(name)) {
-                     case (deferred, Some(code)) if name != null =>
-                       (code andThen exec)(name).flatMap(`()` andThen deferred.complete)
-                     case (deferred, _) =>
-                       deferred.complete(`()`(name))
-                   }
-          yield
-            ()
+      def apply()(`<R`: >*<): IO[Seq[Any]] =
+        `<R`.flatModify { case it @ ><(q, _) =>
+          it -> q.take
+        }.flatMap { (names, b2) =>
+          IO.pure(names) <* b2.await
+        }
 
-        case Input(code)  =>
-          for
-            deferred <- Deferred[IO, `()`]
-            opt      <- q.tryTake
-            _        <- opt.fold(r.offer(deferred -> code)) {
-                          case name if name != null && code.isDefined =>
-                            (code.get andThen exec)(name).flatMap(`()` andThen deferred.complete)
-                          case name =>
-                            deferred.complete(`()`(name))
-                        }
-            _        <- sender.get.widenRequest[Deferred[IO, `()`]] ! deferred
-          yield
-            ()
+      def apply()(`<R`: >*<)(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[Any]] =
+        `<R`.flatModify { case it @ ><(q, _) =>
+          it -> q.take
+        }.flatMap {
+          case it@ (Seq(null, _*), _) => IO.pure(it)
+          case (it, b2) => (code andThen exec)(it)
+                             .flatTap {
+                               case Seq(null, _*) => `<R`.update(_.copy(stop = true))
+                               case _ => IO.unit
+                             }.map(_ -> b2)
+        }.flatMap { (names, b2) =>
+          IO.pure(names) <* b2.await
+        }

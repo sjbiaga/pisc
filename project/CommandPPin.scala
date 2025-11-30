@@ -8,9 +8,9 @@ import internal.util.complete._
 import java.io.File
 import java.nio.file.Path
 
-object CommandPin {
+object CommandPPin {
 
-  def pin = Command("pin") { state =>
+  def ppin = Command("ppin") { state =>
     import state._
 
     val extracted = Project.extract(state)
@@ -25,19 +25,19 @@ object CommandPin {
       fileExamples().map(_.stripSuffix(".pisc")).toSeq
     }
 
-    val opts = Map("-ca" -> Nil, "-ca" -> Nil, "-kk" -> (0 to 2).map("-O" + _))
+    val opts = Map("-ce" -> Nil, "-kk" -> (0 to 2).map("-O" + _))
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {
         case it if it.startsWith("-") && args.size == 1 =>
-          Seq("-ca", "-ce", "-kk").filter(_.startsWith(it.toLowerCase))
+          Seq("-ce", "-kk").filter(_.startsWith(it.toLowerCase))
         case it =>
           { if (it.isEmpty && args.size == 1) suggestions(Seq("-")) else Nil } ++
           { if (args.size > 1 && opts.contains(args(1))) opts(args(1)) else Nil } ++
           examples("test", it) ++ { if (it.startsWith("test")) Nil else examples("pisc", it) }
       }
 
-    val pinArgsParser: Parser[Seq[String]] = {
+    val ppinArgsParser: Parser[Seq[String]] = {
 
       def loop(previous: Seq[String]): Parser[Seq[String]] = {
         token(Space) ~> NotSpace.examples(suggestions(previous): _*).flatMap(res => loop(previous :+ res))
@@ -47,7 +47,7 @@ object CommandPin {
 
     }
 
-    pinArgsParser
+    ppinArgsParser
   } { (state, pisc) =>
 
     val extracted = Project.extract(state)

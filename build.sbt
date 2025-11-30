@@ -1,5 +1,5 @@
 import Dependencies._
-import CommandPin._
+import CommandPPin._
 
 ThisBuild / scalaVersion := "3.7.4"
 
@@ -17,9 +17,9 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `ca-main`, `ca-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`)
   .settings(
-    name := "π-Calculus[experimental]2Scala",
+    name := "Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -27,13 +27,13 @@ lazy val root = (project in file("."))
     scalaVersion := "3.7.4",
     crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    commands += pin,
+    commands += ppin,
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
   )
 
 lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "ce π-Calculus[experimental]2Scala",
+    name := "ce Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -46,7 +46,7 @@ lazy val `ce-main` = (project in file("ce/main"))
 
 lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
-    name := "ce_ π-Calculus[experimental]2Scala",
+    name := "ce_ Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -57,35 +57,9 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     libraryDependencies ++= Seq(catseffect, munit % Test)
   )
 
-lazy val `ca-main` = (project in file("ca/main"))
-  .settings(
-    name := "ca π-Calculus[experimental]2Scala",
-    organization := "sjb.ia.ga",
-    organizationName := "sjbiaga",
-    version := "1.0",
-    maxErrors := 5,
-    scalaVersion := "3.7.4",
-    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
-    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(catsactors, munit % Test)
-  )
-
-lazy val `ca-main_` = (project in file("ca/main_"))
-  .settings(
-    name := "ca_ π-Calculus[experimental]2Scala",
-    organization := "sjb.ia.ga",
-    organizationName := "sjbiaga",
-    version := "1.0",
-    maxErrors := 5,
-    scalaVersion := "3.7.4",
-    crossScalaVersions ++= Seq("2.13.18", "3.7.4"),
-    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(catsactors, munit % Test)
-  )
-
 lazy val `akka-main` = (project in file("akka/main"))
   .settings(
-    name := "akka π-Calculus[experimental]2Scala",
+    name := "akka Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -98,7 +72,7 @@ lazy val `akka-main` = (project in file("akka/main"))
 
 lazy val `akka-main_` = (project in file("akka/main_"))
   .settings(
-    name := "akka_ π-Calculus[experimental]2Scala",
+    name := "akka_ Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -111,7 +85,7 @@ lazy val `akka-main_` = (project in file("akka/main_"))
 
 lazy val `pekko-main` = (project in file("pekko/main"))
   .settings(
-    name := "pekko π-Calculus[experimental]2Scala",
+    name := "pekko Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -124,7 +98,7 @@ lazy val `pekko-main` = (project in file("pekko/main"))
 
 lazy val `pekko-main_` = (project in file("pekko/main_"))
   .settings(
-    name := "pekko_ π-Calculus[experimental]2Scala",
+    name := "pekko_ Polyadic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -135,7 +109,7 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
     libraryDependencies ++= Seq(pekko, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "c[ea]/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "examples/*.scala"
+unmanagedSources / excludeFilter := "c[ea]/ppi*.scala" || "*[ae]kk[ao]/ppi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

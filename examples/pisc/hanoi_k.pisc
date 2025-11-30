@@ -4,7 +4,7 @@
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 
-@val ! : String => Future[String] = { _ => Future.successful(null) }
+@val ! : Seq[Any] => Future[Seq[String]] = { _ => Future.successful(Seq(null)) }
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \

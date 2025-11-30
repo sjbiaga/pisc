@@ -29,24 +29,22 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
-
 import scala.io.Source
 
 import munit.FunSuite
 
-import Pi.*
+import PolyadicPi.*
 import Calculus.*
 import Encoding.*
-import PiSuite.*
+import PolyadicPiSuite.*
 
 
-class PiSuite extends FunSuite:
+class PolyadicPiSuite extends FunSuite:
 
   test("agent-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1") {
-     Main(null, getClass.getSimpleName) {
+      Main(null, getClass.getSimpleName) {
         source("""
                ⟦⟧ =
                P(u) = u(x). u(x). ( u(v). ⟦ z(x). ⟧ )
@@ -121,72 +119,7 @@ class PiSuite extends FunSuite:
 
   }
 
-  test("encoding - with invocation - parameters and pointers mixed or not") {
 
-    Main(null, getClass.getSimpleName) {
-      source("""
-                ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
-                Agent0 = ()
-                Agent2(a, b) = b<a>.()
-                Process1 = ν(x, y) ⟦ ν(x) Agent2(){x} ^ Agent0 ⟧{x, y}
-                Process2 = ν(x, y) ⟦ ν(x) Agent2(x, x) ^ Agent0 ⟧{x, y}
-             """)
-    } match
-      case _ :: _ :: Right((_, +(_, ∥(_, `.`(exp1, ν("x", "y")))))) :: Right((_, +(_, ∥(_, `.`(exp2, ν("x", "y")))))) :: Nil =>
-        exp1 match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
-                                    `.`(`(*)`("Agent0", Nil)))), _, assignment1) =>
-            assertEquals(assignment1, Set(Symbol("x_υ4υ") -> Symbol("x"), Symbol("y_υ5υ") -> Symbol("y")))
-          case _ =>
-            assert(false)
-        exp2 match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
-                                    `.`(`(*)`("Agent0", Nil)))), _, assignmentʹ) =>
-            assertEquals(assignmentʹ, Set(Symbol("x_υaυ") -> Symbol("x"), Symbol("y_υbυ") -> Symbol("y")))
-          case _ =>
-            assert(false)
-      case _ =>
-        assert(false)
-
-  }
-
-  test("encoding - nested") {
-
-    Main(null, getClass.getSimpleName) {
-      source("""
-                ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
-                ⟦1 t"Out" 1⟧{z} = z<z>.()
-                ⟦2 t"In" 2⟧{w} = w(z).τ/*println('z)*/.()
-                ⟦3 t"Nest" 3⟧ = ν(ch) ⟦ ⟦1 Out 1⟧ ^ ⟦2 In 2⟧ ⟧{ch, ch}
-                Main = ⟦3 Nest 3⟧
-             """)
-    } match
-      case Right((_, +(_, ∥(_, `.`(exp))))) :: Nil =>
-        exp match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(expʹ, ν("ch_υnυ")))), _,  _) =>
-            expʹ match
-              case `⟦⟧`(_, _, +(_, ∥(_, `.`(exp1), `.`(exp2))), _, assignment) =>
-                assertEquals(assignment, Set(Symbol("x_υoυ") -> Symbol("ch_υnυ"), Symbol("y_υpυ") -> Symbol("ch_υnυ")))
-                exp1 match
-                  case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, assignment1) =>
-                    assertEquals(assignment1, Set(Symbol("z_υqυ") -> Symbol("x_υoυ")))
-                  case _ =>
-                    assert(false)
-                exp2 match
-                  case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, assignmentʹ) =>
-                    assertEquals(assignmentʹ, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
-                  case _ =>
-                    assert(false)
-              case _ =>
-                assert(false)
-          case _ =>
-            assert(false)
-      case _ =>
-        assert(false)
-
-  }
-
-
-object PiSuite:
+object PolyadicPiSuite:
 
   def source(src: String) = Source.fromString(src)

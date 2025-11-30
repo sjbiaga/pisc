@@ -1,21 +1,24 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi lists.scala -- 1 2  3 5
+# ./examples $ ppi lists.scala -- 1 2 3 5 7
 
-@import eu.timepit.refined.collection.*
-@import eu.timepit.refined.numeric.*
+# https://github.com/alexj136/nodes/blob/master/examples/lists
 
-Main = ν(ch)                              \
-     ( Client(ch, /*args.map(_.toInt)*/)  \
-     | Server(ch)                         \
+Main = ν(sumlist)ν(print)ν(rch)                            \
+     ( Client(sumlist, print, rch, /*args.map(_.toInt)*/)  \
+     | Server(sumlist)                                     \
+     | print(sum: Int /**/).τ/*println(s"sum=${'sum}")*/.  \
+       sumlist#2<>.                                        \
      )
 
-Client(ch, l) = ch<l>.
+Client(sumlist, print, rch, l) = sumlist<l,rch>.rch(sum).print<sum>.
 
-Server(ch) = !.ch(list: List[Int] /* Size[Even] */).                   \
-             if /*'list.nonEmpty*/ = True                              \
-             then                                                      \
-               list::(head1, head2, tail) /*println('head1+'head2)*/.  \
-               ch<tail>.                                               \
-             else                                                      \
-               ch<>.
+Server(sumlist) = !.sumlist(list: List[Int] /**/, rch).                               \
+                  if /*'list.isEmpty*/ = True                                         \
+                  then                                                                \
+                    rch</*0*/>.                                                       \
+                  else                                                                \
+                    ν(rch_recursive_call)                                             \
+                    list::(head,tail).                                                \
+                    (sumlist<tail,rch_recursive_call>.                                \
+                     rch_recursive_call(tailsum: Int /**/).rch</*'head+'tailsum*/>.)

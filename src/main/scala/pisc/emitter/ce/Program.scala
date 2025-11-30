@@ -39,11 +39,11 @@ import ce.Meta.*
 
 object Program:
 
-  extension (node: Pre | AST)(using id: => String)
+  extension (self: Pre | AST)(using id: => String)
 
     def emitʹ(implicit semaphore: Option[String]): List[Enumerator] =
 
-      node match
+      self match
 
         case ∥(_, operand) =>
           operand.emitʹ
@@ -68,7 +68,7 @@ object Program:
 
       var * = List[Enumerator]()
 
-      node match
+      self match
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
@@ -139,43 +139,75 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), arg, nu @ (None | Some("ν")), code) =>
-          val argʹ =
+        case π(λ(Symbol(ch)), nu @ (None | Some("ν")), code, params*) =>
+          val paramsʹ =
             nu match
               case None =>
-                arg
+                params
               case _ =>
-                val λ(Symbol(par)) = arg
-                val parʹ = if ch == par then id else par
-                * = ν(parʹ).emit
-                λ(Symbol(parʹ))
+                params.map {
+                  case λ(Symbol(`ch`)) => λ(Symbol(id))
+                  case it => it
+                }
+
+          nu match
+            case None =>
+            case _ =>
+              * = ν(paramsʹ.filter(_.isSymbol).map(_.asSymbol.name)*).emit
+
+          val args = paramsʹ.map(_.toTerm).toList
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(args)),
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
               val expr = `for * yield ()`(`_ <- IO { * }`(term))
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(args)),
                                Term.ArgClause(expr::Nil)
                              ))
             case _ =>
-              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)))
+              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args)))
 
           nu match
             case None =>
             case _ =>
-              val λ(Symbol(par)) = arg
-              if ch == par
-              then
-                val λ(Symbol(parʹ)) = argʹ
-                * :+= `* <- IO.pure(*)`(par -> parʹ)
+              params.zipWithIndex.foreach {
+                case (λ(Symbol(`ch`)), i) =>
+                  * :+= `* <- IO.pure(*)`(ch -> paramsʹ(i).asSymbol.name)
+              }
 
-        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), code) =>
+        case π(λ(Symbol(ch)), Some(""), code, params*) =>
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
+
+          code match
+            case Some((Right(term), _)) =>
+              * = Enumerator.Generator(`Seq(*) <- …`(args*),
+                                       Term.Apply(Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                                  Term.ArgClause(term::Nil)
+                                       ))
+            case _ =>
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(\(ch), Term.ArgClause(Nil)))
+
+          params.zipWithIndex.foreach {
+            case (λ @ λ(Symbol(arg)), i) =>
+              val par = args(i)
+              λ.`type` match
+                case Some((tpe, Some(refined))) =>
+                  * :+= `* = *: * …`(arg, par, tpe, refined)
+                case Some((tpe, _)) =>
+                  * :+= `* = *: *`(arg, par, tpe)
+                case _ =>
+          }
+
+        case π(λ(Symbol(ch)), Some(cons), code, params*) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -199,25 +231,6 @@ object Program:
               * :+= `_ <- IO { * }`(term)
             case _ =>
 
-        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
-          val par = if λ.`type`.isDefined then id else arg
-
-          code match
-            case Some((Right(term), _)) =>
-              * = `* <- *`(par -> Term.Apply(
-                                    Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                    Term.ArgClause(term::Nil)
-                           ))
-            case _ =>
-              * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
-
-          λ.`type` match
-            case Some((tpe, Some(refined))) =>
-              * :+= `* = *: * …`(arg, par, tpe, refined)
-            case Some((tpe, _)) =>
-              * :+= `* = *: *`(arg, par, tpe)
-            case _ =>
-
         case _: π => ??? // caught by parser
 
         ////////////////////////////////////////////// restriction | prefixes //
@@ -239,21 +252,26 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
+        case !(parallelism, pace, Some(π @ π(λ(Symbol(ch)), Some("ν"), _, params*)), sum) =>
+          val args = params.filter(_.isSymbol).map(_.asSymbol.name)
+
           val υidυ = id
           val υidυʹ = id
 
-          val `π.emit` = π.emit match
-            case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              hd :: it.copy(pat = Pat.Var(υidυʹ)) :: tl
+          val `π.emit()` = π.emit match
+            case ls =>
+              ls.drop(args.size) match
+                case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
+                  ls.take(args.size) ::: it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          var `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   `IO.cede`,
-                                                                   Term.Apply(\(υidυ),
-                                                                              Term.ArgClause(\(par) :: Nil)))
-                                            }
+          var `!.π⋯` = `π.emit()` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                        Type.ArgClause(Nil),
+                                                                        Term.ArgClause(\("None") :: Nil)),
+                                                        `IO.cede`,
+                                                        Term.Apply(\(υidυ),
+                                                                   Term.ArgClause(args.map(\(_)).toList)),
+                                                        Nil)
+                                              }
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -276,37 +294,43 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
           else
             * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
+                `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
 
-        case !(parallelism, pace, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
-          val par = if λ.`type`.isDefined then id else arg
+        case !(parallelism, pace, Some(π @ π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
 
           val υidυ = id
 
-          val πʹ = π.copy(name = λ.copy()(using None))
+          val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, params.map(_.copy()(using None))*)
 
           var `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                      Term.ArgClause(\(arg) :: Nil)))
+                                                      Term.ArgClause(params.map(_.asSymbol.name).map(\(_)).toList)))
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
-          val `val` =
-            λ.`type` match
-              case Some((tpe, Some(refined))) =>
-                `val * = *: * …`(arg, par, tpe, refined) :: Nil
-              case Some((tpe, _)) =>
-                `val * = *: *`(arg, par, tpe) :: Nil
-              case _ => Nil
+          val `val` = params.zipWithIndex.flatMap {
+            case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
+              val par = args(i)
+              λ.`type`.get match
+                case (tpe, Some(refined)) =>
+                  Some(`val * = *: * …`(arg, par, tpe, refined))
+                case (tpe, _) =>
+                  Some(`val * = *: *`(arg, par, tpe))
+            case _ => None
+          }.toList
 
           val sem = if parallelism < 0 then null else id
 
           val it =
             if parallelism < 0
             then
-              Term.If(Term.ApplyUnary("!", par),
+              Term.If(Term.ApplyUnary("!", args.head),
                       `IO.cede`,
                       Term.Block(`val` :+
                                  `List( *, … ).parSequence`(
@@ -317,7 +341,7 @@ object Program:
             else
               `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
-              Term.If(Term.ApplyUnary("!", par),
+              Term.If(Term.ApplyUnary("!", args.head),
                       `IO.cede`,
                       Term.Block(`val` :+
                                  `List( *, … ).parSequence`(
@@ -328,10 +352,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
           else
             * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, it)) :: `!.π⋯`
+                `* <- *`(υidυ -> `IO { def *(*: ()): IO[Any] = …; * }`(υidυ, it, args*)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
@@ -341,11 +365,12 @@ object Program:
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          var `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   `IO.cede`,
-                                                                   υidυ)
+          var `!.μ⋯` = `μ.emit` :+ `_ <- *` { Term.If(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                      Type.ArgClause(Nil),
+                                                                      Term.ArgClause(\("None") :: Nil)),
+                                                      `IO.cede`,
+                                                      υidυ,
+                                                      Nil)
                                             }
 
           var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)

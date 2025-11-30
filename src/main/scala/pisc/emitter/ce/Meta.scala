@@ -90,20 +90,22 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => `IO.cede`
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparTraverse"), Term.ArgClause(`…` :: Nil))
 
-  def `IO { def *(*: ()): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
+
+  def `IO { def *(*: ()): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
-                            *._1,
+                            *,
                             Member.ParamClauseGroup(Type.ParamClause(Nil),
-                                                    Term.ParamClause(Term.Param(Nil,
-                                                                                *._2,
-                                                                                Some(Type.Name("()")),
-                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                                                    Term.ParamClause(**.map(Term.Param(Nil,
+                                                                                       _,
+                                                                                       Some(Type.Name("()")),
+                                                                                       None)).toList,
+                                                                     None) :: Nil) :: Nil,
                             `: IO[Any]`,
                              `…`
-                   ) :: \(*._1) :: Nil
+                   ) :: \(*) :: Nil
                  ) :: Nil
                )
     )

@@ -29,10 +29,11 @@
 package object Π:
 
   import _root_.scala.util.{ Success, Try }
+  import _root_.java.util.concurrent.atomic.AtomicBoolean
   import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
   import _root_.scala.collection.immutable.Queue
-  import _root_.akka.actor.typed.scaladsl.Behaviors
-  import _root_.akka.actor.typed.{ ActorRef, Behavior }
+  import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
+  import _root_.org.apache.pekko.actor.typed.{ ActorRef, Behavior }
 
   import `Π-magic`.*
 
@@ -77,19 +78,19 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)
+    def apply(value: `()`*)
              (using ExecutionContext): Future[Option[Unit]] =
-      Future { a ! Output(value.name, null, None) }.map(_ => Some(()))
+      Future { a ! Output(value.map(_.name), null, None) }.map(_ => Some(()))
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => Future[Any])
+    def apply(value: `()`*)(code: => Future[Any])
              (using ExecutionContext): Future[Option[Unit]] =
       for
         _      <- Future.unit
         promise = Promise[Unit]
-        _      <- Future { a ! Output(value.name, promise, Some(code)) }
+        _      <- Future { a ! Output(value.map(_.name), promise, Some(code)) }
         _      <- promise.future
       yield
         Some(())
@@ -97,27 +98,27 @@ package object Π:
     /**
       * positive prefix i.e. input
       */
-    def apply()(using ExecutionContext): Future[`()`] =
+    def apply()(arity: Int)(using ExecutionContext): Future[Seq[`()`]] =
       for
         _      <- Future.unit
-        promise = Promise[`()`]
-        _      <- Future { a ! Input(promise, None) }
-        name   <- promise.future
+        promise = Promise[Seq[`()`]]
+        _      <- Future { a ! Input(arity, promise, None) }
+        names  <- promise.future
       yield
-        name
+        names
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => Future[T])
-                  (using ExecutionContext): Future[`()`] =
+    def apply()(arity: Int)(code: Seq[Any] => Future[Seq[Any]])
+                           (using ExecutionContext): Future[Seq[`()`]] =
       for
         _      <- Future.unit
-        promise = Promise[`()`]
-        _      <- Future { a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]])) }
-        name   <- promise.future
+        promise = Promise[Seq[`()`]]
+        _      <- Future { a ! Input(arity, promise, Some(code)) }
+        names  <- promise.future
       yield
-        name
+        names
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -128,9 +129,9 @@ package object Π:
 
     enum Request:
       private[`Π-magic`] case Execute(promise: Promise[Unit])
-      private[`Π-magic`] case Compute(promise: Promise[`()`], result: Try[Any])
-      case Input(wrap: Promise[`()`], code: Option[Any => Future[Any]])
-      case Output(name: Any, done: Promise[Unit], exec: Option[Future[Any]])
+      private[`Π-magic`] case Compute(arity: Int, promise: Promise[Seq[`()`]], result: Try[Seq[Any]])
+      case Input(arity: Int, wrap: Promise[Seq[`()`]], code: Option[Seq[Any] => Future[Seq[Any]]])
+      case Output(names: Seq[Any], done: Promise[Unit], exec: Option[Future[Any]])
 
     type >< = ActorRef[Request]
 
@@ -138,36 +139,36 @@ package object Π:
 
       Behaviors.receive[Request] {
 
-        case (_, Execute(promise))                    =>
+        case (_, Execute(promise))                     =>
           promise.success(())
           Behaviors.same
 
-        case (_, Compute(promise, result))            =>
-          promise.success(result.fold(_ => `()`(null), `()`))
+        case (_, Compute(arity, promise, result))      =>
+          promise.success(result.fold(_ => Seq.fill(arity)(null).map(`()`), _.map(`()`)))
           Behaviors.same
 
-        case (context, it @ Output(name, done, exec)) =>
+        case (context, it @ Output(names, done, exec)) =>
 
           i.dequeueOption.fold(νActor(i, o.enqueue(it))) {
-            case (Input(wrap, Some(code)), i) if name != null =>
-              context.pipeToSelf(code(name))(Compute(wrap, _))
+            case (Input(arity, wrap, Some(code)), i) if names.head != null =>
+              context.pipeToSelf(code(names))(Compute(arity, wrap, _))
               if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
               νActor(i, o)
-            case (Input(wrap, _), i)                          =>
-              wrap.success(`()`(name))
+            case (Input(_, wrap, _), i)                                    =>
+              wrap.success(names.map(`()`))
               if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
               νActor(i, o)
           }
 
-        case (context, it @ Input(wrap, code))        =>
+        case (context, it @ Input(arity, wrap, code))  =>
 
           o.dequeueOption.fold(νActor(i.enqueue(it), o)) {
-            case (Output(name, done, exec), o) if name != null && code.isDefined =>
-              context.pipeToSelf(code.get(name))(Compute(wrap, _))
+            case (Output(names, done, exec), o) if names.head != null && code.isDefined =>
+              context.pipeToSelf(code.get(names))(Compute(arity, wrap, _))
               if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
               νActor(i, o)
-            case (Output(name, done, exec), o)                                   =>
-              wrap.success(`()`(name))
+            case (Output(names, done, exec), o)                                         =>
+              wrap.success(names.map(`()`))
               if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
               νActor(i, o)
           }

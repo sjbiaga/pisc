@@ -62,6 +62,9 @@ abstract trait Meta:
     else
       Pat.Tuple(*.map(\(_)).map(Pat.Var(_)).toList)
 
+  def `Seq(*) <- …`(* : String*): Pat =
+      Pat.Extract(\("Seq"), Pat.ArgClause(*.map(\(_)).map(Pat.Var(_)).toList))
+
 
   def `* <- *`(* : (String, Term)): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(*._1), *._2)

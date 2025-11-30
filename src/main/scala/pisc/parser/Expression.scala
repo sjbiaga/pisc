@@ -39,7 +39,7 @@ import scala.util.matching.Regex
 
 import scala.util.parsing.combinator.JavaTokenParsers
 
-import Pi.Names
+import PolyadicPi.Names
 import Calculus.{ λ, AST }
 import Encoding.{ renamed, Bindings }
 import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated, Substitution }

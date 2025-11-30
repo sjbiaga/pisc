@@ -41,7 +41,7 @@ import scala.meta.Term
 import _root_.pisc.parser.Expression
 import Expression.Code
 import _root_.pisc.parser.Encoding
-import _root_.pisc.parser.Pi.*
+import _root_.pisc.parser.PolyadicPi.*
 import _root_.pisc.parser.Calculus.*
 import Encoding.*
 import Expansion.*
@@ -480,12 +480,14 @@ object Expansion:
           val it = _it.map {
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
-            case it @ π(λ(ch: Symbol), _, Some(_), given Option[Code]) =>
-              it.copy(channel = replaced(ch), code = recoded)
-            case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code]) =>
-              it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)
-            case it @ π(λ(ch: Symbol), _, None, given Option[Code]) =>
-              it.copy(channel = replaced(ch), code = recoded)
+            case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
+              π(replaced(ch), cons, recoded, names*)
+            case π(λ(ch: Symbol), None, given Option[Code], names*) =>
+              val namesʹ = names.map {
+                case λ(arg: Symbol) => replaced(arg)
+                case it => it
+              }
+              π(replaced(ch), None, recoded, namesʹ*)
             case it => it
           }
           `.`(end.replace, it*)
@@ -505,14 +507,15 @@ object Expansion:
         case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
           `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.replace)
 
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, Some(_), given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+          `!`(parallelism, pace, Some(π(replaced(ch), cons, recoded, names*)), sum.replace)
 
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)), sum.replace)
-
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(channel = replaced(ch), code = recoded)), sum.replace)
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+          val namesʹ = names.map {
+            case λ(arg: Symbol) => replaced(arg)
+            case it => it
+          }
+          `!`(parallelism, pace, Some(π(replaced(ch), None, recoded, namesʹ*)), sum.replace)
 
         case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.replace)
@@ -607,18 +610,16 @@ object Expansion:
               it
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
-            case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), given Option[Code]) =>
+            case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
               val chʹ = updated(ch)
-              given_Bindings --= params.map(_.asSymbol).filterNot(_.name.isEmpty)
-              it.copy(channel = chʹ, code = recoded)
-            case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code]) =>
-              val chʹ = updated(ch)
-              given_Bindings -= par
-              it.copy(channel = chʹ, code = recoded)
-            case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code]) =>
-              it.copy(channel = updated(ch), name = updated(arg), code = recoded)
-            case it @ π(λ(ch: Symbol), _, None, given Option[Code]) =>
-              it.copy(channel = updated(ch), code = recoded)
+              given_Bindings --= names.filter(_.isSymbol).map(_.asSymbol).filterNot(_.name.isEmpty)
+              π(chʹ, cons, recoded, names*)
+            case π(λ(ch: Symbol), None, given Option[Code], names*) =>
+              val namesʹ = names.map {
+                case λ(arg: Symbol) => updated(arg)
+                case it => it
+              }
+              π(updated(ch), None, recoded, namesʹ*)
             case it => it
           }
           `.`(end.update, it*)
@@ -638,17 +639,18 @@ object Expansion:
         case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
           `!`(parallelism, pace, Some(it.copy(code = recoded)), sum.update)
 
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code])), sum) =>
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
           given Bindings = Bindings(bindings)
           val chʹ = updated(ch)
-          given_Bindings -= par
-          `!`(parallelism, pace, Some(it.copy(channel = chʹ, code = recoded)), sum.update)
+          given_Bindings --= names.filter(_.isSymbol).map(_.asSymbol).filterNot(_.name.isEmpty)
+          `!`(parallelism, pace, Some(π(chʹ, cons, recoded, names*)), sum.update)
 
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(channel = updated(ch), name = updated(arg), code = recoded)), sum.update)
-
-        case !(parallelism, pace, Some(it @ π(λ(ch: Symbol), _, None, given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(channel = updated(ch), code = recoded)), sum.update)
+        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+          val namesʹ = names.map {
+            case λ(arg: Symbol) => updated(arg)
+            case it => it
+          }
+          `!`(parallelism, pace, Some(π(updated(ch), None, recoded, namesʹ*)), sum.update)
 
         case it @ !(_, _, _, sum) =>
           it.copy(sum = sum.update)

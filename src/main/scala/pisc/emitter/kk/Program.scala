@@ -248,8 +248,7 @@ object Program:
           var code = ts.flatMap(_._2)
           var ns = ps.flatMap {
             case ν(names*) => names
-            case π(_, λ(Symbol(arg)), Some(_), _) => Some(arg)
-            case π(_, λ(params: List[`λ`]), Some(_), _) => params.map(_.asSymbol.name).filter(_.nonEmpty)
+            case π(_, Some(_), _, params*) => params.filter(_.isSymbol).map(_.asSymbol.name).filterNot(_.isEmpty)
             case _ => Nil
           }.toSet.toSeq
 
@@ -451,10 +450,12 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(parallelism, _, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
+        case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), Some("ν"), _, params*)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
-          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, par, Some(Type.Name("()")), None) :: Nil)))
+          val paramsʹ = params.filter(_.isSymbol).map(_.asSymbol.name).map(\(_))
+
+          val defn = sum.generate._1.map(_.copy(paramss = List(paramsʹ.map(Term.Param(Nil, _, Some(Type.Name("()")), None)).toList)))
 
           π.emit match
 
@@ -465,41 +466,49 @@ object Program:
                 case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
                   hd :: it.copy(pat = Pat.Var(υidυ)) :: tl
 
-              `π.emit`.pipeToSelf(defn, par)(`if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
-                                                                                  Type.ArgClause(Nil),
-                                                                                  Term.ArgClause("None" :: Nil)),
-                                                                  `Behaviors.stopped`,
-                                                                  _))
+              `π.emit`.pipeToSelf(defn, paramsʹ*)(`if * then … else …`(Term.ApplyInfix(\(υidυ), \("eq"),
+                                                                                       Type.ArgClause(Nil),
+                                                                                       Term.ArgClause("None" :: Nil)),
+                                                                       `Behaviors.stopped`,
+                                                                       _))
 
-        case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
+        case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
+
           implicit val sem = if parallelism < 0 then None else Some(id)
-
-          val par = if λ.`type`.isDefined then id else arg
 
           val defn = sum.generate._1.map {
             case it @ Defn.Def(_, _, _, _, _, Term.Block(stats)) =>
 
-              val `val` =
-                λ.`type` match
-                  case Some((tpe, Some(refined))) =>
-                    `val * = *: * …`(arg, par, tpe, refined) :: Nil
-                  case Some((tpe, _)) =>
-                    `val * = *: *`(arg, par, tpe) :: Nil
-                  case _ => Nil
+              val `val` = params.zipWithIndex.flatMap {
+                case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
+                  val par = args(i)
+                  λ.`type`.get match
+                    case (tpe, Some(refined)) =>
+                      Some(`val * = *: * …`(arg, par, tpe, refined))
+                    case (tpe, _) =>
+                      Some(`val * = *: *`(arg, par, tpe))
+                case _ => None
+              }.toList
 
-              val parʹ = Term.Param(Nil, par, Some(Type.Name("()")), None)
+              val argsʹ = args.map(Term.Param(Nil, _, Some(Type.Name("()")), None))
 
-              it.copy(paramss = List(parʹ :: Nil), body = Term.Block(`val` ::: stats))
+              it.copy(paramss = List(argsʹ.toList), body = Term.Block(`val` ::: stats))
           }
 
-          val πʹ = π.copy(name = λ.copy(`val` = Symbol(par))(using None))
+          val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, params.map(_.copy()(using None))*)
 
-          val `πʹ.emit` = πʹ.emit._2
+          val `πʹ.emit` = πʹ.emit._2 match
+            case (it: Enumerator.Generator) :: tl =>
+              it.copy(pat = `Seq(*) <- …`(args*)) :: tl
 
-          `πʹ.emit`.pipeToSelf(defn, par)(`if * then … else …`(Term.ApplyUnary("!", par),
-                                                               `Behaviors.stopped`,
-                                                               _)
-                                         )(using Nil)
+          `πʹ.emit`.pipeToSelf(defn, args.map(\(_))*)(`if * then … else …`(Term.ApplyUnary("!", args.head),
+                                                                           `Behaviors.stopped`,
+                                                                           _)
+                                                     )(using Nil)
 
         case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
@@ -588,45 +597,80 @@ object Program:
           * = `_ <- *`("τ")
 
 
-        case π(λ(Symbol(ch)), arg, nu @ (None | Some("ν")), code) =>
-          val argʹ =
+        case π(λ(Symbol(ch)), nu @ (None | Some("ν")), code, params*) =>
+          val paramsʹ =
             nu match
               case None =>
-                arg
+                params
               case _ =>
-                val λ(Symbol(par)) = arg
-                val parʹ = if ch == par then id else par
-                val (ns, ls) = ν(parʹ).emit
-                ** = ns
-                * = ls
-                λ(Symbol(parʹ))
+                params.map {
+                  case λ(Symbol(`ch`)) => λ(Symbol(id))
+                  case it => it
+                }
+
+          nu match
+            case None =>
+            case _ =>
+              val (ns, ls) = ν(paramsʹ.filter(_.isSymbol).map(_.asSymbol.name)*).emit
+              ** = ns
+              * = ls
+
+          val args = paramsʹ.map(_.toTerm).toList
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(args)),
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
               val expr = `for * yield ()`(`_ <- Future { * }`(term))
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
+                               Term.Apply(\(ch), Term.ArgClause(args)),
                                Term.ArgClause(expr::Nil)
                              ))
             case _ =>
-              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)))
+              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(args)))
 
           nu match
             case None =>
             case _ =>
-              val λ(Symbol(par)) = arg
-              if ch == par
-              then
-                val λ(Symbol(parʹ)) = argʹ
-                * :+= `* <- Future.successful(*)`(par -> parʹ)
+              params.zipWithIndex.foreach {
+                case (λ(Symbol(`ch`)), i) =>
+                  * :+= `* <- Future.successful(*)`(ch -> paramsʹ(i).asSymbol.name)
+              }
 
-        case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), code) =>
+        case π(λ(Symbol(ch)), Some(""), code, params*) =>
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
+
+          code match
+            case Some((Right(term), _)) =>
+              * = Enumerator.Generator(`Seq(*) <- …`(args*),
+                                       Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                                             Term.ArgClause(Lit.Int(args.size) :: Nil)),
+                                                  Term.ArgClause(term::Nil)
+                                       ))
+            case _ =>
+              * = Enumerator.Generator(`Seq(*) <- …`(args*),
+                                       Term.Apply(Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                                  Term.ArgClause(Lit.Int(args.size) :: Nil)))
+
+          params.zipWithIndex.foreach {
+            case (λ @ λ(Symbol(arg)), i) =>
+              val par = args(i)
+              λ.`type` match
+                case Some((tpe, Some(refined))) =>
+                  * :+= `* = *: * …`(arg, par, tpe, refined)
+                case Some((tpe, _)) =>
+                  * :+= `* = *: *`(arg, par, tpe)
+                case _ =>
+          }
+
+        case π(λ(Symbol(ch)), Some(cons), code, params*) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -648,25 +692,6 @@ object Program:
           code match
             case Some((Right(term), _)) =>
               * :+= `_ <- Future { * }`(term)
-            case _ =>
-
-        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
-          val par = if λ.`type`.isDefined then id else arg
-
-          code match
-            case Some((Right(term), _)) =>
-              * = `* <- *`(par -> Term.Apply(
-                                    Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                    Term.ArgClause(term::Nil)
-                           ))
-            case _ =>
-              * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
-
-          λ.`type` match
-            case Some((tpe, Some(refined))) =>
-              * :+= `* = *: * …`(arg, par, tpe, refined)
-            case Some((tpe, _)) =>
-              * :+= `* = *: *`(arg, par, tpe)
             case _ =>
 
         case _: π => ??? // caught by parser

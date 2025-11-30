@@ -57,7 +57,7 @@ package object Π:
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
       ( for
-          q <- Queue.synchronous[IO, Any]
+          q <- Queue.synchronous[IO, Seq[Any]]
         yield
           f(q)
       ).flatten
@@ -90,40 +90,40 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(q)
+    def apply(value: `()`*): IO[Option[Unit]] = ><(value.map(_.name))(q)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = apply(value) <* exec(code)
+    def apply(value: `()`*)(code: => IO[Any]): IO[Option[Unit]] = apply(value) <* exec(code)
 
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = ><()(q).map(new `()`(_))
+    def apply(): IO[Seq[`()`]] = ><()(q).map(_.map(new `()`(_)))
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => IO[T]): IO[`()`] = ><()(q)(code).map(new `()`(_))
+    def apply()(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[`()`]] = ><()(q)(code).map(_.map(new `()`(_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    type >< = Queue[IO, Any]
+    type >< = Queue[IO, Seq[Any]]
 
     object >< :
 
-      inline def apply(name: Any)(`>Q`: ><): IO[Option[Unit]] =
-        `>Q`.offer(name).as(Some(()))
+      inline def apply(names: Seq[Any])(`>Q`: ><): IO[Option[Unit]] =
+        `>Q`.offer(names).as(Some(()))
 
-      inline def apply()(`<Q`: ><): IO[Any] =
+      inline def apply()(`<Q`: ><): IO[Seq[Any]] =
         `<Q`.take
 
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
+      inline def apply[T]()(`<Q`: ><)(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[Any]] =
         `<Q`.take.flatMap {
-          case null => IO.pure(null)
-          case it: T => (code andThen exec)(it)
+          case it @ Seq(null, _*) => IO.pure(it)
+          case it => (code andThen exec)(it)
         }

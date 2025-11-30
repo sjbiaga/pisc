@@ -1,10 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi_ hanoi.scala
+# ./examples $ ppi_ hanoi.scala
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 
-@val ! : String => IO[String] = { _ => IO.canceled.as("") }
+@val ! : Seq[Any] => IO[Seq[Any]] = { _ => IO.pure(Seq(null)) }
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \

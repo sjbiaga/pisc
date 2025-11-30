@@ -38,14 +38,14 @@ import scala.collection.mutable.{
 
 import emitter.shared.Meta.`()(null)`
 
-import Pi.*
+import PolyadicPi.*
 import Calculus.*
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.Duplications
 
 
-abstract class Pi extends Expression:
+abstract class PolyadicPi extends Expression:
 
   def μ: Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
@@ -54,34 +54,48 @@ abstract class Pi extends Expression:
       case _ =>
         τ(None) -> (Names(), Names())
     } |
-    name ~ ("<"~>opt(opt("ν")~name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
-      case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
+    name ~ opt(arity) ~ ("<"~>opt(opt("ν")~names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
+      case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ Some(Some(_) ~ (par, _)) ~ _ if !par.isSymbol =>
-        throw PrefixChannelParsingException(par)
-      case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
-        val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ free ++ freeʹ -- bound)
-      case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
-        val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, None) -> (bound, name ++ free -- bound)
-      case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
-      case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = None, None) -> (Names(), name)
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.filter(_._1.isSymbol).size > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+        throw PrefixUniquenessParsingException(ch.asSymbol, args.filter(_._1.isSymbol).map(_._1.asSymbol.name)*)
+      case (ch, _) ~ None ~ None ~ _ =>
+        throw PrefixArityParsingException(ch)
+      case (ch, _) ~ Some(arity) ~ Some(_ ~ args) ~ _ =>
+        throw PrefixArityParsingExceptionʹ(ch, arity, args.size)
+      case (ch, name) ~ _ ~ Some(ν ~ args) ~ Some((it, freeʹ)) =>
+        val free = args.map(_._2).reduce(_ ++ _)
+        val bound = args.filter(_._1.isSymbol) match
+          case Nil => Names()
+          case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
+        π(ch, polarity = ν, Some(it), args.map(_._1)*) -> (bound, name ++ free ++ freeʹ -- bound)
+      case (ch, name) ~ _ ~ Some(ν ~ args) ~ _ =>
+        val free = args.map(_._2).reduce(_ ++ _)
+        val bound = args.filter(_._1.isSymbol) match
+          case Nil => Names()
+          case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
+        π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ free -- bound)
+      case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
+        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
+      case (ch, name) ~ Some(arity) ~ _ ~ _ =>
+        π(ch, polarity = None, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
     } |
-    name ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
-      case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
+    name ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
+      case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case _ ~ (par, _) ~ _ if !par.isSymbol =>
-        throw PrefixChannelParsingException(par)
+      case _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
+        throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
+      case (ch, _) ~ params ~ _ if params.size > params.distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+        throw PrefixUniquenessParsingException(ch.asSymbol, params.map(_._1.asSymbol.name)*)
       case _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (ch, name) ~ (par, bound) ~ code =>
-        val freeʹ = code.map(_._2).getOrElse(Names())
-        π(ch, par, polarity = Some(""), code.map(_._1)) -> (bound, name ++ freeʹ)
+      case (ch, name) ~ params ~ code =>
+        val args = params.map(_._1)
+        val bound = params.map(_._2).reduce(_ ++ _)
+        val free = code.map(_._2).getOrElse(Names())
+        π(ch, polarity = Some(""), code.map(_._1), args*) -> (bound, name ++ free)
     } |
-    name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
+    name ~ cons_r ~ ("("~>namesʹʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case _ ~ _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
@@ -91,20 +105,20 @@ abstract class Pi extends Expression:
             val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
             paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
           } =>
-        throw PrefixChannelsParsingExceptionʹ(ch.asSymbol,
-                                              params
-                                                .filterNot { case (λ(Symbol("")), _) => true case _ => false }
-                                                .map(_._1.asSymbol.name)*)
+        throw PrefixUniquenessParsingException(ch.asSymbol,
+                                               params
+                                                 .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                 .map(_._1.asSymbol.name)*)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case (λ(ch: Symbol), _) ~ cons ~ params ~ _
           if params.exists { case (λ(`ch`), _) => true case _ => false } =>
         throw ConsItselfParsingException(ch, cons)
       case (ch, name) ~ cons ~ params ~ code =>
-        val args = λ(params.map(_._1))
+        val args = params.map(_._1)
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, args, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ free &~ bound)
+        π(ch, polarity = Some(cons), code.map(_._1), args*) -> (bound, name ++ free &~ bound)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -126,6 +140,9 @@ abstract class Pi extends Expression:
     rep1sep(name, ",")
 
   def namesʹ: Parser[List[(λ, Names)]] =
+    rep1sep(nameʹ, ",")
+
+  def namesʹʹ: Parser[List[(λ, Names)]] =
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
@@ -145,6 +162,10 @@ abstract class Pi extends Expression:
       "" ~> // handle whitespace
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
+
+  /** Arity. */
+  def arity: Parser[Int] =
+    "#"~>"""\d+""".r ^^ { _.toInt }
 
   protected val emitter: Emitter
 
@@ -228,11 +249,11 @@ abstract class Pi extends Expression:
           bindings += name -> Occurrence(shadow, pos(true))
 
 
-object Pi:
+object PolyadicPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter { case ce, ca, kk }
+  enum Emitter { case ce, kk }
 
   type Names = Set[Symbol]
 
@@ -258,6 +279,17 @@ object Pi:
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
+
+
+  case class PrefixUniquenessParsingException(name: Symbol, ps: String*)
+      extends PrefixParsingException(s"""${name.name} channel parameters names '${ps.mkString(", ")}' must be distinct""")
+
+  case class PrefixArityParsingException(name: λ)
+      extends PrefixParsingException(s"Without arguments, channel ${name.asSymbol.name} must specify arity")
+
+  case class PrefixArityParsingExceptionʹ(name: λ, arity: Int, size: Int)
+      extends PrefixParsingException(s"${name.asSymbol.name} channel must not specify both arity ($arity) and arguments (#$size)")
+
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
@@ -376,7 +408,7 @@ object Pi:
             else if it.matches("^[ ]*@.*")
             then // Scala
               Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
-            else // Pi
+            else // PolyadicPi
               _cntr = Map(0 -> 0L)
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
