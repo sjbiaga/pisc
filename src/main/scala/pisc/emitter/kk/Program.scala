@@ -211,7 +211,7 @@ object Program:
             case (_, -1) =>
               None
             case (Some(Defn.Def(_, Term.Name(name), _, _, _, _)), parallelism) =>
-              Some(name -> ("∥2" + id -> parallelism))
+              Some(name -> ("sem2" + id -> parallelism))
           }.toMap
 
           var names = defs.map(_._1.get.name.value)
@@ -474,9 +474,23 @@ object Program:
         case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
 
-          val defn = sum.generate._1.map(_.copy(paramss = List(Term.Param(Nil, arg, Some(Type.Name("()")), None) :: Nil)))
-
           val par = if λ.`type`.isDefined then id else arg
+
+          val defn = sum.generate._1.map {
+            case it @ Defn.Def(_, _, _, _, _, Term.Block(stats)) =>
+
+              val `val` =
+                λ.`type` match
+                  case Some((tpe, Some(refined))) =>
+                    `val * = *: * …`(arg, par, tpe, refined) :: Nil
+                  case Some((tpe, _)) =>
+                    `val * = *: *`(arg, par, tpe) :: Nil
+                  case _ => Nil
+
+              val parʹ = Term.Param(Nil, par, Some(Type.Name("()")), None)
+
+              it.copy(paramss = List(parʹ :: Nil), body = Term.Block(`val` ::: stats))
+          }
 
           val πʹ = π.copy(name = λ.copy()(using None))
 
@@ -484,18 +498,10 @@ object Program:
             case (it: Enumerator.Generator) :: tl =>
               it.copy(pat = Pat.Var(par)) :: tl
 
-          val `val` =
-            λ.`type` match
-              case Some((tpe, Some(refined))) =>
-                `val * = *: * …`(arg, par, tpe, refined) :: Nil
-              case Some((tpe, _)) =>
-                `val * = *: *`(arg, par, tpe) :: Nil
-              case _ => Nil
-
-          `πʹ.emit`.pipeToSelf(defn, arg) { it => `if * then … else …`(Term.ApplyUnary("!", par),
-                                                                       `Behaviors.stopped`,
-                                                                       Term.Block(`val` :+ it))
-                                          }(using Nil)
+          `πʹ.emit`.pipeToSelf(defn, par)(`if * then … else …`(Term.ApplyUnary("!", par),
+                                                               `Behaviors.stopped`,
+                                                               _)
+                                         )(using Nil)
 
         case !(parallelism, _, Some(μ), sum) =>
           implicit val sem = if parallelism < 0 then None else Some(id)
