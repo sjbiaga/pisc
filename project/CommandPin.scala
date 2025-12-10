@@ -25,12 +25,12 @@ object CommandPin {
       fileExamples().map(_.stripSuffix(".pisc")).toSeq
     }
 
-    val opts = Map("-ca" -> Nil, "-ca" -> Nil, "-kk" -> (0 to 2).map("-O" + _))
+    val opts = Map("-ce" -> Nil, "-fs2" -> Nil, "-kk" -> (0 to 2).map("-O" + _))
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {
         case it if it.startsWith("-") && args.size == 1 =>
-          Seq("-ca", "-ce", "-kk").filter(_.startsWith(it.toLowerCase))
+          Seq("-ce", "-fs2", "-kk").filter(_.startsWith(it.toLowerCase))
         case it =>
           { if (it.isEmpty && args.size == 1) suggestions(Seq("-")) else Nil } ++
           { if (args.size > 1 && opts.contains(args(1))) opts(args(1)) else Nil } ++

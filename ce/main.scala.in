@@ -28,10 +28,12 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.{ IO, IOApp, ExitCode }
+import _root_.cats.effect.IO
 
 
-object App extends IOApp:
+object App extends _root_.cats.effect.IOApp:
+
+  import _root_.cats.effect.ExitCode
 
   override def run(args: List[String]): IO[ExitCode] =
     π.Main(args*).as(ExitCode.Success)

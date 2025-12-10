@@ -685,6 +685,7 @@ object Program:
       val id = new helper.υidυ
       given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
+        .tail
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>

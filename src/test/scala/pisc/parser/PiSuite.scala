@@ -46,7 +46,7 @@ class PiSuite extends FunSuite:
   test("agent-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1") {
-     Main(null, getClass.getSimpleName) {
+     Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦⟧ =
                P(u) = u(x). u(x). ( u(v). ⟦ z(x). ⟧ )
@@ -59,7 +59,7 @@ class PiSuite extends FunSuite:
   test("encoding-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1 in the right hand side of encoding 1") {
-      Main(null, getClass.getSimpleName) {
+      Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦⟧ =
                ⟦1 t"X" 1⟧ = ⟦ z(x). ⟧
@@ -72,7 +72,7 @@ class PiSuite extends FunSuite:
   test("encoding-uniqueness-hardcoded-binding") {
 
     interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of encoding 1") {
-      Main(null, getClass.getSimpleName) {
+      Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(x). M{v}
                """)
@@ -84,7 +84,7 @@ class PiSuite extends FunSuite:
   test("encoding-uniqueness-encoded-binding") {
 
     interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of encoding 3") {
-      Main(null, getClass.getSimpleName) {
+      Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
                ⟦2 t"λ $x,$y . ${$M}" 2⟧{u} = u(x). u(y). M{y}
@@ -98,7 +98,7 @@ class PiSuite extends FunSuite:
   test("encoding-non-parameter-hardcoded-binding") {
 
     interceptMessage[NonParameterBindingParsingException]("A binding name (u) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 1") {
-      Main(null, getClass.getSimpleName) {
+      Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = x(u).
                """)
@@ -110,7 +110,7 @@ class PiSuite extends FunSuite:
   test("encoding-non-parameter-encoded-binding") {
 
     interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
-      Main(null, getClass.getSimpleName) {
+      Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(v). M{v}
@@ -123,7 +123,7 @@ class PiSuite extends FunSuite:
 
   test("encoding - with invocation - parameters and pointers mixed or not") {
 
-    Main(null, getClass.getSimpleName) {
+    Main(Emitter.test, getClass.getSimpleName) {
       source("""
                 ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
                 Agent0 = ()
@@ -132,7 +132,7 @@ class PiSuite extends FunSuite:
                 Process2 = ν(x, y) ⟦ ν(x) Agent2(x, x) ^ Agent0 ⟧{x, y}
              """)
     } match
-      case _ :: _ :: Right((_, +(_, ∥(_, `.`(exp1, ν("x", "y")))))) :: Right((_, +(_, ∥(_, `.`(exp2, ν("x", "y")))))) :: Nil =>
+      case _ :: _ :: _ :: Right((_, +(_, ∥(_, `.`(exp1, ν("x", "y")))))) :: Right((_, +(_, ∥(_, `.`(exp2, ν("x", "y")))))) :: Nil =>
         exp1 match
           case `⟦⟧`(_, _, +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
                                     `.`(`(*)`("Agent0", Nil)))), _, assignment1) =>
@@ -152,7 +152,7 @@ class PiSuite extends FunSuite:
 
   test("encoding - nested") {
 
-    Main(null, getClass.getSimpleName) {
+    Main(Emitter.test, getClass.getSimpleName) {
       source("""
                 ⟦ 'P ^ 'Q ⟧{x,y} = P{x} | Q{y}
                 ⟦1 t"Out" 1⟧{z} = z<z>.()
@@ -161,7 +161,7 @@ class PiSuite extends FunSuite:
                 Main = ⟦3 Nest 3⟧
              """)
     } match
-      case Right((_, +(_, ∥(_, `.`(exp))))) :: Nil =>
+      case _ :: Right((_, +(_, ∥(_, `.`(exp))))) :: Nil =>
         exp match
           case `⟦⟧`(_, _, +(_, ∥(_, `.`(expʹ, ν("ch_υnυ")))), _,  _) =>
             expʹ match

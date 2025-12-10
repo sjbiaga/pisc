@@ -59,17 +59,23 @@ abstract trait Meta extends shared.Meta:
     Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
 
   def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 ->Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
+
+  private val `IO.*`: Term => Boolean =
+    case Term.Select(Term.Name("IO"), _) => true
+    case Term.Apply(it, _) => `IO.*`(it)
+    case Term.ApplyType(it, _) => `IO.*`(it)
+    case _ => false
 
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(),
-                         Term.Apply(\("IO"),
-                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+    if `IO.*`(*)
+    then
+      Enumerator.Generator(`* <- …`(), *)
+    else
+      Enumerator.Generator(`* <- …`(), Term.Apply(\("IO"), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
   def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(),
-                         Term.Apply(Term.Select("IO", "sleep"),
-                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select("IO", "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
   @tailrec

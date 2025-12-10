@@ -144,7 +144,7 @@ Emitters
 
 - [Cats Effect](https://github.com/sjbiaga/pisc/tree/main-experimental/ce/README.md)
 
-- [Cats Actors](https://github.com/sjbiaga/pisc/tree/main-experimental/ca/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/main-experimental/fs2io/README.md)
 
 - [Akka](https://github.com/sjbiaga/pisc/tree/main-experimental/akka/README.md)
 

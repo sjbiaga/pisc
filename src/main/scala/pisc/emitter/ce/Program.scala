@@ -453,6 +453,7 @@ object Program:
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
       prog
+        .tail
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)

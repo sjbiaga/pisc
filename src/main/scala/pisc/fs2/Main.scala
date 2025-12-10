@@ -27,7 +27,7 @@
  */
 
 package pisc
-package ca
+package fs2
 
 import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.StandardCharsets.UTF_8
@@ -36,7 +36,7 @@ import java.nio.file.Paths
 import scala.io.Source
 
 import parser.Pi
-import emitter.ca.Program
+import emitter.fs2.Program
 
 
 object Main:
@@ -51,7 +51,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val pi = Pi.Main(Pi.Emitter.ca, in)
+      val pi = Pi.Main(Pi.Emitter.fs2, in)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -63,11 +63,11 @@ object Main:
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
         val ps = Program.Main()(pi(prog.map(_._1)))
-        val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
+        val code = (ps.zipWithIndex.map(_ -> is(_)) ++ ls)
           .sortBy(_._2)
           .map(_._1)
           .mkString("\n\n")

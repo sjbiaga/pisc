@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-fs2io|-akka|-pekko)
             local emit="${1#?}"
             shift
             ;;
@@ -15,13 +15,12 @@ function pi() {
             ;;
     esac
     case "$emit" in
-        ca)
-            local deps='--repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        fs2io)
+            local deps='--dep co.fs2::fs2-core:3.13.0-M7
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
@@ -48,7 +47,7 @@ function pi() {
     done
     set ${srcs#?} ../${emit}/pi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.7.4 \
+                  -q -O -nowarn -S 3.8.0-RC2 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -58,9 +57,13 @@ function pi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-akka|-pekko)
             local emit="${1#?}"
             shift
+            ;;
+        -fs2io)
+            echo "fs2io is N/A for pi_: use 'pi $@'" >&2
+            return
             ;;
         -*)
             return
@@ -69,11 +72,6 @@ function pi_() {
             ;;
     esac
     case "$emit" in
-        ca)
-            local deps='--repo https://jitpack.io
-                        --dep com.github.suprnation.cats-actors::cats-actors:2.0.1
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
@@ -102,7 +100,7 @@ function pi_() {
     done
     set ${srcs#?} ../${emit}/pi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.7.4 \
+                  -q -O -nowarn -S 3.8.0-RC2 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -112,7 +110,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -c[ea]|-akka|-pekko)
+        -ce|-akka|-pekko|-fs2io)
             local emit="${1#?}"
             shift
             ;;

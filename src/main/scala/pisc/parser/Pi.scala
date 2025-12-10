@@ -36,6 +36,8 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
+import scala.meta.{ Lit, Term }
+
 import emitter.shared.Meta.`()(null)`
 
 import Pi.*
@@ -65,6 +67,8 @@ abstract class Pi extends Expression:
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
         val bound = ν.fold(Names())(_=>free)
         π(ch, arg, polarity = ν, None) -> (bound, name ++ free -- bound)
+      case (ch, _) ~ None ~ _ if !emitter.supportsEmptyOutput =>
+        throw EmptyOutputNotSupportedParsingException(emitter, ch.asSymbol.name)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
         π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
@@ -180,6 +184,8 @@ abstract class Pi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _typeclasses: List[String] = Nil
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _χ_id: helper.υidυ = null
@@ -232,7 +238,17 @@ object Pi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter { case ce, ca, kk }
+  enum Emitter(val supportsEmptyOutput: Boolean = true,
+               val canScale: Boolean = false,
+               val hasReplicationInputGuardFlaw: Boolean = true,
+               val assignsReplicationParallelism1: Boolean = false) {
+    case ce extends Emitter()
+    case fs2 extends Emitter(supportsEmptyOutput = false,
+                             hasReplicationInputGuardFlaw = false,
+                             assignsReplicationParallelism1 = true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    private[parser] case test extends Emitter()
+  }
 
   type Names = Set[Symbol]
 
@@ -258,6 +274,9 @@ object Pi:
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
+
+  case class EmptyOutputNotSupportedParsingException(emitter: Emitter, name: String)
+      extends PrefixParsingException(s"""Emitter `$emitter' does not support empty output on a channel name "$name"""")
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
@@ -344,11 +363,13 @@ object Pi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _typeclasses = Nil
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
-                       "scaling" -> _scaling))
+                       "scaling" -> _scaling,
+                       "typeclasses" -> _typeclasses))
       eqtn = List()
       defn = Map()
       self = Set()
@@ -401,14 +422,21 @@ object Pi:
                   scala.sys.error(failure.msg)
           }
 
-      ( if i < eqtn.size && !_exclude
-        then
-          r ::: eqtn.slice(i, eqtn.size).map(Right(_))
-        else
-          r
-      ).filter {
-        case Right((`(*)`(s"Self_$n", _, _*), _))
-            if { try { n.toInt; true } catch _ => false } =>
-          self.contains(n.toInt)
-        case _ => true
-      }
+      val prog =
+        ( if i < eqtn.size && !_exclude
+          then
+            r ::: eqtn.slice(i, eqtn.size).map(Right(_))
+          else
+            r
+        ).filter {
+          case Right((`(*)`(s"Self_$n", _, _*), _))
+              if { try { n.toInt; true } catch _ => false } =>
+            self.contains(n.toInt)
+          case _ => true
+        }
+
+      if _typeclasses.isEmpty
+      then
+        Right(`(*)`(null, Nil, λ(Lit.Null())), `+`(-1)) :: prog
+      else
+        Right(`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)) :: prog
