@@ -3,11 +3,11 @@ import CommandPin._
 
 ThisBuild / scalaVersion := "3.8.0-RC3"
 
-//val akkaSecureToken = "TODO"
+val akkaSecureToken = "cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx"
 
 Global / resolvers ++= Seq(
-//                           "akka-secure-mvn" at s"https://repo.akka.io/$akkaSecureToken/secure",
-//                           Resolver.url("akka-secure-ivy", url(s"https://repo.akka.io/$akkaSecureToken/secure"))(Resolver.ivyStylePatterns),
+                           "akka-secure-mvn" at s"https://repo.akka.io/$akkaSecureToken/secure",
+                           Resolver.url("akka-secure-ivy", url(s"https://repo.akka.io/$akkaSecureToken/secure"))(Resolver.ivyStylePatterns)
                            )
 
 val scala2Opts = Seq("-feature", "-language:implicitConversions", "-deprecation", "-Ytasty-reader")
