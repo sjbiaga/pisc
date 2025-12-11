@@ -1,12 +1,10 @@
 Pi-calculus in SCala aka PISC ala RISC (experimental)
 =====================================================
 
-Asynchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main-async) is a variant.
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
-[Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic) is also supported.
-Asynchronous [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-async) is also supported.
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-experimental) is in alpha stage.
+[Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-experimental) is also supported.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
-[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
+[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-experimental) is another fruitful
 combination of ambients with stochastic π-calculus.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
@@ -154,28 +152,14 @@ Emitters
 Branches
 --------
 
-- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
-
-- [π-calculus async](https://github.com/sjbiaga/pisc/tree/main-async)
-
 - [π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/main-experimental)
 
-- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
-
-- [Polyadic π-calculus async](https://github.com/sjbiaga/pisc/tree/polyadic-async)
+- [Polyadic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/polyadic-experimental)
 
 - [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
 - [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
 
-- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) using supervisor/`IO.canceled`
-
-- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-flatMap) with `flatMap`s/`null` comparison
-
 - [Stochastic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental)
-
-- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) using supervisor/`IO.canceled`
-
-- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap) with `flatMap`s/`null` comparison
 
 - [BioAmbients (experimental)](https://github.com/sjbiaga/pisc/tree/bioambients-experimental)

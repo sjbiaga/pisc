@@ -54,11 +54,13 @@ object Program:
               case +(_, ∥(_, `.`(?:(((lhs, rhs), mismatch), t, None)))) =>
                 if mismatch
                 then
-                  `if * then … else …`(====(lhs, rhs), `_ <- Stream.unit`, cases(t))
+                  `if * then … else …`(====(lhs, rhs), Nil, cases(t))
                 else
-                  `if * then … else …`(====(lhs, rhs), cases(t), `_ <- Stream.unit`)
+                  `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
-                `_ <- Stream.eval(*)`(Term.Select(semaphore.get, "acquire")) :: sum.emit
+                val υidυ = id
+                `* <- Stream.eval(*)`(υidυ -> Term.Select(semaphore.get, "tryAcquire")) ::
+                Enumerator.Generator(`* <- …`(), `if * then … else …`(υidυ, sum.emit, Nil))
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
 
@@ -232,7 +234,7 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          * = f.fold(`_ <- Stream.unit` :: Nil)(_.emit)
+          * = f.fold(Nil)(_.emit)
 
           if mismatch
           then
@@ -487,7 +489,7 @@ object Program:
 
     implicit private def `*[F]`(* : List[Enumerator]): Term =
       if *.nonEmpty then `for *[F] yield ()`(* *)
-      else \(`_ <- Stream.unit`)
+      else \(`_ <- \\.unit`)
 
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ

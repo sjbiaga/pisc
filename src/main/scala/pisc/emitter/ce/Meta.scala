@@ -76,7 +76,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
-      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(\), Term.Name("unit" | "cede")) => None
       case it => Some(it)
     } match
       case Nil => `IO.cede`
@@ -84,7 +84,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `List( *, … ).parTraverse`(* : Term*)(`…`: String): Term =
     *.flatMap {
-      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(\), Term.Name("unit" | "cede")) => None
       case it => Some(it)
     } match
       case Nil => `IO.cede`

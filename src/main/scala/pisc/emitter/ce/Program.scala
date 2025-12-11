@@ -73,7 +73,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -388,14 +387,14 @@ object Program:
             then
               `List( *, … ).parSequence`(
                 sum.emit,
-                `_ <- IO.unit` :: `!⋯`
+                `_ <- \\.unit` :: `!⋯`
               )
             else
               `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
                 sum.emit :+ `_ <- *.release`(sem),
-                `_ <- IO.unit` :: `!⋯`
+                `_ <- \\.unit` :: `!⋯`
               )
 
           if parallelism < 0

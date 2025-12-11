@@ -43,7 +43,6 @@ object π:
   import _root_.scala.concurrent.duration.*
 
   import _root_.cats.effect.Temporal
-  import _root_.cats.effect.syntax.all.*
   import _root_.cats.effect.std.Semaphore
 
   import _root_.fs2.Stream

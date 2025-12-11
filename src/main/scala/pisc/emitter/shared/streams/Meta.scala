@@ -39,11 +39,9 @@ import dialects.Scala3
 
 abstract trait Meta extends shared.effects.Meta:
 
+  override protected lazy val \ = "Stream"
+
   val `: Stream[F, Any]` = Some(Type.Apply(\\("Stream"), Type.ArgClause(\\("F") :: \\("Any") :: Nil)))
-
-
-  val `_ <- Stream.unit` =
-    Enumerator.Generator(`* <- …`(), Term.Select("Stream", "unit"))
 
 
   def `*[F]`(* : Term) =
@@ -81,7 +79,7 @@ abstract trait Meta extends shared.effects.Meta:
     then
       if !(*.head.isInstanceOf[Enumerator.Generator])
       then
-        `for *[F] yield ()`((`_ <- Stream.unit` +: *)*)
+        `for *[F] yield ()`((`_ <- \\.unit` +: *)*)
       else if *.size == 1
       then
         *.head match
@@ -98,4 +96,4 @@ abstract trait Meta extends shared.effects.Meta:
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
-      `for *[F] yield ()`(`_ <- Stream.unit`)
+      `for *[F] yield ()`(`_ <- \\.unit`)
