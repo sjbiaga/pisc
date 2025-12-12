@@ -1,0 +1,47 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# https://github.com/alexj136/nodes/blob/master/examples/greeter
+
+@given Conversion[`()`, String] = _.`()`[String]
+
+@val nl: String => Task[String] = { it => ZIO.succeed { s"$it\n" } }
+
+Main = ν(stdout) Greeter(stdout)
+
+Greeter(stdout, name*) = \
+                       τ /* _    <- ZIO.debug("What's your name?"); \
+                           'name <- ZIO.blocking { ZIO.succeed(scala.io.StdIn.readLine) } */. \
+                       if /* 'name.isBlank */ = True \
+                       then Greeter(stdout) \
+                       else ( Chooser(stdout, name) \
+                            | stdout(greet) /* nl */. τ/*ZIO.succeed(print('greet))*/. \
+                            ) \
+
+Chooser(stdout, name) = Greeter'(stdout, name) \
+                      + Greeter"(stdout, name) \
+                      + Greeter"'(stdout, name)
+
+Greeter'(stdout, name) = \
+                       ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">. ) \
+                       + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
+                       + ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"] \
+                           [name ≠ "Voldemort"] stdout</*ZIO.succeed(s"Hello ${'name}!")*/>.  ) \
+                       )
+
+Greeter"(stdout, name) = \
+                       ( if /*name.substring(0,1).toUpperCase*/ = "Q" \
+                         then stdout<"That's an unusual name.">. \
+                         else \
+                           if name = "Voldemort" \
+                           then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
+                           else stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                       )
+
+Greeter"'(stdout, name) = \
+                        ( /*name.substring(0,1).toUpperCase*/ = "Q" \
+                          ? stdout<"That's an unusual name.">. \
+                          : \
+                            name = "Voldemort" \
+                            ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
+                            : stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                        )

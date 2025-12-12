@@ -28,38 +28,36 @@
 
 //package main.scala.in
 
+import _root_.zio.ZIO
 
-object App extends _root_.cats.effect.IOApp:
 
-  import _root_.cats.effect.{ ExitCode, IO }
+object App extends _root_.zio.ZIOAppDefault:
 
-  override def run(args: List[String]): IO[ExitCode] =
-    π.Main[IO](args*).compile.drain.as(ExitCode.Success)
+  import _root_.zio.ZIOAppArgs
+  import _root_.zio.stream.ZStream
+
+  override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+    for
+      args <- ZIOAppArgs.getArgs
+      _    <- π.Main(args.toSeq*).runDrain
+    yield
+      ()
 
 
 object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
-  import _root_.scala.concurrent.duration.*
 
-  import _root_.cats.effect.Temporal
-  import _root_.cats.effect.std.Semaphore
-
-  import _root_.fs2.Stream
+  import _root_.zio.{ durationInt, durationLong, Semaphore, Task }
+  import _root_.zio.stream.ZStream
 
   import _root_.eu.timepit.refined.*
 
-  extension [F[_]: Temporal](self: πLs[Stream[F, ?]])
-    private[π] inline def πparJoin: Stream[F, Unit] =
-      self.parJoinUnbounded.as(())
-    private[π] inline def πparJoin(semaphore: Semaphore[F]): Stream[F, Unit] =
-      self.map { it =>
-        for
-          b <- Stream.eval(semaphore.tryAcquire)
-          _ <- if b then it else Stream.unit
-        yield
-          ()
-      }.πparJoin
+  extension (self: πLs[ZStream[Any, Throwable, ?]])
+    private[π] inline def πmerge: ZStream[Any, Throwable, Unit] =
+      ZStream.mergeAllUnbounded()(self*).as(())
+    private[π] inline def πmerge(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
+      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map { it => semaphore.tryWithPermit(it.runDrain) }))
 
   import Π.*
 

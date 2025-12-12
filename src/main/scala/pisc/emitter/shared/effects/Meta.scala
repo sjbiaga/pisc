@@ -98,7 +98,7 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(\), Term.Name("unit" | "cede"))) =>
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede"))) =>
             `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())

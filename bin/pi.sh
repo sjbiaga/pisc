@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-fs2io|-akka|-pekko)
+        -ce|-fs2io|-akka|-pekko|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -30,6 +30,9 @@ function pi() {
         pekko)
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
             ;;
+        zs)
+            local deps='--dep dev.zio::zio-streams:2.1.23'
+            ;;
     esac
     while [ $# -gt 0 ]
     do
@@ -47,7 +50,7 @@ function pi() {
     done
     set ${srcs#?} ../${emit}/pi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC2 \
+                  -q -O -nowarn -S 3.8.0-RC3 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -61,8 +64,8 @@ function pi_() {
             local emit="${1#?}"
             shift
             ;;
-        -fs2io)
-            echo "fs2io is N/A for pi_: use 'pi $@'" >&2
+        -fs2io|-zs)
+            echo "${1#?} is N/A for pi_: use 'pi $@'" >&2
             return
             ;;
         -*)
@@ -100,7 +103,7 @@ function pi_() {
     done
     set ${srcs#?} ../${emit}/pi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC2 \
+                  -q -O -nowarn -S 3.8.0-RC3 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -110,7 +113,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2io)
+        -ce|-fs2io|-akka|-pekko|-zs)
             local emit="${1#?}"
             shift
             ;;

@@ -246,6 +246,9 @@ object Pi:
     case fs2 extends Emitter(supportsEmptyOutput = false,
                              hasReplicationInputGuardFlaw = false,
                              assignsReplicationParallelism1 = true)
+    case zs extends Emitter(supportsEmptyOutput = false,
+                            hasReplicationInputGuardFlaw = false,
+                            assignsReplicationParallelism1 = true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
     private[parser] case test extends Emitter()
   }

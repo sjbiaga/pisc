@@ -28,7 +28,7 @@
 
 package pisc
 package emitter
-package fs2
+package zs
 
 import scala.meta.*
 import dialects.Scala3
@@ -36,58 +36,80 @@ import dialects.Scala3
 import parser.Calculus.`(*)`
 
 
-object Meta extends emitter.shared.streams.Meta:
+object Meta extends emitter.shared.effects.Meta:
 
-  def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
+  override protected lazy val \ = "ZStream"
+
+  val `: ZStream[Any, Throwable, Any]` =
+    Some(Type.Apply(\\(\), Type.ArgClause(\\("Any") :: \\("Throwable") :: \\("Any") :: Nil)))
+
+  def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: Stream[F, Any]`,
+               "Main", `String*`("args"), `: ZStream[Any, Throwable, Any]`,
                body)
     case `(*)`(identifier, _, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: Stream[F, Any]`,
+               identifier, `(…)`(params*), `: ZStream[Any, Throwable, Any]`,
                body)
 
 
-  def `String*`(* : String)(using tcs: Set[String]) =
+  def `String*`(* : String) =
     Member.ParamClauseGroup(
-      Type.ParamClause(Type.Param(Nil,
-                                  \\("F"),
-                                  Type.ParamClause(Type.Param(Nil, Name.Placeholder(), Type.ParamClause(Nil),
-                                                              Type.Bounds(None, None, Nil, Nil)) :: Nil),
-                                  Type.Bounds(None, None, tcs.map(\\(_)).toList, Nil)) :: Nil),
+      Type.ParamClause(Nil),
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(\\("String"))), None) :: Nil,
                        None) :: Nil
     ) :: Nil
 
-  def `(…)`(* : String*)(using tcs: Set[String]) =
+  def `(…)`(* : String*) =
     Member.ParamClauseGroup(
-      Type.ParamClause(Type.Param(Nil,
-                                  \\("F"),
-                                  Type.ParamClause(Type.Param(Nil, Name.Placeholder(), Type.ParamClause(Nil),
-                                                              Type.Bounds(None, None, Nil, Nil)) :: Nil),
-                                  Type.Bounds(None, None, tcs.map(\\(_)).toList, Nil)) :: Nil),
+      Type.ParamClause(Nil),
       Term.ParamClause(*
-                        .map(Term.Param(Nil, _, Some(Type.Apply(\\("()"), Type.ArgClause(\\("F") :: Nil))), None))
+                        .map(Term.Param(Nil, _, Some(\\("()")), None))
                         .toList,
                        None) :: Nil
     ) :: Nil
 
 
-  def `List( *, … ).parJoin`(* : Term*): Term =
-    *.flatMap {
-      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
-      case it => Some(it)
-    } match
-      case Nil => \(Nil)
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin")
+  def `* <- ZStream.fromZIO(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 -> Term.Apply(Term.Select("ZStream", "fromZIO"), Term.ArgClause(*._2 :: Nil)))
 
-  def `List( *, … ).parJoin(…)`(* : Term*)(`…`: String): Term =
+  def `_ <- ZStream.fromZIO(*)`(* : Term): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select("ZStream", "fromZIO"), Term.ArgClause(* :: Nil)))
+
+  private val `ZStream.fromZIO`: Term => Boolean =
+    case Term.Select(Term.Name("ZStream"), Term.Name("fromZIO")) => true
+    case Term.Apply(it, _) => `ZStream.fromZIO`(it)
+    case Term.ApplyType(it, _) => `ZStream.fromZIO`(it)
+    case _ => false
+
+  def `ZStream.fromZIO(…)`(`…`: List[Enumerator]): List[Enumerator] =
+    `…`.map {
+      case it @ Enumerator.Generator(_, rhs) if `ZStream.fromZIO`(rhs) => it
+      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select("ZStream", "fromZIO"), Term.ArgClause(it.rhs :: Nil)))
+      case it => it
+    }
+
+
+  def `* <- Semaphore.make(…)`(* : String): Enumerator.Generator =
+    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.Select("Semaphore", "make"),
+                                              Term.ArgClause(Lit.Int(1) :: Nil)))
+
+
+  def `List( *, … ).merge`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin"),
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πmerge")
+
+  def `List( *, … ).merge(…)`(* : Term*)(`…`: String): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => \(Nil)
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πmerge"),
                             Term.ArgClause(`…` :: Nil))

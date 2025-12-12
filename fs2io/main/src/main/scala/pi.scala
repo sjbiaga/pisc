@@ -212,25 +212,25 @@ package object Π:
         * replication input guard
         */
       def apply(): Stream[F, `()`[F]] =
-        s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.evalTap(_ => o)
+        s.evalFilter(_._2.complete(())).map(_._1).evalTap(_ => o)
 
       /**
         * replication input guard w/ pace
         */
       def apply(pace: FiniteDuration): Stream[F, `()`[F]] =
-        s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.spaced(pace).evalTap(_ => o)
+        s.evalFilter(_._2.complete(())).map(_._1).spaced(pace).evalTap(_ => o)
 
       /**
         * replication input guard w/ code
         */
       def apply[T]()(code: T => F[T]): Stream[F, `()`[F]] =
-        s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
+        s.evalFilter(_._2.complete(())).map(_._1).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: T => F[T]): Stream[F, `()`[F]] =
-        s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.spaced(pace).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
+        s.evalFilter(_._2.complete(())).map(_._1).spaced(pace).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
 
     object ν:
 
@@ -245,7 +245,7 @@ package object Π:
         */
       def apply[T]()(code: => F[T]): Stream[F, `()`[F]] =
         for
-          name <- new ν[F]
+          name <- Π.ν[F]
           deferred <- Stream.eval(Deferred[F, Unit])
           _ <- a >> Stream.emit(name -> deferred).through1(t)
           _ <- Stream.eval(deferred.get >> code)
@@ -282,13 +282,13 @@ package object Π:
       * input prefix
       */
     def apply(): Stream[F, `()`[F]] =
-      s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.head
+      s.evalFilter(_._2.complete(())).map(_._1).head
 
     /**
       * input prefix w/ code
       */
     def apply[T]()(code: T => F[T]): Stream[F, `()`[F]] =
-      s.evalMapFilter { (it, d) => d.complete(()).map(if _ then Some(it) else None) }.head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      s.evalFilter(_._2.complete(())).map(_._1).head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
 
     override def toString: String = if name == null then "null" else name.toString
 
