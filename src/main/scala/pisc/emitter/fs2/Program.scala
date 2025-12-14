@@ -154,17 +154,31 @@ object Program:
             case _ =>
               * = `* <- *`(par -> Term.Apply(Term.Select(ch, nu), Term.ArgClause(Nil)))
 
+        case π(λ(Symbol(ch)), λ(Lit.Null()), None, code) =>
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "null"), Term.ArgClause(Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "null"), Term.ArgClause(Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(Term.Select(ch, "null"), Term.ArgClause(Nil)))
+
         case π(λ(Symbol(ch)), λ(arg: Term), None, code) =>
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "*"), Term.ArgClause(arg :: Nil)),
-                                             Term.ArgClause(expr :: Nil)))
+                                      Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "*"), Term.ArgClause(arg :: Nil)),
-                                             Term.ArgClause(expr :: Nil)))
+                                      Term.ArgClause(expr :: Nil)))
             case _ =>
               * = `_ <- *`(Term.Apply(Term.Select(ch, "*"), Term.ArgClause(arg :: Nil)))
 
@@ -174,13 +188,34 @@ object Program:
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * = `_ <- *`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: Nil)),
-                                             Term.ArgClause(expr :: Nil)))
+                                      Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
               * = `_ <- *`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: Nil)),
-                                             Term.ArgClause(expr :: Nil)))
+                                      Term.ArgClause(expr :: Nil)))
             case _ =>
               * = `_ <- *`(Term.Apply(\(ch), Term.ArgClause(arg.toTerm :: Nil)))
+
+        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
+
+          val par = if λ.`type`.isDefined then id else arg
+
+          code match
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `* <- *`(par -> Term.Apply(
+                                    Term.Apply(\(ch), Term.ArgClause(Nil)),
+                                    Term.ArgClause(expr :: Nil)
+                           ))
+            case _ =>
+              * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
+
+          λ.`type` match
+            case Some((tpe, Some(refined))) =>
+              * :+= `* = *: * …`(arg, par, tpe, refined)
+            case Some((tpe, _)) =>
+              * :+= `* = *: *`(arg, par, tpe)
+            case _ =>
 
         case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), code) =>
           val args = params.map {
@@ -204,26 +239,6 @@ object Program:
           code match
             case Some((Right(term), _)) =>
               * :+= `_ <- Stream.eval(*)`(term)
-            case _ =>
-
-        case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
-          val par = if λ.`type`.isDefined then id else arg
-
-          code match
-            case Some((Right(term), _)) =>
-              val expr = term
-              * = `* <- *`(par -> Term.Apply(
-                                    Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                    Term.ArgClause(expr :: Nil)
-                           ))
-            case _ =>
-              * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
-
-          λ.`type` match
-            case Some((tpe, Some(refined))) =>
-              * :+= `* = *: * …`(arg, par, tpe, refined)
-            case Some((tpe, _)) =>
-              * :+= `* = *: *`(arg, par, tpe)
             case _ =>
 
         case _: π => ??? // caught by parser
@@ -286,10 +301,6 @@ object Program:
           val par = if λ.`type`.isDefined then id else arg
 
           code match
-            case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
-              * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Select(ch, "!"), Term.ArgClause(pace :: Nil)),
-                                             Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
               * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Select(ch, "!"), Term.ArgClause(pace :: Nil)),
@@ -310,10 +321,6 @@ object Program:
           val par = if λ.`type`.isDefined then id else arg
 
           code match
-            case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
-              * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Select(ch, "!"), Term.ArgClause(Nil)),
-                                             Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
               * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Select(ch, "!"), Term.ArgClause(Nil)),
@@ -327,6 +334,39 @@ object Program:
             case Some((tpe, _)) =>
               * :+= `* = *: *`(arg, par, tpe)
             case _ =>
+
+          * = * ::: sum.emit
+
+        case !(_, Some((time, unit)), Some(π(λ(Symbol(ch)), λ(Lit.Null()), None, code)), sum) =>
+          val pace = Term.Select(Lit.Long(time), unit)
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(pace :: Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(pace :: Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(pace :: Nil)))
+
+          * = * ::: sum.emit
+
+        case !(_, None, Some(π(λ(Symbol(ch)), λ(Lit.Null()), None, code)), sum) =>
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(Nil)),
+                                      Term.ArgClause(expr :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Select(ch, "!"), "null"), Term.ArgClause(Nil)))
 
           * = * ::: sum.emit
 
@@ -485,7 +525,7 @@ object Program:
       *
 
 
-  final class Main:
+  final class Main(F: String):
 
     implicit private def `*[F]`(* : List[Enumerator]): Term =
       if *.nonEmpty then `for *[F] yield ()`(* *)
@@ -500,6 +540,13 @@ object Program:
           case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
             typeclasses.args.map { case Term.Name(it) => it }.toSet
 
+      val Array(tpe, _path*) = F.split('.').reverse
+      val path = _path.reverse.map(\(_)).foldLeft("_root_": Term)(Term.Select(_, _))
+
+      Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
+                Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
+                Type.Bounds(None, None, Nil, Nil)).toString
+      ::
       prog
         .tail
         .map(_ -> _.emit(using id()))

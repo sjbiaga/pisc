@@ -38,8 +38,6 @@ import scala.collection.mutable.{
 
 import scala.meta.{ Lit, Term }
 
-import emitter.shared.Meta.`()(null)`
-
 import Pi.*
 import Calculus.*
 import Encoding.*
@@ -67,12 +65,10 @@ abstract class Pi extends Expression:
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
         val bound = ν.fold(Names())(_=>free)
         π(ch, arg, polarity = ν, None) -> (bound, name ++ free -- bound)
-      case (ch, _) ~ None ~ _ if !emitter.supportsEmptyOutput =>
-        throw EmptyOutputNotSupportedParsingException(emitter, ch.asSymbol.name)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(`()(null)`), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
+        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(`()(null)`), polarity = None, None) -> (Names(), name)
+        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, None) -> (Names(), name)
     } |
     name ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
@@ -238,15 +234,15 @@ object Pi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter(val supportsEmptyOutput: Boolean = true,
+  enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
                val canScale: Boolean = false,
                val hasReplicationInputGuardFlaw: Boolean = true,
                val assignsReplicationParallelism1: Boolean = false) {
     case ce extends Emitter()
-    case fs2 extends Emitter(supportsEmptyOutput = false,
+    case fs2 extends Emitter(nullOnEmptyOutput = Lit.Null(),
                              hasReplicationInputGuardFlaw = false,
                              assignsReplicationParallelism1 = true)
-    case zs extends Emitter(supportsEmptyOutput = false,
+    case zs extends Emitter(nullOnEmptyOutput = Lit.Null(),
                             hasReplicationInputGuardFlaw = false,
                             assignsReplicationParallelism1 = true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
@@ -277,9 +273,6 @@ object Pi:
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
-
-  case class EmptyOutputNotSupportedParsingException(emitter: Emitter, name: String)
-      extends PrefixParsingException(s"""Emitter `$emitter' does not support empty output on a channel name "$name"""")
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")

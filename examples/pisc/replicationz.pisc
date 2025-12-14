@@ -108,10 +108,18 @@ Main = ν(x) ( Main(x)                             \
             | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, two sequential finite subscribers ✔
 
 Main = ν(x) ( (x(y). τ/*ZIO.debug(1->y)*/. x(z). τ/*ZIO.debug(2->z)*/.)  \
             | (!.x</*ZIO.attempt(gen.nextInt)*/>.)                       \
+            )
+
+⟦ exclude = no ⟧
+
+# multiple finite publishers, one finite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*ZIO.debug(y)*/. x</*ZIO.attempt(gen.nextInt.abs)*/>.)  \
+            | (x</*ZIO.attempt(-gen.nextInt.abs)*/>.)                            \
             )

@@ -44,7 +44,9 @@ object Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    args.foreach { arg =>
+    var F = "cats.effect.IO"
+
+    def pin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("pisc") + "scala.in").toString
       var source: Source = null
@@ -62,15 +64,16 @@ object Main:
         val bind = pi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main()(pi(prog.map(_._1)))
+        val ps = Program.Main(F)(pi(prog.map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map(_ -> is(_)) ++ ls)
-          .sortBy(_._2)
-          .map(_._1)
-          .mkString("\n\n")
+        val code = ps.head + "\n\n"
+                 + (ps.tail.zipWithIndex.map { _ -> is(_) } ++ ls)
+                   .sortBy(_._2)
+                   .map(_._1)
+                   .mkString("\n\n")
 
         bwr.write(code, 0, code.length)
       catch t =>
@@ -80,4 +83,9 @@ object Main:
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
         if source ne null then source.close()
+
+    args.foreach {
+      case "-F" => F = "cats.effect.IO"
+      case it if it.startsWith("-F") => F = it.substring(2)
+      case it => pin(it)
     }

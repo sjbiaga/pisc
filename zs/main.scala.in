@@ -54,9 +54,9 @@ object π:
   import _root_.eu.timepit.refined.*
 
   extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πmerge: ZStream[Any, Throwable, Unit] =
+    private[π] inline def πmergeAll: ZStream[Any, Throwable, Unit] =
       ZStream.mergeAllUnbounded()(self*).as(())
-    private[π] inline def πmerge(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
+    private[π] inline def πcollectAllPar(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map { it => semaphore.tryWithPermit(it.runDrain) }))
 
   import Π.*

@@ -109,13 +109,13 @@ package object Π:
 
     private inline def t = `()`[><[F]].topic
     private inline def q = `()`[><[F]].queue
-    private inline def l = `()`[><[F]].limit
-    private def a = Stream.eval(q.take >> l.set(false))
+    private inline def r = `()`[><[F]].limit
+    private def a = Stream.eval(q.take >> r.set(false))
     private def o =
       for
-        b <- l.get
+        b <- r.get
         s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> l.set(true) else Temporal[F].unit
+        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Temporal[F].unit
       yield
         ()
     private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten
@@ -181,6 +181,32 @@ package object Π:
         */
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Stream[F, Unit] =
         a >> Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).evalTap(_ => code).through1(t)
+
+      object `null`:
+
+        /**
+          * `null` replication output guard
+          */
+        inline def apply(): Stream[F, Unit] =
+          self.!.apply(new `()`[F](null))
+
+        /**
+          * `null` replication output guard w/ pace
+          */
+        inline def apply(pace: FiniteDuration): Stream[F, Unit] =
+          self.!.apply(pace, new `()`[F](null))
+
+        /**
+          * `null` replication output guard w/ code
+          */
+        inline def apply[T]()(code: => F[T]): Stream[F, Unit] =
+          self.!.apply(new `()`[F](null))(code)
+
+        /**
+          * `null` replication output guard w/ pace w/ code
+          */
+        inline def apply[T](pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
+          self.!.apply(pace, new `()`[F](null))(code)
 
       object * :
 
@@ -264,6 +290,20 @@ package object Π:
     def apply[T](value: `()`[F])(code: => F[T]): Stream[F, Unit] =
       a >> Stream.eval(Deferred[F, Unit].map(value -> _)).evalTap(_ => code).through1(t)
 
+    object `null`:
+
+      /**
+        * constant output prefix
+        */
+      inline def apply(): Stream[F, Unit] =
+        self.apply(new `()`[F](null))
+
+      /**
+        * constant output prefix w/ code
+        */
+      inline def apply[T]()(code: => F[T]): Stream[F, Unit] =
+        self.apply(new `()`[F](null))(code)
+
     object * :
 
       /**
@@ -297,10 +337,10 @@ package object Π:
 
   private object `Π-magic`:
 
-   case class ><[F[_]](topic: Topic[F, (`()`[F], Deferred[F, Unit])],
-                       queue: Queue[F, Unit],
-                       limit: Ref[F, Boolean])
+    case class ><[F[_]](topic: Topic[F, (`()`[F], Deferred[F, Unit])],
+                        queue: Queue[F, Unit],
+                        limit: Ref[F, Boolean])
 
-   extension [F[_]: Temporal, O](self: Stream[F, O])
-     inline def through1(topic: Topic[F, O]): Stream[F, Unit] =
-       self.evalMap(topic.publish1).takeWhile(_.isRight).void
+    extension [F[_]: Temporal, O](self: Stream[F, O])
+      inline def through1(topic: Topic[F, O]): Stream[F, Unit] =
+        self.evalMap(topic.publish1).takeWhile(_.isRight).void

@@ -17,7 +17,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `fs2io-main`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `zs-main`)
+  .aggregate(`ce-main`, `ce-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
@@ -55,19 +55,6 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catseffect, munit % Test)
-  )
-
-lazy val `fs2io-main` = (project in file("fs2io/main"))
-  .settings(
-    name := "fs2io π-Calculus[experimental]2Scala",
-    organization := "sjb.ia.ga",
-    organizationName := "sjbiaga",
-    version := "1.0",
-    maxErrors := 5,
-    scalaVersion := "3.8.0-RC3",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
-    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(fs2, munit % Test)
   )
 
 lazy val `akka-main` = (project in file("akka/main"))
@@ -122,6 +109,32 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
     libraryDependencies ++= Seq(pekko, munit % Test)
   )
 
+lazy val `fs2-main` = (project in file("fs2/main"))
+  .settings(
+    name := "fs2 π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC3",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(fs2, munit % Test)
+  )
+
+lazy val `fs2-main_` = (project in file("fs2/main_"))
+  .settings(
+    name := "fs2_ π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC3",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(fs2, munit % Test)
+  )
+
 lazy val `zs-main` = (project in file("zs/main"))
   .settings(
     name := "zs π-Calculus[experimental]2Scala",
@@ -135,7 +148,20 @@ lazy val `zs-main` = (project in file("zs/main"))
     libraryDependencies ++= Seq(zs, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "fs2io/pi.scala" || "zs/pi.scala" || "examples/*.scala"
+lazy val `zs-main_` = (project in file("zs/main_"))
+  .settings(
+    name := "zs_ π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC3",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(zs, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "ce/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "[fz]s*/pi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

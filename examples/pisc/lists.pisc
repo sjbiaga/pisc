@@ -5,9 +5,9 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
-Main = ν(ch)                              \
-     ( Client(ch, /*args.map(_.toInt)*/)  \
-     | Server(ch)                         \
+Main = ν(ch)                                     \
+     ( Client(ch, /*args.map(_.toInt).toList*/)  \
+     | Server(ch)                                \
      )
 
 Client(ch, l) = ch<l>.

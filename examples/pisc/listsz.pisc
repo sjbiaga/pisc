@@ -1,0 +1,21 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ pi_ listsz.scala -- 1 2  3 5
+
+@import eu.timepit.refined.collection.*
+@import eu.timepit.refined.numeric.*
+
+Main = ν(ch)                                     \
+     ( Client(ch, /*args.map(_.toInt).toList*/)  \
+     | Server(ch)                                \
+     )
+
+Client(ch, l) = ch<l>.
+
+Server(ch) = !.ch(list: List[Int] /* Size[Even] */).                     \
+             if /*'list.nonEmpty*/ = True                                \
+             then                                                        \
+               list::(head1, head2, tail) /*ZIO.debug('head1+'head2)*/.  \
+               ch<tail>.                                                 \
+             else                                                        \
+               ch<>.

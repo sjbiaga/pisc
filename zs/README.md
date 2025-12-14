@@ -57,7 +57,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `zs` contains two files: `pi.scala` and `main.scala.in`.
+The root project folder `zs` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
@@ -68,6 +68,10 @@ To get and run the examples, one can `source` the functions from `bin/pi.sh`.
 To run an example, `cd` to `examples` and execute:
 
     ./examples $ pi -zs ex.scala
+
+or - if stopping output prefix replication -, add an underscore:
+
+    ./examples $ pi_ -zs ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 

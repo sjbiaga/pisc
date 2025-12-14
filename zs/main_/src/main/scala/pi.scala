@@ -43,10 +43,11 @@ package object Π:
     def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] =
       ( for
           hub   <- ZStream.fromZIO(Hub.unbounded[(`()`, Promise[Throwable, Unit])])
+          stop  <- ZStream.fromZIO(Promise.make[Throwable, Unit])
           queue <- ZStream.fromZIO(Queue.unbounded[Unit])
           limit <- ZStream.fromZIO(Ref.make(false))
         yield
-          f(><(hub, queue, limit))
+          f(><(hub, stop, queue, limit))
       ).flatten
 
 
@@ -99,6 +100,7 @@ package object Π:
   implicit final class `()`(private val name: Any) { self =>
 
     private inline def h = `()`[><].hub
+    private inline def p = `()`[><].stop
     private inline def q = `()`[><].queue
     private inline def r = `()`[><].limit
     private def a = ZStream.fromZIO(q.take *> r.set(false))
@@ -129,49 +131,49 @@ package object Π:
           * replication bound output guard
           */
         def apply(): ZStream[Any, Throwable, `()`] =
-          τ.!() *> self.ν()
+          (τ.!() *> self.ν()).interruptWhen(p)
 
         /**
           * replication bound output guard w/ code
           */
         def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, `()`] =
-          τ.!() *> self.ν()(code)
+          (τ.!() *> self.ν()(code)).interruptWhen(p)
 
         /**
           * replication bound output guard w/ pace
           */
         def apply(pace: Duration): ZStream[Any, Throwable, `()`] =
-          τ.!(pace) *> self.ν()
+          (τ.!(pace) *> self.ν()).interruptWhen(p)
 
         /**
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, `()`] =
-          τ.!(pace) *> self.ν()(code)
+          (τ.!(pace) *> self.ν()(code)).interruptWhen(p)
 
       /**
         * constant replication output guard
         */
       def apply(value: `()`): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h)
+        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h).interruptWhen(p)
 
       /**
         * constant replication output guard w/ pace
         */
       def apply(pace: Duration, value: `()`): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h)
+        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h).interruptWhen(p)
 
       /**
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).tap(_ => code).through1(h)
+        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).tap(_ => code).through1(h).interruptWhen(p)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: Duration, value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).tap(_ => code).through1(h)
+        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).tap(_ => code).through1(h).interruptWhen(p)
 
       object `null`:
 
@@ -179,25 +181,25 @@ package object Π:
           * `null` replication output guard
           */
         inline def apply(): ZStream[Any, Throwable, Unit] =
-          self.!.apply(new `()`(null))
+          self.`null`()
 
         /**
           * `null` replication output guard w/ pace
           */
-        inline def apply(pace: Duration): ZStream[Any, Throwable, Unit] =
-          self.!.apply(pace, new `()`(null))
+        inline def apply(_pace: Duration): ZStream[Any, Throwable, Unit] =
+          self.`null`()
 
         /**
           * `null` replication output guard w/ code
           */
         inline def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          self.!.apply(new `()`(null))(code)
+          self.`null`()(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
-        inline def apply[T](pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          self.!.apply(pace, new `()`(null))(code)
+        inline def apply[T](_pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+          self.`null`()(code)
 
       object * :
 
@@ -205,49 +207,49 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](value: => Task[S]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).interruptWhen(p)
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).interruptWhen(p)
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.tap(_ => code).through1(h)
+          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.tap(_ => code).through1(h).interruptWhen(p)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.tap(_ => code).through1(h)
+          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.tap(_ => code).through1(h).interruptWhen(p)
 
       /**
         * replication input guard
         */
       def apply(): ZStream[Any, Throwable, `()`] =
-        s.filterZIO(_._2.succeed(())).map(_._1).tap(_ => o)
+        s.filterZIO(_._2.succeed(())).map(_._1).tap { case it if it.name == null => p.succeed(()) case _ => o }.interruptWhen(p)
 
       /**
         * replication input guard w/ pace
         */
       def apply(pace: Duration): ZStream[Any, Throwable, `()`] =
-        s.filterZIO(_._2.succeed(())).map(_._1).tap(_ => ZIO.sleep(pace)).tap(_ => o)
+        s.filterZIO(_._2.succeed(())).map(_._1).tap(_ => ZIO.sleep(pace)).tap { case it if it.name == null => p.succeed(()) case _ => o }.interruptWhen(p)
 
       /**
         * replication input guard w/ code
         */
       def apply[T]()(code: T => Task[T]): ZStream[Any, Throwable, `()`] =
-        s.filterZIO(_._2.succeed(())).map(_._1).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }.tap(_ => o)
+        s.filterZIO(_._2.succeed(())).map(_._1).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }.tap { case it if it.name == null => p.succeed(()) case _ => o }.interruptWhen(p)
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: Duration)(code: T => Task[T]): ZStream[Any, Throwable, `()`] =
-        s.filterZIO(_._2.succeed(())).map(_._1).tap(_ => ZIO.sleep(pace)).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }.tap(_ => o)
+        s.filterZIO(_._2.succeed(())).map(_._1).tap(_ => ZIO.sleep(pace)).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }.tap { case it if it.name == null => p.succeed(()) case _ => o }.interruptWhen(p)
 
     object ν:
 
@@ -286,14 +288,14 @@ package object Π:
       /**
         * `null` output prefix
         */
-      inline def apply(): ZStream[Any, Throwable, Unit] =
-        self.apply(new `()`(null))
+      def apply(): ZStream[Any, Throwable, Unit] =
+        ZStream.fromZIO(p.succeed(()).as(()))
 
       /**
         * `null` output prefix w/ code
         */
-      inline def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        self.apply(new `()`(null))(code)
+      def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+        ZStream.fromZIO(p.succeed(()).as(())).tap(_ => code)
 
     object * :
 
@@ -313,13 +315,13 @@ package object Π:
       * input prefix
       */
     def apply(): ZStream[Any, Throwable, `()`] =
-      s.filterZIO(_._2.succeed(())).map(_._1).take(1)
+      s.filterZIO(_._2.succeed(())).map(_._1).take(1).tap { case it if it.name == null => p.succeed(()) case _ => ZIO.unit }
 
     /**
       * input prefix w/ code
       */
     def apply[T]()(code: T => Task[T]): ZStream[Any, Throwable, `()`] =
-      s.filterZIO(_._2.succeed(())).map(_._1).take(1).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+      s.filterZIO(_._2.succeed(())).map(_._1).take(1).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }.tap { case it if it.name == null => p.succeed(()) case _ => ZIO.unit }
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -329,6 +331,7 @@ package object Π:
   private object `Π-magic`:
 
     case class ><(hub: Hub[(`()`, Promise[Throwable, Unit])],
+                  stop: Promise[Throwable, Unit],
                   queue: Queue[Unit],
                   limit: Ref[Boolean])
 

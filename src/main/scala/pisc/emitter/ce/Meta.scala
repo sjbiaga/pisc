@@ -76,7 +76,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
-      case Term.Select(Term.Name(\), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
       case it => Some(it)
     } match
       case Nil => `IO.cede`
@@ -84,7 +84,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `List( *, … ).parTraverse`(* : Term*)(`…`: String): Term =
     *.flatMap {
-      case Term.Select(Term.Name(\), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
       case it => Some(it)
     } match
       case Nil => `IO.cede`
@@ -92,7 +92,7 @@ object Meta extends emitter.shared.effects.Meta:
 
 
   def `IO { def *(*: ()): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(\("IO"),
+    Term.Apply(\(\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -110,7 +110,7 @@ object Meta extends emitter.shared.effects.Meta:
     )
 
   def `IO { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
-    Term.Apply(\("IO"),
+    Term.Apply(\(\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,

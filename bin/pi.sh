@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-fs2io|-akka|-pekko|-zs)
+        -ce|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -19,7 +19,7 @@ function pi() {
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
-        fs2io)
+        fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
@@ -29,6 +29,10 @@ function pi() {
             ;;
         pekko)
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
+            ;;
+        fs2)
+            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
             local deps='--dep dev.zio::zio-streams:2.1.23'
@@ -60,13 +64,9 @@ function pi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-akka|-pekko)
+        -ce|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
-            ;;
-        -fs2io|-zs)
-            echo "${1#?} is N/A for pi_: use 'pi $@'" >&2
-            return
             ;;
         -*)
             return
@@ -85,6 +85,13 @@ function pi_() {
             ;;
         pekko)
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
+            ;;
+        fs2)
+            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zs)
+            local deps='--dep dev.zio::zio-streams:2.1.23'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -113,7 +120,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-fs2io|-akka|-pekko|-zs)
+        -ce|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;

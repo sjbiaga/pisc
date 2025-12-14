@@ -85,7 +85,7 @@ Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)    \
             | (!.x</*Async[F].delay(gen.nextInt)*/>.)  \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, multiple finite subscribers ✔
 
@@ -121,4 +121,12 @@ Main = ν(x) ( Main(x)                                \
 
 Main = ν(x) ( (x(y). τ/*Console[F].println(1->y)*/. x(z). τ/*Console[F].println(2->z)*/.)  \
             | (!.x</*Async[F].delay(gen.nextInt)*/>.)                                      \
+            )
+
+⟦ exclude = no ⟧
+
+# multiple finite publishers, one finite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*Console[F].println(y)*/. x</*Async[F].delay(gen.nextInt.abs)*/>.)  \
+            | (x</*Async[F].delay(-gen.nextInt.abs)*/>.)                                     \
             )
