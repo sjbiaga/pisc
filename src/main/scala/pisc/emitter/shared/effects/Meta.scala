@@ -39,7 +39,7 @@ import dialects.Scala3
 
 abstract trait Meta extends shared.Meta:
 
-  protected lazy val \ = "IO"
+  protected lazy val \ = ""
 
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
@@ -50,34 +50,10 @@ abstract trait Meta extends shared.Meta:
     else \(`_ <- \\.unit`)
 
 
-  val `: IO[Any]` = `:`("IO", "Any")
-
   val `_ <- \\.unit` = `_ <- \\.*`("unit")
-
-  val `IO.cede` = Term.Select("IO", "cede")
-
 
   def `_ <- \\.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select(\, *))
-
-  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 -> Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
-
-  private val `IO.*`: Term => Boolean =
-    case Term.Select(Term.Name("IO"), _) => true
-    case Term.Apply(it, _) => `IO.*`(it)
-    case Term.ApplyType(it, _) => `IO.*`(it)
-    case _ => false
-
-  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
-    if `IO.*`(*)
-    then
-      Enumerator.Generator(`* <- …`(), *)
-    else
-      Enumerator.Generator(`* <- …`(), Term.Apply(\("IO"), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
-
-  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select("IO", "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
   @tailrec
@@ -104,18 +80,3 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
     else
       `for * yield ()`(`_ <- \\.unit`)
-
-
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
-
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
-
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )

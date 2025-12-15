@@ -38,6 +38,8 @@ import parser.Calculus.`(*)`
 
 object Meta extends emitter.shared.effects.Meta:
 
+  override protected lazy val \ = "IO"
+
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
@@ -65,6 +67,44 @@ object Meta extends emitter.shared.effects.Meta:
                         .toList,
                        None) :: Nil
     ) :: Nil
+
+
+  val `: IO[Any]` = `:`(\, "Any")
+
+  val `IO.cede` = Term.Select(\, "cede")
+
+  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, "pure"), Term.ArgClause(*._2 :: Nil)))
+
+  private val `IO.*`: Term => Boolean =
+    case Term.Select(Term.Name(`\\`), _) => true
+    case Term.Apply(it, _) => `IO.*`(it)
+    case Term.ApplyType(it, _) => `IO.*`(it)
+    case _ => false
+
+  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
+    if `IO.*`(*)
+    then
+      Enumerator.Generator(`* <- …`(), *)
+    else
+      Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+
+  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+
+
+  def `_ <- *.acquire`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+
+  def `_ <- *.release`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+
+  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(*),
+                         Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\(\) :: Nil)),
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
+                         )
+    )
 
 
   def `_ <- *.tryAcquire.ifM`(* : String, ** : Term): Enumerator.Generator =

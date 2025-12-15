@@ -237,7 +237,7 @@ object Pi:
   enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
                val canScale: Boolean = false,
                val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false) {
+               val assignsReplicationParallelism1: Boolean = false):
     case ce extends Emitter()
     case fs2 extends Emitter(nullOnEmptyOutput = Lit.Null(),
                              hasReplicationInputGuardFlaw = false,
@@ -247,7 +247,6 @@ object Pi:
                             assignsReplicationParallelism1 = true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
     private[parser] case test extends Emitter()
-  }
 
   type Names = Set[Symbol]
 
@@ -433,6 +432,6 @@ object Pi:
 
       if _typeclasses.isEmpty
       then
-        Right(`(*)`(null, Nil, λ(Lit.Null())), `+`(-1)) :: prog
+        Right((`(*)`(null, Nil, λ(Lit.Null())), `+`(-1))) :: prog
       else
-        Right(`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)) :: prog
+        Right((`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1))) :: prog
