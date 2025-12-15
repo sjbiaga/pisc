@@ -106,7 +106,7 @@ package object Π:
     /**
       * positive prefix i.e. input
       */
-    def apply()(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[`()`]] = ><()(ref)(code).map(_.map(new `()`(_)))
+    def apply[T]()(code: Seq[T] => IO[Seq[T]]): IO[Seq[`()`]] = ><()(ref)(code).map(_.map(new `()`(_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -146,16 +146,16 @@ package object Π:
           IO.pure(names) <* b2.await
         }
 
-      def apply()(`<R`: >*<)(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[Any]] =
+      def apply[T]()(`<R`: >*<)(code: Seq[T] => IO[Seq[T]]): IO[Seq[Any]] =
         `<R`.flatModify { case it @ ><(q, _) =>
           it -> q.take
         }.flatMap {
-          case it@ (Seq(null, _*), _) => IO.pure(it)
-          case (it, b2) => (code andThen exec)(it)
-                             .flatTap {
-                               case Seq(null, _*) => `<R`.update(_.copy(stop = true))
-                               case _ => IO.unit
-                             }.map(_ -> b2)
+          case it @ (Seq(null, _*), _) => IO.pure(it)
+          case (it: Seq[T], b2) => (code andThen exec)(it)
+                                     .flatTap {
+                                       case Seq(null, _*) => `<R`.update(_.copy(stop = true))
+                                       case _ => IO.unit
+                                     }.map(_ -> b2)
         }.flatMap { (names, b2) =>
           IO.pure(names) <* b2.await
         }

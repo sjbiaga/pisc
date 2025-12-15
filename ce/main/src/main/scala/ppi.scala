@@ -105,7 +105,7 @@ package object Π:
     /**
       * positive prefix i.e. input
       */
-    def apply()(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[`()`]] = ><()(q)(code).map(_.map(new `()`(_)))
+    def apply[T]()(code: Seq[T] => IO[Seq[T]]): IO[Seq[`()`]] = ><()(q)(code).map(_.map(new `()`(_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -122,8 +122,8 @@ package object Π:
       inline def apply()(`<Q`: ><): IO[Seq[Any]] =
         `<Q`.take
 
-      inline def apply[T]()(`<Q`: ><)(code: Seq[Any] => IO[Seq[Any]]): IO[Seq[Any]] =
+      inline def apply[T]()(`<Q`: ><)(code: Seq[T] => IO[Seq[T]]): IO[Seq[Any]] =
         `<Q`.take.flatMap {
-          case it @ Seq(null, _*) => IO.pure(it)
-          case it => (code andThen exec)(it)
+          case it @ Seq(null, _*) => IO.pure(it.asInstanceOf[Seq[T]])
+          case it: Seq[T] => (code andThen exec)(it)
         }

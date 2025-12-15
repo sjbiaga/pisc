@@ -36,7 +36,7 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import emitter.shared.Meta.`()(null)`
+import scala.meta.{ Lit, Term }
 
 import PolyadicPi.*
 import Calculus.*
@@ -57,8 +57,15 @@ abstract class PolyadicPi extends Expression:
     name ~ opt(arity) ~ ("<"~>opt(opt("ν")~names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
-      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.filter(_._1.isSymbol).size > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.count(_._1.isSymbol) > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
         throw PrefixUniquenessParsingException(ch.asSymbol, args.filter(_._1.isSymbol).map(_._1.asSymbol.name)*)
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if !emitter.allowsMixedBoundOutput
+                                                  && args.count(_._1.isSymbol) < args.size =>
+        throw MixedBoundOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
+      case (ch, _) ~ _ ~ Some(None ~ args) ~ _ if !emitter.allowsMixedOutput
+                                               && args.map(_._1).exists { case λ(_: Term) => true case _ => false }
+                                               && !args.map(_._1).forall { case λ(_: Term) => true case _ => false } =>
+        throw MixedOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
       case (ch, _) ~ None ~ None ~ _ =>
         throw PrefixArityParsingException(ch)
       case (ch, _) ~ Some(arity) ~ Some(_ ~ args) ~ _ =>
@@ -76,9 +83,9 @@ abstract class PolyadicPi extends Expression:
           case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
         π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ free -- bound)
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name ++ freeʹ)
+        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
-        π(ch, polarity = None, None, Seq.fill(arity)(λ(`()(null)`))*) -> (Names(), name)
+        π(ch, polarity = None, None, Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*) -> (Names(), name)
     } |
     name ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
@@ -201,6 +208,8 @@ abstract class PolyadicPi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _typeclasses: List[String] = Nil
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _χ_id: helper.υidυ = null
@@ -253,7 +262,26 @@ object PolyadicPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter { case ce, kk }
+  enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
+               val allowsMixedBoundOutput: Boolean = true,
+               val allowsMixedOutput: Boolean = true,
+               val canScale: Boolean = false,
+               val hasReplicationInputGuardFlaw: Boolean = true,
+               val assignsReplicationParallelism1: Boolean = false) {
+    case ce extends Emitter()
+    case fs2 extends Emitter(nullOnEmptyOutput = Lit.Null(),
+                             allowsMixedBoundOutput = false,
+                             allowsMixedOutput = false,
+                             hasReplicationInputGuardFlaw = false,
+                             assignsReplicationParallelism1 = true)
+    case zs extends Emitter(nullOnEmptyOutput = Lit.Null(),
+                            allowsMixedBoundOutput = false,
+                            allowsMixedOutput = false,
+                            hasReplicationInputGuardFlaw = false,
+                            assignsReplicationParallelism1 = true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    private[parser] case test extends Emitter()
+  }
 
   type Names = Set[Symbol]
 
@@ -280,6 +308,11 @@ object PolyadicPi:
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
 
+  case class MixedBoundOutputNotAllowedParsingException(emitter: Emitter, name: String)
+      extends PrefixParsingException(s"""Emitter `$emitter' does not allow mixed bound output on a channel name "$name"""")
+
+  case class MixedOutputNotAllowedParsingException(emitter: Emitter, name: String)
+      extends PrefixParsingException(s"""Emitter `$emitter' does not allow mixed output on a channel name "$name"""")
 
   case class PrefixUniquenessParsingException(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""${name.name} channel parameters names '${ps.mkString(", ")}' must be distinct""")
@@ -376,11 +409,13 @@ object PolyadicPi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _typeclasses = Nil
       _dirs = List(Map("errors" -> _werr,
                        "duplications" -> _dups,
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
-                       "scaling" -> _scaling))
+                       "scaling" -> _scaling,
+                       "typeclasses" -> _typeclasses))
       eqtn = List()
       defn = Map()
       self = Set()
@@ -433,14 +468,21 @@ object PolyadicPi:
                   scala.sys.error(failure.msg)
           }
 
-      ( if i < eqtn.size && !_exclude
-        then
-          r ::: eqtn.slice(i, eqtn.size).map(Right(_))
-        else
-          r
-      ).filter {
-        case Right((`(*)`(s"Self_$n", _, _*), _))
-            if { try { n.toInt; true } catch _ => false } =>
-          self.contains(n.toInt)
-        case _ => true
-      }
+      val prog =
+        ( if i < eqtn.size && !_exclude
+          then
+            r ::: eqtn.slice(i, eqtn.size).map(Right(_))
+          else
+            r
+        ).filter {
+          case Right((`(*)`(s"Self_$n", _, _*), _))
+              if { try { n.toInt; true } catch _ => false } =>
+            self.contains(n.toInt)
+          case _ => true
+        }
+
+      if _typeclasses.isEmpty
+      then
+        Right(`(*)`(null, Nil, λ(Lit.Null())), `+`(-1)) :: prog
+      else
+        Right(`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)) :: prog

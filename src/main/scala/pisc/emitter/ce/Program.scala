@@ -73,7 +73,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -179,6 +178,7 @@ object Program:
               params.zipWithIndex.foreach {
                 case (λ(Symbol(`ch`)), i) =>
                   * :+= `* <- IO.pure(*)`(ch -> paramsʹ(i).asSymbol.name)
+                case _ =>
               }
 
         case π(λ(Symbol(ch)), Some(""), code, params*) =>
@@ -413,14 +413,14 @@ object Program:
             then
               `List( *, … ).parSequence`(
                 sum.emit,
-                `_ <- IO.unit` :: `!⋯`
+                `_ <- \\.unit` :: `!⋯`
               )
             else
               `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
               `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
                 sum.emit :+ `_ <- *.release`(sem),
-                `_ <- IO.unit` :: `!⋯`
+                `_ <- \\.unit` :: `!⋯`
               )
 
           if parallelism < 0
@@ -478,6 +478,7 @@ object Program:
     def apply(prog: List[Bind]): List[String] =
       val id = new helper.υidυ
       prog
+        .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_).toString)

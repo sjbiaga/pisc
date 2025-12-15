@@ -46,6 +46,7 @@ abstract trait Meta:
 
 
   inline implicit def \(* : String): Term.Name = Term.Name(*)
+  inline def \\(* : String): Type.Name = Type.Name(*)
 
 
   def `:`(name: String, clause: String): Option[Type.Apply] =

@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ ppi_ hanoi.scala
+# ./examples $ ppi_ -ce hanoi.scala
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 

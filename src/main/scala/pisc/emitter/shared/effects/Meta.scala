@@ -39,37 +39,45 @@ import dialects.Scala3
 
 abstract trait Meta extends shared.Meta:
 
+  protected lazy val \ = "IO"
+
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
   inline implicit def \\(* : Enumerator): Term = \(*)
 
   implicit def \(* : List[Enumerator]): Term =
     if *.nonEmpty then `for * yield ()`(* *)
-    else \(`_ <- IO.unit`)
+    else \(`_ <- \\.unit`)
 
 
   val `: IO[Any]` = `:`("IO", "Any")
 
-  val `_ <- IO.unit` = `_ <- IO.*`("unit")
+  val `_ <- \\.unit` = `_ <- \\.*`("unit")
 
   val `IO.cede` = Term.Select("IO", "cede")
 
 
-  def `_ <- IO.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select("IO", *))
+  def `_ <- \\.*`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(\, *))
 
   def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 ->Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))
+
+  private val `IO.*`: Term => Boolean =
+    case Term.Select(Term.Name("IO"), _) => true
+    case Term.Apply(it, _) => `IO.*`(it)
+    case Term.ApplyType(it, _) => `IO.*`(it)
+    case _ => false
 
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(),
-                         Term.Apply(\("IO"),
-                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+    if `IO.*`(*)
+    then
+      Enumerator.Generator(`* <- …`(), *)
+    else
+      Enumerator.Generator(`* <- …`(), Term.Apply(\("IO"), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
   def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(),
-                         Term.Apply(Term.Select("IO", "sleep"),
-                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select("IO", "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
   @tailrec
@@ -78,7 +86,7 @@ abstract trait Meta extends shared.Meta:
     then
       if !(*.head.isInstanceOf[Enumerator.Generator])
       then
-        `for * yield ()`((`_ <- IO.unit` +: *)*)
+        `for * yield ()`((`_ <- \\.unit` +: *)*)
       else if *.size == 1
       then
         *.head match
@@ -90,12 +98,12 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name("IO"), Term.Name("unit" | "cede"))) =>
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede"))) =>
             `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
-      `for * yield ()`(`_ <- IO.unit`)
+      `for * yield ()`(`_ <- \\.unit`)
 
 
   def `_ <- *.acquire`(* : String): Enumerator.Generator =

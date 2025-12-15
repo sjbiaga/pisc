@@ -1,12 +1,10 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC (experimental)
+==============================================================
 
-Asynchronous [π-calculus](https://github.com/sjbiaga/pisc/tree/main-async) is a variant.
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
-[Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic) is also supported.
-Asynchronous [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-async) is also supported.
+[π-calculus](https://github.com/sjbiaga/pisc/tree/main-experimental) is a variant.
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-experimental) is in alpha stage.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
-[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
+[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-experimental) is another fruitful
 combination of ambients with stochastic π-calculus.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
@@ -49,12 +47,14 @@ The BNF formal grammar for processes is the following.
 The BNF formal grammar for prefixes is the following.
 
     PREFIXES       ::= { PREFIX }
-    PREFIX         ::= μ "."
-                     | "ν" "(" NAMES ")"
+    PREFIX         ::= "ν" "(" NAMES ")"
+                     | μ "."
     μ              ::= "τ" [ EXPRESSION ]
-                     | NAME "<" [ ["ν"] NAME ] ">" [ EXPRESSION ]
-                     | NAME "(" NAME ")" [ EXPRESSION ]
+                     | NAME "<" [ "ν" ] NAMES ">" [ EXPRESSION ]
+                     | NAME ARITY "<" ">" [ EXPRESSION ]
+                     | NAME "(" NAMES ")" [ EXPRESSION ]
                      | NAME <CONS> "(" NAMESʹ ")" [ EXPRESSION ]
+    ARITY          ::= "#" NATURAL_NUMBER
     SCALE          ::= NATURAL_NUMBER "*"
     PACE           ::= NATURAL_NUMBER [ "," TIME_UNIT ]
     EXPRESSION     ::= "/*" ... "*/"
@@ -75,10 +75,11 @@ backslash continue on the next line.
 
 Summation (`CHOICE`) has lower precedence than composition (`PARALLEL`).
 
-The output prefix uses angular parentheses and has the form `NAME<NAME>.`, while
-the input prefix uses the round parentheses and has the form `NAME(NAME).`. A _`name`_
+The output prefix uses angular parentheses and has the form `NAME<NAMES>.`, while
+the input prefix uses the round parentheses and has the form `NAME(NAMES).`. A _`name`_
 in parentheses can also be a (constant) `String` literal, a (boxed in a) `BigDecimal` number,
 or a [`Scalameta`](https://scalameta.org) term as a `Scala` comment between `/*` and `*/`.
+The polyadic version allows multiple names separated by comma between parentheses.
 
 A match has the form `[NAME=NAME]` and a mismatch the same, but
 using the `NOT EQUAL TO` Unicode `≠` character. `NAME=NAME` or `NAME≠NAME` is a
@@ -91,9 +92,12 @@ distinguished from other prefixes.
 
 The name before parentheses (angular or round) must be a channel name.
 
-For output, the name in angular parentheses is optional, if empty being `null`.
+For output, the names in angular parentheses are optional, if empty being `null`.
 This may be used to cease guarded replication with _input_ prefix guard: i.e.,
-if a `null` is received, the (stack-safe, recursive) replication stops.
+if `null`s are received, the (stack-safe, recursive) replication stops.
+
+For polyadic π-calculus, the absence of arguments mandates the channel arity
+be specified (with "#").
 
 Note that input/output prefixes and the silent transition are followed by a dot,
 whereas restriction is not; also, inaction, invocation, (mis)match, `if then else`,
@@ -110,14 +114,14 @@ Between output prefix closing angular parenthesis and ".", there can be a
 just after ending the output but before returning from it.
 
 Between input prefix closing round parenthesis and ".", there can be a
-`Scalameta` function-term as a `T`-parameterized `T => IO[T]` piece of code,
-that is applied the prior result from the input, obtaining the `IO[T]` that is
+`Scalameta` function-term as a `Seq[Any] => IO[Seq[Any]]` piece of code,
+that is applied the prior result from the input, obtaining the `IO[Seq[Any]]` that is
 executed under supervision (so that cancellation does not outlive the
 `cats.effect.std.Supervisor[IO]`) providing the actual result, just after ending
 the input but before returning from it.
 
-If `null` is received, that function will not run. Otherwise, if its result is
-`null`, this may be used to cease guarded replication with _output_ prefix guard:
+If `null`s are received, that function will not run. Otherwise, if its results are
+`null`s, this may be used to cease guarded replication with _output_ prefix guard:
 i.e., should just this one input prefix remain, the (stack-safe, recursive)
 replication stops.
 
@@ -134,48 +138,32 @@ can be reused; the lexical category is `qual`.
 Unlike the rest of the agents, the `Main` agent has the command line arguments
 spliced as `vararg` parameter(s).
 
-If an equation's list of formal parameters ends in "*", then the last one will not
-be available in the output, its presence serving only to avoid not scoping a free name.
-It facilitates passing from Scala values in expressions to names in the calculus.
-
 
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/main-experimental/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/ce/README.md)
 
-- [Cats Actors](https://github.com/sjbiaga/pisc/tree/main-experimental/ca/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/fs2/README.md)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/main-experimental/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/akka/README.md)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/main-experimental/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/pekko/README.md)
+
+- [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/zs/README.md)
 
 
 Branches
 --------
 
-- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
-
-- [π-calculus async](https://github.com/sjbiaga/pisc/tree/main-async)
-
 - [π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/main-experimental)
 
-- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
-
-- [Polyadic π-calculus async](https://github.com/sjbiaga/pisc/tree/polyadic-async)
+- [Polyadic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/polyadic-experimental)
 
 - [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
 - [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
 
-- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) using supervisor/`IO.canceled`
-
-- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-flatMap) with `flatMap`s/`null` comparison
-
 - [Stochastic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental)
-
-- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) using supervisor/`IO.canceled`
-
-- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-flatMap) with `flatMap`s/`null` comparison
 
 - [BioAmbients (experimental)](https://github.com/sjbiaga/pisc/tree/bioambients-experimental)

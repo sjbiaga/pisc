@@ -1,5 +1,9 @@
 # -*- indent-tabs-mode: nil; -*-
 
+#P = τ.( A | B ) | C
+
+# P = τ. ! .τ.
+
 P(x) =
 
 Q = ν(x) x(x). P(x)

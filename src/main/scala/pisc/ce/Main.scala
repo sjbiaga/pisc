@@ -63,9 +63,9 @@ object Main:
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
         val ps = Program.Main()(pi(prog.map(_._1)))
-        val is = prog.map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
           .sortBy(_._2)
