@@ -141,18 +141,19 @@ object Program:
         case π(λ(Symbol(ch)), Some(nu @ "ν"), code, params*) =>
 
           val args = params.map(_.asSymbol.name)
+          val arity = Lit.Int(args.size)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(ch, nu), Term.ArgClause(Lit.Int(args.size) :: Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(ch, nu), Term.ArgClause(arity :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(ch, nu), Term.ArgClause(Lit.Int(args.size) :: Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(ch, nu), Term.ArgClause(arity :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(ch, nu), Term.ArgClause(Lit.Int(args.size) :: Nil)))
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(ch, nu), Term.ArgClause(arity :: Nil)))
 
         case π(λ(Symbol(ch)), None, code, args*) if args.forall { case λ(Lit.Null()) => true case _ => false } =>
 
@@ -275,36 +276,38 @@ object Program:
           val pace = Term.Select(Lit.Long(time), unit)
 
           val args = params.map(_.asSymbol.name)
+          val arity = Lit.Int(args.size)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(pace :: Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: pace :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(pace :: Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: pace :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(pace :: Nil)))
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: pace :: Nil)))
 
           * = * ::: sum.emit
 
         case !(_, None, Some(π(λ(Symbol(ch)), Some(nu @ "ν"), code, params*)), sum) =>
 
           val args = params.map(_.asSymbol.name)
+          val arity = Lit.Int(args.size)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(Nil)),
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: Nil)),
                                                                         Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(Nil)))
+              * = Enumerator.Generator(`Seq(*) <- …`(args*), Term.Apply(Term.Select(Term.Select(ch, "!"), nu), Term.ArgClause(arity :: Nil)))
 
           * = * ::: sum.emit
 

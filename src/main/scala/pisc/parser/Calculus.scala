@@ -331,7 +331,9 @@ object Calculus:
         else
           "if " + test + " " + t + " else " + f.get
 
-      case !(_, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(-1, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+
+      case !(parallelism, _, guard, sum) => s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
 
       case `⟦⟧`(definition, variables, sum, _, assignment) =>
         val vars = if (variables.isEmpty)

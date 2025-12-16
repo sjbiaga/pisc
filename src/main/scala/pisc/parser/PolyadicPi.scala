@@ -267,7 +267,7 @@ object PolyadicPi:
                val allowsMixedOutput: Boolean = true,
                val canScale: Boolean = false,
                val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false) {
+               val assignsReplicationParallelism1: Boolean = false):
     case ce extends Emitter()
     case fs2 extends Emitter(nullOnEmptyOutput = Lit.Null(),
                              allowsMixedBoundOutput = false,
@@ -281,7 +281,6 @@ object PolyadicPi:
                             assignsReplicationParallelism1 = true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
     private[parser] case test extends Emitter()
-  }
 
   type Names = Set[Symbol]
 
@@ -322,7 +321,6 @@ object PolyadicPi:
 
   case class PrefixArityParsingExceptionʹ(name: λ, arity: Int, size: Int)
       extends PrefixParsingException(s"${name.asSymbol.name} channel must not specify both arity ($arity) and arguments (#$size)")
-
 
   case class TermParsingException(enums: List[Enumerator])
       extends PrefixParsingException(s"The embedded Scalameta should be a Term, not Enumerator `$enums'")
@@ -483,6 +481,6 @@ object PolyadicPi:
 
       if _typeclasses.isEmpty
       then
-        Right(`(*)`(null, Nil, λ(Lit.Null())), `+`(-1)) :: prog
+        Right((`(*)`(null, Nil, λ(Lit.Null())), `+`(-1))) :: prog
       else
-        Right(`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)) :: prog
+        Right((`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1))) :: prog
