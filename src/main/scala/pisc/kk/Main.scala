@@ -35,6 +35,9 @@ import java.nio.file.Paths
 
 import scala.io.Source
 
+import scala.meta.*
+import dialects.Scala3
+
 import parser.PolyadicPi
 import emitter.kk.Program
 
@@ -53,7 +56,7 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val pi = PolyadicPi.Main(PolyadicPi.Emitter.kk, in)
+      val ppi = PolyadicPi.Main(PolyadicPi.Emitter.kk, in)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -61,22 +64,22 @@ object Main:
         fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
-        val bind = pi(source).zipWithIndex
+        val bind = ppi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main(opt)(pi(prog.map(_._1)))
+        val ps = Program.Main(opt)(ppi(prog.map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
+        val code = (ps.zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
           .sortBy(_._2)
           .map(_._1)
           .mkString("\n\n")
 
         bwr.write(code, 0, code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${pi.ln}! " + t.getMessage + ".")
+        Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()

@@ -475,10 +475,10 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
       prog
         .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))

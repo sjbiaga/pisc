@@ -481,6 +481,6 @@ object PolyadicPi:
 
       if _typeclasses.isEmpty
       then
-        Right((`(*)`(null, Nil, λ(Lit.Null())), `+`(-1))) :: prog
+        Right((`(*)`(null, Nil, λ(Lit.Null())), `+`(-1)): Bind) :: prog
       else
-        Right((`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1))) :: prog
+        Right((`(*)`(null, Nil, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)): Bind) :: prog

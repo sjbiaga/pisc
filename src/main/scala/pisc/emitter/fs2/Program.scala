@@ -576,7 +576,7 @@ object Program:
       if *.nonEmpty then `for *[F] yield ()`(* *)
       else \(`_ <- \\.unit`)
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
       given Set[String] =
@@ -590,10 +590,10 @@ object Program:
 
       Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
                 Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
-                Type.Bounds(None, None, Nil, Nil)).toString
+                Type.Bounds(None, None, Nil, Nil))
       ::
       prog
         .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))
