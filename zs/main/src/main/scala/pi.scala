@@ -101,7 +101,7 @@ package object Π:
     private inline def h = `()`[><].hub
     private inline def q = `()`[><].queue
     private inline def r = `()`[><].limit
-    private def a = ZStream.fromZIO(q.take *> r.set(false))
+    private implicit def a: Task[Unit] = q.take *> r.set(false)
     private def o =
       for
         b <- r.get
@@ -153,25 +153,25 @@ package object Π:
         * constant replication output guard
         */
       def apply(value: `()`): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h)
+        ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h)
 
       /**
         * constant replication output guard w/ pace
         */
       def apply(pace: Duration, value: `()`): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h)
+        ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h)
 
       /**
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h).tap(_ => code)
+        ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h).tap(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: Duration, value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code)
+        ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code)
 
       object `null`:
 
@@ -205,25 +205,25 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](value: => Task[S]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+          ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+          ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
+          ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          a *> ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
+          ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
 
       /**
         * replication input guard
@@ -257,7 +257,7 @@ package object Π:
       def apply(): ZStream[Any, Throwable, `()`] =
         for
           name <- Π.ν
-          _    <- a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(name -> _)).through1(h)
+          _    <- ZStream.fromZIO(Promise.make[Throwable, Unit].map(name -> _)).through1(h)
         yield
           name
 
@@ -267,7 +267,7 @@ package object Π:
       def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, `()`] =
         for
           name <- Π.ν
-          _    <- a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(name -> _)).through1(h).tap(_ => code)
+          _    <- ZStream.fromZIO(Promise.make[Throwable, Unit].map(name -> _)).through1(h).tap(_ => code)
         yield
           name
 
@@ -275,13 +275,13 @@ package object Π:
       * constant output prefix
       */
     def apply(value: `()`): ZStream[Any, Throwable, Unit] =
-      a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).through1(h)
+      ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).through1(h)
 
     /**
       * constant output prefix w/ code
       */
     def apply[T](value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-      a *> ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code)
+      ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code)
 
     object `null`:
 
@@ -303,13 +303,13 @@ package object Π:
         * variable output prefix
         */
       def apply[S](value: => Task[S]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+        ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        a *> ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
+        ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
 
     /**
       * input prefix
@@ -335,5 +335,6 @@ package object Π:
                   limit: Ref[Boolean])
 
     extension [O](self: ZStream[Any, Throwable, O])
-      inline def through1(hub: Hub[O]): ZStream[Any, Throwable, Unit] =
-        self.tap(hub.publish).as(())
+      inline def through1(hub: Hub[O])
+                         (using await: Task[Unit]): ZStream[Any, Throwable, Unit] =
+        self.tap(await *> hub.publish(_)).as(())

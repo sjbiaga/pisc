@@ -39,11 +39,11 @@ import zs.Meta.*
 
 object Program:
 
-  extension (node: Pre | AST)(using id: => String)
+  extension (self: Pre | AST)(using id: => String)
 
     def emitʹ(implicit semaphore: Option[String]): List[Enumerator] =
 
-      node match
+      self match
 
         case ∥(_, operand) =>
           operand.emitʹ
@@ -68,7 +68,7 @@ object Program:
 
       var * = List[Enumerator]()
 
-      node match
+      self match
 
         // SUMMATION ///////////////////////////////////////////////////////////
 
@@ -525,11 +525,10 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
-
       prog
-        .tail
+        .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))

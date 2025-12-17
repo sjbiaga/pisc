@@ -35,6 +35,9 @@ import java.nio.file.Paths
 
 import scala.io.Source
 
+import scala.meta.*
+import dialects.Scala3
+
 import parser.Pi
 import emitter.fs2.Program
 
@@ -69,8 +72,8 @@ object Main:
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.head + "\n\n"
-                 + (ps.tail.zipWithIndex.map { _ -> is(_) } ++ ls)
+        val code = ps.head.toString + "\n\n"
+                 + (ps.tail.zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")

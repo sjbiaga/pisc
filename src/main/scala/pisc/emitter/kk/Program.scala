@@ -681,11 +681,11 @@ object Program:
 
     import Optimize.*
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
       given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
-        .tail
+        .drop(1)
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>
@@ -706,4 +706,3 @@ object Program:
         }
         .flatMap { (k, it) => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value + k))._1 else Some(it) }
         .map { it => if optLevel > 1 then it.optimize2(using opt._2)._1 else it }
-        .map(_.toString)

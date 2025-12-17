@@ -112,7 +112,7 @@ package object Π:
     private inline def d = `()`[><[F]].stop
     private inline def q = `()`[><[F]].queue
     private inline def r = `()`[><[F]].limit
-    private def a = Stream.eval(q.take >> r.set(false))
+    private implicit def a: F[Unit] = q.take >> r.set(false)
     private def o =
       for
         b <- r.get
@@ -164,25 +164,25 @@ package object Π:
         * constant replication output guard
         */
       def apply(value: `()`[F]): Stream[F, Unit] =
-        a >> Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d)
+        Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d)
 
       /**
         * constant replication output guard w/ pace
         */
       def apply(pace: FiniteDuration, value: `()`[F]): Stream[F, Unit] =
-        a >> Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d)
+        Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d)
 
       /**
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F])(code: => F[T]): Stream[F, Unit] =
-        a >> Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
+        Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Stream[F, Unit] =
-        a >> Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
+        Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
 
       object `null`:
 
@@ -216,25 +216,25 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](value: => F[S]): Stream[F, Unit] =
-          a >> Stream.repeatEval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
+          Stream.repeatEval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](pace: FiniteDuration, value: => F[S]): Stream[F, Unit] =
-          a >> Stream.awakeEvery(pace).evalMap(_ => value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
+          Stream.awakeEvery(pace).evalMap(_ => value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => F[S])(code: => F[T]): Stream[F, Unit] =
-          a >> Stream.repeatEval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
+          Stream.repeatEval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Stream[F, Unit] =
-          a >> Stream.awakeEvery(pace).evalMap(_ => value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
+          Stream.awakeEvery(pace).evalMap(_ => value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
 
       /**
         * replication input guard
@@ -268,7 +268,7 @@ package object Π:
       def apply(): Stream[F, `()`[F]] =
         for
           name <- Π.ν[F]
-          _    <- a >> Stream.eval(Deferred[F, Unit].map(name -> _)).through1(t)
+          _    <- Stream.eval(Deferred[F, Unit].map(name -> _)).through1(t)
         yield
           name
 
@@ -278,7 +278,7 @@ package object Π:
       def apply[T]()(code: => F[T]): Stream[F, `()`[F]] =
         for
           name <- Π.ν[F]
-          _    <- a >> Stream.eval(Deferred[F, Unit].map(name -> _)).through1(t).evalTap(_ => code)
+          _    <- Stream.eval(Deferred[F, Unit].map(name -> _)).through1(t).evalTap(_ => code)
         yield
           name
 
@@ -286,13 +286,13 @@ package object Π:
       * constant output prefix
       */
     def apply(value: `()`[F]): Stream[F, Unit] =
-      a >> Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t)
+      Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t)
 
     /**
       * constant output prefix w/ code
       */
     def apply[T](value: `()`[F])(code: => F[T]): Stream[F, Unit] =
-      a >> Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+      Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
 
     object `null`:
 
@@ -314,13 +314,13 @@ package object Π:
         * variable output prefix
         */
       def apply[S](value: => F[S]): Stream[F, Unit] =
-        a >> Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
+        Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](value: => F[S])(code: => F[T]): Stream[F, Unit] =
-        a >> Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code)
+        Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code)
 
     /**
       * input prefix
@@ -347,5 +347,6 @@ package object Π:
                         limit: Ref[F, Boolean])
 
     extension [F[_]: Temporal, O](self: Stream[F, O])
-      inline def through1(topic: Topic[F, O]): Stream[F, Unit] =
-        self.evalMap(topic.publish1).takeWhile(_.isRight).void
+      inline def through1(topic: Topic[F, O])
+                         (using await: F[Unit]): Stream[F, Unit] =
+        self.evalMap(await >> topic.publish1(_)).takeWhile(_.isRight).void
