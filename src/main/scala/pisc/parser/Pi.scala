@@ -238,13 +238,13 @@ object Pi:
                val canScale: Boolean = false,
                val hasReplicationInputGuardFlaw: Boolean = true,
                val assignsReplicationParallelism1: Boolean = false):
+    def this(_u: Unit) = this(nullOnEmptyOutput = Lit.Null(),
+                              hasReplicationInputGuardFlaw = false,
+                              assignsReplicationParallelism1 = true)
     case ce extends Emitter()
-    case fs2 extends Emitter(nullOnEmptyOutput = Lit.Null(),
-                             hasReplicationInputGuardFlaw = false,
-                             assignsReplicationParallelism1 = true)
-    case zs extends Emitter(nullOnEmptyOutput = Lit.Null(),
-                            hasReplicationInputGuardFlaw = false,
-                            assignsReplicationParallelism1 = true)
+    case fs2 extends Emitter(())
+    case monix extends Emitter(())
+    case zs extends Emitter(())
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
     private[parser] case test extends Emitter()
 

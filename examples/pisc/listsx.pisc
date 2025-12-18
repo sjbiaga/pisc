@@ -1,0 +1,22 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ pi listsx.scala -- 1 2  3 5
+
+@import cats.effect.Async
+
+@import eu.timepit.refined.collection.*
+@import eu.timepit.refined.numeric.*
+
+⟦ typeclasses = (Async,Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+
+Main = ν(ch)                                     \
+     ( Client(ch, /*args.map(_.toInt).toList*/)  \
+     | Server(ch)                                \
+     )
+
+Client(ch, l) = ch<l>.
+
+Server(ch) = ch(list: List[Int] /* Size[Even] */).                                   \
+             [/*'list.nonEmpty*/ = True]                                             \
+             list::(head1, head2, tail) /*Async[F].delay(println('head1+'head2))*/.  \
+             ( ch<tail>. | Server(ch) )                                              \

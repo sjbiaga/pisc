@@ -28,7 +28,7 @@
 
 package pisc
 package emitter
-package fs2
+package monix
 
 import scala.meta.*
 import dialects.Scala3
@@ -38,9 +38,12 @@ import parser.Calculus.`(*)`
 
 object Meta extends emitter.shared.streams.Meta:
 
-  override protected lazy val \ = "Stream"
+  override protected lazy val \ = "Iterant"
 
-  override protected lazy val \\ = "eval"
+  override protected lazy val \\ = "liftF"
+
+  override lazy val `_ <- \\.unit` =
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "pure"), Term.ArgClause(Lit.Unit() :: Nil)))
 
   def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
@@ -79,19 +82,19 @@ object Meta extends emitter.shared.streams.Meta:
     ) :: Nil
 
 
-  def `List( *, … ).parJoin`(* : Term*): Term =
+  def `Observable( *, … ).mapParF`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin")
+      case it => Term.Select(Term.Apply(\("πObs"), Term.ArgClause(it.toList)), "πmapParF")
 
-  def `List( *, … ).parJoin(…)`(* : Term*)(`…`: String): Term =
+  def `Observable( *, … ).mapParF(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin"),
+      case it => Term.Apply(Term.Select(Term.Apply(\("πObs"), Term.ArgClause(it.toList)), "πmapParF"),
                             Term.ArgClause(`…` :: Nil))

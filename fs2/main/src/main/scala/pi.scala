@@ -274,11 +274,7 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T]()(code: => F[T]): Stream[F, `()`[F]] =
-        for
-          name <- Π.ν[F]
-          _    <- Stream.eval(Deferred[F, Unit].map(name -> _)).through1(t).evalTap(_ => code)
-        yield
-          name
+        apply().evalTap(_ => code)
 
     /**
       * constant output prefix
@@ -290,7 +286,7 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](value: `()`[F])(code: => F[T]): Stream[F, Unit] =
-      Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+      apply(value).evalTap(_ => code)
 
     object `null`:
 
@@ -318,7 +314,7 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S, T](value: => F[S])(code: => F[T]): Stream[F, Unit] =
-        Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).evalTap(_ => code)
+        apply[S](value).evalTap(_ => code)
 
     /**
       * input prefix

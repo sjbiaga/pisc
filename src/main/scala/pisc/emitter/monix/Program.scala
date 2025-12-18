@@ -28,13 +28,13 @@
 
 package pisc
 package emitter
-package fs2
+package monix
 
 import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
-import fs2.Meta.*
+import monix.Meta.*
 
 
 object Program:
@@ -82,21 +82,21 @@ object Program:
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val sfs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val ifs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
             `* <- Semaphore[F](…)`(sem.get),
-            `_ <- *`(`List( *, … ).parJoin`(sfs*))
+            `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
           )
 
         case it: + =>
-          val sfs = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val ifs = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val sem = id
 
           * = List(
             `* <- Semaphore[F](…)`(sem),
-            `_ <- *`(`List( *, … ).parJoin(…)`(sfs*)(sem))
+            `_ <- *`(`Observable( *, … ).mapParF(…)`(ifs*)(sem))
           )
 
         /////////////////////////////////////////////////////////// summation //
@@ -108,9 +108,9 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val sfs = it.components.foldRight(List[Term]())(_.emit :: _)
+          val ifs = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parJoin`(sfs*))
+          * = `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -536,7 +536,7 @@ object Program:
 
       given Set[String] =
         prog.head match
-          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Temporal")
+          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Concurrent", "ContextShift", "Timer", "TaskLift", "TaskLike")
           case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
             typeclasses.args.map { case Term.Name(it) => it }.toSet
 

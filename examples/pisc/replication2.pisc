@@ -3,8 +3,6 @@
 @import cats.effect.Async
 @import cats.effect.std.Console
 
-@import scala.concurrent.duration._
-
 @val gen = new scala.util.Random
 
 ⟦ typeclasses = (Async,Console) ⟧
@@ -53,7 +51,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt.abs)*/>.)   \
             | (!.x(y). τ/*Console[F].println(2->y)*/.)                        \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, one infinite subscriber, bound output guard ✔
 
@@ -123,7 +121,7 @@ Main = ν(x) ( (x(y). τ/*Console[F].println(1->y)*/. x(z). τ/*Console[F].print
             | (!.x</*Async[F].delay(gen.nextInt)*/>.)                                      \
             )
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # multiple finite publishers, one infinite subscriber ✔
 

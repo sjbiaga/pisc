@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi lists.scala -- 1 2  3 5
+# ./examples $ pi -ce lists.scala -- 1 2  3 5
 
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*

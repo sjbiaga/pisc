@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -19,10 +19,6 @@ function pi() {
             local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
-        fs2)
-            local deps='--dep co.fs2::fs2-core:3.13.0-M7
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
                         --dep com.typesafe.akka::akka-actor-typed:2.10.12'
@@ -32,6 +28,10 @@ function pi() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        monix)
+            local deps='--dep io.monix::monix:3.4.1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
@@ -64,7 +64,7 @@ function pi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -88,6 +88,10 @@ function pi_() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        monix)
+            local deps='--dep io.monix::monix:3.4.1
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
@@ -120,7 +124,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -130,9 +134,18 @@ function pio() {
         *)
             ;;
     esac
+    case "$emit" in
+        fs2|monix)
+            local F=`grep 'type.F.=.' in/"$1".scala.in`
+            local F=${F##*.}.
+            ;;
+        *)
+            local F=
+            ;;
+    esac
     while [ $# -gt 0 ]
     do
-        { cat ../${emit}/main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
+        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
         scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift

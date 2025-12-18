@@ -5,10 +5,8 @@ ThisBuild / scalaVersion := "3.8.0-RC3"
 
 val akkaSecureToken = "cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx"
 
-Global / resolvers ++= Seq(
-                           "akka-secure-mvn" at s"https://repo.akka.io/$akkaSecureToken/secure",
-                           Resolver.url("akka-secure-ivy", url(s"https://repo.akka.io/$akkaSecureToken/secure"))(Resolver.ivyStylePatterns)
-                           )
+Global / resolvers ++= Seq("akka-secure-mvn" at s"https://repo.akka.io/$akkaSecureToken/secure",
+                           Resolver.url("akka-secure-ivy", url(s"https://repo.akka.io/$akkaSecureToken/secure"))(Resolver.ivyStylePatterns))
 
 val scala2Opts = Seq("-feature", "-language:implicitConversions", "-deprecation", "-Ytasty-reader")
 val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-Xwiki-syntax", "-Xmax-inlines", "128", "-new-syntax")
@@ -17,7 +15,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `monix-main`, `monix-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
@@ -133,6 +131,32 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
     crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(fs2, munit % Test)
+  )
+
+lazy val `monix-main` = (project in file("monix/main"))
+  .settings(
+    name := "monix π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC3",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(monix, munit % Test)
+  )
+
+lazy val `monix-main_` = (project in file("monix/main_"))
+  .settings(
+    name := "monix_ π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC3",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC3"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(monix, munit % Test)
   )
 
 lazy val `zs-main` = (project in file("zs/main"))

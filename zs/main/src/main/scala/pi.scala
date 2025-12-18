@@ -265,11 +265,7 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, `()`] =
-        for
-          name <- Π.ν
-          _    <- ZStream.fromZIO(Promise.make[Throwable, Unit].map(name -> _)).through1(h).tap(_ => code)
-        yield
-          name
+        apply().tap(_ => code)
 
     /**
       * constant output prefix
@@ -281,7 +277,7 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code)
+      apply(value).tap(_ => code)
 
     object `null`:
 
@@ -309,7 +305,7 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code)
+        apply[S](value).tap(_ => code)
 
     /**
       * input prefix
