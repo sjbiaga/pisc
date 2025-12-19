@@ -28,13 +28,13 @@
 
 package pisc
 package emitter
-package zs
+package monix
 
 import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
-import zs.Meta.*
+import monix.Meta.*
 
 
 object Program:
@@ -58,7 +58,9 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
-                `_ <- ZStream.fromZIO(*)`(Term.Apply(Term.Select(semaphore.get, "tryWithPermit"), Term.ArgClause(Term.Select(sum.emit, "runDrain") :: Nil)))
+                val υidυ = id
+                `* <- Stream.evalF(*)`(υidυ -> Term.Select(semaphore.get, "tryAcquire")) ::
+                Enumerator.Generator(`* <- …`(), `if * then … else …`(υidυ, sum.emit, Nil))
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
 
@@ -80,21 +82,21 @@ object Program:
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val zss = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val ifs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
-            `* <- Semaphore.make(…)`(sem.get),
-            `_ <- *`(`List( *, … ).mergeAll`(zss*))
+            `* <- Semaphore[F](…)`(sem.get),
+            `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
           )
 
         case it: + =>
-          val zss = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val ifs = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val sem = id
 
           * = List(
-            `* <- Semaphore.make(…)`(sem),
-            `_ <- *`(`List( *, … ).collectAllPar(…)`(zss*)(sem))
+            `* <- Semaphore[F](…)`(sem),
+            `_ <- *`(`Observable( *, … ).mapParF(…)`(ifs*)(sem))
           )
 
         /////////////////////////////////////////////////////////// summation //
@@ -106,9 +108,9 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val zss = it.components.foldRight(List[Term]())(_.emit :: _)
+          val ifs = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).mergeAll`(zss*))
+          * = `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -124,18 +126,18 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { it => `* <- *`(it -> "ν") }.toList
+          * = names.map { it => `* <- *`(it -> `*[F]`("ν")) }.toList
 
         case τ(Some((Left(enums), _))) =>
-          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
-          * = * ::: `ZStream.fromZIO(…)`(enums)
+          * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)))
+          * = * ::: `Stream.evalF(…)`(enums)
 
         case τ(Some((Right(term), _))) =>
           val expr = term
-          * = `_ <- *`(Term.Apply(Term.Apply(\("τ"), Term.ArgClause(Nil)), Term.ArgClause(expr :: Nil)))
+          * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)), Term.ArgClause(expr :: Nil)))
 
         case τ(_) =>
-          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
+          * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)))
 
 
         case π(λ(Symbol(ch)), Some(nu @ "ν"), code, params*) =>
@@ -249,7 +251,7 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              * :+= `_ <- ZStream.fromZIO(*)`(term)
+              * :+= `_ <- Stream.evalF(*)`(term)
             case _ =>
 
         case _: π => ??? // caught by parser
@@ -258,6 +260,7 @@ object Program:
 
 
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
+
         case ?:(((lhs, rhs), mismatch), t, f) =>
           * = f.fold(Nil)(_.emit)
 
@@ -483,14 +486,14 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              * = `_ <- *`(Term.Apply(Term.Select("τ", "!"), Term.ArgClause(pace :: Nil)))
-              * = * ::: `ZStream.fromZIO(…)`(enums)
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"), Term.ArgClause(pace :: Nil)))
+              * = * ::: `Stream.evalF(…)`(enums)
             case Some((Right(term), _)) =>
               val expr = term
-              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select("τ", "!"), Term.ArgClause(pace :: Nil)),
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"), Term.ArgClause(pace :: Nil)),
                                       Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = `_ <- *`(Term.Apply(Term.Select("τ", "!"), Term.ArgClause(pace :: Nil)))
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"), Term.ArgClause(pace :: Nil)))
 
           * = * ::: sum.emit
 
@@ -498,15 +501,15 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              * = `_ <- *`(Term.Apply(Term.Select("τ", "!"),
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"),
                                       Term.ArgClause(Nil)))
-              * = * ::: `ZStream.fromZIO(…)`(enums)
+              * = * ::: `Stream.evalF(…)`(enums)
             case Some((Right(term), _)) =>
               val expr = term
-              * = `_ <- *`(Term.Apply(Term.Select("τ", "!"),
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"),
                                       Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = `_ <- *`(Term.Apply(Term.Select("τ", "!"),
+              * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"),
                                       Term.ArgClause(Nil)))
 
           * = * ::: sum.emit
@@ -514,13 +517,13 @@ object Program:
         case !(_, Some((time, unit)), _, sum) =>
           val pace = Term.Select(Lit.Long(time), unit)
 
-          * = `_ <- *`(Term.Apply(Term.Select("τ", "!"), Term.ArgClause(pace :: Nil)))
+          * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"), Term.ArgClause(pace :: Nil)))
 
           * = * ::: sum.emit
 
         case !(_, None, _, sum) =>
 
-          * = `_ <- *`(Term.Apply(Term.Select("τ", "!"), Term.ArgClause(Nil)))
+          * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "!"), Term.ArgClause(Nil)))
 
           * = * ::: sum.emit
 
@@ -560,17 +563,35 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * = `_ <- *`(Term.Apply(term, Term.ArgClause(args)))
+          * = `_ <- *`(Term.Apply(Term.ApplyType(term, Type.ArgClause(\\("F") :: Nil)), Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
       *
 
 
-  final class Main:
+  final class Main(F: String):
+
+    implicit private def `*[F]`(* : List[Enumerator]): Term =
+      if *.nonEmpty then `for *[F] yield ()`(* *)
+      else \(`_ <- \\.unit`)
 
     def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
+
+      given Set[String] =
+        prog.head match
+          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Temporal")
+          case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
+            typeclasses.args.map { case Term.Name(it) => it }.toSet
+
+      val Array(tpe, _path*) = F.split('.').reverse
+      val path = _path.reverse.map(\(_)).foldLeft("_root_": Term)(Term.Select(_, _))
+
+      Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
+                Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
+                Type.Bounds(None, None, Nil, Nil))
+      ::
       prog
         .drop(1)
         .map(_ -> _.emit(using id()))

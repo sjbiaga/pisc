@@ -1,0 +1,49 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ ppi_ -monix hanoix.scala
+
+@import cats.effect.Async
+
+@given [F[_]: Concurrent]: Conversion[`()`[F], Int] = _.`()`[Int]
+
+@def ![F[_]: Concurrent]: Seq[String] => F[Seq[String]] = { _ => Concurrent[F].pure(Seq(null)) }
+
+⟦ typeclasses = (Async,Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+
+Main = ν(a,b,c)      \
+     ( (!.a<"a">.)   \
+     | (!.b<"b">.)   \
+     | (!.c<"c">.)   \
+     | Hanoi(a,b,c)  \
+     )
+
+Hanoi(a,b,c,n*) = ν(w)                                                 \
+                ( τ/* _ <- Async[F].delay(print("n = "));              \
+                     'n <- Async[F].delay {                            \
+                             try                                       \
+                               scala.io.StdIn.readLine.toInt           \
+                             catch _ => -1                             \
+                           }                                           \
+                    */.                                                \
+                  Hanoi(a,b,c,n,w)                                     \
+                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.               \
+                  τ/*_ <- Async[F].delay(println(s"#${'w} moves"))*/.  \
+                )
+
+
+Move(from,to,z) = from(x).to(y).                                    \
+                  τ/*Async[F].delay(println(s"${'x} -> ${'y}"))*/.  \
+                                z</*Async[F].pure(1)*/>.
+
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                                      \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )                     \
+                   else ν(x)                                                  \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                               \
+                      | x(x). ν(y)                                            \
+                              ( Move(a,c,y)                                   \
+                              | y(y). ν(z)                                    \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)               \
+                                      | z(z).w</*Async[F].pure('x+'y+'z)*/>.  \
+                                      )                                       \
+                              )                                               \
+                      )

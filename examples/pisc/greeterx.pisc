@@ -2,9 +2,13 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-@given Conversion[`()`, String] = _.`()`[String]
+@import cats.effect.Async
 
-@val nl: Seq[String] => IO[Seq[String]] = { case Seq(it) => IO { Seq(s"$it\n") } }
+@given [F[_]: Concurrent]: Conversion[`()`[F], String] = _.`()`[String]
+
+@def nl[F[_]: Concurrent]: Seq[String] => F[Seq[String]] = { case Seq(it) => Concurrent[F].pure { Seq(s"$it\n") } }
+
+⟦ typeclasses = (Async,Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 
@@ -16,10 +20,10 @@ Greeter(stdin, stdout, line*) = \
                               ) \
                               | \
                               ( stdout(prompt) /* nl */. \
-                                τ /* _    <- IO { print('prompt) }; \
-                                    'line <- IO.blocking { scala.io.StdIn.readLine } */. \
+                                τ /* _    <- Async[F].delay(print('prompt)); \
+                                    'line <- Async[F].delay { scala.io.StdIn.readLine } */. \
                                                          stdin<line>.stdout(greet) /* nl */. \
-                                [/* !'greet */ = False] τ/*print('greet)*/. \
+                                [/* !'greet */ = False] τ/*Async[F].delay(print('greet))*/. \
                               ) \
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
@@ -30,7 +34,7 @@ Greeter'(stdout, name) = \
                        ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">. ) \
                        + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
                        + ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"] \
-                           [name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.  ) \
+                           [name ≠ "Voldemort"] stdout</*Async[F].pure(s"Hello ${'name}!")*/>.  ) \
                        )
 
 Greeter"(stdout, name) = \
@@ -39,7 +43,7 @@ Greeter"(stdout, name) = \
                          else \
                            if name = "Voldemort" \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           else stdout</*s"Hello ${'name}!"*/>. \
+                           else stdout</*Async[F].pure(s"Hello ${'name}!")*/>. \
                        )
 
 Greeter"'(stdout, name) = \
@@ -48,5 +52,5 @@ Greeter"'(stdout, name) = \
                           : \
                             name = "Voldemort" \
                             ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                            : stdout</*s"Hello ${'name}!"*/>. \
+                            : stdout</*Async[F].pure(s"Hello ${'name}!")*/>. \
                         )

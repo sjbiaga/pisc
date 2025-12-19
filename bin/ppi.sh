@@ -4,7 +4,7 @@ function ppi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -30,6 +30,10 @@ function ppi() {
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
+        monix)
+            local deps='--dep io.monix::monix:3.4.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
         zs)
             local deps='--dep dev.zio::zio-streams:2.1.23'
             ;;
@@ -48,7 +52,7 @@ function ppi() {
         args="$args $1"
         shift
     done
-    set ../$emit/ppi.scala ${srcs#?}
+    set ${srcs#?} ../${emit}/ppi.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.8.0-RC3 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -60,7 +64,7 @@ function ppi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -86,6 +90,10 @@ function ppi_() {
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
+        monix)
+            local deps='--dep io.monix::monix:3.4.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
         zs)
             local deps='--dep dev.zio::zio-streams:2.1.23'
             ;;
@@ -104,7 +112,7 @@ function ppi_() {
         args="$args $1"
         shift
     done
-    set ../$emit/ppi_.scala ${srcs#?}
+    set ${srcs#?} ../${emit}/ppi_.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.8.0-RC3 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -116,7 +124,7 @@ function ppio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-akka|-pekko|-fs2|-zs)
+        -ce|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -126,9 +134,18 @@ function ppio() {
         *)
             ;;
     esac
+    case "$emit" in
+        fs2|monix)
+            local F=`grep 'type.F.=.' in/"$1".scala.in`
+            local F=${F##*.}.
+            ;;
+        *)
+            local F=
+            ;;
+    esac
     while [ $# -gt 0 ]
     do
-        { cat ../${emit}/main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
+        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
         scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift

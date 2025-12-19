@@ -144,11 +144,13 @@ Emitters
 
 - [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/ce/README.md)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/fs2/README.md)
-
 - [Akka](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/akka/README.md)
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/pekko/README.md)
+
+- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/fs2/README.md)
+
+- [Monix](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/monix/README.md)
 
 - [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/zs/README.md)
 

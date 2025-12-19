@@ -31,6 +31,7 @@ package object Π:
   import _root_.scala.collection.immutable.Seq
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.cats.instances.seq.*
   import _root_.cats.syntax.apply.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
@@ -129,6 +130,7 @@ package object Π:
         case _ =>
           this.name == that.name
 
+    inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
 
@@ -176,13 +178,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+        apply(value*).evalTap(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+        apply(pace, value*).evalTap(_ => code)
 
       object `null`:
 
@@ -195,7 +197,7 @@ package object Π:
         /**
           * `null` replication output guard w/ pace
           */
-        inline def apply(pace: FiniteDuration, arity: Int): Stream[F, Unit] =
+        inline def apply(arity: Int, pace: FiniteDuration): Stream[F, Unit] =
           self.!.apply(pace, Seq.fill(arity)(new `()`[F](null))*)
 
         /**
@@ -207,7 +209,7 @@ package object Π:
         /**
           * `null` replication output guard w/ pace w/ code
           */
-        inline def apply[T](pace: FiniteDuration, arity: Int)(code: => F[T]): Stream[F, Unit] =
+        inline def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
           self.!.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(code)
 
       object * :
@@ -228,13 +230,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          value.traverse(Stream.eval).repeat.evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code)
+          apply[S](value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          value.traverse(Stream.eval).repeat.spaced(pace).evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code)
+          apply[S](pace, value*).evalTap(_ => code)
 
       /**
         * replication input guard
@@ -252,13 +254,13 @@ package object Π:
         * replication input guard w/ code
         */
       def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }.evalTap(_ => o)
+        s.evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap(_ => o)
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.spaced(pace).evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }.evalTap(_ => o)
+        s.spaced(pace).evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap(_ => o)
 
     object ν:
 
@@ -276,11 +278,7 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T](arity: Int)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-        for
-          names <- Seq.fill(arity)(Π.ν[F].map(identity)).sequence
-          _     <- Stream.eval(Deferred[F, Unit].map(names -> _)).through1(t).evalTap(_ => code)
-        yield
-          names
+        apply(arity).evalTap(_ => code)
 
     /**
       * constant output prefix
@@ -292,7 +290,7 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+      apply(value*).evalTap(_ => code)
 
     object `null`:
 
@@ -320,7 +318,7 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        value.traverse(Stream.eval).evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code)
+        apply[S](value*).evalTap(_ => code)
 
     /**
       * input prefix
@@ -332,7 +330,7 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      s.head.evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }
+      apply().evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }
 
     override def toString: String = if name == null then "null" else name.toString
 

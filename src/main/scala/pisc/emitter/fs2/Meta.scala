@@ -38,15 +38,19 @@ import parser.Calculus.`(*)`
 
 object Meta extends emitter.shared.streams.Meta:
 
+  override protected lazy val \ = "Stream"
+
+  override protected lazy val \\ = "eval"
+
   def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: Stream[F, Any]`,
+               "Main", `String*`("args"), `: Stream[F, Unit]`,
                body)
     case `(*)`(identifier, _, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: Stream[F, Any]`,
+               identifier, `(…)`(params*), `: Stream[F, Unit]`,
                body)
 
 

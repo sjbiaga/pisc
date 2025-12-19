@@ -1,0 +1,45 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ ppi_ -zs hanoiz.scala
+
+@given Conversion[`()`, Int] = _.`()`[Int]
+
+@val ! : Seq[String] => Task[Seq[String]] = { _ => ZIO.succeed(Seq(null)) }
+
+Main = ν(a,b,c)      \
+     ( (!.a<"a">.)   \
+     | (!.b<"b">.)   \
+     | (!.c<"c">.)   \
+     | Hanoi(a,b,c)  \
+     )
+
+Hanoi(a,b,c,n*) = ν(w)                                        \
+                ( τ/* _ <- ZIO.attempt(print("n = "));        \
+                     'n <- ZIO.succeedBlocking {              \
+                             try                              \
+                               scala.io.StdIn.readLine.toInt  \
+                             catch _ => -1                    \
+                           }                                  \
+                    */.                                       \
+                  Hanoi(a,b,c,n,w)                            \
+                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
+                  τ/*ZIO.debug(s"#${'w} moves")*/.            \
+                )
+
+
+Move(from,to,z) = from(x).to(y).                      \
+                  τ/*ZIO.debug(s"${'x} -> ${'y}")*/.  \
+                                z</*ZIO.succeed(1)*/>.
+
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                                    \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )                   \
+                   else ν(x)                                                \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                             \
+                      | x(x). ν(y)                                          \
+                              ( Move(a,c,y)                                 \
+                              | y(y). ν(z)                                  \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)             \
+                                      | z(z).w</*ZIO.succeed('x+'y+'z)*/>.  \
+                                      )                                     \
+                              )                                             \
+                      )

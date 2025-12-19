@@ -31,6 +31,7 @@ package object Π:
   import _root_.scala.collection.immutable.Seq
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.cats.instances.seq.*
   import _root_.cats.syntax.apply.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
@@ -131,6 +132,7 @@ package object Π:
         case _ =>
           this.name == that.name
 
+    inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
 
@@ -178,13 +180,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
+        apply(value*).evalTap(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        Stream.awakeEvery(pace).evalMap(_ => Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code).interruptWhen(d)
+        apply(pace, value*).interruptWhen(d)
 
       object `null`:
 
@@ -197,8 +199,8 @@ package object Π:
         /**
           * `null` replication output guard w/ pace
           */
-        inline def apply(_pace: FiniteDuration, _arity: Int): Stream[F, Unit] =
-          self.`null`(_arity)
+        inline def apply(_arity: Int, _pace: FiniteDuration): Stream[F, Unit] =
+          apply(_arity)
 
         /**
           * `null` replication output guard w/ code
@@ -209,8 +211,8 @@ package object Π:
         /**
           * `null` replication output guard w/ pace w/ code
           */
-        inline def apply[T](_pace: FiniteDuration, _arity: Int)(code: => F[T]): Stream[F, Unit] =
-          self.`null`(_arity)(code)
+        inline def apply[T](_arity: Int, _pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
+          apply(_arity)(code)
 
       object * :
 
@@ -230,13 +232,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          value.traverse(Stream.eval).repeat.evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
+          apply[S](value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          value.traverse(Stream.eval).repeat.spaced(pace).evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code).interruptWhen(d)
+          apply[S](pace, value*).evalTap(_ => code)
 
       /**
         * replication input guard
@@ -254,13 +256,13 @@ package object Π:
         * replication input guard w/ code
         */
       def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => o }.interruptWhen(d)
+        s.evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => o }.interruptWhen(d)
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.spaced(pace).evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => o }.interruptWhen(d)
+        s.spaced(pace).evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => o }.interruptWhen(d)
 
     object ν:
 
@@ -278,11 +280,7 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T](arity: Int)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-        for
-          names <- Seq.fill(arity)(Π.ν[F].map(identity)).sequence
-          _     <- Stream.eval(Deferred[F, Unit].map(names -> _)).through1(t).evalTap(_ => code)
-        yield
-          names
+        apply(arity).evalTap(_ => code)
 
     /**
       * constant output prefix
@@ -294,7 +292,7 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => code)
+      apply(value*).evalTap(_ => code)
 
     object `null`:
 
@@ -308,7 +306,7 @@ package object Π:
         * `null` output prefix w/ code
         */
       def apply[T](_arity: Int)(code: => F[T]): Stream[F, Unit] =
-        Stream.eval(d.complete(Right(())).void).evalTap(_ => code)
+        apply(_arity).evalTap(_ => code)
 
     object * :
 
@@ -322,19 +320,19 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        value.traverse(Stream.eval).evalMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(t).evalTap(_ => code)
+        apply[S](value*).evalTap(_ => code)
 
     /**
       * input prefix
       */
     def apply(): Stream[F, Seq[`()`[F]]] =
-      s.head
+      s.head.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => Temporal[F].unit }
 
     /**
       * input prefix w/ code
       */
     def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      s.head.evalMap { it => code(it.`()`[Seq[T]]).map(_.map(new `()`[F](_))) }
+      s.head.evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap { case Seq(it, _*) if it.name == null => d.complete(Right(())).void case _ => Temporal[F].unit }
 
     override def toString: String = if name == null then "null" else name.toString
 

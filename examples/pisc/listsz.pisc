@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ ppi_ listsz.scala -- 1 2 3 5 7
+# ./examples $ ppi_ -zs listsz.scala -- 1 2 3 5 7
 
 # https://github.com/alexj136/nodes/blob/master/examples/lists
 

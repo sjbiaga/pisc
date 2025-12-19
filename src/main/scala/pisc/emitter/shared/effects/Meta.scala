@@ -50,7 +50,7 @@ abstract trait Meta extends shared.Meta:
     else \(`_ <- \\.unit`)
 
 
-  val `_ <- \\.unit` = `_ <- \\.*`("unit")
+  lazy val `_ <- \\.unit` = `_ <- \\.*`("unit")
 
 
   def `_ <- \\.*`(* : String): Enumerator.Generator =
@@ -75,7 +75,8 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede"))) =>
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")))
+             | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil)) =>
             `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
