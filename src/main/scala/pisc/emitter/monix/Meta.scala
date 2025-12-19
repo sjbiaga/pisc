@@ -84,7 +84,7 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `Observable( *, … ).mapParF`(* : Term*): Term =
     *.flatMap {
-      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
@@ -92,7 +92,7 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `Observable( *, … ).mapParF(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
-      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)

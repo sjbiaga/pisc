@@ -167,13 +167,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        ZStream.fromZIO(Promise.make[Throwable, Unit].map(value -> _)).repeat(Schedule.forever).through1(h).tap(_ => code).interruptWhen(p)
+        apply(value).tap(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: Duration, value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-        ZStream.tick(pace).mapZIO(_ => Promise.make[Throwable, Unit].map(value -> _)).through1(h).tap(_ => code).interruptWhen(p)
+        apply(pace, value).tap(_ => code)
 
       object `null`:
 
@@ -187,7 +187,7 @@ package object Π:
           * `null` replication output guard w/ pace
           */
         inline def apply(_pace: Duration): ZStream[Any, Throwable, Unit] =
-          self.`null`()
+          apply()
 
         /**
           * `null` replication output guard w/ code
@@ -199,7 +199,7 @@ package object Π:
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](_pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          self.`null`()(code)
+          apply()(code)
 
       object * :
 
@@ -219,13 +219,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code).interruptWhen(p)
+          apply[S](value).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h).tap(_ => code).interruptWhen(p)
+          apply[S](pace, value).tap(_ => code)
 
       /**
         * replication input guard

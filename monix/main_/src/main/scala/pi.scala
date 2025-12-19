@@ -179,13 +179,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        Iterant.repeatEvalF(Deferred[F, Unit].map(value -> _)).through1(ch).mapEval(code.as(_))
+        apply(value).mapEval(code.as(_))
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        Iterant.intervalAtFixedRate(pace).mapEval(_ => Deferred[F, Unit].map(value -> _)).through1(ch).mapEval(code.as(_))
+        apply(pace, value).mapEval(code.as(_))
 
       object `null`:
 
@@ -199,7 +199,7 @@ package object Π:
           * `null` replication output guard w/ pace
           */
         inline def apply(_pace: FiniteDuration): Iterant[F, Unit] =
-          self.`null`()
+         apply()
 
         /**
           * `null` replication output guard w/ code
@@ -211,7 +211,7 @@ package object Π:
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](_pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
-          self.`null`()(code)
+          apply()(code)
 
       object * :
 
@@ -231,13 +231,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          Iterant.repeatEvalF(value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch).mapEval(code.as(_))
+          apply[S](value).mapEval(code.as(_))
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          Iterant.intervalAtFixedRate(pace).mapEval(_ => value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch).mapEval(code.as(_))
+          apply[S](pace, value).mapEval(code.as(_))
 
       /**
         * replication input guard

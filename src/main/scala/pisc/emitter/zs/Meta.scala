@@ -40,18 +40,18 @@ object Meta extends emitter.shared.effects.Meta:
 
   override protected lazy val \ = "ZStream"
 
-  val `: ZStream[Any, Throwable, Any]` =
+  val `: ZStream[Any, Throwable, Unit]` =
     Some(Type.Apply(\\(\), Type.ArgClause(\\("Any") :: \\("Throwable") :: \\("Unit") :: Nil)))
 
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: ZStream[Any, Throwable, Any]`,
+               "Main", `String*`("args"), `: ZStream[Any, Throwable, Unit]`,
                body)
     case `(*)`(identifier, _, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: ZStream[Any, Throwable, Any]`,
+               identifier, `(…)`(params*), `: ZStream[Any, Throwable, Unit]`,
                body)
 
 

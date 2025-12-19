@@ -70,7 +70,7 @@ abstract trait Meta extends shared.effects.Meta:
 
   def `* <- Semaphore[F](…)`(* : String): Enumerator.Generator =
     `* <- Stream.evalF(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("F") :: Nil)),
-                                          Term.ArgClause(Lit.Int(1) :: Nil)))
+                                           Term.ArgClause(Lit.Int(1) :: Nil)))
 
 
   @tailrec
@@ -91,7 +91,8 @@ abstract trait Meta extends shared.effects.Meta:
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))) =>
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit")))
+             | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil)) =>
             `for *[F] yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())

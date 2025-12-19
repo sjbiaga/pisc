@@ -179,13 +179,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        Iterant.repeatEvalF(Deferred[F, Unit].map(value -> _)).through1(ch).mapEval(code.as(_))
+        apply(value).mapEval(code.as(_))
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        Iterant.intervalAtFixedRate(pace).mapEval(_ => Deferred[F, Unit].map(value -> _)).through1(ch).mapEval(code.as(_))
+        apply(pace, value).mapEval(code.as(_))
 
       object `null`:
 
@@ -231,13 +231,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          Iterant.repeatEvalF(value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch).mapEval(code.as(_))
+          apply[S](value).mapEval(code.as(_))
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          Iterant.intervalAtFixedRate(pace).mapEval(_ => value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch).mapEval(code.as(_))
+          apply[S](pace, value).mapEval(code.as(_))
 
       /**
         * replication input guard
@@ -331,7 +331,7 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T]()(code: T => F[T]): Iterant[F, `()`[F]] =
-      s.take(1).mapEval { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply().mapEval { it => code(it.`()`[T]).map(new `()`[F](_)) }
 
     override def toString: String = if name == null then "null" else name.toString
 

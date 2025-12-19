@@ -185,7 +185,7 @@ lazy val `zs-main_` = (project in file("zs/main_"))
     libraryDependencies ++= Seq(zs, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "[fz]s*/pi*.scala" || "examples/*.scala"
+unmanagedSources / excludeFilter := "ce/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "[fz]s*/pi*.scala" || "monix/pi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 
