@@ -148,6 +148,8 @@ Emitters
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/main-experimental/pekko/README.md)
 
+- [Monix](https://github.com/sjbiaga/pisc/tree/main-experimental/monix/README.md)
+
 - [ZStream](https://github.com/sjbiaga/pisc/tree/main-experimental/zs/README.md)
 
 

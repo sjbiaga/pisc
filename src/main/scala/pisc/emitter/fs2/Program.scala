@@ -548,7 +548,7 @@ object Program:
                 Type.Bounds(None, None, Nil, Nil))
       ::
       prog
-        .tail
+        .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

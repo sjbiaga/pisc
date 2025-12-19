@@ -118,6 +118,7 @@ package object Π:
         case _ =>
           this.name == that.name
 
+    inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
 
