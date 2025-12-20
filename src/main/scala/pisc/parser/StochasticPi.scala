@@ -36,7 +36,8 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import scala.meta.Lit
+import scala.meta.{ Lit, Term }
+import scala.meta.dialects.Scala3
 
 import StochasticPi.*
 import Calculus.*
@@ -217,6 +218,8 @@ abstract class StochasticPi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _typeclasses: List[String] = Nil
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _sπ_id: helper.υidυ = null
@@ -276,7 +279,15 @@ object StochasticPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter { case ce, cef, kk }
+  enum Emitter(val canScale: Boolean = false,
+               val hasReplicationInputGuardFlaw: Boolean = true,
+               val assignsReplicationParallelism1: Boolean = false):
+    case ce extends Emitter()
+    case cef extends Emitter()
+    case fs2 extends Emitter(hasReplicationInputGuardFlaw = false,
+                             assignsReplicationParallelism1 = true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    private[parser] case test extends Emitter()
 
   type Actions = Set[String]
 
@@ -663,6 +674,9 @@ object StochasticPi:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
+          case !(_, _, Some(μ), sum) if emitter.assignsReplicationParallelism1 =>
+            sum.graph ++ Seq(μ -> sum)
+
           case !(_, _, Some(μ), sum) =>
             sum.graph ++ Seq(μ -> μ, μ -> sum)
 
@@ -717,6 +731,7 @@ object StochasticPi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _typeclasses = Nil
       _par = 9
       _traces = None
       _dirs = List(Map("errors" -> _werr,
@@ -724,6 +739,7 @@ object StochasticPi:
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
                        "scaling" -> _scaling,
+                       "typeclasses" -> _typeclasses,
                        "parallelism" -> _par,
                        "traces" -> _traces))
       eqtn = List()
@@ -798,4 +814,12 @@ object StochasticPi:
           case _ => true
         }
 
-      Right(`(*)`(null, λ(Lit.Int(_par))), `+`(-1)) :: prog
+      if _typeclasses.isEmpty
+      then
+        Right((`(*)`(null, λ(Lit.Null())), `+`(-1)): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
+        prog
+      else
+        Right((`(*)`(null, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
+        prog

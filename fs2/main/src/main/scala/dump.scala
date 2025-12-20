@@ -26,58 +26,19 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-package pisc
-package emitter
-package shared
-package effects
+import _root_.scala.collection.immutable.List
 
-import scala.annotation.tailrec
+import _root_.cats.effect.Temporal
+import _root_.cats.effect.std.Queue
 
-import scala.meta.*
-import dialects.Scala3
+import `Π-loop`.*
 
 
-abstract trait Meta extends shared.Meta:
+package object `Π-dump`:
 
-  protected lazy val \ = ""
+  type -[F[_]] = Queue[F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
 
-  inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
+  final class πdump[F[_]: Temporal]:
 
-  inline implicit def \\(* : Enumerator): Term = \(*)
-
-  implicit def \(* : List[Enumerator]): Term =
-    if *.nonEmpty then `for * yield ()`(* *)
-    else \(`_ <- \\.unit`)
-
-
-  val `_ <- \\.unit` = `_ <- \\.*`("unit")
-
-
-  def `_ <- \\.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(\, *))
-
-
-  @tailrec
-  final def `for * yield ()`(* : Enumerator*): Term =
-    if *.nonEmpty
-    then
-      if !(*.head.isInstanceOf[Enumerator.Generator])
-      then
-        `for * yield ()`((`_ <- \\.unit` +: *)*)
-      else if *.size == 1
-      then
-        *.head match
-          case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
-            `for * yield ()`(it.enums*)
-          case Enumerator.Generator(Pat.Wildcard(), it) =>
-            it
-          case _ =>
-            Term.ForYield(*.toList, Lit.Unit())
-      else
-        *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede"))) =>
-            `for * yield ()`(*.init*)
-          case _ =>
-            Term.ForYield(*.toList, Lit.Unit())
-    else
-      `for * yield ()`(`_ <- \\.unit`)
+    def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+      Temporal[F].unit

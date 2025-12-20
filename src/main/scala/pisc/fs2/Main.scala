@@ -27,7 +27,7 @@
  */
 
 package pisc
-package kk
+package fs2
 
 import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.StandardCharsets.UTF_8
@@ -39,8 +39,8 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.StochasticPi
-import parser.Calculus.`(*)`
-import emitter.kk.Program
+import parser.Calculus.{ `(*)`, λ }
+import emitter.fs2.Program
 
 
 object Main extends helper.Main:
@@ -48,7 +48,7 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    var opt = 1
+    var F = "cats.effect.IO"
 
     def pin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
@@ -57,7 +57,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.kk, in)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.fs2, in)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -72,16 +72,52 @@ object Main extends helper.Main:
 
         val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
-        val ps = Program.Main(opt)(prog)
+        val ps =
+          ( F.split('.').reverse match
+              case Array(tpe, _path*) =>
+                val path = _path.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _))
+                Defn.Type(Nil, Type.Name("F"), Type.ParamClause(Nil),
+                          Type.Select(path.asInstanceOf[Term.Select], Type.Name(tpe)),
+                          Type.Bounds(None, None, Nil, Nil))
+          )
+          ::
+          ( prog.tail.head match
+              case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
+                Defn.Val(Nil, Pat.Var(Term.Name("π-parallelism")) :: Nil, None, parallelism)
+          )
+          :: Program.Main()(prog)
+
         val is = prog_.drop(2).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.head + "\n\n"
-                 + (ps.tail.zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
-                   .sortBy(_._2)
-                   .map(_._1)
-                   .mkString("\n\n")
+        val tc: String => Type =
+          _.split('.').reverse match
+            case Array(it) => Type.Name(it)
+            case Array(hd, tl*) => Type.Select(tl.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
+
+        val tcs =
+          prog.head match
+            case (`(*)`(_, λ(_: Lit.Null)), _) => Set("Temporal")
+            case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
+              typeclasses.args.map { case Term.Name(it) => it }.toSet
+
+        val code = (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+          .sortBy(_._2)
+          .map(_._1)
+
+        val main = Defn.Class(Mod.Final() :: Nil,
+                              Type.Name("πmain"),
+                              Type.ParamClause(
+                                Type.Param(Nil,
+                                           Type.Name("F"),
+                                           Type.ParamClause(Type.Param(Nil, Name.Placeholder(),
+                                                                       Type.ParamClause(Nil), Type.Bounds(None, None, Nil, Nil)) :: Nil),
+                                           Type.Bounds(None, None, tcs.map(tc).toList, Nil)) :: Nil),
+                              Ctor.Primary(Nil, Name.Anonymous(), Seq.empty),
+                              Template(None, Nil, Template.Body(None, code), Nil))
+
+        val codeʹ = ps.take(2).mkString("\n\n") + "\n\n" + main.toString
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString
@@ -101,7 +137,7 @@ object Main extends helper.Main:
             .enabled
         ).toString + "\n\n"
 
-        bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
+        bwr.write(magic + elvis + init + codeʹ, 0, magic.length + elvis.length + init.length + codeʹ.length)
       catch t =>
         Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage + ".")
         throw t
@@ -111,10 +147,7 @@ object Main extends helper.Main:
         if source ne null then source.close()
 
     args.foreach {
-      case "-O" => opt = 1
-      case it if it.startsWith("-O") =>
-        val arg = it.substring(2)
-        try opt = arg.toInt min 1 max 0
-        catch _ => { opt = 1; pin(arg) }
+      case "-F" => F = "cats.effect.IO"
+      case it if it.startsWith("-F") => F = it.substring(2)
       case it => pin(it)
     }

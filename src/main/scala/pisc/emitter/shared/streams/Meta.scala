@@ -29,7 +29,7 @@
 package pisc
 package emitter
 package shared
-package effects
+package streams
 
 import scala.annotation.tailrec
 
@@ -37,47 +37,63 @@ import scala.meta.*
 import dialects.Scala3
 
 
-abstract trait Meta extends shared.Meta:
+abstract trait Meta extends shared.effects.Meta:
 
-  protected lazy val \ = ""
+  override protected lazy val \ = "Stream"
 
-  inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
-
-  inline implicit def \\(* : Enumerator): Term = \(*)
-
-  implicit def \(* : List[Enumerator]): Term =
-    if *.nonEmpty then `for * yield ()`(* *)
-    else \(`_ <- \\.unit`)
+  val `: Stream[F, Any]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Any") :: Nil)))
 
 
-  val `_ <- \\.unit` = `_ <- \\.*`("unit")
+  def `*[F]`(* : Term) =
+    Term.ApplyType(*, Type.ArgClause(\\("F") :: Nil))
 
 
-  def `_ <- \\.*`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(\, *))
+  def `* <- Stream.eval(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, "eval"), Term.ArgClause(*._2 :: Nil)))
+
+  def `_ <- Stream.eval(*)`(* : Term): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "eval"), Term.ArgClause(* :: Nil)))
+
+  private val `Stream.eval`: Term => Boolean =
+    case Term.Select(Term.Name(`\\`), Term.Name("eval")) => true
+    case Term.Apply(it, _) => `Stream.eval`(it)
+    case Term.ApplyType(it, _) => `Stream.eval`(it)
+    case _ => false
+
+  def `Stream.eval(…)`(`…`: List[Enumerator]): List[Enumerator] =
+    `…`.map {
+      case it @ Enumerator.Generator(_, rhs) if `Stream.eval`(rhs) => it
+      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, "eval"), Term.ArgClause(it.rhs :: Nil)))
+      case it => it
+    }
+
+
+  def `* <- Semaphore[F](…)`(* : String): Enumerator.Generator =
+    `* <- Stream.eval(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("F") :: Nil)),
+                                          Term.ArgClause(Lit.Int(1) :: Nil)))
 
 
   @tailrec
-  final def `for * yield ()`(* : Enumerator*): Term =
+  final def `for *[F] yield ()`(* : Enumerator*): Term =
     if *.nonEmpty
     then
       if !(*.head.isInstanceOf[Enumerator.Generator])
       then
-        `for * yield ()`((`_ <- \\.unit` +: *)*)
+        `for *[F] yield ()`((`_ <- \\.unit` +: *)*)
       else if *.size == 1
       then
         *.head match
           case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
-            `for * yield ()`(it.enums*)
+            `for *[F] yield ()`(it.enums*)
           case Enumerator.Generator(Pat.Wildcard(), it) =>
             it
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
       else
         *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede"))) =>
-            `for * yield ()`(*.init*)
+          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))) =>
+            `for *[F] yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())
     else
-      `for * yield ()`(`_ <- \\.unit`)
+      `for *[F] yield ()`(`_ <- \\.unit`)

@@ -211,9 +211,10 @@ abstract class Encoding extends Calculus:
          | "exclude" | "include"
          | "paceunit"
          | "scaling"
+         | "typeclasses"
          | "parallelism"
-         | "traces" => true
-      case _        => false
+         | "traces"      => true
+      case _             => false
     }
 
     private def boolean: Boolean =
@@ -278,6 +279,12 @@ abstract class Encoding extends Calculus:
         case "scaling"      =>
           _scaling = boolean
 
+        case "typeclasses"  =>
+          _typeclasses = _dir.get._2 match
+            case it: String       => List(it)
+            case it: List[String] => it
+            case _                => throw DirectiveValueParsingException(_dir.get, "a comma separated list")
+
         case "parallelism"  =>
           _par = 1 max number.toInt
 
@@ -303,6 +310,7 @@ abstract class Encoding extends Calculus:
                             "exclude" -> _exclude,
                             "paceunit" -> _paceunit,
                             "scaling" -> _scaling,
+                            "typeclasses" -> _typeclasses,
                             "parallelism" -> _par,
                             "traces" -> _traces)
           catch _ =>
@@ -313,6 +321,7 @@ abstract class Encoding extends Calculus:
                 case "exclude" | "include" => "exclude" -> _exclude
                 case it @ "paceunit"       => it -> _paceunit
                 case it @ "scaling"        => it -> _scaling
+                case it @ "typeclasses"    => it -> _typeclasses
                 case it @ "parallelism"    => it -> _par
                 case it @ "traces"         => it -> _traces
               }
@@ -322,14 +331,15 @@ abstract class Encoding extends Calculus:
           if boolean
           then
             _dirs.head.foreach {
-              case ("errors", it: Boolean)       => _werr = it
-              case ("duplications", it: Boolean) => _dups = it
-              case ("exclude", it: Boolean)      => _exclude = it
-              case ("paceunit", it: String)      => _paceunit = it
-              case ("scaling", it: Boolean)      => _scaling = it
-              case ("parallelism", it: Int)      => _par = it
+              case ("errors", it: Boolean)                => _werr = it
+              case ("duplications", it: Boolean)          => _dups = it
+              case ("exclude", it: Boolean)               => _exclude = it
+              case ("paceunit", it: String)               => _paceunit = it
+              case ("scaling", it: Boolean)               => _scaling = it
+              case ("parallelism", it: Int)               => _par = it
+              case ("typeclasses", it: List[String])      => _typeclasses = it
               case ("traces", it: Option[Option[String]]) => _traces = it
-              case _                             => ???
+              case _                                      => ???
             }
             _dirs = _dirs.tail
 

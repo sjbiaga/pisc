@@ -63,7 +63,6 @@ package object `Π-loop`:
   type \ = IO[Unit]
 
 
-
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): IO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>

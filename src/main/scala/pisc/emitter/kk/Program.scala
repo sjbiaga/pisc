@@ -800,17 +800,17 @@ object Program:
 
     import Optimize.*
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
       given opt: Opt = Opt(Mapʹ())
 
-      ( prog.head match
+      ( prog.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
       prog
-        .tail
+        .drop(2)
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>
@@ -828,4 +828,3 @@ object Program:
             k -> dfn(defn :: Nil, recv)(bind)
         }
         .flatMap { (k, it) => if optLevel > 0 then it.optimize1(using opt.__1(it.name.value + k))._1 else Some(it) }
-        .map(_.toString)

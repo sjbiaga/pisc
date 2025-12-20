@@ -35,6 +35,9 @@ import java.nio.file.Paths
 
 import scala.io.Source
 
+import scala.meta.*
+import dialects.Scala3
+
 import parser.StochasticPi
 import parser.Calculus.`(*)`
 import emitter.ce.Program
@@ -68,14 +71,15 @@ object Main extends helper.Main:
         val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
         val ps = Program.Main()(prog)
-        val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(2).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
-          .sortBy(_._2)
-          .map(_._1)
-          .mkString("\n\n")
+        val code = ps.head.toString + "\n\n"
+                 + (ps.tail.zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+                   .sortBy(_._2)
+                   .map(_._1)
+                   .mkString("\n\n")
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString

@@ -73,7 +73,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -410,15 +409,15 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
-      ( prog.head match
+      ( prog.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
       prog
-        .tail
+        .drop(2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))

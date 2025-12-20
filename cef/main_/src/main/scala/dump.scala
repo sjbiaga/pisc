@@ -96,7 +96,7 @@ package object `Π-dump`:
                  _ <- record(no, ts1, ts, delay, duration)(k1)
                  _ <- if k1 == k2 then IO.unit
                       else record(no, ts2, ts, delay, duration)(k2)
-                 _  <- IO.cede >> dump
+                 _ <- IO.cede >> dump
                yield
                  ()
              case ks: List[String] =>

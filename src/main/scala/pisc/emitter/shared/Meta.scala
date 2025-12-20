@@ -59,6 +59,7 @@ abstract trait Meta:
 
 
   inline implicit def \(* : String): Term.Name = Term.Name(*)
+  inline def \\(* : String): Type.Name = Type.Name(*)
 
 
   def `:`(name: String, clause: String): Option[Type.Apply] =
@@ -178,6 +179,10 @@ abstract trait Meta:
 
   def `π-exclude`(enabled: Actions): Term =
     Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))
+
+  def `π-exclude[F]`(enabled: Actions): Term =
+    Term.Apply(Term.ApplyType(\("π-exclude"), Type.ArgClause(\\("F") :: Nil)),
                Term.ArgClause(enabled.map(Lit.String(_)).toList))
 
 

@@ -86,7 +86,7 @@ object Program:
 
         case it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _) =>
           val parʹ = if ch == par then id else par
-          val ** = if ch == par then `* <- IO.pure(*)`(par -> parʹ) else `_ <- IO.unit`
+          val ** = if ch == par then `* <- IO.pure(*)`(par -> parʹ) else `_ <- \\.unit`
           `for * yield ()`(
             `* <- *`(parʹ -> "ν"),
             `_ <- *`(it.copy(name = λ(Symbol(parʹ)), polarity = None)(it.υidυ).emit(** :: *))
@@ -154,7 +154,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -405,15 +404,15 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
-      ( prog.head match
+      ( prog.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
       prog
-        .tail
+        .drop(2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))
