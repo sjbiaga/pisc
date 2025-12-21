@@ -77,7 +77,7 @@ object Main extends helper.Main:
 
         val ls = bind.drop(2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.head + "\n\n"
+        val code = ps.head.toString + "\n\n"
                  + (ps.tail.zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)

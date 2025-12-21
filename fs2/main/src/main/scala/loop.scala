@@ -58,6 +58,8 @@ package object `Π-loop`:
 
   type &[F[_]] = Ref[F, Long]
 
+  type ~[F[_]] = Semaphore[F]
+
   type *[F[_]] = Queue[F, Unit]
 
   type \[F[_]] = () => F[Unit]
@@ -107,8 +109,7 @@ package object `Π-loop`:
           else ExitCode.Error
         } >>= (!.complete(_).void)
 
-    def loop(parallelism: Int)
-            (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F])
+    def loop(using % : %[F], ! : ![F], & : &[F], ~ : ~[F], - : -[F], * : *[F])
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       %.flatModify { m =>
         m -> {
@@ -143,7 +144,7 @@ package object `Π-loop`:
                  }
           if it.isEmpty && !exit()
           then
-            *.take >> loop(parallelism)
+            *.take >> loop
           else
             ∥(it)(`π-wand`._1)() match
               case Nil =>
@@ -152,42 +153,40 @@ package object `Π-loop`:
                   then
                     this.exit(it.keys.toList)
                   else
-                    *.take >> loop(parallelism)
+                    *.take >> loop
                 }
               case nel =>
-                Semaphore[F](parallelism).flatMap { sem =>
-                  nel.parTraverse { case (key1, key2, _delay) =>
-                                    Temporal[F].uncancelable { _ =>
-                                      val k1 = key1.substring(36)
-                                      val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
-                                      val ^^ = key2.substring(0, 36)
-                                      for
-                                        _  <- sem.acquire
-                                        cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                        p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
-                                        p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
-                                        ((d1, c1), _) = p1
-                                        ((d2, c2), _) = p2
-                                        o1 <- d1.tryGet
-                                        o2 <- d2.tryGet
-                                        _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some(cb)).void
-                                              else Temporal[F].unit
-                                        _  <- if k1 == k2 then Temporal[F].unit
-                                              else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some(cb)).void
-                                              else Temporal[F].unit
-                                        _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some(cb))).void
-                                              else Temporal[F].unit
-                                        _  <- if k1 == k2 then Temporal[F].unit
-                                              else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some(cb))).void
-                                              else Temporal[F].unit
-                                        _  <- cb.await
-                                        _  <- sem.release
-                                      yield
-                                        ()
-                                    }
-                                  } >> loop(parallelism)
-                }
+                nel.parTraverse { case (key1, key2, _delay) =>
+                                  Temporal[F].uncancelable { _ =>
+                                    val k1 = key1.substring(36)
+                                    val k2 = key2.substring(36)
+                                    val ^  = key1.substring(0, 36)
+                                    val ^^ = key2.substring(0, 36)
+                                    for
+                                      _  <- ~.acquire
+                                      cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                      p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
+                                      p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
+                                      ((d1, c1), _) = p1
+                                      ((d2, c2), _) = p2
+                                      o1 <- d1.tryGet
+                                      o2 <- d2.tryGet
+                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some(cb)).void
+                                            else Temporal[F].unit
+                                      _  <- if k1 == k2 then Temporal[F].unit
+                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some(cb)).void
+                                            else Temporal[F].unit
+                                      _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some(cb))).void
+                                            else Temporal[F].unit
+                                      _  <- if k1 == k2 then Temporal[F].unit
+                                            else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some(cb))).void
+                                            else Temporal[F].unit
+                                      _  <- cb.await
+                                      _  <- ~.release
+                                    yield
+                                      ()
+                                  }
+                                } >> loop
         }
       }
 

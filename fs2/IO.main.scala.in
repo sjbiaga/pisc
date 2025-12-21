@@ -34,19 +34,19 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.scala.collection.immutable.Map
 
   import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref }
-  import _root_.cats.effect.std.Queue
+  import _root_.cats.effect.std.{ Queue, Semaphore }
 
   import `Π-dump`.*
   import `Π-loop`.*
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(parallelism: Int, args: List[String])(% : %[IO], / : /[IO], * : *[IO], - : -[IO], ! : ![IO], & : &[IO]) =
+  private def run(args: List[String])(% : %[IO], / : /[IO], * : *[IO], - : -[IO], ! : ![IO], & : &[IO], ~ : ~[IO]) =
     val lπ = πloop[IO]()
     val dπ = πdump[IO]()
     val mπ = π.πmain[IO]()
     ( for
-        _ <- lπ.loop(parallelism)(using %, !, &, -, *)(π.`π-wand`).background
+        _ <- lπ.loop(using %, !, &, ~, -, *)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, *).background
         _ <- dπ.dump(using %, !, -).background
       yield
@@ -70,8 +70,9 @@ object App extends _root_.cats.effect.IOApp:
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)
+      ~ <- Semaphore[π.F](p)
       _ <- sΠ.`π-enable`[π.F](π.`π-main`)(using %)
-      x <- run(p, args)(%, /, *, -, !, &)
+      x <- run(args)(%, /, *, -, !, &, ~)
     yield
       x
 

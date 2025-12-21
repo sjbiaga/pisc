@@ -76,7 +76,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `spin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> spin -fs2 ex
+    sbt:Stochastic π-Calculus[experimental]2Scala> spin -fs2 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
