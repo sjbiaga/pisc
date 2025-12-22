@@ -35,7 +35,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
-import _root_.cats.effect.{ Clock, Deferred, ExitCode, Ref, Temporal }
+import _root_.cats.effect.{ Clock, Deferred, ExitCode, Ref, Temporal, Unique }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
@@ -46,7 +46,9 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, >< }
 
-  type +[F[_]] = ((Deferred[F, Option[CyclicBarrier[F]]], Ref[F, Deferred[F, Option[CyclicBarrier[F]]]]), (Ref[F, Long], (><[F] | Object, Option[Boolean], Rate)))
+  type <>[F[_]] = (CyclicBarrier[F], Unique.Token)
+
+  type +[F[_]] = ((Deferred[F, Option[<>[F]]], Ref[F, Deferred[F, Option[<>[F]]]]), (Ref[F, Long], (><[F] | Object, Option[Boolean], Rate)))
 
   type %[F[_]] = Ref[F, Map[String, Int | (Boolean, +[F])]]
 
@@ -62,7 +64,7 @@ package object `Π-loop`:
 
   type \[F[_]] = () => F[Unit]
 
-  final class πloop[F[_]: Clock: Parallel: Temporal]:
+  final class πloop[F[_]: Clock: Parallel: Temporal: Unique]:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
@@ -147,21 +149,22 @@ package object `Π-loop`:
                                     for
                                       _  <- ~.acquire
                                       cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                      tk <- Unique[F].unique
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                       ((d1, c1), (ts1, _)) = p1
                                       ((d2, c2), (ts2, _)) = p2
                                       o1 <- d1.tryGet
                                       o2 <- d2.tryGet
-                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some(cb)).void
+                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, tk))).void
                                             else Temporal[F].unit
                                       _  <- if k1 == k2 then Temporal[F].unit
-                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some(cb)).void
+                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, tk))).void
                                             else Temporal[F].unit
-                                      _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some(cb))).void
+                                      _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some((cb, tk)))).void
                                             else Temporal[F].unit
                                       _  <- if k1 == k2 then Temporal[F].unit
-                                            else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some(cb))).void
+                                            else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some((cb, tk)))).void
                                             else Temporal[F].unit
                                       _  <- cb.await
                                       no <- &.updateAndGet(_ + 1)

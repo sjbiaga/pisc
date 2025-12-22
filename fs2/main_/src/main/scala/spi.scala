@@ -36,13 +36,13 @@ package object sΠ:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Clock, Deferred, Ref, Resource, Temporal }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue }
+  import _root_.cats.effect.{ Clock, Deferred, Ref, Resource, Temporal, Unique }
+  import _root_.cats.effect.std.Queue
 
   import _root_.fs2.Stream
   import _root_.fs2.concurrent.{ SignallingRef, Topic }
 
-  import `Π-loop`.{ +, %, /, \ }
+  import `Π-loop`.{ <>, +, %, /, \ }
   import `Π-magic`.*
   export `Π-magic`.><
   import `Π-stats`.Rate
@@ -104,7 +104,7 @@ package object sΠ:
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
       ( for
-          topic <- Stream.eval(Topic[F, (`()`[F], Deferred[F, Unit])])
+          topic <- Stream.eval(Topic[F, (`()`[F], Unique.Token)])
           queue <- Stream.eval(Queue.unbounded[F, Unit])
           limit <- Stream.eval(Ref[F].of(false))
         yield
@@ -129,14 +129,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new Object, None, rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -147,11 +147,14 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              _        <- if cb_token eq None then sr.set(true)
+                                          else
+                                            val (cbarrier, _) = cb_token.get
+                                            enable[F](key) >> cbarrier.await
                             yield
                               ()
                           }.interruptWhen(sr)
@@ -170,14 +173,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new Object, None, rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -188,11 +191,14 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              _        <- if cb_token eq None then sr.set(true)
+                                          else
+                                            val (cbarrier, _) = cb_token.get
+                                            enable[F](key) >> cbarrier.await
                             yield
                               ()
                           }.interruptWhen(sr).spaced(pace)
@@ -211,14 +217,14 @@ package object sΠ:
                             ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new Object, None, rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -229,11 +235,14 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              _        <- if cb_token eq None then sr.set(true)
+                                          else
+                                            val (cbarrier, _) = cb_token.get
+                                            enable[F](key) >> cbarrier.await
                             yield
                               ()
                           }.interruptWhen(sr).evalTap(_ => code)
@@ -252,14 +261,14 @@ package object sΠ:
                             ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new Object, None, rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -270,11 +279,14 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              _        <- if cb_token eq None then sr.set(true)
+                                          else
+                                            val (cbarrier, _) = cb_token.get
+                                            enable[F](key) >> cbarrier.await
                             yield
                               ()
                           }.interruptWhen(sr).spaced(pace).evalTap(_ => code)
@@ -293,13 +305,15 @@ package object sΠ:
                        ^ : String): Stream[F, Unit] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (new Object, None, rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        _        <- if cbarrier eq None then Stream.empty
-                    else Stream.eval(enable[F](key) >> cbarrier.get.await)
+        cb_token <- Stream.eval(deferred.get)
+        _        <- if cb_token eq None then Stream.empty
+                    else
+                      val (cbarrier, _) = cb_token.get
+                      Stream.eval(enable[F](key) >> cbarrier.await)
       yield
         ()
 
@@ -313,13 +327,15 @@ package object sΠ:
                           ^ : String): Stream[F, Unit] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (new Object, None, rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        _        <- if cbarrier eq None then Stream.empty
-                    else Stream.eval(enable[F](key) >> cbarrier.get.await).evalTap(_ => code)
+        cb_token <- Stream.eval(deferred.get)
+        _        <- if cb_token eq None then Stream.empty
+                    else
+                      val (cbarrier, _) = cb_token.get
+                      Stream.eval(enable[F](key) >> cbarrier.await).evalTap(_ => code)
       yield
         ()
 
@@ -339,7 +355,7 @@ package object sΠ:
         _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Temporal[F].unit
       yield
         ()
-    private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.evalFilter(_._2.complete(())).map(_._1)
+    private def s(tk: Unique.Token) = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.filter(_._2 eq tk).map(_._1)
 
     def ====(that: `()`[F]) =
       try
@@ -367,14 +383,14 @@ package object sΠ:
                            ^ : String): Stream[F, `()`[F]] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            name     <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            name     <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -387,14 +403,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                                token    <- if cb_token eq None then sr.set(true).as(null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              (enable[F](key) >> cbarrier.await).as(token)
                               yield
-                                it -> deferred
+                                it -> token
                             }.interruptWhen(sr).through1(t)
                           yield
                             it
@@ -411,14 +429,14 @@ package object sΠ:
                               ^ : String): Stream[F, `()`[F]] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            name     <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            name     <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -431,14 +449,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                                token    <- if cb_token eq None then sr.set(true).as(null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              (enable[F](key) >> cbarrier.await).as(token)
                               yield
-                                it -> deferred
+                                it -> token
                             }.interruptWhen(sr).through1(t).evalTap(_ => code)
                           yield
                             it
@@ -455,14 +475,14 @@ package object sΠ:
                            ^ : String): Stream[F, `()`[F]] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            name     <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            name     <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -475,14 +495,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                                token    <- if cb_token eq None then sr.set(true).as(null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              (enable[F](key) >> cbarrier.await).as(token)
                               yield
-                                it -> deferred
+                                it -> token
                             }.interruptWhen(sr).spaced(pace).through1(t)
                           yield
                             it
@@ -499,14 +521,14 @@ package object sΠ:
                               ^ : String): Stream[F, `()`[F]] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            name     <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            name     <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -519,14 +541,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                                token    <- if cb_token eq None then sr.set(true).as(null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              (enable[F](key) >> cbarrier.await).as(token)
                               yield
-                                it -> deferred
+                                it -> token
                             }.interruptWhen(sr).spaced(pace).through1(t).evalTap(_ => code)
                           yield
                             it
@@ -543,14 +567,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -561,14 +585,16 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              deferred <- Deferred[F, Unit]
-                              _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              value -> deferred
+                              value -> token
                           }.interruptWhen(sr).through1(t)
                         yield
                           ()
@@ -585,14 +611,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -603,14 +629,16 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              deferred <- Deferred[F, Unit]
-                              _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              value -> deferred
+                              value -> token
                           }.interruptWhen(sr).spaced(pace).through1(t)
                         yield
                           ()
@@ -627,14 +655,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -645,14 +673,16 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              deferred <- Deferred[F, Unit]
-                              _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              value -> deferred
+                              value -> token
                           }.interruptWhen(sr).through1(t).evalTap(_ => code)
                         yield
                           ()
@@ -669,14 +699,14 @@ package object sΠ:
                          ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
@@ -687,14 +717,16 @@ package object sΠ:
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              deferred <- Deferred[F, Unit]
-                              _        <- if cbarrier eq None then deferred.complete(()) >> sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              value -> deferred
+                              value -> token
                           }.interruptWhen(sr).spaced(pace).through1(t).evalTap(_ => code)
                         yield
                           ()
@@ -713,14 +745,14 @@ package object sΠ:
                               ^ : String): Stream[F, Unit] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            _        <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            _        <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -731,14 +763,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                it       <- if cbarrier eq None then deferred.complete(()) >> sr.set(true).as(null.asInstanceOf[S]) else value.flatTap(_ => enable[F](key) >> cbarrier.get.await)
+                                it       <- if cb_token eq None then sr.set(true).as(`null` -> null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              value.map(new `()`[F](_) -> token).flatTap(_ => enable[F](key) >> cbarrier.await)
                               yield
-                                new `()`[F](it) -> deferred
+                                it
                             }.interruptWhen(sr).through1(t)
                           yield
                             ()
@@ -755,14 +789,14 @@ package object sΠ:
                               ^ : String): Stream[F, Unit] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            _        <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            _        <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -773,14 +807,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                it       <- if cbarrier eq None then deferred.complete(()) >> sr.set(true).as(null.asInstanceOf[S]) else value.flatTap(_ => enable[F](key) >> cbarrier.get.await)
+                                it       <- if cb_token eq None then sr.set(true).as(`null` -> null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              value.map(new `()`[F](_) -> token).flatTap(_ => enable[F](key) >> cbarrier.await)
                               yield
-                                new `()`[F](it) -> deferred
+                                it
                             }.interruptWhen(sr).spaced(pace).through1(t)
                           yield
                             ()
@@ -797,14 +833,14 @@ package object sΠ:
                                  ^ : String): Stream[F, Unit] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            _        <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            _        <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -815,14 +851,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                it       <- if cbarrier eq None then deferred.complete(()) >> sr.set(true).as(null.asInstanceOf[S]) else value.flatTap(_ => enable[F](key) >> cbarrier.get.await)
+                                it       <- if cb_token eq None then sr.set(true).as(`null` -> null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              value.map(new `()`[F](_) -> token).flatTap(_ => enable[F](key) >> cbarrier.await)
                               yield
-                                new `()`[F](it) -> deferred
+                                it
                             }.interruptWhen(sr).through1(t).evalTap(_ => code)
                           yield
                             ()
@@ -839,14 +877,14 @@ package object sΠ:
                                  ^ : String): Stream[F, Unit] =
           for
             _        <- Stream.eval(exclude(key))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Ref[F].of(deferred))
-            deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+            deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
             timestamp <- Stream.eval(Ref[F].of(now))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-            cbarrier <- Stream.eval(deferred.get)
-            _        <- if cbarrier eq None then Stream.empty
+            cb_token <- Stream.eval(deferred.get)
+            _        <- if cb_token eq None then Stream.empty
                         else
                           for
                             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -857,14 +895,16 @@ package object sΠ:
                                 _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                                 deferred <- continue.get
-                                cbarrier <- deferred.get
-                                deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                                cb_token <- deferred.get
+                                deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                deferred <- Deferred[F, Unit]
-                                it       <- if cbarrier eq None then deferred.complete(()) >> sr.set(true).as(null.asInstanceOf[S]) else value.flatTap(_ => enable[F](key) >> cbarrier.get.await)
+                                it       <- if cb_token eq None then sr.set(true).as(`null` -> null)
+                                            else
+                                              val (cbarrier, token) = cb_token.get
+                                              value.map(new `()`[F](_) -> token).flatTap(_ => enable[F](key) >> cbarrier.await)
                               yield
-                                new `()`[F](it) -> deferred
+                                it
                             }.interruptWhen(sr).spaced(pace).through1(t).evalTap(_ => code)
                           yield
                             ()
@@ -881,33 +921,36 @@ package object sΠ:
                          ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
-                          _  <- Stream.repeatEval {
+                          tk <- Stream.repeatEval {
                             for
                               now      <- Clock[F].monotonic.map(_.toNanos)
                               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              ()
+                              token
                           }.interruptWhen(sr)
-                          it <- s.head
+                          it <- s(tk).head
                         yield
                           it
         yield
@@ -923,33 +966,36 @@ package object sΠ:
                          ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
-                          _  <- Stream.repeatEval {
+                          tk <- Stream.repeatEval {
                             for
                               now      <- Clock[F].monotonic.map(_.toNanos)
                               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              ()
+                              token
                           }.interruptWhen(sr).spaced(pace)
-                          it <- s.head
+                          it <- s(tk).head
                         yield
                           it
         yield
@@ -965,33 +1011,36 @@ package object sΠ:
                             ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
-                          _  <- Stream.repeatEval {
+                          tk <- Stream.repeatEval {
                             for
                               now      <- Clock[F].monotonic.map(_.toNanos)
                               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              ()
+                              token
                           }.interruptWhen(sr)
-                          it <- s.head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+                          it <- s(tk).head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
                         yield
                           it
         yield
@@ -1007,33 +1056,36 @@ package object sΠ:
                             ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Ref[F].of(deferred))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
                         for
                           sr <- Stream.eval(SignallingRef[F].of(false))
-                          _  <- Stream.repeatEval {
+                          tk <- Stream.repeatEval {
                             for
                               now      <- Clock[F].monotonic.map(_.toNanos)
                               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                               _        <- if enabled then Temporal[F].unit else timestamp.set(now)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
                               deferred <- continue.get
-                              cbarrier <- deferred.get
-                              deferred <- Deferred[F, Option[CyclicBarrier[F]]]
+                              cb_token <- deferred.get
+                              deferred <- Deferred[F, Option[<>[F]]]
                               _        <- continue.set(deferred)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              _        <- if cbarrier eq None then sr.set(true) else enable[F](key) >> cbarrier.get.await
+                              token    <- if cb_token eq None then sr.set(true).as(null)
+                                          else
+                                            val (cbarrier, token) = cb_token.get
+                                            (enable[F](key) >> cbarrier.await).as(token)
                             yield
-                              ()
+                              token
                           }.interruptWhen(sr).spaced(pace)
-                          it <- s.head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+                          it <- s(tk).head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
                         yield
                           it
         yield
@@ -1051,16 +1103,17 @@ package object sΠ:
                          ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
+                        val (cbarrier, token) = cb_token.get
                         for
                           it <- sΠ.ν[F]
-                          _  <- Stream.eval(Deferred[F, Unit].map(it -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await)).through1(t)
+                          _  <- Stream.emit(it -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t)
                         yield
                           it
         yield
@@ -1076,16 +1129,17 @@ package object sΠ:
                             ^ : String): Stream[F, `()`[F]] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          name     <- if cbarrier eq None then Stream.empty
+          cb_token <- Stream.eval(deferred.get)
+          name     <- if cb_token eq None then Stream.empty
                       else
+                        val (cbarrier, token) = cb_token.get
                         for
                           it <- sΠ.ν[F]
-                          _  <- Stream.eval(Deferred[F, Unit].map(it -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await)).through1(t).evalTap(_ => code)
+                          _  <- Stream.emit(it -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t).evalTap(_ => code)
                         yield
                           it
         yield
@@ -1101,13 +1155,15 @@ package object sΠ:
                        ^ : String): Stream[F, Unit] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        _        <- if cbarrier eq None then Stream.empty
-                    else Stream.eval(Deferred[F, Unit].map(value -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await)).through1(t)
+        cb_token <- Stream.eval(deferred.get)
+        _        <- if cb_token eq None then Stream.empty
+                    else
+                      val (cbarrier, token) = cb_token.get
+                      Stream.emit(value -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t)
       yield
         ()
 
@@ -1121,13 +1177,15 @@ package object sΠ:
                           ^ : String): Stream[F, Unit] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        _        <- if cbarrier eq None then Stream.empty
-                    else Stream.eval(Deferred[F, Unit].map(value -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await)).through1(t).evalTap(_ => code)
+        cb_token <- Stream.eval(deferred.get)
+        _        <- if cb_token eq None then Stream.empty
+                    else
+                      val (cbarrier, token) = cb_token.get
+                      Stream.emit(value -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t).evalTap(_ => code)
       yield
         ()
 
@@ -1143,13 +1201,15 @@ package object sΠ:
                             ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
-                      else Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await) }.through1(t)
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
+                      else
+                        val (cbarrier, token) = cb_token.get
+                        Stream.eval(value).map(new `()`[F](_) -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t)
         yield
           ()
 
@@ -1163,13 +1223,15 @@ package object sΠ:
                                ^ : String): Stream[F, Unit] =
         for
           _        <- Stream.eval(exclude(key))
-          deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+          deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
           timestamp <- Stream.eval(Ref[F].of(now))
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(false), rate)))))
-          cbarrier <- Stream.eval(deferred.get)
-          _        <- if cbarrier eq None then Stream.empty
-                      else Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _).flatTap(_ => enable[F](key) >> cbarrier.get.await) }.through1(t).evalTap(_ => code)
+          cb_token <- Stream.eval(deferred.get)
+          _        <- if cb_token eq None then Stream.empty
+                      else
+                        val (cbarrier, token) = cb_token.get
+                        Stream.eval(value).map(new `()`[F](_) -> token).evalTap(_ => enable[F](key) >> cbarrier.await).through1(t).evalTap(_ => code)
         yield
           ()
 
@@ -1183,16 +1245,17 @@ package object sΠ:
                        ^ : String): Stream[F, `()`[F]] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        name     <- if cbarrier eq None then Stream.empty
+        cb_token <- Stream.eval(deferred.get)
+        name     <- if cb_token eq None then Stream.empty
                     else
+                      val (cbarrier, token) = cb_token.get
                       for
-                        _  <- Stream.eval(enable[F](key) >> cbarrier.get.await)
-                        it <- s.head
+                        _  <- Stream.eval(enable[F](key) >> cbarrier.await)
+                        it <- s(token).head
                       yield
                         it
       yield
@@ -1208,16 +1271,17 @@ package object sΠ:
                           ^ : String): Stream[F, `()`[F]] =
       for
         _        <- Stream.eval(exclude(key))
-        deferred <- Stream.eval(Deferred[F, Option[CyclicBarrier[F]]])
+        deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         now      <- Stream.eval(Clock[F].monotonic.map(_.toNanos))
         timestamp <- Stream.eval(Ref[F].of(now))
         _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[><[F]], Some(true), rate)))))
-        cbarrier <- Stream.eval(deferred.get)
-        name     <- if cbarrier eq None then Stream.empty
+        cb_token <- Stream.eval(deferred.get)
+        name     <- if cb_token eq None then Stream.empty
                     else
+                      val (cbarrier, token) = cb_token.get
                       for
-                        _  <- Stream.eval(enable[F](key) >> cbarrier.get.await)
-                        it <- s.head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+                        _  <- Stream.eval(enable[F](key) >> cbarrier.await)
+                        it <- s(token).head.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
                       yield
                         it
       yield
@@ -1230,7 +1294,7 @@ package object sΠ:
 
   private object `Π-magic`:
 
-    case class ><[F[_]](topic: Topic[F, (`()`[F], Deferred[F, Unit])],
+    case class ><[F[_]](topic: Topic[F, (`()`[F], Unique.Token)],
                         queue: Queue[F, Unit],
                         limit: Ref[F, Boolean])
 
