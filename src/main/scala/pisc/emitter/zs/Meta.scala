@@ -97,13 +97,13 @@ object Meta extends emitter.shared.effects.Meta:
                                               Term.ArgClause(Lit.Int(1) :: Nil)))
 
 
-  def `List( *, … ).mergeAll`(* : Term*): Term =
+  def `List( *, … ).collectAllPar`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πmergeAll")
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
 
   def `List( *, … ).collectAllPar(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {

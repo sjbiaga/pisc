@@ -11,9 +11,9 @@ and `Task[_]`.
 Names act as [hub](https://zio.dev/reference/concurrency/hub/)s, with
 possibly multiple publishers and multiple subscribers.
 
-Composition: parallel modelled with - `ZStream.mergeAllUnbounded()`.
+Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain))) *> ZStream.empty`.
 
-Summation: non-deterministic choice modelled with - `ZIO.collectAllParDiscard` and `Semaphore.tryWithPermit(ZStream.runDrain)`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_)))) *> ZStream.empty`.
 
 [Guarded] Replication: modelled with infinite streams.
 

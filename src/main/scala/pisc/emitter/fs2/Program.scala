@@ -86,7 +86,7 @@ object Program:
 
           * = List(
             `* <- Semaphore[F](…)`(sem.get),
-            `_ <- *`(`List( *, … ).parJoin`(sfs*))
+            `_ <- *`(`List( *, … ).parSequence`(sfs*))
           )
 
         case it: + =>
@@ -96,7 +96,7 @@ object Program:
 
           * = List(
             `* <- Semaphore[F](…)`(sem),
-            `_ <- *`(`List( *, … ).parJoin(…)`(sfs*)(sem))
+            `_ <- *`(`List( *, … ).parSequence(…)`(sfs*)(sem))
           )
 
         /////////////////////////////////////////////////////////// summation //
@@ -110,7 +110,7 @@ object Program:
         case it: ∥ =>
           val sfs = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parJoin`(sfs*))
+          * = `_ <- *`(`List( *, … ).parSequence`(sfs*))
 
         ///////////////////////////////////////////////////////// composition //
 

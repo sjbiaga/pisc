@@ -9,7 +9,7 @@
 
 @def nl[F[_]: Temporal]: String => F[String] = { it => Temporal[F].pure { s"$it\n" } }
 
-⟦ typeclasses = (Async,Console) ⟧
+⟦ typeclasses = (Async,Console,Parallel) ⟧
 
 Main = ν(stdout) Greeter(stdout)
 

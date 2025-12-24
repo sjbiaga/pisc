@@ -80,21 +80,21 @@ object Program:
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val sfs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val zss = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
             `* <- Semaphore.make(…)`(sem.get),
-            `_ <- *`(`List( *, … ).mergeAll`(sfs*))
+            `_ <- *`(`List( *, … ).collectAllPar`(zss*))
           )
 
         case it: + =>
-          val sfs = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val zss = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val sem = id
 
           * = List(
             `* <- Semaphore.make(…)`(sem),
-            `_ <- *`(`List( *, … ).collectAllPar(…)`(sfs*)(sem))
+            `_ <- *`(`List( *, … ).collectAllPar(…)`(zss*)(sem))
           )
 
         /////////////////////////////////////////////////////////// summation //
@@ -106,9 +106,9 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val sfs = it.components.foldRight(List[Term]())(_.emit :: _)
+          val zss = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).mergeAll`(sfs*))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(zss*))
 
         ///////////////////////////////////////////////////////// composition //
 

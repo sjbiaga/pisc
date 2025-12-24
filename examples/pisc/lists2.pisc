@@ -7,7 +7,7 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
-⟦ typeclasses = (Console,Temporal) ⟧
+⟦ typeclasses = (Console,Temporal,Parallel) ⟧
 
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \

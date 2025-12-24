@@ -5,9 +5,9 @@
 
 @val gen = new scala.util.Random
 
-⟦ typeclasses = (Async,Console) ⟧
+⟦ typeclasses = (Async,Console,Parallel) ⟧
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
@@ -121,7 +121,7 @@ Main = ν(x) ( (x(y). τ/*Console[F].println(1->y)*/. x(z). τ/*Console[F].print
             | (!.x</*Async[F].delay(gen.nextInt)*/>.)                                      \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # multiple finite publishers, one infinite subscriber ✔
 
