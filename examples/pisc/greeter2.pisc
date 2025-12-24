@@ -9,7 +9,7 @@
 
 @def nl[F[_]: Temporal]: Seq[String] => F[Seq[String]] = { case Seq(it) => Temporal[F].pure { Seq(s"$it\n") } }
 
-⟦ typeclasses = (Async,Console) ⟧
+⟦ typeclasses = (Async,Console,Parallel) ⟧
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 

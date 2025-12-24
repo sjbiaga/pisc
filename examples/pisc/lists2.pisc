@@ -6,7 +6,7 @@
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (Console,Temporal) ⟧
+⟦ typeclasses = (Console,Temporal,Parallel) ⟧
 
 Main = ν(sumlist)ν(print)ν(rch)                                       \
      ( Client(sumlist, print, rch, /*args.map(_.toInt).toList*/)      \

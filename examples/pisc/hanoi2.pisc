@@ -9,7 +9,7 @@
 
 @def ![F[_]: Temporal]: Seq[String] => F[Seq[String]] = { _ => Temporal[F].pure(Seq(null)) }
 
-⟦ typeclasses = (Async,Console) ⟧
+⟦ typeclasses = (Async,Console,Parallel) ⟧
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \

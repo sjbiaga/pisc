@@ -79,19 +79,19 @@ object Meta extends emitter.shared.streams.Meta:
     ) :: Nil
 
 
-  def `List( *, … ).parJoin`(* : Term*): Term =
+  def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin")
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
 
-  def `List( *, … ).parJoin(…)`(* : Term*)(`…`: String): Term =
+  def `List( *, … ).parSequence(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
-      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparJoin"),
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence"),
                             Term.ArgClause(`…` :: Nil))

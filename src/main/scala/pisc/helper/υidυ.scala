@@ -64,9 +64,6 @@ final class υidυ:
   def copy: Any =
     ix -> Seq.from(id)
 
-  def reuse: Unit =
-    paste(0 -> Seq[Char]('0'))
-
   def paste(it: Any): Unit =
     val (ix, id) = it.asInstanceOf[(Int, Seq[Char])]
     this.ix = ix

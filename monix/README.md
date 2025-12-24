@@ -11,9 +11,9 @@ and either Cats Effect `IO[_]` _or_ Monix `Task[_]`.
 Names act as [concurrent channel](https://monix.io/api/current/monix/catnap/ConcurrentChannel.html)s, with
 possibly multiple producers and multiple consumers (`MPMC`).
 
-Composition: parallel modelled with - `Iterant.liftF(Observable.mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F])`.
+Composition: parallel modelled with - `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F]) >> Iterant.empty`.
 
-Summation: non-deterministic choice modelled with - `Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F])`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F]) >> Iterant.empty`.
 
 [Guarded] Replication: modelled with infinite streams.
 

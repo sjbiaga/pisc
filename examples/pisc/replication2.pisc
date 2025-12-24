@@ -7,9 +7,9 @@
 
 @val gen = new scala.util.Random
 
-⟦ typeclasses = (Async,Console) ⟧
+⟦ typeclasses = (Async,Console,Parallel) ⟧
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
@@ -53,7 +53,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt.abs)*/>.)   \
             | (!.x(y). τ/*Console[F].println(2->y)*/.)                        \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, one infinite subscriber, bound output guard ✔
 

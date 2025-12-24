@@ -84,7 +84,7 @@ object Program:
 
           * = List(
             `* <- Semaphore.make(…)`(sem.get),
-            `_ <- *`(`List( *, … ).mergeAll`(zss*))
+            `_ <- *`(`List( *, … ).collectAllPar`(zss*))
           )
 
         case it: + =>
@@ -108,7 +108,7 @@ object Program:
         case it: ∥ =>
           val zss = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).mergeAll`(zss*))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(zss*))
 
         ///////////////////////////////////////////////////////// composition //
 
