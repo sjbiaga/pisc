@@ -101,7 +101,7 @@ object Program:
 
         case it @ π(_, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _) =>
           val parʹ = if ch == par then id else par
-          val ** = if ch == par then `* <- IO.pure(*)`(par -> parʹ) else `_ <- IO.unit`
+          val ** = if ch == par then `* <- IO.pure(*)`(par -> parʹ) else `_ <- \\.unit`
           `for * yield ()`(
             `* <- *`(parʹ -> "ν"),
             `_ <- *`(it.copy(name = λ(Symbol(parʹ)), polarity = None)(it.υidυ).emit(** :: *))
@@ -133,20 +133,20 @@ object Program:
         case it @ ζ(cap, name, _, r, code) =>
           code match
             case Some((Left(enums), _)) =>
-              val term = `for * yield ()`(enums*)
+              val expr = `for * yield ()`(enums*)
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
                                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
-                                            Term.ArgClause(term::Nil)),
+                                            Term.ArgClause(expr::Nil)),
                                           *)
             case Some((Right(term), _)) =>
-              val code = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
                                               Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
-                                            Term.ArgClause(code::Nil)),
+                                            Term.ArgClause(expr::Nil)),
                                           *)
             case _ =>
               `*.flatMap { null else … }`(Term.Apply(
@@ -193,7 +193,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -411,9 +410,9 @@ object Program:
             .map { it => Term.Apply(\("Some"), Term.ArgClause(Lit.String(it) :: Nil)) }
             .getOrElse(\("None"))
 
-          val ** = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
+          * = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: sum.emit))
+          * = `_ <- *`(`List( *, … ).parSequence`(* ::: sum.emit))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -461,19 +460,19 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
-      ( prog.head match
+      ( prog.tail.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
-      ( prog.tail.head match
+      ( prog.tail.tail.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
-            Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot).toString
+            Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot)
       ) ::
       prog
-        .tail.tail
+        .drop(4)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))

@@ -172,7 +172,7 @@ package object sΠ:
     */
   object τ:
 
-    def apply(rate: Rate, `_}{`: `}{`)(key: String, `)(`: IOLocal[`)(`])
+    def apply(rate: Rate, `_}{`: `}{`)(key: String, `_)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
@@ -452,7 +452,7 @@ package object sΠ:
                          (using `][`: `][`): Txn[Boolean] =
           (dir_cap, dir_capʹ) match
             case (`π-local`, `π-local`)   =>
-               stm.pure(node == nodeʹ)
+              stm.pure(node == nodeʹ)
             case (`π-s2s`, `π-s2s`)
                | (`π-enter`, `π-accept`)
                | (`π-merge+`, `π-merge-`) =>

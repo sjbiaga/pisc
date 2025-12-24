@@ -36,7 +36,7 @@ import scala.meta.*
 import dialects.Scala3
 
 
-object Meta extends emitter.shared.effects.Meta:
+object Meta extends emitter.ce.Meta:
 
   def `*.flatMap { null else … }`(* : Term, `…`: List[Enumerator])(implicit υidυ: String): Term =
     Term.Apply(
@@ -76,7 +76,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   private def `(*)`(* : Term): Option[Term] =
     * match
-      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
       case _ => Some(*)
 
   @tailrec
@@ -87,10 +87,10 @@ object Meta extends emitter.shared.effects.Meta:
     } then
       `List( *, … ).parSequence`((
         *.flatMap {
-          case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+          case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
           case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparSequence")) =>
             ls.flatMap {
-              case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+              case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
               case it => Some(it)
             }
           case it => Some(it)

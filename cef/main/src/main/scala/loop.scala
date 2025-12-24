@@ -142,7 +142,7 @@ package object `Π-loop`:
                            case (key1, (_, (e1, Some(p1), _))) =>
                              val ^ = key1.substring(0, 36)
                              !m.exists {
-                               case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
+                               case (key2, (_, (e2, Some(p2), _))) if e1 == e2 && p1 != p2 =>
                                  val ^^ = key2.substring(0, 36)
                                  ^ != ^^
                                  || {
@@ -152,7 +152,7 @@ package object `Π-loop`:
                                  }
                                case _ => false
                              }
-                           case _ => true
+                           case _ => false
                          }
                        }
                }

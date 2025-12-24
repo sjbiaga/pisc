@@ -2,6 +2,8 @@
 
 ⟦ traces = console ⟧
 
+⟦ exclude = yes ⟧
+
 P(x) = (!. local x@∞ ! { 1 } /*println("out 1")*/.) | (!. local x@∞ ? { z } /*IO.pure(_).flatTap { z => IO.println(s"in $z") }*/.)
 
 Q(x) = "l"[ !. s2s x@∞ ! { 2 } /*println("out 2")*/. ] | "r"[ !. s2s x@∞ ? { z } /*IO.pure(_).flatTap { z => IO.println(s"in $z") }*/. ]
@@ -9,3 +11,55 @@ Q(x) = "l"[ !. s2s x@∞ ! { 2 } /*println("out 2")*/. ] | "r"[ !. s2s x@∞ ? {
 R(x) = "p"[ "c"[ !. c2p x@∞ ! { 3 } /*println("out 3")*/. ] | ( !. p2c x@∞ ? { z } /*IO.pure(_).flatTap { z => IO.println(s"in $z") }*/. ) ]
 
 Main = ν(x) "r"[ P(x) | Q(x) | R(x) ]
+
+⟦ exclude = no ⟧
+
+P = ν(x) [ "l"[ accept x /*println("accepted")*/. ] | "r"[ enter x /*println("entered")*/. ] ]
+
+Q = ν(x) "p"[ "c"[ exit x /*println("exited")*/. ] | expel x /*println("expelled")*/. ]
+
+R = ν(x) "r"[ "+"[ merge+ x /*println("merged+")*/. ] | "-"[ merge- x /*println("merged-")*/. ] ]
+
+Main = P | Q | R
+
+⟦ exclude = yes ⟧
+
+C(x) = exit x /*println("exited")*/. s2s x?{y}. enter y /*println("entered")*/. C(y)
+
+P(x) = expel x /*println("expelled")*/. s2s x!{νy}. accept y /*println("accepted")*/. P(y)
+
+Main = ν(x) [ "p"[ "c"[ C(x) ] | P(x) ] ]
+
+⟦ exclude = yes ⟧
+
+C(x) = ( ! .exit x /*println("exited")*/. ) | ( ! .enter x /*println("entered")*/. )
+
+P(x) = ( ! .expel x /*println("expelled")*/. ) | ( ! .accept x /*println("accepted")*/. )
+
+Main = ν(x) "p"[ "c"[ C(x) ] | P(x) ]
+
+⟦ exclude = yes ⟧
+
+C(x) = exit x /*println("exited")*/. s2s x?{y}. enter y /*println("entered")*/.
+
+P(x) = expel x /*println("expelled")*/. s2s x!{νy}. accept y /*println("accepted")*/.
+
+Main = ν(x) "p"[ "c"[ ! 2 c2p x?{y}/*IO.pure(_) <* IO.println("c2p")*/. C(y) ] | ! 2 p2c x!{νy}/*println("p2c")*/. P(y) ]
+
+⟦ exclude = yes ⟧
+
+C(x) = ! .exit x /*println("exited")*/. enter x /*println("entered")*/.
+
+P(x) = ! .expel x /*println("expelled")*/. accept x /*println("accepted")*/.
+
+Main = ν(x) "p"[ "c"[ C(x) ] | P(x) ]
+
+⟦ exclude = yes ⟧
+
+C(x) = exit x /*println("exited")*/.
+
+P(x) = expel x /*println("expelled")*/.
+
+Main = ν(x) ! 2 "p"[ "c"[ C(x) ] | P(x) ]
+
+⟦ snapshot = n ⟧

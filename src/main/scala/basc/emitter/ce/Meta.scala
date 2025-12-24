@@ -35,12 +35,161 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
+import parser.BioAmbients.Actions
+import parser.Calculus.`(*)`
 
-object Meta extends emitter.shared.effects.Meta:
+
+abstract trait Meta extends emitter.shared.effects.Meta:
+
+  override protected lazy val \ = "IO"
+
+  val `IO.cede` = Term.Select(\, "cede")
+
+  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 ->Term.Apply(Term.Select(\, "pure"), Term.ArgClause(*._2 :: Nil)))
+
+  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(\(\),
+                                    Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+
+  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(Term.Select(\, "sleep"),
+                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+
+
+  def defn(body: Term): `(*)` => Defn.Def =
+    case `(*)`("Main") =>
+      Defn.Def(Nil,
+               "Main",
+               Member.ParamClauseGroup(
+                 Type.ParamClause(Nil),
+                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                                  Term.Param(Nil, \("}{"), Some(\\("}{")), None) :: Nil, None) ::
+                 `String*`("args") :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
+               ) :: Nil,
+               `: IO[Any]`,
+               body
+      )
+    case `(*)`(identifier, _params*) =>
+      val params = _params.map(_.asSymbol.name)
+      Defn.Def(Nil,
+               identifier,
+               Member.ParamClauseGroup(
+                 Type.ParamClause(Nil),
+                 Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
+                                  Term.Param(Nil, \("}{"), Some(\\("}{")), None) :: Nil, None) ::
+                 `(…)`(params*) :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
+               ) :: Nil,
+               `: IO[Any]`,
+               body
+      )
+
+
+  def `String*`(* : String) =
+    Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(\\("String"))), None) :: Nil
+                    ,None)
+
+  def `(…)`(* : String*) =
+    Term.ParamClause(*.map(\(_)).map(Term.Param(Nil, _, Some(\\("()")), None)).toList
+                    ,None)
+
+
+  val `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)` =
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) :: Nil
+                    ,Some(Mod.Using())) ::
+    Term.ParamClause(List("%", "/", "\\")
+                       .map { it => Term.Param(Mod.Using() :: Nil,
+                                               Name.Anonymous(), Some(\\(it)),
+                                               None)
+                       }
+                    ,Some(Mod.Using())) ::
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", \\("]["))), None) ::
+                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"),
+                                                                                       \\("TSemaphore"))), None) :: Nil
+                    ,Some(Mod.Using())) ::
+    Nil
+
+
+  def `_ <- *.acquire`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+
+  def `_ <- *.release`(* : String): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+
+  def `* <- Semaphore[IO](…)`(* : String, `…`: Int): Enumerator.Generator =
+    Enumerator.Generator(`* <- …`(*),
+                         Term.Apply(Term.ApplyType(\("Semaphore"),
+                                                   Type.ArgClause(\\("IO") :: Nil)),
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
+                         )
+    )
+
+
+  val `: IO[Any]` = `:`(\, "Any")
+
+  val `: String => IO[Any]` =
+    `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
+
+
+  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(\("IO"),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *._1,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil,
+                                                                                *._2,
+                                                                                Some(\\("()")),
+                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                            `: String => IO[Any]`,
+                            Term.Block(
+                              Term.Function(
+                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
+                                                            "^",
+                                                            None,
+                                                            None) :: Nil, None), `…`
+                              ) :: Nil
+                            )
+                   ) :: \(*._1) :: Nil
+                 ) :: Nil
+               )
+    )
+
+
+  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(* : String, `…`: Term): Term =
+    Term.Apply(\("IO"),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Val(Mod.Lazy() :: Nil,
+                            `* <- …`(*) :: Nil,
+                            `: String => IO[Any]`,
+                            Term.Block(
+                              Term.Function(
+                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
+                                                            "^",
+                                                            None,
+                                                            None) :: Nil, None), `…`
+                              ) :: Nil
+                            )
+                   ) :: \(*) :: Nil
+                 ) :: Nil
+               )
+    )
+
+
+  def `π-exclude`(enabled: Actions): Term =
+    Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))
+
+
+object Meta extends emitter.ce.Meta:
 
   private def `π-supervised(*)`(* : Term): Option[Term] =
     * match
-      case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
       case _ => Some(Term.Apply(\("π-supervised"), Term.ArgClause(* :: Nil)))
 
   @tailrec
@@ -51,10 +200,10 @@ object Meta extends emitter.shared.effects.Meta:
     } then
       `List( *, … ).parSequence`((
         *.flatMap {
-          case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+          case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
           case Term.Select(Term.Apply(Term.Name("πLs"), ls), Term.Name("πparSequence")) =>
             ls.flatMap {
-              case Term.Select(Term.Name("IO"), Term.Name("unit" | "cede")) => None
+              case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
               case Term.Apply(Term.Name("π-supervised"), it :: Nil) => Some(it)
               case it => Some(it)
             }

@@ -496,7 +496,7 @@ package object sΠ:
                          (using `][`: `][`): Txn[Boolean] =
           (dir_cap, dir_capʹ) match
             case (`π-local`, `π-local`)   =>
-               stm.pure(node == nodeʹ)
+              stm.pure(node == nodeʹ)
             case (`π-s2s`, `π-s2s`)
                | (`π-enter`, `π-accept`)
                | (`π-merge+`, `π-merge-`) =>

@@ -71,14 +71,15 @@ object Main extends helper.Main:
         val (prog, (discarded, excluded, enabled)) = ba(prog_.map(_._1))
 
         val ps = Program.Main()(prog)
-        val is = prog_.map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(4).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(4).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
-          .sortBy(_._2)
-          .map(_._1)
-          .mkString("\n\n")
+        val code = ps.take(2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+                   .sortBy(_._2)
+                   .map(_._1)
+                   .mkString("\n\n")
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString

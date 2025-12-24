@@ -36,7 +36,7 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import scala.meta.Lit
+import scala.meta.{ Lit, Term }
 
 import BioAmbients.*
 import Calculus.*
@@ -238,6 +238,10 @@ abstract class BioAmbients extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _typeclasses: List[String] = Nil
+
+  protected var _threadlocal: List[String] = Nil
+
   private[parser] var _id: helper.υidυ = null
 
   private[parser] var _sπ_id: helper.υidυ = null
@@ -304,7 +308,14 @@ object BioAmbients:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter { case ce, cef, kk }
+  enum Emitter(val canScale: Boolean = false,
+               val hasReplicationInputGuardFlaw: Boolean = true,
+               val assignsReplicationParallelism1: Boolean = false):
+    case ce extends Emitter()
+    case cef extends Emitter()
+    case fs2 extends Emitter(hasReplicationInputGuardFlaw = false,
+                             assignsReplicationParallelism1 = true)
+    private[parser] case test extends Emitter()
 
   type Actions = Set[String]
 
@@ -718,6 +729,9 @@ object BioAmbients:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
+          case !(_, _, Some(μ), sum) if emitter.assignsReplicationParallelism1 =>
+            sum.graph ++ Seq(μ -> sum)
+
           case !(_, _, Some(μ), sum) =>
             sum.graph ++ Seq(μ -> μ, μ -> sum)
 
@@ -815,6 +829,8 @@ object BioAmbients:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _typeclasses = Nil
+      _threadlocal = Nil
       _par = 9
       _snapshot = false
       _traces = None
@@ -823,6 +839,8 @@ object BioAmbients:
                        "exclude" -> _exclude,
                        "paceunit" -> _paceunit,
                        "scaling" -> _scaling,
+                       "typeclasses" -> _typeclasses,
+                       "threadlocal" -> _threadlocal,
                        "parallelism" -> _par,
                        "snapshot" -> _snapshot,
                        "traces" -> _traces))
@@ -899,5 +917,8 @@ object BioAmbients:
           case _ => true
         }
 
+      Right((`(*)`(null, λ(if _typeclasses.isEmpty then Lit.Null() else Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)): Bind) ::
+      Right((`(*)`(null, λ(if _threadlocal.isEmpty then Lit.Null() else Term.Tuple(_threadlocal.map(Term.Name(_))))), `+`(-1)): Bind) ::
       Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
-      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(-1)): Bind) :: prog
+      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(-1)): Bind) ::
+      prog

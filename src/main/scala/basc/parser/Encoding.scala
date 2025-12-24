@@ -211,6 +211,8 @@ abstract class Encoding extends Calculus:
          | "exclude" | "include"
          | "paceunit"
          | "scaling"
+         | "typeclasses"
+         | "threadlocal"
          | "parallelism"
          | "snapshot"
          | "traces" => true
@@ -247,8 +249,8 @@ abstract class Encoding extends Calculus:
         case it: List[String] if it.forall(key) => Set.from(it.map(canonical))
         case _                                  => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
 
-    private def string(`type`: String = "a string"): String =
-      _dir.get._2 match
+    private def string(`val`: => String | List[String] = _dir.get._2, `type`: String = "a string"): String =
+      `val` match
         case it: String
             if (it.startsWith("\"") || it.startsWith("'"))
             && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
@@ -279,6 +281,19 @@ abstract class Encoding extends Calculus:
         case "scaling"      =>
           _scaling = boolean
 
+        case "typeclasses"  =>
+          _typeclasses = _dir.get._2 match
+            case it: String       => List(it)
+            case it: List[String] => it
+            case _                => throw DirectiveValueParsingException(_dir.get, "a comma separated list")
+
+        case "threadlocal"  =>
+          _threadlocal = _dir.get._2 match
+            case it: String                                             => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), "set", "get", "to")
+            case List(it: String, set: String, get: String)             => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), set, get)
+            case List(it: String, set: String, get: String, to: String) => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), set, get, to)
+            case _                                                      => throw DirectiveValueParsingException(_dir.get, "a triple/quadruple list")
+
         case "parallelism"  =>
           _par = 1 max number.toInt
 
@@ -302,14 +317,16 @@ abstract class Encoding extends Calculus:
           try
             if boolean
             then
-              _dirs ::= Map("errors" -> _werr,
+              _dirs ::= Map("errors"       -> _werr,
                             "duplications" -> _dups,
-                            "exclude" -> _exclude,
-                            "paceunit" -> _paceunit,
-                            "scaling" -> _scaling,
-                            "parallelism" -> _par,
-                            "snapshot" -> _snapshot,
-                            "traces" -> _traces)
+                            "exclude"      -> _exclude,
+                            "paceunit"     -> _paceunit,
+                            "scaling"      -> _scaling,
+                            "typeclasses"  -> _typeclasses,
+                            "threadlocal"  -> _threadlocal,
+                            "parallelism"  -> _par,
+                            "snapshot"     -> _snapshot,
+                            "traces"       -> _traces)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
@@ -318,6 +335,8 @@ abstract class Encoding extends Calculus:
                 case "exclude" | "include" => "exclude" -> _exclude
                 case it @ "paceunit"       => it -> _paceunit
                 case it @ "scaling"        => it -> _scaling
+                case it @ "typeclasses"    => it -> _typeclasses
+                case it @ "threadlocal"    => it -> _threadlocal
                 case it @ "parallelism"    => it -> _par
                 case it @ "snapshot"       => it -> _snapshot
                 case it @ "traces"         => it -> _traces
@@ -328,15 +347,17 @@ abstract class Encoding extends Calculus:
           if boolean
           then
             _dirs.head.foreach {
-              case ("errors", it: Boolean)       => _werr = it
-              case ("duplications", it: Boolean) => _dups = it
-              case ("exclude", it: Boolean)      => _exclude = it
-              case ("paceunit", it: String)      => _paceunit = it
-              case ("scaling", it: Boolean)      => _scaling = it
-              case ("parallelism", it: Int)      => _par = it
-              case ("snapshot", it: Boolean)     => _snapshot = it
+              case ("errors", it: Boolean)                => _werr = it
+              case ("duplications", it: Boolean)          => _dups = it
+              case ("exclude", it: Boolean)               => _exclude = it
+              case ("paceunit", it: String)               => _paceunit = it
+              case ("scaling", it: Boolean)               => _scaling = it
+              case ("typeclasses", it: List[String])      => _typeclasses = it
+              case ("threadlocal", it: List[String])      => _threadlocal = it
+              case ("parallelism", it: Int)               => _par = it
+              case ("snapshot", it: Boolean)              => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
-              case _                             => ???
+              case _                                      => ???
             }
             _dirs = _dirs.tail
 

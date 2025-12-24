@@ -28,7 +28,7 @@
 
 import _root_.java.io.{ PrintStream, FileOutputStream }
 
-import _root_.scala.collection.immutable.{ List, Map }
+import _root_.scala.collection.immutable.List
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.flatMap.*
@@ -106,9 +106,9 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (d, d2)) =>
+             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (d1, d2)) =>
                for
-                 l1 <- d.get
+                 l1 <- d1.get
                  l2 <- if k1 == k2 then IO.pure(l1) else d2.get
                  p  <- record(no, ts1, ts, delay, duration, l1)(k1)
                  _  <- if snapshot then record(no, p, l1._2._2) else IO.unit

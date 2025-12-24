@@ -58,10 +58,11 @@ abstract trait Meta:
 
 
   inline implicit def \(* : String): Term.Name = Term.Name(*)
+  inline def \\(* : String): Type.Name = Type.Name(*)
 
 
   def `:`(name: String, clause: String): Option[Type.Apply] =
-    Some(Type.Apply(Type.Name(name), Type.ArgClause(Type.Name(clause) :: Nil)))
+    Some(Type.Apply(\\(name), Type.ArgClause(\\(clause) :: Nil)))
 
 
   def `* <- …`(* : String*): Pat =

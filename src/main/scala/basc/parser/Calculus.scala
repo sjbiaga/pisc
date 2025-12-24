@@ -75,7 +75,7 @@ abstract class Calculus extends BioAmbients:
           if scalingʹ == 0
           then
             `+`(-1) -> Names()
-          else if _scaling && emitter == Emitter.kk
+          else if _scaling && emitter.canScale
           then
             `+`(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -95,7 +95,7 @@ abstract class Calculus extends BioAmbients:
           if scalingʹ == 0
           then
             ∥(-1, `.`(`+`(-1))) -> Names()
-          else if _scaling && emitter == Emitter.kk
+          else if _scaling && emitter.canScale
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -133,12 +133,15 @@ abstract class Calculus extends BioAmbients:
     "!"~> scale ~ opt( pace ) ~ opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
       case _ ~ _ ~ Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
+      case parallelism ~ _ ~ Some((π(_, λ(ch: Symbol), _, _, _, _), _)) if emitter.assignsReplicationParallelism1
+                                                                        && parallelism.abs != 1 =>
+        throw GuardParallelismNot1ParsingException(emitter, parallelism, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
         if ch == par
         then
-          emitter match
-            case Emitter.kk =>
-            case _ => warn(throw GuardParsingException(ch.name, cons.isEmpty))
+          if emitter.hasReplicationInputGuardFlaw
+          then
+            warn(throw GuardParsingException(ch.name, cons.isEmpty))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
@@ -369,7 +372,9 @@ object Calculus:
         else
           "if " + test + " " + t + " else " + f.get
 
-      case !(_, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(-1, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+
+      case !(parallelism, _, guard, sum) => s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
 
       case `[]`(label, sum) =>
         label.getOrElse("") + "[ " + sum + " ]"
@@ -453,6 +458,9 @@ object Calculus:
 
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
+
+  case class GuardParallelismNot1ParsingException(emitter: Emitter, parallelism: Int, name: String)
+      extends PrefixParsingException(s"""Emitter `$emitter' assigns parallelism 1 (≠ $parallelism) to a replication guard with channel name "$name"""")
 
   case class AmbientLabelParsingException(label: String)
       extends ParsingException(s"An ambient label $label contains commas")

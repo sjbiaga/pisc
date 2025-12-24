@@ -73,7 +73,6 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
         case +(_, operand) =>
           * = operand.emit
@@ -241,22 +240,22 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val term = `for * yield ()`(enums*)
+              val expr = `for * yield ()`(enums*)
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
                              ),
-                             Term.ArgClause(term::Nil)
+                             Term.ArgClause(expr::Nil)
                            ))
             case Some((Right(term), _)) =>
-              val code = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
                                Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)
                              ),
-                             Term.ArgClause(code::Nil)
+                             Term.ArgClause(expr::Nil)
                            ))
             case _ =>
               * = `_ <- *`(Term.Apply(
@@ -405,9 +404,9 @@ object Program:
             .map { it => Term.Apply(\("Some"), Term.ArgClause(Lit.String(it) :: Nil)) }
             .getOrElse(\("None"))
 
-          val ** = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
+          * = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: sum.emit))
+          * = `_ <- *`(`List( *, … ).parSequence`(* ::: sum.emit))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -455,19 +454,19 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
-      ( prog.head match
+      ( prog.tail.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism).toString
+            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
-      ( prog.tail.head match
+      ( prog.tail.tail.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
-            Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot).toString
+            Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot)
       ) ::
       prog
-        .tail.tail
+        .drop(4)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
-        .map(defn(_)(_).toString)
+        .map(defn(_)(_))

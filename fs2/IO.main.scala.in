@@ -1,0 +1,122 @@
+/*
+ * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+//package main.scala.in
+
+import _root_.cats.effect.IOLocal
+
+
+object App extends _root_.cats.effect.IOApp:
+
+  import _root_.scala.collection.immutable.Map
+
+  import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref, Resource }
+  import _root_.cats.effect.std.{ Queue, Semaphore }
+
+  import _root_.io.github.timwspence.cats.stm.STM
+
+  import `Π-dump`.*
+  import `Π-loop`.*
+
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
+
+  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[IO])
+                 (% : %[IO], / : /[IO], * : *[IO], - : -[IO], ! : ![IO], & : &[IO], ~ : ~[IO])
+                 (using `}{`.`][`, `}{`.stm.TSemaphore) =
+    val lπ = πloop[IO]()
+    val dπ = πdump[IO]()
+    val mπ = π.πmain[IO]()
+    ( for
+        _ <- lπ.loop(snapshot, `}{`)(using %, !, &, ~, -, *)(π.`π-wand`).background
+        _ <- lπ.poll(using %, /, *).background
+        _ <- dπ.dump(snapshot)(using %, !, -).background
+      yield
+        ()
+    ).use { _ =>
+      for
+        l <- IOLocal[sΠ.`)(`](uuid)
+        _ <- mπ.Main(l, `}{`)(args*)(using π.`π-uuid`)(using %, /, () => *.offer(())).compile.drain
+        x <- !.get
+      yield
+        x
+    }
+
+  override def run(args: List[String]) =
+    val p = if sys.Prop.IntProp(bacsp).isSet
+            then sys.Prop.IntProp(bacsp).value
+            else π.`π-parallelism`
+    val s = if sys.BooleanProp.keyExists(baass).value
+            then true
+            else π.`π-snapshot`
+    for
+      % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
+      * <- Queue.unbounded[π.F, Unit]
+      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[π.F, (String, (String, String))], Deferred[π.F, (String, (String, String))]))]
+      ! <- Deferred[π.F, ExitCode]
+      & <- Ref[π.F].of(0L)
+      ~ <- Semaphore[π.F](p)
+      _ <- sΠ.`π-enable`[π.F](π.`π-main`)(using %)
+      stm <- STM.runtime[π.F]
+      wrapper = new sΠ.`}{`(stm)
+      (uuid, tree, semaphore) <- wrapper.`][`()
+      x <- run(args, s, uuid, wrapper)(%, /, *, -, !, &, ~)(using tree, semaphore)
+    yield
+      x
+
+
+object π:
+
+  import _root_.java.util.UUID
+
+  import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.scala.concurrent.duration.*
+
+  import _root_.cats.Parallel
+  import _root_.cats.syntax.all.*
+
+  import _root_.cats.effect.{ Concurrent, LiftIO, Temporal }
+
+  import _root_.fs2.Stream
+
+  import _root_.eu.timepit.refined.*
+
+  extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
+    private[π] inline def πparSequence: Stream[F, Nothing] =
+      Stream.exec(self.map(_.compile.drain).parSequence.void)
+
+  import sΠ.*
+  import `π-$`.*, `π-ζ`.*
+
+  def `π-uuid` = UUID.randomUUID.toString
+
+  import `Π-loop`.{ %, /, \ }
+  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+
+
