@@ -81,12 +81,12 @@ object Program:
 
           val sfs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
-          * = `_ <- *`(`List( *, … ).parJoin`(sfs*))
+          * = `_ <- *`(`List( *, … ).parSequence`(sfs*))
 
         case it: + =>
           val sfs = it.choices.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parJoin`(sfs*))
+          * = `_ <- *`(`List( *, … ).parSequence`(sfs*))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -99,7 +99,7 @@ object Program:
         case it: ∥ =>
           val sfs = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parJoin`(sfs*))
+          * = `_ <- *`(`List( *, … ).parSequence`(sfs*))
 
         ///////////////////////////////////////////////////////// composition //
 

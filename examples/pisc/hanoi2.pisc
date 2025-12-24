@@ -5,7 +5,7 @@
 
 @given [F[_]: Temporal]: Conversion[`()`[F], Int] = _.`()`[Int]
 
-⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console) ⟧
+⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console,Parallel) ⟧
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \

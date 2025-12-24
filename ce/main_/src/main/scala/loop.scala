@@ -134,7 +134,7 @@ package object `Π-loop`:
                                  }
                                case _ => false
                              }
-                           case _ => true
+                           case _ => false
                          }
                        }
                }

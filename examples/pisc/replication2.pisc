@@ -5,11 +5,11 @@
 
 @val gen = new scala.util.Random
 
-⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console) ⟧
+⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console,Parallel) ⟧
 
 ⟦ traces = on ⟧
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
@@ -61,7 +61,7 @@ Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*Console[F].println(z)*/.) 
             | (!.x(y). y</*Async[F].delay(gen.nextInt)*/>.)                   \
             )
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # one finite publisher, one finite subscriber, bound output prefix ✔
 

@@ -11,9 +11,9 @@ and Cats Effect `IO[_]`.
 Names act as [topic](https://fs2.io/#/concurrency-primitives?id=topic)s, with
 possibly multiple [publishers and multiple subscribers](https://fs2.io/#/concurrency-primitives?id=single-publisher-multiple-subscriber).
 
-Composition: parallel modelled with - `List(...).parJoinUnbounded`.
+Composition: parallel modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
 
-Summation: probabilistic choice modelled with - `List(...).parJoinUnbounded`.
+Summation: probabilistic choice modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
 
 [Guarded] Replication: modelled with infinite streams.
 
