@@ -150,7 +150,7 @@ package object Π:
           * replication bound output guard w/ code
           */
         def apply[T]()(code: => F[T]): Iterant[F, `()`[F]] =
-          Iterant.repeatEval(()) >> self.ν()(code)
+          Iterant.repeatEval(()) >> self.ν[T]()(code)
 
         /**
           * replication bound output guard w/ pace
@@ -162,7 +162,7 @@ package object Π:
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](pace: FiniteDuration)(code: => F[T]): Iterant[F, `()`[F]] =
-          Iterant.intervalAtFixedRate(pace) >> self.ν()(code)
+          Iterant.intervalAtFixedRate(pace) >> self.ν[T]()(code)
 
       /**
         * constant replication output guard
@@ -206,13 +206,13 @@ package object Π:
           * `null` replication output guard w/ code
           */
         inline def apply[T]()(code: => F[T]): Iterant[F, Unit] =
-          self.`null`()(code)
+          self.`null`[T]()(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](_pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
-          apply()(code)
+          apply[T]()(code)
 
       object * :
 
@@ -220,25 +220,25 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](value: => S): Iterant[F, Unit] =
-          Iterant.repeatEvalF(Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+          apply[S](Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](pace: FiniteDuration, value: => S): Iterant[F, Unit] =
-          Iterant.intervalAtFixedRate(pace).mapEval(_ => Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+          apply[S](pace, Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](Concurrent[F].delay(value)).mapEval(code.as(_))
+          apply[S](value).mapEval(code.as(_))
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](pace, Concurrent[F].delay(value)).mapEval(code.as(_))
+          apply[S](pace, value).mapEval(code.as(_))
 
         /**
           * variable replication output guard
@@ -342,13 +342,13 @@ package object Π:
         * variable output prefix
         */
       def apply[S](value: => S): Iterant[F, Unit] =
-        Iterant.liftF(Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+        apply[S](Concurrent[F].delay(value))
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-        apply[S](Concurrent[F].delay(value)).mapEval(code.as(_))
+        apply[S](value).mapEval(code.as(_))
 
       /**
         * variable output prefix

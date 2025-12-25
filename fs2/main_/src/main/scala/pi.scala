@@ -147,7 +147,7 @@ package object Π:
           * replication bound output guard w/ code
           */
         def apply[T]()(code: => F[T]): Stream[F, `()`[F]] =
-          (Stream.unit.repeat >> self.ν()(code)).interruptWhen(d)
+          (Stream.unit.repeat >> self.ν[T]()(code)).interruptWhen(d)
 
         /**
           * replication bound output guard w/ pace
@@ -159,7 +159,7 @@ package object Π:
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](pace: FiniteDuration)(code: => F[T]): Stream[F, `()`[F]] =
-          (Stream.awakeEvery(pace) >> self.ν()(code)).interruptWhen(d)
+          (Stream.awakeEvery(pace) >> self.ν[T]()(code)).interruptWhen(d)
 
       /**
         * constant replication output guard
@@ -203,13 +203,13 @@ package object Π:
           * `null` replication output guard w/ code
           */
         inline def apply[T]()(code: => F[T]): Stream[F, Unit] =
-          self.`null`()(code)
+          self.`null`[T]()(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](_pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
-          apply()(code)
+          apply[T]()(code)
 
       object * :
 
@@ -217,25 +217,25 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](value: => S): Stream[F, Unit] =
-          Stream.repeatEval(Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
+          apply[S](Async[F].delay(value))
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](pace: FiniteDuration, value: => S): Stream[F, Unit] =
-          Stream.awakeEvery(pace).evalMap(_ => Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t).interruptWhen(d)
+          apply[S](pace, Async[F].delay(value))
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => S)(code: => F[T]): Stream[F, Unit] =
-          apply[S](Async[F].delay(value)).evalTap(_ => code)
+          apply[S](value).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Stream[F, Unit] =
-          apply(pace, Async[F].delay(value)).evalTap(_ => code)
+          apply[S](pace, value).evalTap(_ => code)
 
         /**
           * variable replication output guard
@@ -263,7 +263,7 @@ package object Π:
           */
         @annotation.targetName("applyF")
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Stream[F, Unit] =
-          apply(pace, value).evalTap(_ => code)
+          apply[S](pace, value).evalTap(_ => code)
 
       /**
         * replication input guard
@@ -339,13 +339,13 @@ package object Π:
         * variable output prefix
         */
       def apply[S](value: => S): Stream[F, Unit] =
-        Stream.eval(Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
+        apply[S](Async[F].delay(value))
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](value: => S)(code: => F[T]): Stream[F, Unit] =
-        apply[S](Async[F].delay(value)).evalTap(_ => code)
+        apply[S](value).evalTap(_ => code)
 
       /**
         * variable output prefix
