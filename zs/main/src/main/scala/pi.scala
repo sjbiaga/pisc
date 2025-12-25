@@ -205,24 +205,52 @@ package object Π:
         /**
           * variable replication output guard
           */
+        def apply[S](value: => S): ZStream[Any, Throwable, Unit] =
+          ZStream.fromZIO(ZIO.attempt(value)).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+
+        /**
+          * variable replication output guard w/ pace
+          */
+        def apply[S](pace: Duration, value: => S): ZStream[Any, Throwable, Unit] =
+          ZStream.tick(pace).mapZIO(_ => ZIO.attempt(value)).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+
+        /**
+          * variable replication output guard w/ code
+          */
+        def apply[S, T](value: => S)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+          apply[S](ZIO.attempt(value)).tap(_ => code)
+
+        /**
+          * variable replication output guard w/ pace w/ code
+          */
+        def apply[S, T](pace: Duration, value: => S)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+          apply[S](pace, ZIO.attempt(value)).tap(_ => code)
+
+        /**
+          * variable replication output guard
+          */
+        @annotation.targetName("applyTask")
         def apply[S](value: => Task[S]): ZStream[Any, Throwable, Unit] =
           ZStream.fromZIO(value).repeat(Schedule.forever).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
         /**
           * variable replication output guard w/ pace
           */
+        @annotation.targetName("applyTask")
         def apply[S](pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
           ZStream.tick(pace).mapZIO(_ => value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
         /**
           * variable replication output guard w/ code
           */
+        @annotation.targetName("applyTask")
         def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
           apply[S](value).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
+        @annotation.targetName("applyTask")
         def apply[S, T](pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
           apply[S](pace, value).tap(_ => code)
 
@@ -299,12 +327,26 @@ package object Π:
       /**
         * variable output prefix
         */
+      def apply[S](value: => S): ZStream[Any, Throwable, Unit] =
+        ZStream.fromZIO(ZIO.attempt(value)).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
+
+      /**
+        * variable output prefix w/ code
+        */
+      def apply[S, T](value: => S)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+        apply[S](ZIO.attempt(value)).tap(_ => code)
+
+      /**
+        * variable output prefix
+        */
+      @annotation.targetName("applyTask")
       def apply[S](value: => Task[S]): ZStream[Any, Throwable, Unit] =
         ZStream.fromZIO(value).mapZIO { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }.through1(h)
 
       /**
         * variable output prefix w/ code
         */
+      @annotation.targetName("applyTask")
       def apply[S, T](value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
         apply[S](value).tap(_ => code)
 

@@ -34,7 +34,7 @@ package object Π:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Deferred, Ref, Resource, Temporal }
+  import _root_.cats.effect.{ Async, Deferred, Ref, Resource }
   import _root_.cats.effect.std.Queue
 
   import _root_.fs2.Stream
@@ -46,7 +46,7 @@ package object Π:
   /**
     * restriction aka new name
     */
-  final class ν[F[_]: Temporal]:
+  final class ν[F[_]: Async]:
 
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
@@ -62,7 +62,7 @@ package object Π:
   /**
     * silent transition
     */
-  final class τ[F[_]: Temporal]:
+  final class τ[F[_]: Async]:
 
     object ! :
 
@@ -105,7 +105,7 @@ package object Π:
   /**
     * events, i.e., names (topics) and values
     */
-  implicit final class `()`[F[_]: Temporal](private val name: Any) { self =>
+  implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
     private inline def t = `()`[><[F]].topic
     private inline def q = `()`[><[F]].queue
@@ -115,7 +115,7 @@ package object Π:
       for
         b <- r.get
         s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Temporal[F].unit
+        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
       yield
         ()
     private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.evalFilter(_._2.complete(())).map(_._1)
@@ -214,24 +214,52 @@ package object Π:
         /**
           * variable replication output guard
           */
+        def apply[S](value: => S): Stream[F, Unit] =
+          Stream.repeatEval(Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
+
+        /**
+          * variable replication output guard w/ pace
+          */
+        def apply[S](pace: FiniteDuration, value: => S): Stream[F, Unit] =
+          Stream.awakeEvery(pace).evalMap(_ => Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
+
+        /**
+          * variable replication output guard w/ code
+          */
+        def apply[S, T](value: => S)(code: => F[T]): Stream[F, Unit] =
+          apply[S](Async[F].delay(value)).evalTap(_ => code)
+
+        /**
+          * variable replication output guard w/ pace w/ code
+          */
+        def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Stream[F, Unit] =
+          apply[S](pace, Async[F].delay(value)).evalTap(_ => code)
+
+        /**
+          * variable replication output guard
+          */
+        @annotation.targetName("applyF")
         def apply[S](value: => F[S]): Stream[F, Unit] =
           Stream.repeatEval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
 
         /**
           * variable replication output guard w/ pace
           */
+        @annotation.targetName("applyF")
         def apply[S](pace: FiniteDuration, value: => F[S]): Stream[F, Unit] =
           Stream.awakeEvery(pace).evalMap(_ => value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
 
         /**
           * variable replication output guard w/ code
           */
+        @annotation.targetName("applyF")
         def apply[S, T](value: => F[S])(code: => F[T]): Stream[F, Unit] =
           apply[S](value).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
+        @annotation.targetName("applyF")
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Stream[F, Unit] =
           apply[S](pace, value).evalTap(_ => code)
 
@@ -308,12 +336,26 @@ package object Π:
       /**
         * variable output prefix
         */
+      def apply[S](value: => S): Stream[F, Unit] =
+        Stream.eval(Async[F].delay(value)).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
+
+      /**
+        * variable output prefix w/ code
+        */
+      def apply[S, T](value: => S)(code: => F[T]): Stream[F, Unit] =
+        apply[S](Async[F].delay(value)).evalTap(_ => code)
+
+      /**
+        * variable output prefix
+        */
+      @annotation.targetName("applyF")
       def apply[S](value: => F[S]): Stream[F, Unit] =
         Stream.eval(value).evalMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(t)
 
       /**
         * variable output prefix w/ code
         */
+      @annotation.targetName("applyF")
       def apply[S, T](value: => F[S])(code: => F[T]): Stream[F, Unit] =
         apply[S](value).evalTap(_ => code)
 
@@ -340,7 +382,7 @@ package object Π:
                         queue: Queue[F, Unit],
                         limit: Ref[F, Boolean])
 
-    extension [F[_]: Temporal, O](self: Stream[F, O])
+    extension [F[_]: Async, O](self: Stream[F, O])
       inline def through1(topic: Topic[F, O])
                          (using await: F[Unit]): Stream[F, Unit] =
         self.evalMap(await >> topic.publish1(_)).takeWhile(_.isRight).void

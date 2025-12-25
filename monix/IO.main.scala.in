@@ -55,10 +55,10 @@ object π:
   import _root_.eu.timepit.refined.*
 
   extension [F[_]: Concurrent: TaskLift: TaskLike](self: πObs[Iterant[F, ?]])
-    private[π] inline def πmapParF: Iterant[F, Nothing] =
-      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F]) >> Iterant.empty
-    private[π] inline def πmapParF(semaphore: Semaphore[F]): Iterant[F, Nothing] =
-      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F]) >> Iterant.empty
+    private[π] inline def πmapParF: Iterant[F, Unit] =
+      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F])
+    private[π] inline def πmapParF(semaphore: Semaphore[F]): Iterant[F, Unit] =
+      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F])
 
   import Π.*
 

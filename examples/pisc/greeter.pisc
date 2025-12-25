@@ -20,7 +20,7 @@ Greeter(stdin, stdout, line*) = \
                                     'line <- IO.blocking { scala.io.StdIn.readLine } */. \
                                                          stdin<line>.stdout(greet) /* nl */. \
                                 [/* !'greet */ = False] τ/*print('greet)*/. \
-                              ) \
+                              )
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
                       + Greeter"(stdout, name) \

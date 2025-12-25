@@ -219,24 +219,52 @@ package object Π:
         /**
           * variable replication output guard
           */
+        def apply[S](value: => S): Iterant[F, Unit] =
+          Iterant.repeatEvalF(Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+
+        /**
+          * variable replication output guard w/ pace
+          */
+        def apply[S](pace: FiniteDuration, value: => S): Iterant[F, Unit] =
+          Iterant.intervalAtFixedRate(pace).mapEval(_ => Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+
+        /**
+          * variable replication output guard w/ code
+          */
+        def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
+          apply[S](Concurrent[F].delay(value)).mapEval(code.as(_))
+
+        /**
+          * variable replication output guard w/ pace w/ code
+          */
+        def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
+          apply[S](pace, Concurrent[F].delay(value)).mapEval(code.as(_))
+
+        /**
+          * variable replication output guard
+          */
+        @annotation.targetName("applyF")
         def apply[S](value: => F[S]): Iterant[F, Unit] =
           Iterant.repeatEvalF(value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
 
         /**
           * variable replication output guard w/ pace
           */
+        @annotation.targetName("applyF")
         def apply[S](pace: FiniteDuration, value: => F[S]): Iterant[F, Unit] =
           Iterant.intervalAtFixedRate(pace).mapEval(_ => value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
 
         /**
           * variable replication output guard w/ code
           */
+        @annotation.targetName("applyF")
         def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
           apply[S](value).mapEval(code.as(_))
 
         /**
           * variable replication output guard w/ pace w/ code
           */
+        @annotation.targetName("applyF")
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
           apply[S](pace, value).mapEval(code.as(_))
 
@@ -313,12 +341,26 @@ package object Π:
       /**
         * variable output prefix
         */
+      def apply[S](value: => S): Iterant[F, Unit] =
+        Iterant.liftF(Concurrent[F].delay(value)).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
+
+      /**
+        * variable output prefix w/ code
+        */
+      def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
+        apply[S](Concurrent[F].delay(value)).mapEval(code.as(_))
+
+      /**
+        * variable output prefix
+        */
+      @annotation.targetName("applyF")
       def apply[S](value: => F[S]): Iterant[F, Unit] =
         Iterant.liftF(value).mapEval { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }.through1(ch)
 
       /**
         * variable output prefix w/ code
         */
+      @annotation.targetName("applyF")
       def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
         apply[S](value).mapEval(code.as(_))
 

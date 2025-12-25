@@ -2,12 +2,11 @@
 
 # ./examples $ pi_ -fs2 hanoi2.scala
 
-@import cats.effect.Async
 @import cats.effect.std.Console
 
-@given [F[_]: Temporal]: Conversion[`()`[F], Int] = _.`()`[Int]
+@given [F[_]: Async]: Conversion[`()`[F], Int] = _.`()`[Int]
 
-@def ![F[_]: Temporal]: String => F[String] = { _ => Temporal[F].pure(null) }
+@def ![F[_]: Async]: String => F[String] = { _ => Async[F].pure(null) }
 
 ⟦ typeclasses = (Async,Console,Parallel) ⟧
 
@@ -34,17 +33,17 @@ Hanoi(a,b,c,n*) = ν(w)                                            \
 
 Move(from,to,z) = from(x).to(y).                               \
                   τ/*Console[F].println(s"${'x} -> ${'y}")*/.  \
-                                z</*Async[F].pure(1)*/>.
+                                z</*1*/>.
 
-Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                                      \
-                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )                     \
-                   else ν(x)                                                  \
-                      ( Hanoi(a,c,b,/*'n-1*/,x)                               \
-                      | x(x). ν(y)                                            \
-                              ( Move(a,c,y)                                   \
-                              | y(y). ν(z)                                    \
-                                      ( Hanoi(b,a,c,/*'n-1*/,z)               \
-                                      | z(z).w</*Async[F].pure('x+'y+'z)*/>.  \
-                                      )                                       \
-                              )                                               \
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
+                   else ν(x)                                     \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                  \
+                      | x(x). ν(y)                               \
+                              ( Move(a,c,y)                      \
+                              | y(y). ν(z)                       \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)  \
+                                      | z(z).w</*'x+'y+'z*/>.    \
+                                      )                          \
+                              )                                  \
                       )

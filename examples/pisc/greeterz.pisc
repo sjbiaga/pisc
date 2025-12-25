@@ -6,16 +6,21 @@
 
 @val nl: String => Task[String] = { it => ZIO.succeed { s"$it\n" } }
 
-Main = ν(stdout) Greeter(stdout)
+Main = ν(stdin, stdout) Greeter(stdin, stdout)
 
-Greeter(stdout, name*) = \
-                       τ /* _    <- ZIO.debug("What's your name?"); \
-                           'name <- ZIO.blocking { ZIO.succeed(scala.io.StdIn.readLine) } */. \
-                       if /* 'name.isBlank */ = True \
-                       then Greeter(stdout) \
-                       else ( Chooser(stdout, name) \
-                            | stdout(greet) /* nl */. τ/*ZIO.succeed(print('greet))*/. \
-                            ) \
+Greeter(stdin, stdout, line*) = \
+                              ( stdout<"What's your name?">.stdin(name). \
+                                                                         if /* 'name.isBlank */ = True \
+                                                                         then stdout<>. Greeter(stdin, stdout) \
+                                                                         else Chooser(stdout, name) \
+                              ) \
+                              | \
+                              ( stdout(prompt) /* nl */. \
+                                τ /* _    <- ZIO.attempt { print('prompt) }; \
+                                    'line <- ZIO.blocking { ZIO.succeed(scala.io.StdIn.readLine) } */. \
+                                                         stdin<line>.stdout(greet) /* nl */. \
+                                [/* !'greet */ = False] τ/*ZIO.attempt(print('greet))*/. \
+                              )
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
                       + Greeter"(stdout, name) \
@@ -25,7 +30,7 @@ Greeter'(stdout, name) = \
                        ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">. ) \
                        + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
                        + ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"] \
-                           [name ≠ "Voldemort"] stdout</*ZIO.succeed(s"Hello ${'name}!")*/>.  ) \
+                           [name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.  ) \
                        )
 
 Greeter"(stdout, name) = \
@@ -34,7 +39,7 @@ Greeter"(stdout, name) = \
                          else \
                            if name = "Voldemort" \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           else stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                           else stdout</*s"Hello ${'name}!"*/>. \
                        )
 
 Greeter"'(stdout, name) = \
@@ -43,5 +48,5 @@ Greeter"'(stdout, name) = \
                           : \
                             name = "Voldemort" \
                             ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                            : stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                            : stdout</*s"Hello ${'name}!"*/>. \
                         )
