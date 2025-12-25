@@ -184,7 +184,7 @@ package object `Π-loop`:
                                                 (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
                                                 _            <- sd1.complete(slabel -> elabel)
                                                 _            <- if k1 == k2 then Temporal[F].unit
-                                                                else sd2.complete(slabel -> (elabelʹ -> elabel._2)).void
+                                                                else sd2.complete(slabelʹ -> (elabelʹ -> elabel._2)).void
                                                 _            <- ( if k1 == k2 then
                                                                     `}{`.stm.commit {
                                                                       for

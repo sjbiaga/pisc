@@ -439,7 +439,7 @@ package object sΠ:
             */
           def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                    (using % : %[F], / : /[F], \ : \[F])
-                   (using `}{`.`][`, `}{`.stm.TSemaphore)
+                   (using `}{`.stm.TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
@@ -482,7 +482,7 @@ package object sΠ:
             */
           def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                       (using % : %[F], / : /[F], \ : \[F])
-                      (using `}{`.`][`, `}{`.stm.TSemaphore)
+                      (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, `()`[F]] =
@@ -525,7 +525,7 @@ package object sΠ:
             */
           def apply(rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                    (using % : %[F], / : /[F], \ : \[F])
-                   (using `}{`.`][`, `}{`.stm.TSemaphore)
+                   (using `}{`.stm.TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
@@ -568,7 +568,7 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                       (using % : %[F], / : /[F], \ : \[F])
-                      (using `}{`.`][`, `}{`.stm.TSemaphore)
+                      (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, `()`[F]] =
@@ -611,7 +611,7 @@ package object sΠ:
           */
         def apply(rate: Rate, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
@@ -652,7 +652,7 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: FiniteDuration, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
@@ -693,7 +693,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
@@ -734,7 +734,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
@@ -777,7 +777,7 @@ package object sΠ:
             */
           def apply[S](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                       (using % : %[F], / : /[F], \ : \[F])
-                      (using `}{`.`][`, `}{`.stm.TSemaphore)
+                      (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, Unit] =
@@ -819,7 +819,7 @@ package object sΠ:
             */
           def apply[S](rate: Rate, pace: FiniteDuration, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                       (using % : %[F], / : /[F], \ : \[F])
-                      (using `}{`.`][`, `}{`.stm.TSemaphore)
+                      (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, Unit] =
@@ -860,7 +860,7 @@ package object sΠ:
             */
           def apply[S, T](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                          (using % : %[F], / : /[F], \ : \[F])
-                         (using `}{`.`][`, `}{`.stm.TSemaphore)
+                         (using `}{`.stm.TSemaphore)
                          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                    `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                    ^ : String): Stream[F, Unit] =
@@ -901,7 +901,7 @@ package object sΠ:
             */
           def apply[S, T](rate: Rate, pace: FiniteDuration, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                          (using % : %[F], / : /[F], \ : \[F])
-                         (using `}{`.`][`, `}{`.stm.TSemaphore)
+                         (using `}{`.stm.TSemaphore)
                          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                    `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                    ^ : String): Stream[F, Unit] =
@@ -942,7 +942,7 @@ package object sΠ:
           */
         def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
@@ -984,7 +984,7 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
@@ -1026,7 +1026,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: T => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
@@ -1068,7 +1068,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: T => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
@@ -1112,7 +1112,7 @@ package object sΠ:
           */
         def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                  (using % : %[F], / : /[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
@@ -1138,7 +1138,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                     (using % : %[F], / : /[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
@@ -1164,7 +1164,7 @@ package object sΠ:
         */
       def apply(rate: Rate, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                (using % : %[F], / : /[F])
-               (using `}{`.`][`, `}{`.stm.TSemaphore)
+               (using `}{`.stm.TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
@@ -1186,7 +1186,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                   (using % : %[F], / : /[F])
-                  (using `}{`.`][`, `}{`.stm.TSemaphore)
+                  (using `}{`.stm.TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, Unit] =
@@ -1210,7 +1210,7 @@ package object sΠ:
           */
         def apply[S](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                     (using % : %[F], / : /[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
@@ -1232,7 +1232,7 @@ package object sΠ:
           */
         def apply[S, T](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                        (using % : %[F], / : /[F])
-                       (using `}{`.`][`, `}{`.stm.TSemaphore)
+                       (using `}{`.stm.TSemaphore)
                        (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                  `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                  ^ : String): Stream[F, Unit] =
@@ -1254,7 +1254,7 @@ package object sΠ:
         */
       def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                (using % : %[F], / : /[F])
-               (using `}{`.`][`, `}{`.stm.TSemaphore)
+               (using `}{`.stm.TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, `()`[F]] =
@@ -1280,7 +1280,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: T => F[T])
                   (using % : %[F], / : /[F])
-                  (using `}{`.`][`, `}{`.stm.TSemaphore)
+                  (using `}{`.stm.TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
@@ -1310,7 +1310,7 @@ package object sΠ:
           */
         def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
@@ -1353,7 +1353,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)(code: => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
@@ -1396,7 +1396,7 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)
                  (using % : %[F], / : /[F], \ : \[F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore)
+                 (using `}{`.stm.TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
@@ -1439,7 +1439,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: FiniteDuration, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)(code: => F[T])
                     (using % : %[F], / : /[F], \ : \[F])
-                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using `}{`.stm.TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
@@ -1482,7 +1482,7 @@ package object sΠ:
         */
       def apply(rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)
                (using % : %[F], / : /[F])
-               (using `}{`.`][`, `}{`.stm.TSemaphore)
+               (using `}{`.stm.TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
@@ -1509,7 +1509,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, `}{`: `}{`[F])(key: String, `)(`: `)(`)(cap: `π-ζ`)(code: => F[T])
                   (using % : %[F], / : /[F])
-                  (using `}{`.`][`, `}{`.stm.TSemaphore)
+                  (using `}{`.stm.TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, Unit] =
@@ -1557,6 +1557,7 @@ package object sΠ:
           _    <- stm.commit {
             for
               _ <- `2`.acquire
+              _ <- `2`.acquire
               _ <- `][`.modify { m =>
                                  val root = m.keys.find(_.contains(key)).get
                                  val tree @ `}{`(_, _, children, _) = m(root)
@@ -1568,6 +1569,7 @@ package object sΠ:
                                    m + (child -> tree.copy(siblings = siblings + node))
                                  }
                                }
+              _ <- `2`.release
               _ <- `2`.release
             yield
               ()
