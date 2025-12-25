@@ -140,7 +140,7 @@ package object Π:
           * replication bound output guard w/ code
           */
         def apply[T](arity: Int)(code: => Task[T]): ZStream[Any, Throwable, Seq[`()`]] =
-          (τ.!() *> self.ν(arity)(code)).interruptWhen(p)
+          (τ.!() *> self.ν[T](arity)(code)).interruptWhen(p)
 
         /**
           * replication bound output guard w/ pace
@@ -152,7 +152,7 @@ package object Π:
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](arity: Int, pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Seq[`()`]] =
-          (τ.!(pace) *> self.ν(arity)(code)).interruptWhen(p)
+          (τ.!(pace) *> self.ν[T](arity)(code)).interruptWhen(p)
 
       /**
         * constant replication output guard
@@ -196,15 +196,39 @@ package object Π:
           * `null` replication output guard w/ code
           */
         inline def apply[T](_arity: Int)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          self.`null`(_arity)(code)
+          self.`null`[T](_arity)(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](_arity: Int, _pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          apply(_arity)(code)
+          apply[T](_arity)(code)
 
       object * :
+
+        /**
+          * variable replication output guard
+          */
+        def apply[S](value: () => S*): ZStream[Any, Throwable, Unit] =
+          apply[S](value.map { it => ZIO.attempt(it()) }*)
+
+        /**
+          * variable replication output guard w/ pace
+          */
+        def apply[S](pace: Duration, value: () => S*): ZStream[Any, Throwable, Unit] =
+          apply[S](pace, value.map { it => ZIO.attempt(it()) }*)
+
+        /**
+          * variable replication output guard w/ code
+          */
+        def apply[S, T](value: () => S*)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+          apply[S](value*).tap(_ => code)
+
+        /**
+          * variable replication output guard w/ pace w/ code
+          */
+        def apply[S, T](pace: Duration, value: () => S*)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+          apply[S](pace, value*).tap(_ => code)
 
         /**
           * variable replication output guard
@@ -300,6 +324,18 @@ package object Π:
         apply(_arity).tap(_ => code)
 
     object * :
+
+      /**
+        * variable output prefix
+        */
+      def apply[S](value: () => S*): ZStream[Any, Throwable, Unit] =
+        apply[S](value.map { it => ZIO.attempt(it()) }*)
+
+      /**
+        * variable output prefix w/ code
+        */
+      def apply[S, T](value: () => S*)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+        apply[S](value*).tap(_ => code)
 
       /**
         * variable output prefix

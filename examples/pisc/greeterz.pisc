@@ -6,8 +6,6 @@
 
 @val nl: Seq[String] => Task[Seq[String]] = { case Seq(it) => ZIO.succeed { Seq(s"$it\n") } }
 
-⟦ typeclasses = (Async,Console) ⟧
-
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 
 Greeter(stdin, stdout, line*) = \
@@ -22,7 +20,7 @@ Greeter(stdin, stdout, line*) = \
                                     'line <- ZIO.succeedBlocking { scala.io.StdIn.readLine } */. \
                                                          stdin<line>.stdout(greet) /* nl */. \
                                 [/* !'greet */ = False] τ/*ZIO.attempt(print('greet))*/. \
-                              ) \
+                              )
 
 Chooser(stdout, name) = Greeter'(stdout, name) \
                       + Greeter"(stdout, name) \
@@ -32,7 +30,7 @@ Greeter'(stdout, name) = \
                        ( ( [/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">. ) \
                        + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
                        + ( [/*name.substring(0,1).toUpperCase*/ ≠ "Q"] \
-                           [name ≠ "Voldemort"] stdout</*ZIO.succeed(s"Hello ${'name}!")*/>.  ) \
+                           [name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.  ) \
                        )
 
 Greeter"(stdout, name) = \
@@ -41,7 +39,7 @@ Greeter"(stdout, name) = \
                          else \
                            if name = "Voldemort" \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           else stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                           else stdout</*s"Hello ${'name}!"*/>. \
                        )
 
 Greeter"'(stdout, name) = \
@@ -50,5 +48,5 @@ Greeter"'(stdout, name) = \
                           : \
                             name = "Voldemort" \
                             ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                            : stdout</*ZIO.succeed(s"Hello ${'name}!")*/>. \
+                            : stdout</*s"Hello ${'name}!"*/>. \
                         )

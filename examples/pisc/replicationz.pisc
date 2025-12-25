@@ -2,29 +2,29 @@
 
 @val gen = new scala.util.Random
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*ZIO.attempt(gen.nextInt)*/>.)  \
-            | (!.x(y). τ/*ZIO.debug(y)*/.)                            \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)  \
+            | (!.x(y). τ/*ZIO.debug(y)*/.)               \
             )
 
 ⟦ exclude = yes ⟧
 
 # two infinite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*ZIO.attempt(gen.nextInt.abs)*/>.)   \
-            | (! 100,milliseconds .x</*ZIO.attempt(-gen.nextInt.abs)*/>.)  \
-            | (!.x(y). τ/*ZIO.debug(y)*/.)                                 \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*ZIO.debug(y)*/.)                    \
             )
 
 ⟦ exclude = yes ⟧
 
 # two finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (x</*ZIO.attempt(gen.nextInt.abs)*/>.)          \
-            | (x</*ZIO.attempt(-gen.nextInt.abs)*/>.)         \
+Main = ν(x) ( (x</*gen.nextInt.abs*/>.)                       \
+            | (x</*-gen.nextInt.abs*/>.)                      \
             | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)  \
             )
 
@@ -32,50 +32,50 @@ Main = ν(x) ( (x</*ZIO.attempt(gen.nextInt.abs)*/>.)          \
 
 # two sequential finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (x</*ZIO.attempt(gen.nextInt.abs)*/>. x</*ZIO.attempt(-gen.nextInt.abs)*/>.)  \
-            | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)                                \
+Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>.)  \
+            | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)      \
             )
 
 ⟦ exclude = yes ⟧
 
 # two infinite publishers, two infinite subscribers ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*ZIO.attempt(gen.nextInt.abs)*/>.)   \
-            | (! 100,milliseconds .x</*ZIO.attempt(-gen.nextInt.abs)*/>.)  \
-            | (!.x(y). τ/*ZIO.debug(1->y)*/.)                              \
-            | (!.x(y). τ/*ZIO.debug(2->y)*/.)                              \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*ZIO.debug(1->y)*/.)                 \
+            | (!.x(y). τ/*ZIO.debug(2->y)*/.)                 \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, one infinite subscriber, bound output guard ✔
 
 Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*ZIO.debug(z)*/.)  \
-            | (!.x(y). y</*ZIO.attempt(gen.nextInt)*/>.)             \
+            | (!.x(y). y</*gen.nextInt*/>.)                          \
             )
 
 ⟦ exclude = yes ⟧
 
 # one finite publisher, one finite subscriber, bound output prefix ✔
 
-Main = ν(x) ! ( (x<νy>. y(z). τ/*ZIO.debug(z)*/.)         \
-              | (x(y). y</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ! ( (x<νy>. y(z). τ/*ZIO.debug(z)*/.)  \
+              | (x(y). y</*gen.nextInt*/>.)        \
               )
 
 ⟦ exclude = yes ⟧
 
 # one finite publisher, one finite subscriber, output prefix ✔
 
-Main = ν(x) ! ( (x(y). τ/*ZIO.debug(y)*/.)          \
-              | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ! ( (x(y). τ/*ZIO.debug(y)*/.)  \
+              | (x</*gen.nextInt*/>.)       \
               )
 
 ⟦ exclude = yes ⟧
 
 # one infinite publisher, multiple finite subscribers ✔
 
-Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)          \
-            | (!.x</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)  \
+            | (!.x</*gen.nextInt*/>.)       \
             )
 
 ⟦ exclude = yes ⟧
@@ -84,17 +84,17 @@ Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)          \
 
 Main(x) = x(y). τ/*ZIO.debug(y)*/. Main(x)
 
-Main = ν(x) ( Main(x)                               \
-            | (!.x</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ( Main(x)                  \
+            | (!.x</*gen.nextInt*/>.)  \
             )
 
 ⟦ exclude = yes ⟧
 
 # two finite publishers, multiple finite subscribers ✔
 
-Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)        \
-            | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
-            | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)  \
+            | (x</*gen.nextInt*/>.)         \
+            | (x</*gen.nextInt*/>.)         \
             )
 
 ⟦ exclude = yes ⟧
@@ -103,9 +103,9 @@ Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)        \
 
 Main(x) = x(y). τ/*ZIO.debug(y)*/. Main(x)
 
-Main = ν(x) ( Main(x)                             \
-            | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
-            | (x</*ZIO.attempt(gen.nextInt)*/>.)  \
+Main = ν(x) ( Main(x)                \
+            | (x</*gen.nextInt*/>.)  \
+            | (x</*gen.nextInt*/>.)  \
             )
 
 ⟦ exclude = yes ⟧
@@ -113,21 +113,21 @@ Main = ν(x) ( Main(x)                             \
 # one infinite publisher, two sequential finite subscribers ✔
 
 Main = ν(x) ( (x(y). τ/*ZIO.debug(1->y)*/. x(z). τ/*ZIO.debug(2->z)*/.)  \
-            | (!.x</*ZIO.attempt(gen.nextInt)*/>.)                       \
+            | (!.x</*gen.nextInt*/>.)                                    \
             )
 
 ⟦ exclude = yes ⟧
 
 # multiple finite publishers, one finite subscriber ✔
 
-Main = ν(x) ( (!.x(y). τ/*ZIO.debug(y)*/. x</*ZIO.attempt(gen.nextInt.abs)*/>.)  \
-            | (x</*ZIO.attempt(-gen.nextInt.abs)*/>.)                            \
+Main = ν(x) ( (!.x(y). τ/*ZIO.debug(y)*/. x</*gen.nextInt.abs*/>.)  \
+            | (x</*-gen.nextInt.abs*/>.)                            \
             )
 
 ⟦ exclude = yes ⟧
 
 # multiple finite publishers, one infinite subscriber, one finite subscriber ✔
 
-Main = ν(x) ( (!.x(y). τ/*ZIO.debug(1->y)*/. x</*ZIO.attempt(gen.nextInt.abs)*/>. x(y). τ/*ZIO.debug(2->y)*/.)  \
-            | (x</*ZIO.attempt(-gen.nextInt.abs)*/>.)                                                           \
+Main = ν(x) ( (!.x(y). τ/*ZIO.debug(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/*ZIO.debug(2->y)*/.)  \
+            | (x</*-gen.nextInt.abs*/>.)                                                           \
             )

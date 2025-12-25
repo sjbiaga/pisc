@@ -13,14 +13,14 @@ Main = ν(sumlist)ν(print)ν(rch)                                   \
 
 Client(sumlist, print, rch, l) = sumlist<l,rch>.rch(sum).print<sum>.
 
-Server(sumlist) = sumlist(list: List[Int] /**/, rch).                                              \
-                  if /*'list.isEmpty*/ = True                                                      \
-                  then                                                                             \
-                    rch</*ZIO.succeed(0)*/>.                                                       \
-                  else                                                                             \
-                    ν(rch_recursive_call)                                                          \
-                    list::(head,tail).                                                             \
-                    ( Server(sumlist)                                                              \
-                    | sumlist<tail,rch_recursive_call>.                                            \
-                      rch_recursive_call(tailsum: Int /**/).rch</*ZIO.succeed('head+'tailsum)*/>.  \
+Server(sumlist) = sumlist(list: List[Int] /**/, rch).                                 \
+                  if /*'list.isEmpty*/ = True                                         \
+                  then                                                                \
+                    rch</*0*/>.                                                       \
+                  else                                                                \
+                    ν(rch_recursive_call)                                             \
+                    list::(head,tail).                                                \
+                    ( Server(sumlist)                                                 \
+                    | sumlist<tail,rch_recursive_call>.                               \
+                      rch_recursive_call(tailsum: Int /**/).rch</*'head+'tailsum*/>.  \
                     )

@@ -581,7 +581,7 @@ object Program:
 
       given Set[String] =
         prog.head match
-          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Temporal")
+          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Async")
           case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
             typeclasses.args.map { case Term.Name(it) => it }.toSet
 

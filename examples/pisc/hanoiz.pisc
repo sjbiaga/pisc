@@ -29,17 +29,17 @@ Hanoi(a,b,c,n*) = ν(w)                                        \
 
 Move(from,to,z) = from(x).to(y).                      \
                   τ/*ZIO.debug(s"${'x} -> ${'y}")*/.  \
-                                z</*ZIO.succeed(1)*/>.
+                                z</*1*/>.
 
-Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                                    \
-                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )                   \
-                   else ν(x)                                                \
-                      ( Hanoi(a,c,b,/*'n-1*/,x)                             \
-                      | x(x). ν(y)                                          \
-                              ( Move(a,c,y)                                 \
-                              | y(y). ν(z)                                  \
-                                      ( Hanoi(b,a,c,/*'n-1*/,z)             \
-                                      | z(z).w</*ZIO.succeed('x+'y+'z)*/>.  \
-                                      )                                     \
-                              )                                             \
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )        \
+                   else ν(x)                                     \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                  \
+                      | x(x). ν(y)                               \
+                              ( Move(a,c,y)                      \
+                              | y(y). ν(z)                       \
+                                      ( Hanoi(b,a,c,/*'n-1*/,z)  \
+                                      | z(z).w</*'x+'y+'z*/>.    \
+                                      )                          \
+                              )                                  \
                       )

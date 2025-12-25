@@ -60,4 +60,6 @@ object π:
 
   import Π.*
 
+  implicit def `π-fun0`[A](it: => A): () => A = () => it
+
 

@@ -45,19 +45,21 @@ object π:
   import _root_.cats.Parallel
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.Temporal
+  import _root_.cats.effect.Async
   import _root_.cats.effect.std.Semaphore
 
   import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
-  extension [F[_]: Parallel: Temporal](self: πLs[Stream[F, ?]])
+  extension [F[_]: Async: Parallel](self: πLs[Stream[F, ?]])
     private[π] inline def πparSequence: Stream[F, Nothing] =
       Stream.exec(self.map(_.compile.drain).parSequence.void)
     private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Nothing] =
       self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
 
   import Π.*
+
+  implicit def `π-fun0`[A](it: => A): () => A = () => it
 
 

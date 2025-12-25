@@ -4,27 +4,25 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/lists
 
-@import cats.effect.Async
+⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
 
-⟦ typeclasses = (Async,Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
-
-Main = ν(sumlist)ν(print)ν(rch)                                            \
-     ( Client(sumlist, print, rch, /*args.map(_.toInt).toList*/)           \
-     | Server(sumlist)                                                     \
-     | print(sum: Int /**/).τ/*Async[F].delay(println(s"sum=${'sum}"))*/.  \
-       sumlist#2<>.                                                        \
+Main = ν(sumlist)ν(print)ν(rch)                                                 \
+     ( Client(sumlist, print, rch, /*args.map(_.toInt).toList*/)                \
+     | Server(sumlist)                                                          \
+     | print(sum: Int /**/).τ/*Concurrent[F].delay(println(s"sum=${'sum}"))*/.  \
+       sumlist#2<>.                                                             \
      )
 
 Client(sumlist, print, rch, l) = sumlist<l,rch>.rch(sum).print<sum>.
 
-Server(sumlist) = sumlist(list: List[Int] /**/, rch).                                                     \
-                  if /*'list.isEmpty*/ = True                                                             \
-                  then                                                                                    \
-                    rch</*Concurrent[F].pure(0)*/>.                                                       \
-                  else                                                                                    \
-                    ν(rch_recursive_call)                                                                 \
-                    list::(head,tail).                                                                    \
-                    ( Server(sumlist)                                                                     \
-                    | sumlist<tail,rch_recursive_call>.                                                   \
-                      rch_recursive_call(tailsum: Int /**/).rch</*Concurrent[F].pure('head+'tailsum)*/>.  \
+Server(sumlist) = sumlist(list: List[Int] /**/, rch).                                 \
+                  if /*'list.isEmpty*/ = True                                         \
+                  then                                                                \
+                    rch</*0*/>.                                                       \
+                  else                                                                \
+                    ν(rch_recursive_call)                                             \
+                    list::(head,tail).                                                \
+                    ( Server(sumlist)                                                 \
+                    | sumlist<tail,rch_recursive_call>.                               \
+                      rch_recursive_call(tailsum: Int /**/).rch</*'head+'tailsum*/>.  \
                     )

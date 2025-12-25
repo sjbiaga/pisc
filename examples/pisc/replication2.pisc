@@ -1,6 +1,5 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@import cats.effect.Async
 @import cats.effect.std.Console
 
 @import scala.concurrent.duration._
@@ -13,25 +12,25 @@
 
 # one infinite publisher, one infinite subscriber ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt)*/>.)  \
-            | (!.x(y). τ/*Console[F].println(y)*/.)                      \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)  \
+            | (!.x(y). τ/*Console[F].println(y)*/.)      \
             )
 
 ⟦ exclude = yes ⟧
 
 # two infinite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt.abs)*/>.)   \
-            | (! 100,milliseconds .x</*Async[F].delay(-gen.nextInt.abs)*/>.)  \
-            | (!.x(y). τ/*Console[F].println(y)*/.)                           \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*Console[F].println(y)*/.)           \
             )
 
 ⟦ exclude = yes ⟧
 
 # two finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (x</*Async[F].delay(gen.nextInt.abs)*/>.)                \
-            | (x</*Async[F].delay(-gen.nextInt.abs)*/>.)               \
+Main = ν(x) ( (x</*gen.nextInt.abs*/>.)                                \
+            | (x</*-gen.nextInt.abs*/>.)                               \
             | (! 100,milliseconds .x(y). τ/*Console[F].println(y)*/.)  \
             )
 
@@ -39,18 +38,18 @@ Main = ν(x) ( (x</*Async[F].delay(gen.nextInt.abs)*/>.)                \
 
 # two sequential finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (x</*Async[F].delay(gen.nextInt.abs)*/>. x</*Async[F].delay(-gen.nextInt.abs)*/>.)  \
-            | (! 100,milliseconds .x(y). τ/*Console[F].println(y)*/.)                             \
+Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>.)       \
+            | (! 100,milliseconds .x(y). τ/*Console[F].println(y)*/.)  \
             )
 
 ⟦ exclude = yes ⟧
 
 # two infinite publishers, two infinite subscribers ✔
 
-Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt.abs)*/>.)   \
-            | (! 100,milliseconds .x</*Async[F].delay(-gen.nextInt.abs)*/>.)  \
-            | (!.x(y). τ/*Console[F].println(1->y)*/.)                        \
-            | (!.x(y). τ/*Console[F].println(2->y)*/.)                        \
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*Console[F].println(1->y)*/.)        \
+            | (!.x(y). τ/*Console[F].println(2->y)*/.)        \
             )
 
 ⟦ exclude = yes ⟧
@@ -58,31 +57,31 @@ Main = ν(x) ( (! 100,milliseconds .x</*Async[F].delay(gen.nextInt.abs)*/>.)   \
 # one infinite publisher, one infinite subscriber, bound output guard ✔
 
 Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*Console[F].println(z)*/.)  \
-            | (!.x(y). y</*Async[F].delay(gen.nextInt)*/>.)                   \
+            | (!.x(y). y</*gen.nextInt*/>.)                                   \
             )
 
 ⟦ exclude = yes ⟧
 
 # one finite publisher, one finite subscriber, bound output prefix ✔
 
-Main = ν(x) ! ( (x<νy>. y(z). τ/*Console[F].println(z)*/.)   \
-              | (x(y). y</*Async[F].delay(gen.nextInt)*/>.)  \
+Main = ν(x) ! ( (x<νy>. y(z). τ/*Console[F].println(z)*/.)  \
+              | (x(y). y</*gen.nextInt*/>.)                 \
               )
 
 ⟦ exclude = yes ⟧
 
 # one finite publisher, one finite subscriber, output prefix ✔
 
-Main = ν(x) ! ( (x(y). τ/*Console[F].println(y)*/.)    \
-              | (x</*Async[F].delay(gen.nextInt)*/>.)  \
+Main = ν(x) ! ( (x(y). τ/*Console[F].println(y)*/.)  \
+              | (x</*gen.nextInt*/>.)                \
               )
 
 ⟦ exclude = yes ⟧
 
 # one infinite publisher, multiple finite subscribers ✔
 
-Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)    \
-            | (!.x</*Async[F].delay(gen.nextInt)*/>.)  \
+Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)  \
+            | (!.x</*gen.nextInt*/>.)                \
             )
 
 ⟦ exclude = yes ⟧
@@ -91,8 +90,8 @@ Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)    \
 
 Main(x) = x(y). τ/*Console[F].println(y)*/. Main(x)
 
-Main = ν(x) ( Main(x)                                  \
-            | (!.x</*Async[F].delay(gen.nextInt)*/>.)  \
+Main = ν(x) ( Main(x)                  \
+            | (!.x</*gen.nextInt*/>.)  \
             )
 
 ⟦ exclude = yes ⟧
@@ -100,8 +99,8 @@ Main = ν(x) ( Main(x)                                  \
 # two finite publishers, multiple finite subscribers ✔
 
 Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)  \
-            | (x</*Async[F].delay(gen.nextInt)*/>.)  \
-            | (x</*Async[F].delay(gen.nextInt)*/>.)  \
+            | (x</*gen.nextInt*/>.)                  \
+            | (x</*gen.nextInt*/>.)                  \
             )
 
 ⟦ exclude = yes ⟧
@@ -110,9 +109,9 @@ Main = ν(x) ( (! x(y). τ/*Console[F].println(y)*/.)  \
 
 Main(x) = x(y). τ/*Console[F].println(y)*/. Main(x)
 
-Main = ν(x) ( Main(x)                                \
-            | (x</*Async[F].delay(gen.nextInt)*/>.)  \
-            | (x</*Async[F].delay(gen.nextInt)*/>.)  \
+Main = ν(x) ( Main(x)                \
+            | (x</*gen.nextInt*/>.)  \
+            | (x</*gen.nextInt*/>.)  \
             )
 
 ⟦ exclude = yes ⟧
@@ -120,21 +119,21 @@ Main = ν(x) ( Main(x)                                \
 # one infinite publisher, two sequential finite subscribers ✔
 
 Main = ν(x) ( (x(y). τ/*Console[F].println(1->y)*/. x(z). τ/*Console[F].println(2->z)*/.)  \
-            | (!.x</*Async[F].delay(gen.nextInt)*/>.)                                      \
+            | (!.x</*gen.nextInt*/>.)                                                      \
             )
 
 ⟦ exclude = yes ⟧
 
 # multiple finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (!.x(y). τ/*Console[F].println(y)*/. x</*Async[F].delay(gen.nextInt.abs)*/>.)  \
-            | (x</*Async[F].delay(-gen.nextInt.abs)*/>.)                                     \
+Main = ν(x) ( (!.x(y). τ/*Console[F].println(y)*/. x</*gen.nextInt.abs*/>.)  \
+            | (x</*-gen.nextInt.abs*/>.)                                     \
             )
 
 ⟦ exclude = yes ⟧
 
 # multiple finite publishers, one infinite subscriber, one finite subscriber ✔
 
-Main = ν(x) ( (!.x(y). τ/*Console[F].println(1->y)*/. x</*Async[F].delay(gen.nextInt.abs)*/>. x(y). τ/*Console[F].println(2->y)*/.)  \
-            | (x</*Async[F].delay(-gen.nextInt.abs)*/>.)                                                                             \
+Main = ν(x) ( (!.x(y). τ/*Console[F].println(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/*Console[F].println(2->y)*/.)  \
+            | (x</*-gen.nextInt.abs*/>.)                                                                             \
             )

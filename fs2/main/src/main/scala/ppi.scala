@@ -37,7 +37,7 @@ package object Π:
   import _root_.cats.syntax.flatMap.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ Deferred, Ref, Resource, Temporal }
+  import _root_.cats.effect.{ Async, Deferred, Ref, Resource }
   import _root_.cats.effect.std.Queue
 
   import _root_.fs2.Stream
@@ -49,7 +49,7 @@ package object Π:
   /**
     * restriction aka new name
     */
-  final class ν[F[_]: Temporal]:
+  final class ν[F[_]: Async]:
 
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
@@ -65,7 +65,7 @@ package object Π:
   /**
     * silent transition
     */
-  final class τ[F[_]: Temporal]:
+  final class τ[F[_]: Async]:
 
     object ! :
 
@@ -108,7 +108,7 @@ package object Π:
   /**
     * events, i.e., names (topics) and values
     */
-  implicit final class `()`[F[_]: Temporal](private val name: Any) { self =>
+  implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
     private inline def t = `()`[><[F]].topic
     private inline def q = `()`[><[F]].queue
@@ -118,7 +118,7 @@ package object Π:
       for
         b <- r.get
         s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Temporal[F].unit
+        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
       yield
         ()
     private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.evalFilter(_._2.complete(())).map(_._1)
@@ -148,7 +148,7 @@ package object Π:
           * replication bound output guard w/ code
           */
         def apply[T](arity: Int)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-          Stream.unit.repeat >> self.ν(arity)(code)
+          Stream.unit.repeat >> self.ν[T](arity)(code)
 
         /**
           * replication bound output guard w/ pace
@@ -160,7 +160,7 @@ package object Π:
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-          Stream.awakeEvery(pace) >> self.ν(arity)(code)
+          Stream.awakeEvery(pace) >> self.ν[T](arity)(code)
 
       /**
         * constant replication output guard
@@ -204,15 +204,39 @@ package object Π:
           * `null` replication output guard w/ code
           */
         inline def apply[T](arity: Int)(code: => F[T]): Stream[F, Unit] =
-          self.!.apply(Seq.fill(arity)(new `()`[F](null))*)(code)
+          self.!.apply[T](Seq.fill(arity)(new `()`[F](null))*)(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
         inline def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
-          self.!.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(code)
+          self.!.apply[T](pace, Seq.fill(arity)(new `()`[F](null))*)(code)
 
       object * :
+
+        /**
+          * variable replication output guard
+          */
+        def apply[S](value: () => S*): Stream[F, Unit] =
+          apply[S](value.map { it => Async[F].delay(it()) }*)
+
+        /**
+          * variable replication output guard w/ pace
+          */
+        def apply[S](pace: FiniteDuration, value: () => S*): Stream[F, Unit] =
+          apply[S](pace, value.map { it => Async[F].delay(it()) }*)
+
+        /**
+          * variable replication output guard w/ code
+          */
+        def apply[S, T](value: () => S*)(code: => F[T]): Stream[F, Unit] =
+          apply[S](value*).evalTap(_ => code)
+
+        /**
+          * variable replication output guard w/ pace w/ code
+          */
+        def apply[S, T](pace: FiniteDuration, value: () => S*)(code: => F[T]): Stream[F, Unit] =
+          apply[S](pace, value*).evalTap(_ => code)
 
         /**
           * variable replication output guard
@@ -304,9 +328,21 @@ package object Π:
         * `null` output prefix w/ code
         */
       inline def apply[T](arity: Int)(code: => F[T]): Stream[F, Unit] =
-        self.apply(Seq.fill(arity)(new `()`[F](null)))(code)
+        self.apply[T](Seq.fill(arity)(new `()`[F](null)))(code)
 
     object * :
+
+      /**
+        * variable output prefix
+        */
+      def apply[S](value: () => S*): Stream[F, Unit] =
+        apply[S](value.map { it => Async[F].delay(it()) }*)
+
+      /**
+        * variable output prefix w/ code
+        */
+      def apply[S, T](value: () => S*)(code: => F[T]): Stream[F, Unit] =
+        apply[S](value*).evalTap(_ => code)
 
       /**
         * variable output prefix
@@ -343,7 +379,7 @@ package object Π:
                         queue: Queue[F, Unit],
                         limit: Ref[F, Boolean])
 
-    extension [F[_]: Temporal, O](self: Stream[F, O])
+    extension [F[_]: Async, O](self: Stream[F, O])
       inline def through1(topic: Topic[F, O])
                          (using await: F[Unit]): Stream[F, Unit] =
         self.evalMap(await >> topic.publish1(_)).takeWhile(_.isRight).void
