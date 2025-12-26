@@ -35,7 +35,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
-import _root_.cats.effect.{ Deferred, ExitCode, Fiber, Ref, Temporal, Unique }
+import _root_.cats.effect.{ Concurrent, Deferred, ExitCode, Fiber, Ref, Unique }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 import _root_.cats.effect.syntax.spawn.*
 
@@ -68,13 +68,13 @@ package object `Π-loop`:
 
   type \[F[_]] = () => F[Unit]
 
-  final class πloop[F[_]: Parallel: Temporal: Unique]:
+  final class πloop[F[_]: Concurrent: Parallel]:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
       if m.contains(^ + k)
       then m(^ + k).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None).void
-      else Temporal[F].unit
+      else Concurrent[F].unit
 
     private def `π-discard`(discarded: `Π-Set`[String])
                            (using % : %[F])
@@ -94,7 +94,7 @@ package object `Π-loop`:
       then
         `π-discard`(trick(key))
       else
-        Temporal[F].unit
+        Concurrent[F].unit
 
 
     private def exit(ks: List[String])
@@ -163,7 +163,7 @@ package object `Π-loop`:
                 }
               case nel =>
                 nel.parTraverse { case (key1, key2, _delay) =>
-                                  Temporal[F].uncancelable { _ =>
+                                  Concurrent[F].uncancelable { _ =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
                                     val ^  = key1.substring(0, 36)
@@ -171,14 +171,14 @@ package object `Π-loop`:
                                     for
                                       cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                       _  <- ~.acquire
-                                      tk <- if k1 == k2 then Temporal[F].pure(null) else Unique[F].unique
+                                      tk <- if k1 == k2 then Concurrent[F].pure(null) else Concurrent[F].unique
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                       ((d1, c1), ((key, ord), _)) = p1
                                       ((d2, c2), ((keyʹ, ordʹ), _)) = p2
                                       o1 <- d1.tryGet
                                       o2 <- d2.tryGet
-                                      fb <- ( if k1 == k2 then Temporal[F].unit
+                                      fb <- ( if k1 == k2 then Concurrent[F].unit
                                               else
                                                 (ord, ordʹ) match
                                                   case (dir: `π-$`, dirʹ: `π-$`) =>
@@ -186,16 +186,16 @@ package object `Π-loop`:
                                                   case (cap: `π-ζ`, capʹ: `π-ζ`) =>
                                                     `}{`.><.ζ(key, cap, keyʹ, capʹ)
                                             ).start
-                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, fb, tk))).void
-                                            else Temporal[F].unit
-                                      _  <- if k1 == k2 then Temporal[F].unit
-                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, fb, tk))).void
-                                            else Temporal[F].unit
+                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Concurrent[F].unit) >> d1.complete(Some((cb, fb, tk))).void
+                                            else Concurrent[F].unit
+                                      _  <- if k1 == k2 then Concurrent[F].unit
+                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Concurrent[F].unit) >> d2.complete(Some((cb, fb, tk))).void
+                                            else Concurrent[F].unit
                                       _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some((cb, fb, tk)))).void
-                                            else Temporal[F].unit
-                                      _  <- if k1 == k2 then Temporal[F].unit
+                                            else Concurrent[F].unit
+                                      _  <- if k1 == k2 then Concurrent[F].unit
                                             else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some((cb, fb, tk)))).void
-                                            else Temporal[F].unit
+                                            else Concurrent[F].unit
                                       _  <- ~.release
                                       _  <- cb.await
                                     yield
@@ -220,6 +220,6 @@ package object `Π-loop`:
                         ) + (^ + key -> (true, it))
              }
         _ <- *.offer(())
-        _ <- Temporal[F].cede >> poll
+        _ <- Concurrent[F].cede >> poll
       yield
         ()

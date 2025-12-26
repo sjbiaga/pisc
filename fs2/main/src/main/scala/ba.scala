@@ -36,7 +36,7 @@ package object sΠ:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Deferred, Ref, Resource, Temporal, Unique }
+  import _root_.cats.effect.{ Async, Deferred, Ref, Resource, Unique }
   import _root_.cats.effect.std.{ CyclicBarrier, Queue, UUIDGen }
 
   import _root_.fs2.Stream
@@ -64,7 +64,7 @@ package object sΠ:
     /**
       * Initial ambient unique key.
       */
-    def apply[F[_]: Temporal: UUIDGen](): F[`)(`] =
+    def apply[F[_]: Async: UUIDGen](): F[`)(`] =
       UUIDGen.randomUUID[F].map(new `)(`(_))
 
   /**
@@ -123,8 +123,8 @@ package object sΠ:
     `π-enable`[F](spell(key))
 
 
-  inline def `π-exclude`[F[_]: Temporal](enabled: String*)
-                                        (using % : %[F], \ : \[F]): F[Unit] =
+  inline def `π-exclude`[F[_]: Async](enabled: String*)
+                                     (using % : %[F], \ : \[F]): F[Unit] =
     `π-exclude`[F](Set.from(enabled)) >> \()
 
   private def `π-exclude`[F[_]](enabled: `Π-Set`[String])
@@ -139,20 +139,20 @@ package object sΠ:
                                  }
     )
 
-  private def exclude[F[_]: Temporal](key: String)
-                                     (using % : %[F])
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): F[Unit] =
+  private def exclude[F[_]: Async](key: String)
+                                  (using % : %[F])
+                                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): F[Unit] =
     if `π-elvis`.contains(key)
     then
       `π-exclude`[F](`π-elvis`(key))
     else
-      Temporal[F].unit
+      Async[F].unit
 
 
   /**
     * restriction aka new name
     */
-  final class ν[F[_]: Temporal]:
+  final class ν[F[_]: Async]:
 
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
@@ -195,7 +195,7 @@ package object sΠ:
   /**
     * silent transition
     */
-  final class τ[F[_]: Temporal]:
+  final class τ[F[_]: Async]:
 
     object ! :
 
@@ -398,7 +398,7 @@ package object sΠ:
   /**
     * events, i.e., names (topics) and values
     */
-  implicit final class `()`[F[_]: Temporal](private val name: Any) { self =>
+  implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
     private def map = `()`[>*<[F]]
 
@@ -410,7 +410,7 @@ package object sΠ:
       for
         b <- r.get
         s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Temporal[F].unit
+        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
       yield
         ()
     private def s(tk: Unique.Token)(using Int) = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.filter(_._2 eq tk).map(_._1)
@@ -775,6 +775,51 @@ package object sΠ:
           /**
             * variable replication output guard
             */
+          def apply[S](rate: Rate, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
+                      (using %[F], /[F], \[F])
+                      (using `}{`.stm.TSemaphore)
+                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                ^ : String): Stream[F, Unit] =
+            apply[S](rate, Async[F].delay(value), `}{`)(key, `)(`)(dir)
+
+          /**
+            * variable replication output guard w/ pace
+            */
+          def apply[S](rate: Rate, pace: FiniteDuration, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
+                      (using %[F], /[F], \[F])
+                      (using `}{`.stm.TSemaphore)
+                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                ^ : String): Stream[F, Unit] =
+            apply[S](rate, pace, Async[F].delay(value), `}{`)(key, `)(`)(dir)
+
+          /**
+            * variable replication output guard w/ code
+            */
+          def apply[S, T](rate: Rate, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
+                         (using %[F], /[F], \[F])
+                         (using `}{`.stm.TSemaphore)
+                         (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                   `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                   ^ : String): Stream[F, Unit] =
+            apply[S, T](rate, Async[F].delay(value), `}{`)(key, `)(`)(dir)(code)
+
+          /**
+            * variable replication output guard w/ pace w/ code
+            */
+          def apply[S, T](rate: Rate, pace: FiniteDuration, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
+                         (using %[F], /[F], \[F])
+                         (using `}{`.stm.TSemaphore)
+                         (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                   `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                   ^ : String): Stream[F, Unit] =
+            apply[S, T](rate, pace, Async[F].delay(value), `}{`)(key, `)(`)(dir)(code)
+
+          /**
+            * variable replication output guard
+            */
+          @annotation.targetName("applyF")
           def apply[S](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                       (using % : %[F], / : /[F], \ : \[F])
                       (using `}{`.stm.TSemaphore)
@@ -817,6 +862,7 @@ package object sΠ:
           /**
             * variable replication output guard w/ pace
             */
+          @annotation.targetName("applyF")
           def apply[S](rate: Rate, pace: FiniteDuration, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                       (using % : %[F], / : /[F], \ : \[F])
                       (using `}{`.stm.TSemaphore)
@@ -858,6 +904,7 @@ package object sΠ:
           /**
             * variable replication output guard w/ code
             */
+          @annotation.targetName("applyF")
           def apply[S, T](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                          (using % : %[F], / : /[F], \ : \[F])
                          (using `}{`.stm.TSemaphore)
@@ -899,6 +946,7 @@ package object sΠ:
           /**
             * variable replication output guard w/ pace w/ code
             */
+          @annotation.targetName("applyF")
           def apply[S, T](rate: Rate, pace: FiniteDuration, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                          (using % : %[F], / : /[F], \ : \[F])
                          (using `}{`.stm.TSemaphore)
@@ -966,7 +1014,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1008,7 +1056,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1050,7 +1098,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1092,7 +1140,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1208,6 +1256,29 @@ package object sΠ:
         /**
           * variable output prefix
           */
+        def apply[S](rate: Rate, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
+                    (using %[F], /[F])
+                    (using `}{`.stm.TSemaphore)
+                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                              ^ : String): Stream[F, Unit] =
+          apply[S](rate, Async[F].delay(value), `}{`)(key, `)(`)(dir)
+
+        /**
+          * variable output prefix w/ code
+          */
+        def apply[S, T](rate: Rate, value: => S, `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
+                       (using %[F], /[F])
+                       (using `}{`.stm.TSemaphore)
+                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                 ^ : String): Stream[F, Unit] =
+          apply[S, T](rate, Async[F].delay(value), `}{`)(key, `)(`)(dir)(code)
+
+        /**
+          * variable output prefix
+          */
+        @annotation.targetName("applyF")
         def apply[S](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)
                     (using % : %[F], / : /[F])
                     (using `}{`.stm.TSemaphore)
@@ -1230,6 +1301,7 @@ package object sΠ:
         /**
           * variable output prefix w/ code
           */
+        @annotation.targetName("applyF")
         def apply[S, T](rate: Rate, value: => F[S], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(code: => F[T])
                        (using % : %[F], / : /[F])
                        (using `}{`.stm.TSemaphore)
@@ -1335,7 +1407,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1378,7 +1450,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1421,7 +1493,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1464,7 +1536,7 @@ package object sΠ:
                                 deferred <- Deferred[F, Option[<>[F]]]
                                 _        <- continue.set(deferred)
                                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                                token    <- if cb_fb_tk eq None then sr.set(true).flatMap(_ => Unique[F].unique)
+                                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
                                             else
                                               val (cbarrier, fiber, token) = cb_fb_tk.get
                                               (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
@@ -1536,7 +1608,7 @@ package object sΠ:
   }
 
 
-  final class `}{`[F[_]: Temporal: UUIDGen](val stm: STM[F]):
+  final class `}{`[F[_]: Async: UUIDGen](val stm: STM[F]):
 
     import stm.*
 
@@ -1756,7 +1828,7 @@ package object sΠ:
 
     type >*<[F[_]] = Map[Int, ><[F]]
 
-    extension [F[_]: Temporal, O](self: Stream[F, O])
+    extension [F[_]: Async, O](self: Stream[F, O])
       inline def through1(topic: Topic[F, O])
                          (using await: F[Unit]): Stream[F, Unit] =
         self.evalMap(await >> topic.publish1(_)).takeWhile(_.isRight).void

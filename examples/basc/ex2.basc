@@ -1,9 +1,8 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@import cats.effect.Async
 @import cats.effect.std.Console
 
-⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
 
 ⟦ traces = console ⟧
 

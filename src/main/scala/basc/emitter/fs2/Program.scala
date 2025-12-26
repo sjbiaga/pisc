@@ -280,7 +280,7 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          * = f.fold(Nil)(_.emit)
+          * = f.fold(`_ <- Stream.eval(*)`(`π-exclude[F]`(t.enabled)): List[Enumerator])(_.emit)
 
           if mismatch
           then

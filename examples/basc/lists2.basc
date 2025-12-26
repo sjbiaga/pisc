@@ -1,10 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ spi lists.scala -- 1 2  3 5
+# ./examples $ spi -fs2 lists2.scala -- 1 2  3 5
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (cats.effect.std.Console,LiftIO,Parallel,Temporal) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
 
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
@@ -19,6 +19,4 @@ Client(ch, l) = ch!{l}.
 Server(ch) = ch?{list: List[Int] /* Size[Even] */}.                           \
              [/*'list.nonEmpty*/ = True]                                      \
              list::(head1,head2,tail) /*Console[F].println('head1+'head2)*/.  \
-             ( Server(ch)                                                     \
-             | ch!{tail}.                                                     \
-             )
+             ( ch!{tail}. | Server(ch) )

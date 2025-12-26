@@ -35,7 +35,7 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.scala.collection.immutable.Map
 
-  import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref, Resource }
+  import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref }
   import _root_.cats.effect.std.{ Queue, Semaphore }
 
   import _root_.io.github.timwspence.cats.stm.STM
@@ -101,7 +101,7 @@ object π:
   import _root_.cats.Parallel
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.{ Concurrent, LiftIO, Temporal }
+  import _root_.cats.effect.{ Async, Concurrent, LiftIO }
 
   import _root_.fs2.Stream
 

@@ -35,7 +35,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
-import _root_.cats.effect.{ Clock, Deferred, ExitCode, Fiber, Ref, Temporal, Unique }
+import _root_.cats.effect.{ Deferred, ExitCode, Fiber, Ref, Temporal, Unique }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 import _root_.cats.effect.syntax.spawn.*
 
@@ -65,7 +65,7 @@ package object `Π-loop`:
 
   type \[F[_]] = () => F[Unit]
 
-  final class πloop[F[_]: Clock: Parallel: Temporal: Unique]:
+  final class πloop[F[_]: Parallel: Temporal]:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
@@ -152,7 +152,7 @@ package object `Π-loop`:
                                     for
                                       cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                       _  <- ~.acquire
-                                      tk <- if k1 == k2 then Temporal[F].pure(null) else Unique[F].unique
+                                      tk <- if k1 == k2 then Temporal[F].pure(null) else Temporal[F].unique
                                       sd1 <- Deferred[F, (String, (String, String))]
                                       sd2 <- Deferred[F, (String, (String, String))]
                                       sD <- Deferred[F, String]
@@ -212,7 +212,7 @@ package object `Π-loop`:
                                       _  <- ~.release
                                       _  <- cb.await
                                       no <- &.updateAndGet(_ + 1)
-                                      now <- Clock[F].monotonic.map(_.toNanos)
+                                      now <- Temporal[F].monotonic.map(_.toNanos)
                                       s1 <- ts1.get
                                       s2 <- ts2.get
                                       _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration), (sd1, sd2)))

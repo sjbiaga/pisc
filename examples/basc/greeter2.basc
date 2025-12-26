@@ -2,14 +2,13 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-@import cats.effect.Async
 @import cats.effect.std.Console
 
-⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
 
-@given [F[_]: Temporal]: Conversion[`()`[F], String] = _.`()`[String]
+@given [F[_]: Async]: Conversion[`()`[F], String] = _.`()`[String]
 
-@def nl[F[_]: Temporal]: String => F[String] = { it => Temporal[F].pure { s"$it\n" } }
+@def nl[F[_]: Async]: String => F[String] = { it => Async[F].pure { s"$it\n" } }
 
 @val gen = new scala.util.Random
 
@@ -39,23 +38,23 @@ Greeter'(stdout, name) = \
                        ( ([/*name.substring(0,1).toUpperCase*/ = "Q"] stdout ! { "That's an unusual name." }.)  \
                        + ([name = "Voldemort"] stdout ! { "WARNING! LORD VOLDEMORT IS HERE!" }.)                \
                        + ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"]                                           \
-                          [name ≠ "Voldemort"] stdout ! { /*Async[F].pure(s"Hello ${'name}!")*/ }.)             \
+                          [name ≠ "Voldemort"] stdout ! { /*s"Hello ${'name}!"*/ }.)                            \
                        )
 
-Greeter"(stdout, name) =                                                             \
-                       ( if /*name.substring(0,1).toUpperCase*/ = "Q"                \
-                         then stdout ! { "That's an unusual name." }.                \
-                         else                                                        \
-                           if name = "Voldemort"                                     \
-                           then stdout ! { "WARNING! LORD VOLDEMORT IS HERE!" }.     \
-                           else stdout ! { /*Async[F].pure(s"Hello ${'name}!")*/ }.  \
+Greeter"(stdout, name) =                                                          \
+                       ( if /*name.substring(0,1).toUpperCase*/ = "Q"             \
+                         then stdout ! { "That's an unusual name." }.             \
+                         else                                                     \
+                           if name = "Voldemort"                                  \
+                           then stdout ! { "WARNING! LORD VOLDEMORT IS HERE!" }.  \
+                           else stdout ! { /*s"Hello ${'name}!"*/ }.              \
                        )
 
-Greeter"'(stdout, name) =                                                          \
-                        ( /*name.substring(0,1).toUpperCase*/ = "Q"                \
-                          ? stdout ! { "That's an unusual name." }.                \
-                          :                                                        \
-                            name = "Voldemort"                                     \
-                            ? stdout ! { "WARNING! LORD VOLDEMORT IS HERE!" }.     \
-                            : stdout ! { /*Async[F].pure(s"Hello ${'name}!")*/ }.  \
+Greeter"'(stdout, name) =                                                       \
+                        ( /*name.substring(0,1).toUpperCase*/ = "Q"             \
+                          ? stdout ! { "That's an unusual name." }.             \
+                          :                                                     \
+                            name = "Voldemort"                                  \
+                            ? stdout ! { "WARNING! LORD VOLDEMORT IS HERE!" }.  \
+                            : stdout ! { /*s"Hello ${'name}!"*/ }.              \
                         )

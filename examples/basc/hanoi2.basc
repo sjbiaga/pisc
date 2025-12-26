@@ -1,11 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@import cats.effect.Async
 @import cats.effect.std.Console
 
-⟦ typeclasses = (cats.effect.Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
 
-@given [F[_]: Temporal]: Conversion[`()`[F], Int] = _.`()`[Int]
+@given [F[_]: Async]: Conversion[`()`[F], Int] = _.`()`[Int]
 
 Main = ν(a,b,c)      \
      ( (!.a!{"a"}.)  \
@@ -28,17 +27,17 @@ Hanoi(a,b,c,n*) = ν(w)                                              \
 
 Move(from,to,z) = from?{x}.to?{y}.                             \
                   τ/*Console[F].println(s"${'x} -> ${'y}")*/.  \
-                                  z!{/*Async[F].pure(1)*/}.
+                                  z!{/*1*/}.
 
-Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                                          \
-                   then ν(z) ( Move(a,c,z) | z?{z}.w!{z}. )                       \
-                   else ν(x)                                                      \
-                      ( Hanoi(a,c,b,/*'n-1*/,x)                                   \
-                      | x?{x}. ν(y)                                               \
-                               ( Move(a,c,y)                                      \
-                               | y?{y}. ν(z)                                      \
-                                        ( Hanoi(b,a,c,/*'n-1*/,z)                 \
-                                        | z?{z}.w!{/*Async[F].pure('x+'y+'z)*/}.  \
-                                        )                                         \
-                              )                                                   \
+Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                           \
+                   then ν(z) ( Move(a,c,z) | z?{z}.w!{z}. )        \
+                   else ν(x)                                       \
+                      ( Hanoi(a,c,b,/*'n-1*/,x)                    \
+                      | x?{x}. ν(y)                                \
+                               ( Move(a,c,y)                       \
+                               | y?{y}. ν(z)                       \
+                                        ( Hanoi(b,a,c,/*'n-1*/,z)  \
+                                        | z?{z}.w!{/*'x+'y+'z*/}.  \
+                                        )                          \
+                              )                                    \
                       )
