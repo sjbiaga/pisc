@@ -7,7 +7,7 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
-⟦ typeclasses = (cats.effect.std.Console,Parallel,Temporal) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
 
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \

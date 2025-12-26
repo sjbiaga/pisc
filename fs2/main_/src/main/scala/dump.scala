@@ -36,7 +36,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.monadError.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ ExitCode, Async }
+import _root_.cats.effect.{ Async, ExitCode }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*

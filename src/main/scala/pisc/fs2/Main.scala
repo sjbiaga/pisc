@@ -98,7 +98,7 @@ object Main extends helper.Main:
 
         val tcs =
           prog.head match
-            case (`(*)`(_, λ(_: Lit.Null)), _) => Set("Temporal")
+            case (`(*)`(_, λ(_: Lit.Null)), _) => Set("Async")
             case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
               typeclasses.args.map { case Term.Name(it) => it }.toSet
 

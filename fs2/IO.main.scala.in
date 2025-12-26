@@ -87,13 +87,13 @@ object π:
   import _root_.cats.Parallel
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.Temporal
+  import _root_.cats.effect.{ Async, Concurrent }
 
   import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
-  extension [F[_]: Parallel: Temporal](self: πLs[Stream[F, ?]])
+  extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
     private[π] inline def πparSequence: Stream[F, Nothing] =
       Stream.exec(self.map(_.compile.drain).parSequence.void)
 

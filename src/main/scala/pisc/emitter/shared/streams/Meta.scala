@@ -41,7 +41,7 @@ abstract trait Meta extends shared.effects.Meta:
 
   override protected lazy val \ = "Stream"
 
-  val `: Stream[F, Any]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Any") :: Nil)))
+  val `: Stream[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
 
 
   def `*[F]`(* : Term) =

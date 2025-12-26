@@ -460,7 +460,7 @@ object Program:
         case ?:(((lhs, rhs), mismatch), t, f) =>
           val (tʹ, fʹ) = t.generate._1 -> f.flatMap(_.generate._1)
 
-          val (tʹʹ, fʹʹ) = tʹ.spawning() -> fʹ.spawning()
+          val (tʹʹ, fʹʹ) = tʹ.spawning() -> f.fold(`π-exclude`(t.enabled) :: `Behaviors.ignore` :: Nil)(_ => fʹ.spawning())
 
           val `if` =
             if mismatch

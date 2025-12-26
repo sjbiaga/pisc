@@ -41,12 +41,12 @@ object Meta extends emitter.shared.streams.Meta:
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main") =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: Stream[F, Any]`,
+               "Main", `String*`("args"), `: Stream[F, Unit]`,
                body)
     case `(*)`(identifier, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: Stream[F, Any]`,
+               identifier, `(…)`(params*), `: Stream[F, Unit]`,
                body)
 
 
