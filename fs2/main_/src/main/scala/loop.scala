@@ -64,6 +64,7 @@ package object `Π-loop`:
 
   type \[F[_]] = () => F[Unit]
 
+
   final class πloop[F[_]: Parallel: Temporal]:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
@@ -147,8 +148,8 @@ package object `Π-loop`:
                                     val ^  = key1.substring(0, 36)
                                     val ^^ = key2.substring(0, 36)
                                     for
-                                      _  <- ~.acquire
                                       cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                      _  <- ~.acquire
                                       tk <- if k1 == k2 then Temporal[F].pure(null) else Temporal[F].unique
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
@@ -156,23 +157,23 @@ package object `Π-loop`:
                                       ((d2, c2), (ts2, _)) = p2
                                       o1 <- d1.tryGet
                                       o2 <- d2.tryGet
-                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, tk))).void
+                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, tk))).void
                                             else Temporal[F].unit
                                       _  <- if k1 == k2 then Temporal[F].unit
-                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, tk))).void
+                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, tk))).void
                                             else Temporal[F].unit
-                                      _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some((cb, tk)))).void
+                                      _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.flatTap(_.complete(Some((cb, tk)))).void
                                             else Temporal[F].unit
                                       _  <- if k1 == k2 then Temporal[F].unit
-                                            else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some((cb, tk)))).void
+                                            else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.flatTap(_.complete(Some((cb, tk)))).void
                                             else Temporal[F].unit
+                                      s1 <- ts1.get
+                                      s2 <- ts2.get
+                                      _  <- ~.release
                                       _  <- cb.await
                                       no <- &.updateAndGet(_ + 1)
                                       now <- Temporal[F].monotonic.map(_.toNanos)
-                                      s1 <- ts1.get
-                                      s2 <- ts2.get
                                       _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
-                                      _  <- ~.release
                                     yield
                                       ()
                                   }
@@ -184,16 +185,26 @@ package object `Π-loop`:
       for
         h <- /.take
         ((_, key), it) = h
-        _ <- %.update { m =>
-                        val ^ = h._1._1
-                        val n = m(key).asInstanceOf[Int] - 1
-                        ( if n == 0
-                          then
-                            m - key
-                          else
-                            m + (key -> n)
-                        ) + (^ + key -> (true, it))
-             }
+        ((d, _), _) = it
+        o <- d.tryGet
+        _ <- ( if o eq None
+               then
+                 %.update { m =>
+                            val ^ = h._1._1
+                            val n = m(key).asInstanceOf[Int] - 1
+                            ( if n == 0
+                              then
+                                m - key
+                              else
+                                m + (key -> n)
+                            ) + (^ + key -> (true, it))
+                 }
+               else
+                 %.update { m =>
+                            val ^ = h._1._1
+                            m + (^ + key -> (false, it))
+                 }
+             )
         _ <- *.offer(())
         _ <- Temporal[F].cede >> poll
       yield

@@ -1,7 +1,7 @@
 import Dependencies._
 import CommandSPin._
 
-ThisBuild / scalaVersion := "3.8.0-RC4"
+ThisBuild / scalaVersion := "3.8.0-RC5"
 
 val akkaSecureToken = "cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx"
 
@@ -15,15 +15,15 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "Stochastic π-Calculus[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += spin,
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
@@ -36,8 +36,8 @@ lazy val `ce-main` = (project in file("ce/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
@@ -49,8 +49,8 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
@@ -62,8 +62,8 @@ lazy val `cef-main` = (project in file("cef/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
@@ -75,8 +75,8 @@ lazy val `cef-main_` = (project in file("cef/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, munit % Test)
   )
@@ -88,8 +88,8 @@ lazy val `akka-main` = (project in file("akka/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, akka, munit % Test)
   )
@@ -101,8 +101,8 @@ lazy val `akka-main_` = (project in file("akka/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, akka, munit % Test)
   )
@@ -114,8 +114,8 @@ lazy val `pekko-main` = (project in file("pekko/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, pekko, munit % Test)
   )
@@ -127,8 +127,8 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, pekko, munit % Test)
   )
@@ -140,8 +140,8 @@ lazy val `fs2-main` = (project in file("fs2/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, fs2, munit % Test)
   )
@@ -153,13 +153,39 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, fs2, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce/*.scala" || "*[ae]kk[ao]/*.scala" || "fs2/*.scala" || "examples/*.scala"
+lazy val `zs-main` = (project in file("zs/main"))
+  .settings(
+    name := "zs Stochastic π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+  )
+
+lazy val `zs-main_` = (project in file("zs/main_"))
+  .settings(
+    name := "zs_ Stochastic π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "ce/*.scala" || "*[ae]kk[ao]/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

@@ -8,7 +8,7 @@
 
 ⟦ traces = on ⟧
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
@@ -136,4 +136,41 @@ Main = ν(x) ( (!.x(y). τ/*Console[F].println(y)*/. x</*gen.nextInt.abs*/>.)  \
 
 Main = ν(x) ( (!.x(y). τ/*Console[F].println(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/*Console[F].println(2->y)*/.)  \
             | (x</*-gen.nextInt.abs*/>.)                                                                             \
+            )
+
+⟦ replication = (linear,yes) ⟧
+
+⟦ exclude = yes ⟧
+
+# multiple finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (! 4* .x(y : (Int, Int) /**/). τ/*Console[F].println(y._2)*/. [/*y._1 < 4*/ = True] x</*(y._1+1)->gen.nextInt*/>.)  \
+            | (x</*1->gen.nextInt*/>.)                                                                                            \
+            )
+
+⟦ exclude = yes ⟧
+
+# several infinite publishers, several infinite subscribers ✔
+
+Main = ν(x) ( (! 4* .x(y). τ/*Console[F].println(y)*/.)  \
+            | (! 4* .x</*gen.nextInt*/>.)                \
+            )
+
+⟦ exclude = yes ⟧
+
+# several infinite publishers, several infinite subscribers ✔
+
+Main = ν(x) ( (! 4* .x(y). τ/*Console[F].println(y)*/.)                               \
+            | ( (! 4* .x</*gen.nextInt.abs*/>.) + (! 4* .x</*-gen.nextInt.abs*/>.) )  \
+            )
+
+⟦ replication = (parallelism,-1) ⟧
+⟦ replication = (linear,no) ⟧
+
+⟦ exclude = no ⟧
+
+# multiple finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*Console[F].println(y)*/. x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>. )  \
+            | (x</*-gen.nextInt.abs*/>.)                                                               \
             )

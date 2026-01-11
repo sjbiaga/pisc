@@ -44,6 +44,7 @@ package object `Π-loop`:
 
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
+
   import sΠ.{ `Π-Map`, `Π-Set`, >< }
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit])
@@ -61,7 +62,6 @@ package object `Π-loop`:
   type / = Queue[IO, ((String, String), +)]
 
   type \ = IO[Unit]
-
 
 
   def `π-enable`(enabled: `Π-Set`[String])

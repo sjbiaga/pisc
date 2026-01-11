@@ -113,26 +113,11 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
-
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
-
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(\\(\) :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )
-
-
   val `: String => IO[Any]` =
     `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
 
 
-  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
+  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(\(\),
                Term.ArgClause(
                  Term.Block(
@@ -158,7 +143,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     )
 
 
-  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(* : String, `…`: Term): Term =
+  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
     Term.Apply(\(\),
                Term.ArgClause(
                  Term.Block(

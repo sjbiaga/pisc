@@ -41,11 +41,11 @@ abstract trait Meta extends shared.effects.Meta:
 
   override protected lazy val \ = "Stream"
 
-  val `: Stream[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
+  val `: \\[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
 
 
-  def `*[F]`(* : Term) =
-    Term.ApplyType(*, Type.ArgClause(\\("F") :: Nil))
+  def `*[F]`(* : Term, `…`: Type*) =
+    Term.ApplyType(*, Type.ArgClause(\\("F") :: `…`.toList))
 
 
   def `* <- Stream.eval(*)`(* : (String, Term)): Enumerator.Generator =
@@ -66,11 +66,6 @@ abstract trait Meta extends shared.effects.Meta:
       case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, "eval"), Term.ArgClause(it.rhs :: Nil)))
       case it => it
     }
-
-
-  def `* <- Semaphore[F](…)`(* : String): Enumerator.Generator =
-    `* <- Stream.eval(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("F") :: Nil)),
-                                          Term.ArgClause(Lit.Int(1) :: Nil)))
 
 
   @tailrec
@@ -97,3 +92,14 @@ abstract trait Meta extends shared.effects.Meta:
             Term.ForYield(*.toList, Lit.Unit())
     else
       `for *[F] yield ()`(`_ <- \\.unit`)
+
+
+  override def `_ <- *.acquire`(* : String): Enumerator =
+    `Stream.eval(…)`(super.`_ <- *.acquire`(*)).head
+
+  override def `_ <- *.release`(* : String): Enumerator =
+    `Stream.eval(…)`(super.`_ <- *.release`(*)).head
+
+  override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
+    `* <- Stream.eval(*)`(* -> Term.Apply(`*[F]`("Semaphore"),
+                                          Term.ArgClause(Lit.Int(`…`) :: Nil))).head

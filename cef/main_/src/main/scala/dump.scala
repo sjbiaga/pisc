@@ -91,11 +91,11 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration)) =>
+             case (no, ((s1, s2), e), (k1, k2), (delay, duration)) =>
                for
-                 _ <- record(no, ts1, ts, delay, duration)(k1)
+                 _ <- record(no, s1, e, delay, duration)(k1)
                  _ <- if k1 == k2 then IO.unit
-                      else record(no, ts2, ts, delay, duration)(k2)
+                      else record(no, s2, e, delay, duration)(k2)
                  _ <- IO.cede >> dump
                yield
                  ()

@@ -61,7 +61,6 @@ package object `Π-loop`:
   type \ = IO[Unit]
 
 
-
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): IO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>
@@ -163,20 +162,20 @@ package object `Π-loop`:
                                       -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                       p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                       p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                      (d1, (ts1, _)) = p1
-                                      (d2, (ts2, _)) = p2
+                                      (d1, (s1, _)) = p1
+                                      (d2, (s2, _)) = p2
                                       _  <- sem.acquire
                                       _  <- discard(k1)(using ^)
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)
-                                      no <- &.updateAndGet(_ + 1)
                                       _  <- started.update(_ + 1)
                                       fb <- ( for
                                                 _  <- --.await
                                                 _  <- enable(k1)
                                                 _  <- if k1 == k2 then IO.unit else enable(k2)
-                                                ts <- Clock[IO].monotonic.map(_.toNanos)
-                                                _  <- -.offer((no, ((ts1, ts2), ts), (k1, k2), (delay, duration)))
+                                                no <- &.updateAndGet(_ + 1)
+                                                now <- Clock[IO].monotonic.map(_.toNanos)
+                                                _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
                                                 _  <- sem.release
                                                 _  <- started.update(_ - 1)
                                                 _  <- *.offer(())

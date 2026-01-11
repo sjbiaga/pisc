@@ -218,6 +218,8 @@ abstract class StochasticPi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _replication: (Int, Boolean) = (-1, false)
+
   protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
@@ -280,13 +282,19 @@ object StochasticPi:
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   enum Emitter(val canScale: Boolean = false,
-               val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false):
+               val featuresLinearReplication: Boolean = false,
+               val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
+    def this(featuresLinearReplication: Boolean) = this(featuresLinearReplication = featuresLinearReplication,
+                                                        hasReplicationInputGuardFlaw = {
+                                                          case -1|0        => true
+                                                          case 1           => false
+                                                          case parallelism => parallelism > 1
+                                                        })
     case ce extends Emitter()
     case cef extends Emitter()
-    case fs2 extends Emitter(hasReplicationInputGuardFlaw = false,
-                             assignsReplicationParallelism1 = true)
-    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    case fs2 extends Emitter(true)
+    case zs extends Emitter(true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Actions = Set[String]
@@ -674,7 +682,7 @@ object StochasticPi:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-          case !(_, _, Some(μ), sum) if emitter.assignsReplicationParallelism1 =>
+          case !(parallelism, _, Some(μ), sum) if parallelism == 1 || parallelism < -1 =>
             sum.graph ++ Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
@@ -731,17 +739,19 @@ object StochasticPi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _replication = (-1, emitter.featuresLinearReplication)
       _typeclasses = Nil
       _par = 9
       _traces = None
-      _dirs = List(Map("errors" -> _werr,
+      _dirs = List(Map("errors"       -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude,
-                       "paceunit" -> _paceunit,
-                       "scaling" -> _scaling,
-                       "typeclasses" -> _typeclasses,
-                       "parallelism" -> _par,
-                       "traces" -> _traces))
+                       "exclude"      -> _exclude,
+                       "paceunit"     -> _paceunit,
+                       "scaling"      -> _scaling,
+                       "replication"  -> _replication,
+                       "typeclasses"  -> _typeclasses,
+                       "parallelism"  -> _par,
+                       "traces"       -> _traces))
       eqtn = List()
       defn = Map()
       self = Set()

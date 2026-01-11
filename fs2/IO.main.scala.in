@@ -28,18 +28,22 @@
 
 //package main.scala.in
 
+import _root_.cats.effect.Deferred
+import _root_.cats.effect.std.{ Queue, Semaphore }
+
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.Map
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref }
-  import _root_.cats.effect.std.{ Queue, Semaphore }
+
+  import _root_.scala.collection.immutable.{ List, Map }
+
+  import _root_.cats.effect.{ ExitCode, IO, Ref }
 
   import `Π-dump`.*
   import `Π-loop`.*
 
-  private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
   private def run(args: List[String])(% : %[IO], / : /[IO], * : *[IO], - : -[IO], ! : ![IO], & : &[IO], ~ : ~[IO]) =
     val lπ = πloop[IO]()
@@ -53,7 +57,8 @@ object App extends _root_.cats.effect.IOApp:
         ()
     ).use { _ =>
       for
-        _ <- mπ.Main(args*)(using π.`π-uuid`)(using %, /, () => *.offer(())).compile.drain
+        ^ <- π.`π-uuid`[IO]
+        _ <- mπ.Main(args*)(using ^)(using %, /, () => *.offer(())).compile.drain
         x <- !.get
       yield
         x
@@ -79,29 +84,30 @@ object App extends _root_.cats.effect.IOApp:
 
 object π:
 
-  import _root_.java.util.UUID
-
   import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.scala.concurrent.duration.*
 
-  import _root_.cats.Parallel
+  import _root_.cats.{ Functor, Parallel }
   import _root_.cats.syntax.all.*
 
   import _root_.cats.effect.{ Async, Concurrent }
+  import _root_.cats.effect.std.{ CyclicBarrier, UUIDGen }
 
   import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
-  extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
-    private[π] inline def πparSequence: Stream[F, Nothing] =
-      Stream.exec(self.map(_.compile.drain).parSequence.void)
-
   import sΠ.*
-
-  def `π-uuid` = UUID.randomUUID.toString
 
   import `Π-loop`.{ %, /, \ }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+
+
+  extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
+    private[π] inline def πparSequence: Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain).parSequence.void)
+
+  def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
+    UUIDGen.randomString[F]
 
 

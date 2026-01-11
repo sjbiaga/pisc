@@ -1,0 +1,56 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# https://github.com/alexj136/nodes/blob/master/examples/greeter
+
+@given Conversion[`()`, String] = _.`()`[String]
+
+@val nl: String => Task[String] = { it => ZIO.succeed { s"$it\n" } }
+
+@val gen = new scala.util.Random
+
+@def r = 1+math.abs(gen.nextInt%3)
+
+Main = ν(stdin, stdout) Greeter(stdin, stdout)
+
+Greeter(stdin, stdout, line*) = \
+                              ( stdout<"What's your name?">.stdin(name). \
+                                                                         if /* 'name.isBlank */ = True \
+                                                                         then Greeter(stdin, stdout) \
+                                                                         else Chooser(stdout, name) \
+                              ) \
+                              | \
+                              ( stdout(prompt) /* nl */. \
+                                τ /* _    <- ZIO.attempt(print('prompt)); \
+                                    'line <- ZIO.succeedBlocking { scala.io.StdIn.readLine } */. \
+                                stdin<line>.stdout(greet) /* nl */. \
+                                τ/*ZIO.debug('greet)*/. \
+                              )
+
+Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
+                      + τ@r.Greeter"(stdout, name)  \
+                      + τ@r.Greeter"'(stdout, name)
+
+Greeter'(stdout, name) = \
+                       ( ([/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">.)  \
+                       + ([name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">.)                \
+                       + ([/*name.substring(0,1).toUpperCase*/ ≠ "Q"]                                      \
+                          [name ≠ "Voldemort"] stdout</*s"Hello ${'name}!"*/>.)                            \
+                       )
+
+Greeter"(stdout, name) =                                                     \
+                       ( if /*name.substring(0,1).toUpperCase*/ = "Q"        \
+                         then stdout<"That's an unusual name.">.             \
+                         else                                                \
+                           if name = "Voldemort"                             \
+                           then stdout<"WARNING! LORD VOLDEMORT IS HERE!">.  \
+                           else stdout</*s"Hello ${'name}!"*/>.              \
+                       )
+
+Greeter"'(stdout, name) =                                                  \
+                        ( /*name.substring(0,1).toUpperCase*/ = "Q"        \
+                          ? stdout<"That's an unusual name.">.             \
+                          :                                                \
+                            name = "Voldemort"                             \
+                            ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">.  \
+                            : stdout</*s"Hello ${'name}!"*/>.              \
+                        )

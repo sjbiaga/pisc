@@ -46,7 +46,9 @@ package object `Π-dump`:
 
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
+
   type -[F[_]] = Queue[F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
+
 
   final class πdump[F[_]: Async]:
 
@@ -80,7 +82,8 @@ package object `Π-dump`:
       else
         %.flatModify { m =>
           m -> (ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
-                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2.get.flatMap(_.complete(None))))
+                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Async[F].unit
+                                                                                case it => it.get.flatMap(_.complete(None).void) }))
         }.as {
           if !sys.BooleanProp.keyExists(spirsx).value
           && ks.forall(_.charAt(36) == '!')
