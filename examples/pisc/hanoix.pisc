@@ -6,7 +6,7 @@
 
 @def ![F[_]: Concurrent]: Seq[String] => F[Seq[String]] = { _ => Concurrent[F].pure(Seq(null)) }
 
-⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+⟦ replication = (parallelism,1) ⟧
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \

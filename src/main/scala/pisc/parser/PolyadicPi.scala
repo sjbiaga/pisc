@@ -59,9 +59,9 @@ abstract class PolyadicPi extends Expression:
         throw PrefixChannelParsingException(ch)
       case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.count(_._1.isSymbol) > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
         throw PrefixUniquenessParsingException(ch.asSymbol, args.filter(_._1.isSymbol).map(_._1.asSymbol.name)*)
-      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if !emitter.allowsMixedBoundOutput
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if !emitter.allowsMixedOutput
                                                   && args.count(_._1.isSymbol) < args.size =>
-        throw MixedBoundOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
+        throw MixedOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
       case (ch, _) ~ _ ~ Some(None ~ args) ~ _ if !emitter.allowsMixedOutput
                                                && args.map(_._1).exists { case λ(_: Term) => true case _ => false }
                                                && !args.map(_._1).forall { case λ(_: Term) => true case _ => false } =>
@@ -208,6 +208,8 @@ abstract class PolyadicPi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _replication: (Int, Boolean) = (-1, false)
+
   protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
@@ -263,21 +265,23 @@ object PolyadicPi:
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
-               val allowsMixedBoundOutput: Boolean = true,
                val allowsMixedOutput: Boolean = true,
                val canScale: Boolean = false,
-               val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false):
-    def this(_u: Unit) = this(nullOnEmptyOutput = Lit.Null(),
-                              allowsMixedBoundOutput = false,
-                              allowsMixedOutput = false,
-                              hasReplicationInputGuardFlaw = false,
-                              assignsReplicationParallelism1 = true)
+               val featuresLinearReplication: Boolean = false,
+               val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
+    def this(featuresLinearReplication: Boolean) = this(nullOnEmptyOutput = Lit.Null(),
+                                                        allowsMixedOutput = false,
+                                                        featuresLinearReplication = featuresLinearReplication,
+                                                        hasReplicationInputGuardFlaw = {
+                                                          case -1|0        => true
+                                                          case 1           => false
+                                                          case parallelism => parallelism > 1
+                                                        })
     case ce extends Emitter()
-    case fs2 extends Emitter(())
-    case monix extends Emitter(())
-    case zs extends Emitter(())
-    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    case fs2 extends Emitter(true)
+    case monix extends Emitter(false)
+    case zs extends Emitter(true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]
@@ -304,9 +308,6 @@ object PolyadicPi:
 
   case class PrefixChannelsParsingExceptionʹ(name: Symbol, ps: String*)
       extends PrefixParsingException(s"""For a polyadic name ${name.name}, the parameters names '${ps.mkString(", ")}' must be distinct""")
-
-  case class MixedBoundOutputNotAllowedParsingException(emitter: Emitter, name: String)
-      extends PrefixParsingException(s"""Emitter `$emitter' does not allow mixed bound output on a channel name "$name"""")
 
   case class MixedOutputNotAllowedParsingException(emitter: Emitter, name: String)
       extends PrefixParsingException(s"""Emitter `$emitter' does not allow mixed output on a channel name "$name"""")
@@ -405,13 +406,15 @@ object PolyadicPi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _replication = (-1, emitter.featuresLinearReplication)
       _typeclasses = Nil
-      _dirs = List(Map("errors" -> _werr,
-                       "duplications" -> _dups,
-                       "exclude" -> _exclude,
-                       "paceunit" -> _paceunit,
-                       "scaling" -> _scaling,
-                       "typeclasses" -> _typeclasses))
+      _dirs = List(Map("errors"        -> _werr,
+                       "duplications"  -> _dups,
+                       "exclude"       -> _exclude,
+                       "paceunit"      -> _paceunit,
+                       "scaling"       -> _scaling,
+                       "replication"   -> _replication,
+                       "typeclasses"   -> _typeclasses))
       eqtn = List()
       defn = Map()
       self = Set()

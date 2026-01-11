@@ -28,6 +28,7 @@ function ppi() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        --dep dev.zio::zio-interop-cats:23.1.0.13
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -35,7 +36,8 @@ function ppi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-streams:2.1.23'
+            local deps='--dep dev.zio::zio-concurrent:2.1.24
+                        --dep dev.zio::zio-streams:2.1.24'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -54,7 +56,7 @@ function ppi() {
     done
     set ${srcs#?} ../${emit}/ppi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC4 \
+                  -q -O -nowarn -S 3.8.0-RC5 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -88,6 +90,7 @@ function ppi_() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        --dep dev.zio::zio-interop-cats:23.1.0.13
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -95,7 +98,8 @@ function ppi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-streams:2.1.23'
+            local deps='--dep dev.zio::zio-concurrent:2.1.24
+                        --dep dev.zio::zio-streams:2.1.24'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -114,7 +118,7 @@ function ppi_() {
     done
     set ${srcs#?} ../${emit}/ppi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC4 \
+                  -q -O -nowarn -S 3.8.0-RC5 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1

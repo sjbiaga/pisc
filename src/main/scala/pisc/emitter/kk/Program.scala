@@ -472,7 +472,7 @@ object Program:
                                                                        `Behaviors.stopped`,
                                                                        _))
 
-        case !(parallelism, _, Some(π @ π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
+        case !(parallelism, _, Some(π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -499,7 +499,7 @@ object Program:
               it.copy(paramss = List(argsʹ.toList), body = Term.Block(`val` ::: stats))
           }
 
-          val πʹ = Pre.π(λ(Symbol(ch)), Some(""), code, args.map(Symbol(_)).map(λ(_))*)
+          val πʹ = π(λ(Symbol(ch)), Some(""), code, args.map(Symbol(_)).map(λ(_))*)
 
           val `πʹ.emit` = πʹ.emit._2
 

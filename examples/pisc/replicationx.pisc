@@ -2,7 +2,7 @@
 
 @val gen = new scala.util.Random
 
-⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+⟦ replication = (parallelism,1) ⟧
 
 ⟦ exclude = no ⟧
 

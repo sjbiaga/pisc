@@ -101,21 +101,6 @@ object Meta extends emitter.shared.effects.Meta:
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select("IO", "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
-
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
-
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(Type.Name("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )
-
-
   def `List( *, … ).parSequence`(* : Term*): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
@@ -133,7 +118,7 @@ object Meta extends emitter.shared.effects.Meta:
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparTraverse"), Term.ArgClause(`…` :: Nil))
 
 
-  def `IO { def *(*: ()): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
+  def `IO { def *(*: (), ⋯): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(

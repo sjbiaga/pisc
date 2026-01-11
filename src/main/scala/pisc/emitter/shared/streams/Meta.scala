@@ -41,7 +41,9 @@ abstract trait Meta extends shared.effects.Meta:
 
   protected lazy val \\ = ""
 
-  val `: Stream[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
+  protected lazy val \\\ = ""
+
+  val `: \\[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
 
 
   def `*[F]`(* : Term) =
@@ -66,11 +68,6 @@ abstract trait Meta extends shared.effects.Meta:
       case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\), Term.ArgClause(it.rhs :: Nil)))
       case it => it
     }
-
-
-  def `* <- Semaphore[F](…)`(* : String): Enumerator.Generator =
-    `* <- Stream.evalF(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("F") :: Nil)),
-                                           Term.ArgClause(Lit.Int(1) :: Nil)))
 
 
   @tailrec
@@ -98,3 +95,46 @@ abstract trait Meta extends shared.effects.Meta:
             Term.ForYield(*.toList, Lit.Unit())
     else
       `for *[F] yield ()`(`_ <- \\.unit`)
+
+
+  override def `_ <- *.acquire`(* : String): Enumerator =
+    `Stream.evalF(…)`(super.`_ <- *.acquire`(*)).head
+
+  override def `_ <- *.release`(* : String): Enumerator =
+    `Stream.evalF(…)`(super.`_ <- *.release`(*)).head
+
+  override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
+    `* <- Stream.evalF(*)`(* -> Term.Apply(`*[F]`("Semaphore"),
+                                           Term.ArgClause(Lit.Int(`…`) :: Nil))).head
+
+
+  def `\\.\\\\\\ { def *(*: ()[F], ⋯): \\[F, Unit] = …; * }`(* : String, `…`: Term, ** : String*): Term =
+    Term.Apply(Term.Select(\, \\\),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(**.map(Term.Param(Nil,
+                                                                                       _,
+                                                                                       Some(Type.Apply(\\("()"), Type.ArgClause(\\("F") :: Nil))),
+                                                                                       None)).toList,
+                                                                     None) :: Nil) :: Nil,
+                            `: \\[F, Unit]`,
+                             `…`
+                   ) :: \(*) :: Nil
+                 ) :: Nil
+               )
+    )
+
+  def `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\\),
+               Term.ArgClause(Term.Block(
+                                Defn.Val(Mod.Lazy() :: Nil,
+                                         `* <- …`(*) :: Nil,
+                                         `: \\[F, Unit]`,
+                                         `…`
+                                ) :: \(*) :: Nil
+                              ) :: Nil
+               )
+    )

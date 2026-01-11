@@ -46,16 +46,16 @@ object π:
   import _root_.cats.syntax.all.*
 
   import _root_.cats.effect.Async
-  import _root_.cats.effect.std.Semaphore
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
   import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
   extension [F[_]: Async: Parallel](self: πLs[Stream[F, ?]])
-    private[π] inline def πparSequence: Stream[F, Nothing] =
-      Stream.exec(self.map(_.compile.drain).parSequence.void)
-    private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Nothing] =
+    private[π] inline def πparSequence: Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain).parSequence.void)
+    private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Unit] =
       self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
 
   import Π.*

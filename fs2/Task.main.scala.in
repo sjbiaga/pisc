@@ -28,19 +28,20 @@
 
 //package main.scala.in
 
-import _root_.zio.stream.ZStream
-import _root_.zio.ZIO
+import _root_.zio.interop.catz.*
+
+implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
+  _root_.cats.effect.std.Console.make[zio.Task]
 
 
-object App extends _root_.zio.ZIOAppDefault:
+object App extends CatsApp:
 
-  import _root_.zio.{ ExitCode, ZIOAppArgs }
-
+  import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
 
   override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
     for
       args <- getArgs
-      _    <- π.Main(args.toSeq*).runDrain
+      _    <- π.Main[π.F](args.toSeq*).compile.drain
       _    <- exit(ExitCode.success)
     yield
       ()
@@ -49,19 +50,23 @@ object App extends _root_.zio.ZIOAppDefault:
 object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.scala.concurrent.duration.*
 
-  import _root_.zio.{ durationLong, Exit, Queue, Scope, Semaphore, Task, ZLayer }
-  import _root_.zio.concurrent.CyclicBarrier
+  import _root_.cats.Parallel
+  import _root_.cats.syntax.all.*
+
+  import _root_.cats.effect.Async
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+
+  import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
-  extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πcollectAllParZIO: ZIO[Any, Throwable, Unit] =
-      ZIO.collectAllParDiscard(self.map(_.runDrain))
-    private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(self.πcollectAllParZIO)
-    private[π] inline def πcollectAllPar(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain).map(semaphore.tryWithPermit(_))))
+  extension [F[_]: Async: Parallel](self: πLs[Stream[F, ?]])
+    private[π] inline def πparSequence: Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain).parSequence.void)
+    private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Unit] =
+      self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
 
   import Π.*
 
