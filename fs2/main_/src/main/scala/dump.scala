@@ -111,16 +111,16 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (d1, d2)) =>
+             case (no, ((s1, s2), e), (k1, k2), (delay, duration), (d1, d2)) =>
                for
                  l1 <- d1.get
                  l2 <- if k1 == k2 then Async[F].pure(l1) else d2.get
-                 p  <- record(no, ts1, ts, delay, duration, l1)(k1)
+                 p  <- record(no, s1, e, delay, duration, l1)(k1)
                  _  <- if snapshot then record(no, p, l1._2._2) else Async[F].unit
                  _  <- if k1 == k2 then Async[F].unit
                        else
                          for
-                           p <- record(no, ts2, ts, delay, duration, l2)(k2)
+                           p <- record(no, s2, e, delay, duration, l2)(k2)
                            _ <- if snapshot then record(no, p, l2._2._2) else Async[F].unit
                          yield
                            ()

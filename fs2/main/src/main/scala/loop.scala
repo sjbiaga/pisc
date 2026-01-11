@@ -68,6 +68,7 @@ package object `Π-loop`:
 
   type \[F[_]] = () => F[Unit]
 
+
   final class πloop[F[_]: Concurrent: Parallel]:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
@@ -105,7 +106,8 @@ package object `Π-loop`:
       else
         %.flatModify { m =>
           m -> (ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
-                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2.get.flatMap(_.complete(None))))
+                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Concurrent[F].unit
+                                                                                case it => it.get.flatMap(_.complete(None).void) }))
         }.as {
           if !sys.BooleanProp.keyExists(barsx).value
           && ks.forall(_.charAt(36) == '!')
@@ -186,15 +188,15 @@ package object `Π-loop`:
                                                   case (cap: `π-ζ`, capʹ: `π-ζ`) =>
                                                     `}{`.><.ζ(key, cap, keyʹ, capʹ)
                                             ).start
-                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' then %.update(_ - key1) else Concurrent[F].unit) >> d1.complete(Some((cb, fb, tk))).void
+                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else Concurrent[F].unit) >> d1.complete(Some((cb, fb, tk))).void
                                             else Concurrent[F].unit
                                       _  <- if k1 == k2 then Concurrent[F].unit
-                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' then %.update(_ - key2) else Concurrent[F].unit) >> d2.complete(Some((cb, fb, tk))).void
+                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else Concurrent[F].unit) >> d2.complete(Some((cb, fb, tk))).void
                                             else Concurrent[F].unit
-                                      _  <- if k1.charAt(0) == '!' then c1.get.flatTap(_.complete(Some((cb, fb, tk)))).void
+                                      _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.flatTap(_.complete(Some((cb, fb, tk)))).void
                                             else Concurrent[F].unit
                                       _  <- if k1 == k2 then Concurrent[F].unit
-                                            else if k2.charAt(0) == '!' then c2.get.flatTap(_.complete(Some((cb, fb, tk)))).void
+                                            else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.flatTap(_.complete(Some((cb, fb, tk)))).void
                                             else Concurrent[F].unit
                                       _  <- ~.release
                                       _  <- cb.await
@@ -209,16 +211,26 @@ package object `Π-loop`:
       for
         h <- /.take
         ((_, key), it) = h
-        _ <- %.update { m =>
-                        val ^ = h._1._1
-                        val n = m(key).asInstanceOf[Int] - 1
-                        ( if n == 0
-                          then
-                            m - key
-                          else
-                            m + (key -> n)
-                        ) + (^ + key -> (true, it))
-             }
+        ((d, _), _) = it
+        o <- d.tryGet
+        _ <- ( if o eq None
+               then
+                 %.update { m =>
+                            val ^ = h._1._1
+                            val n = m(key).asInstanceOf[Int] - 1
+                            ( if n == 0
+                              then
+                                m - key
+                              else
+                                m + (key -> n)
+                            ) + (^ + key -> (true, it))
+                 }
+               else
+                 %.update { m =>
+                            val ^ = h._1._1
+                            m + (^ + key -> (false, it))
+                 }
+             )
         _ <- *.offer(())
         _ <- Concurrent[F].cede >> poll
       yield

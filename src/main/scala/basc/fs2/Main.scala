@@ -47,6 +47,11 @@ object Main extends helper.Main:
 
   val examples = "examples"
 
+  val threadlocal = Map(
+    "cats.effect.IO" -> "IOLocal",
+    "zio.Task" -> "FiberRef",
+  )
+
   def main(args: Array[String]): Unit =
     var F = "cats.effect.IO"
 
@@ -81,20 +86,20 @@ object Main extends helper.Main:
                           Type.Bounds(None, None, Nil, Nil))
           )
           ::
-          ( prog.tail.tail.head match
+          ( prog.tail.head match
               case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
                 Defn.Val(Nil, Pat.Var(Term.Name("π-parallelism")) :: Nil, None, parallelism)
           )
           ::
-          ( prog.tail.tail.tail.head match
+          ( prog.tail.tail.head match
               case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
                 Defn.Val(Nil, Pat.Var(Term.Name("π-snapshot")) :: Nil, None, snapshot)
           )
-          :: Program.Main()(prog)
+          :: Program.Main(threadlocal(F))(prog)
 
-        val is = prog_.drop(4).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(3).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(4).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(3).filter(_._1.isLeft).map(_.left.get -> _)
 
         val tc: String => Type =
           _.split('.').reverse match
@@ -103,7 +108,7 @@ object Main extends helper.Main:
 
         val tcs =
           prog.head match
-            case (`(*)`(_, λ(_: Lit.Null)), _) => Set("Async", "LiftIO", "Parallel")
+            case (`(*)`(_, λ(_: Lit.Null)), _) => Set("Async", "Parallel")
             case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
               typeclasses.args.map { case Term.Name(it) => it }.toSet
 

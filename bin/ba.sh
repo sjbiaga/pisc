@@ -4,7 +4,7 @@ function ba() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-fs2)
+        -ce|-cef|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -22,8 +22,13 @@ function ba() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zs)
+            local deps='--dep dev.zio::zio-concurrent:2.1.24
+                        --dep dev.zio::zio-streams:2.1.24'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -42,7 +47,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC4 \
+                  -q -O -nowarn -S 3.8.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -56,7 +61,7 @@ function ba_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-fs2)
+        -ce|-cef|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -74,19 +79,15 @@ function ba_() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0-M7
+                        --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
+        zs)
+            local deps='--dep dev.zio::zio-concurrent:2.1.24
+                        --dep dev.zio::zio-streams:2.1.24'
+            ;;
     esac
-    while [ $# -gt 0 ]
-    do
-        if [ "$1" = '--' ]
-        then
-            break
-        fi
-        srcs="$srcs $1"
-        shift
-    done
     while [ $# -gt 0 ]
     do
         if [ "$1" = '--' ]
@@ -103,7 +104,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC4 \
+                  -q -O -nowarn -S 3.8.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -118,7 +119,7 @@ function baio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-cef|-fs2)
+        -ce|-cef|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;

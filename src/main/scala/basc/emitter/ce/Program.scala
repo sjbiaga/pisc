@@ -39,7 +39,7 @@ import ce.Meta.*
 
 object Program:
 
-  extension (self: Pre | AST)(using id: => String)
+  extension (self: Pre | AST)(using id: => String, ^ : (Enumerator.Generator, Term.Name))
 
     def emitʹ: List[Enumerator] =
 
@@ -285,33 +285,33 @@ object Program:
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _)), sum) =>
           val υidυ = id
 
-          var `!.π⋯` = π.emit :+ `_ <- *`(s"$υidυ($par)(`π-uuid`)".parse[Term].get)
+          var `!.π⋯` = pace.map(π.emit :+ `_ <- IO.sleep(*.…)`(_, _)).getOrElse(π.emit) :+ ^._1
 
-          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          `!.π⋯` :+= `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
+                                         Term.ArgClause(^._2 :: Nil)))
 
           val sem = if parallelism < 0 then null else id
 
-          val it =
+          val `!⋯` =
             if parallelism < 0
             then
               `List( *, … ).parSequence`(
                 sum.emit,
-                `!⋯`
+                `!.π⋯`
               )
             else
               `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
                 sum.emit :+ `_ <- *.release`(sem),
-                `!⋯`
+                `!.π⋯`
               )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
           else
-            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
@@ -323,9 +323,10 @@ object Program:
             π.copy(name = λ.copy()(using None))(idʹ)
           }
 
-          var `!.π⋯` = πʹ.emit :+ `_ <- *`(s"$υidυ($arg)(`π-uuid`)".parse[Term].get)
+          var `!.π⋯` = pace.map(πʹ.emit :+ `_ <- IO.sleep(*.…)`(_, _)).getOrElse(πʹ.emit) :+ ^._1
 
-          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          `!.π⋯` :+= `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                         Term.ArgClause(^._2 :: Nil)))
 
           val `val` =
             λ.`type` match
@@ -337,60 +338,58 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val it =
+          val `!⋯` =
             if parallelism < 0
             then
               Term.Block(`val` :+
                          `List( *, … ).parSequence`(
                            sum.emit,
-                           `!⋯`
+                           `!.π⋯`
                          ))
             else
               `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               Term.Block(`val` :+
                          `List( *, … ).parSequence`(
                            sum.emit :+ `_ <- *.release`(sem),
-                           `!⋯`
+                           `!.π⋯`
                          ))
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
           else
-            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(υidυ -> par, it)) :: `!.π⋯`
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
 
-          var `!.μ⋯` = μ.emit :+ `_ <- *`(s"$υidυ(`π-uuid`)".parse[Term].get)
+          var `!.μ⋯` = pace.map(μ.emit :+ `_ <- IO.sleep(*.…)`(_, _)).getOrElse(μ.emit) :+ ^._1
 
-          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+          `!.μ⋯` :+= `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
 
           val sem = if parallelism < 0 then null else id
 
-          val it =
+          val `!⋯` =
             if parallelism < 0
             then
               `List( *, … ).parSequence`(
                 sum.emit,
-                `!⋯`
+                `!.μ⋯`
               )
             else
               `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
-              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
               `List( *, … ).parSequence`(
                 sum.emit :+ `_ <- *.release`(sem),
-                `!⋯`
+                `!.μ⋯`
               )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
           else
-            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(υidυ, it)) :: `!.μ⋯`
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
@@ -414,7 +413,7 @@ object Program:
         // INSTANTIATION ///////////////////////////////////////////////////////
 
         case `⟦⟧`(_, variables, _sum, _, assignment) =>
-          val ** = assignment
+          * = assignment
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
@@ -428,7 +427,7 @@ object Program:
                     else
                       `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.emit
+          * = * ::: sum.emit
 
         case _: `{}` => ???
 
@@ -440,12 +439,8 @@ object Program:
         case `(*)`(identifier, params*) =>
           val args = params.map(_.toTerm).toList
 
-          * = `_ <- *`(Term.Apply(
-                         Term.Apply(
-                           Term.Apply(\(identifier),
-                                      Term.ArgClause(\(")(") :: \("}{") :: Nil)),
-                           Term.ArgClause(args)),
-                         Term.ArgClause(\("π-uuid")::Nil, Some(Mod.Using()))))
+          * = ^._1 :: `_ <- *`(Term.Apply(Term.Apply(Term.Apply(\(identifier), Term.ArgClause(\(")(") :: \("}{") :: Nil)), Term.ArgClause(args)),
+                                          Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
         ////////////////////////////////////////////////////////// invocation //
 
@@ -457,16 +452,21 @@ object Program:
     def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
 
-      ( prog.tail.tail.head match
+      val `^-υidυ` = id()
+
+      given (Enumerator.Generator, Term.Name) =
+        (`* <- *`(`^-υidυ` -> \("π-uuid")), \(`^-υidυ`))
+
+      ( prog.tail.head match
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
-      ( prog.tail.tail.tail.head match
+      ( prog.tail.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
             Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot)
       ) ::
       prog
-        .drop(4)
+        .drop(3)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

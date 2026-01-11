@@ -2,7 +2,9 @@
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
+
+⟦ replication = (linear,no) ⟧
 
 ⟦ traces = console ⟧
 
@@ -44,11 +46,18 @@ Main = ν(x) "p"[ "c"[ C(x) ] | P(x) ]
 
 ⟦ exclude = yes ⟧
 
+⟦ push = replication ⟧
+
+⟦ replication = (parallelism,1) ⟧
+⟦ replication = (linear,yes) ⟧
+
 C(x) = exit x /*Console[F].println("exited")*/. s2s x?{y}. enter y /*Console[F].println("entered")*/.
 
 P(x) = expel x /*Console[F].println("expelled")*/. s2s x!{νy}. accept y /*Console[F].println("accepted")*/.
 
 Main = ν(x) "p"[ "c"[ ! 2 c2p x?{y}/*Async[F].pure(_) <* Console[F].println("c2p")*/. C(y) ] | ! 2 p2c x!{νy}/*Console[F].println("p2c")*/. P(y) ]
+
+⟦ pop = 1 ⟧
 
 ⟦ exclude = yes ⟧
 

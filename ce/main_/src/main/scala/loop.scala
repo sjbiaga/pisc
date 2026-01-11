@@ -173,12 +173,12 @@ package object `Π-loop`:
                                       _  <- discard(k1)(using ^)
                                       _  <- if k1 == k2 then IO.unit else discard(k2)(using ^^)
                                       _  <- %.update(_ - key1 - key2)
-                                      no <- &.updateAndGet(_ + 1)
                                       _  <- started.update(_ + 1)
                                       fb <- ( for
                                                 _  <- --.await
                                                 _  <- enable(k1)
                                                 _  <- if k1 == k2 then IO.unit else enable(k2)
+                                                no <- &.updateAndGet(_ + 1)
                                                 ts <- Clock[IO].monotonic.map(_.toNanos)
                                                 _  <- -.offer((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (+, ++)))
                                                 _  <- sem.release

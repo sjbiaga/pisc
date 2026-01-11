@@ -33,6 +33,7 @@ package shared
 import scala.meta.*
 import dialects.Scala3
 
+import parser.BioAmbients.Actions
 import parser.Calculus.λ
 
 
@@ -171,6 +172,15 @@ abstract trait Meta:
               "value"
             )
    )
+
+
+  def `π-exclude`(enabled: Actions): Term =
+    Term.Apply(\("π-exclude"),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))
+
+  def `π-exclude[F]`(enabled: Actions): Term =
+    Term.Apply(Term.ApplyType(\("π-exclude"), Type.ArgClause(\\("F") :: Nil)),
+               Term.ArgClause(enabled.map(Lit.String(_)).toList))
 
 
 object Meta extends Meta:

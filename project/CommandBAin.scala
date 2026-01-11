@@ -25,12 +25,12 @@ object CommandBAin {
       fileExamples().map(_.stripSuffix(".basc")).toSeq
     }
 
-    val opts = Map("-ce" -> Nil, "-cef" -> Nil, "-fs2" -> Seq("cats.effect.IO").map("-F" + _))
+    val opts = Map("-ce" -> Nil, "-cef" -> Nil, "-fs2" -> Seq("cats.effect.IO", "zio.Task").map("-F" + _), "-zs" -> Nil)
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {
         case it if it.startsWith("-") && args.size == 1 =>
-          Seq("-ce", "-cef", "-fs2").filter(_.startsWith(it.toLowerCase))
+          Seq("-ce", "-cef", "-fs2", "-zs").filter(_.startsWith(it.toLowerCase))
         case it =>
           { if (it.isEmpty && args.size == 1) suggestions(Seq("-")) else Nil } ++
           { if (args.size > 1 && opts.contains(args(1))) opts(args(1)) else Nil } ++

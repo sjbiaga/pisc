@@ -2,7 +2,7 @@
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
 
 @given [F[_]: Async]: Conversion[`()`[F], Int] = _.`()`[Int]
 

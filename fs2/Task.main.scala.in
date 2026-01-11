@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+//package main.scala.in
+
+import _root_.zio.FiberRef
+
+import _root_.zio.interop.catz.*
+import _root_.zio.stream.interop.fs2z.*
+
+
+implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
+  _root_.cats.effect.std.Console.make[zio.Task]
+
+
+object App extends CatsApp:
+
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
+
+
+  import _root_.scala.collection.immutable.{ List, Map }
+
+  import _root_.cats.effect.{ Deferred, Ref }
+  import _root_.cats.effect.std.{ Queue, Semaphore }
+
+  import _root_.zio.{ ExitCode, Task, ZIOAppArgs, ZIO }
+  import _root_.zio.stream.ZStream
+
+  import _root_.io.github.timwspence.cats.stm.STM
+
+  import `Π-dump`.*
+  import `Π-loop`.*
+
+
+  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[Task])
+                 (% : %[Task], / : /[Task], * : *[Task], - : -[Task], ! : ![Task], & : &[Task], ~ : ~[Task])
+                 (using `}{`.`][`, `}{`.stm.TSemaphore) =
+    val lπ = πloop[Task]()
+    val dπ = πdump[Task]()
+    val mπ = π.πmain[Task]()
+    ( for
+        l <- ZStream.fromZIO(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
+        ^ <- ZStream.fromZIO(π.`π-uuid`[Task])
+        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, () => *.offer(())).toZStream[Any]()
+        x <- ZStream.fromZIO(!.get)
+        _ <- ZStream.fromZIO(exit(ExitCode(x.code)))
+      yield
+        ()
+    )
+      .drainFork(ZStream.fromZIO(lπ.loop(snapshot, `}{`)(using %, !, &, ~, -, *)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(lπ.poll(using %, /, *)))
+      .drainFork(ZStream.fromZIO(dπ.dump(snapshot)(using %, !, -)))
+      .runDrain
+
+  override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+    val p = if sys.Prop.IntProp(bacsp).isSet
+            then sys.Prop.IntProp(bacsp).value
+            else π.`π-parallelism`
+    val s = if sys.BooleanProp.keyExists(baass).value
+            then true
+            else π.`π-snapshot`
+    for
+      args <- getArgs
+      % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
+      * <- Queue.unbounded[π.F, Unit]
+      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[π.F, (String, (String, String))], Deferred[π.F, (String, (String, String))]))]
+      ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
+      & <- Ref[π.F].of(0L)
+      ~ <- Semaphore[π.F](p)
+      _ <- sΠ.`π-enable`[π.F](π.`π-main`)(using %)
+      stm <- STM.runtime[π.F]
+      wrapper = new sΠ.`}{`(stm)
+      (uuid, tree, semaphore) <- wrapper.`][`()
+      _ <- run(args.toList, s, uuid, wrapper)(%, /, *, -, !, &, ~)(using tree, semaphore)
+    yield
+      ()
+
+
+object π:
+
+  import _root_.java.util.UUID
+
+  import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.scala.concurrent.duration.*
+
+  import _root_.cats.{ Functor, Parallel }
+  import _root_.cats.syntax.all.*
+
+  import _root_.cats.effect.{ Async, Concurrent }
+  import _root_.cats.effect.std.UUIDGen
+
+  import _root_.fs2.Stream
+
+  import _root_.eu.timepit.refined.*
+
+  import sΠ.*
+  import `π-$`.*, `π-ζ`.*
+
+  import `Π-loop`.{ %, /, \ }
+  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+
+
+  extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
+    private[π] inline def πparSequence: Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain).parSequence.void)
+
+  def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
+    UUIDGen.randomString[F]
+
+

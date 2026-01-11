@@ -72,9 +72,9 @@ object Main extends helper.Main:
         val (prog, (discarded, excluded, enabled)) = ba(prog_.map(_._1))
 
         val ps = Program.Main()(prog)
-        val is = prog_.drop(4).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(3).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(4).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(3).filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = ps.take(2).mkString("\n\n") + "\n\n"
                  + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))

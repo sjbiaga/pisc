@@ -1,10 +1,10 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ spi -fs2 lists2.scala -- 1 2  3 5
+# ./examples $ ba -fs2 lists2.scala -- 1 2  3 5
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (Async,cats.effect.std.Console,LiftIO,Parallel) ⟧
+⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
 
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*

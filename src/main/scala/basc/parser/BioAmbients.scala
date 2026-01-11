@@ -238,9 +238,9 @@ abstract class BioAmbients extends Expression:
 
   protected var _scaling: Boolean = false
 
-  protected var _typeclasses: List[String] = Nil
+  protected var _replication: (Int, Boolean) = (-1, false)
 
-  protected var _threadlocal: List[String] = Nil
+  protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
 
@@ -309,12 +309,18 @@ object BioAmbients:
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   enum Emitter(val canScale: Boolean = false,
-               val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false):
+               val featuresLinearReplication: Boolean = false,
+               val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
+    def this(featuresLinearReplication: Boolean) = this(featuresLinearReplication = featuresLinearReplication,
+                                                        hasReplicationInputGuardFlaw = {
+                                                          case -1|0        => true
+                                                          case 1           => false
+                                                          case parallelism => parallelism > 1
+                                                        })
     case ce extends Emitter()
     case cef extends Emitter()
-    case fs2 extends Emitter(hasReplicationInputGuardFlaw = false,
-                             assignsReplicationParallelism1 = true)
+    case fs2 extends Emitter(true)
+    case zs extends Emitter(true)
     private[parser] case test extends Emitter()
 
   type Actions = Set[String]
@@ -729,7 +735,7 @@ object BioAmbients:
           case ?:(_, t, f) =>
             t.graph ++ f.map(_.graph).getOrElse(Nil)
 
-          case !(_, _, Some(μ), sum) if emitter.assignsReplicationParallelism1 =>
+          case !(parallelism, _, Some(μ), sum) if parallelism == 1 || parallelism < -1 =>
             sum.graph ++ Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
@@ -829,21 +835,21 @@ object BioAmbients:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _replication = (-1, emitter.featuresLinearReplication)
       _typeclasses = Nil
-      _threadlocal = Nil
       _par = 9
       _snapshot = false
       _traces = None
-      _dirs = List(Map("errors" -> _werr,
+      _dirs = List(Map("errors"       -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude,
-                       "paceunit" -> _paceunit,
-                       "scaling" -> _scaling,
-                       "typeclasses" -> _typeclasses,
-                       "threadlocal" -> _threadlocal,
-                       "parallelism" -> _par,
-                       "snapshot" -> _snapshot,
-                       "traces" -> _traces))
+                       "exclude"      -> _exclude,
+                       "paceunit"     -> _paceunit,
+                       "scaling"      -> _scaling,
+                       "replication"  -> _replication,
+                       "typeclasses"  -> _typeclasses,
+                       "parallelism"  -> _par,
+                       "snapshot"     -> _snapshot,
+                       "traces"       -> _traces))
       eqtn = List()
       defn = Map()
       self = Set()
@@ -918,7 +924,6 @@ object BioAmbients:
         }
 
       Right((`(*)`(null, λ(if _typeclasses.isEmpty then Lit.Null() else Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)): Bind) ::
-      Right((`(*)`(null, λ(if _threadlocal.isEmpty then Lit.Null() else Term.Tuple(_threadlocal.map(Term.Name(_))))), `+`(-1)): Bind) ::
       Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
       Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), `+`(-1)): Bind) ::
       prog

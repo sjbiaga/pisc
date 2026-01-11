@@ -59,7 +59,8 @@ object App extends _root_.cats.effect.IOApp:
         wrapper      = new sΠ.`}{`(stm)
         (lo, tree,
          semaphore) <- wrapper.`][`()
-        _           <- π.`π-supervised`(π.Main(lo, wrapper)(args*)(using π.`π-uuid`)(using %, /, *.offer(()))(using tree, semaphore))
+        ^           <- π.`π-uuid`
+        _           <- π.Main(lo, wrapper)(args*)(using ^)(using %, /, *.offer(()))(using tree, semaphore)
         exitcode    <- !.get
       yield
         exitcode
@@ -88,32 +89,28 @@ object App extends _root_.cats.effect.IOApp:
 
 object π:
 
-  import _root_.java.util.UUID
-
+  import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.scala.concurrent.duration.*
 
-  import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
+
+  import _root_.cats.effect.std.UUIDGen
   import _root_.cats.effect.syntax.all.*
 
   import _root_.eu.timepit.refined.*
+
+  import sΠ.*
+  import `π-$`.*, `π-ζ`.*
+
+  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
       self.parSequence.void
 
-  import sΠ.*
-  import `π-$`.*, `π-ζ`.*
-
-  def `π-uuid` = UUID.randomUUID.toString
-
-  def `π-supervised`(io: => IO[Any]): IO[Unit] =
-    _root_.cats.effect.std.Supervisor[IO](await = true)
-      .use(_.supervise(io))
-      .flatMap(_.join.void)
-
-  import `Π-loop`.{ <>, %, /, \ }
-  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  val `π-uuid`: IO[String] =
+    UUIDGen.randomString
 
 

@@ -1,7 +1,7 @@
 import Dependencies._
 import CommandBAin._
 
-ThisBuild / scalaVersion := "3.8.0-RC4"
+ThisBuild / scalaVersion := "3.8.0-RC5"
 
 val akkaSecureToken = "cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx"
 
@@ -15,15 +15,15 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `fs2-main`, `fs2-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += bain,
     libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
@@ -36,8 +36,8 @@ lazy val `ce-main` = (project in file("ce/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
@@ -49,8 +49,8 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
@@ -62,8 +62,8 @@ lazy val `cef-main` = (project in file("cef/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
@@ -75,8 +75,8 @@ lazy val `cef-main_` = (project in file("cef/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
   )
@@ -88,8 +88,8 @@ lazy val `fs2-main` = (project in file("fs2/main"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, fs2, catsstm, munit % Test)
   )
@@ -101,13 +101,39 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
     organizationName := "sjbiaga",
     version := "1.0",
     maxErrors := 5,
-    scalaVersion := "3.8.0-RC4",
-    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC4"),
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, fs2, catsstm, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce*/*.scala" || "fs2/*.scala" || "examples/*.scala"
+lazy val `zs-main` = (project in file("zs/main"))
+  .settings(
+    name := "zs BioAmbients π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+  )
+
+lazy val `zs-main_` = (project in file("zs/main_"))
+  .settings(
+    name := "zs_ BioAmbients π-Calculus[experimental]2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.8.0-RC5",
+    crossScalaVersions ++= Seq("2.13.18", "3.8.0-RC5"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "ce*/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

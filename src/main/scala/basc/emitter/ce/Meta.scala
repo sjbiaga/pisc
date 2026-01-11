@@ -35,7 +35,6 @@ import scala.annotation.tailrec
 import scala.meta.*
 import dialects.Scala3
 
-import parser.BioAmbients.Actions
 import parser.Calculus.`(*)`
 
 
@@ -112,28 +111,13 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     Nil
 
 
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
-
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
-
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"),
-                                                   Type.ArgClause(\\("IO") :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )
-
-
   val `: IO[Any]` = `:`(\, "Any")
 
   val `: String => IO[Any]` =
     `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
 
 
-  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … } * }`(* : (String, String), `…`: Term): Term =
+  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
@@ -159,7 +143,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     )
 
 
-  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … } * }`(* : String, `…`: Term): Term =
+  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
     Term.Apply(\("IO"),
                Term.ArgClause(
                  Term.Block(
@@ -178,11 +162,6 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                  ) :: Nil
                )
     )
-
-
-  def `π-exclude`(enabled: Actions): Term =
-    Term.Apply(\("π-exclude"),
-               Term.ArgClause(enabled.map(Lit.String(_)).toList))
 
 
 object Meta extends emitter.ce.Meta:

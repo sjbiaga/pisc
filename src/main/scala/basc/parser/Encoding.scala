@@ -211,51 +211,69 @@ abstract class Encoding extends Calculus:
          | "exclude" | "include"
          | "paceunit"
          | "scaling"
+         | "replication"
          | "typeclasses"
-         | "threadlocal"
          | "parallelism"
          | "snapshot"
          | "traces" => true
       case _        => false
     }
 
-    private def boolean: Boolean =
-      _dir.get._2 match
-        case it: String =>
-          it.toLowerCase match
-            case "0" | "off" | "false" | "no" | "n" => false
-            case "1" | "on" | "true" | "yes" | "y"  => true
-            case _                                  => throw DirectiveValueParsingException(_dir.get, "a boolean")
-        case _          => throw DirectiveValueParsingException(_dir.get, "a boolean")
+    private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
-    private def number: Double =
-      _dir.get._2 match
-        case it: String =>
-          try
-            it.toDouble
-          catch
-            case _: NumberFormatException =>
-              throw DirectiveValueParsingException(_dir.get, "a number")
+    extension (self: String | List[String])
+              (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
+              (using key: () => String = () => _dir.get._1)
+              (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
 
-    private def file: Option[String] =
-      _dir.get._2 match
-        case it: String if it.toLowerCase == "console" => None
-        case _: String                                 => Some(string("<console> or a filename"))
-        case _                                         => throw DirectiveValueParsingException(_dir.get, "<console> or a filename")
+      def boolean: Boolean =
+        self match
+          case it: String =>
+            it.toLowerCase match
+              case "0" | "off" | "false" | "no" | "n" => false
+              case "1" | "on" | "true" | "yes" | "y"  => true
+              case _                                  => throw err("a boolean")
+          case _          => throw err("a boolean")
 
-    private def keys: Set[String] =
-      _dir.get._2 match
-        case it: String if key(it)              => Set(canonical(it))
-        case it: List[String] if it.forall(key) => Set.from(it.map(canonical))
-        case _                                  => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
+      def number: Int =
+        self match
+          case it: String =>
+            try
+              it.toInt
+            catch
+              case _: NumberFormatException =>
+                throw err("a number")
+          case _          => throw err("a number")
 
-    private def string(`val`: => String | List[String] = _dir.get._2, `type`: String = "a string"): String =
-      `val` match
-        case it: String
-            if (it.startsWith("\"") || it.startsWith("'"))
-            && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
-          it.substring(1, it.length-1)
-        case _                                                   => throw DirectiveValueParsingException(_dir.get, s"${`type`}")
+      def file: Option[String] =
+        self match
+          case it: String if it.toLowerCase == "console" => None
+          case _: String                                 => Some(self.string("<console> or a filename"))
+          case _                                         => throw err("<console> or a filename")
+
+      def string(`type`: String = "a string"): String =
+        self match
+          case it: String
+              if (it.startsWith("\"") || it.startsWith("'"))
+              && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
+            it.substring(1, it.length-1)
+          case _                                                   => throw err(`type`)
+
+      def keys: Set[String] =
+        self match
+          case it: String if Directive.key(it)              => Set(canonical(it))
+          case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+          case _                                            => throw err("a comma separated list of valid keys")
+
+    private def boolean: Boolean = _dir.get._2.boolean
+    private def number: Int = _dir.get._2.number
+    private def file: Option[String] = _dir.get._2.file
+    private def string(`type`: String): String = _dir.get._2.string(`type`)
+    private def string: String = _dir.get._2.string("a string")
+    private def keys: Set[String] = _dir.get._2.keys
+
+    private lazy val settings = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
+    private def setting(using key: () => String = () => _dir.get._1) = settings(key().toLowerCase)
 
     def apply(): Unit =
 
@@ -281,18 +299,20 @@ abstract class Encoding extends Calculus:
         case "scaling"      =>
           _scaling = boolean
 
+        case "replication"  =>
+          _replication = _dir.get._2 match
+            case it: List[String] => it.map(_.toLowerCase) match
+              case List("parallelism", it: String) =>
+                (-1 max it.number(using { msg => DirectiveValueParsingException(_, setting, DirectiveSettingParsingException("parallelism", msg, it)) }), _replication._2)
+              case List("linear", it: String)      =>
+                (_replication._1, it.boolean(using { msg => DirectiveValueParsingException(_, setting, DirectiveSettingParsingException("linear", msg, it)) }))
+              case _                               => throw DirectiveValueParsingException(_dir.get, setting)
+            case _                => throw DirectiveValueParsingException(_dir.get, setting)
+
         case "typeclasses"  =>
           _typeclasses = _dir.get._2 match
             case it: String       => List(it)
             case it: List[String] => it
-            case _                => throw DirectiveValueParsingException(_dir.get, "a comma separated list")
-
-        case "threadlocal"  =>
-          _threadlocal = _dir.get._2 match
-            case it: String                                             => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), "set", "get", "to")
-            case List(it: String, set: String, get: String)             => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), set, get)
-            case List(it: String, set: String, get: String, to: String) => List(string(it, """a method parameter type like "IOLocal[`)(`]""""), set, get, to)
-            case _                                                      => throw DirectiveValueParsingException(_dir.get, "a triple/quadruple list")
 
         case "parallelism"  =>
           _par = 1 max number.toInt
@@ -322,8 +342,8 @@ abstract class Encoding extends Calculus:
                             "exclude"      -> _exclude,
                             "paceunit"     -> _paceunit,
                             "scaling"      -> _scaling,
+                            "replication"  -> _replication,
                             "typeclasses"  -> _typeclasses,
-                            "threadlocal"  -> _threadlocal,
                             "parallelism"  -> _par,
                             "snapshot"     -> _snapshot,
                             "traces"       -> _traces)
@@ -335,8 +355,8 @@ abstract class Encoding extends Calculus:
                 case "exclude" | "include" => "exclude" -> _exclude
                 case it @ "paceunit"       => it -> _paceunit
                 case it @ "scaling"        => it -> _scaling
+                case it @ "replication"    => it -> _replication
                 case it @ "typeclasses"    => it -> _typeclasses
-                case it @ "threadlocal"    => it -> _threadlocal
                 case it @ "parallelism"    => it -> _par
                 case it @ "snapshot"       => it -> _snapshot
                 case it @ "traces"         => it -> _traces
@@ -352,8 +372,8 @@ abstract class Encoding extends Calculus:
               case ("exclude", it: Boolean)               => _exclude = it
               case ("paceunit", it: String)               => _paceunit = it
               case ("scaling", it: Boolean)               => _scaling = it
+              case ("replication", it: (Int, Boolean))    => _replication = it
               case ("typeclasses", it: List[String])      => _typeclasses = it
-              case ("threadlocal", it: List[String])      => _threadlocal = it
               case ("parallelism", it: Int)               => _par = it
               case ("snapshot", it: Boolean)              => _snapshot = it
               case ("traces", it: Option[Option[String]]) => _traces = it
@@ -572,8 +592,11 @@ object Encoding:
   case class DirectiveKeyParsingException(dir: (String, String | List[String]))
       extends DirectiveParsingException(s"The key in the directive ${DirectiveParsingException(dir)} is not valid")
 
-  case class DirectiveValueParsingException(dir: (String, String | List[String]), `type`: String)
-      extends DirectiveParsingException(s"The value in the directive ${DirectiveParsingException(dir)} is not ${`type`}")
+  case class DirectiveValueParsingException(dir: (String, String | List[String]), `type`: String, cause: Throwable = null)
+      extends DirectiveParsingException(s"The value in the directive ${DirectiveParsingException(dir)} is not ${`type`}", cause)
+
+  case class DirectiveSettingParsingException(key: String, `type`: String, `val`: String)
+      extends DirectiveParsingException(s"The <${key}> setting with value '${`val`}' is not ${`type`}")
 
 
   // functions
