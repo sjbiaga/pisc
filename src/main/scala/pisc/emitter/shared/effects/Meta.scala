@@ -81,3 +81,17 @@ abstract trait Meta extends shared.Meta:
             Term.ForYield(*.toList, Lit.Unit())
     else
       `for * yield ()`(`_ <- \\.unit`)
+
+
+  def `_ <- *.acquire`(* : String): Enumerator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
+
+  def `_ <- *.release`(* : String): Enumerator =
+    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
+
+  def `* <- Semaphore(…)`(* : String, `…`: Int = 1): Enumerator =
+    Enumerator.Generator(`* <- …`(*),
+                         Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\(\) :: Nil)),
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
+                         )
+    )

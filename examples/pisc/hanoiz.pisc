@@ -6,6 +6,8 @@
 
 @val ! : String => Task[String] = { _ => ZIO.succeed(null) }
 
+⟦ replication = (parallelism,1) ⟧
+
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \
      | (!.b<"b">.)   \

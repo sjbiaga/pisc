@@ -28,39 +28,47 @@
 
 //package main.scala.in
 
-import _root_.monix.execution.Scheduler.Implicits.global
+import _root_.zio.interop.catz.*
+
+implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
+  _root_.cats.effect.std.Console.make[zio.Task]
 
 
-object App extends _root_.cats.effect.IOApp:
+object App extends CatsApp:
 
-  import _root_.cats.effect.ExitCode
+  import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
 
-  override def run(args: List[String]) =
-    π.Main[π.F](args*).completedL.as(ExitCode.Success)
+  override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+    for
+      args <- getArgs
+      _    <- π.Main[π.F](args.toSeq*).compile.drain
+      _    <- exit(ExitCode.success)
+    yield
+      ()
 
 
 object π:
 
+  import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.scala.concurrent.duration.*
 
+  import _root_.cats.Parallel
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.{ Concurrent, ContextShift, Timer }
-  import _root_.cats.effect.concurrent.Semaphore
+  import _root_.cats.effect.Async
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
-  import _root_.monix.eval.{ TaskLift, TaskLike }
-  import _root_.monix.reactive.{ Observable => πObs }
-  import _root_.monix.tail.Iterant
+  import _root_.fs2.Stream
 
   import _root_.eu.timepit.refined.*
 
   import Π.*
 
 
-  extension [F[_]: Concurrent: TaskLift: TaskLike](self: πObs[Iterant[F, ?]])
-    private[π] inline def πmapParF: Iterant[F, Unit] =
-      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F])
-    private[π] inline def πmapParF(semaphore: Semaphore[F]): Iterant[F, Unit] =
-      Iterant.liftF(self.mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F])
+  extension [F[_]: Async: Parallel](self: πLs[Stream[F, ?]])
+    private[π] inline def πparSequence: Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain).parSequence.void)
+    private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Unit] =
+      self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
 
 

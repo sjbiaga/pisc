@@ -4,6 +4,8 @@
 
 ⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
 
+⟦ replication = (parallelism,1) ⟧
+
 ⟦ exclude = yes ⟧
 
 # one infinite producer, one infinite consumer ✔
@@ -12,7 +14,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)        \
             | (!.x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             )
 
-⟦ exclude = no ⟧
+⟦ exclude = yes ⟧
 
 # two infinite producers, one infinite consumer ✔
 
@@ -48,7 +50,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)       \
             | (!.x(y). τ/*Concurrent[F].delay(println(2->y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ exclude = no ⟧
 
 # one infinite producer, one infinite consumer, bound output guard ✔
 

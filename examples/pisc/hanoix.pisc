@@ -8,6 +8,8 @@
 
 ⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
 
+⟦ replication = (parallelism,1) ⟧
+
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \
      | (!.b<"b">.)   \

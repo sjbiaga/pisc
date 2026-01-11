@@ -10,6 +10,8 @@
 
 ⟦ typeclasses = (Async,Console,Parallel) ⟧
 
+⟦ replication = (parallelism,1) ⟧
+
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \
      | (!.b<"b">.)   \

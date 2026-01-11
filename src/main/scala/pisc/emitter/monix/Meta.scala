@@ -42,18 +42,20 @@ object Meta extends emitter.shared.streams.Meta:
 
   override protected lazy val \\ = "liftF"
 
+  override protected lazy val \\\ = "pure"
+
   override lazy val `_ <- \\.unit` =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "pure"), Term.ArgClause(Lit.Unit() :: Nil)))
 
   def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: Stream[F, Unit]`,
+               "Main", `String*`("args"), `: \\[F, Unit]`,
                body)
     case `(*)`(identifier, _, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: Stream[F, Unit]`,
+               identifier, `(…)`(params*), `: \\[F, Unit]`,
                body)
 
 

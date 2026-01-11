@@ -180,6 +180,8 @@ abstract class Pi extends Expression:
 
   protected var _scaling: Boolean = false
 
+  protected var _replication: (Int, Boolean) = (-1, false)
+
   protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
@@ -236,16 +238,20 @@ object Pi:
 
   enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
                val canScale: Boolean = false,
-               val hasReplicationInputGuardFlaw: Boolean = true,
-               val assignsReplicationParallelism1: Boolean = false):
-    def this(_u: Unit) = this(nullOnEmptyOutput = Lit.Null(),
-                              hasReplicationInputGuardFlaw = false,
-                              assignsReplicationParallelism1 = true)
+               val featuresLinearReplication: Boolean = false,
+               val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
+    def this(featuresLinearReplication: Boolean) = this(nullOnEmptyOutput = Lit.Null(),
+                                                        featuresLinearReplication = featuresLinearReplication,
+                                                        hasReplicationInputGuardFlaw = {
+                                                          case -1|0        => true
+                                                          case 1           => false
+                                                          case parallelism => parallelism > 1
+                                                        })
     case ce extends Emitter()
-    case fs2 extends Emitter(())
-    case monix extends Emitter(())
-    case zs extends Emitter(())
-    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = false)
+    case fs2 extends Emitter(true)
+    case monix extends Emitter(false)
+    case zs extends Emitter(true)
+    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]
@@ -358,13 +364,15 @@ object Pi:
       _exclude = false
       _paceunit = "second"
       _scaling = false
+      _replication = (-1, emitter.featuresLinearReplication)
       _typeclasses = Nil
-      _dirs = List(Map("errors" -> _werr,
+      _dirs = List(Map("errors"       -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude,
-                       "paceunit" -> _paceunit,
-                       "scaling" -> _scaling,
-                       "typeclasses" -> _typeclasses))
+                       "exclude"      -> _exclude,
+                       "paceunit"     -> _paceunit,
+                       "scaling"      -> _scaling,
+                       "replication"  -> _replication,
+                       "typeclasses"  -> _typeclasses))
       eqtn = List()
       defn = Map()
       self = Set()

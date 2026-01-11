@@ -89,22 +89,8 @@ object Meta extends emitter.shared.effects.Meta:
     else
       Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
-  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator.Generator =
+  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
-
-
-  def `_ <- *.acquire`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "acquire"))
-
-  def `_ <- *.release`(* : String): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
-
-  def `* <- Semaphore[IO](…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(*),
-                         Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\(\) :: Nil)),
-                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
-                         )
-    )
 
 
   def `_ <- *.tryAcquire.ifM`(* : String, ** : Term): Enumerator.Generator =

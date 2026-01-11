@@ -9,6 +9,8 @@
 
 ⟦ typeclasses = (Async,Console,Parallel) ⟧
 
+⟦ replication = (parallelism,1) ⟧
+
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \
      | Server(ch)                                \

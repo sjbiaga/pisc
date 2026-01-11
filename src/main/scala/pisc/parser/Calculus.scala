@@ -127,30 +127,33 @@ abstract class Calculus extends Pi:
     "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
       case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
-      case parallelism ~ _ ~ Some((π(λ(ch: Symbol), _, _, _), _)) if emitter.assignsReplicationParallelism1
-                                                                  && parallelism.abs != 1 =>
-        throw GuardParallelismNot1ParsingException(emitter, parallelism, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         if ch == par
         then
-          if emitter.hasReplicationInputGuardFlaw
+          if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
           then
             warn(throw GuardParsingException(ch.name, cons.isEmpty))
         val bound = π._2._1
         BindingOccurrence(bound)
         choice ^^ {
           case (sum, free) =>
-            `!`(parallelism, pace, Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
+            `!`(parallelismʹ, pace, Some(π._1), sum) -> ((free &~ bound) ++ π._2._2)
         }
       case parallelism ~ pace ~ Some(μ) =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         choice ^^ {
           case (sum, free) =>
-            `!`(parallelism, pace, Some(μ._1), sum) -> (free ++ μ._2._2)
+            `!`(parallelismʹ, pace, Some(μ._1), sum) -> (free ++ μ._2._2)
         }
       case parallelism ~ pace ~ _ =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         choice ^^ {
           case (sum, free) =>
-            `!`(parallelism, pace, None, sum) -> free
+            `!`(parallelismʹ, pace, None, sum) -> free
         }
     } |
     capital |
@@ -422,8 +425,6 @@ object Calculus:
   case class ConsGuardParsingException(cons: String, name: String)
       extends PrefixParsingException(s"A name $name that knows how to CONS (`$cons') is used as replication guard")
 
-  case class GuardParallelismNot1ParsingException(emitter: Emitter, parallelism: Int, name: String)
-      extends PrefixParsingException(s"""Emitter `$emitter' assigns parallelism 1 (≠ $parallelism) to a replication guard with channel name "$name"""")
 
   // functions
 

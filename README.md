@@ -142,8 +142,6 @@ Emitters
 
 - [Cats Effect](https://github.com/sjbiaga/pisc/tree/main-experimental/ce/README.md)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/main-experimental/fs2/README.md)
-
 - [Akka](https://github.com/sjbiaga/pisc/tree/main-experimental/akka/README.md)
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/main-experimental/pekko/README.md)
