@@ -110,7 +110,7 @@ object Program:
 
           val (recv, stat) = cases(`+`(-1, ∥(-1, it))).right.get
 
-          val name = "cases" + id
+          val name = id
 
           stat -> dfn(name, recv :: Nil)
 
@@ -127,7 +127,7 @@ object Program:
         case +(-1, it*) if it.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           val defs = it.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
 
-          val name = "sum_cases" + id
+          val name = id
 
           val names = defs.map(_._2.name.value)
 
@@ -149,7 +149,7 @@ object Program:
 
           val defs = it.choices.foldRight(List[Defn.Def]())(_.generate()._1.get :: _)
 
-          val name = "sum" + id
+          val name = id
 
           var names = defs.map(_.name.value)
 
@@ -184,13 +184,13 @@ object Program:
               it
 
             case (Some(it: Defn.Def), parallelism) =>
-              val name = "par" + id
+              val name = id
 
               opt._1 += name -> given_Listʹ_String.toList
 
               val υidυ = id
 
-              val sem = "sem1" + id
+              val sem = id
 
               val stats = `* = Semaphore(…)`(sem, parallelism) :: `* = gACΠ.spawnAnonymous(…)`(υidυ, it.name.value, sem) :: Nil
 
@@ -203,7 +203,7 @@ object Program:
 
           val defs = it.components.foldRight(List[(Option[Defn.Def], Int)]())(_.generate() :: _)
 
-          val name = "par2" + id
+          val name = id
 
           opt._1 += name -> given_Listʹ_String.toList
 
@@ -211,7 +211,7 @@ object Program:
             case (_, -1) =>
               None
             case (Some(Defn.Def(_, Term.Name(name), _, _, _, _)), parallelism) =>
-              Some(name -> ("sem2" + id -> parallelism))
+              Some(name -> (id -> parallelism))
           }.toMap
 
           var names = defs.map(_._1.get.name.value)
@@ -269,11 +269,11 @@ object Program:
 
           given Listʹ[String]()
 
-          val name = "scheme_" + end.ordinal + "_" + code.size + id
+          val name = id
 
           val behavior =
             end match {
-              case !(_, _, Some(_), _) => "thunk" + id
+              case !(_, _, Some(_), _) => id
               case _ => "_"
             }
 
@@ -315,7 +315,7 @@ object Program:
 
           val recv = if semaphore.isDefined then release(using semaphore.get)(block) else block
 
-          val defn = dfn("seq" + id, recv :: Nil)
+          val defn = dfn(id, recv :: Nil)
 
           end match {
 
@@ -406,7 +406,7 @@ object Program:
                       (using Option[String]) =
 
           val recvʹ = `Behaviors.receive { case _ => * }`(defnʹ.spawning(param*))
-          val υidυ = "pipe" + id
+          val υidυ = id
           val defn = dfn(υidυ, Term.Block(recvʹ :: Nil), param.map(_.value)*)
           val thunk = Term.Apply(\(υidυ), Term.ArgClause(param.toList))
           val recv = `Behaviors.receive { case Right(it) => it case Left(it) => if it pipeToSelf(*); same else stopped }`(self, `yield`(thunk))

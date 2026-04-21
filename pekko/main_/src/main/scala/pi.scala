@@ -82,7 +82,7 @@ package object Π:
              (using ExecutionContext): Future[Option[Unit]] =
       for
         _    <- Future.unit
-        stop  = Promise[Boolean]
+        stop  = Promise[Boolean]()
         _    <- Future { a ! Output(value.name, null, None, stop) }
         stop <- stop.future
       yield
@@ -95,8 +95,8 @@ package object Π:
              (using ExecutionContext): Future[Option[Unit]] =
       for
         _      <- Future.unit
-        promise = Promise[Unit]
-        stop    = Promise[Boolean]
+        promise = Promise[Unit]()
+        stop    = Promise[Boolean]()
         _      <- Future { a ! Output(value.name, promise, Some(code), stop) }
         _      <- promise.future
         stop   <- stop.future
@@ -109,7 +109,7 @@ package object Π:
     def apply()(using ExecutionContext): Future[`()`] =
       for
         _      <- Future.unit
-        promise = Promise[`()`]
+        promise = Promise[`()`]()
         _      <- Future { a ! Input(promise, None) }
         name   <- promise.future
       yield
@@ -122,7 +122,7 @@ package object Π:
                   (using ExecutionContext): Future[`()`] =
       for
         _      <- Future.unit
-        promise = Promise[`()`]
+        promise = Promise[`()`]()
         _      <- Future { a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]])) }
         name   <- promise.future
       yield

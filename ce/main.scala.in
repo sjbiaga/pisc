@@ -46,17 +46,19 @@ object π:
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
-  import _root_.cats.effect.syntax.all.*
+
   import _root_.cats.effect.std.Semaphore
+  import _root_.cats.effect.syntax.all.*
 
   import _root_.eu.timepit.refined.*
 
+  import Π.*
+
+
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
-      self.parSequence.void
+      self.parSequenceVoid
     private[π] inline def πparTraverse(semaphore: Semaphore[IO]): IO[Unit] =
-      self.parTraverse_(semaphore.tryAcquire.ifM(_, IO.cede))
-
-  import Π.*
+      self.parTraverseVoid(semaphore.tryAcquire.ifM(_, IO.cede))
 
 

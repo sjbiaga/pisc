@@ -57,9 +57,9 @@ package object Π:
     */
   object τ:
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
         /**
           * linear replication guard
@@ -157,25 +157,24 @@ package object Π:
     def ====(that: `()`) =
       try
         this.h eq that.h
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
-        object ν:
+        object `(ν)`:
 
           /**
             * linear replication bound output guard
             */
           def apply()(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, `()`] =
-            (ZStream.fromZIO(-.await.exit *> +.fold(ZIO.unit)(_.take)).repeat(Schedule.forever) *> self.ν()).tap(_ => *.fold(ZIO.unit)(_.offer(()))).interruptWhen(p)
+            (ZStream.fromZIO(-.await.exit *> +.fold(ZIO.unit)(_.take)).repeat(Schedule.forever) *> self.`(ν)`()).tap(_ => *.fold(ZIO.unit)(_.offer(()))).interruptWhen(p)
 
           /**
             * linear replication bound output guard w/ pace
@@ -219,13 +218,13 @@ package object Π:
         def apply[T](pace: Duration, value: `()`)(code: => Task[T])(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, Unit] =
           apply(pace, value)(-, +, *).tap(_ => code)
 
-        object `null`:
+        object `(null)`:
 
           /**
             * linear `null` replication output guard
             */
           def apply()(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, Unit] =
-            self.`null`()
+            self.`(null)`()
 
           /**
             * linear `null` replication output guard w/ pace
@@ -237,7 +236,7 @@ package object Π:
             * linear `null` replication output guard w/ code
             */
           def apply[T]()(code: => Task[T])(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, Unit] =
-            self.`null`[T]()(code)
+            self.`(null)`[T]()(code)
 
           /**
             * linear `null` replication output guard w/ pace w/ code
@@ -245,7 +244,7 @@ package object Π:
           def apply[T](_pace: Duration)(code: => Task[T])(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, Unit] =
             apply[T]()(code)(-, +, *)
 
-        object * :
+        object `(*)`:
 
           /**
             * linear variable replication output guard
@@ -331,31 +330,31 @@ package object Π:
         def apply[T](pace: Duration)(code: T => Task[T])(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, `()`] =
           stopWithCode[T](s(-, +, *) zipLeft ZStream.tick(pace))(code)
 
-      object ν:
+      object `(ν)`:
 
         /**
           * replication bound output guard
           */
         def apply(): ZStream[Any, Throwable, `()`] =
-          τ.!() *> self.ν()
+          τ.`(!)`() *> self.`(ν)`()
 
         /**
           * replication bound output guard w/ code
           */
         def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, `()`] =
-          τ.!() *> self.ν[T]()(code)
+          τ.`(!)`() *> self.`(ν)`[T]()(code)
 
         /**
           * replication bound output guard w/ pace
           */
         def apply(pace: Duration): ZStream[Any, Throwable, `()`] =
-          τ.!(pace) *> self.ν()
+          τ.`(!)`(pace) *> self.`(ν)`()
 
         /**
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, `()`] =
-          τ.!(pace) *> self.ν[T]()(code)
+          τ.`(!)`(pace) *> self.`(ν)`[T]()(code)
 
       /**
         * constant replication output guard
@@ -381,13 +380,13 @@ package object Π:
       def apply[T](pace: Duration, value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
         apply(pace, value).tap(_ => code)
 
-      object `null`:
+      object `(null)`:
 
         /**
           * `null` replication output guard
           */
         def apply(): ZStream[Any, Throwable, Unit] =
-          self.`null`()
+          self.`(null)`()
 
         /**
           * `null` replication output guard w/ pace
@@ -399,7 +398,7 @@ package object Π:
           * `null` replication output guard w/ code
           */
         def apply[T]()(code: => Task[T]): ZStream[Any, Throwable, Unit] =
-          self.`null`[T]()(code)
+          self.`(null)`[T]()(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
@@ -407,7 +406,7 @@ package object Π:
         def apply[T](_pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
           apply[T]()(code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable replication output guard
@@ -485,7 +484,7 @@ package object Π:
       def apply[T](pace: Duration)(code: T => Task[T]): ZStream[Any, Throwable, `()`] =
         stopWithCode[T](s zipLeft ZStream.tick(pace))(code).tap(_ => o)
 
-    object ν:
+    object `(ν)`:
 
       /**
         * bound output prefix
@@ -540,7 +539,7 @@ package object Π:
     def apply[T](pace: Duration, value: `()`)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
       apply(pace, value).tap(_ => code)
 
-    object `null`:
+    object `(null)`:
 
       /**
         * `null` output prefix
@@ -566,7 +565,7 @@ package object Π:
       def apply[T](_pace: Duration)(code: => Task[T]): ZStream[Any, Throwable, Unit] =
         apply[T]()(code)
 
-    object * :
+    object `(*)`:
 
       /**
         * variable output prefix

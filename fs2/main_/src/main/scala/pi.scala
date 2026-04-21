@@ -66,9 +66,9 @@ package object Π:
     */
   final class τ[F[_]: Async]:
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
         /**
           * linear replication guard
@@ -174,17 +174,17 @@ package object Π:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
-        object ν:
+        object `(ν)`:
 
           /**
             * linear replication bound output guard
             */
           def apply()(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
-            (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) >> self.ν()).evalTap(_ => *.fold(Async[F].unit)(_.offer(()))).interruptWhen(d.get.attempt)
+            (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) >> self.`(ν)`()).evalTap(_ => *.fold(Async[F].unit)(_.offer(()))).interruptWhen(d.get.attempt)
 
           /**
             * linear replication bound output guard w/ pace
@@ -228,13 +228,13 @@ package object Π:
         def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
           apply(pace, value)(-, +, *).evalTap(_ => code)
 
-        object `null`:
+        object `(null)`:
 
           /**
             * linear `null` replication output guard
             */
           def apply()(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.`null`()
+            self.`(null)`()
 
           /**
             * linear `null` replication output guard w/ pace
@@ -246,7 +246,7 @@ package object Π:
             * linear `null` replication output guard w/ code
             */
           def apply[T]()(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.`null`[T]()(code)
+            self.`(null)`[T]()(code)
 
           /**
             * linear `null` replication output guard w/ pace w/ code
@@ -254,7 +254,7 @@ package object Π:
           def apply[T](_pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
             apply[T]()(code)(-, +, *)
 
-        object * :
+        object `(*)`:
 
           /**
             * linear variable replication output guard
@@ -340,31 +340,31 @@ package object Π:
         def apply[T](pace: FiniteDuration)(code: T => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
           stopWithCode[T](s(-, +, *).spaced(pace))(code)
 
-      object ν:
+      object `(ν)`:
 
         /**
           * replication bound output guard
           */
         def apply(): Stream[F, `()`[F]] =
-          Stream.unit.repeat >> self.ν()
+          Stream.unit.repeat >> self.`(ν)`()
 
         /**
           * replication bound output guard w/ pace
           */
         def apply(pace: FiniteDuration): Stream[F, `()`[F]] =
-          Stream.awakeEvery(pace) >> self.ν()
+          Stream.awakeEvery(pace) >> self.`(ν)`()
 
         /**
           * replication bound output guard w/ code
           */
         def apply[T]()(code: => F[T]): Stream[F, `()`[F]] =
-          Stream.unit.repeat >> self.ν[T]()(code)
+          Stream.unit.repeat >> self.`(ν)`[T]()(code)
 
         /**
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](pace: FiniteDuration)(code: => F[T]): Stream[F, `()`[F]] =
-          Stream.awakeEvery(pace) >> self.ν[T]()(code)
+          Stream.awakeEvery(pace) >> self.`(ν)`[T]()(code)
 
       /**
         * constant replication output guard
@@ -390,13 +390,13 @@ package object Π:
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Stream[F, Unit] =
         apply(pace, value).evalTap(_ => code)
 
-      object `null`:
+      object `(null)`:
 
         /**
           * `null` replication output guard
           */
         def apply(): Stream[F, Unit] =
-          self.`null`()
+          self.`(null)`()
 
         /**
           * `null` replication output guard w/ pace
@@ -408,7 +408,7 @@ package object Π:
           * `null` replication output guard w/ code
           */
         def apply[T]()(code: => F[T]): Stream[F, Unit] =
-          self.`null`[T]()(code)
+          self.`(null)`[T]()(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
@@ -416,7 +416,7 @@ package object Π:
         def apply[T](_pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
           apply[T]()(code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable replication output guard
@@ -494,7 +494,7 @@ package object Π:
       def apply[T](pace: FiniteDuration)(code: T => F[T]): Stream[F, `()`[F]] =
         stopWithCode[T](s.spaced(pace))(code).evalTap(_ => o)
 
-    object ν:
+    object `(ν)`:
 
       /**
         * bound output prefix
@@ -549,7 +549,7 @@ package object Π:
     def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Stream[F, Unit] =
       apply(pace, value).evalTap(_ => code)
 
-    object `null`:
+    object `(null)`:
 
       /**
         * `null` output prefix
@@ -575,7 +575,7 @@ package object Π:
       def apply[T](_pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
         apply[T]()(code)
 
-    object * :
+    object `(*)`:
 
       /**
         * variable output prefix

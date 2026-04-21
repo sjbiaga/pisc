@@ -135,7 +135,7 @@ class EncodingFunctionsSuite extends FunSuite:
     recoded(free) match
       case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
                 ->
-                Term.Apply(Term.Name("println"), Lit.Symbol(Symbol("x_υ1υ")) :: Nil)) =>
+                Term.Apply(Term.Name("println"), Term.QuotedMacroExpr(Term.Name("x_υ1υ")) :: Nil)) =>
         free.headOption match
           case Some(Symbol("x_υ1υ")) =>
           case _ =>
@@ -161,7 +161,7 @@ class EncodingFunctionsSuite extends FunSuite:
     recoded(free) match
       case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
                 ->
-                Term.Apply(Term.Name("println"), Lit.Symbol(Symbol("x_υ1υ")) :: Nil)) =>
+                Term.Apply(Term.Name("println"), Term.QuotedMacroExpr(Term.Name("x_υ1υ")) :: Nil)) =>
         assert(free.isEmpty)
       case _ =>
         assert(false)
@@ -184,7 +184,7 @@ class EncodingFunctionsSuite extends FunSuite:
     recoded(free) match
       case Some(Right(Term.Apply(Term.Name("println"), Term.ApplyInfix(Term.Name("x_υ1υ"), Term.Name("+"), _, Term.Name("y_υ2υ") :: Nil) :: Nil))
                 ->
-                Term.Apply(Term.Name("println"), Term.ApplyInfix(Lit.Symbol(Symbol("x_υ1υ")), Term.Name("+"), _, Lit.Symbol(Symbol("y_υ2υ")) :: Nil) :: Nil)) =>
+                Term.Apply(Term.Name("println"), Term.ApplyInfix(Term.QuotedMacroExpr(Term.Name("x_υ1υ")), Term.Name("+"), _, Term.QuotedMacroExpr(Term.Name("y_υ2υ")) :: Nil) :: Nil)) =>
         free.headOption match
           case Some(Symbol("x_υ1υ")) =>
           case _ =>

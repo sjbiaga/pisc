@@ -36,7 +36,7 @@ import Regex.Match
 
 import scala.collection.mutable.{ LinkedHashMap => Map }
 
-import scala.meta.Term
+import scala.meta.{ Lit, Term }
 
 import _root_.pisc.parser.Expression
 import Expression.Code
@@ -239,8 +239,8 @@ abstract class Expansion extends Encoding:
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
                 (using Bindings, Duplications, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
-        case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
-          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
+        case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder() | _: Lit)) =>
+          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() | _: Lit => "_" }
 
           val source = in.source
           val offset = in.offset
@@ -254,8 +254,8 @@ abstract class Expansion extends Encoding:
 
           expand(in, shadows, key)(rhs, end)(success)
 
-        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _op @ Term.Name(op), _, List(rhs))) =>
-          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
+        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder() | _: Lit), _op @ Term.Name(op), _, List(rhs))) =>
+          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() | _: Lit => "_" }
 
           val source = in.source
           val offset = in.offset

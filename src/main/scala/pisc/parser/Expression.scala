@@ -92,7 +92,7 @@ abstract class Expression extends JavaTokenParsers:
 
   private def apply(using params: MutableList[String])
                    (using names: Names): Term => Unit =
-    case Term.Placeholder() =>
+    case Term.Placeholder() | _: Lit =>
     case Term.Name(rhs) if names.contains(Symbol(rhs)) && params.contains(rhs) =>
       throw TemplateParameterParsingException(rhs)
     case Term.Name(rhs) =>
@@ -281,7 +281,7 @@ object Expression:
              (using (MutableList[(Symbol, λ)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Case], Names) =
-      val (cs: List[sm.Case], csns) = UnzipReduce(self.map(CaseTree(_)))
+      val (cs @ List[sm.Case](_*), csns) = UnzipReduce(self.map(CaseTree(_)))
       cs -> csns
 
   object CaseTree:
@@ -422,7 +422,8 @@ object Expression:
         val (as, asns) = this(args)
         it.copy(args = as) -> asns
 
-      case sm.Lit.Symbol(free @ Symbol(name)) =>
+      case sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(name))) =>
+        val free = Symbol(name)
         renaming match
           case null =>
             replacing match
@@ -431,11 +432,11 @@ object Expression:
                   case null =>
                     sm.Pat.Var(sm.Term.Name(name)) -> Set(free)
                   case given Bindings =>
-                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+                    sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).asSymbol.name))) -> Names()
               case given Substitution =>
-                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
+                sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(replaced(free).asSymbol.name))) -> Names()
           case (given MutableList[(Symbol, λ)], given Bindings) =>
-            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
+            sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).asSymbol.name))) -> Names()
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -576,7 +577,7 @@ object Expression:
         case it @ sm.Defn.Class(mods, _, tparams, ctor, templ) =>
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
-          val (c: sm.Ctor.Primary, cns) = Ctor(ctor)
+          val (c @ sm.Ctor.Primary(_, _, _), cns) = Ctor(ctor)
           val (t, tns) = Template(templ)
           it.copy(mods = ms, tparams = ts, ctor = c, templ = t) -> (msns ++ tsns ++ cns ++ tns)
 
@@ -591,14 +592,14 @@ object Expression:
         case it @ sm.Defn.Enum(mods, _, tparams, ctor, templ) =>
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
-          val (c: sm.Ctor.Primary, cns) = Ctor(ctor)
+          val (c @ sm.Ctor.Primary(_, _, _), cns) = Ctor(ctor)
           val (t, tns) = Template(templ)
           it.copy(mods = ms, tparams = ts, ctor = c, templ = t) -> (msns ++ tsns ++ cns ++ tns)
 
         case it @ sm.Defn.EnumCase(mods, _, tparams, ctor, inits) =>
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
-          val (c: sm.Ctor.Primary, cns) = Ctor(ctor)
+          val (c @ sm.Ctor.Primary(_, _, _), cns) = Ctor(ctor)
           val (is, isns) = Init(inits)
           it.copy(mods = ms, tparams = ts, ctor = c, inits = is) -> (msns ++ tsns ++ cns ++ isns)
 
@@ -643,7 +644,7 @@ object Expression:
         case it @ sm.Defn.Trait(mods, _, tparams, ctor, templ) =>
           val (ms, msns) = Mod(mods)
           val (ts, tsns) = Type.Param(tparams)
-          val (c: sm.Ctor.Primary, cns) = Ctor(ctor)
+          val (c @ sm.Ctor.Primary(_, _, _), cns) = Ctor(ctor)
           val (t, tns) = Template(templ)
           it.copy(mods = ms, tparams = ts, ctor = c, templ = t) -> (msns ++ tsns ++ cns ++ tns)
 
@@ -725,7 +726,7 @@ object Expression:
 
       case it @ sm.Term.Annotate(expr, annots) =>
         val (e, ens) = this(expr)
-        val (as: List[sm.Mod.Annot], asns) = Stat.Mod(annots)
+        val (as @ List[sm.Mod.Annot](_*), asns) = Stat.Mod(annots)
         it.copy(expr = e, annots = as) -> (ens ++ asns)
 
       case it @ sm.Term.AnonymousFunction(body) =>
@@ -806,7 +807,8 @@ object Expression:
         val (as, asns) = this(args)
         it.copy(args = as) -> asns
 
-      case sm.Lit.Symbol(free @ Symbol(name)) =>
+      case sm.Term.QuotedMacroExpr(sm.Term.Name(name)) =>
+        val free = Symbol(name)
         renaming match
           case null =>
             replacing match
@@ -815,11 +817,11 @@ object Expression:
                   case null =>
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
-                    sm.Lit.Symbol(updated(free).asSymbol) -> Names()
+                    sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).asSymbol.name)) -> Names()
               case given Substitution =>
-                sm.Lit.Symbol(replaced(free).asSymbol) -> Names()
+                sm.Term.QuotedMacroExpr(sm.Term.Name(replaced(free).asSymbol.name)) -> Names()
           case (given MutableList[(Symbol, λ)], given Bindings) =>
-            sm.Lit.Symbol(renamed(free).asSymbol) -> Names()
+            sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).asSymbol.name)) -> Names()
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
@@ -976,7 +978,7 @@ object Expression:
 
       case it @ sm.Type.Annotate(tpe, annots) =>
         val (t, tns) = this(tpe)
-        val (as: List[sm.Mod.Annot], asns) = Stat.Mod(annots)
+        val (as @ List[sm.Mod.Annot](_*), asns) = Stat.Mod(annots)
         it.copy(tpe = t, annots = as) -> (tns ++ asns)
 
       case it @ sm.Type.AnonymousLambda(tpe) =>
@@ -1041,7 +1043,7 @@ object Expression:
 
       case it @ sm.Type.Match(tpe, cases) =>
         val (t, tns) = this(tpe)
-        val (cs: List[sm.TypeCase], csns) = UnzipReduce(cases.map(CaseTree(_)))
+        val (cs @ List[sm.TypeCase](_*), csns) = UnzipReduce(cases.map(CaseTree(_)))
         it.copy(tpe = t, cases = cs) -> (tns ++ csns)
 
       case it @ sm.Type.Method(paramss, tpe) =>
