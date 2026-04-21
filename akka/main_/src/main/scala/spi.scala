@@ -84,7 +84,7 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]
+        cancel = Promise[Option[Double]]()
         _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (new Object, None, rate))) }
         delay <- cancel.future
       yield
@@ -121,7 +121,7 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]
+        cancel = Promise[Option[Double]]()
         _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(false), rate))) }
         delay <- cancel.future
         _     <- if (delay eq None)
@@ -142,7 +142,7 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]
+        cancel = Promise[Option[Double]]()
         _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(false), rate))) }
         delay <- cancel.future
         _     <- if (delay eq None)
@@ -151,7 +151,7 @@ package object sΠ:
                  else
                    for
                       _      <- Future.unit
-                      promise = Promise[Unit]
+                      promise = Promise[Unit]()
                       _      <- Future { a ! Output(value.name, promise, Some(code)) }
                       _      <- promise.future
                    yield
@@ -169,7 +169,7 @@ package object sΠ:
                        ^ : String): Future[(`()`, java.lang.Double)] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]
+        cancel = Promise[Option[Double]]()
         _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(true), rate))) }
         delay <- cancel.future
         name  <- if (delay eq None)
@@ -178,7 +178,7 @@ package object sΠ:
                  else
                    for
                      _      <- Future.unit
-                     promise = Promise[`()`]
+                     promise = Promise[`()`]()
                      _      <- Future { a ! Input(promise, None) }
                      name   <- promise.future
                    yield
@@ -196,7 +196,7 @@ package object sΠ:
                           ^ : String): Future[(`()`, java.lang.Double)] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]
+        cancel = Promise[Option[Double]]()
         _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(true), rate))) }
         delay <- cancel.future
         name  <- if (delay eq None)
@@ -205,7 +205,7 @@ package object sΠ:
                  else
                    for
                      _      <- Future.unit
-                     promise = Promise[`()`]
+                     promise = Promise[`()`]()
                      _      <- Future { a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]])) }
                      name   <- promise.future
                    yield

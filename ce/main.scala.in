@@ -98,7 +98,7 @@ object π:
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
-      self.parSequence.void
+      self.parSequenceVoid
 
   val `π-uuid`: IO[String] =
     UUIDGen.randomString[IO]

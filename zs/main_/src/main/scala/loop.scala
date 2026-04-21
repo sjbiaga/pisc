@@ -92,8 +92,7 @@ package object `Π-loop`:
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modify { m =>
       {
-        val (it: Map[String, (>< | Object, Option[Boolean], Rate)], exit) =
-          if m.exists(_._2.isInstanceOf[Int])
+        { if m.exists(_._2.isInstanceOf[Int])
           then Map.empty -> { () => false }
           else m
                .filter(_._2.asInstanceOf[(Boolean, +)]._1)
@@ -121,73 +120,70 @@ package object `Π-loop`:
                          }
                        }
                }
-        if it.isEmpty && !exit()
-        then
-          ZIO.debug(-200) *> *.take *> ZIO.debug(200) *> loop
-        else
-          ∥(it)(`π-wand`._1)() match
-            case Nil =>
-              *.size.flatMap { n =>
-                if n == 0 && exit()
-                then
-                  ZIO.debug(-9) *> -.offer(it.keys.toList).unit
-                else
-                  ZIO.debug(-20) *> *.take *> ZIO.debug(20) *> loop
-              }
-            case nel =>
-              ZIO.collectAllParDiscard {
-                nel.map { case (key1, key2, (delay, duration)) =>
-                            ZIO.uninterruptible {
-                              val k1 = key1.substring(36)
-                              val k2 = key2.substring(36)
-                              val ^  = key1.substring(0, 36)
-                              val ^^ = key2.substring(0, 36)
-                              for
-                                cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                ss <- ~.withPermit {
+        } match
+          case (it: Map[String, (>< | Object, Option[Boolean], Rate)], exit) =>
+            if it.isEmpty && !exit()
+            then
+              *.take *> loop
+            else
+              ∥(it)(`π-wand`._1)() match
+                case Nil =>
+                  *.size.flatMap { n =>
+                    if n == 0 && exit()
+                    then
+                      -.offer(it.keys.toList).unit
+                    else
+                      *.take *> loop
+                  }
+                case nel =>
+                  ZIO.collectAllParDiscard {
+                    nel.map { case (key1, key2, (delay, duration)) =>
+                                ZIO.uninterruptible {
+                                  val k1 = key1.substring(36)
+                                  val k2 = key2.substring(36)
+                                  val ^  = key1.substring(0, 36)
+                                  val ^^ = key2.substring(0, 36)
                                   for
                                     cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                    tk <- if k1 == k2 then ZIO.succeed(null) else ZIO.succeed(new Object)
-                                    p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
-                                    p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m}
-                                    ((d1, c1), (ts1, _)) = p1
-                                    ((d2, c2), (ts2, _)) = p2
-                                    b1 <- d1.isDone
-                                    b2 <- d2.isDone
-                                    _  <- if !b1 then discard(k1)(using ^) *> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else ZIO.unit) *> d1.succeed(Some((cb, tk))).unit
-                                          else ZIO.unit
-                                    _  <- if k1 == k2 then ZIO.unit
-                                          else if !b2 then discard(k2)(using ^^) *> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else ZIO.unit) *> d2.succeed(Some((cb, tk))).unit
-                                          else ZIO.unit
-                                    _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.tap(_.succeed(Some((cb, tk)))).unit
-                                          else ZIO.unit
-                                    _  <- if k1 == k2 then ZIO.unit
-                                          else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.tap(_.succeed(Some((cb, tk)))).unit
-                                          else ZIO.unit
-                                    s1 <- ts1.get
-                                    s2 <- ts2.get
+                                    ss <- ~.withPermit {
+                                      for
+                                        tk <- if k1 == k2 then ZIO.succeed(null) else ZIO.succeed(new Object)
+                                        p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
+                                        p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m }
+                                        ((d1, c1), (ts1, _)) = p1
+                                        ((d2, c2), (ts2, _)) = p2
+                                        b1 <- d1.isDone
+                                        b2 <- d2.isDone
+                                        _  <- if !b1 then discard(k1)(using ^) *> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else ZIO.unit) *> d1.succeed(Some((cb, tk))).unit
+                                              else ZIO.unit
+                                        _  <- if k1 == k2 then ZIO.unit
+                                              else if !b2 then discard(k2)(using ^^) *> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else ZIO.unit) *> d2.succeed(Some((cb, tk))).unit
+                                              else ZIO.unit
+                                        _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.tap(_.succeed(Some((cb, tk)))).unit
+                                              else ZIO.unit
+                                        _  <- if k1 == k2 then ZIO.unit
+                                              else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.tap(_.succeed(Some((cb, tk)))).unit
+                                              else ZIO.unit
+                                        s1 <- ts1.get
+                                        s2 <- ts2.get
+                                      yield
+                                        (s1, s2)
+                                    }
+                                    _  <- cb.await.exit
+                                    no <- &.updateAndGet(_ + 1)
+                                    now <- Clock.nanoTime
+                                    _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
                                   yield
-                                    (s1, s2)
+                                    ()
                                 }
-                                _  <- ZIO.debug(-10)
-                                _  <- cb.await.exit
-                                _  <- ZIO.debug(10)
-                                no <- &.updateAndGet(_ + 1)
-                                now <- Clock.nanoTime
-                                _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
-                              yield
-                                ()
-                            }
-                }
-              } *> ZIO.debug(-60) *> loop
+                    }
+                  } *> loop
       } -> m
     }.flatten
 
   def poll(using % : %, / : /, * : *): UIO[Unit] =
     for
-      _ <- ZIO.debug(-50)
       h <- /.take
-      _ <- ZIO.debug(50)
       ((_, key), it) = h
       ((d, _), _) = it
       b <- d.isDone

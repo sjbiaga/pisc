@@ -98,8 +98,7 @@ package object `Π-loop`:
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       %.flatModify { m =>
         m -> {
-          val (it: Map[String, (><[F] | Object, Option[Boolean], Rate)], exit) =
-            if m.exists(_._2.isInstanceOf[Int])
+          { if m.exists(_._2.isInstanceOf[Int])
             then Map.empty -> { () => false }
             else m
                  .filter(_._2.asInstanceOf[(Boolean, +[F])]._1)
@@ -127,57 +126,59 @@ package object `Π-loop`:
                            }
                          }
                  }
-          if it.isEmpty && !exit()
-          then
-            *.take >> loop
-          else
-            ∥(it)(`π-wand`._1)() match
-              case Nil =>
-                *.size.flatMap { n =>
-                  if n == 0 && exit()
-                  then
-                    -.offer(it.keys.toList)
-                  else
-                    *.take >> loop
-                }
-              case nel =>
-                nel.parTraverse { case (key1, key2, (delay, duration)) =>
-                                  Temporal[F].uncancelable { _ =>
-                                    val k1 = key1.substring(36)
-                                    val k2 = key2.substring(36)
-                                    val ^  = key1.substring(0, 36)
-                                    val ^^ = key2.substring(0, 36)
-                                    for
-                                      cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                      _  <- ~.acquire
-                                      tk <- if k1 == k2 then Temporal[F].pure(null) else Temporal[F].unique
-                                      p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
-                                      p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
-                                      ((d1, c1), (ts1, _)) = p1
-                                      ((d2, c2), (ts2, _)) = p2
-                                      o1 <- d1.tryGet
-                                      o2 <- d2.tryGet
-                                      _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, tk))).void
-                                            else Temporal[F].unit
-                                      _  <- if k1 == k2 then Temporal[F].unit
-                                            else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, tk))).void
-                                            else Temporal[F].unit
-                                      _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.flatTap(_.complete(Some((cb, tk)))).void
-                                            else Temporal[F].unit
-                                      _  <- if k1 == k2 then Temporal[F].unit
-                                            else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.flatTap(_.complete(Some((cb, tk)))).void
-                                            else Temporal[F].unit
-                                      s1 <- ts1.get
-                                      s2 <- ts2.get
-                                      _  <- ~.release
-                                      _  <- cb.await
-                                      no <- &.updateAndGet(_ + 1)
-                                      now <- Temporal[F].monotonic.map(_.toNanos)
-                                      _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
-                                    yield
-                                      ()
-                                  }
-                                } >> loop
+          } match
+            case (it: Map[String, (><[F] | Object, Option[Boolean], Rate)], exit) =>
+              if it.isEmpty && !exit()
+              then
+                *.take >> loop
+              else
+                ∥(it)(`π-wand`._1)() match
+                  case Nil =>
+                    *.size.flatMap { n =>
+                      if n == 0 && exit()
+                      then
+                        -.offer(it.keys.toList)
+                      else
+                        *.take >> loop
+                    }
+                  case nel =>
+                    nel.parTraverse { case (key1, key2, (delay, duration)) =>
+                                      Temporal[F].uncancelable { _ =>
+                                        val k1 = key1.substring(36)
+                                        val k2 = key2.substring(36)
+                                        val ^  = key1.substring(0, 36)
+                                        val ^^ = key2.substring(0, 36)
+                                        for
+                                          cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                          _  <- ~.acquire
+                                          tk <- if k1 == k2 then Temporal[F].pure(null) else Temporal[F].unique
+                                          p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
+                                          p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
+                                          ((d1, c1), (ts1, _)) = p1
+                                          ((d2, c2), (ts2, _)) = p2
+                                          o1 <- d1.tryGet
+                                          o2 <- d2.tryGet
+                                          _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else Temporal[F].unit) >> d1.complete(Some((cb, tk))).void
+                                                else Temporal[F].unit
+                                          _  <- if k1 == k2 then Temporal[F].unit
+                                                else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else Temporal[F].unit) >> d2.complete(Some((cb, tk))).void
+                                                else Temporal[F].unit
+                                          _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.flatTap(_.complete(Some((cb, tk)))).void
+                                                else Temporal[F].unit
+                                          _  <- if k1 == k2 then Temporal[F].unit
+                                                else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.flatTap(_.complete(Some((cb, tk)))).void
+                                                else Temporal[F].unit
+                                          s1 <- ts1.get
+                                          s2 <- ts2.get
+                                          _  <- ~.release
+                                          _  <- cb.await
+                                          no <- &.updateAndGet(_ + 1)
+                                          now <- Temporal[F].monotonic.map(_.toNanos)
+                                          _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
+                                        yield
+                                          ()
+                                      }
+                                    } >> loop
         }
       }
 
