@@ -56,11 +56,7 @@ package object Π:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
-      ( for
-          q <- Queue.synchronous[IO, Seq[Any]]
-        yield
-          f(q)
-      ).flatten
+      Queue.synchronous[IO, Seq[Any]].map(`()`).flatMap(f)
 
 
   /**
@@ -79,9 +75,8 @@ package object Π:
     def ====(that: `()`) =
       try
         this.q eq that.q
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]

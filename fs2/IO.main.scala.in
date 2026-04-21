@@ -54,7 +54,7 @@ object π:
 
   extension [F[_]: Async: Parallel](self: πLs[Stream[F, ?]])
     private[π] inline def πparSequence: Stream[F, Unit] =
-      Stream.eval(self.map(_.compile.drain).parSequence.void)
+      Stream.eval(self.map(_.compile.drain).parSequenceVoid)
     private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Unit] =
       self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
 

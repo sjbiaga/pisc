@@ -77,9 +77,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `_ <- *.tryAcquire.ifM`(* : String, ** : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(Term.Select(*, "tryAcquire"), "ifM"),
-                                                Term.ArgClause(** :: `IO.cede` :: Nil)
-                                     )
-    )
+                                                Term.ArgClause(** :: `IO.cede` :: Nil)))
 
   def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
     `* <- *`(*._1 -> Term.Apply(Term.Select("IO", "pure"), Term.ArgClause(*._2 :: Nil)))

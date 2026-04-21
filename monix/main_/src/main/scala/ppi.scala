@@ -73,7 +73,7 @@ package object Π:
     */
   final class τ[F[_]: Concurrent: Timer]:
 
-    object ! :
+    object `(!)`:
 
       /**
         * replication guard
@@ -152,33 +152,33 @@ package object Π:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
 
-    object ! :
+    object `(!)`:
 
-      object ν:
+      object `(ν)`:
 
         /**
           * replication bound output guard
           */
         def apply(arity: Int): Iterant[F, Seq[`()`[F]]] =
-          Iterant.repeatEval(()) >> self.ν(arity)
+          Iterant.repeatEval(()) >> self.`(ν)`(arity)
 
         /**
           * replication bound output guard w/ pace
           */
         def apply(arity: Int, pace: FiniteDuration): Iterant[F, Seq[`()`[F]]] =
-          Iterant.intervalAtFixedRate(pace) >> self.ν(arity)
+          Iterant.intervalAtFixedRate(pace) >> self.`(ν)`(arity)
 
         /**
           * replication bound output guard w/ code
           */
         def apply[T](arity: Int)(code: => F[T]): Iterant[F, Seq[`()`[F]]] =
-          Iterant.repeatEval(()) >> self.ν[T](arity)(code)
+          Iterant.repeatEval(()) >> self.`(ν)`[T](arity)(code)
 
         /**
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](arity: Int,  pace: FiniteDuration)(code: => F[T]): Iterant[F, Seq[`()`[F]]] =
-          Iterant.intervalAtFixedRate(pace) >> self.ν[T](arity)(code)
+          Iterant.intervalAtFixedRate(pace) >> self.`(ν)`[T](arity)(code)
 
       /**
         * constant replication output guard
@@ -204,13 +204,13 @@ package object Π:
       def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Iterant[F, Unit] =
         apply(pace, value*).mapEval(code.as(_))
 
-      object `null`:
+      object `(null)`:
 
         /**
           * `null` replication output guard
           */
         def apply(_arity: Int): Iterant[F, Unit] =
-          self.`null`(_arity)
+          self.`(null)`(_arity)
 
         /**
           * `null` replication output guard w/ pace
@@ -222,7 +222,7 @@ package object Π:
           * `null` replication output guard w/ code
           */
         def apply[T](_arity: Int)(code: => F[T]): Iterant[F, Unit] =
-          self.`null`[T](_arity)(code)
+          self.`(null)`[T](_arity)(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
@@ -230,7 +230,7 @@ package object Π:
         def apply[T](_arity: Int, _pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
           apply[T](_arity)(code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable replication output guard
@@ -304,7 +304,7 @@ package object Π:
       def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Iterant[F, Seq[`()`[F]]] =
         haltWithCode[T]((s zip Iterant.intervalAtFixedRate(pace)).map(_._1))(code)
 
-    object ν:
+    object `(ν)`:
 
       /**
         * bound output prefix
@@ -358,7 +358,7 @@ package object Π:
     def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Iterant[F, Unit] =
       apply(pace, value*).mapEval(code.as(_))
 
-    object `null`:
+    object `(null)`:
 
       /**
         * `null` output prefix
@@ -384,7 +384,7 @@ package object Π:
       def apply[T](_arity: Int, _pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
         apply[T](_arity)(code)
 
-    object * :
+    object `(*)`:
 
       /**
         * variable output prefix

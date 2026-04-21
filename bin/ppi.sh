@@ -16,18 +16,18 @@ function ppi() {
     esac
     case "$emit" in
         ce)
-            local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
+            local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.12'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.17'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.5.0'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+            local deps='--dep co.fs2::fs2-core:3.13.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
@@ -36,27 +36,27 @@ function ppi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.24
-                        --dep dev.zio::zio-streams:2.1.24'
+            local deps='--dep dev.zio::zio-concurrent:2.1.25
+                        --dep dev.zio::zio-streams:2.1.25'
             ;;
     esac
     while [ $# -gt 0 ]
     do
-        if [ "$1" = '--' ]
+        if [ "$1" = '--' ] || [[ "$1" = '-'* ]]
         then
             break
         fi
-        srcs="$srcs $1"
+        local srcs="$srcs $1"
         shift
     done
     while [ $# -gt 0 ]
     do
-        args="$args $1"
+        local args="$args $1"
         shift
     done
     set ${srcs#?} ../${emit}/ppi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC5 \
+                  -q -O -nowarn -S 3.8.4-RC2 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -78,18 +78,18 @@ function ppi_() {
     esac
     case "$emit" in
         ce)
-            local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
+            local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.12'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.17'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.3.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.5.0'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+            local deps='--dep co.fs2::fs2-core:3.13.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
@@ -98,27 +98,27 @@ function ppi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.24
-                        --dep dev.zio::zio-streams:2.1.24'
+            local deps='--dep dev.zio::zio-concurrent:2.1.25
+                        --dep dev.zio::zio-streams:2.1.25'
             ;;
     esac
     while [ $# -gt 0 ]
     do
-        if [ "$1" = '--' ]
+        if [[ "$1" = '-'* ]]
         then
             break
         fi
-        srcs="$srcs $1"
+        local srcs="$srcs $1"
         shift
     done
     while [ $# -gt 0 ]
     do
-        args="$args $1"
+        local args="$args $1"
         shift
     done
     set ${srcs#?} ../${emit}/ppi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC5 \
+                  -q -O -nowarn -S 3.8.4-RC2 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1

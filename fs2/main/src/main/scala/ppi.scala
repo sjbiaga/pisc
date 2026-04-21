@@ -69,9 +69,9 @@ package object Π:
     */
   final class τ[F[_]: Async]:
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
         /**
           * linear replication guard
@@ -176,17 +176,17 @@ package object Π:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
-        object ν:
+        object `(ν)`:
 
           /**
             * linear replication bound output guard
             */
           def apply(arity: Int)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-            (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) >> self.ν(arity)).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
+            (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) >> self.`(ν)`(arity)).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
 
           /**
             * linear replication bound output guard w/ pace
@@ -230,33 +230,33 @@ package object Π:
         def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
           apply(pace, value*)(-, +, *).evalTap(_ => code)
 
-        object `null`:
+        object `(null)`:
 
           /**
             * linear `null` replication output guard
             */
           def apply(arity: Int)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.!.+.apply(Seq.fill(arity)(new `()`[F](null))*)(-, +, *)
+            self.`(!)`.`(+)`.apply(Seq.fill(arity)(new `()`[F](null))*)(-, +, *)
 
           /**
             * linear `null` replication output guard w/ pace
             */
           def apply(arity: Int, pace: FiniteDuration)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.!.+.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(-, +, *)
+            self.`(!)`.`(+)`.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(-, +, *)
 
           /**
             * linear `null` replication output guard w/ code
             */
           def apply[T](arity: Int)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.!.+.apply(Seq.fill(arity)(new `()`[F](null))*)(code)(-, +, *)
+            self.`(!)`.`(+)`.apply(Seq.fill(arity)(new `()`[F](null))*)(code)(-, +, *)
 
           /**
             * linear `null` replication output guard w/ pace w/ code
             */
           def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            self.!.+.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(code)(-, +, *)
+            self.`(!)`.`(+)`.apply(pace, Seq.fill(arity)(new `()`[F](null))*)(code)(-, +, *)
 
-        object * :
+        object `(*)`:
 
           /**
             * linear variable replication output guard
@@ -338,31 +338,31 @@ package object Π:
         def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
           s(-, +, *).spaced(pace).evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }
 
-      object ν:
+      object `(ν)`:
 
         /**
           * replication bound output guard
           */
         def apply(arity: Int): Stream[F, Seq[`()`[F]]] =
-          Stream.unit.repeat >> self.ν(arity)
+          Stream.unit.repeat >> self.`(ν)`(arity)
 
         /**
           * replication bound output guard w/ pace
           */
         def apply(arity: Int, pace: FiniteDuration): Stream[F, Seq[`()`[F]]] =
-          Stream.awakeEvery(pace) >> self.ν(arity)
+          Stream.awakeEvery(pace) >> self.`(ν)`(arity)
 
         /**
           * replication bound output guard w/ code
           */
         def apply[T](arity: Int)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-          Stream.unit.repeat >> self.ν[T](arity)(code)
+          Stream.unit.repeat >> self.`(ν)`[T](arity)(code)
 
         /**
           * replication bound output guard w/ pace w/ code
           */
         def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-          Stream.awakeEvery(pace) >> self.ν[T](arity)(code)
+          Stream.awakeEvery(pace) >> self.`(ν)`[T](arity)(code)
 
       /**
         * constant replication output guard
@@ -388,33 +388,33 @@ package object Π:
       def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
         apply(pace, value*).evalTap(_ => code)
 
-      object `null`:
+      object `(null)`:
 
         /**
           * `null` replication output guard
           */
         def apply(arity: Int): Stream[F, Unit] =
-          self.!.apply(Seq.fill(arity)(new `()`[F](null))*)
+          self.`(!)`.apply(Seq.fill(arity)(new `()`[F](null))*)
 
         /**
           * `null` replication output guard w/ pace
           */
         def apply(arity: Int, pace: FiniteDuration): Stream[F, Unit] =
-          self.!.apply(pace, Seq.fill(arity)(new `()`[F](null))*)
+          self.`(!)`.apply(pace, Seq.fill(arity)(new `()`[F](null))*)
 
         /**
           * `null` replication output guard w/ code
           */
         def apply[T](arity: Int)(code: => F[T]): Stream[F, Unit] =
-          self.!.apply[T](Seq.fill(arity)(new `()`[F](null))*)(code)
+          self.`(!)`.apply[T](Seq.fill(arity)(new `()`[F](null))*)(code)
 
         /**
           * `null` replication output guard w/ pace w/ code
           */
         def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
-          self.!.apply[T](pace, Seq.fill(arity)(new `()`[F](null))*)(code)
+          self.`(!)`.apply[T](pace, Seq.fill(arity)(new `()`[F](null))*)(code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable replication output guard
@@ -488,7 +488,7 @@ package object Π:
       def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
         s.spaced(pace).evalMap { it => code(it.map(_.`()`[T])).map(_.map(new `()`[F](_))) }.evalTap(_ => o)
 
-    object ν:
+    object `(ν)`:
 
       /**
         * bound output prefix
@@ -542,7 +542,7 @@ package object Π:
     def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
       apply(pace, value*).evalTap(_ => code)
 
-    object `null`:
+    object `(null)`:
 
       /**
         * `null` output prefix
@@ -568,7 +568,7 @@ package object Π:
       def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
         self.apply[T](pace, Seq.fill(arity)(new `()`[F](null))*)(code)
 
-    object * :
+    object `(*)`:
 
       /**
         * variable output prefix

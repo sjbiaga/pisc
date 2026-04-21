@@ -80,9 +80,8 @@ package object Π:
     def ====(that: `()`) =
       try
         this.ref eq that.ref
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
