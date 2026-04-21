@@ -189,9 +189,9 @@ package object sΠ:
     */
   object τ:
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
         /**
           * linear replication guard
@@ -409,7 +409,7 @@ package object sΠ:
       for
         b <- r.get
         s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) *> r.set(true) else ZIO.unit
+        _ <- if !b || s <= 0 then q.offer(()) *> r.set(true) else ZIO.unit
       yield
         ()
     private def s(tk: Object)(using Int) = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o)).filter(_._2 eq tk).map(_._1)
@@ -429,11 +429,11 @@ package object sΠ:
 
     object π:
 
-      object ! :
+      object `(!)`:
 
-        object + :
+        object `(+)`:
 
-          object ν:
+          object `(ν)`:
 
             /**
               * linear replication bound output guard
@@ -542,7 +542,6 @@ package object sΠ:
                              ^ : String): ZStream[Any, Throwable, Unit] =
             implicit val ord = dir.ord
             for
-              _        <- ZStream.fromZIO(ZIO.debug(0->"lin const out"))
               _        <- ( for
                               discard <- if None eq + then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                                          else ZStream.fromZIO(?.await)
@@ -550,11 +549,9 @@ package object sΠ:
                             yield
                               ()
                           )
-              _        <- ZStream.fromZIO(ZIO.debug(1->"lin const out"))
               discard  <- if None eq + then ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
               if !discard
-              _        <- ZStream.fromZIO(ZIO.debug(2->"lin const out"))
               promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
               continue <- ZStream.fromZIO(Ref.make(promise))
               promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
@@ -624,7 +621,7 @@ package object sΠ:
                                 ^ : String): ZStream[Any, Throwable, Unit] =
             apply(rate, pace, value)(key, `)(`)(dir)(?, -, +, *).tap(_ => code)
 
-          object * :
+          object `(*)`:
 
             /**
               * linear variable replication output guard
@@ -855,7 +852,7 @@ package object sΠ:
                                 ^ : String): ZStream[Any, Throwable, `()`] =
             apply(rate, pace)(key, `)(`)(dir)(?, -, +, *).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
-        object ν:
+        object `(ν)`:
 
           /**
             * replication bound output guard
@@ -1005,7 +1002,7 @@ package object sΠ:
                            ^ : String): ZStream[Any, Throwable, Unit] =
           apply(rate, pace, value)(key, `)(`)(dir).tap(_ => code)
 
-        object * :
+        object `(*)`:
 
           /**
             * variable replication output guard
@@ -1198,7 +1195,7 @@ package object sΠ:
                               ^ : String): ZStream[Any, Throwable, `()`] =
           apply(rate, pace)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
-      object ν:
+      object `(ν)`:
 
         /**
           * bound output prefix
@@ -1269,16 +1266,12 @@ package object sΠ:
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-          _        <- ZStream.fromZIO(ZIO.debug(-300))
           `)(`     <- ZStream.fromZIO(`)(`.get)
           _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map -> ord, Some(false), rate)))))
           cb_fb_tk <- ZStream.fromZIO(promise.await)
-          _        <- ZStream.fromZIO(ZIO.debug(300))
           if cb_fb_tk ne None
           (cbarrier, fiber, token) = cb_fb_tk.get
-          _        <- ZStream.fromZIO(ZIO.debug(-600))
           _        <- ZStream.succeed(value -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).through1(h)
-          _        <- ZStream.fromZIO(ZIO.debug(600))
         yield
           ()
 
@@ -1315,7 +1308,7 @@ package object sΠ:
                             ^ : String): ZStream[Any, Throwable, Unit] =
         apply(rate, pace, value)(key, `)(`)(dir).tap(_ => code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable output prefix
@@ -1433,17 +1426,13 @@ package object sΠ:
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-          _        <- ZStream.fromZIO(ZIO.debug(-400))
           `)(`     <- ZStream.fromZIO(`)(`.get)
           _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map -> ord, Some(true), rate)))))
           cb_fb_tk <- ZStream.fromZIO(promise.await)
-          _        <- ZStream.fromZIO(ZIO.debug(400))
           if cb_fb_tk ne None
           (cbarrier, fiber, token) = cb_fb_tk.get
-          _  <- ZStream.fromZIO(ZIO.debug(-800))
           _  <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
           it <- s(token).take(1)
-          _  <- ZStream.fromZIO(ZIO.debug(800))
         yield
           it
 
@@ -1482,9 +1471,9 @@ package object sΠ:
 
     object ζ:
 
-      object ! :
+      object `(!)`:
 
-        object + :
+        object `(+)`:
 
           /**
             * linear replication capability guard

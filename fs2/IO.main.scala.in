@@ -96,8 +96,6 @@ object App extends _root_.cats.effect.IOApp:
 
 object π:
 
-  import _root_.java.util.UUID
-
   import _root_.scala.collection.immutable.{ List => πLs }
   import _root_.scala.concurrent.duration.*
 
@@ -120,7 +118,7 @@ object π:
 
   extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])
     private[π] inline def πparSequence: Stream[F, Unit] =
-      Stream.eval(self.map(_.compile.drain).parSequence.void)
+      Stream.eval(self.map(_.compile.drain).parSequenceVoid)
 
   def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
     UUIDGen.randomString[F]

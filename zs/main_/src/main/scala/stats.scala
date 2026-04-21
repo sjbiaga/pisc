@@ -180,7 +180,7 @@ package object `Π-stats`:
           (key2, (ether2, polarity2, (rate2, weight2))) = χ(j)
           if polarity2 ne None
         do
-          if (ether1 eq ether2) && polarity1.get != polarity2.get
+          if ether1 == ether2 && polarity1.get != polarity2.get
           then
             val ^^ = key2.substring(0, 36)
             if ^ != ^^

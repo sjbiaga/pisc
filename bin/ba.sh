@@ -16,19 +16,19 @@ function ba() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
+            local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+            local deps='--dep co.fs2::fs2-core:3.13.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.24
-                        --dep dev.zio::zio-streams:2.1.24'
+            local deps='--dep dev.zio::zio-concurrent:2.1.25
+                        --dep dev.zio::zio-streams:2.1.25'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -47,7 +47,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC5 \
+                  -q -O -nowarn -S 3.8.4-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.3 \
@@ -73,19 +73,19 @@ function ba_() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0-RC1
+            local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.13.0-M7
+            local deps='--dep co.fs2::fs2-core:3.13.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.24
-                        --dep dev.zio::zio-streams:2.1.24'
+            local deps='--dep dev.zio::zio-concurrent:2.1.25
+                        --dep dev.zio::zio-streams:2.1.25'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -104,7 +104,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.0-RC5 \
+                  -q -O -nowarn -S 3.8.4-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.3 \

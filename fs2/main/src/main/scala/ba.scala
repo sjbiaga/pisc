@@ -197,9 +197,9 @@ package object sΠ:
     */
   final class τ[F[_]: Async]:
 
-    object ! :
+    object `(!)`:
 
-      object + :
+      object `(+)`:
 
         /**
           * linear replication guard
@@ -440,11 +440,11 @@ package object sΠ:
 
     object π:
 
-      object ! :
+      object `(!)`:
 
-        object + :
+        object `(+)`:
 
-          object ν:
+          object `(ν)`:
 
             /**
               * linear replication bound output guard
@@ -604,7 +604,7 @@ package object sΠ:
                                 ^ : String): Stream[F, Unit] =
             apply(rate, pace, value, `}{`)(key, `)(`)(dir)(?, -, +, *).evalTap(_ => code)
 
-          object * :
+          object `(*)`:
 
             /**
               * linear variable replication output guard
@@ -806,7 +806,7 @@ package object sΠ:
                                 ^ : String): Stream[F, `()`[F]] =
             apply(rate, pace, `}{`)(key, `)(`)(dir)(?, -, +, *).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
 
-        object ν:
+        object `(ν)`:
 
           /**
             * replication bound output guard
@@ -954,7 +954,7 @@ package object sΠ:
                               ^ : String): Stream[F, Unit] =
           apply(rate, pace, value, `}{`)(key, `)(`)(dir).evalTap(_ => code)
 
-        object * :
+        object `(*)`:
 
           /**
             * variable replication output guard
@@ -1145,7 +1145,7 @@ package object sΠ:
                               ^ : String): Stream[F, `()`[F]] =
           apply(rate, pace, `}{`)(key, `)(`)(dir).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
 
-      object ν:
+      object `(ν)`:
 
         /**
           * bound output prefix
@@ -1256,7 +1256,7 @@ package object sΠ:
                             ^ : String): Stream[F, Unit] =
         apply(rate, pace, value, `}{`)(key, `)(`)(dir).evalTap(_ => code)
 
-      object * :
+      object `(*)`:
 
         /**
           * variable output prefix
@@ -1416,9 +1416,9 @@ package object sΠ:
 
     object ζ:
 
-      object ! :
+      object `(!)`:
 
-        object + :
+        object `(+)`:
 
           /**
             * linear replication capability guard
