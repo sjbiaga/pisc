@@ -120,7 +120,7 @@ abstract class Encoding extends Calculus:
   def instantiation(using bindings: Bindings, duplications: Duplications, _scale: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
-      if _nest == 0 then _cache.clear
+      if _nest == 0 then _cache.clear()
       nest(true)
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
@@ -221,55 +221,56 @@ abstract class Encoding extends Calculus:
 
     private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
-    extension (self: String | List[String])
-              (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
-              (using key: () => String = () => _dir.get._1)
-              (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
+    given `_String | List[String]_`: {} with
 
-      def boolean: Boolean =
-        self match
-          case it: String =>
-            it.toLowerCase match
-              case "0" | "off" | "false" | "no" | "n" => false
-              case "1" | "on" | "true" | "yes" | "y"  => true
-              case _                                  => throw err("a boolean")
-          case _          => throw err("a boolean")
+      extension (self: String | List[String])
+                (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
+                (using key: () => String = () => _dir.get._1)
+                (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
 
-      def number: Int =
-        self match
-          case it: String =>
-            try
-              it.toInt
-            catch
-              case _: NumberFormatException =>
-                throw err("a number")
-          case _          => throw err("a number")
+        def boolean: Boolean =
+          self match
+            case it: String =>
+              it.toLowerCase match
+                case "0" | "off" | "false" | "no" | "n" => false
+                case "1" | "on" | "true" | "yes" | "y"  => true
+                case _                                  => throw err("a boolean")
+            case _          => throw err("a boolean")
 
-      def file: Option[String] =
-        self match
-          case it: String if it.toLowerCase == "console" => None
-          case _: String                                 => Some(self.string("<console> or a filename"))
-          case _                                         => throw err("<console> or a filename")
+        def number: Int =
+          self match
+            case it: String =>
+              try
+                it.toInt
+              catch
+                case _: NumberFormatException =>
+                  throw err("a number")
+            case _          => throw err("a number")
 
-      def string(`type`: String = "a string"): String =
-        self match
-          case it: String
-              if (it.startsWith("\"") || it.startsWith("'"))
-              && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
-            it.substring(1, it.length-1)
-          case _                                                   => throw err(`type`)
+        def file: Option[String] =
+          self match
+            case it: String if it.toLowerCase == "console" => None
+            case _: String                                 => Some(self.string("<console> or a filename"))
+            case _                                         => throw err("<console> or a filename")
 
-      def keys: Set[String] =
-        self match
-          case it: String if Directive.key(it)              => Set(canonical(it))
-          case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
-          case _                                            => throw err("a comma separated list of valid keys")
+        def string(`type`: String = "a string"): String =
+          self match
+            case it: String
+                if (it.startsWith("\"") || it.startsWith("'"))
+                && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
+              it.substring(1, it.length-1)
+            case _                                                   => throw err(`type`)
+
+        def keys: Set[String] =
+          self match
+            case it: String if Directive.key(it)              => Set(canonical(it))
+            case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+            case _                                            => throw err("a comma separated list of valid keys")
 
     private def boolean: Boolean = _dir.get._2.boolean
     private def number: Int = _dir.get._2.number
     private def file: Option[String] = _dir.get._2.file
-    private def string(`type`: String): String = _dir.get._2.string(`type`)
-    private def string: String = _dir.get._2.string("a string")
+    private def string(`type`: String = "a string"): String = _dir.get._2.string(`type`)
     private def keys: Set[String] = _dir.get._2.keys
 
     private lazy val settings = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
@@ -711,16 +712,16 @@ object Encoding:
 
         case ∅() => ast
 
-        case +(sc, it*) =>
-          `+`(sc, it.map(rename(_))*)
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(rename(_)))
 
-        case ∥(sc, it*) =>
-          ∥(sc, it.map(rename(_))*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(rename(_)))
 
-        case `.`(end, _it*) =>
+        case `.`(end, prefixes*) =>
           val n = refresh.size
           given Names = Names(bound)
-          val it = _it.map {
+          val prefixesʹ = prefixes.map {
             case ν(_names*) =>
               val names = _names.map(Symbol(_)).map(rebind(_))
               ν(names.map(_.asSymbol.name)*)
@@ -744,7 +745,7 @@ object Encoding:
           }
           val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(endʹ, it*)
+          `.`(endʹ, prefixesʹ*)
 
         case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
           ?:(((renamed(lhs), renamed(rhs)), m), rename(t), f.map(rename(_)))
@@ -758,28 +759,28 @@ object Encoding:
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
 
-        case !(parallelism, pace, Some(it @ τ(_, given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(code = recoded(free))(it.id)), rename(sum))
+        case it @ !(_, _, Some(τ @ τ(_, given Option[Code])), sum) =>
+          it.copy(guard = Some(τ.copy(code = recoded(free))(τ.id)), sum = rename(sum))
 
-        case !(parallelism, pace, Some(it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
+        case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
           val n = refresh.size
           given Names = Names(bound)
-          val π = it.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))(it.id)
+          val πʹ = π.copy(channel = renamed(ch), name = rebind(par), code = recoded(free))(π.id)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(parallelism, pace, Some(π), sumʹ)
+          it.copy(guard = Some(πʹ), sum = sumʹ)
 
-        case !(parallelism, pace, Some(it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
-          val π = it.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))(it.id)
-          `!`(parallelism, pace, Some(π), rename(sum))
+        case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), sum) =>
+          val πʹ = π.copy(channel = renamed(ch), name = renamed(arg), code = recoded(free))(π.id)
+          it.copy(guard = Some(πʹ), sum = rename(sum))
 
-        case !(parallelism, pace, Some(it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
-          val π = it.copy(channel = renamed(ch), code = recoded(free))(it.id)
-          `!`(parallelism, pace, Some(π), rename(sum))
+        case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), sum) =>
+          val πʹ = π.copy(channel = renamed(ch), code = recoded(free))(π.id)
+          it.copy(guard = Some(πʹ), sum = rename(sum))
 
-        case !(parallelism, pace, Some(it @ ζ(_, name, _, _, given Option[Code])), sum) =>
-          val ζ = it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(it.id)
-          `!`(parallelism, pace, Some(ζ), rename(sum))
+        case it @ !(_, _, Some(ζ @ ζ(_, name, _, _, given Option[Code])), sum) =>
+          val ζʹ = ζ.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded(free))(ζ.id)
+          it.copy(guard = Some(ζʹ), sum = rename(sum))
 
         case it @ !(_, _, _, sum) =>
           it.copy(sum = rename(sum))
@@ -817,21 +818,19 @@ object Encoding:
               xid
           it.copy(variables = variablesʹ, sum = sumʹ, xid = xidʹ, assignment = assignmentʹ)
 
-        case `{}`(identifier, pointers, agent, params*) =>
+        case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_).asSymbol)
           val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
-          `{}`(identifier, pointersʹ, agent, paramsʹ*)
-
-        case `(*)`(identifier, params*) =>
+        case it @ `(*)`(_, params*) =>
           val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-
-          `(*)`(identifier, paramsʹ*)
+          it.copy(params = paramsʹ)
