@@ -103,9 +103,8 @@ package object sΠ:
     def ====(that: `()`) =
       try
         this.a eq that.a
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]

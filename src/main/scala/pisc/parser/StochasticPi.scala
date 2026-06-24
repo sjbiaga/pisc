@@ -382,14 +382,14 @@ object StochasticPi:
 
         case ∅() => ast
 
-        case +(sc, it*) =>
-          `+`(sc, it.map(_.shallow)*)
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(_.shallow))
 
-        case ∥(sc, it*) =>
-          ∥(sc, it.map(_.shallow)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.shallow))
 
-        case `.`(end, it*) =>
-          `.`(end.shallow, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.shallow)
 
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
@@ -400,8 +400,8 @@ object StochasticPi:
         case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers, true, params*) =>
-          `(*)`(id, (params ++ pointers.map(λ(_)))*)
+        case `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, (params ++ pointers.map(λ(_)))*)
 
         case _ => ast
 
@@ -707,7 +707,7 @@ object StochasticPi:
 
       val discarded = Map[String, Actions]()
 
-      excluded.clear
+      excluded.clear()
 
       val enabled = Map[String, Actions]()
 
