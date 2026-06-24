@@ -85,11 +85,11 @@ object Ensure:
 
         case ∅() =>
 
-        case +(_, it*) =>
-         it.foldLeft(())((_, par) => par.recursive)
+        case +(_, choices*) =>
+         choices.foreach(_.recursive)
 
-        case ∥(_, it*) =>
-         it.foldLeft(())((_, seq) => seq.recursive)
+        case ∥(_, components*) =>
+         components.foreach(_.recursive)
 
         case `.`(end, _*) =>
           end.recursive
