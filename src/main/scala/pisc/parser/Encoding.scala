@@ -116,7 +116,7 @@ abstract class Encoding extends Calculus:
   def instantiation(using bindings: Bindings, duplications: Duplications, _scale: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
-      if _nest == 0 then _cache.clear
+      if _nest == 0 then _cache.clear()
       nest(true)
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
@@ -654,41 +654,41 @@ object Encoding:
 
         case ∅() => ast
 
-        case +(sc, it*) =>
-          `+`(sc, it.map(rename(_))*)
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(rename(_)))
 
-        case ∥(sc, it*) =>
-          ∥(sc, it.map(rename(_))*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(rename(_)))
 
-        case `.`(end, _it*) =>
+        case `.`(end, prefixes*) =>
           val n = refresh.size
           given Names = Names(bound)
-          val it = _it.map {
+          val prefixesʹ = prefixes.map {
             case ν(_names*) =>
               val names = _names.map(Symbol(_)).map(rebind(_))
               ν(names.map(_.asSymbol.name)*)
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded(free))
-            case π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*) =>
+            case it @ π(λ(ch: Symbol), Some(_), given Option[Code], names*) =>
               val chʹ = renamed(ch)
               val namesʹ = names.map {
                 case it @ λ(Symbol("")) => it
                 case λ(par: Symbol) => rebind(par)
                 case it => it
               }
-              π(chʹ, cons, recoded(free), namesʹ*)
-            case π(λ(ch: Symbol), None, given Option[Code], names*) =>
+              it.copy(channel = chʹ, code = recoded(free), names = namesʹ)
+            case it @ π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val chʹ = renamed(ch)
               val namesʹ = names.map {
                 case λ(arg: Symbol) => renamed(arg)
                 case it => it
               }
-              π(chʹ, None, recoded(free), namesʹ*)
+              it.copy(channel = chʹ, code = recoded(free), names = namesʹ)
             case it => it
           }
           val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(endʹ, it*)
+          `.`(endʹ, prefixesʹ*)
 
         case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
           ?:(((renamed(lhs), renamed(rhs)), m), rename(t), f.map(rename(_)))
@@ -702,10 +702,10 @@ object Encoding:
         case ?:(cond, t, f) =>
           ?:(cond, rename(t), f.map(rename(_)))
 
-        case !(parallelism, pace, Some(it @ τ(given Option[Code])), sum) =>
-          `!`(parallelism, pace, Some(it.copy(code = recoded(free))), rename(sum))
+        case it @ !(_, _, Some(τ @ τ(given Option[Code])), sum) =>
+          it.copy(guard = Some(τ.copy(code = recoded(free))), sum = rename(sum))
 
-        case !(parallelism, pace, Some(π(λ(ch: Symbol), cons @ Some(_), given Option[Code], names*)), sum) =>
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), Some(_), given Option[Code], names*)), sum) =>
           val n = refresh.size
           given Names = Names(bound)
           val chʹ = renamed(ch)
@@ -713,17 +713,19 @@ object Encoding:
             case λ(arg: Symbol) => rebind(arg)
             case it => it
           }
-          val it: π = π(chʹ, cons, recoded(free), namesʹ*)
+          val πʹ = π.copy(channel = chʹ, code = recoded(free), names = namesʹ)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          `!`(parallelism, pace, Some(it), sumʹ)
+          it.copy(guard = Some(πʹ), sum = sumʹ)
 
-        case !(parallelism, pace, Some(π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => renamed(arg)
             case it => it
           }
-          `!`(parallelism, pace, Some(π(renamed(ch), None, recoded(free), namesʹ*)), rename(sum))
+          val πʹ = π.copy(channel = renamed(ch), code = recoded(free), names = namesʹ)
+          val sumʹ = rename(sum)
+          it.copy(guard = Some(πʹ), sum = sumʹ)
 
         case it @ !(_, _, _, sum) =>
           it.copy(sum = rename(sum))
@@ -758,21 +760,19 @@ object Encoding:
               xid
           it.copy(variables = variablesʹ, sum = sumʹ, xid = xidʹ, assignment = assignmentʹ)
 
-        case `{}`(identifier, pointers, agent, params*) =>
+        case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_).asSymbol)
           val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
-          `{}`(identifier, pointersʹ, agent, paramsʹ*)
-
-        case `(*)`(identifier, qual, params*) =>
+        case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-
-          `(*)`(identifier, qual, paramsʹ*)
+          it.copy(params = paramsʹ)

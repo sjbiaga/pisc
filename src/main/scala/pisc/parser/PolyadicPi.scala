@@ -340,14 +340,14 @@ object PolyadicPi:
 
         case ∅() => ast
 
-        case +(sc, it*) =>
-          `+`(sc, it.map(_.shallow)*)
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(_.shallow))
 
-        case ∥(sc, it*) =>
-          ∥(sc, it.map(_.shallow)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.shallow))
 
-        case `.`(end, it*) =>
-          `.`(end.shallow, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.shallow)
 
         case ?:(cond, t, f) =>
           ?:(cond, t.shallow, f.map(_.shallow))
@@ -358,8 +358,8 @@ object PolyadicPi:
         case it @ `⟦⟧`(_, _, sum, _, _) =>
           it.copy(sum = sum.shallow)
 
-        case `{}`(id, pointers, true, params*) =>
-          `(*)`(id, Nil, (params ++ pointers.map(λ(_)))*)
+        case `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, Nil, (params ++ pointers.map(λ(_)))*)
 
         case _ => ast
 
@@ -388,8 +388,8 @@ object PolyadicPi:
         (i, n) <- rep
       do
         prog(i)._1 match
-          case `(*)`(id, _, params*) =>
-            warn(throw RecRepParsingException(id, params.size, n))
+          case `(*)`(identifier, _, params*) =>
+            warn(throw RecRepParsingException(identifier, params.size, n))
 
     def apply(prog: List[Bind]): List[Bind] =
       given List[Bind] = prog.map(_ -> _.shallow)

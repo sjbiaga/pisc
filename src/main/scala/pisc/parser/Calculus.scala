@@ -281,6 +281,14 @@ object Calculus:
         else "" + channel + names.mkString("<", ", ", ">.")
       case _ => "τ."
 
+  given `_π_`: {} with
+    extension (self: π)
+      def copy(channel: λ = self.channel,
+               polarity: Option[String] = self.polarity,
+               code: Option[Code] = self.code,
+               names: Seq[λ] = self.names): π =
+        π(channel, polarity, code, names*)
+
   enum AST:
 
     case +(scaling: Int, choices: AST.∥ *)
@@ -362,6 +370,39 @@ object Calculus:
           case _ => \(identifier)
         Term.Apply(term, Term.ArgClause(args)).toString
 
+  given `_+_`: {} with
+    extension (self: +)
+      def copy(scaling: Int = self.scaling,
+               choices: Seq[∥] = self.choices): + =
+        `+`(scaling, choices*)
+
+  given `_∥_`: {} with
+    extension (self: ∥)
+      def copy(scaling: Int = self.scaling,
+               components: Seq[`.`] = self.components): ∥ =
+        ∥(scaling, components*)
+
+  given `_._`: {} with
+    extension (self: `.`)
+      def copy(end: + | - = self.end,
+               prefixes: Seq[Pre] = self.prefixes): `.` =
+        `.`(end, prefixes*)
+
+  given `_{}_`: {} with
+    extension (self: `{}`)
+      def copy(identifier: String = self.identifier,
+               pointers: List[Symbol] = self.pointers,
+               agent: Boolean = self.agent,
+               params: Seq[λ] = self.params): `{}` =
+        `{}`(identifier, pointers, agent, params*)
+
+  given `_(*)_`: {} with
+    extension (self: `(*)`)
+      def copy(identifier: String = self.identifier,
+               qual: List[String] = self.qual,
+               params: Seq[λ] = self.params): `(*)` =
+        `(*)`(identifier, qual, params*)
+
   object ∅ :
     def unapply(self: AST): Boolean = self match
       case sum: + => sum.isVoid
@@ -430,8 +471,7 @@ object Calculus:
   extension (sum: +)
     private def isVoid: Boolean = sum match
       case +(_) => true
-      case +(_, it*) => it.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
-      case _ => false
+      case _ => sum.choices.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
 
   extension [T <: AST](ast: T)
 
@@ -444,31 +484,31 @@ object Calculus:
         case ∅() =>
           `+`(-1)
 
-        case +(sc, ∥(-1|1, `.`(sum: +)), it*) =>
+        case it @ +(_, ∥(-1|1, `.`(sum: +)), choices*) =>
           val lhs = sum.flatten
-          val rhs = `+`(-1, it*).flatten
-          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
+          val rhs = `+`(-1, choices*).flatten
+          it.copy(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
 
-        case +(sc, par, it*) =>
+        case it @ +(_, par, choices*) =>
           val lhs: + = `+`(-1, par.flatten)
-          val rhs = `+`(-1, it*).flatten
-          `+`(sc, (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid)*)
+          val rhs = `+`(-1, choices*).flatten
+          it.copy(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
 
-        case ∥(sc, `.`(+(-1|1, par)), it*) =>
+        case it @ ∥(_, `.`(+(-1|1, par)), components*) =>
           val lhs = par.flatten
-          val rhs = ∥(-1, it*).flatten
-          ∥(sc, (lhs.components ++ rhs.components)*)
+          val rhs = ∥(-1, components*).flatten
+          it.copy(components = lhs.components ++ rhs.components)
 
-        case ∥(sc, seq, it*) =>
+        case it @ ∥(sc, seq, components*) =>
           val lhs: ∥ = ∥(-1, seq.flatten)
-          val rhs = ∥(-1, it*).flatten
-          ∥(sc, (lhs.components ++ rhs.components)*)
+          val rhs = ∥(-1, components*).flatten
+          it.copy(components = lhs.components ++ rhs.components)
 
-        case `.`(+(-1|1, ∥(-1|1, `.`(end, ps*))), it*) =>
-          `.`(end, (it ++ ps)*).flatten
+        case `.`(+(-1|1, ∥(-1|1, `.`(end, psr*))), psl*) =>
+          `.`(end, (psl ++ psr)*).flatten
 
-        case `.`(end, it*) =>
-          `.`(end.flatten, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.flatten)
 
         case ?:(cond, t, f) =>
           ?:(cond, t.flatten, f.map(_.flatten))

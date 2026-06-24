@@ -21,10 +21,10 @@ function ppi() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.17'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.19'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.5.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -36,8 +36,8 @@ function ppi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.25
-                        --dep dev.zio::zio-streams:2.1.25'
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-streams:2.1.26'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -56,7 +56,7 @@ function ppi() {
     done
     set ${srcs#?} ../${emit}/ppi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.4-RC2 \
+                  -q -O -nowarn -S 3.9.0-RC1 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1
@@ -83,10 +83,10 @@ function ppi_() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.17'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.19'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.5.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -98,8 +98,8 @@ function ppi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.25
-                        --dep dev.zio::zio-streams:2.1.25'
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-streams:2.1.26'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -118,7 +118,7 @@ function ppi_() {
     done
     set ${srcs#?} ../${emit}/ppi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.8.4-RC2 \
+                  -q -O -nowarn -S 3.9.0-RC1 \
                   --dep eu.timepit::refined:0.11.3 \
                   ${args#?} \
                   2>&1

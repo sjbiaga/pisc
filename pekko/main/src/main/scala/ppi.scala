@@ -67,9 +67,8 @@ package object Π:
     def ====(that: `()`) =
       try
         this.a eq that.a
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
@@ -80,7 +79,7 @@ package object Π:
       */
     def apply(value: `()`*)
              (using ExecutionContext): Future[Option[Unit]] =
-      Future { a ! Output(value.map(_.name), null, None) }.map(_ => Some(()))
+      Future { a ! Output(value.map(_.name), null, None) }.map(Some(_))
 
     /**
       * negative prefix i.e. output
