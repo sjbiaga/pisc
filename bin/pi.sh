@@ -39,12 +39,6 @@ function pi() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-streams:2.1.26'
             ;;
-        ember)
-            local deps='--dep org.http4s::http4s-circe:0.23.33
-                        --dep io.circe::circe-generic:0.14.15
-                        --dep org.http4s::http4s-ember-client:0.23.33
-                        -Dcats.effect.warnOnNonMainThreadDetected=false'
-            ;;
     esac
     while [ $# -gt 0 ]
     do

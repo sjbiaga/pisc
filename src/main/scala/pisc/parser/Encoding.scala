@@ -471,7 +471,7 @@ object Encoding:
     val isBinding = position.binds && position.counter < 0
 
   object Binder:
-    def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
+    def apply(self: Occurrence)(υidυ: Symbol) = self.copy(shadow = υidυ)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)

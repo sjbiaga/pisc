@@ -160,9 +160,9 @@ abstract class Calculus extends Pi:
     invocation() |
     instantiation
 
-  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
-
   def capital: Parser[(`{}`, Names)]
+
+  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
