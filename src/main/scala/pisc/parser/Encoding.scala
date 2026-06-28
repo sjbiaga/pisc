@@ -220,55 +220,56 @@ abstract class Encoding extends Calculus:
 
     private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
-    extension (self: String | List[String])
-              (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
-              (using key: () => String = () => _dir.get._1)
-              (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
+    given `_String | List[String]_`: {} with
 
-      def boolean: Boolean =
-        self match
-          case it: String =>
-            it.toLowerCase match
-              case "0" | "off" | "false" | "no" | "n" => false
-              case "1" | "on" | "true" | "yes" | "y"  => true
-              case _                                  => throw err("a boolean")
-          case _          => throw err("a boolean")
+      extension (self: String | List[String])
+                (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
+                (using key: () => String = () => _dir.get._1)
+                (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
 
-      def number: Int =
-        self match
-          case it: String =>
-            try
-              it.toInt
-            catch
-              case _: NumberFormatException =>
-                throw err("a number")
-          case _          => throw err("a number")
+        def boolean: Boolean =
+          self match
+            case it: String =>
+              it.toLowerCase match
+                case "0" | "off" | "false" | "no" | "n" => false
+                case "1" | "on" | "true" | "yes" | "y"  => true
+                case _                                  => throw err("a boolean")
+            case _          => throw err("a boolean")
 
-      def file: Option[String] =
-        self match
-          case it: String if it.toLowerCase == "console" => None
-          case _: String                                 => Some(self.string("<console> or a filename"))
-          case _                                         => throw err("<console> or a filename")
+        def number: Int =
+          self match
+            case it: String =>
+              try
+                it.toInt
+              catch
+                case _: NumberFormatException =>
+                  throw err("a number")
+            case _          => throw err("a number")
 
-      def string(`type`: String = "a string"): String =
-        self match
-          case it: String
-              if (it.startsWith("\"") || it.startsWith("'"))
-              && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
-            it.substring(1, it.length-1)
-          case _                                                   => throw err(`type`)
+        def file: Option[String] =
+          self match
+            case it: String if it.toLowerCase == "console" => None
+            case _: String                                 => Some(self.string("<console> or a filename"))
+            case _                                         => throw err("<console> or a filename")
 
-      def keys: Set[String] =
-        self match
-          case it: String if Directive.key(it)              => Set(canonical(it))
-          case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
-          case _                                            => throw err("a comma separated list of valid keys")
+        def string(`type`: String = "a string"): String =
+          self match
+            case it: String
+                if (it.startsWith("\"") || it.startsWith("'"))
+                && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
+              it.substring(1, it.length-1)
+            case _                                                   => throw err(`type`)
+
+        def keys: Set[String] =
+          self match
+            case it: String if Directive.key(it)              => Set(canonical(it))
+            case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+            case _                                            => throw err("a comma separated list of valid keys")
 
     private def boolean: Boolean = _dir.get._2.boolean
     private def number: Int = _dir.get._2.number
     private def file: Option[String] = _dir.get._2.file
-    private def string(`type`: String): String = _dir.get._2.string(`type`)
-    private def string: String = _dir.get._2.string("a string")
+    private def string(`type`: String = "a string"): String = _dir.get._2.string(`type`)
     private def keys: Set[String] = _dir.get._2.keys
 
     private lazy val settings = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
@@ -516,7 +517,7 @@ object Encoding:
     val isBinding = position.binds && position.counter < 0
 
   object Binder:
-    def apply(self: Occurrence)(υidυ: Symbol) = Occurrence(υidυ, self.position)
+    def apply(self: Occurrence)(υidυ: Symbol) = self.copy(shadow = υidυ)
     def unapply(self: Occurrence): Option[Symbol] =
       self.shadow match
         case it: Symbol => Some(it)
