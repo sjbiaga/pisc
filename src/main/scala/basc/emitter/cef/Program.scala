@@ -291,52 +291,62 @@ object Program:
         case !(parallelism, pace, Some(π @ π(_, _, λ(Symbol(par)), Some("ν"), _, _)), sum) =>
           val υidυ = id
 
-          var `!.π⋯` = ^._1 :: `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
-                                                   Term.ArgClause(^._2 :: Nil)))
-
-          `!.π⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
-
-          `!.π⋯` = `_ <- *`(π.emit(`!.π⋯`)) :: Nil
-
           val sem = if parallelism < 0 then null else id
 
-          val `!⋯` =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                sum.emit,
-                `!.π⋯`
-              )
-            else
-              `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              `List( *, … ).parSequence`(
-                sum.emit :+ `_ <- *.release`(sem),
-                `!.π⋯`
-              )
+          val `!.π⋯` = `_ <- *` {
+            π.emit {
+              ( if parallelism < 0
+                then
+                  Nil
+                else
+                  `_ <- *.acquire`(sem) :: Nil
+              ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
+                                               Term.ArgClause(^._2 :: Nil)))
+            }
+          } :: Nil
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit
+              else sum.emit :+ `_ <- *.release`(sem),
+              `!⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(π @ π(_, _, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           val υidυ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val πʹ = {
             def idʹ: String = π.υidυ
             π.copy(name = λ.copy()(using None))(idʹ)
           }
 
-          var `!.π⋯` = ^._1 :: `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                   Term.ArgClause(^._2 :: Nil)))
+          val `!.π⋯` = `_ <- *` {
+            πʹ.emit {
+              ( if parallelism < 0
+                then
+                  Nil
+                else
+                  `_ <- *.acquire`(sem) :: Nil
+              ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                               Term.ArgClause(^._2 :: Nil)))
+            }
+          } :: Nil
 
-          `!.π⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
-
-          `!.π⋯` = `_ <- *`(πʹ.emit(`!.π⋯`)) :: Nil
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` =
             λ.`type` match
@@ -346,62 +356,54 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val sem = if parallelism < 0 then null else id
-
-          val `!⋯` =
-            if parallelism < 0
-            then
-              Term.Block(`val` :+
-                         `List( *, … ).parSequence`(
-                           sum.emit,
-                           `!.π⋯`
-                         ))
-            else
-              `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              Term.Block(`val` :+
-                         `List( *, … ).parSequence`(
-                           sum.emit :+ `_ <- *.release`(sem),
-                           `!.π⋯`
-                         ))
+          val body =
+            Term.Block(`val` :+
+                       `List( *, … ).parSequence`(
+                         if parallelism < 0
+                         then sum.emit
+                         else sum.emit :+ `_ <- *.release`(sem),
+                         `!⋯`
+                       ))
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
 
-          var `!.μ⋯` = ^._1 :: `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
-
-          `!.μ⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
-
-          `!.μ⋯` = `_ <- *`(μ.emit(`!.μ⋯`)) :: Nil
-
           val sem = if parallelism < 0 then null else id
 
-          val `!⋯` =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                sum.emit,
-                `!.μ⋯`
-              )
-            else
-              `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
-              `List( *, … ).parSequence`(
-                sum.emit :+ `_ <- *.release`(sem),
-                `!.μ⋯`
-              )
+          val `!.μ⋯` = `_ <- *`{
+            μ.emit {
+              ( if parallelism < 0
+                then
+                  Nil
+                else
+                  `_ <- *.acquire`(sem) :: Nil
+              ) :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+            }
+          } :: Nil
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit
+              else sum.emit :+ `_ <- *.release`(sem),
+              `!⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 

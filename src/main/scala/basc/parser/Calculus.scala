@@ -356,9 +356,11 @@ object Calculus:
 
     override def toString: String = this match
       case ∅() => "()"
-      case +(_, choices*) => choices.mkString(" + ")
+      case +(-1, choices*) => choices.mkString(" + ")
+      case +(sc, choices*) => sc + " * " + choices.mkString(" + ")
 
-      case ∥(_, components*) => components.mkString(" | ")
+      case ∥(-1, components*) => components.mkString(" | ")
+      case ∥(sc, components*) => sc + " * " + components.mkString(" | ")
 
       case `.`(∅()) => "()"
       case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"

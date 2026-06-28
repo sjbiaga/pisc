@@ -95,7 +95,7 @@ object π:
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.std.UUIDGen
+  import _root_.cats.effect.std.{ Semaphore, UUIDGen }
   import _root_.cats.effect.syntax.all.*
 
   import _root_.eu.timepit.refined.*
@@ -108,7 +108,7 @@ object π:
 
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
-      self.parSequence.void
+      self.parSequenceVoid
 
   val `π-uuid`: IO[String] =
     UUIDGen.randomString

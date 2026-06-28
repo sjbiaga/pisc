@@ -190,3 +190,8 @@ object Meta extends emitter.ce.Meta:
         })*)
       else
         Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.flatMap(`π-supervised(*)`).toList)), "πparSequence")
+
+  def `List( * >> …, … ).parSequence`(* : Term*)(`…`: Term): Term =
+    `List( *, … ).parSequence`(* *) match
+      case Term.Select(Term.Apply(Term.Name("πLs"), (hd @ Term.Apply(Term.Name("π-supervised"), _)) :: tl), Term.Name("πparSequence")) =>
+        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(Term.ApplyInfix(hd, \(">>"), Type.ArgClause(Nil), Term.ArgClause(`…` :: Nil)) :: tl)), "πparSequence")
