@@ -75,7 +75,7 @@ abstract class Encoding extends Calculus:
               val free = _free ++ par.capitals
               val (constantsʹ, variablesʹ, bindingsʹ, parʹ) =
                 par match
-                  case ∥(`.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, _, assignmentʹ)))
+                  case ∥(sc, `.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, _, assignmentʹ)))
                       if assignmentʹ.size < variablesʹ.size =>
                     val constantsʹʹ = constantsʹ &~ constants
                     val pointersʹ = variablesʹ.map(_.replaceAll("_υ.*υ", ""))
@@ -92,7 +92,7 @@ abstract class Encoding extends Calculus:
                       bound ++= boundʹ
                       val bindingsʹ = boundʹ.map(_ -> Occurrence(None, pos()))
                       val expʹ: `⟦⟧` = exp.copy(assignment = assignmentʹʹ)
-                      val parʹ: ∥ = ∥(`.`(expʹ))
+                      val parʹ: ∥ = ∥(sc, `.`(expʹ))
                       (constants ++ constantsʹʹ, variables ++ pointersʹʹ, given_Bindings ++ bindingsʹ, parʹ)
                   case _ =>
                     (constants, variables, given_Bindings, par)
@@ -116,7 +116,7 @@ abstract class Encoding extends Calculus:
   def instantiation(using bindings: Bindings, duplications: Duplications, _sc: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
-      if _nest == 0 then _cache.clear
+      if _nest == 0 then _cache.clear()
       nest(true)
       val grp1 = m.group(1)
       val code = if grp1.isEmpty
@@ -196,78 +196,106 @@ abstract class Encoding extends Calculus:
     private def canonical: String => String =
       case "werr" => "errors"
       case "dups" => "duplications"
-      case it => it
+      case it     => it
 
     private def key: String => Boolean = canonical andThen {
       case "errors" | "duplications"
          | "exclude" | "include"
-         | "paceunit" => true
-      case _ => false
+         | "paceunit"
+         | "scaling" => true
+      case _         => false
     }
 
-    private def boolean: Boolean =
-      _dir.get._2 match
-        case it: String =>
-          it.toLowerCase match
-            case "0" | "off" | "false" | "no" | "n" => false
-            case "1" | "on" | "true" | "yes" | "y" => true
-            case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
-        case _ => throw DirectiveValueParsingException(_dir.get, "a boolean")
+    private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
-    private def keys: Set[String] =
-      _dir.get._2 match
-        case it: String if key(it) => Set(canonical(it))
-        case it: List[String] if it.forall(key) => Set.from(it.map(canonical))
-        case _ => throw DirectiveValueParsingException(_dir.get, "a comma separated list of valid keys")
+    extension (self: String | List[String])
+              (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> throw DirectiveValueParsingException(dir, msg) })
+              (using key: () => String = () => _dir.get._1)
+              (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
+
+      def boolean: Boolean =
+        self match
+          case it: String =>
+            it.toLowerCase match
+              case "0" | "off" | "false" | "no" | "n" => false
+              case "1" | "on" | "true" | "yes" | "y"  => true
+              case _                                  => throw err("a boolean")
+          case _          => throw err("a boolean")
+
+      def number: Int =
+        self match
+          case it: String =>
+            try
+              it.toInt
+            catch
+              case _: NumberFormatException =>
+                throw err("a number")
+          case _          => throw err("a number")
+
+      def keys: Set[String] =
+        self match
+          case it: String if Directive.key(it)              => Set(canonical(it))
+          case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+          case _                                            => throw err("a comma separated list of valid keys")
+
+    private def boolean: Boolean = _dir.get._2.boolean
+    private def number: Int = _dir.get._2.number
+    private def keys: Set[String] = _dir.get._2.keys
 
     def apply(): Unit =
 
       canonical(_dir.get._1.toLowerCase) match
 
-        case "errors" =>
+        case "errors"       =>
           _werr = boolean
 
         case "duplications" =>
           _dups = boolean
 
-        case "exclude" =>
+        case "exclude"      =>
           _exclude = boolean
 
-        case "include" =>
+        case "include"      =>
           _exclude = !boolean
 
-        case "paceunit" =>
+        case "paceunit"     =>
           _paceunit = _dir.get._2 match
             case it: String => it
-            case _ => throw DirectiveValueParsingException(_dir.get, "a time unit")
+            case _          => throw DirectiveValueParsingException(_dir.get, "a time unit")
 
-        case "push" =>
+        case "scaling"      =>
+          _scaling = boolean
+
+        case "push"         =>
           try
             if boolean
             then
-              _dirs ::= Map("errors" -> _werr,
+              _dirs ::= Map("errors"       -> _werr,
                             "duplications" -> _dups,
-                            "exclude" -> _exclude,
-                            "paceunit" -> _paceunit)
+                            "exclude"      -> _exclude,
+                            "paceunit"     -> _paceunit,
+                            "scaling"      -> _scaling)
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
-                case it @ "errors" => it -> _werr
-                case it @ "duplications" => it -> _dups
+                case it @ "errors"         => it -> _werr
+                case it @ "duplications"   => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
-                case it @ "paceunit" => it -> _paceunit
+                case it @ "paceunit"       => it -> _paceunit
+                case it @ "scaling"        => it -> _scaling
               }
             }
 
-        case "pop" =>
+        case "pop"          =>
           if boolean
           then
             _dirs.head.foreach {
-              case ("errors", it: Boolean) => _werr = it
+              case ("errors", it: Boolean)       => _werr = it
               case ("duplications", it: Boolean) => _dups = it
-              case ("exclude", it: Boolean) => _exclude = it
-              case ("paceunit", it: String) => _paceunit = it
-              case _ => ???
+              case ("exclude", it: Boolean)      => _exclude = it
+              case ("paceunit", it: String)      => _paceunit = it
+              case ("scaling", it: Boolean)      => _scaling = it
+              case _                             => ???
             }
             _dirs = _dirs.tail
 
@@ -278,7 +306,7 @@ abstract class Encoding extends Calculus:
             this()
             _dir = dir
 
-        case _ => throw DirectiveKeyParsingException(_dir.get)
+        case _              => throw DirectiveKeyParsingException(_dir.get)
 
 
 object Encoding:
@@ -345,7 +373,7 @@ object Encoding:
         given (∥ | `⟦⟧` => ∥ | `⟦⟧`) = { ast =>
           lazy val count: AST => Unit =
             case ∅() =>
-            case ∥(it*) => it.foreach(count)
+            case ∥(_, it*) => it.foreach(count)
             case `.`(end, _*) => count(end)
             case !(_, _, _, par) => count(par)
             case `[]`(_, par) => count(par)
@@ -370,7 +398,7 @@ object Encoding:
         }
         lazy val reset: AST => Unit =
           case ∅() =>
-          case ∥(it*) => it.foreach(reset)
+          case ∥(_, it*) => it.foreach(reset)
           case `.`(end, _*) => reset(end)
           case !(_, _, _, par) => reset(par)
           case `[]`(_, par) => reset(par)
@@ -413,7 +441,7 @@ object Encoding:
     val isBinding = position.binds && position.counter < 0
 
   object Binder:
-    def apply(self: Occurrence)(υidυ: String) = Occurrence(υidυ, self.position)
+    def apply(self: Occurrence)(υidυ: String) = self.copy(shadow = υidυ)
     def unapply(self: Occurrence): Option[String] =
       self.shadow match
         case it: String => Some(it)
@@ -538,7 +566,7 @@ object Encoding:
 
         case ∅() => Names()
 
-        case ∥(it*) => it.map(_.capitals).reduce(_ ++ _)
+        case ∥(_, it*) => it.map(_.capitals).reduce(_ ++ _)
 
         case `.`(end, _*) =>
           end.capitals
@@ -591,13 +619,13 @@ object Encoding:
 
         case ∅() => ast
 
-        case ∥(it*) =>
-          ∥(it.map(rename(_))*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(rename(_)))
 
-        case `.`(end, _it*) =>
+        case `.`(end, prefixes*) =>
           val n = refresh.size
           given Names = Names(bound)
-          val it = _it.map {
+          val prefixesʹ = prefixes.map {
             case ν(names*) =>
               ν(names.map(rebind(_))*)
             case it @ τ(given Option[Code]) =>
@@ -614,7 +642,7 @@ object Encoding:
           }
           val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(endʹ, it*)
+          `.`(endʹ, prefixesʹ*)
 
         case <>(given Option[Code], _path*) =>
           val path = _path.map {
@@ -624,13 +652,13 @@ object Encoding:
           }
           <>(recoded(free), path*)
 
-        case !(parallelism, pace, Some(name), par) =>
+        case it @ !(_, _, Some(name), par) =>
           val n = refresh.size
           given Names = Names(bound)
           val nameʹ = rebind(name)
           val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
-          `!`(parallelism, pace, Some(nameʹ), parʹ)
+          it.copy(guard = Some(nameʹ), par = parʹ)
 
         case it @ !(_, _, _, par) =>
           it.copy(par = rename(par))
@@ -671,13 +699,11 @@ object Encoding:
               xid
           it.copy(variables = variablesʹ, par = parʹ, xid = xidʹ, assignment = assignmentʹ)
 
-        case `{}`(identifier, pointers, agent, params*) =>
+        case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_))
           val paramsʹ = params.map(renamed(_))
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
-          `{}`(identifier, pointersʹ, agent, paramsʹ*)
-
-        case `(*)`(identifier, qual, params*) =>
+        case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params.map(renamed(_))
-
-          `(*)`(identifier, qual, paramsʹ*)
+          it.copy(params = paramsʹ)

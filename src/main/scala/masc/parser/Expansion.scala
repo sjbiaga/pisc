@@ -36,7 +36,7 @@ import Regex.Match
 
 import scala.collection.mutable.{ LinkedHashMap => Map }
 
-import scala.meta.Term
+import scala.meta.{ Lit, Term }
 
 import _root_.masc.parser.Expression
 import Expression.Code
@@ -66,6 +66,7 @@ abstract class Expansion extends Encoding:
       }
     }
   }
+
 
   def instance(defs: List[Define], end: String)
               (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
@@ -230,8 +231,8 @@ abstract class Expansion extends Encoding:
       def expand(in: Input, _ts: Seq[Term], end: Either[String, String])
                 (using Bindings, Duplications, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
-        case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder())) =>
-          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
+        case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder() | _: Lit)) =>
+          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() | _: Lit => "_" }
 
           val source = in.source
           val offset = in.offset
@@ -245,8 +246,8 @@ abstract class Expansion extends Encoding:
 
           expand(in, shadows, key)(rhs, end)(success)
 
-        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _op @ Term.Name(op), _, List(rhs))) =>
-          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
+        case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder() | _: Lit), _op @ Term.Name(op), _, List(rhs))) =>
+          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() | _: Lit => "_" }
 
           val source = in.source
           val offset = in.offset
@@ -461,11 +462,11 @@ object Expansion:
 
         case ∅() => ast
 
-        case ∥(it*) =>
-          ∥(it.map(_.replace)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.replace))
 
-        case `.`(end, _it*) =>
-          val it = _it.map {
+        case `.`(end, prefixes*) =>
+          val prefixesʹ = prefixes.map {
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
             case `..`(_path*) =>
@@ -479,7 +480,7 @@ object Expansion:
               it.copy(code = recoded)
             case it => it
           }
-          `.`(end.replace, it*)
+          `.`(end.replace, prefixesʹ*)
 
         case <>(given Option[Code], _path*) =>
           val path = _path.map {
@@ -511,18 +512,16 @@ object Expansion:
           else
             ast
 
-        case `{}`(identifier, pointers, true, params*) =>
+        case it @ `{}`(_, pointers, true, params*) =>
           val pointersʹ = pointers.map(replaced(_))
           val paramsʹ = params.map(replaced(_))
-
-          `{}`(identifier, pointersʹ, true, paramsʹ*)
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
         case _: `{}` => ???
 
-        case `(*)`(identifier, qual, params*) =>
+        case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params.map(replaced(_))
-
-          `(*)`(identifier, qual, paramsʹ*)
+          it.copy(params = paramsʹ)
 
 
     private def concatenate(using pointers: List[String]): T =
@@ -533,11 +532,11 @@ object Expansion:
 
         case ∅() => ast
 
-        case ∥(it*) =>
-          ∥(it.map(_.concatenate)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.concatenate))
 
-        case `.`(end, it*) =>
-          `.`(end.concatenate, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.concatenate)
 
         case it @ !(_, _, _, par) =>
           it.copy(par = par.concatenate)
@@ -552,9 +551,8 @@ object Expansion:
           it.assignment ++= variables.drop(it.assignment.size) zip pointers
           it
 
-        case it @ `{}`(identifier, _, agent, params*) =>
-          val pointersʹ = it.pointers ++ pointers
-          `{}`(identifier, pointersʹ, agent, params*)
+        case it: `{}` =>
+          it.copy(pointers = it.pointers ++ pointers)
 
         case _ => ast
 
@@ -567,12 +565,12 @@ object Expansion:
 
         case ∅() => ast
 
-        case ∥(it*) =>
-          ∥(it.map(_.update)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.update))
 
-        case `.`(end, _it*) =>
+        case `.`(end, prefixes*) =>
           given Bindings = Bindings(bindings)
-          val it = _it.map {
+          val prefixesʹ = prefixes.map {
             case it @ ν(names*) =>
               given_Bindings --= names
               it
@@ -589,7 +587,7 @@ object Expansion:
               given_Bindings -= name
               it.copy(code = recoded)
           }
-          `.`(end.update, it*)
+          `.`(end.update, prefixesʹ*)
 
         case <>(given Option[Code], _path*) =>
           val path = _path.map {
@@ -617,13 +615,11 @@ object Expansion:
           val assignmentʹ = assignment.map(_ -> updated(_))
           it.copy(par = par.update, assignment = assignmentʹ)
 
-        case `{}`(identifier, pointers, agent, params*) =>
+        case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(updated(_))
           val paramsʹ = params.map(updated(_))
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
-          `{}`(identifier, pointersʹ, agent, paramsʹ*)
-
-        case `(*)`(identifier, qual, params*) =>
+        case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params.map(updated(_))
-
-          `(*)`(identifier, qual, paramsʹ*)
+          it.copy(params = paramsʹ)

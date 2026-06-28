@@ -28,6 +28,7 @@
 
 package masc
 package emitter
+package ce
 
 import scala.meta.*
 import dialects.Scala3
@@ -49,9 +50,8 @@ object Program:
         // COMPOSITION /////////////////////////////////////////////////////////
 
         case ∅() =>
-          * = `_ <- IO.unit`
 
-        case ∥(operand) =>
+        case ∥(_, operand) =>
           * = operand.emit
 
         case it: ∥ =>
@@ -78,7 +78,7 @@ object Program:
 
         case τ(Some((Left(enums), _))) =>
           * = `_ <- *`("τ")
-          * :::= enums
+          * = * ::: enums
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
@@ -107,76 +107,72 @@ object Program:
         ////////////////////////////////////////////// restriction | prefixes //
 
 
-        ////// REPLICATION /////////////////////////////////////////////////////
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, pace, Some(name), par) =>
           val υidυ = id
 
-          var `!.(*).⋯` = `()`(name, None).emit :+ `_ <- *`(Term.Apply(\(υidυ),
-                                                                       Term.ArgClause(\(name) :: Nil)))
-
-          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.(*).⋯`).getOrElse(`!.(*).⋯`)
-
           val sem = if parallelism < 0 then null else id
 
-          val it =
-            if parallelism < 0
-            then
-              Term.If(Term.ApplyUnary("!", name),
-                      `IO.cede`,
-                      `List( *, … ).parSequence`(
-                        par.emit,
-                        `!⋯`
-                      )
-                     )
-            else
-              `!.(*).⋯` = `_ <- *.acquire`(sem) :: `!.(*).⋯`
-              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
-              Term.If(Term.ApplyUnary("!", name),
-                      `IO.cede`,
-                      `List( *, … ).parSequence`(
-                        par.emit,
-                        `!⋯`
-                      )
-                     )
+          val `()ʹ` = `()`(name, None)
+
+          val `!.().⋯` =
+            ( if parallelism < 0
+              then
+                `()ʹ`.emit
+              else
+                `()ʹ`.emit :+ `_ <- *.acquire`(sem)
+            ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(name) :: Nil)))
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.().⋯`).getOrElse(`!.().⋯`)
+
+          val body =
+            Term.If(Term.ApplyUnary("!", name),
+                    `IO.cede`,
+                    `List( *, … ).parSequence`(
+                      if parallelism < 0
+                      then par.emit
+                      else par.emit :+ `_ <- *.release`(sem),
+                      `!⋯`
+                    )
+                   )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+            * = `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
           else
-            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, it)) :: `!.(*).⋯`
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `IO { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
 
         case !(parallelism, pace, _, par) =>
           val υidυ = id
 
-          var `!.⋯` = `_ <- *`(υidυ) :: Nil
-
-          var `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
-
           val sem = if parallelism < 0 then null else id
 
-          val it =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                par.emit,
-                `_ <- IO.unit` :: `!⋯`
-              )
-            else
-              `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
-              `!⋯` = `_ <- *.acquire`(sem) :: `!⋯`
-              `List( *, … ).parSequence`(
-                par.emit :+ `_ <- *.release`(sem),
-                `_ <- IO.unit` :: `!⋯`
-              )
+          val `!.⋯` =
+            ( if parallelism < 0
+              then
+                Nil
+              else
+                `_ <- *.acquire`(sem) :: Nil
+            ) :+ `_ <- *`(υidυ)
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then par.emit
+              else par.emit :+ `_ <- *.release`(sem),
+              `_ <- \\.unit` :: `!⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.⋯`
+            * = `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
           else
-            * = `* <- Semaphore[IO](…)`(sem, parallelism) ::
-                `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, it)) :: `!.⋯`
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ, `IO { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -228,7 +224,7 @@ object Program:
         // INSTANTIATION ///////////////////////////////////////////////////////
 
         case `⟦⟧`(_, variables, _par, _, assignment) =>
-          val ** = assignment
+          * = assignment
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
@@ -239,9 +235,9 @@ object Program:
                     then
                       _par
                     else
-                      ∥(`.`(_par, ν(variables.drop(n).toSeq*)))
+                      ∥(-1, `.`(_par, ν(variables.drop(n).toSeq*)))
 
-          * = ** ::: par.emit
+          * = * ::: par.emit
 
         case _: `{}` => ???
 
@@ -257,10 +253,8 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * :+= `_ <- *`(Term.Apply(
-                           Term.Apply(term,
-                                      Term.ArgClause(\(")(") :: \("}{") :: Nil)),
-                           Term.ArgClause(args)))
+          * = `_ <- *`(Term.Apply(Term.Apply(term, Term.ArgClause(\(")(") :: \("}{") :: Nil)),
+                                  Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
@@ -269,6 +263,6 @@ object Program:
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[String] =
+    def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
-      prog.map(_ -> _.emit(using id())).map(_.swap).map(defn(_)(_).toString)
+      prog.map(_ -> _.emit(using id())).map(_.swap).map(defn(_)(_))

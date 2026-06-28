@@ -66,10 +66,17 @@ abstract class Calculus extends Ambient:
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
       rep1sep(sequential, "|") ^^ { _.unzip match
         case (it, ns) =>
-          ∥(it*) -> ns.reduce(_ ++ _) match
-            case (∥(it*), names) =>
-              (0 until scalingʹ).foldLeft(∥(): ∥) { case (∥(itʹ*), _) => ∥((itʹ ++ it)*) } match
-                case par => par -> (if par.components.isEmpty then Names() else names)
+          if scalingʹ == 0
+          then
+            ∥(-1) -> Names()
+          else if _scaling && emitter.canScale
+          then
+            ∥(scaling, it*) -> ns.reduce(_ ++ _)
+          else
+            ∥(-1, it*) -> ns.reduce(_ ++ _) match
+              case (∥(_, it*), names) =>
+                (0 until scalingʹ).foldLeft(∥(-1): ∥) { case (∥(_, itʹ*), _) => ∥(-1, (itʹ ++ it)*) } match
+                  case par => par -> names
       }
     }
 
@@ -82,7 +89,7 @@ abstract class Calculus extends Ambient:
     }
 
   def parallelʹ(using Bindings, Duplications, Int): Parser[(∥, Names)] =
-    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥() -> Names()) }
+    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥(-1) -> Names()) }
 
   def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
     "!"~> scale ~ opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
@@ -95,13 +102,15 @@ abstract class Calculus extends Ambient:
       case (amb, name) ~ (par, free) =>
         `[]`(amb, par) -> (name ++ free)
     } |
-    ("<"~>caps<~">") ~ opt( expression ) ^^ { // output action
+    ("<"~> opt( caps ) <~">") ~ opt( expression ) ^^ { // output action
       case _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
-      case (path, free) ~ Some((it @ (Right(_), _), freeʹ)) =>
+      case Some((path, free)) ~ Some((it @ (Right(_), _), freeʹ)) =>
         <>(Some(it), path*) -> (free ++ freeʹ)
-      case (path, free) ~ _ =>
+      case Some((path, free)) ~ _ =>
         <>(None, path*) -> free
+      case _ =>
+        <>(None) -> Names()
     } |
     "go" ~> name ~ ("."~> parallel) ^^ { // objective move
       case (amb, name) ~ (par, free) =>
@@ -111,9 +120,9 @@ abstract class Calculus extends Ambient:
     invocation() |
     instantiation
 
-  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
-
   def capital: Parser[(`{}`, Names)]
+
+  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
@@ -160,21 +169,27 @@ abstract class Calculus extends Ambient:
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
-    qual ~ IDENT ~ opt( "("~>names<~")" ) ^^ {
+    qual ~ IDENT ~ opt( "("~> names ~ opt(if equation then "*" else "") <~")" ) ^^ {
       case qual ~ identifier ~ _ if equation && qual.nonEmpty =>
         throw EquationQualifiedException(identifier, qual)
-      case qual ~ "Self" ~ Some(params) =>
+      case qual ~ "Self" ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         self += _code
-        `(*)`("Self_" + _code, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`("Self_" + _code, qual, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ "Self" ~ _ =>
         self += _code
         `(*)`("Self_" + _code, qual) -> Names()
-      case qual ~ identifier ~ Some(params) =>
+      case qual ~ identifier ~ Some(params ~ init) =>
+        val paramsʹ = if equation && init.isDefined
+                      then params.map(_._1).init
+                      else params.map(_._1)
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(identifier, qual, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`(identifier, qual, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
       case qual ~ identifier ~ _ =>
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
@@ -227,7 +242,7 @@ object Calculus:
 
   enum AST:
 
-    case ∥(components: AST.`.`*)
+    case ∥(scaling: Int, components: AST.`.`*)
 
     case `.`(end: AST.∥ | -, prefixes: Pre*)
 
@@ -259,7 +274,8 @@ object Calculus:
 
     override def toString: String = this match
       case ∅() => "()"
-      case ∥(components*) => components.mkString(" | ")
+      case ∥(-1, components*) => components.mkString(" | ")
+      case ∥(sc, components*) => sc + " * " + components.mkString(" | ")
 
       case `.`(∅()) => "()"
       case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
@@ -294,7 +310,7 @@ object Calculus:
         s"""$identifier$ps{${pointers.mkString(", ")}}"""
 
       case `(*)`(identifier, qual, params*) =>
-        import emitter.Meta.\
+        import emitter.shared.Meta.\
         val args = params.map(\(_)).toList
         val term = qual match
           case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
@@ -305,6 +321,39 @@ object Calculus:
     def unapply(self: AST): Boolean = self match
       case par: ∥ => par.isVoid
       case _ => false
+
+  given `_∥_`: {} with
+    extension (self: ∥)
+      def copy(scaling: Int = self.scaling,
+               components: Seq[`.`] = self.components): ∥ =
+        ∥(scaling, components*)
+
+  given `_._`: {} with
+    extension (self: `.`)
+      def copy(end: ∥ | - = self.end,
+               prefixes: Seq[Pre] = self.prefixes): `.` =
+        `.`(end, prefixes*)
+
+  given `_<>_`: {} with
+    extension (self: <>)
+      def copy(code: Option[Code] = self.code,
+               path: Seq[Ambient.AST] = self.path): <> =
+        <>(code, path*)
+
+  given `_{}_`: {} with
+    extension (self: `{}`)
+      def copy(identifier: String = self.identifier,
+               pointers: List[String] = self.pointers,
+               agent: Boolean = self.agent,
+               params: Seq[String] = self.params): `{}` =
+        `{}`(identifier, pointers, agent, params*)
+
+  given `_(*)_`: {} with
+    extension (self: `(*)`)
+      def copy(identifier: String = self.identifier,
+               qual: List[String] = self.qual,
+               params: Seq[String] = self.params): `(*)` =
+        `(*)`(identifier, qual, params*)
 
 
   // exceptions
@@ -329,11 +378,9 @@ object Calculus:
   // functions
 
   extension (par: ∥)
-    @annotation.tailrec
-    private def isVoid: Boolean = par match
-      case ∥() => true
-      case ∥(`.`(par: ∥)) => par.isVoid
-      case _ => false
+    def isVoid: Boolean = par match
+      case ∥(_) => true
+      case _ => par.components.forall { case `.`(par: ∥) => par.isVoid case _ => false }
 
   extension [T <: AST](ast: T)
 
@@ -343,36 +390,37 @@ object Calculus:
 
       ast match
 
-        case ∅() => ast
+        case ∅() =>
+          ∥(-1)
 
-        case ∥(`.`(par: ∥), it*) =>
+        case it @ ∥(_, `.`(par: ∥), components*) =>
           val lhs = par.flatten
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components).filterNot(∥(_).isVoid)*)
+          val rhs = ∥(-1, components*).flatten
+          it.copy(components = (lhs.components ++ rhs.components).filterNot(∥(-1, _).isVoid))
 
-        case ∥(seq, it*) =>
-          val lhs: ∥ = ∥(seq.flatten)
-          val rhs = ∥(it*).flatten
-          ∥((lhs.components ++ rhs.components).filterNot(∥(_).isVoid)*)
+        case it @ ∥(_, seq, components*) =>
+          val lhs: ∥ = ∥(-1, seq.flatten)
+          val rhs = ∥(-1, components*).flatten
+          it.copy(components = (lhs.components ++ rhs.components).filterNot(∥(-1, _).isVoid))
 
-        case `.`(∥(`.`(end, ps*)), it*) =>
-          `.`(end, (it ++ ps)*).flatten
+        case `.`(∥(_, `.`(end, psr*)), psl*) =>
+          `.`(end, (psl ++ psr)*).flatten
 
-        case `.`(end, it*) =>
-          `.`(end.flatten, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.flatten)
 
         case !(-1, None, None, par) =>
           par.flatten match
-            case ∥(`.`(end: !)) => end
+            case ∥(-1|1, `.`(end: !)) => end
             case it => `!`(-1, None, None, it)
 
         case it @ !(_, _, _, par) =>
           it.copy(par = par.flatten)
 
-        case `[]`(amb, par) =>
-          `[]`(amb, par.flatten)
+        case it @ `[]`(_, par) =>
+          it.copy(par = par.flatten)
 
-        case `go.`(amb, par) =>
-          `go.`(amb, par.flatten)
+        case it @ `go.`(_, par) =>
+          it.copy(par = par.flatten)
 
         case _ => ast

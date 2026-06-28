@@ -46,7 +46,7 @@ import Expansion.Duplications
 abstract class Ambient extends Expression:
 
   def caps: Parser[(List[AST], Names)] =
-    repsep(cap, ".") ^^ { _.unzip match
+    rep1sep(cap, ".") ^^ { _.unzip match
       case (cs, ns) =>
         cs.filterNot(_.isInstanceOf[ε.type]) -> ns.reduceOption(_ ++ _).getOrElse(Names())
     }
@@ -82,6 +82,8 @@ abstract class Ambient extends Expression:
       rep1(acceptIf(Character.isLowerCase)("ambient name expected but '" + _ + "' found"),
           elem("ambient name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
+  protected val emitter: Emitter
+
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
@@ -111,6 +113,8 @@ abstract class Ambient extends Expression:
   protected var _exclude: Boolean = false
 
   protected var _paceunit: String = null
+
+  protected var _scaling: Boolean = false
 
   private[parser] var _id: helper.υidυ = null
 
@@ -179,6 +183,10 @@ object Ambient:
       case ζ(op, amb) => s"$op $amb"
       case _ => "ε"
 
+  enum Emitter(val canScale: Boolean = false):
+    case ce extends Emitter()
+    private[parser] case test extends Emitter()
+
   type Names = Set[String]
 
   object Names:
@@ -198,11 +206,11 @@ object Ambient:
 
         case ∅() => ast
 
-        case ∥(it*) =>
-          ∥(it.map(_.shallow)*)
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.shallow))
 
-        case `.`(end, it*) =>
-          `.`(end.shallow, it*)
+        case it @ `.`(end, _*) =>
+          it.copy(end = end.shallow)
 
         case it @ !(_, _, _, par) =>
           it.copy(par = par.shallow)
@@ -222,7 +230,8 @@ object Ambient:
         case _ => ast
 
 
-  final class Main(override protected val in: String) extends Expansion:
+  final class Main(override protected val emitter: Emitter,
+                   override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -262,10 +271,12 @@ object Ambient:
       _dups = false
       _exclude = false
       _paceunit = "second"
-      _dirs = List(Map("errors" -> _werr,
+      _scaling = false
+      _dirs = List(Map("errors"       -> _werr,
                        "duplications" -> _dups,
-                       "exclude" -> _exclude,
-                       "paceunit" -> _paceunit))
+                       "exclude"      -> _exclude,
+                       "paceunit"     -> _paceunit,
+                       "scaling"      -> _scaling))
       eqtn = List()
       defn = Map()
       self = Set()

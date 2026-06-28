@@ -27,6 +27,7 @@
  */
 
 package masc
+package ce
 
 import java.io.{ FileWriter, BufferedWriter }
 import java.nio.charset.StandardCharsets.UTF_8
@@ -34,8 +35,11 @@ import java.nio.file.Paths
 
 import scala.io.Source
 
+import scala.meta.*
+import dialects.Scala3
+
 import parser.Ambient
-import emitter.Program
+import emitter.ce.Program
 
 
 object Main:
@@ -50,10 +54,11 @@ object Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ma = Ambient.Main(in)
+      val ma = Ambient.Main(Ambient.Emitter.ce, in)
 
       try
-        source = Source.fromFile(s"$examples/masc/$in")
+        val root = if arg.startsWith("test") then "test" else "masc"
+        source = Source.fromFile(s"$examples/$root/$in")
         fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
@@ -65,7 +70,7 @@ object Main:
 
         val ls = bind.filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls)
+        val code = (ps.zipWithIndex.map { _ -> is(_) } ++ ls.map(_.parse[Stat].get -> _))
           .sortBy(_._2)
           .map(_._1)
           .mkString("\n\n")
