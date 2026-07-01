@@ -32,12 +32,13 @@ package object sΠ:
 
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.apply.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref, Resource, Unique }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue, UUIDGen }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore, UUIDGen }
 
   import _root_.fs2.concurrent.{ SignallingRef, Topic }
   import _root_.fs2.{ Pull, Stream }
@@ -160,31 +161,25 @@ package object sΠ:
           map <- Stream.eval {
             for
               local_topic <- Topic[F, (`()`[F], Unique.Token)]
-              local_queue <- Queue.unbounded[F, Unit]
-              local_limit <- Ref[F].of(false)
+              local_limit <- Semaphore[F](0)
               s2s_topic <- Topic[F, (`()`[F], Unique.Token)]
-              s2s_queue <- Queue.unbounded[F, Unit]
-              s2s_limit <- Ref[F].of(false)
+              s2s_limit <- Semaphore[F](0)
               p2c_topic <- Topic[F, (`()`[F], Unique.Token)]
-              p2c_queue <- Queue.unbounded[F, Unit]
-              p2c_limit <- Ref[F].of(false)
+              p2c_limit <- Semaphore[F](0)
               accept_topic <- Topic[F, (`()`[F], Unique.Token)]
-              accept_queue <- Queue.unbounded[F, Unit]
-              accept_limit <- Ref[F].of(false)
+              accept_limit <- Semaphore[F](0)
               expel_topic <- Topic[F, (`()`[F], Unique.Token)]
-              expel_queue <- Queue.unbounded[F, Unit]
-              expel_limit <- Ref[F].of(false)
+              expel_limit <- Semaphore[F](0)
               merge_topic <- Topic[F, (`()`[F], Unique.Token)]
-              merge_queue <- Queue.unbounded[F, Unit]
-              merge_limit <- Ref[F].of(false)
+              merge_limit <- Semaphore[F](0)
             yield
               Map(
-                `π-local`.ord  -> ><[F](local_topic, local_queue, local_limit),
-                `π-s2s`.ord    -> ><[F](s2s_topic, s2s_queue, s2s_limit),
-                `π-p2c`.ord    -> ><[F](p2c_topic, p2c_queue, p2c_limit),
-                `π-accept`.ord -> ><[F](accept_topic, accept_queue, accept_limit),
-                `π-expel`.ord  -> ><[F](expel_topic, expel_queue, expel_limit),
-                `π-merge+`.ord -> ><[F](merge_topic, merge_queue, merge_limit)
+                `π-local`.ord  -> ><[F](local_topic, local_limit),
+                `π-s2s`.ord    -> ><[F](s2s_topic, s2s_limit),
+                `π-p2c`.ord    -> ><[F](p2c_topic, p2c_limit),
+                `π-accept`.ord -> ><[F](accept_topic, accept_limit),
+                `π-expel`.ord  -> ><[F](expel_topic, expel_limit),
+                `π-merge+`.ord -> ><[F](merge_topic, merge_limit)
               )
           }
         yield
@@ -406,29 +401,24 @@ package object sΠ:
     private def map = `()`[>*<[F]]
 
     private inline def t(implicit ord: Int) = map(ord).topic
-    private inline def q(implicit ord: Int) = map(ord).queue
-    private inline def r(implicit ord: Int) = map(ord).limit
-    private implicit def a(using Int): F[Unit] = q.take >> r.set(false)
-    private def o(using Int) =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
-      yield
-        ()
+    private inline def l(implicit ord: Int) = map(ord).limit
+    private implicit def a(using Int): F[Unit] = l.acquire
+    private def o(using Int) = l.release
     private def s(using Int) = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten
 
     extension (self: Stream[F, Unique.Token])
-      private def `zipRight s`(using Int) =
+      private def `zipRight s`(using Int): Stream[F, `()`[F]] = `self zipRight s`(true)
+      private def `zipRight s.head`(using Int): Stream[F, `()`[F]] = `self zipRight s`(false).head
+      private def `self zipRight s`(r: Boolean)(using Int): Stream[F, `()`[F]] =
         def zip(tks: Pull[F, Nothing, Option[(Unique.Token, Stream[F, Unique.Token])]],
                 its: Pull[F, Nothing, Option[((`()`[F], Unique.Token), Stream[F, (`()`[F], Unique.Token)])]]): Pull[F, `()`[F], Unit] =
           tks.flatMap {
             case Some((tk, tksʹ)) =>
               its.flatMap {
                 case Some(((it, tkʹ), itsʹ)) if tk eq tkʹ =>
-                  Pull.output1(it) >> zip(tksʹ.pull.uncons1, itsʹ.pull.uncons1)
-                case Some((_, itsʹ)) =>
-                  zip(tks, itsʹ.pull.uncons1)
+                  Pull.output1(it) >> Pull.eval(o.whenA(r)) >> zip(tksʹ.pull.uncons1, itsʹ.pull.uncons1)
+                case Some(_) =>
+                  zip(tksʹ.pull.uncons1, its)
                 case _ =>
                   Pull.done
               }
@@ -436,13 +426,6 @@ package object sΠ:
               Pull.done
           }
         zip(self.pull.uncons1, s.pull.uncons1).stream
-
-    def ====(that: `()`[F]) =
-      try
-        this.map eq that.map
-      catch
-        case _ =>
-          this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
@@ -2004,8 +1987,7 @@ package object sΠ:
   private object `Π-magic`:
 
     case class ><[F[_]](topic: Topic[F, (`()`[F], Unique.Token)],
-                        queue: Queue[F, Unit],
-                        limit: Ref[F, Boolean])
+                        limit: Semaphore[F])
 
     type >*<[F[_]] = Map[Int, ><[F]]
 

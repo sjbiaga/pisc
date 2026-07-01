@@ -31,7 +31,7 @@ lazy val root = (project in file("."))
 
 lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "ce main BioAmbients[experimental]2Scala",
+    name := "ce BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -44,7 +44,7 @@ lazy val `ce-main` = (project in file("ce/main"))
 
 lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
-    name := "ce main_ BioAmbients[experimental]2Scala",
+    name := "ce BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -57,7 +57,7 @@ lazy val `ce-main_` = (project in file("ce/main_"))
 
 lazy val `cef-main` = (project in file("cef/main"))
   .settings(
-    name := "cef main BioAmbients[experimental]2Scala",
+    name := "cef BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -70,7 +70,7 @@ lazy val `cef-main` = (project in file("cef/main"))
 
 lazy val `cef-main_` = (project in file("cef/main_"))
   .settings(
-    name := "cef main_ BioAmbients[experimental]2Scala",
+    name := "cef BioAmbients[experimental]2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -117,7 +117,7 @@ lazy val `zs-main` = (project in file("zs/main"))
     scalaVersion := "3.9.0-RC1",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, zic, munit % Test)
   )
 
 lazy val `zs-main_` = (project in file("zs/main_"))
@@ -130,7 +130,7 @@ lazy val `zs-main_` = (project in file("zs/main_"))
     scalaVersion := "3.9.0-RC1",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, zic, munit % Test)
   )
 
 unmanagedSources / excludeFilter := "ce*/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"

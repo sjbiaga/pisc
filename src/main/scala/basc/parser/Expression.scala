@@ -122,12 +122,12 @@ abstract class Expression extends JavaTokenParsers:
         operators.headOption match
           case Some(op) if op.isBlank => ???
           case Some(op) =>
-            Term.ApplyInfix(Term.Name(it),
+            Term.ApplyInfix(if it == "_" then Term.Placeholder() else Term.Name(it),
                             Term.Name(op.strip),
                             Type.ArgClause(Nil),
                             Term.ArgClause(this(operators.tail, operands.tail))) :: Nil
           case _ =>
-            Term.Name(it) :: Nil
+            (if it == "_" then Term.Placeholder() else Term.Name(it)) :: Nil
       case _ if operators.nonEmpty => ???
       case _ => Nil
 

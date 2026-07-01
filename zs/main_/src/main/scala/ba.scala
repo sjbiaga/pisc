@@ -30,6 +30,8 @@ package object sΠ:
 
   import _root_.scala.collection.immutable.{ Map, Set }
 
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.concurrentInstance
   import _root_.zio.{ Clock, Duration, FiberRef, Hub, Promise, Random, Ref, Queue, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stm.{ TRef, TSemaphore }
@@ -152,31 +154,25 @@ package object sΠ:
           map <- ZStream.fromZIO {
             for
               local_hub   <- Hub.unbounded[(`()`, Object)]
-              local_queue <- Queue.unbounded[Unit]
-              local_limit <- Ref.make(false)
+              local_limit <- Semaphore[Task](0)
               s2s_hub   <- Hub.unbounded[(`()`, Object)]
-              s2s_queue <- Queue.unbounded[Unit]
-              s2s_limit <- Ref.make(false)
+              s2s_limit <- Semaphore[Task](0)
               p2c_hub   <- Hub.unbounded[(`()`, Object)]
-              p2c_queue <- Queue.unbounded[Unit]
-              p2c_limit <- Ref.make(false)
+              p2c_limit <- Semaphore[Task](0)
               accept_hub   <- Hub.unbounded[(`()`, Object)]
-              accept_queue <- Queue.unbounded[Unit]
-              accept_limit <- Ref.make(false)
+              accept_limit <- Semaphore[Task](0)
               expel_hub   <- Hub.unbounded[(`()`, Object)]
-              expel_queue <- Queue.unbounded[Unit]
-              expel_limit <- Ref.make(false)
+              expel_limit <- Semaphore[Task](0)
               merge_hub   <- Hub.unbounded[(`()`, Object)]
-              merge_queue <- Queue.unbounded[Unit]
-              merge_limit <- Ref.make(false)
+              merge_limit <- Semaphore[Task](0)
             yield
               Map(
-                `π-local`.ord  -> ><(local_hub, local_queue, local_limit),
-                `π-s2s`.ord    -> ><(s2s_hub, s2s_queue, s2s_limit),
-                `π-p2c`.ord    -> ><(p2c_hub, p2c_queue, p2c_limit),
-                `π-accept`.ord -> ><(accept_hub, accept_queue, accept_limit),
-                `π-expel`.ord  -> ><(expel_hub, expel_queue, expel_limit),
-                `π-merge+`.ord -> ><(merge_hub, merge_queue, merge_limit)
+                `π-local`.ord  -> ><(local_hub, local_limit),
+                `π-s2s`.ord    -> ><(s2s_hub, s2s_limit),
+                `π-p2c`.ord    -> ><(p2c_hub, p2c_limit),
+                `π-accept`.ord -> ><(accept_hub, accept_limit),
+                `π-expel`.ord  -> ><(expel_hub, expel_limit),
+                `π-merge+`.ord -> ><(merge_hub, merge_limit)
               )
           }
         yield
@@ -414,24 +410,19 @@ package object sΠ:
     private def map = `()`[>*<]
 
     private inline def h(implicit ord: Int) = map(ord).hub
-    private inline def q(implicit ord: Int) = map(ord).queue
-    private inline def r(implicit ord: Int) = map(ord).limit
-    private implicit def a(using Int): UIO[Unit] = q.take *> r.set(false)
-    private def o(using Int) =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s <= 0 then q.offer(()) *> r.set(true) else ZIO.unit
-      yield
-        ()
-    private def s(tk: Object)(using Int) = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o)).filter(_._2 eq tk).map(_._1)
+    private inline def l(implicit ord: Int) = map(ord).limit
+    private implicit def a(using Int): Task[Unit] = l.acquire
+    private def o(using Int) = l.release
+    private def s(tk: Object)(using Int) = ZStream
+      .unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o))
+      .filter(_._2 eq tk)
+      .map(_._1)
 
     def ====(that: `()`) =
       try
         this.map eq that.map
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
@@ -846,7 +837,7 @@ package object sΠ:
                 yield
                   token
               }.repeat(Schedule.forever).interruptWhen(sp)
-              it <- s(tk).take(1)
+              it <- s(tk).take(1).tap(_ => o)
               _  <- ZStream.fromZIO(*.fold(ZIO.unit)(_.offer(())))
             yield
               it
@@ -1210,7 +1201,7 @@ package object sΠ:
               yield
                 token
             }.repeat(Schedule.forever).interruptWhen(sp)
-            it <- s(tk).take(1)
+            it <- s(tk).take(1).tap(_ => o)
           yield
             it
 
@@ -1578,7 +1569,7 @@ package object sΠ:
                  yield
                    token
               }.repeat(Schedule.forever).interruptWhen(sp)
-              _  <- if polarity then s(tk).take(1) else ZStream.succeed(unit -> tk).through1(h)
+              _  <- if polarity then s(tk).take(1).tap(_ => o) else ZStream.succeed(unit -> tk).through1(h)
               _  <- ZStream.fromZIO(*.fold(ZIO.unit)(_.offer(())))
             yield
               ()
@@ -1657,7 +1648,7 @@ package object sΠ:
                yield
                  token
             }.interruptWhen(sp)
-            _  <- if polarity then s(tk).take(1) else ZStream.succeed(unit -> tk).through1(h)
+            _  <- if polarity then s(tk).take(1).tap(_ => o) else ZStream.succeed(unit -> tk).through1(h)
           yield
             ()
 
@@ -2056,8 +2047,7 @@ package object sΠ:
   private object `Π-magic`:
 
     case class ><(hub: Hub[(`()`, Object)],
-                  queue: Queue[Unit],
-                  limit: Ref[Boolean])
+                  limit: Semaphore[Task])
 
     type >*< = Map[Int, ><]
 

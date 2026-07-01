@@ -204,9 +204,8 @@ package object sΠ:
     def ====(that: `()`) =
       try
         this.ref eq that.ref
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this

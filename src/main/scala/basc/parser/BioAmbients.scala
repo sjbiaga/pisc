@@ -167,7 +167,7 @@ abstract class BioAmbients extends Expression:
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
-    opt( wholeNumber <~ "*" ) ^^ { _.map(_.toInt.abs).getOrElse(-1) }
+    opt( wholeNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt.abs) }
 
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
@@ -288,7 +288,11 @@ abstract class BioAmbients extends Expression:
   protected object BindingOccurrence:
     def apply(names: Names)
              (using Bindings, Int): Unit =
-      names.foreach { it => this(it, if _code < 0 then None else Some(it), hardcoded = true) }
+      if _code < 0
+      then
+        names.foreach(this(_, None, hardcoded = true))
+      else
+        (names zip names.map(Some(_))).foreach(this(_, _, hardcoded = true))
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
