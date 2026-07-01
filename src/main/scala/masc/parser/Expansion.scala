@@ -76,7 +76,7 @@ abstract class Expansion extends Encoding:
     new Parser[(`⟦⟧`, Names)] {
 
       def expand(in: Input, shadows: List[Option[String]], key: CacheKey)
-                (op: String, end: Either[String, String])
+                (_op: Either[String, Lit], end: Either[String, String])
                 (success: Input => (ParseResult[Fresh], Seq[Term]))
                 (using bindings: Bindings)
                 (using duplications: Duplications)
@@ -90,55 +90,66 @@ abstract class Expansion extends Encoding:
         if (open_r findPrefixMatchOf SubSequence(source, start, 1 min (source.length - start))).nonEmpty
         then
 
-          if op.charAt(0).isLower || op == "_"
-          then
-            Failure("name expected not instantiation", in) -> Nil
+          _op match
 
-          else
+            case Right(lit) =>
+              Failure(s"literal `$lit` expected not instantiation", in) -> Nil
 
-            _cache.get(key) match
+            case Left(op) =>
 
-              case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
-                bindings ++= binders
+              if op.charAt(0).isLower
+              then
+                Failure("name expected not instantiation", in) -> Nil
 
-                substitution(op) = exp
-                free ++= freeʹ -- bindings.map(_._1)
+              else if op == "_"
+              then
+                Failure("nothing expected not instantiation", in) -> Nil
 
-                paste(cp)
+              else
 
-                success(inʹ)
+                _cache.get(key) match
 
-              case _ =>
-
-                given Bindings = Bindings(bindings)
-                parse(instantiation, in) match
-
-                  case Success((exp, freeʹ), in) =>
+                  case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
                     bindings ++= binders
 
                     substitution(op) = exp
                     free ++= freeʹ -- bindings.map(_._1)
 
-                    val source = in.source
-                    val offset = in.offset
-                    val start = handleWhiteSpace(source, offset)
+                    paste(cp)
 
-                    val n = end.map(_.length).getOrElse(0)
-
-                    if start + n <= source.length
-                    && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
-                    then
-                      val inʹ = in.drop(start + n - offset)
-
-                      _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
-
-                      success(inʹ)
-
-                    else
-                      Failure(s"operator '${end.right.get}' expected", in) -> Nil
+                    success(inʹ)
 
                   case _ =>
-                    Failure("instantiation expected", in) -> Nil
+
+                    given Bindings = Bindings(bindings)
+                    parse(instantiation, in) match
+
+                      case Success((exp, freeʹ), in) =>
+                        bindings ++= binders
+
+                        substitution(op) = exp
+                        free ++= freeʹ -- bindings.map(_._1)
+
+                        val source = in.source
+                        val offset = in.offset
+                        val start = handleWhiteSpace(source, offset)
+
+                        val n = end.map(_.length).getOrElse(0)
+
+                        if start + n <= source.length
+                        && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
+                        then
+                          val inʹ = in.drop(start + n - offset)
+
+                          _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
+
+                          success(inʹ)
+
+                        else
+                          Failure(s"operator '${end.right.get}' expected", in) -> Nil
+
+                      case _ =>
+                        Failure("instantiation expected", in) -> Nil
 
         else balanced(end)(source, start) match
 
@@ -152,74 +163,106 @@ abstract class Expansion extends Encoding:
             || result.strip == "_"
             then
 
-              if op.charAt(0).isUpper
-              then
-                Failure("parallel expected", in) -> Nil
+              _op match
 
-              else
-                val inʹ = in.drop(start + n - offset)
-                success(inʹ)
+                case Right(lit) =>
+                  Failure(s"literal `$lit` expected", in) -> Nil
 
-            else if op.charAt(0).isLower || op == "_"
-            then
+                case Left(op) =>
 
-              parseAll(name, result) match
+                  if op.charAt(0).isUpper
+                  then
+                    Failure("parallel expected", in) -> Nil
 
-                case Success((it, freeʹ), _) =>
-                  shadows(idx) match
-                    case shadow @ Some(_) =>
-                      BindingOccurrence(it, shadow)
-                      duplications(xid)._2(op) = it -> shadow
-                    case _ =>
-                      bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
-                        case Some((_, Shadow(υidυ))) =>
-                          substitution(op) = υidυ
-                        case _ =>
-                          substitution(op) = it
-                      free ++= freeʹ -- bindings.map(_._1)
-                  idx += 1
+                  else if op == "_"
+                  then
+                    val inʹ = in.drop(start + n - offset)
+                    success(inʹ)
 
-                  val inʹ = in.drop(start + n - offset)
-                  success(inʹ)
-
-                case _ =>
-                  Failure("name expected", in) -> Nil
+                  else
+                    Failure("name expected", in) -> Nil
 
             else
 
-              _cache.get(key) match
+              _op match
 
-                case Some((par: ∥, cp, freeʹ, given Bindings, inʹ)) =>
-                  bindings ++= binders
+                case Right(lit) =>
 
-                  substitution(op) = par
-                  free ++= freeʹ -- bindings.map(_._1)
+                  import scala.meta.*
+                  import scala.meta.contrib.*
+                  import dialects.Scala3
 
-                  paste(cp)
+                  result.parse[Term] match
 
-                  success(inʹ)
-
-                case _ =>
-
-                  given Bindings = Bindings(bindings)
-                  parseAll(parallel, result) match
-
-                    case Success((par, freeʹ), _) =>
-                      bindings ++= binders
-
-                      val parʹ = par.flatten.update(using Bindings(given_Bindings))
-
-                      substitution(op) = parʹ
-                      free ++= freeʹ -- bindings.map(_._1)
-
+                    case scala.meta.parsers.Parsed.Success(litʹ) if lit isEqual litʹ =>
                       val inʹ = in.drop(start + n - offset)
-
-                      _cache(key) = (parʹ, copy, freeʹ, given_Bindings, inʹ)
-
                       success(inʹ)
 
                     case _ =>
-                      Failure("parallel expected", in) -> Nil
+                      Failure(s"literal `$lit` expected but `${result.strip}` found", in) -> Nil
+
+                case Left(op) =>
+
+                  if op.charAt(0).isLower
+                  then
+
+                    parseAll(name, result) match
+
+                      case Success((it, freeʹ), _) =>
+                        shadows(idx) match
+                          case shadow @ Some(_) =>
+                            BindingOccurrence(it, shadow)
+                            duplications(xid)._2(op) = it -> shadow
+                          case _ =>
+                            bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
+                              case Some((_, Shadow(υidυ))) =>
+                                substitution(op) = υidυ
+                              case _ =>
+                                substitution(op) = it
+                            free ++= freeʹ -- bindings.map(_._1)
+                        idx += 1
+
+                        val inʹ = in.drop(start + n - offset)
+                        success(inʹ)
+
+                      case _ =>
+                        Failure("name expected", in) -> Nil
+
+                  else
+
+                    _cache.get(key) match
+
+                      case Some((par: ∥, cp, freeʹ, given Bindings, inʹ)) =>
+                        bindings ++= binders
+
+                        substitution(op) = par
+                        free ++= freeʹ -- bindings.map(_._1)
+
+                        paste(cp)
+
+                        success(inʹ)
+
+                      case _ =>
+
+                        given Bindings = Bindings(bindings)
+                        parseAll(parallel, result) match
+
+                          case Success((par, freeʹ), _) =>
+                            bindings ++= binders
+
+                            val parʹ = par.flatten.update(using Bindings(given_Bindings))
+
+                            substitution(op) = parʹ
+                            free ++= freeʹ -- bindings.map(_._1)
+
+                            val inʹ = in.drop(start + n - offset)
+
+                            _cache(key) = (parʹ, copy, freeʹ, given_Bindings, inʹ)
+
+                            success(inʹ)
+
+                          case _ =>
+                            Failure("parallel expected", in) -> Nil
 
           case _ =>
             val found = if start == source.length
@@ -232,7 +275,7 @@ abstract class Expansion extends Encoding:
                 (using Bindings, Duplications, Substitution, Names): ((Fresh, Term)) => (ParseResult[Fresh], Seq[Term]) =
 
         case (it @ (_, (_, shadows)), _rhs @ (Term.Name(_) | Term.Placeholder() | _: Lit)) =>
-          val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() | _: Lit => "_" }
+          val rhs = _rhs match { case lit: Lit => Right(lit) case _ => Left(_rhs.toString) }
 
           val source = in.source
           val offset = in.offset
@@ -247,7 +290,7 @@ abstract class Expansion extends Encoding:
           expand(in, shadows, key)(rhs, end)(success)
 
         case (it @ (_, (_, shadows)), Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder() | _: Lit), _op @ Term.Name(op), _, List(rhs))) =>
-          val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() | _: Lit => "_" }
+          val lhs = _lhs match { case lit: Lit => Right(lit) case _ => Left(_lhs.toString) }
 
           val source = in.source
           val offset = in.offset
@@ -326,8 +369,8 @@ abstract class Expansion extends Encoding:
                           (using Bindings, Int)
                           (using duplications: Duplications): Term => Unit =
 
-    case _rhs @ (Term.Name(_) | Term.Placeholder()) =>
-      val rhs = _rhs match { case Term.Name(rhs) => rhs case Term.Placeholder() => "_" }
+    case _rhs @ (Term.Name(_) | Term.Placeholder() | _: Lit) =>
+      val rhs = _rhs match { case Term.Name(rhs) => rhs case _ => null }
 
       duplications(xid) match
         case (true, map) =>
@@ -337,8 +380,8 @@ abstract class Expansion extends Encoding:
             case _ =>
         case _ =>
 
-    case Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder()), _, _, List(rhs)) =>
-      val lhs = _lhs match { case Term.Name(lhs) => lhs case Term.Placeholder() => "_" }
+    case Term.ApplyInfix(_lhs @ (Term.Name(_) | Term.Placeholder() | _: Lit), _, _, List(rhs)) =>
+      val lhs = _lhs match { case Term.Name(lhs) => lhs case _ => null }
 
       duplications(xid) match
         case (true, map) =>
