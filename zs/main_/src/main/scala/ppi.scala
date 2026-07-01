@@ -30,6 +30,8 @@ package object Π:
 
   import _root_.scala.collection.immutable.Seq
 
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.concurrentInstance
   import _root_.zio.{ Duration, Hub, Promise, Ref, Queue, Schedule, Task, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stream.ZStream
@@ -46,10 +48,9 @@ package object Π:
       for
         hub   <- Hub.unbounded[(Seq[`()`], Promise[Throwable, Unit])]
         stop  <- Promise.make[Throwable, Unit]
-        queue <- Queue.unbounded[Unit]
-        limit <- Ref.make(false)
+        limit <- Semaphore[Task](0)
       yield
-        ><(hub, stop, queue, limit)
+        ><(hub, stop, limit)
 
     def map[B](f: `()` => B): ZStream[Any, Throwable, B] = flatMap(f andThen ZStream.succeed)
     def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] =
@@ -144,19 +145,15 @@ package object Π:
 
     private inline def h = `()`[><].hub
     private inline def p = `()`[><].stop
-    private inline def q = `()`[><].queue
-    private inline def r = `()`[><].limit
-    private implicit def a: Task[Unit] = q.take *> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s <= 0 then q.offer(()) *> r.set(true) else ZIO.unit
-      yield
-        ()
-    private def s = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o)).filterZIO(_._2.succeed(())).map(_._1)
+    private inline def l = `()`[><].limit
+    private implicit def a: Task[Unit] = l.acquire
+    private def o = l.release
+    private def s = ZStream
+      .unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o))
+      .filterZIO(_._2.succeed(()))
+      .map(_._1)
     private def s(- : CyclicBarrier, + : Option[Queue[Unit]], * : Option[Queue[Unit]]): ZStream[Any, Throwable, Seq[`()`]] =
-      (ZStream.fromZIO(-.await.exit *> +.fold(ZIO.unit)(_.take)).repeat(Schedule.forever) zipRight s).tap(_ => *.fold(ZIO.unit)(_.offer(())))
+      (ZStream.fromZIO(-.await.exit *> +.fold(ZIO.unit)(_.take)).repeat(Schedule.forever) zipRight s.tap(_ => o)).tap(_ => *.fold(ZIO.unit)(_.offer(())))
 
     def ====(that: `()`) =
       try
@@ -636,22 +633,26 @@ package object Π:
       stopWithCode[T](s.take(1) <* ZStream.unit.repeat(Schedule.fromDuration(pace)))(code)
 
     private def stop(s: ZStream[Any, Throwable, Seq[`()`]]): ZStream[Any, Throwable, Seq[`()`]] =
-      s.tap { case Seq(it, _*) if it.name == null => p.succeed(()) case _ => ZIO.unit }.interruptWhen(p)
+      s.tap(p.succeed(()).when(_)).interruptWhen(p)
 
     private def stopWithCode[T](s: ZStream[Any, Throwable, Seq[`()`]])(code: Seq[T] => Task[Seq[T]]): ZStream[Any, Throwable, Seq[`()`]] =
-      stop(s.mapZIO { it => code(it.map(_.`()`[T])).map(_.map(new `()`(_))) })
+      stop(s.map(_.map(_.`()`[T])).mapZIO(code(_).map(_.map(new `()`(_)))))
 
     override def toString: String = if name == null then "null" else name.toString
 
   }
 
 
+  private object `()`:
+
+    given Conversion[Seq[`()`], Boolean] = !_.head
+
+
   private object `Π-magic`:
 
     case class ><(hub: Hub[(Seq[`()`], Promise[Throwable, Unit])],
                   stop: Promise[Throwable, Unit],
-                  queue: Queue[Unit],
-                  limit: Ref[Boolean])
+                  limit: Semaphore[Task])
 
     extension [O](self: ZStream[Any, Throwable, O])
       def through1(hub: Hub[O])
