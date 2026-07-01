@@ -79,10 +79,7 @@ abstract class Calculus extends StochasticPi:
           then
             `+`(scaling, it*) -> ns.reduce(_ ++ _)
           else
-            `+`(-1, it*) -> ns.reduce(_ ++ _) match
-              case (+(_, it*), names) =>
-                (0 until scalingʹ).foldLeft(`+`(-1): +) { case (+(_, itʹ*), _) => `+`(-1, (itʹ ++ it)*) } match
-                  case sum => sum -> names
+            `+`(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*) -> ns.reduce(_ ++ _)
       }
     }
 
@@ -99,10 +96,7 @@ abstract class Calculus extends StochasticPi:
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
           else
-            ∥(-1, it*) -> ns.reduce(_ ++ _) match
-              case (∥(_, it*), names) =>
-                (0 until scalingʹ).foldLeft(∥(-1): ∥) { case (∥(_, itʹ*), _) => ∥(-1, (itʹ ++ it)*) } match
-                  case par => par -> names
+            ∥(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*) -> ns.reduce(_ ++ _)
       }
     }
 

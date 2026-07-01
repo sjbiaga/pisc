@@ -33,7 +33,8 @@ function spi() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26'
+                        --dep dev.zio::zio-streams:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -55,7 +56,7 @@ function spi() {
                   -q -O -nowarn -S 3.9.0-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep eu.timepit::refined:0.11.3 \
+                  --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
@@ -95,7 +96,8 @@ function spi_() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26'
+                        --dep dev.zio::zio-streams:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -117,7 +119,7 @@ function spi_() {
                   -q -O -nowarn -S 3.9.0-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
-                  --dep eu.timepit::refined:0.11.3 \
+                  --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \

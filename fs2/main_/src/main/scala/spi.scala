@@ -32,12 +32,13 @@ package object sΠ:
 
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.apply.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref, Resource, Unique }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
   import _root_.fs2.concurrent.{ SignallingRef, Topic }
   import _root_.fs2.{ Pull, Stream }
@@ -105,10 +106,9 @@ package object sΠ:
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
       ( for
           topic <- Stream.eval(Topic[F, (`()`[F], Unique.Token)])
-          queue <- Stream.eval(Queue.unbounded[F, Unit])
-          limit <- Stream.eval(Ref[F].of(false))
+          limit <- Stream.eval(Semaphore[F](0))
         yield
-          f(><[F](topic, queue, limit))
+          f(><[F](topic, limit))
       ).flatten
 
 
@@ -324,29 +324,24 @@ package object sΠ:
   implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
     private inline def t = `()`[><[F]].topic
-    private inline def q = `()`[><[F]].queue
-    private inline def r = `()`[><[F]].limit
-    private implicit def a: F[Unit] = q.take >> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
-      yield
-        ()
+    private inline def l = `()`[><[F]].limit
+    private implicit def a: F[Unit] = l.acquire
+    private def o = l.release
     private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten
 
     extension (self: Stream[F, Unique.Token])
-      private def `zipRight s` =
+      private def `zipRight s`: Stream[F, `()`[F]] = `self zipRight s`(true)
+      private def `zipRight s.head`: Stream[F, `()`[F]] = `self zipRight s`(false).head
+      private def `self zipRight s`(r: Boolean): Stream[F, `()`[F]] =
         def zip(tks: Pull[F, Nothing, Option[(Unique.Token, Stream[F, Unique.Token])]],
                 its: Pull[F, Nothing, Option[((`()`[F], Unique.Token), Stream[F, (`()`[F], Unique.Token)])]]): Pull[F, `()`[F], Unit] =
           tks.flatMap {
             case Some((tk, tksʹ)) =>
               its.flatMap {
                 case Some(((it, tkʹ), itsʹ)) if tk eq tkʹ =>
-                  Pull.output1(it) >> zip(tksʹ.pull.uncons1, itsʹ.pull.uncons1)
-                case Some((_, itsʹ)) =>
-                  zip(tks, itsʹ.pull.uncons1)
+                  Pull.output1(it) >> Pull.eval(o.whenA(r)) >> zip(tksʹ.pull.uncons1, itsʹ.pull.uncons1)
+                case Some(_) =>
+                  zip(tksʹ.pull.uncons1, its)
                 case _ =>
                   Pull.done
               }
@@ -358,9 +353,8 @@ package object sΠ:
     def ====(that: `()`[F]) =
       try
         this.t eq that.t
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
@@ -717,7 +711,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate)(key)(?, -, +, *).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+          apply(rate)(key)(?, -, +, *).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
         /**
           * linear replication input guard w/ pace w/ code
@@ -727,7 +721,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate, pace)(key)(?, -, +, *).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+          apply(rate, pace)(key)(?, -, +, *).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
       object `(ν)`:
 
@@ -1051,7 +1045,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate)(key).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+        apply(rate)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
       /**
         * replication input guard w/ pace w/ code
@@ -1061,7 +1055,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate, pace)(key).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+        apply(rate, pace)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
     object `(ν)`:
 
@@ -1282,7 +1276,7 @@ package object sΠ:
         cb_token <- Stream.eval(deferred.get)
         if cb_token ne None
         (cbarrier, token) = cb_token.get
-        it <- Stream.eval(enable[F](key) >> cbarrier.await).as(token).`zipRight s`.head
+        it <- Stream.eval(enable[F](key) >> cbarrier.await).as(token).`zipRight s.head`
       yield
         it
 
@@ -1304,7 +1298,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, `()`[F]] =
-      apply(rate)(key).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply(rate)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
     /**
       * input prefix w/ pace w/ code
@@ -1314,7 +1308,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, `()`[F]] =
-      apply(rate, pace)(key).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply(rate, pace)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -1324,8 +1318,7 @@ package object sΠ:
   private object `Π-magic`:
 
     case class ><[F[_]](topic: Topic[F, (`()`[F], Unique.Token)],
-                        queue: Queue[F, Unit],
-                        limit: Ref[F, Boolean])
+                        limit: Semaphore[F])
 
     extension [F[_]: Async, O](self: Stream[F, O])
       def through1(topic: Topic[F, O])

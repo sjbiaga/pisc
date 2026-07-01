@@ -30,6 +30,8 @@ package object sΠ:
 
   import _root_.scala.collection.immutable.{ Map, Set }
 
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.concurrentInstance
   import _root_.zio.{ Duration, Hub, Promise, Ref, Queue, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stream.ZStream
@@ -97,10 +99,9 @@ package object sΠ:
     def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] =
       ( for
           hub   <- ZStream.fromZIO(Hub.unbounded[(`()`, Object)])
-          queue <- ZStream.fromZIO(Queue.unbounded[Unit])
-          limit <- ZStream.fromZIO(Ref.make(false))
+          limit <- ZStream.fromZIO(Semaphore[Task](0))
         yield
-          f(><(hub, queue, limit))
+          f(><(hub, limit))
       ).flatten
 
 
@@ -317,24 +318,19 @@ package object sΠ:
   implicit final class `()`(private val name: Any) { self =>
 
     private inline def h = `()`[><].hub
-    private inline def q = `()`[><].queue
-    private inline def r = `()`[><].limit
-    private implicit def a: UIO[Unit] = q.take *> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s <= 0 then q.offer(()) *> r.set(true) else ZIO.unit
-      yield
-        ()
-    private def s(tk: Object) = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o)).filter(_._2 eq tk).map(_._1)
+    private inline def l = `()`[><].limit
+    private implicit def a: Task[Unit] = l.acquire
+    private def o = l.release
+    private def s(tk: Object) = ZStream
+      .unwrapScoped(ZStream.fromHubScoped(h).tap(_ => o))
+      .filter(_._2 eq tk)
+      .map(_._1)
 
     def ====(that: `()`) =
       try
         this.h eq that.h
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
@@ -701,7 +697,7 @@ package object sΠ:
               yield
                 token
             }.repeat(Schedule.forever).interruptWhen(sp)
-            it <- s(tk).take(1)
+            it <- s(tk).take(1).tap(_ => o)
             _  <- ZStream.fromZIO(*.fold(ZIO.unit)(_.offer(())))
           yield
             it
@@ -724,7 +720,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
-          apply(rate)(key)(?, -, +, *).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+          apply(rate)(key)(?, -, +, *).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
         /**
           * linear replication input guard w/ pace w/ code
@@ -734,7 +730,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
-          apply(rate, pace)(key)(?, -, +, *).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+          apply(rate, pace)(key)(?, -, +, *).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
       object `(ν)`:
 
@@ -1017,7 +1013,7 @@ package object sΠ:
             yield
               token
           }.repeat(Schedule.forever).interruptWhen(sp)
-          it <- s(tk).take(1)
+          it <- s(tk).take(1).tap(_ => o)
         yield
           it
 
@@ -1039,7 +1035,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, `()`] =
-        apply(rate)(key).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+        apply(rate)(key).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
       /**
         * replication input guard w/ pace w/ code
@@ -1049,7 +1045,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, `()`] =
-        apply(rate, pace)(key).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+        apply(rate, pace)(key).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
     object `(ν)`:
 
@@ -1285,7 +1281,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): ZStream[Any, Throwable, `()`] =
-      apply(rate)(key).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+      apply(rate)(key).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
     /**
       * input prefix w/ pace w/ code
@@ -1295,7 +1291,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): ZStream[Any, Throwable, `()`] =
-      apply(rate, pace)(key).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+      apply(rate, pace)(key).map(_.`()`[T]).mapZIO(code(_).map(new `()`(_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -1305,8 +1301,7 @@ package object sΠ:
   private object `Π-magic`:
 
     case class ><(hub: Hub[(`()`, Object)],
-                  queue: Queue[Unit],
-                  limit: Ref[Boolean])
+                  limit: Semaphore[Task])
 
     extension [O](self: ZStream[Any, Throwable, O])
       def through1(hub: Hub[O])

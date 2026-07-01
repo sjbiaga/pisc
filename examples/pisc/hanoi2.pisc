@@ -2,7 +2,7 @@
 
 @import cats.effect.std.Console
 
-@given [F[_]: Temporal]: Conversion[`()`[F], Int] = _.`()`[Int]
+@given [F[_]: Async]: Conversion[`()`[F], Int] = _.`()`[Int]
 
 ⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
 

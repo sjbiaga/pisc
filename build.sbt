@@ -169,7 +169,7 @@ lazy val `zs-main` = (project in file("zs/main"))
     scalaVersion := "3.9.0-RC1",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, zic, munit % Test)
   )
 
 lazy val `zs-main_` = (project in file("zs/main_"))
@@ -182,7 +182,7 @@ lazy val `zs-main_` = (project in file("zs/main_"))
     scalaVersion := "3.9.0-RC1",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC1"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, munit % Test)
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zs, zic, munit % Test)
   )
 
 unmanagedSources / excludeFilter := "ce/*.scala" || "*[ae]kk[ao]/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"
