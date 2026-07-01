@@ -35,8 +35,8 @@ package object Π:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Concurrent, ContextShift, Resource, Timer }
-  import _root_.cats.effect.concurrent.{ Deferred, Ref }
+  import _root_.cats.effect.{ Concurrent, ContextShift, Resource, Sync, Timer }
+  import _root_.cats.effect.concurrent.{ Deferred, Ref, Semaphore }
 
   import _root_.monix.catnap.{ ConcurrentChannel, ConcurrentQueue }
   import _root_.monix.catnap.ConsumerF.Config
@@ -57,10 +57,9 @@ package object Π:
       val unbounded = Config(capacity = Some(Unbounded()), consumerType = Some(MultiConsumer))
       ( for
           channel <- Iterant.liftF(ConcurrentChannel.withConfig[F, Option[Throwable], (`()`[F], Deferred[F, Unit])](unbounded, MultiProducer))
-          queue   <- Iterant.liftF(ConcurrentQueue.unbounded[F, Unit]())
-          limit   <- Iterant.liftF(Ref[F].of(false))
+          limit   <- Iterant.liftF(Semaphore[F](0))
         yield
-          f(><[F](channel, queue, limit))
+          f(><[F](channel, limit))
       ).flatten
 
 
@@ -68,6 +67,8 @@ package object Π:
     * silent transition
     */
   final class τ[F[_]: Concurrent: Timer]:
+
+    import `()`.tapEval
 
     object `(!)`:
 
@@ -87,13 +88,13 @@ package object Π:
         * replication guard w/ code
         */
       def apply[T]()(code: => F[T]): Iterant[F, Unit] =
-        apply().mapEval(code.as(_))
+        apply().tapEval(_ => code)
 
       /**
         * replication guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
-        apply(pace).mapEval(code.as(_))
+        apply(pace).tapEval(_ => code)
 
     /**
       * prefix
@@ -111,38 +112,37 @@ package object Π:
       * prefix w/ code
       */
     def apply[T]()(code: => F[T]): Iterant[F, Unit] =
-      apply().mapEval(code.as(_))
+      apply().tapEval(_ => code)
 
     /**
       * prefix w/ pace w/ code
       */
     def apply[T](pace: FiniteDuration)(code: => F[T]): Iterant[F, Unit] =
-      apply(pace).mapEval(code.as(_))
+      apply(pace).tapEval(_ => code)
 
   /**
     * events, i.e., names (channels) and values
     */
   implicit final class `()`[F[_]: Concurrent: ContextShift: Timer](private val name: Any) { self =>
 
+    import Π.`()`.tapEval
+
     private inline def ch = `()`[><[F]].channel
-    private inline def q = `()`[><[F]].queue
-    private inline def r = `()`[><[F]].limit
-    private implicit def a: F[Unit] = q.poll >> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        e <- q.isEmpty
-        _ <- if !b || e then q.offer(()) >> r.set(true) else Concurrent[F].unit
-      yield
-        ()
-    private def s = Iterant.resource((ch.consume <* Resource.eval(o)).use(_.pull.map(_.right.get)))(_ => Concurrent[F].unit).repeat.mapEval { (it, d) => d.complete(()).attempt.map(it -> _.isRight) }.filter(_._2).map(_._1)
+    private inline def l = `()`[><[F]].limit
+    private implicit def a: F[Unit] = l.acquire
+    private def o = l.release
+    private def s = Iterant
+      .liftF(ch.consume.flatTap(_ => Resource.eval(o)).use(_.pull.map(_.right.get)))
+      .repeat
+      .mapEval { (it, d) => d.complete(()).attempt.map(it -> _.isRight) }
+      .filter(_._2)
+      .map(_._1)
 
     def ====(that: `()`[F]) =
       try
         this.ch eq that.ch
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
@@ -192,13 +192,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        apply(value).mapEval(code.as(_))
+        apply(value).tapEval(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-        apply(pace, value).mapEval(code.as(_))
+        apply(pace, value).tapEval(_ => code)
 
       object `(null)`:
 
@@ -244,13 +244,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](value).mapEval(code.as(_))
+          apply[S](value).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](pace, value).mapEval(code.as(_))
+          apply[S](pace, value).tapEval(_ => code)
 
         /**
           * variable replication output guard
@@ -271,14 +271,14 @@ package object Π:
           */
         @annotation.targetName("applyF")
         def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          apply[S](value).mapEval(code.as(_))
+          apply[S](value).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         @annotation.targetName("applyF")
         def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          apply[S](pace, value).mapEval(code.as(_))
+          apply[S](pace, value).tapEval(_ => code)
 
       /**
         * replication input guard
@@ -290,19 +290,19 @@ package object Π:
         * replication input guard w/ pace
         */
       def apply(pace: FiniteDuration): Iterant[F, `()`[F]] =
-        (apply() zip Iterant.intervalAtFixedRate(pace)).map(_._1)
+        (s zip Iterant.intervalAtFixedRate(pace)).map(_._1)
 
       /**
         * replication input guard w/ code
         */
       def apply[T]()(code: T => F[T]): Iterant[F, `()`[F]] =
-        apply().mapEval { it => code(it.`()`[T]).map(new `()`[F](_)) }
+        s.map(_.`()`[T]).mapEval(code(_).map(new `()`[F](_)))
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: T => F[T]): Iterant[F, `()`[F]] =
-        (apply[T]()(code) zip Iterant.intervalAtFixedRate(pace)).map(_._1)
+        (s.map(_.`()`[T]).mapEval(code(_).map(new `()`[F](_))) zip Iterant.intervalAtFixedRate(pace)).map(_._1)
 
     object `(ν)`:
 
@@ -326,13 +326,13 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T]()(code: => F[T]): Iterant[F, `()`[F]] =
-        apply().mapEval(code.as(_))
+        apply().tapEval(_ => code)
 
       /**
         * bound output prefix w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: => F[T]): Iterant[F, `()`[F]] =
-        apply(pace).mapEval(code.as(_))
+        apply(pace).tapEval(_ => code)
 
     /**
       * constant output prefix
@@ -350,13 +350,13 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-      apply(value).mapEval(code.as(_))
+      apply(value).tapEval(_ => code)
 
     /**
       * constant output prefix w/ pace w/ code
       */
     def apply[T](pace: FiniteDuration, value: `()`[F])(code: => F[T]): Iterant[F, Unit] =
-      apply(pace, value).mapEval(code.as(_))
+      apply(pace, value).tapEval(_ => code)
 
     object `(null)`:
 
@@ -402,13 +402,13 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-        apply[S](value).mapEval(code.as(_))
+        apply[S](value).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
       def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
-        apply[S](pace, value).mapEval(code.as(_))
+        apply[S](pace, value).tapEval(_ => code)
 
       /**
         * variable output prefix
@@ -429,14 +429,14 @@ package object Π:
         */
       @annotation.targetName("applyF")
       def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-        apply[S](value).mapEval(code.as(_))
+        apply[S](value).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
       @annotation.targetName("applyF")
       def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-        apply[S](pace, value).mapEval(code.as(_))
+        apply[S](pace, value).tapEval(_ => code)
 
     /**
       * input prefix
@@ -454,7 +454,7 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T]()(code: T => F[T]): Iterant[F, `()`[F]] =
-      apply().mapEval { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply().map(_.`()`[T]).mapEval(code(_).map(new `()`[F](_)))
 
     /**
       * input prefix w/ pace w/ code
@@ -467,11 +467,17 @@ package object Π:
   }
 
 
+  private object `()`:
+
+    extension [F[_]: Sync, A](self: Iterant[F, A])
+      def tapEval[B](f: A => F[B]): Iterant[F, A] =
+        self.mapEval(a => f(a).as(a))
+
+
   private object `Π-magic`:
 
     case class ><[F[_]](channel: ConcurrentChannel[F, Option[Throwable], (`()`[F], Deferred[F, Unit])],
-                        queue: ConcurrentQueue[F, Unit],
-                        limit: Ref[F, Boolean])
+                        limit: Semaphore[F])
 
     final implicit class IterantOps[F[_]: Concurrent, O](self: Iterant[F, O]):
       def through1(channel: ConcurrentChannel[F, Option[Throwable], O])

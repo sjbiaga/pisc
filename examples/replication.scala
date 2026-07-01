@@ -28,27 +28,32 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.{IO, IOApp, ExitCode}
+import _root_.cats.effect.IO
 
-object App extends IOApp:
+object App extends _root_.cats.effect.IOApp:
 
-  override def run(args: List[String]): IO[ExitCode] =
-    π.Main(args*).as(ExitCode.Success)
+  import _root_.cats.effect.ExitCode
+
+  override def run(args: List[String]): IO[ExitCode] = π.Main(args*).as(ExitCode.Success)
 
 object π:
 
   import _root_.scala.collection.immutable.{List => πLs}
+  import _root_.scala.concurrent.duration.*
+
+  import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
-  import _root_.cats.effect.syntax.all.*
+
   import _root_.cats.effect.std.Semaphore
+  import _root_.cats.effect.syntax.all.*
 
-  import eu.timepit.refined.*
-
-  extension (self: πLs[IO[?]])
-    private[π] inline def πparSequence: IO[Unit] =
-      _root_.cats.data.NonEmptyList.fromListUnsafe(self).parSequence.void
+  import _root_.eu.timepit.refined.*
 
   import Π.*
+
+  extension (self: πLs[IO[?]])
+    private[π] inline def πparSequence: IO[Unit]                           = self.parSequenceVoid
+    private[π] inline def πparTraverse(semaphore: Semaphore[IO]): IO[Unit] = self.parTraverseVoid(semaphore.tryAcquire.ifM(_, IO.cede))
 
   import scala.concurrent.duration._
 
@@ -56,55 +61,59 @@ object π:
 
   def ms = (10 + math.abs(gen.nextInt % 10)).milliseconds
 
-  def Main(args: String*): IO[Any] = for {
-    c <- IO.ref(0)
-    x <- ν
-    _ <- πLs(
-      for {
-        _υ2υ <- IO {
-          lazy val _υ2υ: IO[Any] = πLs(
-            for {
-              i <- c.get
-              _ <- IO.sleep(ms)
-              _ <- x(i)
-              _ <- τ
-              _ <- IO {
-                println(s"out $i")
-              }
-            } yield (),
-            for {
-              _ <- IO.unit
-              _ <- c.update(_ + 1 min 50)
-              i <- c.get
-              _ <- if i == 50 then IO.never else IO.cede
-              _ <- _υ2υ
-            } yield ()
-          ).πparSequence
-          _υ2υ
-        }
-        _    <- _υ2υ
-      } yield (),
-      for {
-        _υ1υ <- IO {
-          lazy val _υ1υ: IO[Any] = πLs(
-            for {
-              _ <- IO.sleep(ms)
-              y <- x()
-              _ <- τ
-              _ <- IO {
-                println(s"in $y")
-              }
-            } yield (),
-            for {
-              _ <- IO.unit
-              i <- c.get
-              _ <- if i == 50 then IO.never else IO.cede
-              _ <- _υ1υ
-            } yield ()
-          ).πparSequence
-          _υ1υ
-        }
-        _    <- _υ1υ
-      } yield ()
-    ).πparSequence
-  } yield ()
+  def Main(args: String*): IO[Any] =
+    for {
+      c <- IO.ref(0)
+      x <- ν
+      _ <-
+        πLs(
+          for {
+            _υ2υ <- IO {
+              lazy val _υ2υ: IO[Any] =
+                πLs(
+                  for {
+                    i <- c.get
+                    _ <- IO.sleep(ms)
+                    _ <- x(i)
+                    _ <- τ
+                    _ <- IO {
+                      println(s"out $i")
+                    }
+                  } yield (),
+                  for {
+                    _ <- IO.unit
+                    _ <- c.update(_ + 1 min 50)
+                    i <- c.get
+                    _ <- if i == 50 then IO.never else IO.cede
+                    _ <- _υ2υ
+                  } yield ()
+                ).πparSequence
+              _υ2υ
+            }
+            _    <- _υ2υ
+          } yield (),
+          for {
+            _υ1υ <- IO {
+              lazy val _υ1υ: IO[Any] =
+                πLs(
+                  for {
+                    _ <- IO.sleep(ms)
+                    y <- x()
+                    _ <- τ
+                    _ <- IO {
+                      println(s"in $y")
+                    }
+                  } yield (),
+                  for {
+                    _ <- IO.unit
+                    i <- c.get
+                    _ <- if i == 50 then IO.never else IO.cede
+                    _ <- _υ1υ
+                  } yield ()
+                ).πparSequence
+              _υ1υ
+            }
+            _    <- _υ1υ
+          } yield ()
+        ).πparSequence
+    } yield ()

@@ -37,7 +37,8 @@ function pi() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26'
+                        --dep dev.zio::zio-streams:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -57,7 +58,7 @@ function pi() {
     set ${srcs#?} ../${emit}/pi.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.9.0-RC1 \
-                  --dep eu.timepit::refined:0.11.3 \
+                  --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
 }
@@ -99,7 +100,8 @@ function pi_() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26'
+                        --dep dev.zio::zio-streams:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -119,7 +121,7 @@ function pi_() {
     set ${srcs#?} ../${emit}/pi_.scala
     scala-cli run "$@" $deps \
                   -q -O -nowarn -S 3.9.0-RC1 \
-                  --dep eu.timepit::refined:0.11.3 \
+                  --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
 }

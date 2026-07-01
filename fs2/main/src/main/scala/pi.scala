@@ -35,7 +35,7 @@ package object Π:
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref, Resource }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
   import _root_.fs2.Stream
   import _root_.fs2.concurrent.Topic
@@ -52,10 +52,9 @@ package object Π:
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
       ( for
           topic <- Stream.eval(Topic[F, (`()`[F], Deferred[F, Unit])])
-          queue <- Stream.eval(Queue.unbounded[F, Unit])
-          limit <- Stream.eval(Ref[F].of(false))
+          limit <- Stream.eval(Semaphore[F](0))
         yield
-          f(><[F](topic, queue, limit))
+          f(><[F](topic, limit))
       ).flatten
 
 
@@ -146,24 +145,20 @@ package object Π:
   implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
     private inline def t = `()`[><[F]].topic
-    private inline def q = `()`[><[F]].queue
-    private inline def r = `()`[><[F]].limit
-    private implicit def a: F[Unit] = q.take >> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
-      yield
-        ()
-    private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.evalFilter(_._2.complete(())).map(_._1)
+    private inline def l = `()`[><[F]].limit
+    private implicit def a: F[Unit] = l.acquire
+    private def o = l.release
+    private def s = Stream
+      .resource(t.subscribeAwaitUnbounded.flatTap(_ => Resource.eval(o)))
+      .flatten
+      .evalFilter(_._2.complete(()))
+      .map(_._1)
 
     def ====(that: `()`[F]) =
       try
         this.t eq that.t
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
@@ -315,7 +310,7 @@ package object Π:
           * linear replication input guard
           */
         def apply()(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
-          (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) zipRight s).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
+          (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) zipRight s.evalTap(_ => o)).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
 
         /**
           * linear replication input guard w/ pace
@@ -327,13 +322,13 @@ package object Π:
           * linear replication input guard w/ code
           */
         def apply[T]()(code: T => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
-          apply()(-, +, *).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+          apply()(-, +, *).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
         /**
           * linear replication input guard w/ pace w/ code
           */
         def apply[T](pace: FiniteDuration)(code: T => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
-          apply(pace)(-, +, *).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+          apply(pace)(-, +, *).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
       object `(ν)`:
 
@@ -481,13 +476,13 @@ package object Π:
         * replication input guard w/ code
         */
       def apply[T]()(code: T => F[T]): Stream[F, `()`[F]] =
-        s.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
+        s.map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_))).evalTap(_ => o)
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: T => F[T]): Stream[F, `()`[F]] =
-        s.spaced(pace).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }.evalTap(_ => o)
+        s.spaced(pace).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_))).evalTap(_ => o)
 
     object `(ν)`:
 
@@ -639,13 +634,13 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T]()(code: T => F[T]): Stream[F, `()`[F]] =
-      apply().evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply().map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
     /**
       * input prefix w/ pace w/ code
       */
     def apply[T](pace: FiniteDuration)(code: T => F[T]): Stream[F, `()`[F]] =
-      apply(pace).evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) }
+      apply(pace).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -655,8 +650,7 @@ package object Π:
   private object `Π-magic`:
 
     case class ><[F[_]](topic: Topic[F, (`()`[F], Deferred[F, Unit])],
-                        queue: Queue[F, Unit],
-                        limit: Ref[F, Boolean])
+                        limit: Semaphore[F])
 
     extension [F[_]: Async, O](self: Stream[F, O])
       def through1(topic: Topic[F, O])

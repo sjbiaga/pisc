@@ -30,13 +30,14 @@ package object Π:
 
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.apply.*
   import _root_.cats.syntax.applicativeError.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref, Resource }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
   import _root_.fs2.Stream
   import _root_.fs2.concurrent.Topic
@@ -54,10 +55,9 @@ package object Π:
       ( for
           topic <- Stream.eval(Topic[F, (`()`[F], Deferred[F, Unit])])
           stop  <- Stream.eval(Deferred[F, Unit])
-          queue <- Stream.eval(Queue.unbounded[F, Unit])
-          limit <- Stream.eval(Ref[F].of(false))
+          limit <- Stream.eval(Semaphore[F](0))
         yield
-          f(><[F](topic, stop, queue, limit))
+          f(><[F](topic, stop, limit))
       ).flatten
 
 
@@ -149,26 +149,22 @@ package object Π:
 
     private inline def t = `()`[><[F]].topic
     private inline def d = `()`[><[F]].stop
-    private inline def q = `()`[><[F]].queue
-    private inline def r = `()`[><[F]].limit
-    private implicit def a: F[Unit] = q.take >> r.set(false)
-    private def o =
-      for
-        b <- r.get
-        s <- q.size
-        _ <- if !b || s == 0 then q.offer(()) >> r.set(true) else Async[F].unit
-      yield
-        ()
-    private def s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(o)).flatten.evalFilter(_._2.complete(())).map(_._1)
+    private inline def l = `()`[><[F]].limit
+    private implicit def a: F[Unit] = l.acquire
+    private def o = l.release
+    private def s = Stream
+      .resource(t.subscribeAwaitUnbounded.flatTap(_ => Resource.eval(o)))
+      .flatten
+      .evalFilter(_._2.complete(()))
+      .map(_._1)
     private def s(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, `()`[F]] =
-      (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) zipRight s).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
+      (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) zipRight s.evalTap(_ => o)).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
 
     def ====(that: `()`[F]) =
       try
         this.t eq that.t
-      catch
-        case _ =>
-          this.name == that.name
+      catch _ =>
+        this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
@@ -654,22 +650,26 @@ package object Π:
       stopWithCode[T](s.head <* Stream.sleep(pace))(code)
 
     private def stop(s: Stream[F, `()`[F]]): Stream[F, `()`[F]] =
-      s.evalTap { case it if it.name == null => d.complete(()).void case _ => Async[F].unit }.interruptWhen(d.get.attempt)
+      s.evalTap(d.complete(()).whenA(_)).interruptWhen(d.get.attempt)
 
     private def stopWithCode[T](s: Stream[F, `()`[F]])(code: T => F[T]): Stream[F, `()`[F]] =
-      stop(s.evalMap { it => code(it.`()`[T]).map(new `()`[F](_)) })
+      stop(s.map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_))))
 
     override def toString: String = if name == null then "null" else name.toString
 
   }
 
 
+  private object `()`:
+
+    given [F[_]: Async]: Conversion[`()`[F], Boolean] = !_
+
+
   private object `Π-magic`:
 
     case class ><[F[_]](topic: Topic[F, (`()`[F], Deferred[F, Unit])],
                         stop: Deferred[F, Unit],
-                        queue: Queue[F, Unit],
-                        limit: Ref[F, Boolean])
+                        limit: Semaphore[F])
 
     extension [F[_]: Async, O](self: Stream[F, O])
       def through1(topic: Topic[F, O])
