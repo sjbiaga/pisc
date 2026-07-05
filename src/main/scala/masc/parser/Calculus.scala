@@ -68,7 +68,7 @@ abstract class Calculus extends Ambient:
         case (it, ns) =>
           if scalingʹ == 0
           then
-            ∥(-1) -> Names()
+            ∅() -> Names()
           else if _scaling && emitter.canScale
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
@@ -77,23 +77,30 @@ abstract class Calculus extends Ambient:
       }
     }
 
-  def sequential(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings)(using Duplications, Int): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ ( leaf | parallelʹ ) ^^ {
       case (it, (bound, free)) ~ (end, freeʹ) =>
-        bindings ++= binders
+        bindings ++= cleaned
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
   def parallelʹ(using Bindings, Duplications, Int): Parser[(∥, Names)] =
-    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∥(-1) -> Names()) }
+    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
 
   def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
-    "!"~> scale ~ opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) ~ parallel ^^ { // [guarded] replication
-      case parallelism ~ pace ~ Some((it, bound)) ~ (par, free) =>
-        `!`(parallelism, pace, Some(it), par) -> (free &~ bound)
-      case parallelism ~ pace ~ None ~ (par, free) =>
-        `!`(parallelism, pace, None, par) -> free
+    "!"~> scale ~ opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) >> { // [guarded] replication
+      case parallelism ~ pace ~ Some((it, bound)) =>
+        BindingOccurrence(bound)
+        parallel ^^ {
+          case (par, free) =>
+            `!`(parallelism, pace, Some(it), par) -> (free &~ bound)
+        }
+      case parallelism ~ pace ~ _ =>
+        parallel ^^ {
+          case (par, free) =>
+            `!`(parallelism, pace, None, par) -> free
+        }
     } |
     name ~ ("["~>parallel<~"]") ^^ { // ambient
       case (amb, name) ~ (par, free) =>
@@ -315,6 +322,7 @@ object Calculus:
         Term.Apply(term, Term.ArgClause(args)).toString
 
   object ∅ :
+    def apply(): ∥ = ∥(-1)
     def unapply(self: AST): Boolean = self match
       case par: ∥ => par.isVoid
       case _ => false
@@ -388,7 +396,7 @@ object Calculus:
       ast match
 
         case ∅() =>
-          ∥(-1)
+          ∅()
 
         case it @ ∥(_, `.`(par: ∥), components*) =>
           val lhs = par.flatten
