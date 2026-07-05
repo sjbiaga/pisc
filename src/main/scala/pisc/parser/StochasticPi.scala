@@ -263,22 +263,38 @@ abstract class StochasticPi extends Expression:
              (using Bindings, Int): Unit =
       if _code < 0
       then
-        names.foreach(this(_, None, hardcoded = true))
+        names.foreach(this(_, None, true))
       else
-        (names zip names.map(Some(_))).foreach(this(_, _, hardcoded = true))
+        (names zip names.map(Some(_))).foreach(this(_, _, true))
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
-        case Some(Occurrence(_, it @ Position(k, false))) if k < 0 =>
-          if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
-          bindings += name -> Occurrence(shadow, it.copy(binds = true))
-        case Some(Occurrence(Some(_), Position(k, true))) if _code >= 0 && (!hardcoded || k < 0) =>
+        case Some(Occurrence(_, Position(counter, _), true)) if counter < 0 =>
+          throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "clobbered")
+        case Some(Occurrence(Some(_), Position(counter, true), _)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
-        case Some(Occurrence(_, Position(_, false))) if _code >= 0 =>
-          throw NonParameterBindingParsingException(_code, _nest, name, hardcoded)
-        case Some(Occurrence(_, Position(_, false))) =>
+        case Some(Occurrence(_, it @ Position(counter, false), _)) =>
+          if counter < 0
+          then
+            if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
+            bindings += name -> Occurrence(shadow, it.copy(binds = true))
+          else
+            posBindUnless(!hardcoded)
+        case Some(Occurrence(_, Position(_, true), _)) =>
+          posBindUnless(!hardcoded)
         case _ =>
-          bindings += name -> Occurrence(shadow, pos(true))
+          posBindUnless(false)
+      def posBindUnless(raise: Boolean): Unit =
+        if raise then throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+        bindings += name -> Occurrence(shadow, pos(true))
+
+  protected object PendingOccurrence:
+    def apply(name: Symbol)
+             (using bindings: Bindings): Unit =
+      bindings.get(name) match
+        case Some(it @ Occurrence(None, Position(counter, false), false)) if counter < 0 =>
+          bindings += name -> it.copy(pending = true)
+        case _ =>
 
 
 object StochasticPi:
@@ -410,8 +426,8 @@ object StochasticPi:
         case _ => ast
 
 
-  final class Main(override protected val emitter: Emitter,
-                   override protected val in: String) extends Expansion:
+  class Main(override protected val emitter: Emitter,
+             override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -737,8 +753,7 @@ object StochasticPi:
     private var l: (Int, Int) = (-1, -1)
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
-    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-      _werr = errors
+    protected def _init: Unit =
       _dups = false
       _exclude = false
       _paceunit = "second"
@@ -747,7 +762,8 @@ object StochasticPi:
       _typeclasses = Nil
       _par = 9
       _traces = None
-      _dirs = List(Map("errors"       -> _werr,
+      _dirs = List(Map("echo"         -> (),
+                       "errors"       -> _werr,
                        "duplications" -> _dups,
                        "exclude"      -> _exclude,
                        "paceunit"     -> _paceunit,
@@ -765,6 +781,10 @@ object StochasticPi:
       _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+
+    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+      _werr = errors
+      _init
 
       given Duplications()
 
@@ -830,10 +850,10 @@ object StochasticPi:
 
       if _typeclasses.isEmpty
       then
-        Right((`(*)`(null, λ(Lit.Null())), `+`(-1)): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
+        Right((`(*)`(null, λ(Lit.Null())), ∅()): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_par))), ∅()): Bind) ::
         prog
       else
-        Right((`(*)`(null, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), `+`(-1)): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_par))), `+`(-1)): Bind) ::
+        Right((`(*)`(null, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_par))), ∅()): Bind) ::
         prog

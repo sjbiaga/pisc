@@ -56,7 +56,7 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-no-binding") {
 
-    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1 in the right hand side of encoding 1") {
+    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1 in the right hand side of definition 1") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦⟧ =
@@ -69,7 +69,7 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-uniqueness-hardcoded-binding") {
 
-    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of encoding 1") {
+    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of definition 1") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦1 t"λ $x . ${$M}" 1⟧{u} = u(x). u(x). M{v}
@@ -81,7 +81,7 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-uniqueness-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of encoding 3") {
+    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of definition 3") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
@@ -95,19 +95,22 @@ class StochasticPiSuite extends FunSuite:
 
   test("encoding-non-parameter-hardcoded-binding") {
 
-    interceptMessage[NonParameterBindingParsingException]("A binding name (u) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 1") {
-      Main(Emitter.test, getClass.getSimpleName) {
-        source("""
-               ⟦1 t"λ $x . ${$M}" 1⟧{u} = x(u).
-               """)
-      }
-    }
+    Main(Emitter.test, getClass.getSimpleName) {
+      source("""
+             ⟦1 t"λ $x . ${$M}" 1⟧{u} = x(u).
+             Main = ν(x) ⟦ λ x . () ⟧
+             """)
+    } match
+      case _ :: _ :: Right((`(*)`("Main"), +(_, ∥(_, `.`(exp, ν("x")))))) :: Nil =>
+        assertMatches(exp) {
+          case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), _, None)))), _, _) => true
+        }
 
   }
 
   test("encoding-non-parameter-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence does not correspond to a parameter at nesting level #1 in the right hand side of encoding 3") {
+    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #1 in the right hand side of definition 3") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
