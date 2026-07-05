@@ -237,7 +237,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧(x) =")
 
-    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
+    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of definition 0") {
       `13`.test
     }
 
@@ -249,7 +249,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{x} =")
 
-    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
+    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of definition 0") {
       `13`.test
     }
 
@@ -261,7 +261,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(x){x} =")
 
-    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of encoding 0") {
+    interceptMessage[DefinitionParametersException]("The parameters, constants, and variables must all be different in the left hand side of definition 0") {
       `13`.test
     }
 
@@ -273,7 +273,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = P{}")
 
-    interceptMessage[DefinitionFreeNamesException]("The free names (P) in the right hand side are not formal parameters of the left hand side of encoding 0") {
+    interceptMessage[DefinitionFreeNamesException]("The free names (P) in the right hand side are not formal parameters of the left hand side of definition 0") {
       `13`.test
     }
 
@@ -285,7 +285,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = ch<x>.")
 
-    interceptMessage[DefinitionFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of encoding 0") {
+    interceptMessage[DefinitionFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of definition 0") {
       `13`.test
     }
 

@@ -440,7 +440,7 @@ class PiParserSuite extends FunSuite:
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")))
 
-    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #0 in the right hand side of encoding 0") {
+    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #0 in the right hand side of definition 0") {
       `13`.test
     }
 
@@ -457,7 +457,7 @@ class PiParserSuite extends FunSuite:
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow2")), hardcoded = true)
 
-    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of encoding 0") {
+    interceptMessage[UniquenessBindingParsingException]("A binding name (x) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of definition 0") {
       `13`.test
     }
 
@@ -473,7 +473,7 @@ class PiParserSuite extends FunSuite:
         given Int = 1
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
 
-    interceptMessage[NonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
+    interceptMessage[ExistingNonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0 in the right hand side of definition 0") {
       `13`.test
     }
 
@@ -485,13 +485,17 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         given Int = 1
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")), hardcoded = true)
 
-    interceptMessage[NonParameterBindingParsingException]("A binding name (x) in a hardcoded binding occurrence does not correspond to a parameter at nesting level #0 in the right hand side of encoding 0") {
-      `13`.test
-    }
+        bindings.head match
+          case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
+            assertEquals(it, Occurrence(Some(Symbol("x_shadow")), Position(1, true)))
+          case _ =>
+            assert(false)
+
+    `13`.test
 
   }
 
@@ -499,16 +503,15 @@ class PiParserSuite extends FunSuite:
 
     val `13` = new PiParserTest:
       override def test =
+        _nest = 0
         _code = -1
-        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         given Int = 1
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
-        bindings.head match
-          case (Symbol("x"), Shadow(Symbol("x_shadow"))) =>
-            assert(false)
-          case _ =>
 
-    `13`.test
+    interceptMessage[ExistingNonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0") {
+      `13`.test
+    }
 
   }
 
@@ -521,6 +524,9 @@ object PiParserSuite:
     override protected val emitter: Emitter = Emitter.test
     override protected def in: String = getClass.getSimpleName
     override def ln: String = "line #0"
+
+    _cntr = Mapʹ(0 -> 0L)
+    _nth = Mapʹ(0 -> 0L)
 
     given Bindings()
 

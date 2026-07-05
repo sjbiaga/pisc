@@ -68,7 +68,7 @@ abstract class Calculus extends Pi:
         case (it, ns) =>
           if scalingʹ == 0
           then
-            `+`(-1) -> Names()
+            ∅() -> Names()
           else if _scaling && emitter.canScale
           then
             `+`(scaling, it*) -> ns.reduce(_ ++ _)
@@ -85,7 +85,7 @@ abstract class Calculus extends Pi:
         case (it, ns) =>
           if scalingʹ == 0
           then
-            ∥(-1, `.`(`+`(-1))) -> Names()
+            ∥(-1, `.`(∅())) -> Names()
           else if _scaling && emitter.canScale
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
@@ -94,18 +94,18 @@ abstract class Calculus extends Pi:
       }
     }
 
-  def sequential(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings)(using Duplications, Int): Parser[(`.`, Names)] =
     given Bindings = Bindings(bindings)
     prefixes ~ ( leaf | choiceʹ ) ^^ {
       case (it, (bound, free)) ~ (end, freeʹ) =>
-        bindings ++= binders
+        bindings ++= cleaned
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
   def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
-    opt( "("~>choice<~")" ) ^^ { _.getOrElse(`+`(-1) -> Names()) }
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
 
-  def leaf(using bindings: Bindings, _ds: Duplications, _sc: Int): Parser[(-, Names)] =
+  def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
     "["~condition~"]"~choice ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
         ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
@@ -390,6 +390,7 @@ object Calculus:
         `(*)`(identifier, qual, params*)
 
   object ∅ :
+    def apply(): + = `+`(-1)
     def unapply(self: AST): Boolean = self match
       case sum: + => sum.isVoid
       case _ => false
@@ -469,7 +470,7 @@ object Calculus:
       ast match
 
         case ∅() =>
-          `+`(-1)
+          ∅()
 
         case it @ +(_, ∥(-1|1, `.`(sum: +)), choices*) =>
           val lhs = sum.flatten

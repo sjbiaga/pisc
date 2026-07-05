@@ -244,14 +244,14 @@ class EncodingFunctionsSuite extends FunSuite:
 
   }
 
-  test("binders") {
+  test("cleaned") {
 
     given Bindings = Bindings()
                    + (Symbol("x_υ1υ") -> Occurrence(Some(Symbol("x_υ2υ")), Position(-1, true)))
                    + (Symbol("y_υ3υ") -> Occurrence(Symbol("y_υ4υ"), Position(-2, true)))
                    + (Symbol("z") -> Occurrence(None, Position(3, true)))
 
-    val bindings = binders
+    val bindings = cleaned
 
     assert(bindings.size == 2)
 
@@ -268,7 +268,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via refresh") {
 
-    val `13` = `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
+    val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -285,7 +285,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - shadow is itself") {
 
-    val `13` = `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
+    val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -308,7 +308,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - shadow is itself - definition is true") {
 
-    val `13` = `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
+    val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -331,7 +331,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - with shadow") {
 
-    val `13` = `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
+    val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -354,7 +354,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("rename - rebind - via Bindings - with shadow - definition is true") {
 
-    val `13` = `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
+    val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
@@ -384,7 +384,7 @@ class EncodingFunctionsSuite extends FunSuite:
       Names(),
       Bindings() + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
                  + (Symbol("ch") -> Occurrence(None, Position(-2, false))),
-      `+`(-1, ∥(-1, `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))))
+      `+`(-1, ∥(-1, `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))))
     )
 
     val id = new helper.υidυ
@@ -408,7 +408,7 @@ class EncodingFunctionsSuite extends FunSuite:
       Names(),
       Bindings() + (Symbol("x") -> Occurrence(None, Position(-1, false)))
                  + (Symbol("ch") -> Occurrence(None, Position(-2, false))),
-      `+`(-1, ∥(-1, `.`(`+`(-1), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))))
+      `+`(-1, ∥(-1, `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))))
     )
 
     val id = new helper.υidυ
@@ -426,7 +426,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - restriction - via refresh") {
 
     val `13` = `+`(-1, ∥(-1,  `.`(?:(((λ(true), λ(false)), false),
-                                     `+`(-1, ∥(-1, `.`(`!`(-1, None, None, `+`(-1)), ν("x")))),
+                                     `+`(-1, ∥(-1, `.`(`!`(-1, None, None, ∅()), ν("x")))),
                                      Some(`+`(-1, ∥(-1, `.`(`(*)`("P", Nil)))))))))
 
     val id = new helper.υidυ
@@ -447,7 +447,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - by restriction - via refresh") {
 
     val `13` = `+`(-1, ∥(-1, `.`(?:(((λ(Symbol("x")), λ(Symbol("y"))), false),
-                                    `+`(-1, ∥(-1, `.`(`!`(-1, None, Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), `+`(-1))))),
+                                    `+`(-1, ∥(-1, `.`(`!`(-1, None, Some(π(λ(Symbol("x")), λ(Symbol("y")), None, None)), ∅())))),
                                     Some(`+`(-1, ∥(-1, `.`(`(*)`("P", Nil, λ(Symbol("x")), λ(Symbol("y")))))))),
                                  ν("x", "y"))))
 
@@ -619,7 +619,7 @@ class EncodingFunctionsSuite extends FunSuite:
         parseAll(definition, """⟦ t"1" ⟧{z} =""") match
           case Success(Some((it @ Macro(_, 0, _, _, bindings, _), _)), _) =>
             bindings.get(Symbol("z")) match
-              case Some(Occurrence(None, _)) =>
+              case Some(Occurrence(None, _, _)) =>
                 it(0, null, false)(id, χ_id) match
                   case (Definition(_, _, _, vs, ∅()), 0 -> Nil) =>
                     vs.headOption match
