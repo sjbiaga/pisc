@@ -49,9 +49,9 @@ abstract class Encoding extends Calculus:
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
       case (term, _parameters) ~ _constants ~ _variables =>
+        val parameters = _parameters.filterNot(_.name.charAt(0).isUpper)
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
         val variables = _variables.map(_._2).getOrElse(Names())
-        val parameters = _parameters.filterNot(_.name.charAt(0).isUpper)
         if (parameters & constants).nonEmpty
         || (variables & parameters).nonEmpty
         || (constants & variables).nonEmpty
@@ -84,7 +84,7 @@ abstract class Encoding extends Calculus:
                     val pointersʹʹ = pointersʹ.drop(assignmentʹ.size)
                     if variablesʹʹ.size != pointersʹʹ.size
                     then
-                      warn(throw EncodingAliasAbandonedException(_code))
+                      warn(throw DefinitionAliasAbandonedException(_code))
                       (constants, variables, given_Bindings, sum)
                     else
                       val assignmentʹʹ = assignmentʹ ++ (variablesʹʹ zip pointersʹʹ)
@@ -207,7 +207,8 @@ abstract class Encoding extends Calculus:
       case it     => it
 
     private def key: String => Boolean = canonical andThen {
-      case "errors" | "duplications"
+      case "echo"
+         | "errors" | "duplications"
          | "exclude" | "include"
          | "paceunit"
          | "scaling"
@@ -280,6 +281,9 @@ abstract class Encoding extends Calculus:
 
       canonical(_dir.get._1.toLowerCase) match
 
+        case "echo"         =>
+          Console.println(_dir.get._2)
+
         case "errors"       =>
           _werr = boolean
 
@@ -338,7 +342,8 @@ abstract class Encoding extends Calculus:
           try
             if boolean
             then
-              _dirs ::= Map("errors"       -> _werr,
+              _dirs ::= Map("echo"         -> (),
+                            "errors"       -> _werr,
                             "duplications" -> _dups,
                             "exclude"      -> _exclude,
                             "paceunit"     -> _paceunit,
@@ -351,6 +356,7 @@ abstract class Encoding extends Calculus:
           catch _ =>
             _dirs ::= Map.from {
               keys.map {
+                case it @ "echo"           => it -> ()
                 case it @ "errors"         => it -> _werr
                 case it @ "duplications"   => it -> _dups
                 case "exclude" | "include" => "exclude" -> _exclude
@@ -368,6 +374,7 @@ abstract class Encoding extends Calculus:
           if boolean
           then
             _dirs.head.foreach {
+              case ("echo", _)                            =>
               case ("errors", it: Boolean)                => _werr = it
               case ("duplications", it: Boolean)          => _dups = it
               case ("exclude", it: Boolean)               => _exclude = it
@@ -477,8 +484,8 @@ object Encoding:
             given Names()
             ast.rename(false, dups, duplicated)(id)()
           catch
-            case it: NoBPEx => throw NoBindingParsingException(_code, nest, it.getMessage)
-            case it => throw it
+            case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
+            case t => throw t
         }
         lazy val reset: AST => Unit =
           case ∅() =>
@@ -503,8 +510,8 @@ object Encoding:
             given Names()
             ast.rename(false, dups, duplicated)(id)()
           catch
-            case it: NoBPEx => throw NoBindingParsingException(_code, nest, it.getMessage)
-            case it => throw it
+            case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
+            case t => throw t
         }
         `⟦⟧`(this, variables, sum.replace.flatten)
 
@@ -522,7 +529,9 @@ object Encoding:
 
   final case class Position(counter: Long, binds: Boolean)
 
-  final case class Occurrence(shadow: Symbol | Option[Symbol], position: Position):
+  final case class Occurrence(shadow: Symbol | Option[Symbol],
+                              position: Position,
+                              pending: Boolean = false):
     val isBinding = position.binds && position.counter < 0
 
   object Binder:
@@ -557,15 +566,15 @@ object Encoding:
       extends ParsingException(s"No definition for encoding $code")
 
   case class DefinitionParametersException(code: Int)
-      extends EquationParsingException(s"The parameters, constants, and variables must all be different in the left hand side of encoding $code")
+      extends EquationParsingException(s"The parameters, constants, and variables must all be different in the left hand side of definition $code")
 
   case class DefinitionFreeNamesException(code: Int, free: Names)
-      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of encoding $code""")
+      extends EquationParsingException(s"""The free names (${free.map(_.name).mkString(", ")}) in the right hand side are not formal parameters of the left hand side of definition $code""")
 
   abstract sealed class BindingParsingException(code: Int, nest: Int, msg: String, cause: Throwable = null)
       extends ParsingException(msg
                                  + s" at nesting level #$nest"
-                                 + (if code >= 0 then s" in the right hand side of encoding $code" else ""), cause)
+                                 + (if code >= 0 then s" in the right hand side of definition $code" else ""), cause)
 
   case class NoBindingParsingException(code: Int, nest: Int, name: String)
       extends BindingParsingException(code, nest, s"No binding for $name")
@@ -575,11 +584,11 @@ object Encoding:
   case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean, how: String)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, being $how""")
 
-  case class NonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence does not correspond to a parameter""")
+  case class ExistingNonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
+      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence already exists and not as a definition parameter""")
 
-  case class EncodingAliasAbandonedException(code: Int)
-      extends ParsingException(s"An encoding alias was abandoned as the right hand side of encoding $code")
+  case class DefinitionAliasAbandonedException(code: Int)
+      extends ParsingException(s"A definition alias was abandoned as the right hand side of definition $code")
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
@@ -643,10 +652,10 @@ object Encoding:
         bindings -= it
         bindings += name -> occurrence
     }
-    binders
+    cleaned
 
-  inline def binders(using bindings: Bindings): Bindings =
-    bindings.filter(_._2.isBinding)
+  inline def cleaned(using bindings: Bindings): Bindings =
+    bindings.filter((_, it) => it.pending || it.isBinding)
 
 
   extension [T <: AST](ast: T)
