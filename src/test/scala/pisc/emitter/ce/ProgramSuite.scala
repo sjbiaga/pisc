@@ -80,7 +80,7 @@ class ProgramSuite extends FunSuite:
   test("replication - bound output guard - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -163,7 +163,7 @@ class ProgramSuite extends FunSuite:
   test("replication - bound output guard - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -255,7 +255,7 @@ class ProgramSuite extends FunSuite:
   test("replication - bound output guard - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -358,7 +358,7 @@ class ProgramSuite extends FunSuite:
   test("replication - bound output guard - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -450,7 +450,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -523,7 +523,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -599,7 +599,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -675,7 +675,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), `+`(-1))
+    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -757,7 +757,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - typed - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), `+`(-1))
+    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -830,7 +830,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - typed - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), `+`(-1))
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -906,7 +906,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - typed - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), `+`(-1))
+    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -982,7 +982,7 @@ class ProgramSuite extends FunSuite:
   test("replication - input guard - typed - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), `+`(-1))
+    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name"))(using Some(\\("Int")->None)))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1066,7 +1066,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output guard - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), `+`(-1))
+    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1143,7 +1143,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output guard - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), `+`(-1))
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1225,7 +1225,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output guard - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), `+`(-1))
+    val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1305,7 +1305,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output guard - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), `+`(-1))
+    val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1383,7 +1383,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, None, None, `+`(-1))
+    val `13` = `!`(-1, None, None, ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1440,7 +1440,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, None, None, `+`(-1))
+    val `13` = `!`(13, None, None, ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1500,7 +1500,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(-1, Some(13L->"seconds"), None, `+`(-1))
+    val `13` = `!`(-1, Some(13L->"seconds"), None, ∅())
 
     //println(`13`.emit.map(_.structure))
 
@@ -1560,7 +1560,7 @@ class ProgramSuite extends FunSuite:
   test("replication - output - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
-    val `13` = `!`(13, Some(13L->"seconds"), None, `+`(-1))
+    val `13` = `!`(13, Some(13L->"seconds"), None, ∅())
 
     //println(`13`.emit.map(_.structure))
 

@@ -83,6 +83,15 @@ abstract class Expansion extends Encoding:
                 (using substitution: Substitution)
                 (using free: Names): (ParseResult[Fresh], Seq[Term]) =
 
+        def pbf(freeʹ: Names)(using Bindings): Unit =
+          freeʹ.foreach(PendingOccurrence(_)) // 1
+          bindings ++= cleaned                // 2
+          free ++= freeʹ &~ bindings.keySet   // 3
+
+        def pf(freeʹ: Names)(using Bindings): Unit =
+          freeʹ.foreach(PendingOccurrence(_)) // 1
+          free ++= freeʹ &~ bindings.keySet   // 3
+
         val source = in.source
         val offset = in.offset
         val start = handleWhiteSpace(source, offset)
@@ -110,10 +119,9 @@ abstract class Expansion extends Encoding:
                 _cache.get(key) match
 
                   case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
-                    bindings ++= binders
+                    pbf(freeʹ)
 
                     substitution(op) = exp
-                    free ++= freeʹ -- bindings.map(_._1)
 
                     paste(cp)
 
@@ -125,11 +133,6 @@ abstract class Expansion extends Encoding:
                     parse(instantiation, in) match
 
                       case Success((exp, freeʹ), in) =>
-                        bindings ++= binders
-
-                        substitution(op) = exp
-                        free ++= freeʹ -- bindings.map(_._1)
-
                         val source = in.source
                         val offset = in.offset
                         val start = handleWhiteSpace(source, offset)
@@ -139,6 +142,10 @@ abstract class Expansion extends Encoding:
                         if start + n <= source.length
                         && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
                         then
+                          pbf(freeʹ)
+
+                          substitution(op) = exp
+
                           val inʹ = in.drop(start + n - offset)
 
                           _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
@@ -172,7 +179,10 @@ abstract class Expansion extends Encoding:
 
                   if op.charAt(0).isUpper
                   then
-                    Failure("choice expected", in) -> Nil
+                    substitution(op) = ∅()
+
+                    val inʹ = in.drop(start + n - offset)
+                    success(inʹ)
 
                   else if op == "_"
                   then
@@ -218,17 +228,18 @@ abstract class Expansion extends Encoding:
                               case Some((_, Shadow(υidυ))) =>
                                 substitution(op) = λ(υidυ)
                               case _ =>
+                                pf(freeʹ)
                                 substitution(op) = λ(it)
-                            free ++= freeʹ -- bindings.map(_._1)
                         idx += 1
 
                         val inʹ = in.drop(start + n - offset)
                         success(inʹ)
 
                       case Success((it, freeʹ), _) =>
-                        substitution(op) = it
-                        free ++= freeʹ -- bindings.map(_._1)
+                        pf(freeʹ)
                         idx += 1
+
+                        substitution(op) = it
 
                         val inʹ = in.drop(start + n - offset)
                         success(inʹ)
@@ -245,10 +256,9 @@ abstract class Expansion extends Encoding:
                     _cache.get(key) match
 
                       case Some((sum: +, cp, freeʹ, given Bindings, inʹ)) =>
-                        bindings ++= binders
+                        pbf(freeʹ)
 
                         substitution(op) = sum
-                        free ++= freeʹ -- bindings.map(_._1)
 
                         paste(cp)
 
@@ -260,12 +270,11 @@ abstract class Expansion extends Encoding:
                         parseAll(choice, result) match
 
                           case Success((sum, freeʹ), _) =>
-                            bindings ++= binders
+                            pbf(freeʹ)
 
                             val sumʹ = sum.flatten.update(using Bindings(given_Bindings))
 
                             substitution(op) = sumʹ
-                            free ++= freeʹ -- bindings.map(_._1)
 
                             val inʹ = in.drop(start + n - offset)
 
