@@ -253,12 +253,12 @@ object Program:
           }.toSet.toSeq
 
           end match {
-            case `⟦⟧`(_, _, _, _, assignment) =>
-              code ++= assignment
+            case `⟦⟧`(_, variables, _, _, pointers) =>
+              code ++= (variables zip pointers)
                 .map(_.name -> _.name)
                 .map(Pat.Var(_) -> _)
                 .map(Enumerator.Val(_, _))
-              ns ++= assignment.map(_._1.name)
+              ns ++= variables.map(_.name)
             case _ =>
           }
 

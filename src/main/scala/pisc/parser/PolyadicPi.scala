@@ -75,13 +75,13 @@ abstract class PolyadicPi extends Expression:
         val bound = args.filter(_._1.isSymbol) match
           case Nil => Names()
           case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
-        π(ch, polarity = ν, Some(it), args.map(_._1)*) -> (bound, name ++ free ++ freeʹ -- bound)
+        π(ch, polarity = ν, Some(it), args.map(_._1)*) -> (bound, name ++ (free ++ freeʹ &~ bound))
       case (ch, name) ~ _ ~ Some(ν ~ args) ~ _ =>
         val free = args.map(_._2).reduce(_ ++ _)
         val bound = args.filter(_._1.isSymbol) match
           case Nil => Names()
           case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
-        π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ free -- bound)
+        π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ (free &~ bound))
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
         π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*) -> (Names(), name ++ freeʹ)
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
@@ -125,7 +125,7 @@ abstract class PolyadicPi extends Expression:
         val args = params.map(_._1)
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, polarity = Some(cons), code.map(_._1), args*) -> (bound, name ++ free &~ bound)
+        π(ch, polarity = Some(cons), code.map(_._1), args*) -> (bound, name ++ (free &~ bound))
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -252,18 +252,18 @@ abstract class PolyadicPi extends Expression:
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
-        case Some(Occurrence(_, Position(counter, _), true)) if counter < 0 =>
+        case Some(Occurrence(_, Position(counter, _, _), true)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "clobbered")
-        case Some(Occurrence(Some(_), Position(counter, true), _)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, _), _)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
-        case Some(Occurrence(_, it @ Position(counter, false), _)) =>
+        case Some(Occurrence(_, it @ Position(counter, false, _), _)) =>
           if counter < 0
           then
             if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
-            bindings += name -> Occurrence(shadow, it.copy(binds = true))
+            bindings += name -> Occurrence(shadow, it.copy(binds = true, path = path))
           else
             posBindUnless(!hardcoded)
-        case Some(Occurrence(_, Position(_, true), _)) =>
+        case Some(Occurrence(_, Position(_, true, _), _)) =>
           posBindUnless(!hardcoded)
         case _ =>
           posBindUnless(false)
@@ -272,10 +272,15 @@ abstract class PolyadicPi extends Expression:
         bindings += name -> Occurrence(shadow, pos(true))
 
   protected object PendingOccurrence:
+    def apply(names: Names)
+             (using Bindings): Unit =
+      names.foreach(this(_))
     def apply(name: Symbol)
              (using bindings: Bindings): Unit =
       bindings.get(name) match
-        case Some(it @ Occurrence(None, Position(counter, false), false)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, it), false)) if counter < 0 && !path.startsWith(it) =>
+          throw ScopeBindingParsingException(_code, _nest, name)
+        case Some(it @ Occurrence(None, Position(counter, false, _), false)) if counter < 0 =>
           bindings += name -> it.copy(pending = true)
         case _ =>
 
