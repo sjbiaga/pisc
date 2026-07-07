@@ -271,8 +271,8 @@ object Program:
           }.toSet.toSeq
 
           end match {
-            case `⟦⟧`(_, _, _, _, assignment) =>
-              val `vals` = assignment
+            case `⟦⟧`(_, variables, _, _, pointers) =>
+              val `vals` = (variables zip pointers)
                 .map(_.name -> _.name)
                 .map(Pat.Var(_) -> _)
                 .map(Enumerator.Val(_, _))
@@ -282,7 +282,7 @@ object Program:
                 code ++= `vals`
               else
                 code = code.init :+ patch(code.last, `vals`)
-              ns ++= assignment.map(_._1.name)
+              ns ++= variables.map(_.name)
             case _ =>
           }
 

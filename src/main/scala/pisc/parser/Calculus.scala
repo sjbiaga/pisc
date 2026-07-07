@@ -29,8 +29,6 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
-
 import scala.meta.{ Term, Type }
 
 import emitter.shared.Meta.rateʹ
@@ -83,6 +81,9 @@ abstract class Calculus extends StochasticPi:
       }
     }
 
+  def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
+    opt( "("~>choice<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
+
   def parallel(using Bindings, Duplications, Int): Parser[(∥, Names)] =
     scale >> { scaling =>
       val scalingʹ = scaling.abs
@@ -107,77 +108,6 @@ abstract class Calculus extends StochasticPi:
         bindings ++= cleaned
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
-
-  def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
-    opt( "("~>choice<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
-
-  def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
-    "["~condition~"]"~choice ^^ { // (mis)match
-      case _ ~ cond ~ _ ~ t =>
-        ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
-    } |
-    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
-      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
-    } |
-    condition~"?"~choice~":"~choice ^^ { // Elvis operator
-      case cond ~ _ ~ t ~ _ ~ f =>
-        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
-    } |
-    "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
-        throw ConsGuardParsingException(cons, ch.name)
-      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        if ch == par
-        then
-          if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
-          then
-            warn(throw GuardParsingException(ch.name, cons.isEmpty))
-        val bound = π._2._1
-        BindingOccurrence(bound)
-        choice ^^ {
-          case (sum, free) =>
-            val πʹ: π = {
-              π._1 match
-                case it: π =>
-                  def idʹ: String = '!' + π._1.υidυ
-                  it.copy()(idʹ)
-            }
-            `!`(parallelismʹ, pace, Some(πʹ), sum) -> ((free &~ bound) ++ π._2._2)
-        }
-      case parallelism ~ pace ~ Some(μ) =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        choice ^^ {
-          case (sum, free) =>
-            val μʹ: μ = {
-              μ._1 match
-                case it: π =>
-                  def idʹ: String = '!' + μ._1.υidυ
-                  it.copy()(idʹ)
-                case it: τ =>
-                  def idʹ: String = '!' + μ._1.υidυ
-                  it.copy()(idʹ)
-            }
-            `!`(parallelismʹ, pace, Some(μʹ), sum) -> (free ++ μ._2._2)
-        }
-      case parallelism ~ pace ~ _ =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        choice ^^ {
-          case (sum, free) =>
-            `!`(parallelismʹ, pace, None, sum) -> free
-        }
-    } |
-    capital |
-    invocation() |
-    instantiation
-
-  def capital: Parser[(`{}`, Names)]
-
-  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
 
   def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
     rep(prefix) ^^ { _.unzip match
@@ -208,15 +138,97 @@ abstract class Calculus extends StochasticPi:
           ν(λs.map(_.asSymbol.name)*) -> (bound, Names())
     } |
     μ<~"." ^^ {
-      case it @ (_, (bound, _)) =>
+      case it @ (_, (bound, free)) =>
+        PendingOccurrence(free)
         BindingOccurrence(bound)
         it
     }
 
-  def condition: Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
+  def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
+    "["~condition~"]"~choice ^^ { // (mis)match
+      case _ ~ cond ~ _ ~ t =>
+        ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
+    } |
+    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
+      case _ ~ cond ~ _ ~ t ~ _ ~ f =>
+        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+    } |
+    condition~"?"~choice~":"~choice ^^ { // Elvis operator
+      case cond ~ _ ~ t ~ _ ~ f =>
+        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+    } |
+    "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
+      case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
+        throw ConsGuardParsingException(cons, ch.name)
+      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        if ch == par
+        then
+          if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
+          then
+            warn(throw GuardParsingException(ch.name, cons.isEmpty))
+        val (bound, freeʹ) = π._2
+        PendingOccurrence(freeʹ)
+        BindingOccurrence(bound)
+        choice ^^ {
+          case (sum, free) =>
+            val πʹ: π = {
+              π._1 match
+                case it: π =>
+                  def idʹ: String = '!' + π._1.υidυ
+                  it.copy()(idʹ)
+            }
+            `!`(parallelismʹ, pace, Some(πʹ), sum) -> (freeʹ ++ (free &~ bound))
+        }
+      case parallelism ~ pace ~ Some(μ) =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        val (_, freeʹ) = μ._2
+        PendingOccurrence(freeʹ)
+        choice ^^ {
+          case (sum, free) =>
+            val μʹ: μ = {
+              μ._1 match
+                case it: π =>
+                  def idʹ: String = '!' + μ._1.υidυ
+                  it.copy()(idʹ)
+                case it: τ =>
+                  def idʹ: String = '!' + μ._1.υidυ
+                  it.copy()(idʹ)
+            }
+            `!`(parallelismʹ, pace, Some(μʹ), sum) -> (freeʹ ++ free)
+        }
+      case parallelism ~ pace ~ _ =>
+        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !_replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        choice ^^ {
+          case (sum, free) =>
+            `!`(parallelismʹ, pace, None, sum) -> free
+        }
+    } |
+    capital ^^ {
+      case it @ (_, free) =>
+        PendingOccurrence(free)
+        it
+    } |
+    invocation() ^^ {
+      case it @ (_, free) =>
+        PendingOccurrence(free)
+        it
+    } |
+    instantiation
+
+  def capital: Parser[(`{}`, Names)]
+
+  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
+
+  def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
-        (lhs -> rhs -> (mismatch != "=")) -> (free_lhs ++ free_rhs)
+        val free = free_lhs ++ free_rhs
+        PendingOccurrence(free)
+        (lhs -> rhs -> (mismatch != "=")) -> free
     }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
@@ -311,7 +323,7 @@ object Calculus:
               variables: Names,
               sum: AST.+,
               xid: String = null,
-              assignment: Set[(Symbol, Symbol)] = Set.empty)
+              pointers: List[Symbol] = Nil)
 
     case `{}`(identifier: String,
               pointers: List[Symbol],
@@ -348,16 +360,14 @@ object Calculus:
 
       case !(parallelism, _, guard, sum) => s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
 
-      case `⟦⟧`(definition, variables, sum, _, assignment) =>
+      case `⟦⟧`(definition, variables, sum, _, pointers) =>
         val vars = if (variables.isEmpty)
                    then
                      ""
-                   else
-                     variables.map {
-                       case it if assignment.exists(_._1 == it) =>
-                         s"${it.name} = ${assignment.find(_._1 == it).get._2.name}"
-                       case it => it.name
-                     }.mkString("{", ", ", "}")
+                   else {
+                     (variables zip pointers).map { (it, pt) => s"${it.name} = ${pt.name}" }
+                   ++ variables.drop(pointers.size).map(_.name)
+                   }.mkString("{", ", ", "}")
         s"""${Definition(definition.code, definition.term)}$vars = $sum"""
 
       case `{}`(identifier, pointers, agent, params*) =>

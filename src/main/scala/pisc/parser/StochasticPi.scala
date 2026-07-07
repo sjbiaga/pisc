@@ -63,11 +63,11 @@ abstract class StochasticPi extends Expression:
       case (ch, name) ~ r ~  (ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ free ++ freeʹ -- bound)
+        π(ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ (free ++ freeʹ &~ bound))
       case (ch, name) ~ r ~ (ν ~ (arg, free)) ~ _ =>
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ free -- bound)
+        π(ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ (free &~ bound))
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -104,7 +104,7 @@ abstract class StochasticPi extends Expression:
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ free &~ bound)
+        π(ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ (free &~ bound))
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -269,18 +269,18 @@ abstract class StochasticPi extends Expression:
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
-        case Some(Occurrence(_, Position(counter, _), true)) if counter < 0 =>
+        case Some(Occurrence(_, Position(counter, _, _), true)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "clobbered")
-        case Some(Occurrence(Some(_), Position(counter, true), _)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, _), _)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
-        case Some(Occurrence(_, it @ Position(counter, false), _)) =>
+        case Some(Occurrence(_, it @ Position(counter, false, _), _)) =>
           if counter < 0
           then
             if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
-            bindings += name -> Occurrence(shadow, it.copy(binds = true))
+            bindings += name -> Occurrence(shadow, it.copy(binds = true, path = path))
           else
             posBindUnless(!hardcoded)
-        case Some(Occurrence(_, Position(_, true), _)) =>
+        case Some(Occurrence(_, Position(_, true, _), _)) =>
           posBindUnless(!hardcoded)
         case _ =>
           posBindUnless(false)
@@ -289,10 +289,15 @@ abstract class StochasticPi extends Expression:
         bindings += name -> Occurrence(shadow, pos(true))
 
   protected object PendingOccurrence:
+    def apply(names: Names)
+             (using Bindings): Unit =
+      names.foreach(this(_))
     def apply(name: Symbol)
              (using bindings: Bindings): Unit =
       bindings.get(name) match
-        case Some(it @ Occurrence(None, Position(counter, false), false)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, it), false)) if counter < 0 && !path.startsWith(it) =>
+          throw ScopeBindingParsingException(_code, _nest, name)
+        case Some(it @ Occurrence(None, Position(counter, false, _), false)) if counter < 0 =>
           bindings += name -> it.copy(pending = true)
         case _ =>
 
