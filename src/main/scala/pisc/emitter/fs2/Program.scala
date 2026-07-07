@@ -633,14 +633,14 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, _, assignment) =>
-          val ** = assignment
+        case `⟦⟧`(_, variables, _sum, _, pointers) =>
+          * = (variables zip pointers)
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
 
-          val n = assignment.size
+          val n = pointers.size
 
           val sum = if (variables.size == n)
                     then
@@ -648,7 +648,7 @@ object Program:
                     else
                       `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = ** ::: sum.emit
+          * = * ::: sum.emit
 
         case _: `{}` => ???
 

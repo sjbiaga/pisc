@@ -137,14 +137,16 @@ class PiSuite extends FunSuite:
     } match
       case _ :: _ :: _ :: Right((_, +(_, ∥(_, `.`(exp1, ν("x", "y")))))) :: Right((_, +(_, ∥(_, `.`(exp2, ν("x", "y")))))) :: Nil =>
         exp1 match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
-                                    `.`(`(*)`("Agent0", Nil)))), _, assignment1) =>
+          case `⟦⟧`(_, variables1, +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
+                                             `.`(`(*)`("Agent0", Nil)))), _, pointers1) =>
+            val assignment1 = variables1 zip pointers1
             assertEquals(assignment1, Set(Symbol("x_υ4υ") -> Symbol("x"), Symbol("y_υ5υ") -> Symbol("y")))
           case _ =>
             assert(false)
         exp2 match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
-                                    `.`(`(*)`("Agent0", Nil)))), _, assignmentʹ) =>
+          case `⟦⟧`(_, variablesʹ, +(_, ∥(_, `.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
+                                             `.`(`(*)`("Agent0", Nil)))), _, pointersʹ) =>
+            val assignmentʹ = variablesʹ zip pointersʹ
             assertEquals(assignmentʹ, Set(Symbol("x_υaυ") -> Symbol("x"), Symbol("y_υbυ") -> Symbol("y")))
           case _ =>
             assert(false)
@@ -168,15 +170,18 @@ class PiSuite extends FunSuite:
         exp match
           case `⟦⟧`(_, _, +(_, ∥(_, `.`(expʹ, ν("ch_υnυ")))), _,  _) =>
             expʹ match
-              case `⟦⟧`(_, _, +(_, ∥(_, `.`(exp1), `.`(exp2))), _, assignment) =>
+              case `⟦⟧`(_, variables, +(_, ∥(_, `.`(exp1), `.`(exp2))), _, pointers) =>
+                val assignment = variables zip pointers
                 assertEquals(assignment, Set(Symbol("x_υoυ") -> Symbol("ch_υnυ"), Symbol("y_υpυ") -> Symbol("ch_υnυ")))
                 exp1 match
-                  case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, assignment1) =>
+                  case `⟦⟧`(_, variables1, +(_, ∥(_, `.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, pointers1) =>
+                    val assignment1 = variables1 zip pointers1
                     assertEquals(assignment1, Set(Symbol("z_υqυ") -> Symbol("x_υoυ")))
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, assignmentʹ) =>
+                  case `⟦⟧`(_, variablesʹ, +(_, ∥(_, `.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, pointersʹ) =>
+                    val assignmentʹ = variablesʹ zip pointersʹ
                     assertEquals(assignmentʹ, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
                   case _ =>
                     assert(false)
@@ -209,6 +214,45 @@ class PiSuite extends FunSuite:
         source("""
                ⟦ 'x ^ 'P ^ 'Q ⟧ = ν(x) ( P{} | Q{} )
                ⟦ 'x & 'P ⟧(k) = ⟦ y ^ y<x>. ^ k<x>. ⟧ | ⟦ x ^ P{} ^ P{} ⟧
+               """)
+      }
+    }
+
+  }
+
+  test("encoding-pending-expanded-out-of-scope") {
+
+    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 0") {
+      Main(Emitter.test, getClass.getSimpleName) {
+        source("""
+               ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}
+               ⟦ 'x & 'y ⟧ = ⟦ x ^ y ^ x<y>. ⟧ | ⟦ y ^ z ^ ⟧
+               """)
+      }
+    }
+
+  }
+
+  test("encoding-pending-pointers-out-of-scope") {
+
+    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
+      Main(Emitter.test, getClass.getSimpleName) {
+        source("""
+               ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}
+               ⟦ 'x & 'y ⟧ = ⟦ x ^ y ^ x<y>. ⟧{y}
+               """)
+      }
+    }
+
+  }
+
+  test("encoding-pending-hardcoded-out-of-scope") {
+
+    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
+      Main(Emitter.test, getClass.getSimpleName) {
+        source("""
+               ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}
+               ⟦ 'x & 'y ⟧ = ⟦ x ^ y ^ x<y>. ⟧ | x<y>.
                """)
       }
     }

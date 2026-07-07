@@ -58,22 +58,6 @@ class ExpansionParserSuite extends FunSuite:
 
   }
 
-  test("instantiation - rename - pointers - no binding") {
-
-    val `13` = new ExpansionParserTest:
-      override def test =
-        _code = -1
-        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧{x}")
-      parseAll(definition, "⟦⟧ = ") match
-        case Success(Some(it), _) =>
-          defn(0) = it :: Nil
-
-    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #1") {
-      `13`.test
-    }
-
-  }
-
   test("instantiation - rename - no binding") {
 
     val `13` = new ExpansionParserTest:
@@ -168,8 +152,6 @@ class ExpansionParserSuite extends FunSuite:
 
 
 object ExpansionParserSuite:
-
-  import scala.util.matching.Regex
 
   abstract class ExpansionParserTest extends Expansion:
     override protected val emitter: Emitter = Emitter.test

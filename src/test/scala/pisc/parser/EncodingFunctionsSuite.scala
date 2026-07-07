@@ -648,7 +648,8 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition
             parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
-              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, _, ∅(), _, assignment))))), _) =>
+              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, variables, ∅(), _, pointers))))), _) =>
+                val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
                   case _ =>
@@ -673,13 +674,16 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition1
             parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
-              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(_, _, ∅(), _, assignment))))))), _) =>
+              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(_, variables, ∅(), _, pointers))))))), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition2
+                val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
                     parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
-                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, _, +(_, ∥(_, `.`(`⟦⟧`(_, _, ∅(), _, assignment1)))), _, assignment2))))), _) =>
+                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, variables2, +(_, ∥(_, `.`(`⟦⟧`(_, variables1, ∅(), _, pointers1)))), _, pointers2))))), _) =>
+                        val assignment1 = variables1 zip pointers1
+                        val assignment2 = variables2 zip pointers2
                         assignment1.headOption -> assignment2.headOption match
                           case Some((Symbol("z_υ6υ"), Symbol("y_υ5υ"))) ->
                                Some((Symbol("y_υ5υ"), Symbol("x"))) =>

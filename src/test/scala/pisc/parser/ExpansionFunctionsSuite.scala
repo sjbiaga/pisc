@@ -26,15 +26,22 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-package scala.util.parsing.combinator
 package pisc
 package parser
 
-import scala.collection.mutable.{ HashMap => Map, LinkedHashSet => Set }
+import scala.collection.mutable.{
+  LinkedHashMap => Map,
+  LinkedHashSet => Set
+}
 
 import munit.FunSuite
 
+import _root_.pisc.parser.Pi.*
+import _root_.pisc.parser.Calculus.*
+import _root_.pisc.parser.Encoding.*
+import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.*
+import ExpansionFunctionsSuite.*
 
 
 class ExpansionFunctionsSuite extends FunSuite:
@@ -146,3 +153,103 @@ class ExpansionFunctionsSuite extends FunSuite:
       case _ =>
 
   }
+
+  test("update - output prefix") {
+    val `13` = new ExpansionFunctionTest:
+      override def test =
+        assertMatches(parseAll(choice, "x<x>.")) {
+          case Success((sum, _), _) =>
+            val shadow = Symbol("x_shadow")
+            given Bindings = Map(Symbol("x") -> Occurrence(Some(shadow), Position(1, true)))
+
+            val bindings = Bindings(given_Bindings)
+            sum.update(using bindings) match
+              case +(_, ∥(_, `.`(_, π(λ(`shadow`), λ(`shadow`), _, _)))) =>
+                bindings == given_Bindings
+              case _ => false
+        }
+
+    `13`.test
+  }
+
+  test("update - input prefix . output prefix") {
+    val `13` = new ExpansionFunctionTest:
+      override def test =
+        assertMatches(parseAll(choice, "x(x). x<x>.")) {
+          case Success((sum, _), _) =>
+            val name = Symbol("x")
+            val shadow = Symbol("x_shadow")
+            given Bindings = Map(name -> Occurrence(Some(shadow), Position(1, true)))
+
+            val bindings = Bindings(given_Bindings)
+            sum.update(using bindings) match
+              case +(_, ∥(_, `.`(_, π(λ(`shadow`), λ(`name`), _, _),
+                                    π(λ(`name`), λ(`name`), _, _)))) =>
+                bindings == given_Bindings
+              case _ => false
+        }
+
+    `13`.test
+  }
+
+  test("update - replication - output prefix guard . output prefix") {
+    val `13` = new ExpansionFunctionTest:
+      override def test =
+        assertMatches(parseAll(leaf, "! .x<x>. x<x>.")) {
+          case Success((rep, _), _) =>
+            val shadow = Symbol("x_shadow")
+            given Bindings = Map(Symbol("x") -> Occurrence(Some(shadow), Position(1, true)))
+
+            val bindings = Bindings(given_Bindings)
+            rep.update(using bindings) match
+              case !(_, _, Some(π(λ(`shadow`), λ(`shadow`), _, _)),
+                     +(_, ∥(_, `.`(_, π(λ(`shadow`), λ(`shadow`), _, _))))) =>
+                bindings == given_Bindings
+              case _ => false
+        }
+
+    `13`.test
+  }
+
+  test("update - replication - input prefix guard . output prefix") {
+    val `13` = new ExpansionFunctionTest:
+      override def test =
+        assertMatches(parseAll(leaf, "! .x(x). x<x>.")) {
+          case Success((rep, _), _) =>
+            val name = Symbol("x")
+            val shadow = Symbol("x_shadow")
+            given Bindings = Map(name -> Occurrence(Some(shadow), Position(1, true)))
+
+            val bindings = Bindings(given_Bindings)
+            rep.update(using bindings) match
+              case !(_, _, Some(π(λ(`shadow`), λ(`name`), _, _)),
+                     +(_, ∥(_, `.`(_, π(λ(`name`), λ(`name`), _, _))))) =>
+                bindings == given_Bindings
+              case _ => false
+        }
+
+    `13`.test
+  }
+
+
+object ExpansionFunctionsSuite:
+
+  abstract class ExpansionFunctionTest extends Expansion:
+    override protected val emitter: Emitter = Emitter.test
+    override protected val in: String = getClass.getSimpleName
+    override val ln: String = "line #0"
+
+    eqtn = List()
+    defn = Map()
+    self = Set()
+    _nest = 0
+    _id = new helper.υidυ
+    _χ_id = new helper.υidυ
+    _cntr = Map(0 -> 0L)
+    _nth = Map(0 -> 0L)
+
+    given Bindings()
+    given Duplications()
+    given Int = 1
+
+    def test: Unit

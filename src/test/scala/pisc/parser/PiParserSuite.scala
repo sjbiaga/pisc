@@ -391,6 +391,51 @@ class PiParserSuite extends FunSuite:
 
   }
 
+  test("μ - bound output") {
+
+    val `13` = new PiParserTest:
+      override def test =
+        parseAll(μ, "ch<νn>") match
+          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some("ν"), None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
+            assertEquals(free, Names() + Symbol("ch"))
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("μ - bound output - same name") {
+
+    val `13` = new PiParserTest:
+      override def test =
+        parseAll(μ, "n<νn>") match
+          case Success((π(λ(Symbol("n")), λ(Symbol("n")), Some("ν"), None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
+            assertEquals(free, Names() + Symbol("n"))
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
+  test("μ - input - same name") {
+
+    val `13` = new PiParserTest:
+      override def test =
+        parseAll(μ, "n(n)") match
+          case Success((π(λ(Symbol("n")), λ(Symbol("n")), Some(""), None), (bound, free)), _) =>
+            assertEquals(bound, Names() + Symbol("n"))
+            assertEquals(free, Names() + Symbol("n"))
+          case _ =>
+            assert(false)
+
+    `13`.test
+
+  }
+
   test("Bindings - encoded binding occurrence - parameter") {
 
     val `13` = new PiParserTest:

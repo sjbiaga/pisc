@@ -143,13 +143,13 @@ class PiOccurrenceSuite extends FunSuite:
     parser.pendingOccurrenceObject(name)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(None, Position(counter @ 1, binds @ false), pending @ false)) => true
+      case Some(Occurrence(None, Position(counter @ 1, binds @ false, _), pending @ false)) => true
     }
 
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(None, Position(counter @ 2, binds @ true), pending @ false)) => true
+      case Some(Occurrence(None, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -206,7 +206,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(shadow @ Some(`name`), Position(counter @ `negative`, binds @ true), pending @ false)) => true
+      case Some(Occurrence(shadow @ Some(`name`), Position(counter @ `negative`, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -237,7 +237,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(`shadow`, Position(counter @ `negative`, binds @ true), pending @ false)) => true
+      case Some(Occurrence(`shadow`, Position(counter @ `negative`, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -390,7 +390,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(shadow @ Some(`name`), Position(counter @ `negative`, binds @ true), pending @ false)) => true
+      case Some(Occurrence(shadow @ Some(`name`), Position(counter @ `negative`, binds @ true, _), pending @ false)) => true
     }
 
     interceptMessage[UniquenessBindingParsingException](s"A binding name (${name.name}) does not correspond to a unique hardcoded binding occurrence, being duplicated at nesting level #0 in the right hand side of definition 13") {
@@ -424,7 +424,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(`shadow`, Position(counter @ positive, binds @ true), pending @ false)) => true
+      case Some(Occurrence(`shadow`, Position(counter @ positive, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -459,7 +459,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(`shadow`, Position(counter @ `negative`, binds @ true), pending @ false)) => true
+      case Some(Occurrence(`shadow`, Position(counter @ `negative`, binds @ true, _), pending @ false)) => true
     }
 
     interceptMessage[UniquenessBindingParsingException](s"A binding name (${name.name}) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #0 in the right hand side of definition 13") {
@@ -498,13 +498,13 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(shadow @ None, Position(counter @ 1, binds @ true), pending @ false)) => true
+      case Some(Occurrence(shadow @ None, Position(counter @ 1, binds @ true, _), pending @ false)) => true
     }
 
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(shadow @ None, Position(counter @ 2, binds @ true), pending @ false)) => true
+      case Some(Occurrence(shadow @ None, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -535,7 +535,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(Set(name))
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(shadow @ None, Position(counter @ 2, binds @ true), pending @ false)) => true
+      case Some(Occurrence(shadow @ None, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -557,7 +557,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.pendingOccurrenceObject(name)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(None, Position(counter @ `positive`, binds @ false), pending @ false)) => true
+      case Some(Occurrence(None, Position(counter @ `positive`, binds @ false, _), pending @ false)) => true
     }
   }
 
@@ -580,13 +580,71 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(`shadow`, Position(counter @ negative, binds @ true), pending @ false)) => true
+      case Some(Occurrence(`shadow`, Position(counter @ negative, binds @ true, _), pending @ false)) => true
     }
 
     parser.pendingOccurrenceObject(name)
 
     assertMatches(given_Bindings.get(name)) {
-      case Some(Occurrence(`shadow`, Position(counter @ negative, binds @ true), pending @ false)) => true
+      case Some(Occurrence(`shadow`, Position(counter @ negative, binds @ true, _), pending @ false)) => true
+    }
+  }
+
+  /**
+    * `⟦ 'x ^ 'P ⟧ = ν(x) P{}`
+    *
+    * `⟦ 'x & 'y ⟧ = x<y>.`
+    *
+    * `⟦13 'y 13⟧ = ⟦ y ^ ⟧ | ⟦ y ^ y ⟧`
+    */
+  test("occurrence - definition - parameter - encoded binding - expanded - pending out of scope") {
+    val negative = -1
+    val name = Symbol("y")
+    val shadow = Some(Symbol("x_shadow"))
+    val parameter = Occurrence(shadow = None, Position(counter = negative, binds = false))
+    given Bindings = Map(name -> parameter)
+
+    val parser = new PiMain
+
+    parser._code(13)
+
+    parser._nest(true)
+    parser.bindingOccurrenceObject(name, shadow)
+    parser._nest(false)
+
+    interceptMessage[ScopeBindingParsingException](s"A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 13") {
+      try
+        parser._nest(true)
+        parser.pendingOccurrenceObject(name)
+      finally
+        parser._nest(false)
+    }
+  }
+
+  /**
+    * `⟦ 'x ^ 'P ⟧ = ν(x) P{}`
+    *
+    * `⟦13 'y 13⟧ = ⟦ y ^ ⟧ | y<y>.`
+    *
+    * `⟦13 'y 13⟧ = ⟦ y ^ ⟧{y}`
+    */
+  test("occurrence - definition - parameter - encoded binding - hardcoded - pending out of scope") {
+    val negative = -1
+    val name = Symbol("y")
+    val shadow = Some(Symbol("x_shadow"))
+    val parameter = Occurrence(shadow = None, Position(counter = negative, binds = false))
+    given Bindings = Map(name -> parameter)
+
+    val parser = new PiMain
+
+    parser._code(13)
+
+    parser._nest(true)
+    parser.bindingOccurrenceObject(name, shadow)
+    parser._nest(false)
+
+    interceptMessage[ScopeBindingParsingException](s"A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 13") {
+      parser.pendingOccurrenceObject(name)
     }
   }
 
@@ -604,6 +662,7 @@ object PiOccurrenceSuite:
     override def ln: String = "line #0"
 
     def _code(code: Int) : Unit = _code = code
+    def _nest(b: Boolean) : Unit = nest(b)
 
     val bindingOccurrenceObject = BindingOccurrence
     val pendingOccurrenceObject = PendingOccurrence
