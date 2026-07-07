@@ -29,8 +29,6 @@
 package masc
 package parser
 
-import scala.collection.mutable.{ LinkedHashSet => Set }
-
 import scala.meta.Term
 
 import Expression.Code
@@ -60,6 +58,9 @@ abstract class Calculus extends Ambient:
         }
     }
 
+  def parallelʹ(using Bindings, Duplications, Int): Parser[(∥, Names)] =
+    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
+
   def parallel(using Bindings, Duplications, Int): Parser[(∥, Names)] =
     scale >> { scaling =>
       val scalingʹ = scaling.abs
@@ -85,8 +86,54 @@ abstract class Calculus extends Ambient:
         `.`(end, it*) -> (free ++ (freeʹ &~ bound))
     }
 
-  def parallelʹ(using Bindings, Duplications, Int): Parser[(∥, Names)] =
-    opt( "("~>parallel<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
+  def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
+    rep(prefix) ^^ { _.unzip match
+      case (it, _2) => _2.unzip match
+        case (bs, names) =>
+          val free = Names()
+          names
+            .zipWithIndex
+            .foreach { (ns, i) =>
+              val bound = bs
+                .take(i)
+                .reduceOption(_ ++ _)
+                .getOrElse(Names())
+              free ++= ns -- bound
+            }
+          val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
+          it -> (bound, free)
+    }
+
+  def prefix(using Bindings, Int): Parser[(Pre, (Names, Names))] =
+    "ν"~>"("~>names<~")" ^^ { _.unzip match // restriction
+      case (ns, bs) =>
+        val bound = bs.reduce(_ ++ _)
+        BindingOccurrence(bound)
+        ν(ns*) -> (bound, Names())
+    } |
+    "τ" ~> opt( expression ) <~ "." ^^ { // silent transition
+      case Some((it, free)) =>
+        PendingOccurrence(free)
+        τ(Some(it)) -> (Names(), free)
+      case _ =>
+        τ(None) -> (Names(), Names())
+    } |
+    caps <~ "." ^^ { // capability action
+      case (path, free) =>
+        PendingOccurrence(free)
+        `..`(path*) -> (Names(), free)
+    } |
+    ("("~>name<~")") ~ opt( expression ) <~ "." ^^ {
+      case _ ~ Some(((Left(enums), _), _)) =>
+        throw TermParsingException(enums)
+      case (name, bound) ~ Some((it, free)) =>
+        PendingOccurrence(free)
+        BindingOccurrence(bound)
+        `()`(name, Some(it)) -> (bound, free)
+      case (name, bound) ~ _ =>
+        BindingOccurrence(bound)
+        `()`(name, None) -> (bound, Names())
+    }
 
   def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
     "!"~> scale ~ opt( pace ) ~ opt( "."~> "("~>name<~")" <~"." ) >> { // [guarded] replication
@@ -102,75 +149,49 @@ abstract class Calculus extends Ambient:
             `!`(parallelism, pace, None, par) -> free
         }
     } |
-    name ~ ("["~>parallel<~"]") ^^ { // ambient
-      case (amb, name) ~ (par, free) =>
-        `[]`(amb, par) -> (name ++ free)
+    name >> { // ambient
+      case (amb, name) =>
+        PendingOccurrence(name)
+        "["~> parallel <~"]" ^^ {
+          case (par, free) =>
+            `[]`(amb, par) -> (name ++ free)
+        }
     } |
     ("<"~> opt( caps ) <~">") ~ opt( expression ) ^^ { // output action
       case _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
       case Some((path, free)) ~ Some((it @ (Right(_), _), freeʹ)) =>
+        PendingOccurrence(free ++ freeʹ)
         <>(Some(it), path*) -> (free ++ freeʹ)
       case Some((path, free)) ~ _ =>
+        PendingOccurrence(free)
         <>(None, path*) -> free
       case _ =>
         <>(None) -> Names()
     } |
-    "go" ~> name ~ ("."~> parallel) ^^ { // objective move
-      case (amb, name) ~ (par, free) =>
-        `go.`(amb, par) -> (name ++ free)
+    "go"~> name <~"."  >> { // objective move
+      case (amb, name) =>
+        PendingOccurrence(name)
+        parallel ^^ {
+          case (par, free) =>
+            `go.`(amb, par) -> (name ++ free)
+        }
     } |
-    capital |
-    invocation() |
+    capital ^^ {
+      case it @ (_, free) =>
+        PendingOccurrence(free)
+        it
+    } |
+    invocation() ^^ {
+      case it @ (_, free) =>
+        PendingOccurrence(free)
+        it
+    } |
     instantiation
 
   def capital: Parser[(`{}`, Names)]
 
   def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
-
-  def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
-    rep(prefix) ^^ { _.unzip match
-      case (it, _2) => _2.unzip match
-        case (bs, names) =>
-          bs.foreach(BindingOccurrence(_))
-          val free = Names()
-          names
-            .zipWithIndex
-            .foreach { (ns, i) =>
-              val bound = bs
-                .take(i)
-                .reduceOption(_ ++ _)
-                .getOrElse(Names())
-              free ++= ns -- bound
-            }
-          val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
-          it -> (bound, free)
-    }
-
-  def prefix: Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>names<~")" ^^ { _.unzip match // restriction
-      case (ns, bs) =>
-        val bound = bs.reduce(_ ++ _)
-        ν(ns*) -> (bound, Names())
-    } |
-    "τ" ~> opt( expression ) <~ "." ^^ { // silent transition
-      case Some((it, free)) =>
-        τ(Some(it)) -> (Names(), free)
-      case _ =>
-        τ(None) -> (Names(), Names())
-    } |
-    caps <~ "." ^^ { // capability action
-      case (path, free) =>
-        `..`(path*) -> (Names(), free)
-    } |
-    ("("~>name<~")") ~ opt( expression ) <~ "." ^^ {
-      case _ ~ Some(((Left(enums), _), _)) =>
-        throw TermParsingException(enums)
-      case (name, bound) ~ Some((it, free)) =>
-        `()`(name, Some(it)) -> (bound, free)
-      case (name, bound) ~ _ =>
-        `()`(name, None) -> (bound, Names())
-    }
 
   def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
     qual ~ IDENT ~ opt( "("~> names ~ opt(if equation then "*" else "") <~")" ) ^^ {
@@ -265,7 +286,7 @@ object Calculus:
               variables: Names,
               par: AST.∥,
               xid: String = null,
-              assignment: Set[(String, String)] = Set.empty)
+              pointers: List[String] = Nil)
 
     case `{}`(identifier: String,
               pointers: List[String],
@@ -297,16 +318,14 @@ object Calculus:
 
       case `go.`(amb, par) => "go " + amb + "." + par
 
-      case `⟦⟧`(definition, variables, par, _, assignment) =>
+      case `⟦⟧`(definition, variables, par, _, pointers) =>
         val vars = if (variables.isEmpty)
                    then
                      ""
-                   else
-                     variables.map {
-                       case it if assignment.exists(_._1 == it) =>
-                         s"$it = ${assignment.find(_._1 == it).get._2}"
-                       case it => it
-                     }.mkString("{", ", ", "}")
+                   else {
+                     (variables zip pointers).map { (it, pt) => s"$it = $pt" }
+                   ++ variables.drop(pointers.size)
+                   }.mkString("{", ", ", "}")
         s"""${Definition(definition.code, definition.term)}$vars = $par"""
 
       case `{}`(identifier, pointers, agent, params*) =>

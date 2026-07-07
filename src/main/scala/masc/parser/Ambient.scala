@@ -156,18 +156,18 @@ abstract class Ambient extends Expression:
     def apply(name: String, shadow: Option[String], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
-        case Some(Occurrence(_, Position(counter, _), true)) if counter < 0 =>
+        case Some(Occurrence(_, Position(counter, _, _), true)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "clobbered")
-        case Some(Occurrence(Some(_), Position(counter, true), _)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, _), _)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
-        case Some(Occurrence(_, it @ Position(counter, false), _)) =>
+        case Some(Occurrence(_, it @ Position(counter, false, _), _)) =>
           if counter < 0
           then
             if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
-            bindings += name -> Occurrence(shadow, it.copy(binds = true))
+            bindings += name -> Occurrence(shadow, it.copy(binds = true, path = path))
           else
             posBindUnless(!hardcoded)
-        case Some(Occurrence(_, Position(_, true), _)) =>
+        case Some(Occurrence(_, Position(_, true, _), _)) =>
           posBindUnless(!hardcoded)
         case _ =>
           posBindUnless(false)
@@ -176,10 +176,15 @@ abstract class Ambient extends Expression:
         bindings += name -> Occurrence(shadow, pos(true))
 
   protected object PendingOccurrence:
+    def apply(names: Names)
+             (using Bindings): Unit =
+      names.foreach(this(_))
     def apply(name: String)
              (using bindings: Bindings): Unit =
       bindings.get(name) match
-        case Some(it @ Occurrence(None, Position(counter, false), false)) if counter < 0 =>
+        case Some(Occurrence(Some(_), Position(counter, true, it), false)) if counter < 0 && !path.startsWith(it) =>
+          throw ScopeBindingParsingException(_code, _nest, name)
+        case Some(it @ Occurrence(None, Position(counter, false, _), false)) if counter < 0 =>
           bindings += name -> it.copy(pending = true)
         case _ =>
 

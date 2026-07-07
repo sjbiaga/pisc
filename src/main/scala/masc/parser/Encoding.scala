@@ -37,6 +37,8 @@ import scala.collection.mutable.{
 
 import scala.meta.Term
 
+import helper.υidυ.rewrite
+
 import Expression.Code
 import Ambient.{ AST => _, * }
 import Calculus.*
@@ -73,29 +75,6 @@ abstract class Encoding extends Calculus:
             case (_par, _free) =>
               val par = _par.flatten
               val free = _free ++ par.capitals
-              val (constantsʹ, variablesʹ, bindingsʹ, parʹ) =
-                par match
-                  case ∥(sc, `.`(exp @ `⟦⟧`(Definition(_, _, constantsʹ, _, _), variablesʹ, _, _, assignmentʹ)))
-                      if assignmentʹ.size < variablesʹ.size =>
-                    val constantsʹʹ = constantsʹ &~ constants
-                    val pointersʹ = variablesʹ.map(_.replaceAll("_υ.*υ", ""))
-                    val variablesʹʹ = (pointersʹ &~ variables)
-                                        .map { it => variablesʹ.find(_.startsWith(it)).get }
-                    val pointersʹʹ = pointersʹ.drop(assignmentʹ.size)
-                    if variablesʹʹ.size != pointersʹʹ.size
-                    then
-                      warn(throw DefinitionAliasAbandonedException(_code))
-                      (constants, variables, given_Bindings, par)
-                    else
-                      val assignmentʹʹ = assignmentʹ ++ (variablesʹʹ zip pointersʹʹ)
-                      val boundʹ = constantsʹʹ ++ pointersʹʹ
-                      bound ++= boundʹ
-                      val bindingsʹ = boundʹ.map(_ -> Occurrence(None, pos()))
-                      val expʹ: `⟦⟧` = exp.copy(assignment = assignmentʹʹ)
-                      val parʹ: ∥ = ∥(sc, `.`(expʹ))
-                      (constants ++ constantsʹʹ, variables ++ pointersʹʹ, given_Bindings ++ bindingsʹ, parʹ)
-                  case _ =>
-                    (constants, variables, given_Bindings, par)
               if (free &~ bound).nonEmpty
               then
                 throw DefinitionFreeNamesException(_code, free &~ bound)
@@ -104,16 +83,16 @@ abstract class Encoding extends Calculus:
                 if !_exclude
                 then
                   val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.toSeq*)
-                  eqtn :+= bind -> parʹ
+                  eqtn :+= bind -> par
               Some {
-                Macro(parameters.toList, _parameters.size, constantsʹ, variablesʹ, bindingsʹ, parʹ)
+                Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, par)
                 ->
                 Definition(_code, term, constants, variables, par)
               }
           }
     }
 
-  def instantiation(using bindings: Bindings, duplications: Duplications, _sc: Int): Parser[(`⟦⟧`, Names)] =
+  def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear()
@@ -135,31 +114,31 @@ abstract class Encoding extends Calculus:
           defn.values.reduce(_ ++ _).filterNot(_._2.term.isEmpty)
       } match
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
-          (parallel <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
-            case (par, free) ~ ps =>
+          parallel <~ s"$grp1⟧" ^^ {
+            case (par, free) =>
               val xid = χ_id
               duplications += xid -> (false, Map())
-              (`⟦⟧`(definition, definition.variables, par.flatten, xid) -> free) -> ps
+              `⟦⟧`(definition, definition.variables, par.flatten, xid) -> free
           }
         case it =>
-          (instance(it, s"$grp1⟧") <~ s"$grp1⟧") ~ opt( pointers ) ^^ {
-            case exp ~ ps =>
-              exp -> ps
-          }
-    } ^^ {
-      case ((exp @ `⟦⟧`(Definition(_, _, constants, _, _), variables, _, _, _), free), _pointers) =>
-        try
-          given MutableList[(String, String)]()
-          val pointers = _pointers.map(_._1.map(renamed(_))).getOrElse(Nil)
-          val assignment = variables zip pointers
-          given Names()
-          val expʹ = exp.copy(assignment = assignment).rename()(id)(free)
-          bindings ++= purged
-          nest(false)
-          expʹ -> (free ++ constants)
-        catch
-          case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
-          case it => throw it
+          instance(it, s"$grp1⟧") <~ s"$grp1⟧"
+    } >> {
+      case (exp @ `⟦⟧`(Definition(_, _, constants, _, _), _, _, _, _), free) =>
+        val expʹ =
+          try
+            given MutableList[(String, String)]()
+            given Names()
+            exp.rename()(id)(free)
+          catch
+            case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
+            case it => throw it
+          finally
+            nest(false)
+        bindings ++= purged
+        opt( pointers ) ^^ { _.getOrElse(Nil -> Names()) } ^^ { (pointersʹ, freeʹ) =>
+          PendingOccurrence(freeʹ)(using bindings)
+          expʹ.copy(pointers = pointersʹ) -> (free ++ constants ++ freeʹ)
+        }
     }
 
   def instance(defs: List[Define], end: String)
@@ -339,7 +318,7 @@ object Encoding:
       given MutableList[(String, String)]()
       val variablesʹ = variables
         .map { it =>
-          val υidυ = it.replaceAll("_υ.*υ", "") + id
+          val υidυ = it.rewrite(id)
           given_Bindings(υidυ) = given_Bindings(it)
           given_Bindings -= it
           given_MutableList_String_String.prepend(it -> υidυ)
@@ -442,7 +421,9 @@ object Encoding:
         case Some(term) => if code == 0 then s"⟦ $term ⟧" else s"⟦$code $term $code⟧"
         case _ => if code == 0 then s"⟦ ⟧" else s"⟦$code $code⟧"
 
-  final case class Position(counter: Long, binds: Boolean)
+  final case class Position(counter: Long,
+                            binds: Boolean,
+                            path: Seq[Long] = Nil)
 
   final case class Occurrence(shadow: String | Option[String],
                               position: Position,
@@ -499,8 +480,8 @@ object Encoding:
   case class ExistingNonParameterBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
       extends BindingParsingException(code, nest, s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence already exists and not as a definition parameter""")
 
-  case class DefinitionAliasAbandonedException(code: Int)
-      extends ParsingException(s"A definition alias was abandoned as the right hand side of definition $code")
+  case class ScopeBindingParsingException(code: Int, nest: Int, name: String)
+      extends BindingParsingException(code, nest, s"""A pending occurrence of a definition parameter ($name) is not in the scope of its binding occurrence""")
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
@@ -608,7 +589,7 @@ object Encoding:
 
       def rebind(it: String)
                 (using bound: Names): String =
-        val υidυ = it.replaceAll("_υ.*υ", "") + id
+        val υidυ = it.rewrite(id)
         bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
           case Some((_, occurrence)) if expansion && occurrence.isBinding =>
             bindings += it -> Binder(occurrence)(υidυ)
@@ -678,23 +659,16 @@ object Encoding:
         case `go.`(amb, par) =>
           `go.`(renamed(amb), rename(par))
 
-        case it @ `⟦⟧`(Definition(_, term, _, _, _), variables, par, xid, assignment) =>
+        case it @ `⟦⟧`(Definition(_, term, _, _, _), variables, par, xid, pointers) =>
           if dups then term.foreach(duplicated(xid))
           val n = refresh.size
-          val assignmentʹ = assignment
-                              .map { (it, pt) =>
-                                val υidυ = it.replaceAll("_υ.*υ", "") + id
-                                refresh.prepend(it -> υidυ)
-                                υidυ -> renamed(pt)
-                              }
-          val variablesʹ = assignmentʹ.map(_._1)
-                        ++ variables
-                             .drop(assignment.size)
+          val variablesʹ = variables
                              .map { it =>
-                               val υidυ = it.replaceAll("_υ.*υ", "") + id
+                               val υidυ = it.rewrite(id)
                                refresh.prepend(it -> υidυ)
                                υidυ
                              }
+          val pointersʹ = pointers.map(renamed(_))
           val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
           val xidʹ =
@@ -706,7 +680,7 @@ object Encoding:
               υidυ
             else
               xid
-          it.copy(variables = variablesʹ, par = parʹ, xid = xidʹ, assignment = assignmentʹ)
+          it.copy(variables = variablesʹ, par = parʹ, xid = xidʹ, pointers = pointersʹ)
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_))

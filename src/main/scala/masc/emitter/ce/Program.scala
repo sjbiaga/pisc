@@ -223,13 +223,13 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _par, _, assignment) =>
-          * = assignment
+        case `⟦⟧`(_, variables, _par, _, pointers) =>
+          * = (variables zip pointers)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
 
-          val n = assignment.size
+          val n = pointers.size
 
           val par = if (variables.size == n)
                     then
