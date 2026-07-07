@@ -83,14 +83,13 @@ abstract class Expansion extends Encoding:
                 (using substitution: Substitution)
                 (using free: Names): (ParseResult[Fresh], Seq[Term]) =
 
-        def pbf(freeʹ: Names)(using Bindings): Unit =
-          freeʹ.foreach(PendingOccurrence(_)) // 1
-          bindings ++= cleaned                // 2
-          free ++= freeʹ &~ bindings.keySet   // 3
+        def bf(freeʹ: Names)(using Bindings): Unit =
+          bindings ++= cleaned
+          free ++= freeʹ &~ bindings.keySet
 
         def pf(freeʹ: Names)(using Bindings): Unit =
-          freeʹ.foreach(PendingOccurrence(_)) // 1
-          free ++= freeʹ &~ bindings.keySet   // 3
+          PendingOccurrence(freeʹ)
+          free ++= freeʹ &~ bindings.keySet
 
         val source = in.source
         val offset = in.offset
@@ -119,7 +118,7 @@ abstract class Expansion extends Encoding:
                 _cache.get(key) match
 
                   case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
-                    pbf(freeʹ)
+                    bf(freeʹ)
 
                     substitution(op) = exp
 
@@ -142,7 +141,7 @@ abstract class Expansion extends Encoding:
                         if start + n <= source.length
                         && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
                         then
-                          pbf(freeʹ)
+                          bf(freeʹ)
 
                           substitution(op) = exp
 
@@ -224,11 +223,11 @@ abstract class Expansion extends Encoding:
                             BindingOccurrence(it, shadow)
                             duplications(xid)._2(op) = it -> shadow
                           case _ =>
+                            pf(freeʹ)
                             bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(υidυ))) =>
                                 substitution(op) = λ(υidυ)
                               case _ =>
-                                pf(freeʹ)
                                 substitution(op) = λ(it)
                         idx += 1
 
@@ -256,7 +255,7 @@ abstract class Expansion extends Encoding:
                     _cache.get(key) match
 
                       case Some((sum: +, cp, freeʹ, given Bindings, inʹ)) =>
-                        pbf(freeʹ)
+                        bf(freeʹ)
 
                         substitution(op) = sum
 
@@ -270,7 +269,7 @@ abstract class Expansion extends Encoding:
                         parseAll(choice, result) match
 
                           case Success((sum, freeʹ), _) =>
-                            pbf(freeʹ)
+                            bf(freeʹ)
 
                             val sumʹ = sum.flatten.update(using Bindings(given_Bindings))
 
@@ -448,8 +447,8 @@ object Expansion:
 
   // functions
 
-  private[parser] def balanced(end: Either[String, String])
-                              (source: CharSequence, start: Int): Option[Match] =
+  def balanced(end: Either[String, String])
+              (source: CharSequence, start: Int): Option[Match] =
     var s = SubSequence(source, start)
     val op = end.orElse(end.swap).right.get
     val n = op.length
@@ -582,8 +581,8 @@ object Expansion:
           it.copy(sum = sum.replace)
 
         case it @ `⟦⟧`(_, _, sum, _, _) =>
-          val assignment = it.assignment.map(_ -> replaced(_).asSymbol)
-          it.copy(sum = sum.replace, assignment = assignment)
+          val pointers = it.pointers.map(replaced(_).asSymbol)
+          it.copy(sum = sum.replace, pointers = pointers)
 
         case `{}`(identifier, pointers, false) =>
           val ast = rename(substitution(identifier).asInstanceOf[+ | `⟦⟧`])
@@ -640,12 +639,11 @@ object Expansion:
         case it @ `[]`(_, sum) =>
           it.copy(sum = sum.concatenate)
 
-        case it @ `⟦⟧`(_, variables, _, _, _) =>
-          it.assignment ++= variables.drop(it.assignment.size) zip pointers
-          it
+        case it: `⟦⟧` =>
+          it.copy(pointers = it.pointers ::: pointers)
 
         case it: `{}` =>
-          it.copy(pointers = it.pointers ++ pointers)
+          it.copy(pointers = it.pointers ::: pointers)
 
         case _ => ast
 
@@ -726,9 +724,9 @@ object Expansion:
         case it @ `[]`(_, sum) =>
           it.copy(sum = sum.update)
 
-        case it @ `⟦⟧`(_, _, sum, _, assignment) =>
-          val assignmentʹ = assignment.map(_ -> updated(_).asSymbol)
-          it.copy(sum = sum.update, assignment = assignmentʹ)
+        case it @ `⟦⟧`(_, _, sum, _, pointers) =>
+          val pointersʹ = pointers.map(updated(_).asSymbol)
+          it.copy(sum = sum.update, pointers = pointersʹ)
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(updated(_).asSymbol)

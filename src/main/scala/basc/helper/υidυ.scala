@@ -76,3 +76,10 @@ final class υidυ:
       case _ =>
         paste(it)
         None
+
+
+object υidυ:
+
+  extension (self: String)
+    def rewrite(id: => String): String =
+      self.replaceAll("_υ.*υ", "") + id
