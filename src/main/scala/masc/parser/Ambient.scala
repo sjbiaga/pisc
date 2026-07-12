@@ -136,12 +136,19 @@ abstract class Ambient extends Expression:
     val cntr = Map.from(_cntr)
     _id.save {
       _χ_id.save {
-        r match
-          case Success(it, in) => Some(it -> in)
-          case _ =>
+        var ok = false
+        try
+          r match
+            case Success(it, in) =>
+              ok = true
+              Some(it -> in)
+            case _ =>
+              None
+        finally
+          if !ok
+          then
             _cntr = cntr
             _nest = nest
-            None
       }
     }
 
@@ -225,34 +232,14 @@ object Ambient:
 
     def shallow: T =
 
-      inline given Conversion[Calculus.AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.shallow))
-
-        case it @ `.`(end, _*) =>
-          it.copy(end = end.shallow)
-
-        case it @ !(_, _, _, par) =>
-          it.copy(par = par.shallow)
-
-        case it @ `[]`(_, par) =>
-          it.copy(par = par.shallow)
-
-        case it @ `go.`(_, par) =>
-          it.copy(par = par.shallow)
-
-        case it @ `⟦⟧`(_, _, par, _, _) =>
-          it.copy(par = par.shallow)
+      ast.map(_.shallow) {
 
         case `{}`(identifier, pointers, true, params*) =>
           `(*)`(identifier, Nil, (params ++ pointers)*)
 
-        case _ => ast
+        case it => it
+
+      }
 
 
   class Main(override protected val emitter: Emitter,

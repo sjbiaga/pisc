@@ -220,12 +220,12 @@ object Expression:
   type Code = (List[sm.Enumerator] Either sm.Term, sm.Term)
 
 
-  def recode(orig: sm.Term): (Code, Names) =
+  def recode(orig: sm.Term): Code =
     this(orig) match
-      case (sm.Term.ForYield(enums, _), names) =>
-        (Left(enums), orig) -> names
-      case (term, names) =>
-        (Right(term), orig) -> names
+      case (sm.Term.ForYield(enums, _), _) =>
+        (Left(enums), orig)
+      case (term, _) =>
+        (Right(term), orig)
 
 
   inline def apply(self: sm.Term)

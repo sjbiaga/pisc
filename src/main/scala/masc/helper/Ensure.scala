@@ -42,8 +42,11 @@ object Ensure:
   case object MainParsingExceptionʹ
       extends EquationParsingException("The parameterless Main agent is recursive")
 
-  case class RecRepParsingException(id: String, arity: Int, times: Int)
-      extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+  case class RecRepParsingException(identifier: String, arity: Int, times: Int)
+      extends EquationParsingException(s"""$identifier#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+
+  case class NoEquationException(identifier: String, arity: Int)
+      extends EquationParsingException(s"""No equation for an agent $identifier#$arity""")
 
   private def indexʹ(prog: List[Bind]): ((String, Int)) => Int =
     case (identifier, size) =>
@@ -80,31 +83,16 @@ object Ensure:
                  (using prog: List[Bind])
                  (implicit repl: Int = 0): Unit =
 
-      ast match
+      ast.foreach(_.recursive) {
 
-        case ∅() =>
-
-        case ∥(_, components*) =>
-         components.foreach(_.recursive)
-
-        case `.`(end, _*) =>
-          end.recursive
+        case _: <> =>
 
         case !(_, _, _, par) =>
           par.recursive(stack.size)
 
-        case `[]`(_, par) =>
-          par.recursive
-
-        case `go.`(_, par) =>
-          par.recursive
-
-        case `⟦⟧`(_, _, par, _, _) =>
-          par.recursive
-
         case _: `{}` => ???
 
-        case it @ `(*)`(identifier, _, params*)
+        case `(*)`(identifier, _, params*)
             if stack.contains(identifier -> params.size) =>
           val k = stack.lastIndexOf(identifier -> params.size)
           for
@@ -124,7 +112,10 @@ object Ensure:
 
         case `(*)`(identifier, _, params*) =>
           val i = indexʹ(prog)(identifier -> params.size)
+          if i < 0
+          then
+            throw NoEquationException(identifier, params.size)
           val par = prog(i)._2
           par.recursive(using stack :+ identifier -> params.size)
 
-        case _ =>
+      }

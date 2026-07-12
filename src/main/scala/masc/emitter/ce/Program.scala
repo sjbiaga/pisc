@@ -35,6 +35,7 @@ import dialects.Scala3
 
 import parser.Ambient.{ AST => _, * }
 import parser.Calculus.*
+import parser.Encoding.*
 import Meta.*
 
 
@@ -223,7 +224,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _par, _, pointers) =>
+        case `⟦⟧`(Definition(_, _, _, variables, _), _par, _, pointers) =>
           * = (variables zip pointers)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))

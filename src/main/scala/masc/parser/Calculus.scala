@@ -283,7 +283,6 @@ object Calculus:
     case `go.`(amb: String, par: AST.∥)
 
     case `⟦⟧`(definition: Definition,
-              variables: Names,
               par: AST.∥,
               xid: String = null,
               pointers: List[String] = Nil)
@@ -318,15 +317,19 @@ object Calculus:
 
       case `go.`(amb, par) => "go " + amb + "." + par
 
-      case `⟦⟧`(definition, variables, par, _, pointers) =>
-        val vars = if (variables.isEmpty)
-                   then
-                     ""
-                   else {
-                     (variables zip pointers).map { (it, pt) => s"$it = $pt" }
-                   ++ variables.drop(pointers.size)
-                   }.mkString("{", ", ", "}")
-        s"""${Definition(definition.code, definition.term)}$vars = $par"""
+      case `⟦⟧`(Definition(code, term, constants, variables, _), par, _, pointers) =>
+        val assignment = if (variables.isEmpty)
+                         then
+                           ""
+                         else {
+                           (variables zip pointers).map { (l, r) => s"$l = $r" }
+                         ++ variables.drop(pointers.size)
+                         }.mkString("{", ", ", "}")
+        if constants.isEmpty
+        then
+          s"""${Definition(code, term)}$assignment = $par"""
+        else
+          s"""${Definition(code, term)}${constants.mkString("(", ", ", ")")}$assignment = $par"""
 
       case `{}`(identifier, pointers, agent, params*) =>
         val ps = if agent then params.mkString("(", ", ", ")") else ""
@@ -407,6 +410,164 @@ object Calculus:
       case _ => par.components.forall { case `.`(par: ∥) => par.isVoid case _ => false }
 
   extension [T <: AST](ast: T)
+
+    def foreach(g: AST => Unit)(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
+
+      h.applyOrElse(ast, {
+
+        case ∅() =>
+
+        case ∥(_, components*) =>
+          components.foreach(_.foreach(g)(h))
+
+        case `.`(end, _*) =>
+          end.foreach(g)(h)
+
+        case !(_, _, _, par) =>
+          par.foreach(g)(h)
+
+        case `[]`(_, par) =>
+          par.foreach(g)(h)
+
+        case `go.`(_, par) =>
+          par.foreach(g)(h)
+
+        case `⟦⟧`(_, par, _, _) =>
+          par.foreach(g)(h)
+
+        case _ => g(ast)
+
+      })
+
+    def mapreduce[R](g: AST => R)(h: (R, R) => R): R =
+
+      ast match
+
+        case ∅() => g(ast)
+
+        case ∥(_, components*) =>
+          components.map(_.mapreduce(g)(h)).reduce(h)
+
+        case it @ `.`(end, _*) =>
+          h(g(it), end.mapreduce(g)(h))
+
+        case it @ !(_, _, _, par) =>
+          h(g(it), par.mapreduce(g)(h))
+
+        case it @ `[]`(_, par) =>
+          h(g(it), par.mapreduce(g)(h))
+
+        case it @ `go.`(_, par) =>
+          h(g(it), par.mapreduce(g)(h))
+
+        case it @ `⟦⟧`(_, par, _, _) =>
+          h(g(it), par.mapreduce(g)(h))
+
+        case _ => g(ast)
+
+    def map(g: AST => AST)(h: AST => AST = identity): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.map(g)(h)))
+
+        case it @ `.`(end, _*) =>
+          h(it.copy(end = end.map(g)(h)))
+
+        case it @ !(_, _, _, par) =>
+          h(it.copy(par = par.map(g)(h)))
+
+        case it @ `[]`(_, par) =>
+          h(it.copy(par = par.map(g)(h)))
+
+        case it @ `go.`(_, par) =>
+          h(it.copy(par = par.map(g)(h)))
+
+        case it @ `⟦⟧`(_, par, _, _) =>
+          h(it.copy(par = par.map(g)(h)))
+
+        case _ => h(ast)
+
+    def mapʹ(g: AST => AST)(h: AST => AST): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.mapʹ(g)(h)))
+
+        case it: `.` =>
+          val itʹ @ `.`(end, _*) = h(it)
+          itʹ.copy(end = end.mapʹ(g)(h))
+
+        case it: ! =>
+          val itʹ @ !(_, _, _, par) = h(it)
+          itʹ.copy(par = par.mapʹ(g)(h))
+
+        case it: `[]` =>
+          val itʹ @ `[]`(_, par) = h(it)
+          itʹ.copy(par = par.mapʹ(g)(h))
+
+        case it: `go.` =>
+          val itʹ @ `go.`(_, par) = h(it)
+          itʹ.copy(par = par.mapʹ(g)(h))
+
+        case it: `⟦⟧` =>
+          val itʹ @ `⟦⟧`(_, par, _, _) = h(it)
+          itʹ.copy(par = par.mapʹ(g)(h))
+
+        case _ => h(ast)
+
+    def mapʹʹ(g: AST => AST)(h: AST => (AST, Boolean)): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.mapʹʹ(g)(h)))
+
+        case it: `.` =>
+          h(it) match
+            case (itʹ @ `.`(end, _*), false) =>
+              itʹ.copy(end = end.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: ! =>
+          h(it) match
+            case (itʹ @ !(_, _, _, par), false) =>
+              itʹ.copy(par = par.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `[]` =>
+          h(it) match
+            case (itʹ @ `[]`(_, par), false) =>
+              itʹ.copy(par = par.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `go.` =>
+          h(it) match
+            case (itʹ @ `[]`(_, par), false) =>
+              itʹ.copy(par = par.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `⟦⟧` =>
+          h(it) match
+            case (itʹ @ `⟦⟧`(_, par, _, _), false) =>
+              itʹ.copy(par = par.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case _ => h(ast)._1
 
     def flatten: T =
 
