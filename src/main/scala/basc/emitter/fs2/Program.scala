@@ -34,6 +34,7 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
+import parser.Encoding.*
 import fs2.Meta.*
 
 
@@ -734,7 +735,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, _, pointers) =>
+        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
           * = (variables zip pointers)
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
