@@ -105,7 +105,7 @@ class PiSuite extends FunSuite:
     } match
       case _ :: Right((`(*)`("Main", _), +(_, ∥(_, `.`(exp, ν("x")))))) :: Nil =>
         assertMatches(exp) {
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(∅(), π(λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), None)))), _, _) => true
+          case `⟦⟧`(_, +(_, ∥(_, `.`(∅(), π(λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), None)))), _, _) => true
         }
 
   }
@@ -137,17 +137,19 @@ class PiSuite extends FunSuite:
     } match
       case _ :: _ :: _ :: Right((_, +(_, ∥(_, `.`(exp1, ν("x", "y")))))) :: Right((_, +(_, ∥(_, `.`(exp2, ν("x", "y")))))) :: Nil =>
         exp1 match
-          case `⟦⟧`(_, variables1, +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
-                                             `.`(`(*)`("Agent0", Nil)))), _, pointers1) =>
+          case `⟦⟧`(Definition(_, _, _, variables1, _),
+                    +(_, ∥(_, `.`(`{}`("Agent2", List(Symbol("x_υ6υ"), Symbol("x_υ4υ")), true), ν("x_υ6υ")),
+                              `.`(`(*)`("Agent0", Nil)))), _, pointers1) =>
             val assignment1 = variables1 zip pointers1
             assertEquals(assignment1, Set(Symbol("x_υ4υ") -> Symbol("x"), Symbol("y_υ5υ") -> Symbol("y")))
           case _ =>
             assert(false)
         exp2 match
-          case `⟦⟧`(_, variablesʹ, +(_, ∥(_, `.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
-                                             `.`(`(*)`("Agent0", Nil)))), _, pointersʹ) =>
-            val assignmentʹ = variablesʹ zip pointersʹ
-            assertEquals(assignmentʹ, Set(Symbol("x_υaυ") -> Symbol("x"), Symbol("y_υbυ") -> Symbol("y")))
+          case `⟦⟧`(Definition(_, _, _, variables2, _),
+                    +(_, ∥(_, `.`(`(*)`("Agent2", Nil, λ(Symbol("x_υcυ")), λ(Symbol("x_υcυ"))), ν("x_υcυ")),
+                              `.`(`(*)`("Agent0", Nil)))), _, pointers2) =>
+            val assignment2 = variables2 zip pointers2
+            assertEquals(assignment2, Set(Symbol("x_υaυ") -> Symbol("x"), Symbol("y_υbυ") -> Symbol("y")))
           case _ =>
             assert(false)
       case _ =>
@@ -168,21 +170,21 @@ class PiSuite extends FunSuite:
     } match
       case _ :: Right((_, +(_, ∥(_, `.`(exp))))) :: Nil =>
         exp match
-          case `⟦⟧`(_, _, +(_, ∥(_, `.`(expʹ, ν("ch_υnυ")))), _,  _) =>
+          case `⟦⟧`(_, +(_, ∥(_, `.`(expʹ, ν("ch_υnυ")))), _,  _) =>
             expʹ match
-              case `⟦⟧`(_, variables, +(_, ∥(_, `.`(exp1), `.`(exp2))), _, pointers) =>
+              case `⟦⟧`(Definition(_, _, _, variables, _), +(_, ∥(_, `.`(exp1), `.`(exp2))), _, pointers) =>
                 val assignment = variables zip pointers
                 assertEquals(assignment, Set(Symbol("x_υoυ") -> Symbol("ch_υnυ"), Symbol("y_υpυ") -> Symbol("ch_υnυ")))
                 exp1 match
-                  case `⟦⟧`(_, variables1, +(_, ∥(_, `.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, pointers1) =>
+                  case `⟦⟧`(Definition(_, _, _, variables1, _), +(_, ∥(_, `.`(∅(), π(λ(Symbol("z_υqυ")), λ(Symbol("z_υqυ")), None, None)))), _, pointers1) =>
                     val assignment1 = variables1 zip pointers1
                     assertEquals(assignment1, Set(Symbol("z_υqυ") -> Symbol("x_υoυ")))
                   case _ =>
                     assert(false)
                 exp2 match
-                  case `⟦⟧`(_, variablesʹ, +(_, ∥(_, `.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, pointersʹ) =>
-                    val assignmentʹ = variablesʹ zip pointersʹ
-                    assertEquals(assignmentʹ, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
+                  case `⟦⟧`(Definition(_, _, _, variables2, _), +(_, ∥(_, `.`(∅(), π(λ(Symbol("w_υrυ")), λ(Symbol("z_υsυ")), Some(_), None), τ(Some(_))))), _, pointers2) =>
+                    val assignment2 = variables2 zip pointers2
+                    assertEquals(assignment2, Set(Symbol("w_υrυ") -> Symbol("y_υpυ")))
                   case _ =>
                     assert(false)
               case _ =>

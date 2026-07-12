@@ -63,15 +63,14 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         _code = -1
-        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦ x<y>. 1 ⟧") match
-          case Failure("No binding for x at nesting level #1", _) =>
-          case _ =>
-            assert(false)
+        parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦ x<y>. 1 ⟧")
       parseAll(definition, "⟦ 'P `1` _ ⟧ = P{}") match
         case Success(Some(it), _) =>
           defn(0) = it :: Nil
 
-    `13`.test
+    interceptMessage[NoBindingParsingException]("No binding for x at nesting level #1") {
+      `13`.test
+    }
 
   }
 
@@ -80,7 +79,7 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧") match
-          case Success((`⟦⟧`(Definition(0, None, _, _, ∅()), _, ∅(), _, _), _), _) =>
+          case Success((`⟦⟧`(Definition(0, None, _, _, ∅()), ∅(), _, _), _), _) =>
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)

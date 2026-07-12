@@ -155,17 +155,17 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - without parameters without constants without pointers") {
+  test("definition - without parameters without constants without variables") {
 
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦⟧ =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, ps1, b, ∅()), Definition(0, _, cs2, ps2, ∅()))), _) =>
             assert(cs1.isEmpty)
-            assert(vs1.isEmpty)
+            assert(ps1.isEmpty)
             assert(b.isEmpty)
             assertEquals(cs1, cs2)
-            assertEquals(vs1, vs2)
+            assertEquals(ps1, ps2)
           case _ =>
             assert(false)
 
@@ -173,19 +173,19 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - with parameters without constants without pointers") {
+  test("definition - with parameters without constants without variables") {
 
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧ =") match
-          case Success(Some((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
+          case Success(Some((Macro(List(Symbol("x"), Symbol("y")), 2, cs1, ps1, b, ∅()), Definition(0, _, cs2, ps2, ∅()))), _) =>
             assert(cs1.isEmpty)
-            assert(vs1.isEmpty)
+            assert(ps1.isEmpty)
             assertEquals(b, Map(
                            Symbol("x") -> Occurrence(None, Position(-1, false)),
                            Symbol("y") -> Occurrence(None, Position(-2, false))))
             assertEquals(cs1, cs2)
-            assertEquals(vs1, vs2)
+            assertEquals(ps1, ps2)
           case _ =>
             assert(false)
 
@@ -193,19 +193,19 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - without parameters with constants without pointers") {
+  test("definition - without parameters with constants without variables") {
 
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧(nil, cons) =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, ps1, b, ∅()), Definition(0, _, cs2, ps2, ∅()))), _) =>
             assertEquals(cs1, Names() + Symbol("nil") + Symbol("cons"))
-            assert(vs1.isEmpty)
+            assert(ps1.isEmpty)
             assertEquals(b, Map(
                            Symbol("nil")  -> Occurrence(None, Position(1, false)),
                            Symbol("cons") -> Occurrence(None, Position(2, false))))
             assertEquals(cs1, cs2)
-            assertEquals(vs1, vs2)
+            assertEquals(ps1, ps2)
           case _ =>
             assert(false)
 
@@ -213,17 +213,17 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - without parameters without constants with pointers") {
+  test("definition - without parameters without constants with variables") {
 
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} =") match
-          case Success(Some((Macro(Nil, 0, cs1, vs1, b, ∅()), Definition(0, _, cs2, vs2, ∅()))), _) =>
+          case Success(Some((Macro(Nil, 0, cs1, ps1, b, ∅()), Definition(0, _, cs2, ps2, ∅()))), _) =>
             assert(cs1.isEmpty)
-            assertEquals(vs1, Names() + Symbol("x"))
+            assertEquals(ps1, Names() + Symbol("x"))
             assertEquals(b, Map(Symbol("x") -> Occurrence(None, Position(1, false))))
             assertEquals(cs1, cs2)
-            assertEquals(vs1, vs2)
+            assertEquals(ps1, ps2)
           case _ =>
             assert(false)
 
@@ -243,7 +243,7 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - with parameters without constants with pointers - non-empty intersection") {
+  test("definition - with parameters without constants with variables - non-empty intersection") {
 
     val `13` = new EncodingParserTest:
       override def test =
@@ -255,7 +255,7 @@ class EncodingParserSuite extends FunSuite:
 
   }
 
-  test("definition - without parameters with constants with pointers - non-empty intersection") {
+  test("definition - without parameters with constants with variables - non-empty intersection") {
 
     val `13` = new EncodingParserTest:
       override def test =
@@ -273,7 +273,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = P{}")
 
-    interceptMessage[DefinitionFreeNamesException]("The free names (P) in the right hand side are not formal parameters of the left hand side of definition 0") {
+    interceptMessage[DefinitionFreeNamesException]("The free names (P) in the right hand side are not formal parameters in the left hand side of definition 0") {
       `13`.test
     }
 
@@ -285,7 +285,7 @@ class EncodingParserSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ Nil ⟧{x} = ch<x>.")
 
-    interceptMessage[DefinitionFreeNamesException]("The free names (ch) in the right hand side are not formal parameters of the left hand side of definition 0") {
+    interceptMessage[DefinitionFreeNamesException]("The free names (ch) in the right hand side are not formal parameters in the left hand side of definition 0") {
       `13`.test
     }
 

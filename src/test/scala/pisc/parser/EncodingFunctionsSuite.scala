@@ -40,7 +40,7 @@ import Expression.Code
 import Pi.*
 import Calculus.*
 import Encoding.*
-import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
+import scala.util.parsing.combinator.pisc.parser.Expansion.{ replace, Duplications }
 import EncodingFunctionsSuite.given
 
 
@@ -52,9 +52,9 @@ class EncodingFunctionsSuite extends FunSuite:
                        ∥(-1, `.`('Q'),
                              `.`(?:(((λ(true), λ(false)), false),
                                     `+`(-1, ∥(-1, `.`(`!`(-1, None, None, `+`(-1, ∥(-1, `.`('R'))))))),
-                                    Some(`+`(-1, ∥(-1, `.`(`⟦⟧`(null, null, `+`(-1, ∥(-1, `.`('S'),
-                                                                                      `.`(`{}`("T", Nil, true)),
-                                                                                      `.`(`(*)`("U", Nil)))),
+                                    Some(`+`(-1, ∥(-1, `.`(`⟦⟧`(null, `+`(-1, ∥(-1, `.`('S'),
+                                                                                    `.`(`{}`("T", Nil, true)),
+                                                                                    `.`(`(*)`("U", Nil)))),
                                                                 null)))))))))
 
     assertEquals(`13`.capitals, Names() + Symbol("P") + Symbol("Q") + Symbol("R") + Symbol("S"))
@@ -115,11 +115,11 @@ class EncodingFunctionsSuite extends FunSuite:
     given MutableList[(Symbol, λ)]()
     given Bindings()
     given Names()
-    assertEquals(recoded(Names()), None)
+    assertEquals(recoded, None)
 
   }
 
-  test("recoded - via refresh - without binding") {
+  test("recoded - via refresh") {
 
     import scala.meta.*
     import dialects.Scala3
@@ -129,40 +129,11 @@ class EncodingFunctionsSuite extends FunSuite:
     given Option[Code] = Some(Right(null) -> term)
     given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
     given Bindings()
-    given Names()
-    val free = Names()
 
-    recoded(free) match
+    recoded match
       case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
                 ->
                 Term.Apply(Term.Name("println"), Term.QuotedMacroExpr(Term.Name("x_υ1υ")) :: Nil)) =>
-        free.headOption match
-          case Some(Symbol("x_υ1υ")) =>
-          case _ =>
-            assert(false)
-      case _ =>
-        assert(false)
-
-  }
-
-  test("recoded - via refresh - with binding") {
-
-    import scala.meta.*
-    import dialects.Scala3
-
-    val term = "println('x)".parse[Term].get
-
-    given Option[Code] = Some(Right(null) -> term)
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
-    given Bindings()
-    given Names = Names() + Symbol("x_υ1υ")
-    val free = Names()
-
-    recoded(free) match
-      case Some(Right(Term.Apply(Term.Name("println"), Term.Name("x_υ1υ") :: Nil))
-                ->
-                Term.Apply(Term.Name("println"), Term.QuotedMacroExpr(Term.Name("x_υ1υ")) :: Nil)) =>
-        assert(free.isEmpty)
       case _ =>
         assert(false)
 
@@ -178,17 +149,11 @@ class EncodingFunctionsSuite extends FunSuite:
     given Option[Code] = Some(Right(null) -> term)
     given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
     given Bindings = Bindings() + (Symbol("y") -> Occurrence(Some(Symbol("y_υ2υ")), Position(-1, true)))
-    given Names = Names() + Symbol("y_υ2υ")
-    val free = Names()
 
-    recoded(free) match
+    recoded match
       case Some(Right(Term.Apply(Term.Name("println"), Term.ApplyInfix(Term.Name("x_υ1υ"), Term.Name("+"), _, Term.Name("y_υ2υ") :: Nil) :: Nil))
                 ->
                 Term.Apply(Term.Name("println"), Term.ApplyInfix(Term.QuotedMacroExpr(Term.Name("x_υ1υ")), Term.Name("+"), _, Term.QuotedMacroExpr(Term.Name("y_υ2υ")) :: Nil) :: Nil)) =>
-        free.headOption match
-          case Some(Symbol("x_υ1υ")) =>
-          case _ =>
-            assert(false)
       case _ =>
         assert(false)
 
@@ -274,9 +239,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
     given Bindings()
     given Duplications()
-    given Names()
 
-    `13`.rename()(id())() match
+    `13`.rename()(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
       case _ =>
         assert(false)
@@ -292,9 +256,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x")), Position(1, true)))
     given Duplications()
-    given Names()
 
-    `13`.rename()(id())() match
+    `13`.rename()(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(""), None)) =>
         assert(bindings.size == 1)
         bindings.head match
@@ -315,9 +278,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x")), Position(1, true)))
     given Duplications()
-    given Names()
 
-    `13`.rename(expansion = true)(id())() match
+    `13`.rename(expansion = true)(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 1)
         bindings.head match
@@ -338,9 +300,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
     given Duplications()
-    given Names()
 
-    `13`.rename()(id())() match
+    `13`.rename()(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 2)
         bindings.tail.head match
@@ -361,9 +322,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
     given Duplications()
-    given Names()
 
-    `13`.rename(expansion = true)(id())() match
+    `13`.rename(expansion = true)(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 2)
         bindings.tail.head match
@@ -433,9 +393,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given MutableList[(Symbol, λ)]()
     given Bindings()
     given Duplications()
-    given Names()
 
-    `13`.rename()(id())() match
+    `13`.rename()(id()) match
       case +(-1, ∥(-1, `.`(?:(((λ(true), λ(false)), false),
                               +(-1, ∥(-1, `.`(!(_, _, None, ∅()), ν("x_υ1υ")))),
                               Some(+(-1, ∥(-1, `.`(`(*)`("P", Nil))))))))) =>
@@ -455,9 +414,8 @@ class EncodingFunctionsSuite extends FunSuite:
     given MutableList[(Symbol, λ)]()
     given Bindings()
     given Duplications()
-    given Names()
 
-    `13`.rename()(id())() match
+    `13`.rename()(id()) match
       case +(_, ∥(_, `.`(?:(((λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ"))), false),
                             +(_, ∥(_, `.`(!(_, _, Some(π(λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")), None, None)), ∅())))),
                             Some(+(_, ∥(_, `.`(`(*)`("P", Nil, λ(Symbol("x_υ1υ")), λ(Symbol("y_υ2υ")))))))),
@@ -478,14 +436,13 @@ class EncodingFunctionsSuite extends FunSuite:
             given MutableList[(Symbol, λ)]()
             given Bindings()
             given Int = 1
-            given Names()
 
             given Map[String, λ | (+ | `⟦⟧`)]()
-            val `13` = definition(_code, _nest, _dups, duplicated)(id)
+            val `13` = definition(_code, _nest, _dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
 
-            `13`.rename()(id)() match
-              case `⟦⟧`(_, vs, ∅(), _, _) =>
-                vs.headOption match
+            `13`.rename()(id) match
+              case `⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, Nil) =>
+                variables.headOption match
                   case Some(Symbol("z_υ1υ")) =>
                   case _ =>
                     assert(false)
@@ -512,17 +469,17 @@ class EncodingFunctionsSuite extends FunSuite:
             given MutableList[(Symbol, λ)]()
             given Bindings = Bindings(it.bindings)
             given Int = 1
-            given Names()
 
             given Map[String, λ | (+ | `⟦⟧`)]()
-            val `13` = definition(_code, _nest, _dups, duplicated)(id)
+            val `13` = definition(_code, _nest, _dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
 
-            `13`.rename()(id)() match
-              case `⟦⟧`(_, vs, +(_, ∥(_, `.`(∅(),
-                                             ν("x_υ2υ"),
-                                             π(λ(Symbol("z_υ1υ")), λ(Symbol("y_υ3υ")), Some(""), None),
-                                             π(λ(Symbol("y_υ3υ")), λ(Symbol("x_υ2υ")), None, None)))), _, _) =>
-                vs.headOption match
+            `13`.rename()(id) match
+              case `⟦⟧`(Definition(_, _, _, variables, _),
+                        +(_, ∥(_, `.`(∅(),
+                                      ν("x_υ2υ"),
+                                      π(λ(Symbol("z_υ1υ")), λ(Symbol("y_υ3υ")), Some(""), None),
+                                      π(λ(Symbol("y_υ3υ")), λ(Symbol("x_υ2υ")), None, None)))), _, _) =>
+                variables.headOption match
                   case Some(Symbol("z_υ1υ")) =>
                   case _ =>
                     assert(false)
@@ -621,8 +578,8 @@ class EncodingFunctionsSuite extends FunSuite:
             bindings.get(Symbol("z")) match
               case Some(Occurrence(None, _, _)) =>
                 it(0, null, false)(id, χ_id) match
-                  case (Definition(_, _, _, vs, ∅()), 0 -> Nil) =>
-                    vs.headOption match
+                  case (Definition(_, _, _, variables, ∅()), 0 -> Nil) =>
+                    variables.headOption match
                       case Some(Symbol("z_υ1υ")) =>
                       case _ =>
                         assert(false)
@@ -648,7 +605,7 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition
             parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
-              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, variables, ∅(), _, pointers))))), _) =>
+              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, pointers))))), _) =>
                 val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
@@ -674,14 +631,14 @@ class EncodingFunctionsSuite extends FunSuite:
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition1
             parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
-              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(_, variables, ∅(), _, pointers))))))), _) =>
+              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, pointers))))))), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition2
                 val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
                     parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
-                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(_, variables2, +(_, ∥(_, `.`(`⟦⟧`(_, variables1, ∅(), _, pointers1)))), _, pointers2))))), _) =>
+                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables2, _), +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables1, _), ∅(), _, pointers1)))), _, pointers2))))), _) =>
                         val assignment1 = variables1 zip pointers1
                         val assignment2 = variables2 zip pointers2
                         assignment1.headOption -> assignment2.headOption match

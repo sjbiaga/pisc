@@ -281,7 +281,7 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, Position(_, true), _)) if counter > 0 && !hardcoded =>
+    *     case Some(Occurrence(None, Position(_, true), _)) if counter > 0 && !hardcoded =>
     *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
     * }}}
     */
@@ -289,7 +289,7 @@ class PiOccurrenceSuite extends FunSuite:
     val positive = 1
     val name = Symbol("n")
     val shadow = Some(Symbol("x_shadow"))
-    val occurrence = Occurrence(shadow = Some(name), Position(counter = positive, binds = true))
+    val occurrence = Occurrence(shadow = None, Position(counter = positive, binds = true))
     given Bindings = Map(name -> occurrence)
 
     val parser = new PiMain
@@ -343,7 +343,7 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, Position(_, true), _)) if counter > 0 && !hardcoded =>
+    *     case Some(Occurrence(Some(_), Position(_, true), _)) if counter > 0 && !hardcoded =>
     *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
     * }}}
     */
@@ -351,8 +351,8 @@ class PiOccurrenceSuite extends FunSuite:
     val positive = 1
     val name = Symbol("n")
     val shadow = Some(Symbol("x_shadow"))
-    val occcurrence = Occurrence(shadow = Some(name), Position(counter = positive, binds = true))
-    given Bindings = Map(name -> occcurrence)
+    val occurrence = Occurrence(shadow = Some(name), Position(counter = positive, binds = true))
+    given Bindings = Map(name -> occurrence)
 
     val parser = new PiMain
 

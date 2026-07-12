@@ -303,7 +303,6 @@ object Calculus:
            sum: AST.+)
 
     case `⟦⟧`(definition: Definition,
-              variables: Names,
               sum: AST.+,
               xid: String = null,
               pointers: List[Symbol] = Nil)
@@ -344,15 +343,19 @@ object Calculus:
 
       case !(parallelism, _, guard, sum) => s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
 
-      case `⟦⟧`(definition, variables, sum, _, pointers) =>
-        val vars = if (variables.isEmpty)
-                   then
-                     ""
-                   else {
-                     (variables zip pointers).map { (it, pt) => s"${it.name} = ${pt.name}" }
-                   ++ variables.drop(pointers.size).map(_.name)
-                   }.mkString("{", ", ", "}")
-        s"""${Definition(definition.code, definition.term)}$vars = $sum"""
+      case `⟦⟧`(Definition(code, term, constants, variables, _), sum, _, pointers) =>
+        val assignment = if (variables.isEmpty)
+                         then
+                           ""
+                         else {
+                           (variables zip pointers).map { (l, r) => s"${l.name} = ${r.name}" }
+                         ++ variables.drop(pointers.size).map(_.name)
+                         }.mkString("{", ", ", "}")
+        if constants.isEmpty
+        then
+          s"""${Definition(code, term)}$assignment = $sum"""
+        else
+          s"""${Definition(code, term)}${constants.map(_.name).mkString("(", ", ", ")")}$assignment = $sum"""
 
       case `{}`(identifier, pointers, agent, params*) =>
         val ps = if agent then params.mkString("(", ", ", ")") else ""
@@ -472,6 +475,161 @@ object Calculus:
       case _ => sum.choices.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
 
   extension [T <: AST](ast: T)
+
+    def foreach(g: AST => Unit)(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
+
+      h.applyOrElse(ast, {
+
+        case ∅() =>
+
+        case +(_, choices*) =>
+          choices.foreach(_.foreach(g)(h))
+
+        case ∥(_, components*) =>
+          components.foreach(_.foreach(g)(h))
+
+        case `.`(end, _*) =>
+          end.foreach(g)(h)
+
+        case ?:(_, t, f) =>
+          t.foreach(g)(h)
+          f.foreach(_.foreach(g)(h))
+
+        case !(_, _, _, sum) =>
+          sum.foreach(g)(h)
+
+        case `⟦⟧`(_, sum, _, _) =>
+          sum.foreach(g)(h)
+
+        case _ => g(ast)
+
+      })
+
+    def mapreduce[R](g: AST => R)(h: (R, R) => R): R =
+
+      ast match
+
+        case ∅() => g(ast)
+
+        case +(_, choices*) =>
+          choices.map(_.mapreduce(g)(h)).reduce(h)
+
+        case ∥(_, components*) =>
+          components.map(_.mapreduce(g)(h)).reduce(h)
+
+        case it @ `.`(end, _*) =>
+          h(g(it), end.mapreduce(g)(h))
+
+        case it @ ?:(_, t, f) =>
+          h(h(g(it), t.mapreduce(g)(h)), f.fold(g(∅()))(_.mapreduce(g)(h)))
+
+        case it @ !(_, _, _, sum) =>
+          h(g(it), sum.mapreduce(g)(h))
+
+        case it @ `⟦⟧`(_, sum, _, _) =>
+          h(g(it), sum.mapreduce(g)(h))
+
+        case _ => g(ast)
+
+    def map(g: AST => AST)(h: AST => AST = identity): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(_.map(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.map(g)(h)))
+
+        case it @ `.`(end, _*) =>
+          h(it.copy(end = end.map(g)(h)))
+
+        case ?:(cond, t, f) =>
+          h(?:(cond, t.map(g)(h), f.map(_.map(g)(h))))
+
+        case it @ !(_, _, _, sum) =>
+          h(it.copy(sum = sum.map(g)(h)))
+
+        case it @ `⟦⟧`(_, sum, _, _) =>
+          h(it.copy(sum = sum.map(g)(h)))
+
+        case _ => h(ast)
+
+    def mapʹ(g: AST => AST)(h: AST => AST): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(_.mapʹ(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.mapʹ(g)(h)))
+
+        case it: `.` =>
+          val itʹ @ `.`(end, _*) = h(it)
+          itʹ.copy(end = end.mapʹ(g)(h))
+
+        case it: ?: =>
+          val itʹ @ ?:(_, t, f) = h(it)
+          itʹ.copy(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
+
+        case it: ! =>
+          val itʹ @ !(_, _, _, sum) = h(it)
+          itʹ.copy(sum = sum.mapʹ(g)(h))
+
+        case it: `⟦⟧` =>
+          val itʹ @ `⟦⟧`(_, sum, _, _) = h(it)
+          itʹ.copy(sum = sum.mapʹ(g)(h))
+
+        case _ => h(ast)
+
+    def mapʹʹ(g: AST => AST)(h: AST => (AST, Boolean)): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.copy(choices = choices.map(_.mapʹʹ(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.copy(components = components.map(_.mapʹʹ(g)(h)))
+
+        case it: `.` =>
+          h(it) match
+            case (itʹ @ `.`(end, _*), false) =>
+              itʹ.copy(end = end.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: ?: =>
+          h(it) match
+            case (itʹ @ ?:(_, t, f), false) =>
+              itʹ.copy(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
+            case (itʹ, _) => itʹ
+
+        case it: ! =>
+          h(it) match
+            case (itʹ @ !(_, _, _, sum), false) =>
+              itʹ.copy(sum = sum.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `⟦⟧` =>
+          h(it) match
+            case (itʹ @ `⟦⟧`(_, sum, _, _), false) =>
+              itʹ.copy(sum = sum.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case _ => h(ast)._1
 
     def flatten: T =
 
