@@ -57,7 +57,7 @@ function ppi() {
     done
     set ${srcs#?} ../${emit}/ppi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC1 \
+                  -q -O -nowarn -S 3.9.0-RC3 \
                   --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
@@ -120,7 +120,7 @@ function ppi_() {
     done
     set ${srcs#?} ../${emit}/ppi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC1 \
+                  -q -O -nowarn -S 3.9.0-RC3 \
                   --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1

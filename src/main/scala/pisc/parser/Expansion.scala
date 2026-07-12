@@ -223,11 +223,12 @@ abstract class Expansion extends Encoding:
                             BindingOccurrence(it, shadow)
                             duplications(xid)._2(op) = it -> shadow
                           case _ =>
-                            pf(freeʹ)
                             bindings.find { case (`it`, Shadow(_)) => true case _ => false } match
                               case Some((_, Shadow(υidυ))) =>
+                                PendingOccurrence(freeʹ)
                                 substitution(op) = λ(υidυ)
                               case _ =>
+                                pf(freeʹ)
                                 substitution(op) = λ(it)
                         idx += 1
 
@@ -369,7 +370,9 @@ abstract class Expansion extends Encoding:
               given_Duplications --= duplications.keySet
               duplications ++= given_Duplications
 
-              val exp = definition(_code, _nest, _dups, duplicated)(id)(using duplications)
+              val tooMP = { (code: Int, amount: Int) => warn(throw TooManyPointersParsingException(code, amount)) }
+
+              val exp = definition(_code, _nest, _dups, duplicated, _.replace(tooMP).flatten)(id)(using duplications)
 
               bindings ++= purged
 
@@ -380,7 +383,11 @@ abstract class Expansion extends Encoding:
         catch t =>
           duplications -= xid
 
-          Failure(t.getMessage, in)
+          t match
+            case (AmbiguousParsingException | UndefinedParsingException) =>
+              Failure(t.getMessage, in)
+            case t =>
+              throw t
 
     }.named(s"""⟦${if defs.size == 1 then defs.head._2.code.toString else ""}⟧""")
 
@@ -516,22 +523,13 @@ object Expansion:
 
   extension [T <: AST](ast: T)
 
-    def replace(using rename: + | `⟦⟧` => + | `⟦⟧`)
-               (using substitution: Substitution): T =
+    def replace(tooMP: (Int, Int) => Unit)
+               (using substitution: Substitution)
+               (using rename: + | `⟦⟧` => + | `⟦⟧`): T =
 
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
+      ast.mapʹ(_.replace(tooMP)) {
 
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.replace))
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.replace))
-
-        case `.`(end, prefixes*) =>
+        case it @ `.`(_, prefixes*) =>
           val prefixesʹ = prefixes.map {
             case it @ τ(given Option[Code]) =>
               it.copy(code = recoded)
@@ -545,46 +543,40 @@ object Expansion:
               it.copy(channel = replaced(ch), code = recoded, names = namesʹ)
             case it => it
           }
-          `.`(end.replace, prefixesʹ*)
+          it.copy(prefixes = prefixesʹ)
 
-        case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
-          ?:(((replaced(lhs), replaced(rhs)), m), t.replace, f.map(_.replace))
+        case it @ ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), _, _) =>
+          it.copy(cond = ((replaced(lhs), replaced(rhs)), m))
 
-        case ?:(((λ(lhs: Symbol), rhs), m), t, f) =>
-          ?:(((replaced(lhs), rhs), m), t.replace, f.map(_.replace))
+        case it @ ?:(((λ(lhs: Symbol), rhs), m), _, _) =>
+          it.copy(cond = ((replaced(lhs), rhs), m))
 
-        case ?:(((lhs, λ(rhs: Symbol)), m), t, f) =>
-          ?:(((lhs, replaced(rhs)), m), t.replace, f.map(_.replace))
+        case it @ ?:(((lhs, λ(rhs: Symbol)), m), _, _) =>
+          it.copy(cond = ((lhs, replaced(rhs)), m))
 
-        case ?:(cond, t, f) =>
-          ?:(cond, t.replace, f.map(_.replace))
+        case it @ !(_, _, Some(τ @ τ(given Option[Code])), _) =>
+          it.copy(guard = Some(τ.copy(code = recoded)))
 
-        case it @ !(_, _, Some(τ @ τ(given Option[Code])), sum) =>
-          it.copy(guard = Some(τ.copy(code = recoded)), sum = sum.replace)
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), Some(_), given Option[Code], _*)), _) =>
+          it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded)))
 
-        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), Some(_), given Option[Code], _*)), sum) =>
-          it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded)), sum = sum.replace)
-
-        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => replaced(arg)
             case it => it
           }
-          it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded, names = namesʹ)), sum = sum.replace)
+          it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded, names = namesʹ)))
 
-        case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.replace)
-
-        case it @ `⟦⟧`(_, _, sum, _, _) =>
-          val pointers = it.pointers.map(replaced(_).asSymbol)
-          it.copy(sum = sum.replace, pointers = pointers)
+        case it @ `⟦⟧`(_, _, _, pointers) =>
+          val pointersʹ = pointers.map(replaced(_).asSymbol)
+          it.copy(pointers = pointersʹ)
 
         case `{}`(identifier, pointers, false) =>
           val ast = rename(substitution(identifier).asInstanceOf[+ | `⟦⟧`])
           given List[Symbol] = pointers.map(replaced(_).asSymbol)
           if given_List_Symbol.nonEmpty
           then
-            ast.concatenate
+            ast.concatenate(tooMP)
           else
             ast
 
@@ -607,52 +599,33 @@ object Expansion:
             }
           it.copy(params = paramsʹ)
 
+        case it => it
 
-    private def concatenate(using pointers: List[Symbol]): T =
+      }
 
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
+    def concatenate(tooMP: (Int, Int) => Unit)
+                   (using pointers: List[Symbol]): T =
 
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.concatenate))
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.concatenate))
-
-        case it @ `.`(end, _*) =>
-          it.copy(end = end.concatenate)
-
-        case ?:(cond, t, f) =>
-          ?:(cond, t.concatenate, f.map(_.concatenate))
-
-        case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.concatenate)
+      ast.mapʹʹ(_.concatenate(tooMP)) {
 
         case it: `⟦⟧` =>
-          it.copy(pointers = it.pointers ::: pointers)
+          val pointersʹ = it.pointers ::: pointers
+          if pointersʹ.size > it.definition.variables.size
+          then
+            tooMP(it.definition.code, pointersʹ.size - it.definition.variables.size)
+          it.copy(pointers = pointersʹ) -> true
 
         case it: `{}` =>
-          it.copy(pointers = it.pointers ::: pointers)
+          it.copy(pointers = it.pointers ::: pointers) -> false
 
-        case _ => ast
+        case it => it -> false
+
+      }
 
 
     def update(using bindings: Bindings): T =
 
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.update))
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.update))
+      ast.mapʹʹ(_.update) {
 
         case `.`(end, prefixes*) =>
           given Bindings = Bindings(bindings)
@@ -674,44 +647,38 @@ object Expansion:
               it.copy(channel = updated(ch), code = recoded, names = namesʹ)
             case it => it
           }
-          `.`(end.update, prefixesʹ*)
+          `.`(end.update, prefixesʹ*) -> true
 
-        case ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), t, f) =>
-          ?:(((updated(lhs), updated(rhs)), m), t.update, f.map(_.update))
+        case it @ ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), _, _) =>
+          it.copy(cond = ((updated(lhs), updated(rhs)), m)) -> false
 
-        case ?:(((λ(lhs: Symbol), rhs), m), t, f) =>
-          ?:(((updated(lhs), rhs), m), t.update, f.map(_.update))
+        case it @ ?:(((λ(lhs: Symbol), rhs), m), _, _) =>
+          it.copy(cond = ((updated(lhs), rhs), m)) -> false
 
-        case ?:(((lhs, λ(rhs: Symbol)), m), t, f) =>
-          ?:(((lhs, updated(rhs)), m), t.update, f.map(_.update))
+        case it @ ?:(((lhs, λ(rhs: Symbol)), m), _, _) =>
+          it.copy(cond = ((lhs, updated(rhs)), m)) -> false
 
-        case ?:(cond, t, f) =>
-          ?:(cond, t.update, f.map(_.update))
-
-        case it @ !(_, _, Some(τ @ τ(given Option[Code])), sum) =>
-          it.copy(guard = Some(τ.copy(code = recoded)), sum = sum.update)
+        case it @ !(_, _, Some(τ @ τ(given Option[Code])), _) =>
+          it.copy(guard = Some(τ.copy(code = recoded))) -> false
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), Some(_), given Option[Code], names*)), sum) =>
           given Bindings = Bindings(bindings)
           val chʹ = updated(ch)
           given_Bindings --= names.filter(_.isSymbol).map(_.asSymbol).filterNot(_.name.isEmpty)
           val πʹ = π.copy(channel = chʹ, code = recoded)
-          it.copy(guard = Some(πʹ), sum = sum.update)
+          it.copy(guard = Some(πʹ), sum = sum.update) -> true
 
-        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), sum) =>
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
           val namesʹ = names.map {
             case λ(arg: Symbol) => updated(arg)
             case it => it
           }
           val πʹ = π.copy(channel = updated(ch), code = recoded, names = namesʹ)
-          it.copy(guard = Some(πʹ), sum = sum.update)
+          it.copy(guard = Some(πʹ)) -> false
 
-        case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.update)
-
-        case it @ `⟦⟧`(_, _, sum, _, pointers) =>
+        case it @ `⟦⟧`(_, _, _, pointers) =>
           val pointersʹ = pointers.map(updated(_).asSymbol)
-          it.copy(sum = sum.update, pointers = pointersʹ)
+          it.copy(pointers = pointersʹ) -> false
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(updated(_).asSymbol)
@@ -720,7 +687,7 @@ object Expansion:
               case λ(it: Symbol) => updated(it)
               case it => it
             }
-          it.copy(pointers = pointersʹ, params = paramsʹ)
+          it.copy(pointers = pointersʹ, params = paramsʹ) -> false
 
         case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params
@@ -728,4 +695,8 @@ object Expansion:
               case λ(it: Symbol) => updated(it)
               case it => it
             }
-          it.copy(params = paramsʹ)
+          it.copy(params = paramsʹ) -> false
+
+        case it => it -> false
+
+      }

@@ -71,15 +71,22 @@ final class υidυ:
 
   def save[T](e: => Option[T]): Option[T] =
     val it = copy
-    e match
-      case it @ Some(_) => it
-      case _ =>
+    var ok = false
+    try
+      e match
+        case it @ Some(_) =>
+          ok = true
+          it
+        case _ =>
+          None
+    finally
+      if !ok
+      then
         paste(it)
-        None
 
 
 object υidυ:
 
-  extension (self: String)
-    def rewrite(id: => String): String =
-      self.replaceAll("_υ.*υ", "") + id
+  extension (self: Symbol)
+    def rewrite(id: => String): Symbol =
+      Symbol(self.name.replaceAll("_υ.*υ", "") + id)

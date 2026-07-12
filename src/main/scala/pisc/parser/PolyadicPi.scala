@@ -232,12 +232,19 @@ abstract class PolyadicPi extends Expression:
     val cntr = Map.from(_cntr)
     _id.save {
       _χ_id.save {
-        r match
-          case Success(it, in) => Some(it -> in)
-          case _ =>
+        var ok = false
+        try
+          r match
+            case Success(it, in) =>
+              ok = true
+              Some(it -> in)
+            case _ =>
+              None
+        finally
+          if !ok
+          then
             _cntr = cntr
             _nest = nest
-            None
       }
     }
 
@@ -359,34 +366,14 @@ object PolyadicPi:
 
     def shallow: T =
 
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.shallow))
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.shallow))
-
-        case it @ `.`(end, _*) =>
-          it.copy(end = end.shallow)
-
-        case ?:(cond, t, f) =>
-          ?:(cond, t.shallow, f.map(_.shallow))
-
-        case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.shallow)
-
-        case it @ `⟦⟧`(_, _, sum, _, _) =>
-          it.copy(sum = sum.shallow)
+      ast.map(_.shallow) {
 
         case `{}`(identifier, pointers, true, params*) =>
           `(*)`(identifier, Nil, (params ++ pointers.map(λ(_)))*)
 
-        case _ => ast
+        case it => it
+
+      }
 
 
   final class Main(override protected val emitter: Emitter,
