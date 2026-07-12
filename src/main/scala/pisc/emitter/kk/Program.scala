@@ -37,6 +37,7 @@ import dialects.Scala3
 
 import parser.-
 import parser.Calculus.*
+import parser.Encoding.*
 import parser.StochasticPi.Act
 import kk.Meta.*
 
@@ -271,7 +272,7 @@ object Program:
           }.toSet.toSeq
 
           end match {
-            case `⟦⟧`(_, variables, _, _, pointers) =>
+            case `⟦⟧`(Definition(_, _, _, variables, _), _, _, pointers) =>
               val `vals` = (variables zip pointers)
                 .map(_.name -> _.name)
                 .map(Pat.Var(_) -> _)
@@ -536,8 +537,8 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(_, variables, _sum, _, assignment) =>
-          val n = assignment.size
+        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
+          val n = pointers.size
 
           val sum: + = if (variables.size == n)
                        then

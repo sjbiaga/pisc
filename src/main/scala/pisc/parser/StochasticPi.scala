@@ -248,12 +248,19 @@ abstract class StochasticPi extends Expression:
     _id.save {
       _sπ_id.save {
         _χ_id.save {
-          r match
-            case Success(it, in) => Some(it -> in)
-            case _ =>
-              _cntr = cntr
-              _nest = nest
-              None
+          var ok = false
+          try
+            r match
+              case Success(it, in) =>
+                ok = true
+                Some(it -> in)
+              case _ =>
+                None
+        finally
+          if !ok
+          then
+            _cntr = cntr
+            _nest = nest
         }
       }
     }
@@ -401,34 +408,14 @@ object StochasticPi:
 
     def shallow: T =
 
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.shallow))
-
-        case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.shallow))
-
-        case it @ `.`(end, _*) =>
-          it.copy(end = end.shallow)
-
-        case ?:(cond, t, f) =>
-          ?:(cond, t.shallow, f.map(_.shallow))
-
-        case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.shallow)
-
-        case it @ `⟦⟧`(_, _, sum, _, _) =>
-          it.copy(sum = sum.shallow)
+      ast.map(_.shallow) {
 
         case `{}`(identifier, pointers, true, params*) =>
           `(*)`(identifier, (params ++ pointers.map(λ(_)))*)
 
-        case _ => ast
+        case it => it
+
+      }
 
 
   class Main(override protected val emitter: Emitter,
@@ -558,8 +545,8 @@ object StochasticPi:
             def idʹ: String = '!' + τʹ.υidυ
             `!`(parallelism, pace, Some(τʹ.copy()(idʹ)), sum).parse
 
-          case `⟦⟧`(definition, variables, _sum, xid, assignment) =>
-            val n = assignment.size
+          case `⟦⟧`(definition @ Definition(_, _, _, variables, _), _sum, xid, pointers) =>
+            val n = pointers.size
 
             val sum: + =
               if variables.size == n
@@ -574,7 +561,7 @@ object StochasticPi:
             then
               it = insert_+(it)
 
-            (`⟦⟧`(definition, variables, it, xid, assignment), it.enabled)
+            (`⟦⟧`(definition, it, xid, pointers), it.enabled)
 
           case _: `{}` => ???
 
@@ -649,7 +636,7 @@ object StochasticPi:
 
           case _: ! => ??? // impossible by 'parse'
 
-          case `⟦⟧`(_, _, sum, _, _) =>
+          case `⟦⟧`(_, sum, _, _) =>
             sum.split
             sum.enabled
 
@@ -659,21 +646,12 @@ object StochasticPi:
 
       def graph(using prog: List[Bind]): Seq[(Act, Act | Sum)] =
 
-        ast match
-
-          case ∅() => Nil
-
-          case +(_, ps*) =>
-            ps.map(_.graph).reduce(_ ++ _)
-
-          case ∥(_, ss*) =>
-            ss.map(_.graph).reduce(_ ++ _)
+        ast.mapreduce[Seq[(Act, Act | Sum)]] {
 
           case `.`(end, ps*) =>
 
             inline given Conversion[(Pre, Act | Sum), (Act, Act | Sum)] = _.asInstanceOf[Act] -> _
 
-            end.graph ++
             ( for
                 i <- 0 until ps.size
                 if ps(i) match { case Act(it) => it }
@@ -695,7 +673,7 @@ object StochasticPi:
                 case !(_, _, Some(μ), _) =>
                   Seq(ps(k) -> μ)
                 case _: ! => ??? // impossible by 'parse'
-                case `⟦⟧`(_, _, sum, _, _) =>
+                case `⟦⟧`(_, sum, _, _) =>
                   Seq(ps(k) -> sum)
                 case _: `{}` => ???
                 case it: `(*)` =>
@@ -704,23 +682,19 @@ object StochasticPi:
               else Nil
             }
 
-          case ?:(_, t, f) =>
-            t.graph ++ f.map(_.graph).getOrElse(Nil)
-
           case !(parallelism, _, Some(μ), sum) if parallelism == 1 || parallelism < -1 =>
-            sum.graph ++ Seq(μ -> sum)
+            Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
-            sum.graph ++ Seq(μ -> μ, μ -> sum)
+            Seq(μ -> μ, μ -> sum)
 
           case _: ! => ??? // impossible by 'parse'
 
-          case `⟦⟧`(_, _, sum, _, _) =>
-            sum.graph
-
           case _: `{}` => ???
 
-          case _: `(*)` => Nil
+          case _ => Nil
+
+        }(_ ++ _)
 
     def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 

@@ -42,8 +42,11 @@ object Ensure:
   case object MainParsingExceptionʹ
       extends EquationParsingException("The parameterless Main agent is recursive")
 
-  case class RecRepParsingException(id: String, arity: Int, times: Int)
-      extends EquationParsingException(s"""$id#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+  case class RecRepParsingException(identifier: String, arity: Int, times: Int)
+      extends EquationParsingException(s"""$identifier#$arity is recursively replicated${if times == 1 then "" else " " + times + " times"}""")
+
+  case class NoEquationException(identifier: String, arity: Int)
+      extends EquationParsingException(s"""No equation for an agent $identifier#$arity""")
 
 
   private def indexʹ(prog: List[Bind]): ((String, Int)) => Int =
@@ -81,32 +84,14 @@ object Ensure:
                  (using prog: List[Bind])
                  (implicit repl: Int = 0): Unit =
 
-      ast match
-
-        case ∅() =>
-
-        case +(_, choices*) =>
-         choices.foreach(_.recursive)
-
-        case ∥(_, components*) =>
-         components.foreach(_.recursive)
-
-        case `.`(end, _*) =>
-          end.recursive
-
-        case ?:(_, t, f) =>
-          t.recursive
-          f.foreach(_.recursive)
+      ast.foreach(_.recursive) {
 
         case !(_, _, _, sum) =>
           sum.recursive(stack.size)
 
-        case `⟦⟧`(_, _, sum, _, _) =>
-          sum.recursive
-
         case _: `{}` => ???
 
-        case it @ `(*)`(identifier, params*)
+        case `(*)`(identifier, params*)
             if stack.contains(identifier -> params.size) =>
           val k = stack.lastIndexOf(identifier -> params.size)
           for
@@ -126,5 +111,10 @@ object Ensure:
 
         case `(*)`(identifier, params*) =>
           val i = indexʹ(prog)(identifier -> params.size)
+          if i < 0
+          then
+            throw NoEquationException(identifier, params.size)
           val sum = prog(i)._2
           sum.recursive(using stack :+ identifier -> params.size)
+
+      }
