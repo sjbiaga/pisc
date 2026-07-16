@@ -93,20 +93,6 @@ class AmbientSuite extends FunSuite:
 
   }
 
-  test("encoding-non-parameter-encoded-binding") {
-
-    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #1 in the right hand side of definition 3") {
-      Main(Emitter.test, getClass.getSimpleName) {
-        source("""
-               ⟦ 'x ⟧{u} = x[ <u> ]
-               ⟦2 t"λ $x,$y . ${$M}" 2⟧{u} = u[ (x). (y). M{y} ]
-               ⟦3 t"λλ $z" 3⟧{u} = ⟦2 λ z,u . ⟦ z ⟧ 2⟧
-               """)
-      }
-    }
-
-  }
-
 
 object AmbientSuite:
 

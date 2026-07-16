@@ -59,7 +59,7 @@ abstract class Encoding extends Calculus:
         || (variables & parameters).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        var bound = _parameters ++ constants ++ variables
+        val bound = _parameters ++ constants ++ variables
         given Bindings = Bindings() ++
                          bound
                            .filterNot(_.charAt(0).isUpper)
@@ -324,7 +324,7 @@ object Encoding:
           given_MutableList_String_String.append(it -> υidυ)
           υidυ
         }
-      val parʹ = par.rename(expansion = true, dups)(id, χ_id)
+      val parʹ = par.rename(dups, collect = true)(id, χ_id)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -334,7 +334,7 @@ object Encoding:
         .map(_._2)
       Definition(code, Some(term), constants, variablesʹ, parʹ)
       ->
-      (arity - shadows.count(_.nonEmpty) -> shadows)
+      (arity - shadows.count(_.isDefined) -> shadows)
 
   case class Definition(code: Int,
                         term: Option[Term],
@@ -371,7 +371,7 @@ object Encoding:
           count(ast)
           try
             given MutableList[(String, String)]()
-            ast.rename(false, dups, duplicated)(id)
+            ast.rename(dups, duplicated)(id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -389,7 +389,7 @@ object Encoding:
         given (∥ | `⟦⟧` => ∥ | `⟦⟧`) = { ast =>
           try
             given MutableList[(String, String)]()
-            ast.rename(false, dups, duplicated)(id)
+            ast.rename(dups, duplicated)(id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -467,11 +467,8 @@ object Encoding:
   case class UniquenessBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean, how: String)
       extends BindingParsingException(code, nest, s"""A binding name ($name) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, being $how""")
 
-  case class ExistingNonParameterBindingParsingException(code: Int, nest: Int, name: String, hardcoded: Boolean)
-      extends BindingParsingException(code, nest, s"""A binding name ($name) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence already exists and not as a definition parameter""")
-
   case class ScopeBindingParsingException(code: Int, nest: Int, name: String)
-      extends BindingParsingException(code, nest, s"""A pending occurrence of a definition parameter ($name) is not in the scope of its binding occurrence""")
+      extends BindingParsingException(code, nest, s"""An occurrence of a definition parameter ($name) is not in the scope of its binding occurrence""")
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
@@ -547,8 +544,9 @@ object Encoding:
       }(_ ++ _)
 
 
-    def rename(expansion: Boolean = false, dups: Boolean = false,
-               duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } })
+    def rename(dups: Boolean = false,
+               duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } },
+               collect: Boolean = false)
               (id: => String, χ_id: => String = null)
               (using bindings: Bindings)
               (using duplications: Duplications)
@@ -557,7 +555,7 @@ object Encoding:
       def rebind(it: String): String =
         val υidυ = it.rewrite(id)
         bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
-          case Some((_, occurrence)) if expansion && occurrence.aliasing =>
+          case Some((_, occurrence)) if collect && occurrence.aliasing =>
             bindings += it -> Binder(occurrence)(υidυ)
           case Some((_, occurrence)) =>
             bindings += it -> Shadow(occurrence)(υidυ)
@@ -566,7 +564,10 @@ object Encoding:
         υidυ
 
       inline def rename[S <: AST](ast: S): S =
-        ast.rename(expansion, dups, duplicated)(id, χ_id)
+        ast.rename(dups, duplicated, collect)(id, χ_id)
+
+      given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
+      import parser.Calculus.given
 
       ast.mapʹʹ(rename(_)) {
 
@@ -597,7 +598,7 @@ object Encoding:
             case ζ(op, amb) => ζ(op, renamed(amb))
             case it => it
           }
-          <>(recoded, path*) -> false
+          <>(recoded, path*)
 
         case it @ !(_, _, Some(name), par) =>
           val n = refresh.size
@@ -607,10 +608,10 @@ object Encoding:
           it.copy(guard = Some(nameʹ), par = parʹ) -> true
 
         case it @ `[]`(amb, _) =>
-          it.copy(amb = renamed(amb)) -> false
+          it.copy(amb = renamed(amb))
 
         case it @ `go.`(amb, _) =>
-          it.copy(amb = renamed(amb)) -> false
+          it.copy(amb = renamed(amb))
 
         case it @ `⟦⟧`(dfn @ Definition(_, term, _, variables, _), par, xid, pointers) =>
           if dups then term.foreach(duplicated(xid))
@@ -623,28 +624,28 @@ object Encoding:
                        }
           val parʹ = rename(par)
           refresh.dropInPlace(refresh.size - n)
+          val dfnʹ = dfn.copy(variables = variablesʹ)
           val xidʹ =
-            if dups && expansion && term.isDefined
+            if dups && collect && term.isDefined
             then
               val υidυ = χ_id
-              duplications += υidυ -> (false, Map())
-              duplications(υidυ)._2.addAll(duplications(xid)._2)
+              duplications += υidυ -> (false, duplications(xid)._2)
+              duplications -= xid
               υidυ
             else
               xid
-          val dfnʹ = dfn.copy(variables = variablesʹ)
           val pointersʹ = pointers.map(renamed(_))
           it.copy(definition = dfnʹ, par = parʹ, xid = xidʹ, pointers = pointersʹ) -> true
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_))
           val paramsʹ = params.map(renamed(_))
-          it.copy(pointers = pointersʹ, params = paramsʹ) -> false
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
         case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params.map(renamed(_))
-          it.copy(params = paramsʹ) -> false
+          it.copy(params = paramsʹ)
 
-        case it => it -> false
+        case it => it
 
       }

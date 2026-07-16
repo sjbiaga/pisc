@@ -576,6 +576,9 @@ object Expansion:
     def concatenate(tooMP: (Int, Int) => Unit)
                    (using pointers: List[String]): T =
 
+      given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
+      import _root_.masc.parser.Calculus.given
+
       ast.mapʹʹ(_.concatenate(tooMP)) {
 
         case it: `⟦⟧` =>
@@ -586,14 +589,17 @@ object Expansion:
           it.copy(pointers = pointersʹ) -> true
 
         case it: `{}` =>
-          it.copy(pointers = it.pointers ::: pointers) -> false
+          it.copy(pointers = it.pointers ::: pointers)
 
-        case it => it -> false
+        case it => it
 
       }
 
 
     def update(using bindings: Bindings): T =
+
+      given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
+      import _root_.masc.parser.Calculus.given
 
       ast.mapʹʹ(_.update) {
 
@@ -624,7 +630,7 @@ object Expansion:
             case ζ(op, amb) => ζ(op, updated(amb))
             case it => it
           }
-          <>(recoded, path*) -> false
+          <>(recoded, path*)
 
         case it @ !(_, _, Some(name), par) =>
           given Bindings = Bindings(bindings)
@@ -632,24 +638,24 @@ object Expansion:
           it.copy(par = par.update) -> true
 
         case it @ `[]`(amb, _) =>
-          it.copy(amb = updated(amb)) -> false
+          it.copy(amb = updated(amb))
 
         case it @ `go.`(amb, _) =>
-          it.copy(amb = updated(amb)) -> false
+          it.copy(amb = updated(amb))
 
         case it @ `⟦⟧`(_, _, _, pointers) =>
           val pointersʹ = pointers.map(updated(_))
-          it.copy(pointers = pointersʹ) -> false
+          it.copy(pointers = pointersʹ)
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(updated(_))
           val paramsʹ = params.map(updated(_))
-          it.copy(pointers = pointersʹ, params = paramsʹ) -> false
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
         case it @ `(*)`(_, _, params*) =>
           val paramsʹ = params.map(updated(_))
-          it.copy(params = paramsʹ) -> false
+          it.copy(params = paramsʹ)
 
-        case it => it -> false
+        case it => it
 
       }
