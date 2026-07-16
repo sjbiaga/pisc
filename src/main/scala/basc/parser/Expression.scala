@@ -251,16 +251,16 @@ object Expression:
 
 
   inline def apply(self: sm.Term)
-                  (using refresh: MutableList[(Symbol, λ)] = null)
+                  (using refresh: MutableList[(Symbol, Symbol)] = null)
                   (using replacing: Substitution = null)
                   (using updating: Bindings = null): (sm.Term, Names) =
-    given (MutableList[(Symbol, λ)], Bindings) = if refresh eq null then null else refresh -> updating
+    given (MutableList[(Symbol, Symbol)], Bindings) = if refresh eq null then null else refresh -> updating
     given Bindings = if refresh eq null then updating else null
     Term(self)
 
 
   inline def apply(self: sm.Type): (sm.Type, Names) =
-    given (MutableList[(Symbol, λ)], Bindings) = null
+    given (MutableList[(Symbol, Symbol)], Bindings) = null
     given Substitution = null
     given Bindings = null
     Type(self)
@@ -278,7 +278,7 @@ object Expression:
   object Case:
 
     def apply(self: List[sm.Case])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Case], Names) =
       val (cs @ List[sm.Case](_*), csns) = UnzipReduce(self.map(CaseTree(_)))
@@ -287,7 +287,7 @@ object Expression:
   object CaseTree:
 
     def apply(self: sm.CaseTree)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.CaseTree, Names) = self match
 
@@ -306,7 +306,7 @@ object Expression:
   object Ctor:
 
     def apply(self: sm.Ctor)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Ctor, Names) = self match
 
@@ -328,13 +328,13 @@ object Expression:
   object Enumerator:
 
     def apply(self: List[sm.Enumerator])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Enumerator], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Enumerator)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Enumerator, Names) = self match
 
@@ -363,13 +363,13 @@ object Expression:
   object Init:
 
     def apply(self: List[sm.Init])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Init], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Init)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Init, Names) = self match
 
@@ -384,13 +384,13 @@ object Expression:
   object Pat:
 
     def apply(self: List[sm.Pat])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Pat], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Pat)
-             (using renaming: (MutableList[(Symbol, λ)], Bindings))
+             (using renaming: (MutableList[(Symbol, Symbol)], Bindings))
              (using replacing: Substitution)
              (using updating: Bindings): (sm.Pat, Names) = self match
 
@@ -432,11 +432,11 @@ object Expression:
                   case null =>
                     sm.Pat.Var(sm.Term.Name(name)) -> Set(free)
                   case given Bindings =>
-                    sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).asSymbol.name))) -> Names()
+                    sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).name))) -> Names()
               case given Substitution =>
-                sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(replaced(free).asSymbol.name))) -> Names()
-          case (given MutableList[(Symbol, λ)], given Bindings) =>
-            sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).asSymbol.name))) -> Names()
+                replaced(free).toPat -> Names()
+          case (given MutableList[(Symbol, Symbol)], given Bindings) =>
+            sm.Pat.Macro(sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).name))) -> Names()
 
       case it @ sm.Pat.Macro(body) =>
         val (b, bns) = Term(body)
@@ -465,11 +465,15 @@ object Expression:
                   case null =>
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
-                    sm.Term.Name(s"'${updated(free).asSymbol.name}") -> Names()
+                    sm.Term.Name(s"'${updated(free).name}") -> Names()
               case given Substitution =>
-                sm.Term.Name(s"'${replaced(free).asSymbol.name}") -> Names()
-          case (given MutableList[(Symbol, λ)], given Bindings) =>
-            sm.Term.Name(s"'${renamed(free).asSymbol.name}") -> Names()
+                replaced(free) match
+                  case λ(it: Symbol) =>
+                    sm.Term.Name(s"'${it.name}") -> Names()
+                  case it =>
+                    it.toPat -> Names()
+          case (given MutableList[(Symbol, Symbol)], given Bindings) =>
+            sm.Term.Name(s"'${renamed(free).name}") -> Names()
 
       case it @ sm.Term.Select(qual, _) =>
         val (q, qns) = Term(qual)
@@ -484,7 +488,7 @@ object Expression:
   object Ref:
 
     def apply(self: sm.Ref)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Ref, Names) = self match
 
@@ -502,13 +506,13 @@ object Expression:
   object Stat:
 
     def apply(self: List[sm.Stat])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Stat], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Stat)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Stat, Names) = self match
 
@@ -530,7 +534,7 @@ object Expression:
     object Decl:
 
       def apply(self: sm.Decl)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Decl, Names) = self match
 
@@ -570,7 +574,7 @@ object Expression:
     object Defn:
 
       def apply(self: sm.Defn)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Defn, Names) = self match
 
@@ -674,13 +678,13 @@ object Expression:
     object Mod:
 
       def apply(self: List[sm.Mod])
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (List[sm.Mod], Names) =
         UnzipReduce(self.map(this(_)))
 
       def apply(self: sm.Mod)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Mod, Names) = self match
 
@@ -697,7 +701,7 @@ object Expression:
   object Template:
 
     def apply(self: sm.Template)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Template, Names) = self match
 
@@ -714,13 +718,13 @@ object Expression:
     val `null -> nil` = null.asInstanceOf[sm.Term] -> Names()
 
     def apply(self: List[sm.Term])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Term], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Term)
-             (using renaming: (MutableList[(Symbol, λ)], Bindings))
+             (using renaming: (MutableList[(Symbol, Symbol)], Bindings))
              (using replacing: Substitution)
              (using updating: Bindings): (sm.Term, Names) = self match
 
@@ -817,11 +821,15 @@ object Expression:
                   case null =>
                     sm.Term.Name(name) -> Set(free)
                   case given Bindings =>
-                    sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).asSymbol.name)) -> Names()
+                    sm.Term.QuotedMacroExpr(sm.Term.Name(updated(free).name)) -> Names()
               case given Substitution =>
-                sm.Term.QuotedMacroExpr(sm.Term.Name(replaced(free).asSymbol.name)) -> Names()
-          case (given MutableList[(Symbol, λ)], given Bindings) =>
-            sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).asSymbol.name)) -> Names()
+                replaced(free) match
+                  case λ(it: Symbol) =>
+                    sm.Term.QuotedMacroExpr(sm.Term.Name(it.name)) -> Names()
+                  case it =>
+                    it.toTerm -> Names()
+          case (given MutableList[(Symbol, Symbol)], given Bindings) =>
+            sm.Term.QuotedMacroExpr(sm.Term.Name(renamed(free).name)) -> Names()
 
       case it @ sm.Term.Match(expr, cases) =>
         val (e, ens) = this(expr)
@@ -908,13 +916,13 @@ object Expression:
     object Param:
 
       def apply(self: List[List[sm.Term.Param]])
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (List[List[sm.Term.Param]], Names) =
         UnzipReduce(self.map { ls => UnzipReduce(ls.map(this(_))) })
 
       def apply(self: sm.Term.Param)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Term.Param, Names) = self match
 
@@ -930,7 +938,7 @@ object Expression:
     object Ref:
 
       def apply(self: sm.Term.Ref)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Term.Ref, Names) = self match
 
@@ -951,7 +959,7 @@ object Expression:
     val `null -> nil` = null.asInstanceOf[sm.Type] -> Names()
 
     def apply(self: sm.Type.Bounds)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Type.Bounds, Names) = self match
 
@@ -961,13 +969,13 @@ object Expression:
         it.copy(lo = lo.map(const(l)), hi = hi.map(const(h))) -> (lns ++ hns)
 
     def apply(self: List[sm.Type])
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (List[sm.Type], Names) =
       UnzipReduce(self.map(this(_)))
 
     def apply(self: sm.Type)
-             (using (MutableList[(Symbol, λ)], Bindings))
+             (using (MutableList[(Symbol, Symbol)], Bindings))
              (using Substitution)
              (using Bindings): (sm.Type, Names) = self match
 
@@ -1095,13 +1103,13 @@ object Expression:
     object Param:
 
       def apply(self: List[sm.Type.Param])
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (List[sm.Type.Param], Names) =
         UnzipReduce(self.map(this(_)))
 
       def apply(self: sm.Type.Param)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Type.Param, Names) = self match
 
@@ -1119,7 +1127,7 @@ object Expression:
     object Ref:
 
       def apply(self: sm.Type.Ref)
-               (using (MutableList[(Symbol, λ)], Bindings))
+               (using (MutableList[(Symbol, Symbol)], Bindings))
                (using Substitution)
                (using Bindings): (sm.Type.Ref, Names) = self match
 

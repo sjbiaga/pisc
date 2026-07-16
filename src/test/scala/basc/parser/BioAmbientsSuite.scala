@@ -81,7 +81,7 @@ class BioAmbientsSuite extends FunSuite:
 
   test("encoding-uniqueness-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of definition 3") {
+    interceptMessage[UniquenessBindingParsingException]("A binding name (z) does not correspond to a unique encoded binding occurrence, being duplicated at nesting level #1 in the right hand side of definition 3") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x!{u}.
@@ -110,7 +110,7 @@ class BioAmbientsSuite extends FunSuite:
 
   test("encoding-non-parameter-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #1 in the right hand side of definition 3") {
+    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #2 in the right hand side of definition 3") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x!{u}.

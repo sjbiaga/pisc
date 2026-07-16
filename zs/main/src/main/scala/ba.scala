@@ -32,7 +32,7 @@ package object sΠ:
 
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Duration, FiberRef, Hub, Promise, Random, Ref, Queue, Schedule, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, FiberRef, Hub, Promise, Queue, Random, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
