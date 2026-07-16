@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ * Copyright (c) 2023-2026 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -43,7 +43,7 @@ import ProgramSuite.*
 
 class ProgramSuite extends FunSuite:
 
-  // // REPLICATION (BOUND OUTPUT) ////////////////////////////////////////////////
+  // REPLICATION (BOUND OUTPUT) ////////////////////////////////////////////////
 
   /**
     * `! .guard<νname1,name2>.`
@@ -419,9 +419,9 @@ class ProgramSuite extends FunSuite:
     }
   }
 
-  // //////////////////////////////////////////////// replication (bound output) //
+  //////////////////////////////////////////////// replication (bound output) //
 
-  // // REPLICATION (INPUT) ///////////////////////////////////////////////////////
+  // REPLICATION (INPUT) ///////////////////////////////////////////////////////
 
   /**
     * `! .guard(name1,name2).`
