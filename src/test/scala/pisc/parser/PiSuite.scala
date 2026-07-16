@@ -112,7 +112,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-non-parameter-encoded-binding") {
 
-    interceptMessage[RuntimeException]("A binding name (u) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #1 in the right hand side of definition 3") {
+    interceptMessage[NoBindingParsingException]("No binding for z at nesting level #2 in the right hand side of definition 3") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ⟧{u} = x<u>.
@@ -224,7 +224,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-pending-expanded-out-of-scope") {
 
-    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 0") {
+    interceptMessage[RuntimeException]("An occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 0") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}
@@ -237,7 +237,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-pending-pointers-out-of-scope") {
 
-    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
+    interceptMessage[RuntimeException]("An occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}
@@ -250,7 +250,7 @@ class PiSuite extends FunSuite:
 
   test("encoding-pending-hardcoded-out-of-scope") {
 
-    interceptMessage[RuntimeException]("A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
+    interceptMessage[RuntimeException]("An occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 0") {
       Main(Emitter.test, getClass.getSimpleName) {
         source("""
                ⟦ 'x ^ 'y ^ 'P ⟧ = x(y). P{}

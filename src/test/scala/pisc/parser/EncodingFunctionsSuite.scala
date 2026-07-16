@@ -71,48 +71,48 @@ class EncodingFunctionsSuite extends FunSuite:
 
   test("renamed - from refresh") {
 
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("x") -> Symbol("x_υ1υ"))
     given Bindings()
-    assertEquals(renamed(Symbol("x")), λ(Symbol("x_υ1υ")))
+    assertEquals(renamed(Symbol("x")), Symbol("x_υ1υ"))
 
   }
 
   test("renamed - from bindings - with binder") {
 
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings = Bindings() + (Symbol("x") -> Occurrence(Symbol("x_υ1υ"), Position(-1, true)))
-    assertEquals(renamed(Symbol("x")), λ(Symbol("x_υ1υ")))
+    assertEquals(renamed(Symbol("x")), Symbol("x_υ1υ"))
 
   }
 
   test("renamed - from bindings - with shadow") {
 
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings = Bindings() + (Symbol("x") -> Occurrence(Some(Symbol("x_υ1υ")), Position(-1, true)))
-    assertEquals(renamed(Symbol("x")), λ(Symbol("x_υ1υ")))
+    assertEquals(renamed(Symbol("x")), Symbol("x_υ1υ"))
 
   }
 
   test("renamed - from bindings - by itself") {
 
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings = Bindings() + (Symbol("x") -> Occurrence(None, Position(1, true)))
-    assertEquals(renamed(Symbol("x")), λ(Symbol("x")))
+    assertEquals(renamed(Symbol("x")), Symbol("x"))
 
   }
 
   test("renamed - from bindings - itself a shadow") {
 
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings = Bindings() + (Symbol("x_υ1υ") -> Occurrence(Some(Symbol("x_υ2υ")), Position(-1, true)))
-    assertEquals(renamed(Symbol("x_υ2υ")), λ(Symbol("x_υ2υ")))
+    assertEquals(renamed(Symbol("x_υ2υ")), Symbol("x_υ2υ"))
 
   }
 
   test("recoded - no code") {
 
     given Option[Code] = None
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings()
     given Names()
     assertEquals(recoded, None)
@@ -127,7 +127,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val term = "println('x)".parse[Term].get
 
     given Option[Code] = Some(Right(null) -> term)
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("x") -> Symbol("x_υ1υ"))
     given Bindings()
 
     recoded match
@@ -147,7 +147,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val term = "println('x + 'y)".parse[Term].get
 
     given Option[Code] = Some(Right(null) -> term)
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("x") -> λ(Symbol("x_υ1υ")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("x") -> Symbol("x_υ1υ"))
     given Bindings = Bindings() + (Symbol("y") -> Occurrence(Some(Symbol("y_υ2υ")), Position(-1, true)))
 
     recoded match
@@ -236,7 +236,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("ch") -> Symbol("ch"))
     given Bindings()
     given Duplications()
 
@@ -252,7 +252,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("ch") -> Symbol("ch"))
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x")), Position(1, true)))
     given Duplications()
@@ -274,12 +274,12 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x")), Some(""), None))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("ch") -> Symbol("ch"))
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x")), Position(1, true)))
     given Duplications()
 
-    `13`.rename(expansion = true)(id()) match
+    `13`.rename(collect = true)(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 1)
         bindings.head match
@@ -296,7 +296,7 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("ch") -> Symbol("ch"))
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
     given Duplications()
@@ -318,12 +318,12 @@ class EncodingFunctionsSuite extends FunSuite:
     val `13` = `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ0υ")), Some(""), None))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)] = MutableList(Symbol("ch") -> λ(Symbol("ch")))
+    given MutableList[(Symbol, Symbol)] = MutableList(Symbol("ch") -> Symbol("ch"))
     given bindings: Bindings = Bindings()
                              + (Symbol("x") -> Occurrence(Some(Symbol("x_υ0υ")), Position(-1, true)))
     given Duplications()
 
-    `13`.rename(expansion = true)(id()) match
+    `13`.rename(collect = true)(id()) match
       case `.`(∅(), π(λ(Symbol("ch")), λ(Symbol("x_υ1υ")), Some(_), None)) =>
         assert(bindings.size == 2)
         bindings.tail.head match
@@ -390,7 +390,7 @@ class EncodingFunctionsSuite extends FunSuite:
                                      Some(`+`(-1, ∥(-1, `.`(`(*)`("P", Nil)))))))))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings()
     given Duplications()
 
@@ -411,7 +411,7 @@ class EncodingFunctionsSuite extends FunSuite:
                                  ν("x", "y"))))
 
     val id = new helper.υidυ
-    given MutableList[(Symbol, λ)]()
+    given MutableList[(Symbol, Symbol)]()
     given Bindings()
     given Duplications()
 
@@ -433,7 +433,7 @@ class EncodingFunctionsSuite extends FunSuite:
       override def test =
         parseAll(definition, "⟦ 'x `1` 'y ⟧{z} =") match
           case Success(Some((_, definition @ Definition(_, _, _, _, ∅()))), _) =>
-            given MutableList[(Symbol, λ)]()
+            given MutableList[(Symbol, Symbol)]()
             given Bindings()
             given Int = 1
 
@@ -466,7 +466,7 @@ class EncodingFunctionsSuite extends FunSuite:
                                                                                     ν("x"),
                                                                                     π(λ(Symbol("z")), λ(Symbol("y")), Some(""), None),
                                                                                     π(λ(Symbol("y")), λ(Symbol("x")), None, None)))))))), _) =>
-            given MutableList[(Symbol, λ)]()
+            given MutableList[(Symbol, Symbol)]()
             given Bindings = Bindings(it.bindings)
             given Int = 1
 

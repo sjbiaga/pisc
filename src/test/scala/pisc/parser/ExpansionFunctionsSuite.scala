@@ -231,6 +231,36 @@ class ExpansionFunctionsSuite extends FunSuite:
     `13`.test
   }
 
+  test("concatenate - capitals - concatenation") {
+    val `13`: `{}` = `{}`("P", List(Symbol("p")))
+
+    assertMatches(`13`.concatenate({ (_, _) => })(using List(Symbol("q")))) {
+      case `{}`("P", List(Symbol("p"), Symbol("q")), _, _*) => true
+    }
+  }
+
+  test("concatenate - instantiation - no recursion") {
+    val P: + = `+`(-1, ∥(-1, `.`(`{}`("P", Nil))))
+    val `13` = `⟦⟧`(Definition(0, None, Names(), Names() + Symbol("x"), P), P)
+
+    assertMatches(`13`.concatenate({ (_, _) => })(using List(Symbol("p")))) {
+      case `⟦⟧`(Definition(0, None, _, variables, _), +(_, ∥(_, `.`(`{}`("P", Nil, _, _*)))), _, pointers) =>
+        assertEquals(variables.head, Symbol("x"))
+        assertEquals(pointers.head, Symbol("p"))
+        true
+    }
+  }
+
+  test("concatenate - instantiation - too many pointers") {
+    case class TooMP(code: Int, amount: Int) extends Throwable(code + " " + amount)
+
+    val `13` = `⟦⟧`(Definition(0, None, Names(), Names() + Symbol("x"), ∅()), ∅())
+
+    interceptMessage[TooMP]("0 1") {
+      `13`.concatenate({ (code, amount) => throw TooMP(code, amount) })(using List(Symbol("p"), Symbol("q")))
+    }
+  }
+
 
 object ExpansionFunctionsSuite:
 

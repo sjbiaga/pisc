@@ -231,24 +231,15 @@ abstract class Pi extends Expression:
     def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
              (using bindings: Bindings, scaling: Int): Unit =
       bindings.get(name) match
-        case Some(Occurrence(_, Position(counter, _, _), true)) if counter < 0 =>
+        case Some(Occurrence(_, _, true)) =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "clobbered")
         case Some(Occurrence(Some(_), Position(counter, true, _), _)) if counter < 0 =>
           throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "duplicated")
-        case Some(Occurrence(_, it @ Position(counter, false, _), _)) =>
-          if counter < 0
-          then
-            if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
-            bindings += name -> Occurrence(shadow, it.copy(binds = true, path = path))
-          else
-            posBindUnless(!hardcoded)
-        case Some(Occurrence(_, Position(_, true, _), _)) =>
-          posBindUnless(!hardcoded)
+        case Some(Occurrence(_, it @ Position(counter, false, _), _)) if counter < 0 =>
+          if scaling != 1 then throw UniquenessBindingParsingException(_code, _nest, name, hardcoded, "scaled")
+          bindings += name -> Occurrence(shadow, it.copy(binds = true, path = path))
         case _ =>
-          posBindUnless(false)
-      def posBindUnless(raise: Boolean): Unit =
-        if raise then throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
-        bindings += name -> Occurrence(shadow, pos(true))
+          bindings += name -> Occurrence(shadow, pos(true))
 
   protected object PendingOccurrence:
     def apply(names: Names)

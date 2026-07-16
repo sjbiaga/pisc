@@ -81,20 +81,18 @@ class PiOccurrenceSuite extends FunSuite:
   /**
     * `⟦13 'x ^ 'y 13⟧(k) = k<x>. k(y).`
     *
-    * `P13(a) = ⟦ a ^ a ⟧`
+    * `P13(a) = ν(k) ⟦13 a ^ a 13⟧`
     *
     * @example {{{
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, Position(counter, _), true)) if counter < 0 => // not the case
+    *     case Some(Occurrence(_, _, true)) => // not the case
     *       ...
-    *     case Some(Occurrence(_, it @ Position(counter, false), _)) =>
-    *       if counter < 0 // not the case
-    *       then
-    *         ...
-    *       else
-    *         throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+    *     case Some(Occurrence(_, it @ Position(counter, false), _)) if counter < 0 => // not the case
+    *       ...
+    *     case _ =>
+    *       bindings += name -> Occurrence(shadow, pos(true))
     * }}}
     */
   test("occurrence - equation - parameter - pending - encoded binding") {
@@ -107,11 +105,14 @@ class PiOccurrenceSuite extends FunSuite:
     val parser = new PiMain
 
     parser._code(-1)
+    val _ = parser.pos() // increment counter
 
     parser.pendingOccurrenceObject(name)
 
-    interceptMessage[ExistingNonParameterBindingParsingException](s"A binding name (${name.name}) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0") {
-      parser.bindingOccurrenceObject(name, shadow)
+    parser.bindingOccurrenceObject(name, shadow)
+
+    assertMatches(given_Bindings.get(name)) {
+      case Some(Occurrence(`shadow`, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -250,8 +251,8 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, Position(_, false), _)) if counter > 0 && !hardcoded =>
-    *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+    *     case Some(Occurrence(_, Position(counter, false), _)) if counter > 0 =>
+    *       bindings += name -> Occurrence(shadow, it.copy(binds = true))
     * }}}
     */
   test("occurrence - equation - parameter - encoded binding") {
@@ -264,9 +265,12 @@ class PiOccurrenceSuite extends FunSuite:
     val parser = new PiMain
 
     parser._code(-1)
+    val _ = parser.pos() // increment counter
 
-    interceptMessage[ExistingNonParameterBindingParsingException](s"A binding name (${name.name}) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0") {
-      parser.bindingOccurrenceObject(name, shadow)
+    parser.bindingOccurrenceObject(name, shadow)
+
+    assertMatches(given_Bindings.get(name)) {
+      case Some(Occurrence(`shadow`, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -281,8 +285,8 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(None, Position(_, true), _)) if counter > 0 && !hardcoded =>
-    *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+    *     case Some(Occurrence(None, Position(counter, true), _)) if counter > 0 =>
+    *       bindings += name -> Occurrence(shadow, it.copy(binds = true))
     * }}}
     */
   test("occurrence - equation - new name | input prefix - encoded binding") {
@@ -295,9 +299,12 @@ class PiOccurrenceSuite extends FunSuite:
     val parser = new PiMain
 
     parser._code(-1)
+    val _ = parser.pos() // increment counter
 
-    interceptMessage[ExistingNonParameterBindingParsingException](s"A binding name (${name.name}) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0") {
-      parser.bindingOccurrenceObject(name, shadow)
+    parser.bindingOccurrenceObject(name, shadow)
+
+    assertMatches(given_Bindings.get(name)) {
+      case Some(Occurrence(`shadow`, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -312,8 +319,8 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, Position(_, false), _)) if counter > 0 && !hardcoded =>
-    *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+    *     case Some(Occurrence(_, Position(counter, false), _)) if counter > 0 =>
+    *       bindings += name -> Occurrence(shadow, it.copy(binds = true))
     * }}}
     */
   test("occurrence - definition - constant | variable - encoded binding") {
@@ -326,9 +333,12 @@ class PiOccurrenceSuite extends FunSuite:
     val parser = new PiMain
 
     parser._code(13)
+    val _ = parser.pos() // increment counter
 
-    interceptMessage[ExistingNonParameterBindingParsingException](s"A binding name (${name.name}) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0 in the right hand side of definition 13") {
-      parser.bindingOccurrenceObject(name, shadow)
+    parser.bindingOccurrenceObject(name, shadow)
+
+    assertMatches(given_Bindings.get(name)) {
+      case Some(Occurrence(`shadow`, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -343,8 +353,8 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(Some(_), Position(_, true), _)) if counter > 0 && !hardcoded =>
-    *       throw ExistingNonParameterBindingParsingException(_code, _nest, name, hardcoded)
+    *     case Some(Occurrence(Some(_), Position(counter, true), _)) if counter > 0 =>
+    *       bindings += name -> Occurrence(shadow, it.copy(binds = true))
     * }}}
     */
   test("occurrence - definition - new name | input prefix - encoded binding") {
@@ -357,9 +367,12 @@ class PiOccurrenceSuite extends FunSuite:
     val parser = new PiMain
 
     parser._code(13)
+    val _ = parser.pos() // increment counter
 
-    interceptMessage[ExistingNonParameterBindingParsingException](s"A binding name (${name.name}) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0 in the right hand side of definition 13") {
-      parser.bindingOccurrenceObject(name, shadow)
+    parser.bindingOccurrenceObject(name, shadow)
+
+    assertMatches(given_Bindings.get(name)) {
+      case Some(Occurrence(`shadow`, Position(counter @ 2, binds @ true, _), pending @ false)) => true
     }
   }
 
@@ -483,7 +496,7 @@ class PiOccurrenceSuite extends FunSuite:
     *     ... // everything else was not the case
     *     case None =>
     *       bindings += name -> Occurrence(shadow, pos(true))
-    *     case Some(Occurrence(_, Position(counter, binds @ true), _)) if counter > 0 && hardcoded => // bind anew
+    *     case Some(Occurrence(_, Position(counter, binds @ true), _)) if counter > 0 => // bind anew
     *       bindings += name -> Occurrence(shadow, pos(true))
     * }}}
     */
@@ -517,7 +530,7 @@ class PiOccurrenceSuite extends FunSuite:
     * def apply(name: Symbol, shadow: Option[Symbol], hardcoded: Boolean = false)
     *          (using bindings: Bindings, scaling: Int): Unit =
     *   bindings.get(name) match
-    *     case Some(Occurrence(_, it @ Position(counter, false), _)) if counter > 0 && hardcoded =>
+    *     case Some(Occurrence(_, it @ Position(counter, false), _)) if counter > 0 =>
     *       bindings += name -> Occurrence(shadow, pos(true))
     * }}}
     */
@@ -612,7 +625,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
     parser._nest(false)
 
-    interceptMessage[ScopeBindingParsingException](s"A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 13") {
+    interceptMessage[ScopeBindingParsingException](s"An occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #1 in the right hand side of definition 13") {
       try
         parser._nest(true)
         parser.pendingOccurrenceObject(name)
@@ -643,7 +656,7 @@ class PiOccurrenceSuite extends FunSuite:
     parser.bindingOccurrenceObject(name, shadow)
     parser._nest(false)
 
-    interceptMessage[ScopeBindingParsingException](s"A pending occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 13") {
+    interceptMessage[ScopeBindingParsingException](s"An occurrence of a definition parameter (y) is not in the scope of its binding occurrence at nesting level #0 in the right hand side of definition 13") {
       parser.pendingOccurrenceObject(name)
     }
   }

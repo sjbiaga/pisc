@@ -514,13 +514,15 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = 0
-        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         given Int = 1
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
 
-    interceptMessage[ExistingNonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0 in the right hand side of definition 0") {
-      `13`.test
-    }
+        bindings.head match
+          case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
+            assertEquals(it, Occurrence(Some(Symbol("x_shadow")), Position(1, true)))
+          case _ =>
+            assert(false)
 
   }
 
@@ -550,13 +552,15 @@ class PiParserSuite extends FunSuite:
       override def test =
         _nest = 0
         _code = -1
-        given Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
+        given bindings: Bindings = Mapʹ(Symbol("x") -> Occurrence(None, Position(1, false)))
         given Int = 1
         BindingOccurrence(Symbol("x"), Some(Symbol("x_shadow")))
 
-    interceptMessage[ExistingNonParameterBindingParsingException]("A binding name (x) in an encoded binding occurrence already exists and not as a definition parameter at nesting level #0") {
-      `13`.test
-    }
+        assertMatches(bindings.head) {
+          case (Symbol("x"), it @ Shadow(Symbol("x_shadow"))) =>
+            assertEquals(it, Occurrence(Some(Symbol("x_shadow")), Position(1, true)))
+            true
+        }
 
   }
 

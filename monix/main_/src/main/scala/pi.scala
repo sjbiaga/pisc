@@ -37,7 +37,7 @@ package object Π:
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Concurrent, ContextShift, Resource, Sync, Timer }
-  import _root_.cats.effect.concurrent.{ Deferred, Ref, Semaphore }
+  import _root_.cats.effect.concurrent.{ Deferred, Semaphore }
 
   import _root_.monix.catnap.{ ConcurrentChannel, ConcurrentQueue }
   import _root_.monix.catnap.ConsumerF.Config
