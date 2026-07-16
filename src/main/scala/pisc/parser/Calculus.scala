@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.meta.{ Term, Type }
+import scala.meta.{ Pat, Term, Type }
 
 import Expression.Code
 import PolyadicPi.*
@@ -345,7 +345,7 @@ object Calculus:
         then
           "[ " + test + " ] " + t
         else
-          "if " + test + " " + t + " else " + f.get
+          "if " + test + " then " + t + " else " + f.get
 
       case !(-1, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
 
@@ -436,6 +436,16 @@ object Calculus:
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
         case it: Term => it
+
+    def toPat: Pat =
+      import scala.meta._
+      import dialects.Scala3
+      `val` match
+        case it: Symbol => Pat.Macro(Term.QuotedMacroExpr(Term.Name(it.name)))
+        case it: BigDecimal => Lit.Double(it.toDouble)
+        case it: Boolean => Lit.Boolean(it)
+        case it: String => Lit.String(it)
+        case it: Term => it.asInstanceOf[Pat]
 
     override def toString: String = `val` match
       case it: Symbol => it.name

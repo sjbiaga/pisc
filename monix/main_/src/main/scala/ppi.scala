@@ -39,9 +39,9 @@ package object Π:
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.{ Concurrent, ContextShift, Resource, Sync, Timer }
-  import _root_.cats.effect.concurrent.{ Deferred, Ref }
+  import _root_.cats.effect.concurrent.{ Deferred, Semaphore }
 
-  import _root_.monix.catnap.{ ConcurrentChannel, ConcurrentQueue }
+  import _root_.monix.catnap.ConcurrentChannel
   import _root_.monix.catnap.ConsumerF.Config
   import _root_.monix.execution.BufferCapacity.Unbounded
   import _root_.monix.execution.ChannelType.{ MultiConsumer, MultiProducer }
@@ -59,9 +59,9 @@ package object Π:
       val unbounded = Config(capacity = Some(Unbounded()), consumerType = Some(MultiConsumer))
       for
         channel <- ConcurrentChannel.withConfig[F, Option[Throwable], (Seq[`()`[F]], Deferred[F, Unit])](unbounded, MultiProducer)
-        queue   <- ConcurrentQueue.unbounded[F, Unit]()
+        limit   <- Semaphore[F](0)
       yield
-        ><[F](channel, queue)
+        ><[F](channel, limit)
 
     def map[B](f: `()`[F] => B): Iterant[F, B] = flatMap(f andThen Iterant.pure[F, B])
     def flatMap[B](f: `()`[F] => Iterant[F, B]): Iterant[F, B] =
@@ -133,9 +133,9 @@ package object Π:
     import Π.`()`.tapEval
 
     private inline def ch = `()`[><[F]].channel
-    private inline def q = `()`[><[F]].queue
-    private implicit def a: F[Unit] = q.poll
-    private def o = q.isEmpty.flatMap(q.offer(()).whenA(_))
+    private inline def l = `()`[><[F]].limit
+    private implicit def a: F[Unit] = l.acquire
+    private def o = l.release
     private def s = Iterant
       .liftF(ch.consume.flatTap(_ => Resource.eval(o)).use(_.pull.map(_.right.getOrElse(Seq.empty -> null))))
       .repeat
@@ -485,7 +485,7 @@ package object Π:
   private object `Π-magic`:
 
     case class ><[F[_]](channel: ConcurrentChannel[F, Option[Throwable], (Seq[`()`[F]], Deferred[F, Unit])],
-                        queue: ConcurrentQueue[F, Unit])
+                        limit: Semaphore[F])
 
     final implicit class IterantOps[F[_]: Concurrent, O](self: Iterant[F, O]):
       def through1(channel: ConcurrentChannel[F, Option[Throwable], O])

@@ -59,7 +59,7 @@ abstract class Encoding extends Calculus:
         || (variables & parameters).nonEmpty
         then
           throw DefinitionParametersException(_code)
-        var bound = _parameters ++ constants ++ variables
+        val bound = _parameters ++ constants ++ variables
         given Bindings = Bindings() ++
                          bound
                            .filterNot(_.name.charAt(0).isUpper)
@@ -129,7 +129,7 @@ abstract class Encoding extends Calculus:
           then
             warn(throw TooManyPointersParsingException(code, pointersʹ.size - variables.size))
           try
-            given MutableList[(Symbol, λ)]()
+            given MutableList[(Symbol, Symbol)]()
             val expʹ = exp.rename()(id)
             nest(false)
             bindings ++= purged
@@ -345,16 +345,16 @@ object Encoding:
              (id: => String, χ_id: => String)
              (using Duplications): Fresh =
       given Bindings = Bindings(bindings)
-      given MutableList[(Symbol, λ)]()
+      given MutableList[(Symbol, Symbol)]()
       val variablesʹ = variables
         .map { it =>
           val υidυ = it.rewrite(id)
           given_Bindings(υidυ) = given_Bindings(it)
           given_Bindings -= it
-          given_MutableList_Symbol_λ.append(it -> λ(υidυ))
+          given_MutableList_Symbol_Symbol.append(it -> υidυ)
           υidυ
         }
-      val sumʹ = sum.rename(expansion = true, dups)(id, χ_id)
+      val sumʹ = sum.rename(dups, collect = true)(id, χ_id)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -364,7 +364,7 @@ object Encoding:
         .map(_._2)
       Definition(code, Some(term), constants, variablesʹ, sumʹ)
       ->
-      (arity - shadows.count(_.nonEmpty) -> shadows)
+      (arity - shadows.count(_.isDefined) -> shadows)
 
   case class Definition(code: Int,
                         term: Option[Term],
@@ -400,8 +400,8 @@ object Encoding:
             }
           count(ast)
           try
-            given MutableList[(Symbol, λ)]()
-            ast.rename(false, dups, duplicated)(id)
+            given MutableList[(Symbol, Symbol)]()
+            ast.rename(dups, duplicated)(id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -418,8 +418,8 @@ object Encoding:
       else
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
           try
-            given MutableList[(Symbol, λ)]()
-            ast.rename(false, dups, duplicated)(id)
+            given MutableList[(Symbol, Symbol)]()
+            ast.rename(dups, duplicated)(id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -500,11 +500,8 @@ object Encoding:
   case class UniquenessBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean, how: String)
       extends BindingParsingException(code, nest, s"""A binding name (${name.name}) does not correspond to a unique ${if hardcoded then "hardcoded" else "encoded"} binding occurrence, being $how""")
 
-  case class ExistingNonParameterBindingParsingException(code: Int, nest: Int, name: Symbol, hardcoded: Boolean)
-      extends BindingParsingException(code, nest, s"""A binding name (${name.name}) in ${if hardcoded then "a hardcoded" else "an encoded"} binding occurrence already exists and not as a definition parameter""")
-
   case class ScopeBindingParsingException(code: Int, nest: Int, name: Symbol)
-      extends BindingParsingException(code, nest, s"""A pending occurrence of a definition parameter (${name.name}) is not in the scope of its binding occurrence""")
+      extends BindingParsingException(code, nest, s"""An occurrence of a definition parameter (${name.name}) is not in the scope of its binding occurrence""")
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
@@ -528,21 +525,21 @@ object Encoding:
   // functions
 
   def renamed(it: Symbol)
-             (using refresh: MutableList[(Symbol, λ)])
-             (using bindings: Bindings): λ =
+             (using refresh: MutableList[(Symbol, Symbol)])
+             (using bindings: Bindings): Symbol =
     refresh.find(_._1 == it) match
       case Some((_, r)) => r
       case _ =>
         bindings.find { case (`it`, Binder(_) | Shadow(_)) => true case _ => false } match
-          case Some((_, Binder(it))) => λ(it)
-          case Some((_, Shadow(it))) => λ(it)
+          case Some((_, Binder(it))) => it
+          case Some((_, Shadow(it))) => it
           case _ =>
             bindings.find { case (`it`, _) | (_, Shadow(`it`)) => true case _ => false } match
-              case Some(_) => λ(it)
+              case Some(_) => it
               case _ => throw NoBPEx(it.name)
 
   def recoded(using code: Option[Code])
-             (using MutableList[(Symbol, λ)])
+             (using MutableList[(Symbol, Symbol)])
              (using Bindings): Option[Code] =
     code.map { (_, orig) =>
       val term = Expression(orig)._1
@@ -570,6 +567,8 @@ object Encoding:
     bindings.filter((_, it) => it.pending || it.aliasing)
 
 
+  given Conversion[Symbol, λ] = λ(_)
+
   extension [T <: AST](ast: T)
 
     def capitals: Names =
@@ -583,26 +582,30 @@ object Encoding:
       }(_ ++ _)
 
 
-    def rename(expansion: Boolean = false, dups: Boolean = false,
-               duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } })
+    def rename(dups: Boolean = false,
+               duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } },
+               collect: Boolean = false)
               (id: => String, χ_id: => String = null)
               (using bindings: Bindings)
               (using duplications: Duplications)
-              (using refresh: MutableList[(Symbol, λ)]): T =
+              (using refresh: MutableList[(Symbol, Symbol)]): T =
 
-      def rebind(it: Symbol): λ =
+      def rebind(it: Symbol): Symbol =
         val υidυ = it.rewrite(id)
         bindings.find { case (_, Shadow(`it`)) => true case _ => false } match
-          case Some((_, occurrence)) if expansion && occurrence.aliasing =>
+          case Some((_, occurrence)) if collect && occurrence.aliasing =>
             bindings += it -> Binder(occurrence)(υidυ)
           case Some((_, occurrence)) =>
             bindings += it -> Shadow(occurrence)(υidυ)
           case _ =>
-            refresh.prepend(it -> λ(υidυ))
-        λ(υidυ)
+            refresh.prepend(it -> υidυ)
+        υidυ
 
       inline def rename[S <: AST](ast: S): S =
-        ast.rename(expansion, dups, duplicated)(id, χ_id)
+        ast.rename(dups, duplicated, collect)(id, χ_id)
+
+      given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
+      import parser.Calculus.given
 
       ast.mapʹʹ(rename(_)) {
 
@@ -616,7 +619,7 @@ object Encoding:
               it.copy(code = recoded)
             case it @ π(λ(ch: Symbol), Some(_), given Option[Code], names*) =>
               val chʹ = renamed(ch)
-              val namesʹ = names.map {
+              val namesʹ: Seq[λ] = names.map {
                 case it @ λ(Symbol("")) => it
                 case λ(par: Symbol) => rebind(par)
                 case it => it
@@ -624,7 +627,7 @@ object Encoding:
               it.copy(channel = chʹ, code = recoded, names = namesʹ)
             case it @ π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val chʹ = renamed(ch)
-              val namesʹ = names.map {
+              val namesʹ: Seq[λ] = names.map {
                 case λ(arg: Symbol) => renamed(arg)
                 case it => it
               }
@@ -636,21 +639,21 @@ object Encoding:
           `.`(endʹ, prefixesʹ*) -> true
 
         case it @ ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), _, _) =>
-          it.copy(cond = ((renamed(lhs), renamed(rhs)), m)) -> false
+          it.copy(cond = ((renamed(lhs), renamed(rhs)), m))
 
         case it @ ?:(((λ(lhs: Symbol), rhs), m), _, _) =>
-          it.copy(cond = ((renamed(lhs), rhs), m)) -> false
+          it.copy(cond = ((renamed(lhs), rhs), m))
 
         case it @ ?:(((lhs, λ(rhs: Symbol)), m), _, _) =>
-          it.copy(cond = ((lhs, renamed(rhs)), m)) -> false
+          it.copy(cond = ((lhs, renamed(rhs)), m))
 
         case it @ !(_, _, Some(τ @ τ(given Option[Code])), _) =>
-          it.copy(guard = Some(τ.copy(code = recoded))) -> false
+          it.copy(guard = Some(τ.copy(code = recoded)))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), Some(_), given Option[Code], names*)), sum) =>
           val n = refresh.size
           val chʹ = renamed(ch)
-          val namesʹ = names.map {
+          val namesʹ: Seq[λ] = names.map {
             case λ(arg: Symbol) => rebind(arg)
             case it => it
           }
@@ -660,12 +663,12 @@ object Encoding:
           it.copy(guard = Some(πʹ), sum = sumʹ) -> true
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
-          val namesʹ = names.map {
+          val namesʹ: Seq[λ] = names.map {
             case λ(arg: Symbol) => renamed(arg)
             case it => it
           }
           val πʹ = π.copy(channel = renamed(ch), code = recoded, names = namesʹ)
-          it.copy(guard = Some(πʹ)) -> false
+          it.copy(guard = Some(πʹ))
 
         case it @ `⟦⟧`(dfn @ Definition(_, term, _, variables, _), sum, xid, pointers) =>
           if dups then term.foreach(duplicated(xid))
@@ -673,41 +676,41 @@ object Encoding:
           val variablesʹ = variables
                        .map { it =>
                          val υidυ = it.rewrite(id)
-                         refresh.prepend(it -> λ(υidυ))
+                         refresh.prepend(it -> υidυ)
                          υidυ
                        }
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
+          val dfnʹ = dfn.copy(variables = variablesʹ)
           val xidʹ =
-            if dups && expansion && term.isDefined
+            if dups && collect && term.isDefined
             then
               val υidυ = χ_id
-              duplications += υidυ -> (false, Map())
-              duplications(υidυ)._2.addAll(duplications(xid)._2)
+              duplications += υidυ -> (false, duplications(xid)._2)
+              duplications -= xid
               υidυ
             else
               xid
-          val dfnʹ = dfn.copy(variables = variablesʹ)
           val pointersʹ = pointers.map(renamed(_).asSymbol)
           it.copy(definition = dfnʹ, sum = sumʹ, xid = xidʹ, pointers = pointersʹ) -> true
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_).asSymbol)
-          val paramsʹ = params
+          val paramsʹ: Seq[λ] = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-          it.copy(pointers = pointersʹ, params = paramsʹ) -> false
+          it.copy(pointers = pointersʹ, params = paramsʹ)
 
         case it @ `(*)`(_, _, params*) =>
-          val paramsʹ = params
+          val paramsʹ: Seq[λ] = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-          it.copy(params = paramsʹ) -> false
+          it.copy(params = paramsʹ)
 
-        case it => it -> false
+        case it => it
 
       }

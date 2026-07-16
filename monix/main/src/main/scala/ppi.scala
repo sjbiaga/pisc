@@ -38,9 +38,9 @@ package object Π:
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.{ Concurrent, ContextShift, Resource, Sync, Timer }
-  import _root_.cats.effect.concurrent.{ Deferred, Ref, Semaphore }
+  import _root_.cats.effect.concurrent.{ Deferred, Semaphore }
 
-  import _root_.monix.catnap.{ ConcurrentChannel, ConcurrentQueue }
+  import _root_.monix.catnap.ConcurrentChannel
   import _root_.monix.catnap.ConsumerF.Config
   import _root_.monix.execution.BufferCapacity.Unbounded
   import _root_.monix.execution.ChannelType.{ MultiConsumer, MultiProducer }

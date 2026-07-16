@@ -37,7 +37,7 @@ package object Π:
   import _root_.cats.syntax.flatMap.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ Async, Deferred, Ref, Resource }
+  import _root_.cats.effect.{ Async, Deferred, Resource }
   import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 
   import _root_.fs2.Stream
