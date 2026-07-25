@@ -46,7 +46,7 @@ object π:
   import _root_.cats.syntax.all.*
 
   import _root_.cats.effect.Async
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
 
   import _root_.fs2.Stream
 

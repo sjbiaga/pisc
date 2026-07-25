@@ -504,11 +504,19 @@ object Expansion:
       case Some(it: λ) => it
       case _ => λ(name)
 
+  def replaced(term: Term)
+              (using Substitution): Term =
+    Expression(term)._1
+
   def updated(name: Symbol)
              (using bindings: Bindings): Symbol =
     bindings.find { case (`name`, Shadow(_)) => true case _ => false } match
       case Some((_, Shadow(it))) => it
       case _ => name
+
+  def updated(term: Term)
+             (using Bindings): Term =
+    Expression(term)._1
 
   private def recoded(using code: Option[Code])
                      (using substitution: Substitution = null)
@@ -522,7 +530,7 @@ object Expansion:
     }
 
 
-  given Conversion[Symbol, λ] = λ(_)
+  given Conversion[Symbol | Term, λ] = λ(_)
 
   extension [T <: AST](ast: T)
 
@@ -539,8 +547,9 @@ object Expansion:
             case it @ π(λ(ch: Symbol), Some(_), given Option[Code], _*) =>
               it.copy(channel = replaced(ch), code = recoded)
             case it @ π(λ(ch: Symbol), None, given Option[Code], names*) =>
-              val namesʹ = names.map {
+              val namesʹ: Seq[λ] = names.map {
                 case λ(arg: Symbol) => replaced(arg)
+                case λ(term: Term) => replaced(term)
                 case it => it
               }
               it.copy(channel = replaced(ch), code = recoded, names = namesʹ)
@@ -564,8 +573,9 @@ object Expansion:
           it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded)))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
-          val namesʹ = names.map {
+          val namesʹ: Seq[λ] = names.map {
             case λ(arg: Symbol) => replaced(arg)
+            case λ(term: Term) => replaced(term)
             case it => it
           }
           it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded, names = namesʹ)))
@@ -651,6 +661,7 @@ object Expansion:
             case it @ π(λ(ch: Symbol), None, given Option[Code], names*) =>
               val namesʹ: Seq[λ] = names.map {
                 case λ(arg: Symbol) => updated(arg)
+                case λ(term: Term) => updated(term)
                 case it => it
               }
               it.copy(channel = updated(ch), code = recoded, names = namesʹ)
@@ -680,6 +691,7 @@ object Expansion:
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
           val namesʹ: Seq[λ] = names.map {
             case λ(arg: Symbol) => updated(arg)
+            case λ(term: Term) => updated(term)
             case it => it
           }
           val πʹ = π.copy(channel = updated(ch), code = recoded, names = namesʹ)

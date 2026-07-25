@@ -40,9 +40,9 @@ package object Π:
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.{ Async, Deferred, Resource }
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
 
-  import _root_.fs2.Stream
+  import _root_.fs2.{ Pull, Stream }
   import _root_.fs2.concurrent.Topic
 
   import `Π-magic`.*
@@ -78,26 +78,26 @@ package object Π:
         /**
           * linear replication guard
           */
-        def apply()(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take) >> *.fold(Async[F].unit)(_.offer(())))
+        def apply()(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          Stream.repeatEval(-.await >> *.fold(Async[F].unit)(_.acquire) >> +.release)
 
         /**
           * linear replication guard w/ pace
           */
-        def apply(pace: FiniteDuration)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply()(-, +, *).spaced(pace)
+        def apply(pace: FiniteDuration)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply()(-, *, +).spaced(pace)
 
         /**
           * linear replication guard w/ code
           */
-        def apply[T]()(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply()(-, +, *).evalTap(_ => code)
+        def apply[T]()(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply()(-, *, +).evalTap(_ => code)
 
         /**
           * linear replication guard w/ pace w/ code
           */
-        def apply[T](pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply(pace)(-, +, *).evalTap(_ => code)
+        def apply[T](pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply(pace)(-, *, +).evalTap(_ => code)
 
       /**
         * replication guard
@@ -156,14 +156,25 @@ package object Π:
     private inline def d = `()`[><[F]].stop
     private inline def l = `()`[><[F]].limit
     private implicit def a: F[Unit] = l.acquire
-    private def o = l.release
-    private def s = Stream
-      .resource(t.subscribeAwaitUnbounded.flatTap(_ => Resource.eval(o)))
-      .flatten
-      .evalFilter(_._2.complete(()))
-      .map(_._1)
-    private def s(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-      (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) zipRight s.evalTap(_ => o)).evalTap(_ => *.fold(Async[F].unit)(_.offer(())))
+    private def _s = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(l.release)).flatten
+
+    private def s: Stream[F, Seq[`()`[F]]] = _s.filter(true).stream
+    private def `s.head`: Stream[F, Seq[`()`[F]]] = _s.filter(false).stream
+
+    extension (self: Stream[F, (Seq[`()`[F]], Deferred[F, Unit])])
+      private def filter(r: Boolean): Pull[F, Seq[`()`[F]], Unit] =
+        self.pull.uncons1.flatMap {
+          case Some((it, d), its) =>
+            Pull.eval(d.complete(())).flatMap {
+              if _ then Pull.output1(it) >> (Stream.eval(l.release) >> its).filter(r).whenA(r)
+              else its.filter(r)
+            }
+          case _ =>
+            Pull.done
+        }
+
+    private def s(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+      (Stream.repeatEval(-.await >> *.fold(Async[F].unit)(_.acquire)) zipRight s).evalTap(_ => +.release)
 
     def ====(that: `()`[F]) =
       try
@@ -184,158 +195,158 @@ package object Π:
           /**
             * linear replication bound output guard
             */
-          def apply(arity: Int)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-            (Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take)) >> self.`(ν)`(arity)).evalTap(_ => *.fold(Async[F].unit)(_.offer(()))).interruptWhen(d.get.attempt)
+          def apply(arity: Int)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+            (Stream.repeatEval(-.await >> *.fold(Async[F].unit)(_.acquire)) >> self.`(ν)`(arity)).evalTap(_ => +.release).interruptWhen(d.get.attempt)
 
           /**
             * linear replication bound output guard w/ pace
             */
-          def apply(arity: Int, pace: FiniteDuration)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-            apply(arity)(-, +, *).spaced(pace)
+          def apply(arity: Int, pace: FiniteDuration)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+            apply(arity)(-, *, +).spaced(pace)
 
           /**
             * linear replication bound output guard w/ code
             */
-          def apply[T](arity: Int)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-            apply(arity)(-, +, *).evalTap(_ => code)
+          def apply[T](arity: Int)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+            apply(arity)(-, *, +).evalTap(_ => code)
 
           /**
             * linear replication bound output guard w/ pace w/ code
             */
-          def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-            apply(arity, pace)(-, +, *).evalTap(_ => code)
+          def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+            apply(arity, pace)(-, *, +).evalTap(_ => code)
 
         /**
           * linear constant replication output guard
           */
-        def apply(value: `()`[F]*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          Stream.repeatEval(-.await >> +.fold(Async[F].unit)(_.take) >> Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => *.fold(Async[F].unit)(_.offer(()))).interruptWhen(d.get.attempt)
+        def apply(_1: 1)(value: `()`[F]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          Stream.repeatEval(-.await >> *.fold(Async[F].unit)(_.acquire) >> Deferred[F, Unit].map(value -> _)).through1(t).evalTap(_ => +.release).interruptWhen(d.get.attempt)
 
         /**
           * linear constant replication output guard w/ pace
           */
-        def apply(pace: FiniteDuration, value: `()`[F]*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply(value*)(-, +, *).spaced(pace)
+        def apply(_2: 2)(pace: FiniteDuration, value: `()`[F]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply(1)(value*)(-, *, +).spaced(pace)
 
         /**
           * linear constant replication output guard w/ code
           */
-        def apply[T](value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply(value*)(-, +, *).evalTap(_ => code)
+        def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply(1)(value*)(-, *, +).evalTap(_ => code)
 
         /**
           * linear constant replication output guard w/ pace w/ code
           */
-        def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-          apply(pace, value*)(-, +, *).evalTap(_ => code)
+        def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          apply(2)(pace, value*)(-, *, +).evalTap(_ => code)
 
         object `(null)`:
 
           /**
             * linear `null` replication output guard
             */
-          def apply(_arity: Int)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
+          def apply(_arity: Int)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             self.`(null)`(_arity)
 
           /**
             * linear `null` replication output guard w/ pace
             */
-          def apply(_arity: Int, _pace: FiniteDuration)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply(_arity)(-, +, *)
+          def apply(_arity: Int, _pace: FiniteDuration)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            apply(_arity)(-, *, +)
 
           /**
             * linear `null` replication output guard w/ code
             */
-          def apply[T](_arity: Int)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
+          def apply[T](_arity: Int)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             self.`(null)`[T](_arity)(code)
 
           /**
             * linear `null` replication output guard w/ pace w/ code
             */
-          def apply[T](_arity: Int, _pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[T](_arity)(code)(-, +, *)
+          def apply[T](_arity: Int, _pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            apply[T](_arity)(code)(-, *, +)
 
         object `(*)`:
 
           /**
             * linear variable replication output guard
             */
-          def apply[S](value: () => S*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S](value.map { it => Async[F].delay(it()) }*)(-, +, *)
+          def apply[S](_1: 1)(value: () => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            apply[S](1)(value.map { it => Async[F].delay(it()) }*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](pace: FiniteDuration, value: () => S*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S](pace, value.map { it => Async[F].delay(it()) }*)(-, +, *)
+          def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            apply[S](2)(pace, value.map { it => Async[F].delay(it()) }*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](value: () => S*)(code: F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S, T](value.map { it => Async[F].delay(it()) }*)(code)(-, +, *)
+          def apply[S, T](_3: 3)(value: () => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            apply[S, T](3)(value.map { it => Async[F].delay(it()) }*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](pace: FiniteDuration, value: () => S*)(code: F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S, T](pace, value.map { it => Async[F].delay(it()) }*)(code)(-, +, *)
+          def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            apply[S, T](4)(pace, value.map { it => Async[F].delay(it()) }*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard
             */
-          def apply[S](value: => F[S]*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
+          def apply[S](_1: 1)(value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             Stream.repeatEval {
               for
                 _  <- -.await
-                _  <- +.fold(Async[F].unit)(_.take)
+                _  <- *.fold(Async[F].unit)(_.acquire)
                 it <- value.sequence
                 d  <- Deferred[F, Unit]
               yield
                 it.map(new `()`[F](_)) -> d
-            }.through1(t).evalTap(_ => *.fold(Async[F].unit)(_.offer(()))).interruptWhen(d.get.attempt)
+            }.through1(t).evalTap(_ => +.release).interruptWhen(d.get.attempt)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](pace: FiniteDuration, value: => F[S]*)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S](value*)(-, +, *).spaced(pace)
+          def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            apply[S](1)(value*)(-, *, +).spaced(pace)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S](value*)(-, +, *).evalTap(_ => code)
+          def apply[S, T](_3: 3)(value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            apply[S](1)(value*)(-, *, +).evalTap(_ => code)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](pace: FiniteDuration, value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Unit] =
-            apply[S](pace, value*)(-, +, *).evalTap(_ => code)
+          def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            apply[S](2)(pace, value*)(-, *, +).evalTap(_ => code)
 
         /**
           * linear replication input guard
           */
-        def apply()(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-          stop(s(-, +, *))
+        def apply(_1: 1)()(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+          stop(s(-, *, +))
 
         /**
           * linear replication input guard w/ pace
           */
-        def apply(pace: FiniteDuration)(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-          stop(s(-, +, *).spaced(pace))
+        def apply(_2: 2)(pace: FiniteDuration)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+          stop(s(-, *, +).spaced(pace))
 
         /**
           * linear replication input guard w/ code
           */
-        def apply[T]()(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-          stopWithCode[T](s(-, +, *))(code)
+        def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+          stopWithCode[T](s(-, *, +))(code)
 
         /**
           * linear replication input guard w/ pace w/ code
           */
-        def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], + : Option[Queue[F, Unit]], * : Option[Queue[F, Unit]]): Stream[F, Seq[`()`[F]]] =
-          stopWithCode[T](s(-, +, *).spaced(pace))(code)
+        def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
+          stopWithCode[T](s(-, *, +).spaced(pace))(code)
 
       object `(ν)`:
 
@@ -366,26 +377,26 @@ package object Π:
       /**
         * constant replication output guard
         */
-      def apply(value: `()`[F]*): Stream[F, Unit] =
+      def apply(_1: 1)(value: `()`[F]*): Stream[F, Unit] =
         Stream.repeatEval(Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d.get.attempt)
 
       /**
         * constant replication output guard w/ pace
         */
-      def apply(pace: FiniteDuration, value: `()`[F]*): Stream[F, Unit] =
-        apply(value*).spaced(pace)
+      def apply(_2: 2)(pace: FiniteDuration, value: `()`[F]*): Stream[F, Unit] =
+        apply(1)(value*).spaced(pace)
 
       /**
         * constant replication output guard w/ code
         */
-      def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        apply(value*).evalTap(_ => code)
+      def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
+        apply(1)(value*).evalTap(_ => code)
 
       /**
         * constant replication output guard w/ pace w/ code
         */
-      def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        apply(pace, value*).evalTap(_ => code)
+      def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
+        apply(2)(pace, value*).evalTap(_ => code)
 
       object `(null)`:
 
@@ -418,74 +429,74 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](value: () => S*): Stream[F, Unit] =
-          apply[S](value.map { it => Async[F].delay(it()) }*)
+        def apply[S](_1: 1)(value: () => S*)(using DummyImplicit): Stream[F, Unit] =
+          apply[S](1)(value.map { it => Async[F].delay(it()) }*)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](pace: FiniteDuration, value: () => S*): Stream[F, Unit] =
-          apply[S](pace, value.map { it => Async[F].delay(it()) }*)
+        def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(using DummyImplicit): Stream[F, Unit] =
+          apply[S](2)(pace, value.map { it => Async[F].delay(it()) }*)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](value: () => S*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](value*).evalTap(_ => code)
+        def apply[S, T](_3: 3)(value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          apply[S](1)(value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](pace: FiniteDuration, value: () => S*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](pace, value*).evalTap(_ => code)
+        def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          apply[S](2)(pace, value*).evalTap(_ => code)
 
         /**
           * variable replication output guard
           */
-        def apply[S](value: => F[S]*): Stream[F, Unit] =
+        def apply[S](_1: 1)(value: => F[S]*): Stream[F, Unit] =
           Stream.repeatEval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
-          apply(value*).spaced(pace)
+        def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
+          apply[S](1)(value*).spaced(pace)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](value*).evalTap(_ => code)
+        def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+          apply[S](1)(value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](pace, value*).evalTap(_ => code)
+        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+          apply[S](2)(pace, value*).evalTap(_ => code)
 
       /**
         * replication input guard
         */
-      def apply(): Stream[F, Seq[`()`[F]]] =
-        stop(s).evalTap(_ => o)
+      def apply(_1: 1)(): Stream[F, Seq[`()`[F]]] =
+        stop(s)
 
       /**
         * replication input guard w/ pace
         */
-      def apply(pace: FiniteDuration): Stream[F, Seq[`()`[F]]] =
-        stop(s.spaced(pace)).evalTap(_ => o)
+      def apply(_2: 2)(pace: FiniteDuration): Stream[F, Seq[`()`[F]]] =
+        stop(s.spaced(pace))
 
       /**
         * replication input guard w/ code
         */
-      def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        stopWithCode[T](s)(code).evalTap(_ => o)
+      def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
+        stopWithCode[T](s)(code)
 
       /**
         * replication input guard w/ pace w/ code
         */
-      def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        stopWithCode[T](s.spaced(pace))(code).evalTap(_ => o)
+      def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
+        stopWithCode[T](s.spaced(pace))(code)
 
     object `(ν)`:
 
@@ -521,26 +532,26 @@ package object Π:
     /**
       * constant output prefix
       */
-    def apply(value: `()`[F]*): Stream[F, Unit] =
+    def apply(_1: 1)(value: `()`[F]*): Stream[F, Unit] =
       Stream.eval(Deferred[F, Unit].map(value -> _)).through1(t).interruptWhen(d.get.attempt)
 
     /**
       * constant output prefix w/ pace
       */
-    def apply(pace: FiniteDuration, value: `()`[F]*): Stream[F, Unit] =
-      apply(value*) <* Stream.sleep(pace)
+    def apply(_2: 2)(pace: FiniteDuration, value: `()`[F]*): Stream[F, Unit] =
+      apply(1)(value*) <* Stream.sleep(pace)
 
     /**
       * constant output prefix w/ code
       */
-    def apply[T](value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      apply(value*).evalTap(_ => code)
+    def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
+      apply(1)(value*).evalTap(_ => code)
 
     /**
       * constant output prefix w/ pace w/ code
       */
-    def apply[T](pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      apply(pace, value*).evalTap(_ => code)
+    def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
+      apply(2)(pace, value*).evalTap(_ => code)
 
     object `(null)`:
 
@@ -573,74 +584,74 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](value: () => S*): Stream[F, Unit] =
-        apply[S](value.map { it => Async[F].delay(it()) }*)
+      def apply[S](_1: 1)(value: () => S*)(using DummyImplicit): Stream[F, Unit] =
+        apply[S](1)(value.map { it => Async[F].delay(it()) }*)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](pace: FiniteDuration, value: () => S*): Stream[F, Unit] =
-        apply[S](value*) <* Stream.sleep(pace)
+      def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(using DummyImplicit): Stream[F, Unit] =
+        apply[S](1)(value*) <* Stream.sleep(pace)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](value: () => S*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](value*).evalTap(_ => code)
+      def apply[S, T](_3: 3)(value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        apply[S](1)(value*).evalTap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](pace: FiniteDuration, value: () => S*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](pace, value*).evalTap(_ => code)
+      def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        apply[S](2)(pace, value*).evalTap(_ => code)
 
       /**
         * variable output prefix
         */
-      def apply[S](value: => F[S]*): Stream[F, Unit] =
+      def apply[S](_1: 1)(value: => F[S]*): Stream[F, Unit] =
         Stream.eval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
-        apply[S](value*) <* Stream.sleep(pace)
+      def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
+        apply[S](1)(value*) <* Stream.sleep(pace)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](value*).evalTap(_ => code)
+      def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+        apply[S](1)(value*).evalTap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](pace, value*).evalTap(_ => code)
+      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+        apply[S](2)(pace, value*).evalTap(_ => code)
 
     /**
       * input prefix
       */
-    def apply(): Stream[F, Seq[`()`[F]]] =
-      stop(s.head)
+    def apply(_1: 1)(): Stream[F, Seq[`()`[F]]] =
+      stop(`s.head`)
 
     /**
       * input prefix w/ pace
       */
-    def apply(pace: FiniteDuration): Stream[F, Seq[`()`[F]]] =
-      stop(s.head <* Stream.sleep(pace))
+    def apply(_2: 2)(pace: FiniteDuration): Stream[F, Seq[`()`[F]]] =
+      stop(`s.head` <* Stream.sleep(pace))
 
     /**
       * input prefix w/ code
       */
-    def apply[T]()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      stopWithCode[T](s.head)(code)
+    def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
+      stopWithCode[T](`s.head`)(code)
 
     /**
       * input prefix w/ pace w/ code
       */
-    def apply[T](pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      stopWithCode[T](s.head <* Stream.sleep(pace))(code)
+    def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
+      stopWithCode[T](`s.head` <* Stream.sleep(pace))(code)
 
     private def stop(s: Stream[F, Seq[`()`[F]]]): Stream[F, Seq[`()`[F]]] =
       s.evalTap(d.complete(()).whenA(_)).interruptWhen(d.get.attempt)

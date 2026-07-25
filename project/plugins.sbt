@@ -1,4 +1,4 @@
-addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.1.0")
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.1.1")
 addSbtPlugin("ch.epfl.scala" % "sbt-debug-adapter" % "4.2.9")
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.3.1")

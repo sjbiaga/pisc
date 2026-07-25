@@ -50,6 +50,11 @@ abstract class Encoding extends Calculus:
 
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
+      case _ if _dir.isDefined =>
+        Directive()
+        ".*".r ^^ { _ => None }
+      case _ if _exclude =>
+        ".*".r ^^ { _ => None }
       case (term, _parameters) ~ _constants ~ _variables =>
         val parameters = _parameters.filterNot(_.name.charAt(0).isUpper)
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
@@ -65,32 +70,27 @@ abstract class Encoding extends Calculus:
                            .filterNot(_.name.charAt(0).isUpper)
                            .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
                            .map(_ -> Occurrence(None, _))
-        if _dir.isDefined
-        then
-          Directive()
-          Success(Option.empty[Define], _)
-        else
-          given Int = 1
-          "="~> choice ^^ {
-            case (_sum, _free) =>
-              val sum = _sum.flatten
-              val free = _free ++ sum.capitals
-              if (free &~ bound).nonEmpty
+        given Int = 1
+        "="~> choice ^^ {
+          case (_sum, _free) =>
+            val sum = _sum.flatten
+            val free = _free ++ sum.capitals
+            if (free &~ bound).nonEmpty
+            then
+              throw DefinitionFreeNamesException(_code, free &~ bound)
+            if parameters.size == _parameters.size
+            then
+              if !_exclude
               then
-                throw DefinitionFreeNamesException(_code, free &~ bound)
-              if parameters.size == _parameters.size
-              then
-                if !_exclude
-                then
-                  val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.map(λ(_)).toSeq*)
-                  eqtn :+= bind -> sum
-              Some {
-                Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
-                ->
-                Definition(_code, term, constants, variables, sum)
-              }
-          }
-    }
+                val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.map(λ(_)).toSeq*)
+                eqtn :+= bind -> sum
+            Some {
+              Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
+              ->
+              Definition(_code, term, constants, variables, sum)
+            }
+        }
+      }
 
   def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[(`⟦⟧`, Names)] =
     given Bindings = Bindings(bindings)
@@ -538,6 +538,11 @@ object Encoding:
               case Some(_) => it
               case _ => throw NoBPEx(it.name)
 
+  def renamed(term: Term)
+             (using MutableList[(Symbol, Symbol)])
+             (using Bindings): Term =
+    Expression(term)._1
+
   def recoded(using code: Option[Code])
              (using MutableList[(Symbol, Symbol)])
              (using Bindings): Option[Code] =
@@ -567,7 +572,7 @@ object Encoding:
     bindings.filter((_, it) => it.pending || it.aliasing)
 
 
-  given Conversion[Symbol, λ] = λ(_)
+  given Conversion[Symbol | Term, λ] = λ(_)
 
   extension [T <: AST](ast: T)
 
@@ -629,6 +634,7 @@ object Encoding:
               val chʹ = renamed(ch)
               val namesʹ: Seq[λ] = names.map {
                 case λ(arg: Symbol) => renamed(arg)
+                case λ(term: Term) => renamed(term)
                 case it => it
               }
               it.copy(channel = chʹ, code = recoded, names = namesʹ)
@@ -665,6 +671,7 @@ object Encoding:
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), None, given Option[Code], names*)), _) =>
           val namesʹ: Seq[λ] = names.map {
             case λ(arg: Symbol) => renamed(arg)
+            case λ(term: Term) => renamed(term)
             case it => it
           }
           val πʹ = π.copy(channel = renamed(ch), code = recoded, names = namesʹ)
