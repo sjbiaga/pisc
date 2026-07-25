@@ -255,17 +255,15 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val `!.π⋯` = `_ <- *` {
-            π.emit {
-              ( if parallelism < 0
-                then
-                  Nil
-                else
-                  `_ <- *.acquire`(sem) :: Nil
-              ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
-                                               Term.ArgClause(^._2 :: Nil)))
-            }
-          } :: Nil
+          val `!.π⋯` = ( if parallelism < 0
+                         then
+                           Nil
+                         else
+                           `_ <- *.acquire`(sem) :: Nil
+                       ) :+ `_ <- *` { π.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
+                                                                            Term.ArgClause(^._2 :: Nil)))
+                                              }
+                                     }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -291,22 +289,17 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val πʹ = {
-            def idʹ: String = π.υidυ
-            π.copy(name = λ.copy()(using None))(idʹ)
-          }
+          val πʹ = π.copy(name = λ.copy()(using None))(π.υidυ)
 
-          val `!.π⋯` = `_ <- *` {
-            πʹ.emit {
-              ( if parallelism < 0
-                then
-                  Nil
-                else
-                  `_ <- *.acquire`(sem) :: Nil
-              ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                               Term.ArgClause(^._2 :: Nil)))
-            }
-          } :: Nil
+          val `!.π⋯` = ( if parallelism < 0
+                         then
+                           Nil
+                         else
+                           `_ <- *.acquire`(sem) :: Nil
+                       ) :+ `_ <- *` { πʹ.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                                                    Term.ArgClause(^._2 :: Nil)))
+                                               }
+                                     }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -339,16 +332,14 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val `!.μ⋯` = `_ <- *`{
-            μ.emit {
-              ( if parallelism < 0
-                then
-                  Nil
-                else
-                  `_ <- *.acquire`(sem) :: Nil
-              ) :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
-            }
-          } :: Nil
+          val `!.μ⋯` = ( if parallelism < 0
+                         then
+                           Nil
+                         else
+                           `_ <- *.acquire`(sem) :: Nil
+                       ) :+ `_ <- *` { μ.emit { ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+                                              }
+                                     }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 

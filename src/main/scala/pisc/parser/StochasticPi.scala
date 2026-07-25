@@ -112,7 +112,7 @@ abstract class StochasticPi extends Expression:
                                  stringLiteral ^^ (_.stripPrefix("\"").stripSuffix("\"")) ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ (_ == "True") ^^ { λ(_) -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(term) -> free
+                                   case ((Right(_), term), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -533,8 +533,7 @@ object StochasticPi:
 
           case !(parallelism, pace, _, sum) =>
             val τʹ: τ = τ
-            def idʹ: String = '!' + τʹ.υidυ
-            `!`(parallelism, pace, Some(τʹ.copy()(idʹ)), sum).parse
+            `!`(parallelism, pace, Some(τʹ.copy()('!' + τʹ.υidυ)), sum).parse
 
           case `⟦⟧`(definition @ Definition(_, _, _, variables, _), _sum, xid, pointers) =>
             val n = pointers.size
@@ -673,7 +672,8 @@ object StochasticPi:
               else Nil
             }
 
-          case !(parallelism, _, Some(μ), sum) if parallelism == 1 || parallelism < -1 =>
+          case !(parallelism, _, Some(μ), sum) if emitter.featuresLinearReplication
+                                               && (parallelism == 1 || parallelism < -1) =>
             Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
@@ -788,12 +788,10 @@ object StochasticPi:
                   else
                     Nil
                 case Success(Right(Some(definition)), _) =>
-                  if !_exclude
-                  then
-                    if !defn.contains(_code) then defn(_code) = Nil
-                    defn(_code) ::= definition
+                  if !defn.contains(_code) then defn(_code) = Nil
+                  defn(_code) ::= definition
                   Nil
-                case Success(Right(_), _) => // directive
+                case Success(Right(_), _) => // directive | excluded
                   Nil
                 case failure: NoSuccess =>
                   scala.sys.error(failure.msg)

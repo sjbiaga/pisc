@@ -28,7 +28,9 @@
 
 import _root_.scala.collection.immutable.{ List, Map }
 
-import _root_.zio.{ Clock, ExitCode, Promise, Queue, Ref, Semaphore, UIO, ZIO }
+import _root_.cats.effect.std.Semaphore
+
+import _root_.zio.{ Clock, ExitCode, Promise, Queue, Ref, Semaphore => SemaphoreZIO, Task, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 
 import `Π-dump`.*
@@ -54,20 +56,18 @@ package object `Π-loop`:
 
   type & = Ref[Long]
 
-  type ~ = Semaphore
+  type ~ = SemaphoreZIO
 
-  type * = Queue[Unit]
+  type * = Semaphore[Task]
 
-  type \ = () => UIO[Unit]
+  type \ = () => Task[Unit]
 
 
   private def unblock(m: Map[String, Int | (Boolean, +)], k: String)
                      (implicit ^ : String): UIO[Unit] =
-    if m.contains(^ + k)
-    then m(^ + k).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None).unit
-    else ZIO.unit
+    m(^ + k).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None).when(m.contains(^ + k)).unit
 
-  private def `π-discard`(discarded: `Π-Set`[String])
+  private def `π-discard`(discarded: => `Π-Set`[String])
                          (using % : %)
                          (implicit ^ : String): UIO[Unit] =
     for
@@ -81,15 +81,11 @@ package object `Π-loop`:
                      (using %)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     val (trick, _) = `π-wand`
-    if trick.contains(key)
-    then
-      `π-discard`(trick(key))
-    else
-      ZIO.unit
+    `π-discard`(trick(key)).when(trick.contains(key)).unit
 
 
   def loop(using % : %, ! : !, & : &, ~ : ~, - : -, * : *)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): Task[Unit] =
     %.modify { m =>
       {
         { if m.exists(_._2.isInstanceOf[Int])
@@ -124,16 +120,16 @@ package object `Π-loop`:
           case (it: Map[String, (>< | Object, Option[Boolean], Rate)], exit) =>
             if it.isEmpty && !exit()
             then
-              *.take *> loop
+              *.acquire *> loop
             else
               ∥(it)(`π-wand`._1)() match
                 case Nil =>
-                  *.size.flatMap { n =>
-                    if n == 0 && exit()
+                  *.available.flatMap { n =>
+                    if n == 0L && exit()
                     then
                       -.offer(it.keys.toList).unit
                     else
-                      *.take *> loop
+                      *.acquire *> loop
                   }
                 case nel =>
                   ZIO.collectAllParDiscard {
@@ -154,16 +150,12 @@ package object `Π-loop`:
                                         ((d2, c2), (ts2, _)) = p2
                                         b1 <- d1.isDone
                                         b2 <- d2.isDone
-                                        _  <- if !b1 then discard(k1)(using ^) *> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else ZIO.unit) *> d1.succeed(Some((cb, tk))).unit
-                                              else ZIO.unit
-                                        _  <- if k1 == k2 then ZIO.unit
-                                              else if !b2 then discard(k2)(using ^^) *> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else ZIO.unit) *> d2.succeed(Some((cb, tk))).unit
-                                              else ZIO.unit
-                                        _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.tap(_.succeed(Some((cb, tk)))).unit
-                                              else ZIO.unit
-                                        _  <- if k1 == k2 then ZIO.unit
-                                              else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.tap(_.succeed(Some((cb, tk)))).unit
-                                              else ZIO.unit
+                                        _  <- (discard(k1)(using  ^) *> %.update(_ - key1).when(c1 eq null) *> d1.succeed(Some((cb, tk)))).unless(b1)
+                                        _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null) *> d2.succeed(Some((cb, tk)))).unless(b2).unless(k1 == k2)
+                                        _  <- if c1 eq null then ZIO.unit
+                                              else c1.get.tap(_.succeed(Some((cb, tk))))
+                                        _  <- if c2 eq null then ZIO.unit
+                                              else c2.get.tap(_.succeed(Some((cb, tk)))).unless(k1 == k2)
                                         s1 <- ts1.get
                                         s2 <- ts2.get
                                       yield
@@ -181,7 +173,7 @@ package object `Π-loop`:
       } -> m
     }.flatten
 
-  def poll(using % : %, / : /, * : *): UIO[Unit] =
+  def poll(using % : %, / : /, * : *): Task[Unit] =
     for
       h <- /.take
       ((_, key), it) = h
@@ -205,7 +197,7 @@ package object `Π-loop`:
                           m + (^ + key -> (false, it))
                }
            )
-      _ <- *.offer(())
+      _ <- *.release
       _ <- poll
     yield
       ()

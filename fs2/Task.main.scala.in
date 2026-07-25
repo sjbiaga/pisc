@@ -48,26 +48,26 @@ object App extends CatsApp:
 
   import _root_.cats.effect.Ref
 
-  import _root_.zio.{ ExitCode, Task, ZIOAppArgs, ZIO }
+  import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
   import _root_.zio.stream.ZStream
 
   import `Π-dump`.*
   import `Π-loop`.*
 
 
-  private def run(args: List[String])(% : %[Task], / : /[Task], * : *[Task], - : -[Task], ! : ![Task], & : &[Task], ~ : ~[Task]) =
-    val lπ = πloop[Task]()
-    val dπ = πdump[Task]()
-    val mπ = π.πmain[Task]()
+  private def run(args: List[String])(% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F], ~ : ~[π.F]) =
+    val lπ = πloop[π.F]()
+    val dπ = πdump[π.F]()
+    val mπ = π.πmain[π.F]()
     ( for
-        ^ <- ZStream.fromZIO(π.`π-uuid`[Task])
-        _ <- mπ.Main(args*)(using ^)(using %, /, () => *.offer(())).toZStream[Any]()
+        ^ <- ZStream.fromZIO(π.`π-uuid`[π.F])
+        _ <- mπ.Main(args*)(using ^)(using %, /, () => *.release).toZStream[Any]()
         x <- ZStream.fromZIO(!.get)
         _ <- ZStream.fromZIO(exit(ExitCode(x.code)))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(lπ.loop(using %, !, &, ~, -, *)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(lπ.loop(~)(using %, !, &, -, *)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(lπ.poll(using %, /, *)))
       .drainFork(ZStream.fromZIO(dπ.dump(using %, !, -)))
       .runDrain
@@ -80,7 +80,7 @@ object App extends CatsApp:
       args <- getArgs
       % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
-      * <- Queue.unbounded[π.F, Unit]
+      * <- Semaphore[π.F](0)
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)

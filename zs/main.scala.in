@@ -28,8 +28,10 @@
 
 //package main.scala.in
 
+import _root_.cats.effect.std.Semaphore
+import _root_.zio.interop.catz.concurrentInstance
 import _root_.zio.stream.ZStream
-import _root_.zio.{ Promise, Queue, Semaphore, ZIO }
+import _root_.zio.{ Promise, Queue, Semaphore => SemaphoreZIO, Task, ZIO }
 
 
 object App extends _root_.zio.ZIOAppDefault:
@@ -50,7 +52,7 @@ object App extends _root_.zio.ZIOAppDefault:
   private def run(args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &, ~ : ~) =
     ( for
         ^ <- ZStream.fromZIO(π.`π-uuid`)
-        _ <- π.Main(args*)(using ^)(using %, /, () => *.offer(()).unit)
+        _ <- π.Main(args*)(using ^)(using %, /, () => *.release)
         x <- ZStream.fromZIO(!.await)
         _ <- ZStream.fromZIO(exit(x))
       yield
@@ -69,11 +71,11 @@ object App extends _root_.zio.ZIOAppDefault:
       args <- getArgs
       % <- Ref.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
-      * <- Queue.unbounded[Unit]
+      * <- Semaphore[Task](0)
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Promise.make[Throwable, ExitCode]
       & <- Ref.make(0L)
-      ~ <- Semaphore.make(p)
+      ~ <- SemaphoreZIO.make(p)
       _ <- sΠ.`π-enable`(π.`π-main`)(using %)
       _ <- run(args.toList)(%, /, *, -, !, &, ~)
     yield
@@ -84,7 +86,7 @@ object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
 
-  import _root_.zio.{ durationLong, Exit, Random, Scope, Task, UIO, ZLayer }
+  import _root_.zio.{ durationLong, Random, UIO }
   import _root_.zio.concurrent.CyclicBarrier
 
   import _root_.eu.timepit.refined.*
@@ -96,11 +98,9 @@ object π:
 
 
   extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πcollectAllParZIO: ZIO[Any, Throwable, Unit] =
-      ZIO.collectAllParDiscard(self.map(_.runDrain))
     private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(self.πcollectAllParZIO)
-    private[π] inline def πcollectAllPar(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
+      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
+    private[π] inline def πcollectAllPar(semaphore: SemaphoreZIO): ZStream[Any, Throwable, Unit] =
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain).map(semaphore.tryWithPermit(_))))
 
   val `π-uuid`: UIO[String] =

@@ -29,6 +29,7 @@
 import _root_.scala.collection.immutable.{ List, Map }
 
 import _root_.cats.instances.list.*
+import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
@@ -63,7 +64,7 @@ package object `Π-loop`:
 
   type ~[F[_]] = Semaphore[F]
 
-  type *[F[_]] = Queue[F, Unit]
+  type *[F[_]] = Semaphore[F]
 
   type \[F[_]] = () => F[Unit]
 
@@ -72,9 +73,7 @@ package object `Π-loop`:
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
-      if m.contains(^ + k)
-      then m(^ + k).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None).void
-      else Concurrent[F].unit
+      m(^ + k).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None).void.whenA(m.contains(^ + k))
 
     private def `π-discard`(discarded: `Π-Set`[String])
                            (using % : %[F])
@@ -90,11 +89,7 @@ package object `Π-loop`:
                        (using %[F])
                        (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       val (trick, _) = `π-wand`
-      if trick.contains(key)
-      then
-        `π-discard`(trick(key))
-      else
-        Concurrent[F].unit
+      `π-discard`(trick(key)).whenA(trick.contains(key))
 
 
     private def exit(ks: List[String])
@@ -114,7 +109,8 @@ package object `Π-loop`:
           else ExitCode.Error
         } >>= (!.complete(_).void)
 
-    def loop(using % : %[F], ! : ![F], & : &[F], ~ : ~[F], - : -[F], * : *[F])
+    def loop(~ : ~[F])
+            (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F])
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       %.flatModify { m =>
         m -> {
@@ -150,24 +146,24 @@ package object `Π-loop`:
             case (it: Map[String, (><[F] | Object, Option[Boolean], Rate)], exit) =>
               if it.isEmpty && !exit()
               then
-                *.take >> loop
+                *.acquire >> loop(~)
               else
                 ∥(it)(`π-wand`._1)() match
                   case Nil =>
-                    *.size.flatMap { n =>
-                      if n == 0 && exit()
+                    *.available.flatMap { n =>
+                      if n == 0L && exit()
                       then
                         this.exit(it.keys.toList)
                       else
-                        *.take >> loop
+                        *.acquire >> loop(~)
                     }
                   case nel =>
                     nel.parTraverse { case (key1, key2, _delay) =>
+                                      val k1 = key1.substring(36)
+                                      val k2 = key2.substring(36)
+                                      val ^  = key1.substring(0, 36)
+                                      val ^^ = key2.substring(0, 36)
                                       Concurrent[F].uncancelable { _ =>
-                                        val k1 = key1.substring(36)
-                                        val k2 = key2.substring(36)
-                                        val ^  = key1.substring(0, 36)
-                                        val ^^ = key2.substring(0, 36)
                                         for
                                           cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                           _  <- ~.acquire
@@ -178,22 +174,16 @@ package object `Π-loop`:
                                           ((d2, c2), _) = p2
                                           o1 <- d1.tryGet
                                           o2 <- d2.tryGet
-                                          _  <- if o1 eq None then discard(k1)(using ^) >> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else Concurrent[F].unit) >> d1.complete(Some((cb, tk))).void
-                                                else Concurrent[F].unit
-                                          _  <- if k1 == k2 then Concurrent[F].unit
-                                                else if o2 eq None then discard(k2)(using ^^) >> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else Concurrent[F].unit) >> d2.complete(Some((cb, tk))).void
-                                                else Concurrent[F].unit
-                                          _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.flatTap(_.complete(Some((cb, tk)))).void
-                                                else Concurrent[F].unit
-                                          _  <- if k1 == k2 then Concurrent[F].unit
-                                                else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.flatTap(_.complete(Some((cb, tk)))).void
-                                                else Concurrent[F].unit
+                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, tk)))).whenA(o1 eq None)
+                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, tk)))).whenA(o2 eq None).unlessA(k1 == k2)
+                                          _  <- c1.get.flatTap(_.complete(Some((cb, tk)))).unlessA(c1 eq null)
+                                          _  <- c2.get.flatTap(_.complete(Some((cb, tk)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                           _  <- ~.release
                                           _  <- cb.await
                                         yield
                                           ()
                                       }
-                                    } >> loop
+                                    } >> Concurrent[F].cede >> loop(~)
         }
       }
 
@@ -221,7 +211,7 @@ package object `Π-loop`:
                             m + (^ + key -> (false, it))
                  }
              )
-        _ <- *.offer(())
+        _ <- *.release
         _ <- Concurrent[F].cede >> poll
       yield
         ()

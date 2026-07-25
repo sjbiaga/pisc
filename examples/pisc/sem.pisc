@@ -1,0 +1,7 @@
+# -*- indent-tabs-mode: nil; -*-
+
+Sem(s) = ! 1* .s(r). r(r). τ/*println('r)*/.
+
+⟦ 'n ^ 'd ⟧(s) = τ/*IO.sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*println('n + ".acq")*/. τ/*IO.sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+
+Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100*/ ⟧ | ⟦ "Q" ^ /*200*/ ⟧ )

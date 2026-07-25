@@ -30,6 +30,8 @@ package object sΠ:
 
   import _root_.scala.collection.immutable.{ Map, Set }
 
+  import _root_.cats.syntax.applicative.*
+
   import _root_.cats.effect.{ IO, Clock, Deferred, Ref }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Queue, Supervisor }
@@ -77,11 +79,7 @@ package object sΠ:
   private def exclude(key: String)
                      (using % : %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
-    if `π-elvis`.contains(key)
-    then
-      `π-exclude`(`π-elvis`(key))
-    else
-      IO.unit
+    `π-exclude`(`π-elvis`(key)).whenA(`π-elvis`.contains(key))
 
 
   /**

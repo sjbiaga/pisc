@@ -265,7 +265,7 @@ object Program:
               then
                 π.emit
               else
-                π.emit :+ `_ <- *.acquire`(sem)
+                `_ <- *.acquire`(sem) :: π.emit
             ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
                                              Term.ArgClause(^._2 :: Nil)))
 
@@ -301,17 +301,14 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val πʹ = {
-            def idʹ: String = π.υidυ
-            π.copy(name = λ.copy()(using None))(idʹ)
-          }
+          val πʹ = π.copy(name = λ.copy()(using None))(π.υidυ)
 
           val `!.π⋯` =
             ( if parallelism < 0
               then
                 πʹ.emit
               else
-                πʹ.emit :+ `_ <- *.acquire`(sem)
+                `_ <- *.acquire`(sem) :: πʹ.emit
             ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
                                              Term.ArgClause(^._2 :: Nil)))
 
@@ -360,7 +357,7 @@ object Program:
               then
                 μ.emit
               else
-                μ.emit :+ `_ <- *.acquire`(sem)
+                `_ <- *.acquire`(sem) :: μ.emit
             ) :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)

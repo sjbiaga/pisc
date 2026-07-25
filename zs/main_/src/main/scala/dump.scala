@@ -74,7 +74,7 @@ package object `Π-dump`:
       %.modify { m =>
         (ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None))) *>
          ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => ZIO.unit
-                                                                                               case it => it.get.flatMap(_.succeed(None).unit) }))) -> m
+                                                                                          case it => it.get.flatMap(_.succeed(None).unit) }))) -> m
       }.flatten.as {
         if !sys.BooleanProp.keyExists(spirsx).value
         && ks.forall(_.charAt(36) == '!')

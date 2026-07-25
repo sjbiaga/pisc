@@ -512,10 +512,7 @@ object Program:
               it.copy(paramss = List(parʹ :: Nil), body = Term.Block(`val` ::: stats))
           }
 
-          val πʹ = {
-            def idʹ: String = π.υidυ
-            π.copy(name = λ.copy(`val` = Symbol(par))(using None))(idʹ)
-          }
+          val πʹ = π.copy(name = λ.copy(`val` = Symbol(par))(using None))(π.υidυ)
 
           val `πʹ.emit` = πʹ.emitʹ(Nil)._2
 
