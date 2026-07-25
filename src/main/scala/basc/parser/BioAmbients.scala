@@ -130,7 +130,7 @@ abstract class BioAmbients extends Expression:
                                  stringLiteral ^^ (_.stripPrefix("\"").stripSuffix("\"")) ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ (_ == "True") ^^ { λ(_) -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(term) -> free
+                                   case ((Right(_), term), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -568,8 +568,7 @@ object BioAmbients:
 
           case !(parallelism, pace, _, sum) =>
             val τʹ: τ = τ
-            def idʹ: String = '!' + τʹ.υidυ
-            `!`(parallelism, pace, Some(τʹ.copy()(idʹ)), sum).parse
+            `!`(parallelism, pace, Some(τʹ.copy()('!' + τʹ.υidυ)), sum).parse
 
           case `[]`(label, sum) =>
             var (it, _) = sum.parse
@@ -723,7 +722,8 @@ object BioAmbients:
               else Nil
             }
 
-          case !(parallelism, _, Some(μ), sum) if parallelism == 1 || parallelism < -1 =>
+          case !(parallelism, _, Some(μ), sum) if emitter.featuresLinearReplication
+                                               && (parallelism == 1 || parallelism < -1) =>
             Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
@@ -751,25 +751,9 @@ object BioAmbients:
                 else self.substring(0, i).endsWith(c)
             (it.enabled.find(_("π")) zip it.enabled.find(_("ζ"))).nonEmpty || ps.exists(_.mixed)
 
-          case ∥(_, ss*) =>
-            ss.exists(_.mixed)
+          case _ =>
 
-          case `.`(end, _*) =>
-            end.mixed
-
-          case ?:(_, t, f) =>
-            t.mixed || f.map(_.mixed).getOrElse(false)
-
-          case !(_, _, _, sum) =>
-            sum.mixed
-
-          case `[]`(_, sum) =>
-            sum.mixed
-
-          case `⟦⟧`(_, sum, _, _) =>
-            sum.mixed
-
-          case _ => false
+            ast.mapreduce(_ => false)(_ || _)
 
     def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
@@ -881,12 +865,10 @@ object BioAmbients:
                   else
                     Nil
                 case Success(Right(Some(definition)), _) =>
-                  if !_exclude
-                  then
-                    if !defn.contains(_code) then defn(_code) = Nil
-                    defn(_code) ::= definition
+                  if !defn.contains(_code) then defn(_code) = Nil
+                  defn(_code) ::= definition
                   Nil
-                case Success(Right(_), _) => // directive
+                case Success(Right(_), _) => // directive | excluded
                   Nil
                 case failure: NoSuccess =>
                   scala.sys.error(failure.msg)

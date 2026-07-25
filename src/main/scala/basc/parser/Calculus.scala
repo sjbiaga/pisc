@@ -43,13 +43,15 @@ import scala.util.parsing.combinator.basc.parser.Expansion.Duplications
 abstract class Calculus extends BioAmbients:
 
   def equation(using Duplications): Parser[Bind] =
-    invocation(true)<~"=" >> {
+    invocation(true) >> {
+      case (bind, _) if _exclude =>
+        ".*".r ^^ { _ => bind -> ∅() }
       case (bind, bound) =>
         _code = -1
         _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
-        choice ^^ {
+        "="~> choice ^^ {
           case (_sum, _free) =>
             val sum = _sum.flatten
             val free = _free ++ sum.capitals
@@ -181,8 +183,7 @@ abstract class Calculus extends BioAmbients:
             val πʹ: π = {
               π._1 match
                 case it: π =>
-                  def idʹ: String = '!' + π._1.υidυ
-                  it.copy()(idʹ)
+                  it.copy()('!' + it.υidυ)
             }
             `!`(parallelismʹ, pace, Some(πʹ), sum) -> (freeʹ ++ (free &~ bound))
         }
@@ -196,14 +197,11 @@ abstract class Calculus extends BioAmbients:
             val μʹ: μ | ζ = {
               μ._1 match
                 case it: π =>
-                  def idʹ: String = '!' + it.υidυ
-                  it.copy()(idʹ)
+                  it.copy()('!' + it.υidυ)
                 case it: τ =>
-                  def idʹ: String = '!' + it.υidυ
-                  it.copy()(idʹ)
+                  it.copy()('!' + it.υidυ)
                 case it: ζ =>
-                  def idʹ: String = '!' + it.υidυ
-                  it.copy()(idʹ)
+                  it.copy()('!' + it.υidυ)
             }
             `!`(parallelismʹ, pace, Some(μʹ), sum) -> (freeʹ ++ free)
         }
@@ -288,8 +286,6 @@ abstract class Calculus extends BioAmbients:
 
 object Calculus:
 
-  private val qual_r = "[{][^}]*[}]".r
-
   type Bind = (`(*)`, +)
 
   export Pre.*
@@ -321,7 +317,7 @@ object Calculus:
     override def toString: String = this match
       case ν(names*) => names.mkString("ν(", ", ", ")")
       case π(dir, channel, name, polarity, _, _) =>
-        if polarity.isDefined && polarity.get.nonEmpty
+        if polarity.isDefined
         then
           if polarity.get != "ν"
           then "" + channel + s"${polarity.get}(" + name + ")."
@@ -475,7 +471,7 @@ object Calculus:
         case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
-        case it: Term => it
+        case it: Term => Expression(it)._1
 
     def toPat: Pat =
       import scala.meta._

@@ -31,6 +31,7 @@ package object sΠ:
   import _root_.scala.collection.immutable.{ Queue, Map, Set }
 
   import _root_.cats.instances.list.*
+  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.{ IO, IOLocal, Deferred, Ref }
@@ -130,11 +131,7 @@ package object sΠ:
   private def exclude(key: String)
                      (using % : %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
-    if `π-elvis`.contains(key)
-    then
-      `π-exclude`(`π-elvis`(key))
-    else
-      IO.unit
+    `π-exclude`(`π-elvis`(key)).whenA(`π-elvis`.contains(key))
 
 
   /**
@@ -450,7 +447,6 @@ package object sΠ:
     object `][`:
       def apply(): IO[(IOLocal[`)(`], `][`, TSemaphore)] =
         for
-          _    <- IO.unit
           uuid <- `)(`()
           root  = Set(uuid)
           lo   <- IOLocal[`)(`](uuid)

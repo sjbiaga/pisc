@@ -28,7 +28,9 @@
 
 import _root_.scala.collection.immutable.{ List, Map }
 
-import _root_.zio.{ Clock, ExitCode, Fiber, Promise, Queue, Ref, Semaphore, UIO, ZIO }
+import _root_.cats.effect.std.Semaphore
+
+import _root_.zio.{ Clock, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, Task, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 import _root_.zio.stm.TSemaphore
 
@@ -55,20 +57,18 @@ package object `Π-loop`:
 
   type & = Ref[Long]
 
-  type ~ = Semaphore
+  type ~ = SemaphoreZIO
 
-  type * = Queue[Unit]
+  type * = Semaphore[Task]
 
-  type \ = () => UIO[Unit]
+  type \ = () => Task[Unit]
 
 
   private def unblock(m: Map[String, Int | (Boolean, +)], k: String)
                      (implicit ^ : String): UIO[Unit] =
-    if m.contains(^ + k)
-    then m(^ + k).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None).unit
-    else ZIO.unit
+    m(^ + k).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None).when(m.contains(^ + k)).unit
 
-  private def `π-discard`(discarded: `Π-Set`[String])
+  private def `π-discard`(discarded: => `Π-Set`[String])
                          (using % : %)
                          (implicit ^ : String): UIO[Unit] =
     for
@@ -82,17 +82,13 @@ package object `Π-loop`:
                      (using %)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     val (trick, _) = `π-wand`
-    if trick.contains(key)
-    then
-      `π-discard`(trick(key))
-    else
-      ZIO.unit
+    `π-discard`(trick(key)).when(trick.contains(key)).unit
 
 
   def loop(snapshot: Boolean)
           (using % : %, ! : !, & : &, ~ : ~, - : -, * : *)
           (using `][`: `}{`.`][`, `2`: TSemaphore)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): Task[Unit] =
     %.modify { m =>
       {
         { if m.exists(_._2.isInstanceOf[Int])
@@ -127,91 +123,87 @@ package object `Π-loop`:
           case (it: Map[String, ((>*< | Object, Int), Option[Boolean], Rate)], exit) =>
             if it.isEmpty && !exit()
             then
-              *.take *> loop(snapshot)
+              *.acquire *> loop(snapshot)
             else
               ∥(it)(`π-wand`._1)() match
                 case Nil =>
-                  *.size.flatMap { n =>
-                    if n == 0 && exit()
+                  *.available.flatMap { n =>
+                    if n == 0L && exit()
                     then
                       -.offer(it.keys.toList).unit
                     else
-                      *.take *> loop(snapshot)
+                      *.acquire *> loop(snapshot)
                   }
                 case nel =>
                   ZIO.collectAllParDiscard {
                     nel.map { case (key1, key2, (delay, duration)) =>
-                                ZIO.uninterruptible {
-                                  val k1 = key1.substring(36)
-                                  val k2 = key2.substring(36)
-                                  val ^  = key1.substring(0, 36)
-                                  val ^^ = key2.substring(0, 36)
-                                  for
-                                    cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                    sp1 <- Promise.make[Throwable, (String, (String, String))]
-                                    sp2 <- Promise.make[Throwable, (String, (String, String))]
-                                    ss <- ~.withPermit {
-                                      for
-                                        tk <- if k1 == k2 then ZIO.succeed(null) else ZIO.succeed(new Object)
-                                        p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
-                                        p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m}
-                                        ((d1, c1), (ts1, ((key, ord), _))) = p1
-                                        ((d2, c2), (ts2, ((keyʹ, ordʹ), _))) = p2
-                                        b1 <- d1.isDone
-                                        b2 <- d2.isDone
-                                        fb <- ( for
-                                                  (slabel, _)  <- `}{`.`}{`(key).commit
-                                                  (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                  _            <- ( if k1 == k2 then
-                                                                      `2`.acquireN(2).commit
-                                                                    else
-                                                                      (ord, ordʹ) match
-                                                                        case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                          `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                        case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                          `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                  )
-                                                  elabel       <- `}{`.`}{`(key, snapshot).commit
-                                                  (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                  _            <- sp1.succeed(slabel -> elabel).unit
-                                                  _            <- if k1 == k2 then ZIO.unit
-                                                                  else sp2.succeed(slabelʹ -> (elabelʹ -> elabel._2)).unit
-                                                  _            <- ( if k1 == k2 then
-                                                                      `2`.releaseN(2).commit
-                                                                    else
-                                                                      ZIO.unit
-                                                                  )
-                                                yield
-                                                  ()
-                                              ).fork
-                                        _  <- if !b1 then discard(k1)(using ^) *> (if k1.charAt(0) != '!' || (c1 eq null) then %.update(_ - key1) else ZIO.unit) *> d1.succeed(Some((cb, fb, tk))).unit
-                                              else ZIO.unit
-                                        _  <- if k1 == k2 then ZIO.unit
-                                              else if !b2 then discard(k2)(using ^^) *> (if k2.charAt(0) != '!' || (c2 eq null) then %.update(_ - key2) else ZIO.unit) *> d2.succeed(Some((cb, fb, tk))).unit
-                                              else ZIO.unit
-                                        _  <- if k1.charAt(0) == '!' && (c1 ne null) then c1.get.tap(_.succeed(Some((cb, fb, tk)))).unit
-                                              else ZIO.unit
-                                        _  <- if k1 == k2 then ZIO.unit
-                                              else if k2.charAt(0) == '!' && (c2 ne null) then c2.get.tap(_.succeed(Some((cb, fb, tk)))).unit
-                                              else ZIO.unit
-                                        s1 <- ts1.get
-                                        s2 <- ts2.get
-                                      yield
-                                        (s1, s2)
-                                    }
-                                    _  <- cb.await.exit
-                                    no <- &.updateAndGet(_ + 1)
-                                    now <- Clock.nanoTime
-                                    _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (sp1, sp2)))
-                                  yield
-                                    ()
-                                }
+                              val k1 = key1.substring(36)
+                              val k2 = key2.substring(36)
+                              val ^  = key1.substring(0, 36)
+                              val ^^ = key2.substring(0, 36)
+                              ZIO.uninterruptible {
+                                for
+                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                                  sp1 <- Promise.make[Throwable, (String, (String, String))]
+                                  sp2 <- Promise.make[Throwable, (String, (String, String))]
+                                  ss <- ~.withPermit {
+                                    for
+                                      tk <- if k1 == k2 then ZIO.succeed(null) else ZIO.succeed(new Object)
+                                      p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
+                                      p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m}
+                                      ((d1, c1), (ts1, ((key, ord), _))) = p1
+                                      ((d2, c2), (ts2, ((keyʹ, ordʹ), _))) = p2
+                                      b1 <- d1.isDone
+                                      b2 <- d2.isDone
+                                      fb <- ( for
+                                                (slabel, _)  <- `}{`.`}{`(key).commit
+                                                (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                                _            <- ( if k1 == k2 then
+                                                                    `2`.acquireN(2).commit
+                                                                  else
+                                                                    (ord, ordʹ) match
+                                                                      case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                        `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                      case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                        `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                                )
+                                                elabel       <- `}{`.`}{`(key, snapshot).commit
+                                                (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                                _            <- sp1.succeed(slabel -> elabel).unit
+                                                _            <- if k1 == k2 then ZIO.unit
+                                                                else sp2.succeed(slabelʹ -> (elabelʹ -> elabel._2)).unit
+                                                _            <- ( if k1 == k2 then
+                                                                    `2`.releaseN(2).commit
+                                                                  else
+                                                                    ZIO.unit
+                                                                )
+                                              yield
+                                                ()
+                                            ).fork
+                                      _  <- (discard(k1)(using  ^) *> %.update(_ - key1).when(c1 eq null) *> d1.succeed(Some((cb, fb, tk)))).unless(b1)
+                                      _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null) *> d1.succeed(Some((cb, fb, tk)))).unless(b2).unless(k1 == k2)
+                                      _  <- if c1 eq null then ZIO.unit
+                                            else c1.get.tap(_.succeed(Some((cb, fb, tk))))
+                                      _  <- if c2 eq null then ZIO.unit
+                                            else c2.get.tap(_.succeed(Some((cb, fb, tk)))).unless(k1 == k2)
+                                      s1 <- ts1.get
+                                      s2 <- ts2.get
+                                    yield
+                                      (s1, s2)
+                                  }
+                                  _  <- cb.await.exit
+                                  no <- &.updateAndGet(_ + 1)
+                                  now <- Clock.nanoTime
+                                  _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (sp1, sp2)))
+                                yield
+                                  ()
+                              }
                     }
                   } *> loop(snapshot)
       } -> m
     }.flatten
 
-  def poll(using % : %, / : /, * : *): UIO[Unit] =
+  def poll(using % : %, / : /, * : *): Task[Unit] =
     for
       h <- /.take
       ((_, key), it) = h
@@ -235,7 +227,7 @@ package object `Π-loop`:
                           m + (^ + key -> (false, it))
                }
            )
-      _ <- *.offer(())
+      _ <- *.release
       _ <- poll
     yield
       ()

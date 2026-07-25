@@ -132,9 +132,9 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(IO.cede.void) >> _υ3υ.release,
     *         `π-supervised`(
     *           for {
+    *             _    <- _υ3υ.acquire
     *             name <- ν
     *             _    <- ???
-    *             _    <- _υ3υ.acquire
     *             _υ1υ <- `π-uuid`
     *             _    <- _υ2υ(name)(_υ1υ)
     *           } yield ()
@@ -143,9 +143,9 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   name <- ν
     *   _    <- ???
-    *   _    <- _υ3υ.acquire
     *   _υ1υ <- `π-uuid`
     *   _    <- _υ2υ(name)(_υ1υ)
     * } yield ()
@@ -179,9 +179,9 @@ class ProgramSuite extends FunSuite:
                                                                                  Term.ApplyInfix(Term.Apply(Term.Name("π-supervised"), _), Term.Name(">>"), Nil, Term.Select(Term.Name(_), Term.Name("release")) :: Nil),
                                                                                  Term.Apply(Term.Name("π-supervised"),
                                                                                             Term.ForYield(List(
+                                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), _),
-                                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                           ),
@@ -194,9 +194,9 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Wildcard(), _),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -292,9 +292,9 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(
     *           for {
     *             _    <- IO.sleep(13L.seconds)
+    *             _    <- _υ3υ.acquire
     *             name <- ν
     *             _    <- ???
-    *             _    <- _υ3υ.acquire
     *             _υ1υ <- `π-uuid`
     *             _    <- _υ2υ(name)(_υ1υ)
     *           } yield ()
@@ -303,9 +303,9 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   name <- ν
     *   _    <- ???
-    *   _    <- _υ3υ.acquire
     *   _υ1υ <- `π-uuid`
     *   _    <- _υ2υ(name)(_υ1υ)
     * } yield ()
@@ -341,9 +341,9 @@ class ProgramSuite extends FunSuite:
                                                                                             Term.ForYield(List(
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                                             Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), _),
-                                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                           ),
@@ -356,9 +356,9 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Wildcard(), _),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -452,8 +452,8 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(IO.cede.void) >> _υ3υ.release,
     *         `π-supervised`(
     *           for {
-    *             (name, _) <- ???
     *             _         <- _υ3υ.acquire
+    *             (name, _) <- ???
     *             _υ1υ      <- `π-uuid`
     *             _         <- _υ2υ(name)(_υ1υ)
     *           } yield ()
@@ -462,8 +462,8 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
-    *   (name, _) <- ???
     *   _         <- _υ3υ.acquire
+    *   (name, _) <- ???
     *   _υ1υ      <- `π-uuid`
     *   _         <- _υ2υ(name)(_υ1υ)
     * } yield ()
@@ -498,8 +498,8 @@ class ProgramSuite extends FunSuite:
                                                                                    Term.ApplyInfix(Term.Apply(Term.Name("π-supervised"), _), Term.Name(">>"), Nil, Term.Select(Term.Name(_), Term.Name("release")) :: Nil),
                                                                                    Term.Apply(Term.Name("π-supervised"),
                                                                                               Term.ForYield(List(
-                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                             ),
@@ -513,8 +513,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -608,8 +608,8 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(
     *           for {
     *             _         <- IO.sleep(13L.seconds)
-    *             (name, _) <- ???
     *             _         <- _υ3υ.acquire
+    *             (name, _) <- ???
     *             _υ1υ      <- `π-uuid`
     *             _         <- _υ2υ(name)(_υ1υ)
     *           } yield ()
@@ -618,8 +618,8 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
-    *   (name, _) <- ???
     *   _         <- _υ3υ.acquire
+    *   (name, _) <- ???
     *   _υ1υ      <- `π-uuid`
     *   _         <- _υ2υ(name)(_υ1υ)
     * } yield ()
@@ -656,8 +656,8 @@ class ProgramSuite extends FunSuite:
                                                                                               Term.ForYield(List(
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                                               Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                             ),
@@ -671,8 +671,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -769,8 +769,8 @@ class ProgramSuite extends FunSuite:
             `π-supervised`(IO.cede.void) >> _υ4υ.release,
             `π-supervised`(
               for {
-                (name, _) <- ???
                 _         <- _υ4υ.acquire
+                (name, _) <- ???
                 _υ1υ      <- `π-uuid`
                 _         <- _υ3υ(name)(_υ1υ)
               } yield ()
@@ -779,8 +779,8 @@ class ProgramSuite extends FunSuite:
         }
         _υ3υ
       }
-      (name, _) <- ???
       _         <- _υ4υ.acquire
+      (name, _) <- ???
       _υ1υ      <- `π-uuid`
       _         <- _υ3υ(name)(_υ1υ)
     * } yield ()
@@ -816,8 +816,8 @@ class ProgramSuite extends FunSuite:
                                                                                    Term.ApplyInfix(Term.Apply(Term.Name("π-supervised"), _), Term.Name(">>"), Nil, Term.Select(Term.Name(_), Term.Name("release")) :: Nil),
                                                                                    Term.Apply(Term.Name("π-supervised"),
                                                                                               Term.ForYield(List(
-                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                             ),
@@ -831,8 +831,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -929,8 +929,8 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(
     *           for {
     *             _         <- IO.sleep(13L.seconds)
-    *             (name, _) <- ???
     *             _         <- _υ4υ.acquire
+    *             (name, _) <- ???
     *             _υ1υ      <- `π-uuid`
     *             _         <- _υ3υ(name)(_υ1υ)
     *           } yield ()
@@ -939,8 +939,8 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ3υ
     *   }
-    *   (name, _) <- ???
     *   _         <- _υ4υ.acquire
+    *   (name, _) <- ???
     *   _υ1υ      <- `π-uuid`
     *   _         <- _υ3υ(name)(_υ1υ)
     * } yield ()
@@ -978,8 +978,8 @@ class ProgramSuite extends FunSuite:
                                                                                               Term.ForYield(List(
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                                               Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                              Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                                                                                                               Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                               Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
                                                                                                             ),
@@ -993,8 +993,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Tuple(Pat.Var(Term.Name("name")) :: Pat.Wildcard() :: Nil), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Apply(Term.Name(_), Term.Name("name") :: Nil), Term.Name(_) :: Nil))
       ) => true
@@ -1084,8 +1084,8 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(IO.cede.void) >> _υ3υ.release,
     *         `π-supervised`(
     *           for {
-    *             _    <- ???
     *             _    <- _υ3υ.acquire
+    *             _    <- ???
     *             _υ1υ <- `π-uuid`
     *             _    <- _υ2υ(_υ1υ)
     *           } yield ()
@@ -1094,8 +1094,8 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
-    *   _    <- ???
     *   _    <- _υ3υ.acquire
+    *   _    <- ???
     *   _υ1υ <- `π-uuid`
     *   _    <- _υ2υ(_υ1υ)
     * } yield ()
@@ -1127,8 +1127,8 @@ class ProgramSuite extends FunSuite:
                                                                                  Term.ApplyInfix(Term.Apply(Term.Name("π-supervised"), _), Term.Name(">>"), Nil, Term.Select(Term.Name(_), Term.Name("release")) :: Nil),
                                                                                  Term.Apply(Term.Name("π-supervised"),
                                                                                             Term.ForYield(List(
-                                                                                                            Enumerator.Generator(Pat.Wildcard(), _),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                            Enumerator.Generator(Pat.Wildcard(), _),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name(_) :: Nil))
                                                                                                           ),
@@ -1141,8 +1141,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Wildcard(), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name(_) :: Nil))
       ) => true
@@ -1232,8 +1232,8 @@ class ProgramSuite extends FunSuite:
     *         `π-supervised`(
     *           for {
     *             _    <- IO.sleep(13L.seconds)
-    *             _    <- ???
     *             _    <- _υ3υ.acquire
+    *             _    <- ???
     *             _υ1υ <- `π-uuid`
     *             _    <- _υ2υ(_υ1υ)
     *           } yield ()
@@ -1242,8 +1242,8 @@ class ProgramSuite extends FunSuite:
     *     }
     *     _υ2υ
     *   }
-    *   _    <- ???
     *   _    <- _υ3υ.acquire
+    *   _    <- ???
     *   _υ1υ <- `π-uuid`
     *   _    <- _υ2υ(_υ1υ)
     * } yield ()
@@ -1277,8 +1277,8 @@ class ProgramSuite extends FunSuite:
                                                                                             Term.ForYield(List(
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                                             Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                                            Enumerator.Generator(Pat.Wildcard(), _),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                            Enumerator.Generator(Pat.Wildcard(), _),
                                                                                                             Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                                                                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name(_) :: Nil))
                                                                                                           ),
@@ -1291,8 +1291,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Wildcard(), _),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Name("π-uuid")),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name(_) :: Nil))
       ) => true

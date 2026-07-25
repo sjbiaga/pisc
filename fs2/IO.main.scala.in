@@ -39,7 +39,7 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.cats.effect.{ ExitCode, IO, Deferred, Ref }
+  import _root_.cats.effect.{ ExitCode, Deferred, Ref }
   import _root_.cats.effect.std.{ Queue, Semaphore }
 
   import _root_.io.github.timwspence.cats.stm.STM
@@ -48,14 +48,14 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*
 
 
-  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[IO])
-                 (% : %[IO], / : /[IO], * : *[IO], - : -[IO], ! : ![IO], & : &[IO], ~ : ~[IO])
+  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F], ~ : ~[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore) =
-    val lπ = πloop[IO]()
-    val dπ = πdump[IO]()
-    val mπ = π.πmain[IO]()
+    val lπ = πloop[π.F]()
+    val dπ = πdump[π.F]()
+    val mπ = π.πmain[π.F]()
     ( for
-        _ <- lπ.loop(snapshot, `}{`)(using %, !, &, ~, -, *)(π.`π-wand`).background
+        _ <- lπ.loop(~, snapshot, `}{`)(using %, !, &, -, *)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, *).background
         _ <- dπ.dump(snapshot)(using %, !, -).background
       yield
@@ -63,8 +63,8 @@ object App extends _root_.cats.effect.IOApp:
     ).use { _ =>
       for
         l <- IOLocal[sΠ.`)(`](uuid)
-        ^ <- π.`π-uuid`[IO]
-        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, () => *.offer(())).compile.drain
+        ^ <- π.`π-uuid`[π.F]
+        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, () => *.release).compile.drain
         x <- !.get
       yield
         x
@@ -80,7 +80,7 @@ object App extends _root_.cats.effect.IOApp:
     for
       % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
-      * <- Queue.unbounded[π.F, Unit]
+      * <- Semaphore[π.F](0)
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[π.F, (String, (String, String))], Deferred[π.F, (String, (String, String))]))]
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)

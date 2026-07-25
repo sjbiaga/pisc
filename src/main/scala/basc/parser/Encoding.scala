@@ -50,6 +50,11 @@ abstract class Encoding extends Calculus:
 
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
+      case _ if _dir.isDefined =>
+        Directive()
+        ".*".r ^^ { _ => None }
+      case _ if _exclude =>
+        ".*".r ^^ { _ => None }
       case (term, _parameters) ~ _constants ~ _variables =>
         val parameters = _parameters.filterNot(_.name.charAt(0).isUpper)
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
@@ -65,35 +70,30 @@ abstract class Encoding extends Calculus:
                            .filterNot(_.name.charAt(0).isUpper)
                            .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
                            .map(_ -> Occurrence(None, _))
-        if _dir.isDefined
-        then
-          Directive()
-          Success(Option.empty[Define], _)
-        else
-          given Int = 1
-          "="~> choice ^^ {
-            case (_sum, _free) =>
-              val sum = _sum.flatten
-              val free = _free ++ sum.capitals
-              if (free &~ bound).nonEmpty
+        given Int = 1
+        "="~> choice ^^ {
+          case (_sum, _free) =>
+            val sum = _sum.flatten
+            val free = _free ++ sum.capitals
+            if (free &~ bound).nonEmpty
+            then
+              throw DefinitionFreeNamesException(_code, free &~ bound)
+            if parameters.size == _parameters.size
+            then
+              if !_exclude
               then
-                throw DefinitionFreeNamesException(_code, free &~ bound)
-              if parameters.size == _parameters.size
-              then
-                if !_exclude
+                val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+                if _traces.isDefined
                 then
-                  val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                  if _traces.isDefined
-                  then
-                    eqtn :+= bind -> sum.labelʹ(using bind.identifier -> _traces.get.getOrElse(""))
-                  else
-                    eqtn :+= bind -> sum
-              Some {
-                Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
-                ->
-                Definition(_code, term, constants, variables, sum)
-              }
-          }
+                  eqtn :+= bind -> sum.labelʹ(using bind.identifier -> _traces.get.getOrElse(""))
+                else
+                  eqtn :+= bind -> sum
+            Some {
+              Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
+              ->
+              Definition(_code, term, constants, variables, sum)
+            }
+        }
     }
 
   def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[(`⟦⟧`, Names)] =
@@ -134,7 +134,7 @@ abstract class Encoding extends Calculus:
             warn(throw TooManyPointersParsingException(code, pointersʹ.size - variables.size))
           try
             given MutableList[(Symbol, Symbol)]()
-            val expʹ = exp.rename()(id)
+            val expʹ = exp.rename()(id, sπ_id, sζ_id)
             nest(false)
             bindings ++= purged
             PendingOccurrence(freeʹ)(using bindings)
@@ -299,7 +299,7 @@ abstract class Encoding extends Calculus:
             case it: List[String] => it
 
         case "parallelism"  =>
-          _par = 1 max number.toInt
+          _par = 1 max number
 
         case "snapshot" =>
           _snapshot = boolean
@@ -395,7 +395,7 @@ object Encoding:
                    bindings: Bindings,
                    sum: +):
     def apply(code: Int, term: Term, dups: Boolean)
-             (id: => String, χ_id: => String)
+             (id: => String, sπ_id: => String, χ_id: => String)
              (using Duplications): Fresh =
       given Bindings = Bindings(bindings)
       given MutableList[(Symbol, Symbol)]()
@@ -407,7 +407,7 @@ object Encoding:
           given_MutableList_Symbol_Symbol.append(it -> υidυ)
           υidυ
         }
-      val sumʹ = sum.rename(dups, collect = true)(id, χ_id)
+      val sumʹ = sum.rename(dups, collect = true)(id, sπ_id, χ_id)
       val shadows = (
         parameters.map(_ -> None).toMap
         ++
@@ -427,7 +427,7 @@ object Encoding:
     def apply(_code: Int, nest: Int, dups: Boolean,
               duplicated: (Bindings, Duplications) ?=> String => Term => Unit,
               replace: (+ | `⟦⟧` => + | `⟦⟧`) ?=> + => +)
-             (id: => String)
+             (id: => String, sπ_id: => String, sζ_id: => String)
              (using duplications: Duplications)
              (using Bindings): `⟦⟧` =
       if dups
@@ -454,7 +454,7 @@ object Encoding:
           count(ast)
           try
             given MutableList[(Symbol, Symbol)]()
-            ast.rename(dups, duplicated)(id)
+            ast.rename(dups, duplicated)(id, sπ_id, sζ_id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -472,7 +472,7 @@ object Encoding:
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
           try
             given MutableList[(Symbol, Symbol)]()
-            ast.rename(dups, duplicated)(id)
+            ast.rename(dups, duplicated)(id, sπ_id, sζ_id)
           catch
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
@@ -591,6 +591,11 @@ object Encoding:
               case Some(_) => it
               case _ => throw NoBPEx(it.name)
 
+  def renamed(term: Term)
+             (using MutableList[(Symbol, Symbol)])
+             (using Bindings): Term =
+    Expression(term)._1
+
   def recoded(using code: Option[Code])
              (using MutableList[(Symbol, Symbol)])
              (using Bindings): Option[Code] =
@@ -620,7 +625,7 @@ object Encoding:
     bindings.filter((_, it) => it.pending || it.aliasing)
 
 
-  given Conversion[Symbol, λ] = λ(_)
+  given Conversion[Symbol | Term, λ] = λ(_)
 
   extension [T <: AST](ast: T)
 
@@ -638,7 +643,7 @@ object Encoding:
     def rename(dups: Boolean = false,
                duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } },
                collect: Boolean = false)
-              (id: => String, χ_id: => String = null)
+              (id: => String, sπ_id: => String, sζ_id: => String, χ_id: => String = null)
               (using bindings: Bindings)
               (using duplications: Duplications)
               (using refresh: MutableList[(Symbol, Symbol)]): T =
@@ -655,7 +660,7 @@ object Encoding:
         υidυ
 
       inline def rename[S <: AST](ast: S): S =
-        ast.rename(dups, duplicated, collect)(id, χ_id)
+        ast.rename(dups, duplicated, collect)(id, sπ_id, sζ_id, χ_id)
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
       import parser.Calculus.given
@@ -669,22 +674,24 @@ object Encoding:
               val names = _names.map(Symbol(_)).map(rebind(_))
               ν(names.map(_.asSymbol.name)*)
             case it @ τ(_, given Option[Code]) =>
-              it.copy(code = recoded)(it.id)
+              it.copy(code = recoded)(id)
             case it @ π(_, λ(ch: Symbol), λ(params: List[`λ`]), Some(_), _, given Option[Code]) =>
               val paramsʹ = params.map {
                 case par @ λ(Symbol("")) => par
                 case λ(par: Symbol) => rebind(par)
               }
-              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded)(it.id)
+              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded)(sπ_id)
             case it @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), name = rebind(par), code = recoded)(it.id)
+              it.copy(channel = renamed(ch), name = rebind(par), code = recoded)(sπ_id)
             case it @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), name = renamed(arg), code = recoded)(it.id)
+              it.copy(channel = renamed(ch), name = renamed(arg), code = recoded)(sπ_id)
+            case it @ π(_, λ(ch: Symbol), λ(term: Term), None, _, given Option[Code]) =>
+              it.copy(channel = renamed(ch), name = renamed(term), code = recoded)(sπ_id)
             case it @ π(_, λ(ch: Symbol), _, None, _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), code = recoded)(it.id)
+              it.copy(channel = renamed(ch), code = recoded)(sπ_id)
             case it @ ζ(_, name, _, _, given Option[Code]) =>
-              it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded)(it.id)
-            case it => it
+              it.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded)(sζ_id)
+            case _ => ??? // caught by parser
           }
           val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
@@ -700,26 +707,32 @@ object Encoding:
           it.copy(cond = ((lhs, renamed(rhs)), m))
 
         case it @ !(_, _, Some(τ @ τ(_, given Option[Code])), _) =>
-          it.copy(guard = Some(τ.copy(code = recoded)(τ.id)))
+          it.copy(guard = Some(τ.copy(code = recoded)('!' + sπ_id)))
 
         case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
           val n = refresh.size
-          val πʹ = π.copy(channel = renamed(ch), name = rebind(par), code = recoded)(π.id)
+          val πʹ = π.copy(channel = renamed(ch), name = rebind(par), code = recoded)('!' + sπ_id)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
           it.copy(guard = Some(πʹ), sum = sumʹ) -> true
 
         case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), _) =>
-          val πʹ = π.copy(channel = renamed(ch), name = renamed(arg), code = recoded)(π.id)
+          val πʹ = π.copy(channel = renamed(ch), name = renamed(arg), code = recoded)('!' + sπ_id)
+          it.copy(guard = Some(πʹ))
+
+        case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), λ(term: Term), None, _, given Option[Code])), _) =>
+          val πʹ = π.copy(channel = renamed(ch), name = renamed(term), code = recoded)('!' + sπ_id)
           it.copy(guard = Some(πʹ))
 
         case it @ !(_, _, Some(π @ π(_, λ(ch: Symbol), _, None, _, given Option[Code])), _) =>
-          val πʹ = π.copy(channel = renamed(ch), code = recoded)(π.id)
+          val πʹ = π.copy(channel = renamed(ch), code = recoded)('!' + sπ_id)
           it.copy(guard = Some(πʹ))
 
         case it @ !(_, _, Some(ζ @ ζ(_, name, _, _, given Option[Code])), _) =>
-          val ζʹ = ζ.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded)(ζ.id)
+          val ζʹ = ζ.copy(name = renamed(Symbol(name)).asSymbol.name, code = recoded)('!' + sζ_id)
           it.copy(guard = Some(ζʹ))
+
+        case _: ! => ??? // caught by parser
 
         case it @ `⟦⟧`(dfn @ Definition(_, term, _, variables, _), sum, xid, pointers) =>
           if dups then term.foreach(duplicated(xid))
