@@ -41,13 +41,15 @@ import scala.util.parsing.combinator.masc.parser.Expansion.Duplications
 abstract class Calculus extends Ambient:
 
   def equation(using Duplications): Parser[Bind] =
-    invocation(true)<~"=" >> {
+    invocation(true) >> {
+      case (bind, _) if _exclude =>
+        ".*".r ^^ { _ => bind -> ∅() }
       case (bind, bound) =>
         _code = -1
         _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
-        parallel ^^ {
+        "="~> parallel ^^ {
           case (_par, _free) =>
             val par = _par.flatten
             val free = _free ++ par.capitals

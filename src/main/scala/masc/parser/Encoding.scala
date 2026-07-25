@@ -50,6 +50,11 @@ abstract class Encoding extends Calculus:
 
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
+      case _ if _dir.isDefined =>
+        Directive()
+        ".*".r ^^ { _ => None }
+      case _ if _exclude =>
+        ".*".r ^^ { _ => None }
       case (term, _parameters) ~ _constants ~ _variables =>
         val parameters = _parameters.filterNot(_.charAt(0).isUpper)
         val constants = _constants.map(_.map(_._2).reduce(_ ++ _)).getOrElse(Names())
@@ -65,31 +70,26 @@ abstract class Encoding extends Calculus:
                            .filterNot(_.charAt(0).isUpper)
                            .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
                            .map(_ -> Occurrence(None, _))
-        if _dir.isDefined
-        then
-          Directive()
-          Success(Option.empty[Define], _)
-        else
-          given Int = 1
-          "="~> parallel ^^ {
-            case (_par, _free) =>
-              val par = _par.flatten
-              val free = _free ++ par.capitals
-              if (free &~ bound).nonEmpty
+        given Int = 1
+        "="~> parallel ^^ {
+          case (_par, _free) =>
+            val par = _par.flatten
+            val free = _free ++ par.capitals
+            if (free &~ bound).nonEmpty
+            then
+              throw DefinitionFreeNamesException(_code, free &~ bound)
+            if parameters.size == _parameters.size
+            then
+              if !_exclude
               then
-                throw DefinitionFreeNamesException(_code, free &~ bound)
-              if parameters.size == _parameters.size
-              then
-                if !_exclude
-                then
-                  val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.toSeq*)
-                  eqtn :+= bind -> par
-              Some {
-                Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, par)
-                ->
-                Definition(_code, term, constants, variables, par)
-              }
-          }
+                val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.toSeq*)
+                eqtn :+= bind -> par
+            Some {
+              Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, par)
+              ->
+              Definition(_code, term, constants, variables, par)
+            }
+        }
     }
 
   def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[(`⟦⟧`, Names)] =

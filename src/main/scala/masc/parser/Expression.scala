@@ -425,7 +425,7 @@ object Expression:
         val (as, asns) = this(args)
         it.copy(args = as) -> asns
 
-      case it @ sm.Term.Name(s"'$name") =>
+      case sm.Term.Name(s"'$name") =>
         renaming match
           case null =>
             replacing match

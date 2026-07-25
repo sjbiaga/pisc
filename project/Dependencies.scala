@@ -5,5 +5,5 @@ object Dependencies {
   lazy val catsstm = "io.github.timwspence" %% "cats-stm" % "0.13.5"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
   lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.2"
-  lazy val munit = "org.scalameta" %% "munit" % "1.3.3"
+  lazy val munit = "org.scalameta" %% "munit" % "1.3.4"
 }
