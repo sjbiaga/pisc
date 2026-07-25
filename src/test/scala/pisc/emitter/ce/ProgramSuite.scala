@@ -131,30 +131,26 @@ class ProgramSuite extends FunSuite:
     *       πLs(
     *         _υ3υ.release,
     *         for {
+    *           _    <- _υ3υ.acquire
     *           name <- ν
     *           _υ2υ <- ???
     *           _    <-
     *             if (_υ2υ eq None)
     *               IO.cede
     *             else
-    *               for {
-    *                 _ <- _υ3υ.acquire
-    *                 _ <- _υ1υ(name)
-    *               } yield ()
+    *               _υ1υ(name)
     *         } yield ()
     *       ).πparSequence
     *     _υ1υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   name <- ν
     *   _υ2υ <- ???
     *   _    <-
     *     if (_υ2υ eq None)
     *       IO.cede
     *     else
-    *       for {
-    *         _ <- _υ3υ.acquire
-    *         _ <- _υ1υ(name)
-    *       } yield ()
+    *       _υ1υ(name)
     * } yield ()
     * }}}
     */
@@ -183,16 +179,13 @@ class ProgramSuite extends FunSuite:
                                                                List(
                                                                  Term.Select(Term.Name(_), Term.Name("release")),
                                                                  Term.ForYield(List(
+                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                                                                                  Enumerator.Generator(Pat.Wildcard(),
                                                                                                       Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                                                                                               Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.ForYield(List(
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                                                                                            ),
-                                                                                                                            Lit.Unit())))
+                                                                                                              Term.Apply(Term.Name(_), Term.Name("name") :: Nil)))
                                                                                ),
                                                                                Lit.Unit())
                                                                )
@@ -201,16 +194,13 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                             Term.ForYield(List(
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                           ),
-                                                           Lit.Unit())))
+                                             Term.Apply(Term.Name(_), Term.Name("name") :: Nil)))
       ) => true
     }
   }
@@ -305,30 +295,26 @@ class ProgramSuite extends FunSuite:
     *         _υ3υ.release,
     *         for {
     *           _    <- IO.sleep(13L.seconds)
+    *           _    <- _υ3υ.acquire
     *           name <- ν
     *           _υ2υ <- ???
     *           _    <-
     *             if (_υ2υ eq None)
     *               IO.cede
     *             else
-    *               for {
-    *                 _ <- _υ3υ.acquire
-    *                 _ <- _υ1υ(name)
-    *               } yield ()
+    *               _υ1υ(name)
     *         } yield ()
     *       ).πparSequence
     *     _υ1υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   name <- ν
     *   _υ2υ <- ???
     *   _    <-
     *     if (_υ2υ eq None)
     *       IO.cede
     *     else
-    *       for {
-    *         _ <- _υ3υ.acquire
-    *         _ <- _υ1υ(name)
-    *       } yield ()
+    *       _υ1υ(name)
     * } yield ()
     * }}}
     */
@@ -359,16 +345,13 @@ class ProgramSuite extends FunSuite:
                                                                  Term.ForYield(List(
                                                                                  Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                  Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                                                                                  Enumerator.Generator(Pat.Wildcard(),
                                                                                                       Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                                                                                               Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.ForYield(List(
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                                                                                            ),
-                                                                                                                            Lit.Unit())))
+                                                                                                              Term.Apply(Term.Name(_), Term.Name("name") :: Nil)))
                                                                                ),
                                                                                Lit.Unit())
                                                                )
@@ -377,16 +360,13 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name("name")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                             Term.ForYield(List(
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                           ),
-                                                           Lit.Unit())))
+                                             Term.Apply(Term.Name(_), Term.Name("name") :: Nil)))
       ) => true
     }
   }
@@ -475,16 +455,16 @@ class ProgramSuite extends FunSuite:
     *         πLs(
     *           _υ2υ.release,
     *           for {
-    *             name <- ???
     *             _    <- _υ2υ.acquire
+    *             name <- ???
     *             _    <- _υ1υ(name)
     *           } yield ()
     *         ).πparSequence
     *       }
     *     _υ1υ
     *   }
-    *   name <- ???
     *   _    <- _υ2υ.acquire
+    *   name <- ???
     *   _    <- _υ1υ(name)
     * } yield ()
     * }}}
@@ -517,8 +497,8 @@ class ProgramSuite extends FunSuite:
                                                                          List(
                                                                            Term.Select(Term.Name(_), Term.Name("release")),
                                                                            Term.ForYield(List(
-                                                                                           Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                           Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
                                                                                          ),
                                                                                          Lit.Unit())
@@ -530,8 +510,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
     }
@@ -621,16 +601,16 @@ class ProgramSuite extends FunSuite:
     *           _υ2υ.release,
     *           for {
     *             _    <- IO.sleep(13L.seconds)
-    *             name <- ???
     *             _    <- _υ2υ.acquire
+    *             name <- ???
     *             _    <- _υ1υ(name)
     *           } yield ()
     *         ).πparSequence
     *       }
     *     _υ1υ
     *   }
-    *   name <- ???
     *   _    <- _υ2υ.acquire
+    *   name <- ???
     *   _    <- _υ1υ(name)
     * } yield ()
     * }}}
@@ -665,8 +645,8 @@ class ProgramSuite extends FunSuite:
                                                                            Term.ForYield(List(
                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                            Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                           Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                           Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                            Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
                                                                                          ),
                                                                                          Lit.Unit())
@@ -678,8 +658,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
     }
@@ -773,16 +753,16 @@ class ProgramSuite extends FunSuite:
     *         πLs(
     *           _υ3υ.release,
     *           for {
-    *             name <- ???
     *             _    <- _υ3υ.acquire
+    *             name <- ???
     *             _    <- _υ2υ(name)
     *           } yield ()
     *         ).πparSequence
     *       }
     *     _υ2υ
     *   }
-    *   name <- ???
     *   _    <- _υ3υ.acquire
+    *   name <- ???
     *   _    <- _υ2υ(name)
     * } yield ()
     * }}}
@@ -816,8 +796,8 @@ class ProgramSuite extends FunSuite:
                                                                                     List(
                                                                                       Term.Select(Term.Name(_), Term.Name("release")),
                                                                                       Term.ForYield(List(
-                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                                       Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                                       Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
                                                                                                     ),
                                                                                                     Lit.Unit())
@@ -830,8 +810,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
     }
@@ -925,16 +905,16 @@ class ProgramSuite extends FunSuite:
     *           _υ3υ.release,
     *           for {
     *             _    <- IO.sleep(13L.seconds)
-    *             name <- ???
     *             _    <- _υ3υ.acquire
+    *             name <- ???
     *             _    <- _υ2υ(name)
     *           } yield ()
     *         ).πparSequence
     *       }
     *     _υ2υ
     *   }
-    *   name <- ???
     *   _    <- _υ3υ.acquire
+    *   name <- ???
     *   _    <- _υ2υ(name)
     * } yield ()
     * }}}
@@ -970,8 +950,8 @@ class ProgramSuite extends FunSuite:
                                                                                       Term.ForYield(List(
                                                                                                       Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                                       Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                                       Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                                                                                                       Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
                                                                                                     ),
                                                                                                     Lit.Unit())
@@ -984,8 +964,8 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                Enumerator.Generator(Pat.Var(Term.Name("name")), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
     }
@@ -1075,28 +1055,24 @@ class ProgramSuite extends FunSuite:
     *       πLs(
     *         _υ3υ.release,
     *         for {
+    *           _    <- _υ3υ.acquire
     *           _υ2υ <- ???
     *           _    <-
     *             if (_υ2υ eq None)
     *               IO.cede
     *             else
-    *               for {
-    *                 _ <- _υ3υ.acquire
-    *                 _ <- _υ1υ
-    *               } yield ()
+    *               _υ1υ
     *         } yield ()
     *       ).πparSequence
     *     _υ1υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   _υ2υ <- ???
     *   _    <-
     *     if (_υ2υ eq None)
     *       IO.cede
     *     else
-    *       for {
-    *         _ <- _υ3υ.acquire
-    *         _ <- _υ1υ
-    *       } yield ()
+    *       _υ1υ
     * } yield ()
     * }}}
     */
@@ -1123,15 +1099,12 @@ class ProgramSuite extends FunSuite:
                                                                List(
                                                                  Term.Select(Term.Name(_), Term.Name("release")),
                                                                  Term.ForYield(List(
+                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                                                                                  Enumerator.Generator(Pat.Wildcard(),
                                                                                                       Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                                                                                               Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.ForYield(List(
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                                                                                            ),
-                                                                                                                            Lit.Unit())))
+                                                                                                              Term.Name(_)))
                                                                                ),
                                                                                Lit.Unit())
                                                                )
@@ -1140,15 +1113,12 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                             Term.ForYield(List(
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                           ),
-                                                           Lit.Unit())))
+                                             Term.Name(_)))
       ) => true
     }
   }
@@ -1237,28 +1207,24 @@ class ProgramSuite extends FunSuite:
     *         _υ3υ.release,
     *         for {
     *           _    <- IO.sleep(13L.seconds)
+    *           _    <- _υ3υ.acquire
     *           _υ2υ <- ???
     *           _    <-
     *             if (_υ2υ eq None)
     *               IO.cede
     *             else
-    *               for {
-    *                 _ <- _υ3υ.acquire
-    *                 _ <- _υ1υ
-    *               } yield ()
+    *               _υ1υ
     *         } yield ()
     *       ).πparSequence
     *     _υ1υ
     *   }
+    *   _    <- _υ3υ.acquire
     *   _υ2υ <- ???
     *   _    <-
     *     if (_υ2υ eq None)
     *       IO.cede
+    *       _υ1υ
     *     else
-    *       for {
-    *         _ <- _υ3υ.acquire
-    *         _ <- _υ1υ
-    *       } yield ()
     * } yield ()
     * }}}
     */
@@ -1287,15 +1253,12 @@ class ProgramSuite extends FunSuite:
                                                                  Term.ForYield(List(
                                                                                  Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
                                                                                                                                  Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                                                                                  Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                                                                                  Enumerator.Generator(Pat.Wildcard(),
                                                                                                       Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                                                                                               Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.ForYield(List(
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                                              Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                                                                                            ),
-                                                                                                                            Lit.Unit())))
+                                                                                                              Term.Name(_)))
                                                                                ),
                                                                                Lit.Unit())
                                                                )
@@ -1304,15 +1267,12 @@ class ProgramSuite extends FunSuite:
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
+                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                             Term.ForYield(List(
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                             Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                           ),
-                                                           Lit.Unit())))
+                                             Term.Name(_)))
       ) => true
     }
   }

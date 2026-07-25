@@ -504,11 +504,19 @@ object Expansion:
       case Some(it: λ) => it
       case _ => λ(name)
 
+  def replaced(term: Term)
+              (using Substitution): Term =
+    Expression(term)._1
+
   def updated(name: Symbol)
              (using bindings: Bindings): Symbol =
     bindings.find { case (`name`, Shadow(_)) => true case _ => false } match
       case Some((_, Shadow(it))) => it
       case _ => name
+
+  def updated(term: Term)
+             (using Bindings): Term =
+    Expression(term)._1
 
   private def recoded(using code: Option[Code])
                      (using substitution: Substitution = null)
@@ -522,7 +530,7 @@ object Expansion:
     }
 
 
-  given Conversion[Symbol, λ] = λ(_)
+  given Conversion[Symbol | Term, λ] = λ(_)
 
   extension [T <: AST](ast: T)
 
@@ -540,6 +548,8 @@ object Expansion:
               it.copy(channel = replaced(ch), code = recoded)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code]) =>
               it.copy(channel = replaced(ch), name = replaced(arg), code = recoded)
+            case it @ π(λ(ch: Symbol), λ(term: Term), None, given Option[Code]) =>
+              it.copy(channel = replaced(ch), name = replaced(term), code = recoded)
             case it @ π(λ(ch: Symbol), _, None, given Option[Code]) =>
               it.copy(channel = replaced(ch), code = recoded)
             case it => it
@@ -563,6 +573,9 @@ object Expansion:
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), _) =>
           it.copy(guard = Some(π.copy(channel = replaced(ch), name = replaced(arg), code = recoded)))
+
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(term: Term), None, given Option[Code])), _) =>
+          it.copy(guard = Some(π.copy(channel = replaced(ch), name = replaced(term), code = recoded)))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), _, None, given Option[Code])), _) =>
           it.copy(guard = Some(π.copy(channel = replaced(ch), code = recoded)))
@@ -651,6 +664,8 @@ object Expansion:
               it.copy(channel = chʹ, code = recoded)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code]) =>
               it.copy(channel = updated(ch), name = updated(arg), code = recoded)
+            case it @ π(λ(ch: Symbol), λ(term: Term), None, given Option[Code]) =>
+              it.copy(channel = updated(ch), name = updated(term), code = recoded)
             case it @ π(λ(ch: Symbol), _, None, given Option[Code]) =>
               it.copy(channel = updated(ch), code = recoded)
             case it => it
@@ -677,6 +692,9 @@ object Expansion:
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(arg: Symbol), None, given Option[Code])), _) =>
           it.copy(guard = Some(π.copy(channel = updated(ch), name = updated(arg), code = recoded)))
+
+        case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(term: Term), None, given Option[Code])), _) =>
+          it.copy(guard = Some(π.copy(channel = updated(ch), name = updated(term), code = recoded)))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), _, None, given Option[Code])), _) =>
           it.copy(guard = Some(π.copy(channel = updated(ch), code = recoded)))

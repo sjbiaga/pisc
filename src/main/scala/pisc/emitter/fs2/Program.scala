@@ -91,7 +91,7 @@ object Program:
           val sfs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
-            `* <- Semaphore(…)`(sem.get),
+            `* <- Semaphore(…)`(sem.get, 1),
             `_ <- *`(`List( *, … ).parSequence`(sfs*))
           )
 
@@ -101,7 +101,7 @@ object Program:
           val sem = id
 
           * = List(
-            `* <- Semaphore(…)`(sem),
+            `* <- Semaphore(…)`(sem, 1),
             `_ <- *`(`List( *, … ).parSequence(…)`(sfs*)(sem))
           )
 
@@ -174,19 +174,28 @@ object Program:
             case _ =>
               * = `_ <- *`(Term.Apply(Term.Select(ch, "(null)"), Term.ArgClause(pace(Nil))))
 
-        case π(λ(Symbol(ch)), λ(arg: Term), None, code) =>
+        case π(λ(Symbol(ch)), arg @ λ(_: Term), None, code) =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
-              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), Term.ArgClause(pace(arg :: Nil))),
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
-              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), Term.ArgClause(pace(arg :: Nil))),
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = `_ <- *`(Term.Apply(Term.Select(ch, "(*)"), Term.ArgClause(pace(arg :: Nil))))
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), n),
+                                      Term.ArgClause(pace(arg.toTerm :: Nil))))
 
         case π(λ(Symbol(ch)), arg, None, code) =>
 
@@ -319,19 +328,28 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(arg: Term), None, code)), sum) =>
+        case !(1, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
-              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), Term.ArgClause(pace(arg :: Nil))),
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)))
             case Some((Right(term), _)) =>
               val expr = term
-              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), Term.ArgClause(pace(arg :: Nil))),
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)))
             case _ =>
-              * = `_ <- *`(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), Term.ArgClause(pace(arg :: Nil))))
+              * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), n),
+                                      Term.ArgClause(pace(arg.toTerm :: Nil))))
 
           * = * ::: sum.emit()
 
@@ -440,24 +458,33 @@ object Program:
                            Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(null)"), Term.ArgClause(pace(Nil))),
                            sum.emit())
 
-        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(arg: Term), None, code)), sum) if parallelism < -1 =>
+        case !(parallelism, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) if parallelism < -1 =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
 
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               * = `_ <- +`(-parallelism,
-                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), Term.ArgClause(pace(arg :: Nil))),
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)),
                            sum.emit())
             case Some((Right(term), _)) =>
               val expr = term
               * = `_ <- +`(-parallelism,
-                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), Term.ArgClause(pace(arg :: Nil))),
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n),
+                                                 Term.ArgClause(pace(arg.toTerm :: Nil))),
                                       Term.ArgClause(expr :: Nil)),
                            sum.emit())
             case _ =>
               * = `_ <- +`(-parallelism,
-                           Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), Term.ArgClause(pace(arg :: Nil))),
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n),
+                                      Term.ArgClause(pace(arg.toTerm :: Nil))),
                            sum.emit())
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg, None, code)), sum) if parallelism < -1 =>
@@ -508,9 +535,14 @@ object Program:
 
           val υidυ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val πʹ = π.copy(name = λ.copy()(using None))
 
-          var `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(arg) :: Nil)))
+          val `!.π⋯` = ( if parallelism < 0
+                         then πʹ.emit
+                         else `_ <- *.acquire`(sem) :: πʹ.emit
+                       ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(arg) :: Nil)))
 
           val `val` =
             λ.`type` match
@@ -520,114 +552,96 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val sem = if parallelism < 0 then null else id
-
-          val `!⋯` =
-            if parallelism < 0
-            then
-              Term.Block(`val` :+
-                         `List( *, … ).parSequence`(
-                           sum.emit(),
-                           `!.π⋯`
-                         ))
-            else
-              `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              Term.Block(`val` :+
-                         `List( *, … ).parSequence`(
-                           sum.emit() :+ `_ <- *.release`(sem),
-                           `!.π⋯`
-                         ))
+          val body =
+            Term.Block(`val` :+
+                       `List( *, … ).parSequence`(
+                         if parallelism < 0
+                         then sum.emit()
+                         else sum.emit() :+ `_ <- *.release`(sem),
+                         `!.π⋯`
+                       ))
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(par)), Some(_), _)), sum) =>
           val υidυ = id
 
-          var `!.π⋯` = π.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil)))
-
           val sem = if parallelism < 0 then null else id
 
-          val `!⋯` =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                sum.emit(),
-                `!.π⋯`
-              )
-            else
-              `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
-              `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
-                `!.π⋯`
-              )
+          val `!.π⋯` = ( if parallelism < 0
+                         then π.emit
+                         else `_ <- *.acquire`(sem) :: π.emit
+                       ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil)))
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit()
+              else sum.emit() :+ `_ <- *.release`(sem),
+              `!.π⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, `!⋯`)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
 
-          var `!.μ⋯` = μ.emit :+ `_ <- *`(υidυ)
-
           val sem = if parallelism < 0 then null else id
 
-          val `!⋯` =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                sum.emit(),
-                `!.μ⋯`
-              )
-            else
-              `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
-              `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
-                `!.μ⋯`
-              )
+          val `!.μ⋯` = ( if parallelism < 0
+                         then μ.emit
+                         else `_ <- *.acquire`(sem) :: μ.emit
+                       ) :+ `_ <- *`(υidυ)
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit()
+              else sum.emit() :+ `_ <- *.release`(sem),
+              `!.μ⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, `!⋯`)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, given Option[(Long, String)], _, sum) =>
           val υidυ = id
 
-          var `!.⋯` = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil)))) :: `_ <- *`(υidυ)
-
           val sem = if parallelism < 0 then null else id
 
-          val `!⋯` =
-            if parallelism < 0
-            then
-              `List( *, … ).parSequence`(
-                sum.emit(),
-                `!.⋯`
-              )
-            else
-              `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
-              `List( *, … ).parSequence`(
-                sum.emit() :+ `_ <- *.release`(sem),
-                `!.⋯`
-              )
+          val `!.⋯` = ( if parallelism < 0
+                        then Nil
+                        else `_ <- *.acquire`(sem) :: Nil
+                      ) :+ `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil)))) :+ `_ <- *`(υidυ)
+
+          val body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit()
+              else sum.emit() :+ `_ <- *.release`(sem),
+              `!.⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, `!⋯`)) :: `!.⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, `!⋯`)) :: `!.⋯`
+                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 

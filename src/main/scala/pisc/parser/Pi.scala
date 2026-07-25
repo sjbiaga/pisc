@@ -112,7 +112,7 @@ abstract class Pi extends Expression:
                                  stringLiteral ^^ (_.stripPrefix("\"").stripSuffix("\"")) ^^ { λ(_) -> Names() } |
                                  ( "True" | "False" ) ^^ (_ == "True") ^^ { λ(_) -> Names() } |
                                  expression ^^ {
-                                   case ((Right(term), _), free) => λ(term) -> free
+                                   case ((Right(_), term), free) => λ(term) -> free
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
@@ -421,12 +421,10 @@ object Pi:
                   else
                     Nil
                 case Success(Right(Some(definition)), _) =>
-                  if !_exclude
-                  then
-                    if !defn.contains(_code) then defn(_code) = Nil
-                    defn(_code) ::= definition
+                  if !defn.contains(_code) then defn(_code) = Nil
+                  defn(_code) ::= definition
                   Nil
-                case Success(Right(_), _) => // directive
+                case Success(Right(_), _) => // directive | excluded
                   Nil
                 case failure: NoSuccess =>
                   scala.sys.error(failure.msg)

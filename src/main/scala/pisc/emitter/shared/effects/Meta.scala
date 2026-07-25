@@ -89,7 +89,7 @@ abstract trait Meta extends shared.Meta:
   def `_ <- *.release`(* : String): Enumerator =
     Enumerator.Generator(`* <- …`(), Term.Select(*, "release"))
 
-  def `* <- Semaphore(…)`(* : String, `…`: Int = 1): Enumerator =
+  def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
     Enumerator.Generator(`* <- …`(*),
                          Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\(\) :: Nil)),
                                     Term.ArgClause(Lit.Int(`…`) :: Nil)

@@ -231,54 +231,50 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](value: => S): Iterant[F, Unit] =
-          apply[S](Concurrent[F].delay(value))
+        def apply[S](_1: 1)(value: => S)(using DummyImplicit): Iterant[F, Unit] =
+          apply[S](1)(Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](pace: FiniteDuration, value: => S): Iterant[F, Unit] =
-          apply[S](pace, Concurrent[F].delay(value))
+        def apply[S](_2: 2)(pace: FiniteDuration, value: => S)(using DummyImplicit): Iterant[F, Unit] =
+          apply[S](2)(pace, Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](value).tapEval(_ => code)
+        def apply[S, T](_3: 3)(value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+          apply[S](1)(value).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
-          apply[S](pace, value).tapEval(_ => code)
+        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+          apply[S](2)(pace, value).tapEval(_ => code)
 
         /**
           * variable replication output guard
           */
-        @annotation.targetName("applyF")
-        def apply[S](value: => F[S]): Iterant[F, Unit] =
+        def apply[S](_1: 1)(value: => F[S]): Iterant[F, Unit] =
           Iterant.repeatEvalF(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(ch)
 
         /**
           * variable replication output guard w/ pace
           */
-        @annotation.targetName("applyF")
-        def apply[S](pace: FiniteDuration, value: => F[S]): Iterant[F, Unit] =
-          (apply[S](value) zip Iterant.intervalAtFixedRate(pace)).map(_._1)
+        def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]): Iterant[F, Unit] =
+          (apply[S](1)(value) zip Iterant.intervalAtFixedRate(pace)).map(_._1)
 
         /**
           * variable replication output guard w/ code
           */
-        @annotation.targetName("applyF")
-        def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          apply[S](value).tapEval(_ => code)
+        def apply[S, T](_3: 3)(value: => F[S])(code: => F[T]): Iterant[F, Unit] =
+          apply[S](1)(value).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        @annotation.targetName("applyF")
-        def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-          apply[S](pace, value).tapEval(_ => code)
+        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
+          apply[S](2)(pace, value).tapEval(_ => code)
 
       /**
         * replication input guard
@@ -389,54 +385,50 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](value: => S): Iterant[F, Unit] =
-        apply[S](Concurrent[F].delay(value))
+      def apply[S](_1: 1)(value: => S)(using DummyImplicit): Iterant[F, Unit] =
+        apply[S](1)(Concurrent[F].delay(value))
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](pace: FiniteDuration, value: => S): Iterant[F, Unit] =
-        apply[S](value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
+      def apply[S](_2: 2)(pace: FiniteDuration, value: => S)(using DummyImplicit): Iterant[F, Unit] =
+        apply[S](1)(value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](value: => S)(code: => F[T]): Iterant[F, Unit] =
-        apply[S](value).tapEval(_ => code)
+      def apply[S, T](_3: 3)(value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+        apply[S](1)(value).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](pace: FiniteDuration, value: => S)(code: => F[T]): Iterant[F, Unit] =
-        apply[S](pace, value).tapEval(_ => code)
+      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+        apply[S](2)(pace, value).tapEval(_ => code)
 
       /**
         * variable output prefix
         */
-      @annotation.targetName("applyF")
-      def apply[S](value: => F[S]): Iterant[F, Unit] =
+      def apply[S](_1: 1)(value: => F[S]): Iterant[F, Unit] =
         Iterant.liftF(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(ch)
 
       /**
         * variable output prefix w/ pace
         */
-      @annotation.targetName("applyF")
-      def apply[S](pace: FiniteDuration, value: => F[S]): Iterant[F, Unit] =
-        apply[S](value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
+      def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]): Iterant[F, Unit] =
+        apply[S](1)(value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
 
       /**
         * variable output prefix w/ code
         */
-      @annotation.targetName("applyF")
-      def apply[S, T](value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-        apply[S](value).tapEval(_ => code)
+      def apply[S, T](_3: 3)(value: => F[S])(code: => F[T]): Iterant[F, Unit] =
+        apply[S](1)(value).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      @annotation.targetName("applyF")
-      def apply[S, T](pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
-        apply[S](pace, value).tapEval(_ => code)
+      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S])(code: => F[T]): Iterant[F, Unit] =
+        apply[S](2)(pace, value).tapEval(_ => code)
 
     /**
       * input prefix

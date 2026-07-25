@@ -57,7 +57,7 @@ function pi() {
     done
     set ${srcs#?} ../${emit}/pi.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC3 \
+                  -q -O -nowarn -S 3.9.0-RC4 \
                   --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1
@@ -120,7 +120,7 @@ function pi_() {
     done
     set ${srcs#?} ../${emit}/pi_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC3 \
+                  -q -O -nowarn -S 3.9.0-RC4 \
                   --dep eu.timepit::refined:0.11.4 \
                   ${args#?} \
                   2>&1

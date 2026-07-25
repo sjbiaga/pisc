@@ -84,7 +84,7 @@ object Program:
           val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
-            `* <- Semaphore(…)`(sem.get),
+            `* <- Semaphore(…)`(sem.get, 1),
             `_ <- *`(`List( *, … ).parSequence`(ios*))
           )
 
@@ -94,7 +94,7 @@ object Program:
           val sem = id
 
           * = List(
-            `* <- Semaphore(…)`(sem),
+            `* <- Semaphore(…)`(sem, 1),
             `_ <- *`(`List( *, … ).parTraverse`(ios*)(sem))
           )
 
@@ -249,15 +249,15 @@ object Program:
             case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               hd :: it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          val `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   `IO.cede`,
-                                                                   ( if parallelism < 0
-                                                                     then Nil
-                                                                     else `_ <- *.acquire`(sem)
-                                                                   ) ::: `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil))))
-                                            }
+          val `!.π⋯` = ( if parallelism < 0
+                         then `π.emit`
+                         else `_ <- *.acquire`(sem) :: `π.emit`
+                       ) :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                            Type.ArgClause(Nil),
+                                                                            Term.ArgClause(\("None") :: Nil)),
+                                                            `IO.cede`,
+                                                            `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil))))
+                                     }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -290,7 +290,7 @@ object Program:
               then
                 πʹ.emit
               else
-                πʹ.emit :+ `_ <- *.acquire`(sem)
+                `_ <- *.acquire`(sem) :: πʹ.emit
             ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(arg) :: Nil)))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
@@ -331,15 +331,15 @@ object Program:
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          val `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   `IO.cede`,
-                                                                   ( if parallelism < 0
-                                                                     then Nil
-                                                                     else `_ <- *.acquire`(sem)
-                                                                   ) ::: `_ <- *`(υidυ))
-                                            }
+          val `!.μ⋯` = ( if parallelism < 0
+                         then `μ.emit`
+                         else `_ <- *.acquire`(sem) :: `μ.emit`
+                       ) :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+                                                                            Type.ArgClause(Nil),
+                                                                            Term.ArgClause(\("None") :: Nil)),
+                                                            `IO.cede`,
+                                                            `_ <- *`(υidυ))
+                                     }
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
@@ -363,13 +363,10 @@ object Program:
 
           val sem = if parallelism < 0 then null else id
 
-          val `!.⋯` =
-            ( if parallelism < 0
-              then
-                Nil
-              else
-                `_ <- *.acquire`(sem) :: Nil
-            ) :+ `_ <- *`(υidυ)
+          val `!.⋯` = ( if parallelism < 0
+                        then Nil
+                        else `_ <- *.acquire`(sem) :: Nil
+                      ) :+ `_ <- *`(υidυ)
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 

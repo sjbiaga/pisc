@@ -41,13 +41,15 @@ import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
 abstract class Calculus extends Pi:
 
   def equation(using Duplications): Parser[Bind] =
-    invocation(true)<~"=" >> {
+    invocation(true) >> {
+      case (bind, _) if _exclude =>
+        ".*".r ^^ { _ => bind -> ∅() }
       case (bind, bound) =>
         _code = -1
         _dir = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
-        choice ^^ {
+        "="~> choice ^^ {
           case (_sum, _free) =>
             val sum = _sum.flatten
             val free = _free ++ sum.capitals
@@ -430,7 +432,7 @@ object Calculus:
         case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
         case it: Boolean => Lit.Boolean(it)
         case it: String => Lit.String(it)
-        case it: Term => it
+        case it: Term => Expression(it)._1
 
     def toPat: Pat =
       import scala.meta._

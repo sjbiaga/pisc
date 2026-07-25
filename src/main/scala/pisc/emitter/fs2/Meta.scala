@@ -103,8 +103,8 @@ object Meta extends emitter.shared.streams.Meta:
                        cbarrier: String,
                        name: String,
                        remaining: String,
-                       take: String,
-                       offer: String,
+                       acquire: String,
+                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -114,40 +114,35 @@ object Meta extends emitter.shared.streams.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, take, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Queue"), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("F") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: \\[F, Unit]`,
-        Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                `for * yield ()`(`_ <- *`(Term.Apply(replication, Term.ArgClause(\(cbarrier) :: \(take) :: \("None") :: Nil))) :: sum*),
-                `for * yield ()`(`* <- Stream.evalF(*)`(offer,
-                                                        Term.Apply(Term.ApplyType(Term.Select("Queue", "bounded"),
-                                                                                  Type.ArgClause(\\("F") :: \\("Unit") :: Nil)),
-                                                                   Term.ArgClause(Lit.Int(1) :: Nil)))
-                              :: `_ <- *`(Term.Apply(Term.Select(
-                                                       `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                            Term.ArgClause(\(cbarrier) :: \(take) :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil))) :: sum*),
-                                                       "concurrently"),
-                                                     Term.ArgClause(Term.Apply(\(name),
+        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: `_ <- *`(Term.Apply(Term.Select(
+                                               `for * yield ()`(`_ <- *`(Term.Apply(replication,
+                                                                                    Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                               "concurrently"),
+                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                                                    Term.Select(\, "empty"),
+                                                                    Term.Apply(\(name),
                                                                                Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil)) :: Nil)))*)
-        )
+                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
     `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, "emit"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
     `_ <- +`(parallelism, id, id, id, id, id, replication, sum)
-
 
   private def `* <- +`(parameter: String,
                        parallelism: Int,
                        cbarrier: String,
                        name: String,
                        remaining: String,
-                       take: String,
-                       offer: String,
+                       acquire: String,
+                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -157,27 +152,23 @@ object Meta extends emitter.shared.streams.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, take, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Queue"), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("F") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: \\[F, Unit]`,
-        Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication, Term.ArgClause(\(cbarrier) :: \(take) :: \("None") :: Nil))) :: sum*),
-                `for * yield ()`(`* <- Stream.evalF(*)`(offer,
-                                                        Term.Apply(Term.ApplyType(Term.Select("Queue", "bounded"),
-                                                                                  Type.ArgClause(\\("F") :: \\("Unit") :: Nil)),
-                                                                   Term.ArgClause(Lit.Int(1) :: Nil)))
-                              :: `_ <- *`(Term.Apply(Term.Select(
-                                                       `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                         Term.ArgClause(\(cbarrier) :: \(take) :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil))) :: sum*),
-                                                       "concurrently"),
-                                                     Term.ArgClause(Term.Apply(\(name),
+        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: `_ <- *`(Term.Apply(Term.Select(
+                                               `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
+                                                                                                 Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                               "concurrently"),
+                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                                                    Term.Select(\, "empty"),
+                                                                    Term.Apply(\(name),
                                                                                Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil)) :: Nil)))*)
-        )
+                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
     `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, "emit"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =

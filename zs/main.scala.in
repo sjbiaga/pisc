@@ -49,7 +49,10 @@ object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
 
-  import _root_.zio.{ durationLong, Exit, Queue, Scope, Semaphore, Task, ZLayer }
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.concurrentInstance
+
+  import _root_.zio.{ durationLong, Schedule, Semaphore => SemaphoreZIO, Task }
   import _root_.zio.concurrent.CyclicBarrier
 
   import _root_.eu.timepit.refined.*
@@ -58,11 +61,9 @@ object π:
 
 
   extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πcollectAllParZIO: ZIO[Any, Throwable, Unit] =
-      ZIO.collectAllParDiscard(self.map(_.runDrain))
     private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(self.πcollectAllParZIO)
-    private[π] inline def πcollectAllPar(semaphore: Semaphore): ZStream[Any, Throwable, Unit] =
+      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
+    private[π] inline def πcollectAllPar(semaphore: SemaphoreZIO): ZStream[Any, Throwable, Unit] =
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain).map(semaphore.tryWithPermit(_))))
 
 

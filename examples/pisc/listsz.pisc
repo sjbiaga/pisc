@@ -5,7 +5,7 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
-⟦ replication = (parallelism,1) ⟧
+⟦ replication = (parallelism,-1) ⟧
 
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \

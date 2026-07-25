@@ -157,7 +157,7 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(name, "/*'n*/") match
-          case Success((λ(Term.Name("n")), free), _) =>
+          case Success((λ(Term.QuotedMacroExpr(Term.Name("n"))), free), _) =>
             assertEquals(free, Names() + Symbol("n"))
           case _ =>
             assert(false)

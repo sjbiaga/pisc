@@ -40,6 +40,10 @@ object Meta extends emitter.shared.effects.Meta:
 
   override protected lazy val \ = "ZStream"
 
+  protected lazy val \\ = "fromZIO"
+
+  protected lazy val \\\ = "succeed"
+
   val `: ZStream[Any, Throwable, Unit]` =
     Some(Type.Apply(\\(\), Type.ArgClause(\\("Any") :: \\("Throwable") :: \\("Unit") :: Nil)))
 
@@ -77,13 +81,13 @@ object Meta extends emitter.shared.effects.Meta:
 
 
   def `* <- ZStream.fromZIO(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 -> Term.Apply(Term.Select(\, "fromZIO"), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- ZStream.fromZIO(*)`(* : Term): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "fromZIO"), Term.ArgClause(* :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(* :: Nil)))
 
   private val `ZStream.fromZIO`: Term => Boolean =
-    case Term.Select(Term.Name(`\\`), Term.Name("fromZIO")) => true
+    case Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)) => true
     case Term.Apply(it, _) => `ZStream.fromZIO`(it)
     case Term.ApplyType(it, _) => `ZStream.fromZIO`(it)
     case _ => false
@@ -91,38 +95,24 @@ object Meta extends emitter.shared.effects.Meta:
   def `ZStream.fromZIO(…)`(`…`: List[Enumerator]): List[Enumerator] =
     `…`.map {
       case it @ Enumerator.Generator(_, rhs) if `ZStream.fromZIO`(rhs) => it
-      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, "fromZIO"), Term.ArgClause(it.rhs :: Nil)))
+      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\), Term.ArgClause(it.rhs :: Nil)))
       case it => it
     }
 
-  def `ZStream.fromZIO(Scope.make)(…).provideLayer(*)`(`…`: Term, * : String) =
-    Term.Apply(Term.Select(Term.Apply(Term.Select(\, "fromZIO"),
-                                      Term.ArgClause(Term.Select("Scope", "make") :: Nil)),
-                           "flatMap"),
-               Term.ArgClause(Term.Block(Term.Function(Term.ParamClause(Term.Param(Nil, *, None, None) :: Nil),
-                                                       Term.Apply(Term.Select(Term.Apply(Term.Select(\, "fromZIO"),
-                                                                                         Term.ArgClause(`…` :: Nil)),
-                                                                              "provideLayer"),
-                                                                  Term.ArgClause(Term.Apply(Term.Select("ZLayer", "succeed"),
-                                                                                            Term.ArgClause(* :: Nil)) :: Nil))) :: Nil) :: Nil))
 
-  def `*.close(Exit.unit)`(* : String) =
-    `_ <- ZStream.fromZIO(*)`(Term.Apply(Term.Select(*, "close"), Term.ArgClause(Term.Select("Exit", "unit") :: Nil)))
-
-  def `* <- Semaphore.make(…)`(* : String, `…`: Int = 1): Enumerator.Generator =
-    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.Select("Semaphore", "make"),
+  def `* <- SemaphoreZIO.make(…)`(* : String, `…`: Int): Enumerator.Generator =
+    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.Select("SemaphoreZIO", "make"),
                                               Term.ArgClause(Lit.Int(`…`) :: Nil)))
 
-  def `* <- ….runLast; _ <- …`(* : String, `…`: (Term, Term)) =
-    `…`._1 match
-      case it: Term.ForYield =>
-        `* <- *`(* -> Term.Select(it.copy(body = *), "runLast")) ::
-        `_ <- *`(`if * then … else …`(Term.ApplyInfix(\(*), \("eq"), Type.ArgClause(Nil), Term.ArgClause(\("None") :: Nil)),
-                                      Term.Select("ZIO", "unit"),
-                                      `…`._2))
+  override def `_ <- *.acquire`(* : String): Enumerator =
+    `ZStream.fromZIO(…)`(super.`_ <- *.acquire`(*)).head
 
-  def `*.withPermitScoped`(* : String): Enumerator.Generator =
-    `_ <- *`(Term.Select(*, "withPermitScoped"))
+  override def `_ <- *.release`(* : String): Enumerator =
+    `ZStream.fromZIO(…)`(super.`_ <- *.release`(*)).head
+
+  override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
+    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)),
+                                              Term.ArgClause(Lit.Int(`…`) :: Nil))).head
 
   def `*.tryWithPermit(…)`(* : String, `…`: Term): Term =
     Term.Apply(Term.Select(*, "tryWithPermit"), Term.ArgClause(Term.Select(`…`, "runDrain") :: Nil))
@@ -136,14 +126,6 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => \(Nil)
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
 
-  def `List( *, … ).collectAllParZIO`(* : Term*): Term =
-    *.flatMap {
-      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
-      case it => Some(it)
-    } match
-      case Nil => \(Nil)
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllParZIO")
-
   def `List( *, … ).collectAllPar(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
@@ -154,50 +136,8 @@ object Meta extends emitter.shared.effects.Meta:
                             Term.ArgClause(`…` :: Nil))
 
 
-  def `\\.succeed { def *(*: Scope.Closeable, *: ()): ZIO[Any, Throwable, Unit] = …; * }`(* : ((String, String), String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, "succeed"),
-               Term.ArgClause(
-                 Term.Block(
-                   Defn.Def(Nil,
-                            *._1._1,
-                            Member.ParamClauseGroup(Type.ParamClause(Nil),
-                                                    Term.ParamClause(Term.Param(Nil,
-                                                                                *._1._2,
-                                                                                Some(Type.Select("Scope", \\("Closeable"))),
-                                                                                None)
-                                                                  :: Term.Param(Nil,
-                                                                                *._2,
-                                                                                Some(\\("()")),
-                                                                                None)
-                                                                  :: Nil, None) :: Nil) :: Nil,
-                            `: ZIO[Any, Throwable, Unit]`,
-                             `…`
-                   ) :: \(*._1._1) :: Nil
-                 ) :: Nil
-               )
-    )
-
-  def `\\.succeed { def *(*: Scope.Closeable): ZIO[Any, Throwable, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, "succeed"),
-               Term.ArgClause(
-                 Term.Block(
-                   Defn.Def(Nil,
-                            *._1,
-                            Member.ParamClauseGroup(Type.ParamClause(Nil),
-                                                    Term.ParamClause(Term.Param(Nil,
-                                                                                *._2,
-                                                                                Some(Type.Select("Scope", \\("Closeable"))),
-                                                                                None)
-                                                                  :: Nil, None) :: Nil) :: Nil,
-                            `: ZIO[Any, Throwable, Unit]`,
-                             `…`
-                   ) :: \(*._1) :: Nil
-                 ) :: Nil
-               )
-    )
-
-  def `\\.succeed { def *(*: ()): ZStream[Any, Throwable, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, "succeed"),
+  def `\\.\\\\\\ { def *(*: ()): ZStream[Any, Throwable, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -214,8 +154,8 @@ object Meta extends emitter.shared.effects.Meta:
                )
     )
 
-  def `\\.succeed { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(* : String, `…`: Term): Term =
-    Term.Apply(Term.Select(\, "succeed"),
+  def `\\.\\\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
@@ -231,8 +171,8 @@ object Meta extends emitter.shared.effects.Meta:
                        cbarrier: String,
                        name: String,
                        remaining: String,
-                       take: String,
-                       offer: String,
+                       acquire: String,
+                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -242,27 +182,23 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, take, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Queue"), Type.ArgClause(\\("Unit") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: ZStream[Any, Throwable, Unit]`,
-        Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                `for * yield ()`(`_ <- *`(Term.Apply(replication, Term.ArgClause(\(cbarrier) :: \(take) :: \("None") :: Nil))) :: sum*),
-                `for * yield ()`(`* <- ZStream.fromZIO(*)`(offer,
-                                                           Term.Apply(Term.ApplyType(Term.Select("Queue", "bounded"),
-                                                                                     Type.ArgClause(\\("Unit") :: Nil)),
-                                                                      Term.ArgClause(Lit.Int(1) :: Nil)))
-                              :: `_ <- *`(Term.Apply(Term.Select(
-                                                       `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                            Term.ArgClause(\(cbarrier) :: \(take) :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil))) :: sum*),
-                                                       "drainFork"),
-                                                     Term.ArgClause(Term.Apply(\(name),
+        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: `_ <- *`(Term.Apply(Term.Select(
+                                               `for * yield ()`(`_ <- *`(Term.Apply(replication,
+                                                                                    Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                               "drainFork"),
+                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                                                    Term.Select(\, "empty"),
+                                                                    Term.Apply(\(name),
                                                                                Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil)) :: Nil)))*)
-        )
+                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
     `* <- ZStream.fromZIO(*)`(cbarrier, Term.Apply(Term.Select("CyclicBarrier", "make"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, "succeed"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
@@ -274,8 +210,8 @@ object Meta extends emitter.shared.effects.Meta:
                        cbarrier: String,
                        name: String,
                        remaining: String,
-                       take: String,
-                       offer: String,
+                       acquire: String,
+                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -285,27 +221,23 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, take, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Queue"), Type.ArgClause(\\("Unit") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: ZStream[Any, Throwable, Unit]`,
-        Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication, Term.ArgClause(\(cbarrier) :: \(take) :: \("None") :: Nil))) :: sum*),
-                `for * yield ()`(`* <- ZStream.fromZIO(*)`(offer,
-                                                           Term.Apply(Term.ApplyType(Term.Select("Queue", "bounded"),
-                                                                                     Type.ArgClause(\\("Unit") :: Nil)),
-                                                                      Term.ArgClause(Lit.Int(1) :: Nil)))
-                              :: `_ <- *`(Term.Apply(Term.Select(
-                                                       `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                         Term.ArgClause(\(cbarrier) :: \(take) :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil))) :: sum*),
-                                                       "drainFork"),
-                                                     Term.ArgClause(Term.Apply(\(name),
+        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: `_ <- *`(Term.Apply(Term.Select(
+                                               `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
+                                                                                                 Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                               "drainFork"),
+                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                                                    Term.Select(\, "empty"),
+                                                                    Term.Apply(\(name),
                                                                                Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(offer) :: Nil)) :: Nil)) :: Nil)))*)
-        )
+                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
     `* <- ZStream.fromZIO(*)`(cbarrier, Term.Apply(Term.Select("CyclicBarrier", "make"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, "succeed"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
