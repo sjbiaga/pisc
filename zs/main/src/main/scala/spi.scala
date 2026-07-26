@@ -83,7 +83,7 @@ package object sΠ:
   private def exclude(key: String)
                      (using %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
-    `π-exclude`(`π-elvis`(key)).unless(`π-elvis`.contains(key)).unit
+    `π-exclude`(`π-elvis`(key)).when(`π-elvis`.contains(key)).unit
 
 
   /**
