@@ -201,15 +201,15 @@ package object sΠ:
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
           for
-            _        <- if None eq + then Stream.eval(exclude(key))
+            _        <- if None eq * then Stream.eval(exclude(key))
                         else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-            _        <- if None eq + then Stream.unit
+            _        <- if None eq * then Stream.unit
                         else Stream.eval(deferred.complete(None))
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (`)(` -> `π-τ`, (new Object -> -1, None, rate)))))
             cb_fb_tk <- Stream.eval(deferred.get)
-            _        <- if None eq + then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+            _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -439,15 +439,15 @@ package object sΠ:
                                ^ : String): Stream[F, `()`[F]] =
               implicit val ord = dir.ord
               for
-                _        <- if None eq + then Stream.eval(exclude(key))
+                _        <- if None eq * then Stream.eval(exclude(key))
                             else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                 deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
                 continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                _        <- if None eq + then Stream.unit
+                _        <- if None eq * then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (`)(` -> dir, (map -> ord, Some(false), rate)))))
                 cb_fb_tk <- Stream.eval(deferred.get)
-                _        <- if None eq + then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+                _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
                 sr <- Stream.eval(SignallingRef[F].of(false))
@@ -520,15 +520,15 @@ package object sΠ:
                              ^ : String): Stream[F, Unit] =
             implicit val ord = dir.ord
             for
-              _        <- if None eq + then Stream.eval(exclude(key))
+              _        <- if None eq * then Stream.eval(exclude(key))
                           else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-              _        <- if None eq + then Stream.unit
+              _        <- if None eq * then Stream.unit
                           else Stream.eval(deferred.complete(None))
               _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (`)(` -> dir, (map -> ord, Some(false), rate)))))
               cb_fb_tk <- Stream.eval(deferred.get)
-              _        <- if None eq + then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+              _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
               sr <- Stream.eval(SignallingRef[F].of(false))
@@ -645,15 +645,15 @@ package object sΠ:
                                          ^ : String): Stream[F, Unit] =
               implicit val ord = dir.ord
               for
-                _        <- if None eq + then Stream.eval(exclude(key))
+                _        <- if None eq * then Stream.eval(exclude(key))
                             else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                 deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
                 continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                _        <- if None eq + then Stream.unit
+                _        <- if None eq * then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (`)(` -> dir, (map -> ord, Some(false), rate)))))
                 cb_fb_tk <- Stream.eval(deferred.get)
-                _        <- if None eq + then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+                _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
                 sr <- Stream.eval(SignallingRef[F].of(false))
@@ -720,15 +720,15 @@ package object sΠ:
                              ^ : String): Stream[F, `()`[F]] =
             implicit val ord = dir.ord
             for
-              _        <- if None eq + then Stream.eval(exclude(key))
+              _        <- if None eq * then Stream.eval(exclude(key))
                           else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-              _        <- if None eq + then Stream.unit
+              _        <- if None eq * then Stream.unit
                           else Stream.eval(deferred.complete(None))
               _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (`)(` -> dir, (map -> ord, Some(true), rate)))))
               cb_fb_tk <- Stream.eval(deferred.get)
-              _        <- if None eq + then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+              _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
               sr <- Stream.eval(SignallingRef[F].of(false))
