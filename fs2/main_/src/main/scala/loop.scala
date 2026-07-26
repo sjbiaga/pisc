@@ -197,7 +197,7 @@ package object `Π-loop`:
                                                     ()
                                                 ).start
                                           _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, tk)))).whenA(o1 eq None)
-                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d1.complete(Some((cb, fb, tk)))).whenA(o2 eq None).unlessA(k1 == k2)
+                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, tk)))).whenA(o2 eq None).unlessA(k1 == k2)
                                           _  <- c1.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c1 eq null)
                                           _  <- c2.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                           _  <- ~.release

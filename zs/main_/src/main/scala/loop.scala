@@ -181,7 +181,7 @@ package object `Π-loop`:
                                                 ()
                                             ).fork
                                       _  <- (discard(k1)(using  ^) *> %.update(_ - key1).when(c1 eq null) *> d1.succeed(Some((cb, fb, tk)))).unless(b1)
-                                      _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null) *> d1.succeed(Some((cb, fb, tk)))).unless(b2).unless(k1 == k2)
+                                      _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null) *> d2.succeed(Some((cb, fb, tk)))).unless(b2).unless(k1 == k2)
                                       _  <- if c1 eq null then ZIO.unit
                                             else c1.get.tap(_.succeed(Some((cb, fb, tk))))
                                       _  <- if c2 eq null then ZIO.unit
