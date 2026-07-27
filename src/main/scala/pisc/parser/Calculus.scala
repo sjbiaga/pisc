@@ -700,7 +700,7 @@ object Calculus:
 
       ast match
 
-        case `+`(_, ∥(_, `.`(!(_, _, Some(_), _)))) =>
+        case +(_, ∥(_, `.`(!(_, _, Some(_), _)))) =>
           ast.label("+0")
 
         case _ =>
@@ -761,11 +761,11 @@ object Calculus:
         case ?:(cond, t, _) =>
           ?:(cond, t.label(l), None)
 
-        case it @ !(_, _, None, sum) =>
-          it.copy(sum = sum.label(l))
+        case it @ !(_, _, guard @ Some(_), sum) =>
+          it.copy(guard = relabelledʹ(guard), sum = sum.label(l))
 
-        case !(parallelism, pace, it, sum) =>
-          `!`(parallelism, pace, relabelledʹ(it), sum.label(l))
+        case it @ !(_, _, _, sum) =>
+          it.copy(sum = sum.label(l))
 
         case it @ `⟦⟧`(_, sum, _, _) =>
           it.copy(sum = sum.label(l))

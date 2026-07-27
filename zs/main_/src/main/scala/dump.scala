@@ -61,7 +61,7 @@ package object `Π-dump`:
                     number, started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, fn)
-        }.unit.exit.tap { _ => if ps == null then ZIO.unit else ZIO.attemptBlocking { ps.close } }.unexit
+        }.unit.exit.tap { _ => ZIO.attemptBlocking(ps.close).unless(ps eq null) }.unexit
       case _ =>
         ZIO.unit
 
@@ -89,8 +89,7 @@ package object `Π-dump`:
              case (no, ((s1, s2), e), (k1, k2), (delay, duration)) =>
                for
                  _ <- record(no, s1, e, delay, duration)(k1)
-                 _ <- if k1 == k2 then ZIO.unit
-                      else record(no, s2, e, delay, duration)(k2)
+                 _ <- record(no, s2, e, delay, duration)(k2).unless(k1 == k2)
                  _ <- dump
                yield
                  ()

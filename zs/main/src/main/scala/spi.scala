@@ -32,13 +32,11 @@ package object sΠ:
 
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Duration, Hub, Promise, Ref, Schedule, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Promise, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
-  import _root_.zio.stream.{ ZSink, ZStream }
+  import _root_.zio.stream.ZStream
 
   import `Π-loop`.{ <>, +, %, /, \ }
-  import `Π-magic`.*
-  export `Π-magic`.><
   import `Π-stats`.Rate
 
 
@@ -83,7 +81,7 @@ package object sΠ:
   private def exclude(key: String)
                      (using %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
-    `π-exclude`(`π-elvis`(key)).when(`π-elvis`.contains(key)).unit
+    ZIO.when(`π-elvis`.contains(key))(`π-exclude`(`π-elvis`(key))).unit
 
 
   /**
@@ -92,13 +90,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): ZStream[Any, Throwable, B] = flatMap(f andThen ZStream.succeed)
-    def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] =
-      ( for
-          hub   <- ZStream.fromZIO(Hub.unbounded[(`()`, Object)])
-          limit <- ZStream.fromZIO(Semaphore[Task](0))
-        yield
-          f(><(hub, limit))
-      ).flatten
+    def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] = f(new {})
 
 
   /**
@@ -127,9 +119,9 @@ package object sΠ:
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
             _        <- if None eq * then ZStream.unit
                         else ZStream.fromZIO(promise.succeed(None))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (new Object, None, rate))))
-            cb_token <- ZStream.fromZIO(promise.await)
-            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_token eq None) *> ?.await)
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (new {}, None, rate))))
+            cb_input <- ZStream.fromZIO(promise.await)
+            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_input eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
@@ -139,12 +131,12 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_token <- continue.get.flatMap(_.await)
+                cb_input <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                _        <- if cb_token eq None then sp.succeed(())
+                _        <- if cb_input eq None then sp.succeed(())
                             else
-                              val (cbarrier, _) = cb_token.get
+                              val (cbarrier, _) = cb_input.get
                               enable(key) *> cbarrier.await.exit
               yield
                 ()
@@ -195,19 +187,19 @@ package object sΠ:
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (new Object, None, rate))))
-          cb_token <- ZStream.fromZIO(promise.await)
-          if cb_token ne None
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (new {}, None, rate))))
+          cb_input <- ZStream.fromZIO(promise.await)
+          if cb_input ne None
           sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
           _  <- ZStream.fromZIO {
             for
               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-              cb_token <- continue.get.flatMap(_.await)
+              cb_input <- continue.get.flatMap(_.await)
               _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-              _        <- if cb_token eq None then sp.succeed(())
+              _        <- if cb_input eq None then sp.succeed(())
                           else
-                            val (cbarrier, _) = cb_token.get
+                            val (cbarrier, _) = cb_input.get
                             enable(key) *> cbarrier.await.exit
             yield
               ()
@@ -256,11 +248,11 @@ package object sΠ:
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (new Object, None, rate))))
-        cb_token <- ZStream.fromZIO(promise.await)
-        if cb_token ne None
-        (cbarrier, _) = cb_token.get
-        _        <- ZStream.fromZIO(enable(key) *> cbarrier.await.exit)
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (new {}, None, rate))))
+        cb_input <- ZStream.fromZIO(promise.await)
+        if cb_input ne None
+        (cbarrier, _) = cb_input.get
+        _  <- ZStream.fromZIO(enable(key) *> cbarrier.await.exit)
       yield
         ()
 
@@ -295,52 +287,14 @@ package object sΠ:
       apply(rate, pace)(key).tap(_ => code)
 
   /**
-    * events, i.e., names (hubs) and values
+    * names and values
     */
   implicit final class `()`(private val name: Any) { self =>
 
-    private inline def h = `()`[><].hub
-    private inline def l = `()`[><].limit
-    private implicit def a: Task[Unit] = l.acquire
-    private def _s = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => l.release))
-
-    extension (self: ZStream[Any, Throwable, Object])
-      def `zipRight s`: ZStream[Any, Throwable, `()`] = `self zipRight s`(true, _s)
-      def `zipRight s.head`: ZStream[Any, Throwable, `()`] = `self zipRight s`(false, _s)
-      private def `self zipRight s`(r: Boolean,
-                                    its: ZStream[Any, Throwable, (`()`, Object)]): ZStream[Any, Throwable, `()`] =
-        ZStream.unwrapScoped {
-          self.peel(ZSink.head).map {
-            case (Some(tk), tks) =>
-              tks.filter(r, tk, its)
-            case _ =>
-              ZStream.empty
-          }
-        }
-      private def filter(r: Boolean,
-                         tk: Object,
-                         its: ZStream[Any, Throwable, (`()`, Object)]): ZStream[Any, Throwable, `()`] =
-        ZStream.unwrapScoped {
-          its.peel(ZSink.head).map {
-            case (Some((it, tkʹ)), itsʹ) if tk eq tkʹ =>
-              ZStream(it) ++ `self zipRight s`(r, ZStream.fromZIO(l.release) *> itsʹ).when(r)
-            case (Some(_), itsʹ) =>
-              filter(r, tk, itsʹ)
-            case _ =>
-              ZStream.empty
-          }
-        }
-
-    def ====(that: `()`) =
-      try
-        this.h eq that.h
-      catch _ =>
-        this.name == that.name
+    def ====(that: `()`) = this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
-
-    lazy val `null` = new `()`(null)
 
     object `(!)`:
 
@@ -365,9 +319,9 @@ package object sΠ:
               continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
               _        <- if None eq * then ZStream.unit
                           else ZStream.fromZIO(promise.succeed(None))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-              cb_token <- ZStream.fromZIO(promise.await)
-              discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_token eq None) *> ?.await)
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+              cb_input <- ZStream.fromZIO(promise.await)
+              discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_input eq None) *> ?.await)
                           else ZStream.succeed(false)
               _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
               if !discard
@@ -375,27 +329,27 @@ package object sΠ:
               it <- ( for
                         _  <- ZStream.unit.repeat(Schedule.forever)
                         it <- sΠ.ν
-                        it <- ZStream.fromZIO {
+                        _  <- ZStream.fromZIO {
                           for
                             _        <- -.await.exit
                             _        <- *.fold(ZIO.unit)(_.acquire)
                             _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                            cb_token <- continue.get.flatMap(_.await)
+                            cb_input <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                             _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                            token    <- if cb_token eq None then sp.succeed(()).as(null)
+                            _       <- if cb_input eq None then sp.succeed(())
                                         else
-                                          val (cbarrier, token) = cb_token.get
-                                          (enable(key) *> cbarrier.await.exit).as(token)
+                                          val (cbarrier, input) = cb_input.get
+                                          (input.set(it) *> enable(key) *> cbarrier.await.exit)
                           yield
-                            it -> token
+                            ()
                          }
                        yield
                          it
-                    ).interruptWhen(sp).through1(h)
+                    ).interruptWhen(sp)
               _  <- ZStream.fromZIO(+.release)
             yield
-              it._1
+              it
 
           /**
             * linear replication bound output guard w/ pace
@@ -444,9 +398,9 @@ package object sΠ:
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
             _        <- if None eq * then ZStream.unit
                         else ZStream.fromZIO(promise.succeed(None))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-            cb_token <- ZStream.fromZIO(promise.await)
-            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_token eq None) *> ?.await)
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+            cb_input <- ZStream.fromZIO(promise.await)
+            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_input eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
@@ -456,16 +410,16 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_token <- continue.get.flatMap(_.await)
+                cb_input <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                token    <- if cb_token eq None then sp.succeed(()).as(null)
+                _        <- if cb_input eq None then sp.succeed(())
                             else
-                              val (cbarrier, token) = cb_token.get
-                              (enable(key) *> cbarrier.await.exit).as(token)
+                              val (cbarrier, input) = cb_input.get
+                              (input.set(value) *> enable(key) *> cbarrier.await.exit)
               yield
-                value -> token
-            }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                ()
+            }.repeat(Schedule.forever).interruptWhen(sp)
             _  <- ZStream.fromZIO(+.release)
           yield
             ()
@@ -563,9 +517,9 @@ package object sΠ:
               continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
               _        <- if None eq * then ZStream.unit
                           else ZStream.fromZIO(promise.succeed(None))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-              cb_token <- ZStream.fromZIO(promise.await)
-              discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_token eq None) *> ?.await)
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+              cb_input <- ZStream.fromZIO(promise.await)
+              discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_input eq None) *> ?.await)
                           else ZStream.succeed(false)
               _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
               if !discard
@@ -575,16 +529,16 @@ package object sΠ:
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                  cb_token <- continue.get.flatMap(_.await)
+                  cb_input <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                  it       <- if cb_token eq None then sp.succeed(()).as(`null` -> null)
+                  _        <- if cb_input eq None then sp.succeed(())
                               else
-                                val (cbarrier, token) = cb_token.get
-                                value.map(new `()`(_) -> token).tap(_ => enable(key) *> cbarrier.await.exit)
+                                val (cbarrier, input) = cb_input.get
+                                value.map(new `()`(_)).flatMap(input.set(_) *> enable(key) *> cbarrier.await.exit)
                 yield
-                  it
-              }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                  ()
+              }.repeat(Schedule.forever).interruptWhen(sp)
               _  <- ZStream.fromZIO(+.release)
             yield
               ()
@@ -636,30 +590,31 @@ package object sΠ:
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
             _        <- if None eq * then ZStream.unit
                         else ZStream.fromZIO(promise.succeed(None))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(true), rate))))
-            cb_token <- ZStream.fromZIO(promise.await)
-            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_token eq None) *> ?.await)
+            result   <- ZStream.fromZIO(Ref.make[`()`](null))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Right(result)), rate))))
+            cb_input <- ZStream.fromZIO(promise.await)
+            discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_input eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-            tks = ZStream.fromZIO {
+            _  <- ZStream.fromZIO {
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_token <- continue.get.flatMap(_.await)
+                cb_input <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                token    <- if cb_token eq None then sp.succeed(()).as(null)
+                _        <- if cb_input eq None then sp.succeed(())
                             else
-                              val (cbarrier, token) = cb_token.get
-                              (enable(key) *> cbarrier.await.exit).as(token)
+                              val (cbarrier, _) = cb_input.get
+                              enable(key) *> cbarrier.await.exit
               yield
-                token
+                ()
             }.repeat(Schedule.forever).interruptWhen(sp)
-            it <- tks.`zipRight s`
             _  <- ZStream.fromZIO(+.release)
+            it <- ZStream.fromZIO(result.get)
           yield
             it
 
@@ -707,31 +662,31 @@ package object sΠ:
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-            cb_token <- ZStream.fromZIO(promise.await)
-            if cb_token ne None
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+            cb_input <- ZStream.fromZIO(promise.await)
+            if cb_input ne None
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
             it <- ( for
                       _  <- ZStream.unit.repeat(Schedule.forever)
                       it <- sΠ.ν
-                      it <- ZStream.fromZIO {
+                      _ <- ZStream.fromZIO {
                         for
                           _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                          cb_token <- continue.get.flatMap(_.await)
+                          cb_input <- continue.get.flatMap(_.await)
                           _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                           _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                          token    <- if cb_token eq None then sp.succeed(()).as(null)
+                          _        <- if cb_input eq None then sp.succeed(())
                                       else
-                                        val (cbarrier, token) = cb_token.get
-                                        (enable(key) *> cbarrier.await.exit).as(token)
+                                        val (cbarrier, input) = cb_input.get
+                                        input.set(it) *> enable(key) *> cbarrier.await.exit
                         yield
-                          it -> token
+                          ()
                       }
                     yield
                       it
-                  ).interruptWhen(sp).through1(h)
+                  ).interruptWhen(sp)
           yield
-            it._1
+            it
 
         /**
           * replication bound output guard w/ pace
@@ -775,23 +730,23 @@ package object sΠ:
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-          cb_token <- ZStream.fromZIO(promise.await)
-          if cb_token ne None
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+          cb_input <- ZStream.fromZIO(promise.await)
+          if cb_input ne None
           sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
           _  <- ZStream.fromZIO {
             for
               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-              cb_token <- continue.get.flatMap(_.await)
+              cb_input <- continue.get.flatMap(_.await)
               _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-              token    <- if cb_token eq None then sp.succeed(()).as(null)
+              _        <- if cb_input eq None then sp.succeed(())
                           else
-                            val (cbarrier, token) = cb_token.get
-                            (enable(key) *> cbarrier.await.exit).as(token)
+                            val (cbarrier, input) = cb_input.get
+                            input.set(value) *> enable(key) *> cbarrier.await.exit
             yield
-              value -> token
-          }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+              ()
+          }.repeat(Schedule.forever).interruptWhen(sp)
         yield
           ()
 
@@ -883,23 +838,23 @@ package object sΠ:
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(false), rate))))
-            cb_token <- ZStream.fromZIO(promise.await)
-            if cb_token ne None
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Left(())), rate))))
+            cb_input <- ZStream.fromZIO(promise.await)
+            if cb_input ne None
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
             _  <- ZStream.fromZIO {
               for
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_token <- continue.get.flatMap(_.await)
+                cb_input <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                it       <- if cb_token eq None then sp.succeed(()).as(`null` -> null)
+                _        <- if cb_input eq None then sp.succeed(())
                             else
-                              val (cbarrier, token) = cb_token.get
-                              value.map(new `()`(_) -> token).tap(_ => enable(key) *> cbarrier.await.exit)
+                              val (cbarrier, input) = cb_input.get
+                              value.map(new `()`(_)).flatMap(input.set(_) *> enable(key) *> cbarrier.await.exit)
               yield
-                it
-            }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                ()
+            }.repeat(Schedule.forever).interruptWhen(sp)
           yield
             ()
 
@@ -945,24 +900,25 @@ package object sΠ:
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[><], Some(true), rate))))
-          cb_token <- ZStream.fromZIO(promise.await)
-          if cb_token ne None
+          result   <- ZStream.fromZIO(Ref.make[`()`](null))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`()`[{}], Some(Right(result)), rate))))
+          cb_input <- ZStream.fromZIO(promise.await)
+          if cb_input ne None
           sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-          tks = ZStream.fromZIO {
+          _  <- ZStream.fromZIO {
             for
               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-              cb_token <- continue.get.flatMap(_.await)
+              cb_input <- continue.get.flatMap(_.await)
               _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-              token    <- if cb_token eq None then sp.succeed(()).as(null)
+              _        <- if cb_input eq None then sp.succeed(())
                           else
-                            val (cbarrier, token) = cb_token.get
-                            (enable(key) *> cbarrier.await.exit).as(token)
+                            val (cbarrier, _) = cb_input.get
+                            enable(key) *> cbarrier.await.exit
             yield
-              token
+              ()
           }.repeat(Schedule.forever).interruptWhen(sp)
-          it <- tks.`zipRight s`
+          it <- ZStream.fromZIO(result.get)
         yield
           it
 
@@ -1009,12 +965,12 @@ package object sΠ:
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[><], Some(false), rate))))
-          cb_token <- ZStream.fromZIO(promise.await)
-          if cb_token ne None
-          (cbarrier, token) = cb_token.get
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[{}], Some(Left(())), rate))))
+          cb_input <- ZStream.fromZIO(promise.await)
+          if cb_input ne None
+          (cbarrier, input) = cb_input.get
           it <- sΠ.ν
-          _  <- ZStream.succeed(it -> token).tap(_ => enable(key) *> cbarrier.await.exit).through1(h)
+          _  <- ZStream.fromZIO(input.set(it) *> enable(key) *> cbarrier.await.exit)
         yield
           it
 
@@ -1059,11 +1015,11 @@ package object sΠ:
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[><], Some(false), rate))))
-        cb_token <- ZStream.fromZIO(promise.await)
-        if cb_token ne None
-        (cbarrier, token) = cb_token.get
-        _        <- ZStream.succeed(value -> token).tap(_ => enable(key) *> cbarrier.await.exit).through1(h)
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[{}], Some(Left(())), rate))))
+        cb_input <- ZStream.fromZIO(promise.await)
+        if cb_input ne None
+        (cbarrier, input) = cb_input.get
+        _  <- ZStream.fromZIO(input.set(value) *> enable(key) *> cbarrier.await.exit)
       yield
         ()
 
@@ -1154,11 +1110,11 @@ package object sΠ:
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[><], Some(false), rate))))
-          cb_token <- ZStream.fromZIO(promise.await)
-          if cb_token ne None
-          (cbarrier, token) = cb_token.get
-          _        <- ZStream.fromZIO(value).map(new `()`(_) -> token).tap(_ => enable(key) *> cbarrier.await.exit).through1(h)
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[{}], Some(Left(())), rate))))
+          cb_input <- ZStream.fromZIO(promise.await)
+          if cb_input ne None
+          (cbarrier, input) = cb_input.get
+          _  <- ZStream.fromZIO(value.map(new `()`(_)).flatMap(input.set(_) *> enable(key) *> cbarrier.await.exit))
         yield
           ()
 
@@ -1203,12 +1159,13 @@ package object sΠ:
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[><], Some(true), rate))))
-        cb_token <- ZStream.fromZIO(promise.await)
-        if cb_token ne None
-        (cbarrier, token) = cb_token.get
-        tks = ZStream.fromZIO(enable(key) *> cbarrier.await.exit).as(token)
-        it <- tks.`zipRight s.head`
+        result   <- ZStream.fromZIO(Ref.make[`()`](null))
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`()`[{}], Some(Right(result)), rate))))
+        cb_input <- ZStream.fromZIO(promise.await)
+        if cb_input ne None
+        (cbarrier, _) = cb_input.get
+        _  <- ZStream.fromZIO(enable(key) *> cbarrier.await.exit)
+        it <- ZStream.fromZIO(result.get)
       yield
         it
 
@@ -1245,14 +1202,3 @@ package object sΠ:
     override def toString: String = if name == null then "null" else name.toString
 
   }
-
-
-  private object `Π-magic`:
-
-    case class ><(hub: Hub[(`()`, Object)],
-                  limit: Semaphore[Task])
-
-    extension [O](self: ZStream[Any, Throwable, O])
-      def through1(hub: Hub[O])
-                  (using await: Task[Unit]): ZStream[Any, Throwable, O] =
-        self.mapZIO { it => await *> hub.publish(it).map(it -> _) }.takeWhile(_._2).map(_._1)

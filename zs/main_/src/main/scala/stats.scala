@@ -35,10 +35,12 @@ import _root_.breeze.stats.distributions.Rand.VariableSeed.*
 
 import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
 
+import _root_.zio.Ref
+
 
 package object `Π-stats`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, >< }
+  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
   sealed trait Rate extends Any
   case class ∞(weight: Long) extends AnyVal with Rate
@@ -68,13 +70,13 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
-  def ∥(% : Map[String, (>< | Object, Option[Boolean], Rate)])
+  def ∥(% : Map[String, ({}, Option[Either[Unit, Ref[`()`]]], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (check: Boolean = false): List[(String, String, (Double, Double))] =
-                                    // ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^
-                                    // key1    key1|2   delay   duration
+       (check: Boolean = false): List[(String, String, Ref[`()`], (Double, Double))] =
+                                    // ^^^^^^  ^^^^^^  ^^^^^^^^^   ^^^^^^  ^^^^^^
+                                    // key1    key1|2  input       delay   duration
 
-    val mls = HashMap[(>< | Object, Option[Boolean]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
+    val mls = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
@@ -89,7 +91,7 @@ package object `Π-stats`:
           mls(e -> p) :+= Right(Right(r.weight))
       }
 
-    val msrt = HashMap[(>< | Object, Option[Boolean]), BigDecimal]() // [timed] sums of rates
+    val msrt = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() // [timed] sums of rates
 
     mls // timed
       .foreach {
@@ -103,7 +105,7 @@ package object `Π-stats`:
             msrt(ep) = rs.sum
       }
 
-    val mswi = HashMap[(>< | Object, Option[Boolean]), Long]() // [immediate] sums of weights
+    val mswi = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), Long]() // [immediate] sums of weights
 
     mls // immediate
       .foreach {
@@ -116,7 +118,7 @@ package object `Π-stats`:
             mswi(ep) = ws.sum
       }
 
-    val mswp = HashMap[(>< | Object, Option[Boolean]), Long]() // [passive] sums of weights
+    val mswp = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), Long]() // [passive] sums of weights
 
     mls // passive
       .foreach {
@@ -149,9 +151,9 @@ package object `Π-stats`:
         case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, (Double, Double)), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^   ^^^^^^  ^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2   delay   duration   pri  delay
+    var r = List[((String, String, Ref[`()`], (Double, Double)), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^   ^^^^^^  ^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2  input       delay   duration   pri  delay
 
     for
       i <- 0 until χ.size
@@ -172,7 +174,7 @@ package object `Π-stats`:
           else
             ???
         val delay = delta(rate)
-        r :+= (key1, key1, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+        r :+= (key1, key1, null, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -180,7 +182,7 @@ package object `Π-stats`:
           (key2, (ether2, polarity2, (rate2, weight2))) = χ(j)
           if polarity2 ne None
         do
-          if (ether1 eq ether2) && polarity1.get != polarity2.get
+          if (ether1 eq ether2) && polarity1.get.isLeft == polarity2.get.isRight
           then
             val ^^ = key2.substring(0, 36)
             if ^ != ^^
@@ -212,26 +214,23 @@ package object `Π-stats`:
                 else
                   ???
               val delay = delta(rate)
-              if polarity2.get
-              then
-                r :+= (key1, key2, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
-              else
-                r :+= (key2, key1, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+              val ref = polarity1.get.orElse(polarity2.get).right.get
+              r :+= (key1, key2, ref, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 
     ( for
-        (((key1, key2, _), _), i) <- r.zipWithIndex
+        (((key1, key2, _, _), _), i) <- r.zipWithIndex
       yield
         val k1 = key1.substring(36)
         val k2 = key2.substring(36)
-        val ^ = key1.substring(0, 36)
+        val  ^ = key1.substring(0, 36)
         val ^^ = key2.substring(0, 36)
         r(i)._1 -> {
           0 > r.indexWhere(
             {
-              case ((`key1` | `key2`, _, _), _) | ((_, `key1` | `key2`, _), _) => true
-              case ((key, _, _), _)
+              case ((`key1` | `key2`, _, _, _), _) | ((_, `key1` | `key2`, _, _), _) => true
+              case ((key, _, _, _), _)
                   if {
                     val k = key.substring(36)
                     `π-trick`.contains(k) && {
@@ -239,7 +238,7 @@ package object `Π-stats`:
                       `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
                     }
                   } => true
-              case ((_, key, _), _)
+              case ((_, key, _, _), _)
                   if {
                     val k = key.substring(36)
                     `π-trick`.contains(k) && {
