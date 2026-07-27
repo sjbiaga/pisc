@@ -37,17 +37,15 @@ package object sΠ:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Async, Deferred, Ref, Resource, Unique }
+  import _root_.cats.effect.{ Async, Deferred, Ref }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, UUIDGen }
 
-  import _root_.fs2.concurrent.{ SignallingRef, Topic }
-  import _root_.fs2.{ Pull, Stream }
+  import _root_.fs2.concurrent.SignallingRef
+  import _root_.fs2.Stream
 
   import _root_.io.github.timwspence.cats.stm.STM
 
   import `Π-loop`.{ <>, +, %, /, \ }
-  import `Π-magic`.*
-  export `Π-magic`.>*<
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -125,7 +123,7 @@ package object sΠ:
 
 
   inline def `π-exclude`[F[_]: Async](enabled: String*)
-                                        (using % : %[F], \ : \[F]): F[Unit] =
+                                     (using % : %[F], \ : \[F]): F[Unit] =
     `π-exclude`[F](Set.from(enabled)) >> \()
 
   private def `π-exclude`[F[_]](enabled: `Π-Set`[String])
@@ -141,8 +139,8 @@ package object sΠ:
     )
 
   private def exclude[F[_]: Async](key: String)
-                                     (using % : %[F])
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): F[Unit] =
+                                  (using % : %[F])
+                                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): F[Unit] =
     `π-exclude`[F](`π-elvis`(key)).whenA(`π-elvis`.contains(key))
 
 
@@ -153,34 +151,16 @@ package object sΠ:
 
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
     def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
-      ( for
-          map <- Stream.eval {
-            for
-              local_topic <- Topic[F, (`()`[F], Unique.Token)]
-              local_limit <- Semaphore[F](0)
-              s2s_topic <- Topic[F, (`()`[F], Unique.Token)]
-              s2s_limit <- Semaphore[F](0)
-              p2c_topic <- Topic[F, (`()`[F], Unique.Token)]
-              p2c_limit <- Semaphore[F](0)
-              accept_topic <- Topic[F, (`()`[F], Unique.Token)]
-              accept_limit <- Semaphore[F](0)
-              expel_topic <- Topic[F, (`()`[F], Unique.Token)]
-              expel_limit <- Semaphore[F](0)
-              merge_topic <- Topic[F, (`()`[F], Unique.Token)]
-              merge_limit <- Semaphore[F](0)
-            yield
-              Map(
-                `π-local`.ord  -> ><[F](local_topic, local_limit),
-                `π-s2s`.ord    -> ><[F](s2s_topic, s2s_limit),
-                `π-p2c`.ord    -> ><[F](p2c_topic, p2c_limit),
-                `π-accept`.ord -> ><[F](accept_topic, accept_limit),
-                `π-expel`.ord  -> ><[F](expel_topic, expel_limit),
-                `π-merge+`.ord -> ><[F](merge_topic, merge_limit)
-              )
-          }
-        yield
-          f(map)
-      ).flatten
+      f {
+        Map(
+          `π-local`.ord  -> new {},
+          `π-s2s`.ord    -> new {},
+          `π-p2c`.ord    -> new {},
+          `π-accept`.ord -> new {},
+          `π-expel`.ord  -> new {},
+          `π-merge+`.ord -> new {}
+        )
+      }
 
 
   /**
@@ -208,9 +188,9 @@ package object sΠ:
             _        <- if None eq * then Stream.unit
                         else Stream.eval(deferred.complete(None))
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> `π-τ`, (new {}, None, rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
             sr <- Stream.eval(SignallingRef[F].of(false))
@@ -221,12 +201,12 @@ package object sΠ:
                 enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                 _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                cb_fb_tk <- continue.get.flatMap(_.get)
+                cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                _        <- if cb_fb_tk eq None then sr.set(true)
+                _        <- if cb_fb_in eq None then sr.set(true)
                             else
-                              val (cbarrier, fiber, _) = cb_fb_tk.get
+                              val (cbarrier, fiber, _) = cb_fb_in.get
                               fiber.join >> enable[F](key) >> cbarrier.await
               yield
                 ()
@@ -243,7 +223,7 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
-        apply(rate, `_}{`)(key, `)(`)(?, -, *, +).spaced(pace)
+          apply(rate, `_}{`)(key, `)(`)(?, -, *, +).spaced(pace)
 
         /**
           * linear replication guard w/ code
@@ -278,21 +258,21 @@ package object sΠ:
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-          cb_fb_tk <- Stream.eval(deferred.get)
-          if cb_fb_tk ne None
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> `π-τ`, (new {}, None, rate))))))
+          cb_fb_in <- Stream.eval(deferred.get)
+          if cb_fb_in ne None
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
               _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-              cb_fb_tk <- continue.get.flatMap(_.get)
+              cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-              _        <- if cb_fb_tk eq None then sr.set(true)
+              _        <- if cb_fb_in eq None then sr.set(true)
                           else
-                            val (cbarrier, fiber, _) = cb_fb_tk.get
+                            val (cbarrier, fiber, _) = cb_fb_in.get
                             fiber.join >> enable[F](key) >> cbarrier.await
             yield
               ()
@@ -342,11 +322,11 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-        cb_fb_tk <- Stream.eval(deferred.get)
-        if cb_fb_tk ne None
-        (cbarrier, fiber, _) = cb_fb_tk.get
-        _        <- Stream.eval(fiber.join >> enable[F](key) >> cbarrier.await)
+        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> `π-τ`, (new {}, None, rate))))))
+        cb_fb_in <- Stream.eval(deferred.get)
+        if cb_fb_in ne None
+        (cbarrier, fiber, _) = cb_fb_in.get
+        _  <- Stream.eval(fiber.join >> enable[F](key) >> cbarrier.await)
       yield
         ()
 
@@ -381,45 +361,20 @@ package object sΠ:
       apply(rate, pace, `_}{`)(key, `)(`).evalTap(_ => code)
 
   /**
-    * events, i.e., names (topics) and values
+    * names and values
     */
   implicit final class `()`[F[_]: Async](private val name: Any) { self =>
 
-    private def map = `()`[>*<[F]]
+    private def map = `()`[Map[Int, {}]]
 
-    private inline def t(implicit ord: Int) = map(ord).topic
-    private inline def l(implicit ord: Int) = map(ord).limit
-    private implicit def a(using Int): F[Unit] = l.acquire
-    private def _s(using Int) = Stream.resource(t.subscribeAwaitUnbounded <* Resource.eval(l.release)).flatten
-
-    extension (self: Stream[F, Unique.Token])(using Int)
-      def `zipRight s`: Stream[F, `()`[F]] = `self zipRight s`(true, _s.pull.uncons1).stream
-      def `zipRight s.head`: Stream[F, `()`[F]] = `self zipRight s`(false, _s.pull.uncons1).stream
-      private def `self zipRight s`(r: Boolean,
-                                    its: Pull[F, Nothing, Option[((`()`[F], Unique.Token), Stream[F, (`()`[F], Unique.Token)])]]): Pull[F, `()`[F], Unit] =
-        self.pull.uncons1.flatMap {
-          case Some((tk, tks)) =>
-            tks.filter(r, tk, its)
-          case _ =>
-            Pull.done
-        }
-      private def filter(r: Boolean,
-                         tk: Unique.Token,
-                         its: Pull[F, Nothing, Option[((`()`[F], Unique.Token), Stream[F, (`()`[F], Unique.Token)])]]): Pull[F, `()`[F], Unit] =
-        its.flatMap {
-          case Some(((it, tkʹ), itsʹ)) if tk eq tkʹ =>
-            Pull.output1(it) >> `self zipRight s`(r, (Stream.eval(l.release) >> itsʹ).pull.uncons1).whenA(r)
-          case Some((_, itsʹ)) =>
-            filter(r, tk, itsʹ.pull.uncons1)
-          case _ =>
-            Pull.done
-        }
+    def ====(that: `()`[F]) =
+      try
+        this.map eq that.map
+      catch _ =>
+        this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()`[F] = this
-
-    lazy val `null` = new `()`[F](null)
-    lazy val unit = new `()`[F](())
 
     object π:
 
@@ -438,7 +393,6 @@ package object sΠ:
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): Stream[F, `()`[F]] =
-              implicit val ord = dir.ord
               for
                 _        <- if None eq * then Stream.eval(exclude(key))
                             else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -447,38 +401,38 @@ package object sΠ:
                 _        <- if None eq * then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-                cb_fb_tk <- Stream.eval(deferred.get)
-                _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+                cb_fb_in <- Stream.eval(deferred.get)
+                _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
                 sr <- Stream.eval(SignallingRef[F].of(false))
                 it <- ( for
                           _  <- Stream.unit.repeat
                           it <- sΠ.ν[F]
-                          it <- Stream.eval {
+                          _ <- Stream.eval {
                             for
                               _        <- -.await
                               _        <- *.fold(Async[F].unit)(_.acquire)
                               enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                               _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                              cb_fb_tk <- continue.get.flatMap(_.get)
+                              cb_fb_in <- continue.get.flatMap(_.get)
                               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                              token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                              _        <- if cb_fb_in eq None then sr.set(true)
                                           else
-                                            val (cbarrier, fiber, token) = cb_fb_tk.get
-                                            (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                                            val (cbarrier, fiber, input) = cb_fb_in.get
+                                            input.set(it) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                             yield
-                              it -> token
+                              ()
                           }
                         yield
                           it
-                      ).interruptWhen(sr).through1(t)
+                      ).interruptWhen(sr)
                 _  <- Stream.eval(+.release)
               yield
-                it._1
+                it
 
             /**
               * linear replication bound output guard w/ pace
@@ -522,7 +476,6 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, Unit] =
-            implicit val ord = dir.ord
             for
               _        <- if None eq * then Stream.eval(exclude(key))
                           else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -531,9 +484,9 @@ package object sΠ:
               _        <- if None eq * then Stream.unit
                           else Stream.eval(deferred.complete(None))
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- Stream.eval(deferred.get)
-              _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- Stream.eval(deferred.get)
+              _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
               sr <- Stream.eval(SignallingRef[F].of(false))
@@ -544,16 +497,16 @@ package object sΠ:
                   enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                   _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                  cb_fb_tk <- continue.get.flatMap(_.get)
+                  cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                  token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                  _        <- if cb_fb_in eq None then sr.set(true)
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                                val (cbarrier, fiber, input) = cb_fb_in.get
+                                input.set(value) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                 yield
-                  value -> token
-              }.interruptWhen(sr).through1(t)
+                  ()
+              }.interruptWhen(sr)
               _  <- Stream.eval(+.release)
             yield
               ()
@@ -562,7 +515,7 @@ package object sΠ:
             * linear constant replication output guard w/ pace
             */
           def apply(rate: Rate, pace: FiniteDuration, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                   (using % : %[F], / : /[F], \ : \[F])
+                   (using %[F], /[F], \[F])
                    (using `}{`.stm.TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -573,7 +526,7 @@ package object sΠ:
             * linear constant replication output guard w/ code
             */
           def apply[T](rate: Rate, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(code: => F[T])(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                      (using % : %[F], / : /[F], \ : \[F])
+                      (using %[F], /[F], \[F])
                       (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -584,7 +537,7 @@ package object sΠ:
             * linear constant replication output guard w/ pace w/ code
             */
           def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F], `}{`: `}{`[F])(key: String, `)(`: `)(`)(code: => F[T])(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                      (using % : %[F], / : /[F], \ : \[F])
+                      (using %[F], /[F], \[F])
                       (using `}{`.stm.TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -650,7 +603,6 @@ package object sΠ:
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): Stream[F, Unit] =
-              implicit val ord = dir.ord
               for
                 _        <- if None eq * then Stream.eval(exclude(key))
                             else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -659,9 +611,9 @@ package object sΠ:
                 _        <- if None eq * then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-                cb_fb_tk <- Stream.eval(deferred.get)
-                _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+                cb_fb_in <- Stream.eval(deferred.get)
+                _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
                 sr <- Stream.eval(SignallingRef[F].of(false))
@@ -672,16 +624,16 @@ package object sΠ:
                     enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                     _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                     _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                    cb_fb_tk <- continue.get.flatMap(_.get)
+                    cb_fb_in <- continue.get.flatMap(_.get)
                     _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                     _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                    it       <- if cb_fb_tk eq None then sr.set(true).as(`null` -> null)
+                    _        <- if cb_fb_in eq None then sr.set(true)
                                 else
-                                  val (cbarrier, fiber, token) = cb_fb_tk.get
-                                  value.map(new `()`[F](_) -> token).flatTap(_ => fiber.join *> `}{`.><.release1 *> enable[F](key) >> cbarrier.await)
+                                  val (cbarrier, fiber, input) = cb_fb_in.get
+                                  value.map(new `()`[F](_)).flatMap(input.set(_) >> fiber.join *> `}{`.><.release1 *> enable[F](key) >> cbarrier.await)
                   yield
-                    it
-                }.interruptWhen(sr).through1(t)
+                    ()
+                }.interruptWhen(sr)
                 _  <- Stream.eval(+.release)
               yield
                 ()
@@ -728,7 +680,6 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
-            implicit val ord = dir.ord
             for
               _        <- if None eq * then Stream.eval(exclude(key))
                           else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -736,31 +687,33 @@ package object sΠ:
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               _        <- if None eq * then Stream.unit
                           else Stream.eval(deferred.complete(None))
+              result   <- Stream.eval(Ref[F].of[`()`[F]](null))
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(true), rate))))))
-              cb_fb_tk <- Stream.eval(deferred.get)
-              _        <- if None eq * then Stream.eval(?.complete(cb_fb_tk eq None) >> ?.get)
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+              cb_fb_in <- Stream.eval(deferred.get)
+              _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
               sr <- Stream.eval(SignallingRef[F].of(false))
-              it <- Stream.repeatEval {
+              _  <- Stream.repeatEval {
                 for
                   _        <- -.await
                   _        <- *.fold(Async[F].unit)(_.acquire)
                   enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                   _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                  cb_fb_tk <- continue.get.flatMap(_.get)
+                  cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                  token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                  _        <- if cb_fb_in eq None then sr.set(true)
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                                val (cbarrier, fiber, _) = cb_fb_in.get
+                                fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                 yield
-                  token
-              }.interruptWhen(sr).`zipRight s`
+                  ()
+              }.interruptWhen(sr)
               _  <- Stream.eval(+.release)
+              it <- Stream.eval(result.get)
             yield
               it
 
@@ -808,39 +761,38 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
-            implicit val ord = dir.ord
             for
               _        <- Stream.eval(exclude(key))
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- Stream.eval(deferred.get)
-              if cb_fb_tk ne None
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- Stream.eval(deferred.get)
+              if cb_fb_in ne None
               sr <- Stream.eval(SignallingRef[F].of(false))
               it <- ( for
                         _  <- Stream.unit.repeat
                         it <- sΠ.ν[F]
-                        it <- Stream.eval {
+                        _  <- Stream.eval {
                           for
                             enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                             _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                             _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                            cb_fb_tk <- continue.get.flatMap(_.get)
+                            cb_fb_in <- continue.get.flatMap(_.get)
                             _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                             _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                            token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                            _        <- if cb_fb_in eq None then sr.set(true)
                                         else
-                                          val (cbarrier, fiber, token) = cb_fb_tk.get
-                                          (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                                          val (cbarrier, fiber, input) = cb_fb_in.get
+                                          input.set(it) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                           yield
-                            it -> token
+                            ()
                         }
                       yield
                         it
-                    ).interruptWhen(sr).through1(t)
+                    ).interruptWhen(sr)
             yield
-              it._1
+              it
 
           /**
             * replication bound output guard w/ pace
@@ -884,34 +836,33 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
-          implicit val ord = dir.ord
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            if cb_fb_tk ne None
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            if cb_fb_in ne None
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                 _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                cb_fb_tk <- continue.get.flatMap(_.get)
+                cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                _        <- if cb_fb_in eq None then sr.set(true)
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                              val (cbarrier, fiber, input) = cb_fb_in.get
+                              input.set(value) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
               yield
-                value -> token
-            }.interruptWhen(sr).through1(t)
+                ()
+            }.interruptWhen(sr)
           yield
             ()
-  
+
         /**
           * constant replication output guard w/ pace
           */
@@ -1004,31 +955,30 @@ package object sΠ:
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): Stream[F, Unit] =
-            implicit val ord = dir.ord
             for
               _        <- Stream.eval(exclude(key))
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- Stream.eval(deferred.get)
-              if cb_fb_tk ne None
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- Stream.eval(deferred.get)
+              if cb_fb_in ne None
               sr <- Stream.eval(SignallingRef[F].of(false))
               _  <- Stream.repeatEval {
                 for
                   enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                   _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                  cb_fb_tk <- continue.get.flatMap(_.get)
+                  cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                  it       <- if cb_fb_tk eq None then sr.set(true).as(`null` -> null)
+                  _        <- if cb_fb_in eq None then sr.set(true)
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                value.map(new `()`[F](_) -> token).flatTap(_ => fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
+                                val (cbarrier, fiber, input) = cb_fb_in.get
+                                value.map(new `()`[F](_)).flatMap(input.set(_) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
                 yield
-                  it
-              }.interruptWhen(sr).through1(t)
+                  ()
+              }.interruptWhen(sr)
             yield
               ()
 
@@ -1074,31 +1024,32 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
-          implicit val ord = dir.ord
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+            result   <- Stream.eval(Ref[F].of[`()`[F]](null))
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map -> ord, Some(true), rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            if cb_fb_tk ne None
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            if cb_fb_in ne None
             sr <- Stream.eval(SignallingRef[F].of(false))
-            it <- Stream.repeatEval {
+            _  <- Stream.repeatEval {
               for
                 enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                 _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                cb_fb_tk <- continue.get.flatMap(_.get)
+                cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                _        <- if cb_fb_in eq None then sr.set(true)
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
-               yield
-                 token
-            }.interruptWhen(sr).`zipRight s`
+                              val (cbarrier, fiber, _) = cb_fb_in.get
+                              fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
+              yield
+                ()
+            }.interruptWhen(sr)
+            it <- Stream.eval(result.get)
           yield
             it
 
@@ -1146,17 +1097,16 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
-          implicit val ord = dir.ord
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            if cb_fb_tk ne None
-            (cbarrier, fiber, token) = cb_fb_tk.get
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            if cb_fb_in ne None
+            (cbarrier, fiber, input) = cb_fb_in.get
             it <- sΠ.ν[F]
-            _  <- Stream.emit(it -> token).evalTap(_ => fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).through1(t)
+            _  <- Stream.eval(input.set(it) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
           yield
             it
 
@@ -1202,16 +1152,15 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
-        implicit val ord = dir.ord
         for
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-          cb_fb_tk <- Stream.eval(deferred.get)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          _ <- Stream.emit(value -> token).evalTap(_ => fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).through1(t)
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+          cb_fb_in <- Stream.eval(deferred.get)
+          if cb_fb_in ne None
+          (cbarrier, fiber, input) = cb_fb_in.get
+          _  <- Stream.eval(input.set(value) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
         yield
           ()
 
@@ -1307,16 +1256,15 @@ package object sΠ:
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): Stream[F, Unit] =
-          implicit val ord = dir.ord
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            if cb_fb_tk ne None
-            (cbarrier, fiber, token) = cb_fb_tk.get
-            _        <- Stream.eval(value).map(new `()`[F](_) -> token).evalTap(_ => fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).through1(t)
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            if cb_fb_in ne None
+            (cbarrier, fiber, input) = cb_fb_in.get
+            _  <- Stream.eval(value.map(new `()`[F](_)).flatMap(input.set(_) >> fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await))
           yield
             ()
 
@@ -1362,16 +1310,17 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, `()`[F]] =
-        implicit val ord = dir.ord
         for
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
+          result   <- Stream.eval(Ref[F].of[`()`[F]](null))
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map -> ord, Some(true), rate))))))
-          cb_fb_tk <- Stream.eval(deferred.get)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          it <- Stream.eval(fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token).`zipRight s`.head
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+          cb_fb_in <- Stream.eval(deferred.get)
+          if cb_fb_in ne None
+          (cbarrier, fiber, input) = cb_fb_in.get
+          _  <- Stream.eval(fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
+          it <- Stream.eval(result.get)
         yield
           it
 
@@ -1423,35 +1372,33 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, Unit] =
-            implicit val ord = cap.ord
             for
               _        <- Stream.eval(exclude(key))
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-              cb_fb_tk <- Stream.eval(deferred.get)
-              if cb_fb_tk ne None
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+              cb_fb_in <- Stream.eval(deferred.get)
+              if cb_fb_in ne None
               sr <- Stream.eval(SignallingRef[F].of(false))
-              tks = Stream.repeatEval {
+              _  <- Stream.repeatEval {
                 for
                   _        <- -.await
                   _        <- *.fold(Async[F].unit)(_.acquire)
                   enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                   _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                  cb_fb_tk <- continue.get.flatMap(_.get)
+                  cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                  token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                  _        <- if cb_fb_in eq None then sr.set(true)
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                                val (cbarrier, fiber, _) = cb_fb_in.get
+                                fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                  yield
-                   token
+                   ()
               }.interruptWhen(sr)
-              _  <- if polarity then tks.`zipRight s` else tks.map(unit -> _).through1(t)
               _  <- Stream.eval(+.release)
             yield
               ()
@@ -1498,33 +1445,31 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
-          implicit val ord = cap.ord
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
             polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-            cb_fb_tk <- Stream.eval(deferred.get)
-            if cb_fb_tk ne None
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+            cb_fb_in <- Stream.eval(deferred.get)
+            if cb_fb_in ne None
             sr <- Stream.eval(SignallingRef[F].of(false))
-            tks = Stream.repeatEval {
+            _  <- Stream.repeatEval {
               for
                 enabled  <- %.modify { m => m -> m(^ + key).asInstanceOf[(Boolean, +[F])]._1 }
                 _        <- (Async[F].monotonic.map(_.toNanos) >>= timestamp.set).unlessA(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \()
-                cb_fb_tk <- continue.get.flatMap(_.get)
+                cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }
-                token    <- if cb_fb_tk eq None then sr.set(true).as(null)
+                _        <- if cb_fb_in eq None then sr.set(true)
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
+                              val (cbarrier, fiber, _) = cb_fb_in.get
+                              fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await
                yield
-                 token
+                 ()
             }.interruptWhen(sr)
-            _  <- if polarity then tks.`zipRight s` else tks.map(unit -> _).through1(t)
           yield
             ()
 
@@ -1570,18 +1515,16 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
-        implicit val ord = cap.ord
         for
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-          cb_fb_tk <- Stream.eval(deferred.get)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          tks = Stream.eval(fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await).as(token)
-          _  <- if polarity then tks.`zipRight s`.head else tks.map(unit -> _).through1(t)
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+          cb_fb_in <- Stream.eval(deferred.get)
+          if cb_fb_in ne None
+          (cbarrier, fiber, _) = cb_fb_in.get
+          _  <- Stream.eval(fiber.join >> `}{`.><.release1 >> enable[F](key) >> cbarrier.await)
         yield
           ()
 
@@ -1923,15 +1866,3 @@ package object sΠ:
             yield
               ()
           }
-
-  private object `Π-magic`:
-
-    case class ><[F[_]](topic: Topic[F, (`()`[F], Unique.Token)],
-                        limit: Semaphore[F])
-
-    type >*<[F[_]] = Map[Int, ><[F]]
-
-    extension [F[_]: Async, O](self: Stream[F, O])
-      inline def through1(topic: Topic[F, O])
-                         (using await: F[Unit]): Stream[F, O] =
-        self.evalMap { it => await >> topic.publish1(it).map(it -> _) }.takeWhile(_._2.isRight).map(_._1)

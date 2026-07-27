@@ -63,7 +63,7 @@ package object `Π-dump`:
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
           polarity
-        }.exit.tap { _ => if ps == null then ZIO.unit else ZIO.attemptBlocking { ps.close } }.unexit
+        }.exit.tap { _ => ZIO.unless(ps eq null)(ZIO.attemptBlocking(ps.close)) }.unexit
       case _ =>
         ZIO.succeed(null)
 
@@ -77,7 +77,7 @@ package object `Π-dump`:
         ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
         ps.println("""<?xml version="1.0" ?>""")
         ps.println(snapshot)
-      }.exit.tap { _ => if ps == null then ZIO.unit else ZIO.attemptBlocking { ps.close } }.unexit
+      }.exit.tap { _ => ZIO.unless(ps eq null)(ZIO.attemptBlocking(ps.close)) }.unexit
 
   private def exit(ks: List[String])
                   (using % : %, ! : !): UIO[Unit] =
@@ -105,15 +105,14 @@ package object `Π-dump`:
                  l1 <- p1.await
                  l2 <- if k1 == k2 then ZIO.succeed(l1) else p2.await
                  p  <- record(no, s1, e, delay, duration, l1)(k1)
-                 _  <- if snapshot then record(no, p, l1._2._2) else ZIO.unit
-                 _  <- if k1 == k2 then ZIO.unit
-                       else
-                         for
+                 _  <- record(no, p, l1._2._2).when(snapshot)
+                 _  <- { for
                            p <- record(no, s2, e, delay, duration, l2)(k2)
-                           _ <- if snapshot then record(no, p, l2._2._2) else ZIO.unit
+                           _ <- record(no, p, l2._2._2).when(snapshot)
                          yield
                            ()
-                 _ <- dump(snapshot)
+                       }.unless(k1 == k2)
+                 _  <- dump(snapshot)
                yield
                  ()
              case ks: List[String] =>

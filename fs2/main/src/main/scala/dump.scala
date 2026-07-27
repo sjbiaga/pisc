@@ -28,7 +28,7 @@
 
 import _root_.scala.collection.immutable.List
 
-import _root_.cats.effect.{ Deferred, Concurrent }
+import _root_.cats.effect.{ Concurrent, Deferred }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*

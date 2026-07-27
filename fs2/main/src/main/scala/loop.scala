@@ -36,7 +36,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
-import _root_.cats.effect.{ Concurrent, Deferred, ExitCode, Fiber, Ref, Unique }
+import _root_.cats.effect.{ Concurrent, Deferred, ExitCode, Fiber, Ref }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 import _root_.cats.effect.syntax.spawn.*
 
@@ -49,11 +49,11 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, >*< }
+  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
 
-  type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Unique.Token)
+  type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Ref[F, `()`[F]])
 
-  type +[F[_]] = ((Deferred[F, Option[<>[F]]], Ref[F, Deferred[F, Option[<>[F]]]]), ((`)(`, Ordʹ), ((>*<[F] | Object, Int), Option[Boolean], Rate)))
+  type +[F[_]] = ((Deferred[F, Option[<>[F]]], Ref[F, Deferred[F, Option[<>[F]]]]), ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)))
 
   type %[F[_]] = Ref[F, Map[String, Int | (Boolean, +[F])]]
 
@@ -76,7 +76,7 @@ package object `Π-loop`:
                        (implicit ^ : String): F[Unit] =
       m(^ + k).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None).void.whenA(m.contains(^ + k))
 
-    private def `π-discard`(discarded: => `Π-Set`[String])
+    private def `π-discard`(discarded: `Π-Set`[String])
                            (using % : %[F])
                            (implicit ^ : String): F[Unit] =
       for
@@ -130,7 +130,7 @@ package object `Π-loop`:
                              case (key1, (_, (_, (_, (e1, Some(p1), _))))) =>
                                val ^ = key1.substring(0, 36)
                                !m.exists {
-                                 case (key2, (_, (_, (_, (e2, Some(p2), _))))) if e1 == e2 && p1 != p2 =>
+                                 case (key2, (_, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                                    val ^^ = key2.substring(0, 36)
                                    ^ != ^^
                                    || {
@@ -145,12 +145,12 @@ package object `Π-loop`:
                          }
                  }
           } match
-            case (it: Map[String, ((>*<[F] | Object, Int), Option[Boolean], Rate)], exit) =>
+            case (it: Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)], exit) =>
               if it.isEmpty && !exit()
               then
                 *.acquire >> loop(~, _snapshot, `}{`)
               else
-                ∥[F](it)(`π-wand`._1)() match
+                ∥(it)(`π-wand`._1)() match
                   case Nil =>
                     *.available.flatMap { n =>
                       if n == 0L && exit()
@@ -160,34 +160,31 @@ package object `Π-loop`:
                         *.acquire >> loop(~, _snapshot, `}{`)
                     }
                   case nel =>
-                    nel.parTraverse { case (key1, key2, _delay) =>
+                    nel.parTraverse { case (key1, key2, in, _delay) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
+                                      val  ^ = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       Concurrent[F].uncancelable { _ =>
                                         for
                                           cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                          _  <- ~.acquire
-                                          tk <- if k1 == k2 then Concurrent[F].pure(null) else Concurrent[F].unique
                                           p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                           p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                           ((d1, c1), ((key, ord), _)) = p1
                                           ((d2, c2), ((keyʹ, ordʹ), _)) = p2
+                                          _  <- ~.acquire
                                           o1 <- d1.tryGet
                                           o2 <- d2.tryGet
-                                          fb <- ( if k1 == k2 then Concurrent[F].unit
-                                                  else
-                                                    (ord, ordʹ) match
-                                                      case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                        `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                      case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                        `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                ).start
-                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, tk)))).whenA(o1 eq None)
-                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, tk)))).whenA(o2 eq None).unlessA(k1 == k2)
-                                          _  <- c1.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c1 eq null)
-                                          _  <- c2.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                          fb <- { (ord, ordʹ) match
+                                                    case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                      `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                    case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                      `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                }.unlessA(k1 == k2).start
+                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, in)))).whenA(o1 eq None)
+                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, in)))).whenA(o2 eq None).unlessA(k1 == k2)
+                                          _  <- c1.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c1 eq null)
+                                          _  <- c2.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                           _  <- ~.release
                                           _  <- cb.await
                                         yield

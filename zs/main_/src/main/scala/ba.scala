@@ -32,15 +32,13 @@ package object sΠ:
 
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Clock, Duration, FiberRef, Hub, Promise, Random, Ref, Schedule, Task, UIO, ZIO }
+  import _root_.zio.{ Clock, Duration, FiberRef, Promise, Random, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
-  import _root_.zio.stream.{ ZSink,  ZStream }
+  import _root_.zio.stream.ZStream
 
   import `Π-loop`.{ <>, +, %, /, \ }
-  import `Π-magic`.*
-  export `Π-magic`.>*<
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -121,7 +119,7 @@ package object sΠ:
                         (using % : %, \ : \): Task[Unit] =
     `π-exclude`(Set.from(enabled)) *> \()
 
-  private def `π-exclude`(enabled: => `Π-Set`[String])
+  private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>
                                    val n = m(key).asInstanceOf[Int] - 1
@@ -136,7 +134,7 @@ package object sΠ:
   private def exclude(key: String)
                      (using % : %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
-    `π-exclude`(`π-elvis`(key)).when(`π-elvis`.contains(key)).unit
+    ZIO.when(`π-elvis`.contains(key))(`π-exclude`(`π-elvis`(key))).unit
 
 
   /**
@@ -146,34 +144,16 @@ package object sΠ:
 
     def map[B](f: `()` => B): ZStream[Any, Throwable, B] = flatMap(f andThen ZStream.succeed)
     def flatMap[B](f: `()` => ZStream[Any, Throwable, B]): ZStream[Any, Throwable, B] =
-      ( for
-          map <- ZStream.fromZIO {
-            for
-              local_hub   <- Hub.unbounded[(`()`, Object)]
-              local_limit <- Semaphore[Task](0)
-              s2s_hub   <- Hub.unbounded[(`()`, Object)]
-              s2s_limit <- Semaphore[Task](0)
-              p2c_hub   <- Hub.unbounded[(`()`, Object)]
-              p2c_limit <- Semaphore[Task](0)
-              accept_hub   <- Hub.unbounded[(`()`, Object)]
-              accept_limit <- Semaphore[Task](0)
-              expel_hub   <- Hub.unbounded[(`()`, Object)]
-              expel_limit <- Semaphore[Task](0)
-              merge_hub   <- Hub.unbounded[(`()`, Object)]
-              merge_limit <- Semaphore[Task](0)
-            yield
-              Map(
-                `π-local`.ord  -> ><(local_hub, local_limit),
-                `π-s2s`.ord    -> ><(s2s_hub, s2s_limit),
-                `π-p2c`.ord    -> ><(p2c_hub, p2c_limit),
-                `π-accept`.ord -> ><(accept_hub, accept_limit),
-                `π-expel`.ord  -> ><(expel_hub, expel_limit),
-                `π-merge+`.ord -> ><(merge_hub, merge_limit)
-              )
-          }
-        yield
-          f(map)
-      ).flatten
+      f {
+        Map(
+          `π-local`.ord  -> new {},
+          `π-s2s`.ord    -> new {},
+          `π-p2c`.ord    -> new {},
+          `π-accept`.ord -> new {},
+          `π-expel`.ord  -> new {},
+          `π-merge+`.ord -> new {}
+        )
+      }
 
 
   /**
@@ -204,9 +184,9 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_tk eq None) *> ?.await)
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> `π-τ`, (new {}, None, rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
@@ -218,12 +198,12 @@ package object sΠ:
                 enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                 _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_fb_tk <- continue.get.flatMap(_.await)
+                cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                _        <- if cb_fb_tk eq None then sp.succeed(())
+                _        <- if cb_fb_in eq None then sp.succeed(())
                             else
-                              val (cbarrier, fiber, _) = cb_fb_tk.get
+                              val (cbarrier, fiber, _) = cb_fb_in.get
                               fiber.join *> enable(key) *> cbarrier.await.exit
               yield
                 ()
@@ -276,21 +256,21 @@ package object sΠ:
           continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
           `)(`     <- ZStream.fromZIO(`)(`.get)
           timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-          cb_fb_tk <- ZStream.fromZIO(promise.await)
-          if cb_fb_tk ne None
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> `π-τ`, (new {}, None, rate))))))
+          cb_fb_in <- ZStream.fromZIO(promise.await)
+          if cb_fb_in ne None
           sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
           _  <- ZStream.fromZIO {
             for
               enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
               _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-              cb_fb_tk <- continue.get.flatMap(_.await)
+              cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-              _        <- if cb_fb_tk eq None then sp.succeed(())
+              _        <- if cb_fb_in eq None then sp.succeed(())
                           else
-                            val (cbarrier, fiber, _) = cb_fb_tk.get
+                            val (cbarrier, fiber, _) = cb_fb_in.get
                             fiber.join *> enable(key) *> cbarrier.await.exit
             yield
               ()
@@ -341,10 +321,10 @@ package object sΠ:
         promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
         timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> `π-τ`, (new Object -> -1, None, rate))))))
-        cb_fb_tk <- ZStream.fromZIO(promise.await)
-        if cb_fb_tk ne None
-        (cbarrier, fiber, _) = cb_fb_tk.get
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> `π-τ`, (new {}, None, rate))))))
+        cb_fb_in <- ZStream.fromZIO(promise.await)
+        if cb_fb_in ne None
+        (cbarrier, fiber, _) = cb_fb_in.get
         _        <- ZStream.fromZIO(fiber.join *> enable(key) *> cbarrier.await.exit)
       yield
         ()
@@ -380,43 +360,11 @@ package object sΠ:
       apply(rate, pace)(key, `)(`).tap(_ => code)
 
   /**
-    * events, i.e., names (hubs) and values
+    * names and values
     */
   implicit final class `()`(private val name: Any) { self =>
 
-    private def map = `()`[>*<]
-
-    private inline def h(implicit ord: Int) = map(ord).hub
-    private inline def l(implicit ord: Int) = map(ord).limit
-    private implicit def a(using Int): Task[Unit] = l.acquire
-    private def _s(using Int) = ZStream.unwrapScoped(ZStream.fromHubScoped(h).tap(_ => l.release))
-
-    extension (self: ZStream[Any, Throwable, Object])(using Int)
-      def `zipRight s`: ZStream[Any, Throwable, `()`] = `self zipRight s`(true, _s)
-      def `zipRight s.head`: ZStream[Any, Throwable, `()`] = `self zipRight s`(false, _s)
-      private def `self zipRight s`(r: Boolean,
-                                    its: ZStream[Any, Throwable, (`()`, Object)]): ZStream[Any, Throwable, `()`] =
-        ZStream.unwrapScoped {
-          self.peel(ZSink.head).map {
-            case (Some(tk), tks) =>
-              tks.filter(r, tk, its)
-            case _ =>
-              ZStream.empty
-          }
-        }
-      private def filter(r: Boolean,
-                         tk: Object,
-                         its: ZStream[Any, Throwable, (`()`, Object)]): ZStream[Any, Throwable, `()`] =
-        ZStream.unwrapScoped {
-          its.peel(ZSink.head).map {
-            case (Some((it, tkʹ)), itsʹ) if tk eq tkʹ =>
-              ZStream(it) ++ `self zipRight s`(r, ZStream.fromZIO(l.release) *> itsʹ).when(r)
-            case (Some(_), itsʹ) =>
-              filter(r, tk, itsʹ)
-            case _ =>
-              ZStream.empty
-          }
-        }
+    private def map = `()`[Map[Int, {}]]
 
     def ====(that: `()`) =
       try
@@ -426,9 +374,6 @@ package object sΠ:
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
-
-    lazy val `null` = new `()`(null)
-    lazy val unit = new `()`(())
 
     object π:
 
@@ -447,7 +392,6 @@ package object sΠ:
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): ZStream[Any, Throwable, `()`] =
-              implicit val ord = dir.ord
               for
                 discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                             else ZStream.fromZIO(?.await)
@@ -459,9 +403,9 @@ package object sΠ:
                             else ZStream.fromZIO(promise.succeed(None))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
                 timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-                cb_fb_tk <- ZStream.fromZIO(promise.await)
-                _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_tk eq None) *> ?.await)
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+                cb_fb_in <- ZStream.fromZIO(promise.await)
+                _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                             else ZStream.succeed(false)
                 _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
                 if !discard
@@ -469,29 +413,29 @@ package object sΠ:
                 it <- ( for
                           _  <- ZStream.unit.repeat(Schedule.forever)
                           it <- sΠ.ν
-                          it <- ZStream.fromZIO {
+                          _  <- ZStream.fromZIO {
                             for
                               _        <- -.await.exit
                               _        <- *.fold(ZIO.unit)(_.acquire)
                               enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                               _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                               _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                              cb_fb_tk <- continue.get.flatMap(_.await)
+                              cb_fb_in <- continue.get.flatMap(_.await)
                               _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                               _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                              token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                              _        <- if cb_fb_in eq None then sp.succeed(())
                                           else
-                                            val (cbarrier, fiber, token) = cb_fb_tk.get
-                                            (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                                            val (cbarrier, fiber, input) = cb_fb_in.get
+                                            input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                             yield
-                              it -> token
+                              ()
                            }
                          yield
                            it
-                      ).interruptWhen(sp).through1(h)
+                      ).interruptWhen(sp)
                 _  <- ZStream.fromZIO(+.release)
               yield
-                it._1
+                it
 
             /**
               * linear replication bound output guard w/ pace
@@ -535,7 +479,6 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
-            implicit val ord = dir.ord
             for
               discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
@@ -547,9 +490,9 @@ package object sΠ:
                           else ZStream.fromZIO(promise.succeed(None))
               `)(`     <- ZStream.fromZIO(`)(`.get)
               timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- ZStream.fromZIO(promise.await)
-              _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_tk eq None) *> ?.await)
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- ZStream.fromZIO(promise.await)
+              _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
               _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
               if !discard
@@ -559,18 +502,18 @@ package object sΠ:
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
-                  now      <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
+                  _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                  cb_fb_tk <- continue.get.flatMap(_.await)
+                  cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                  token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                  _        <- if cb_fb_in eq None then sp.succeed(())
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                                val (cbarrier, fiber, input) = cb_fb_in.get
+                                input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                 yield
-                  value -> token
-              }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                  ()
+              }.repeat(Schedule.forever).interruptWhen(sp)
               _  <- ZStream.fromZIO(+.release)
             yield
               ()
@@ -667,7 +610,6 @@ package object sΠ:
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): ZStream[Any, Throwable, Unit] =
-              implicit val ord = dir.ord
               for
                 discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                             else ZStream.fromZIO(?.await)
@@ -679,9 +621,9 @@ package object sΠ:
                             else ZStream.fromZIO(promise.succeed(None))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
                 timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-                cb_fb_tk <- ZStream.fromZIO(promise.await)
-                _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_tk eq None) *> ?.await)
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+                cb_fb_in <- ZStream.fromZIO(promise.await)
+                _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                             else ZStream.succeed(false)
                 _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
                 if !discard
@@ -693,16 +635,16 @@ package object sΠ:
                     enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                     _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                     _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                    cb_fb_tk <- continue.get.flatMap(_.await)
+                    cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                     _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                    it       <- if cb_fb_tk eq None then sp.succeed(()).as(`null` -> null)
+                    _        <- if cb_fb_in eq None then sp.succeed(())
                                 else
-                                  val (cbarrier, fiber, token) = cb_fb_tk.get
-                                  value.map(new `()`(_) -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+                                  val (cbarrier, fiber, input) = cb_fb_in.get
+                                  value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
                   yield
-                    it
-                }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                    ()
+                }.repeat(Schedule.forever).interruptWhen(sp)
                 _  <- ZStream.fromZIO(+.release)
               yield
                 ()
@@ -749,7 +691,6 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
-            implicit val ord = dir.ord
             for
               discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
@@ -760,32 +701,34 @@ package object sΠ:
               _        <- if None eq * then ZStream.unit
                           else ZStream.fromZIO(promise.succeed(None))
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              result   <- ZStream.fromZIO(Ref.make[`()`](null))
               timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(true), rate))))))
-              cb_fb_tk <- ZStream.fromZIO(promise.await)
-              _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_tk eq None) *> ?.await)
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+              cb_fb_in <- ZStream.fromZIO(promise.await)
+              _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
               _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
               if !discard
               sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-              it <- ZStream.fromZIO {
+              _  <- ZStream.fromZIO {
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                   _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                  cb_fb_tk <- continue.get.flatMap(_.await)
+                  cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                  token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                  _        <- if cb_fb_in eq None then sp.succeed(())
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                                val (cbarrier, fiber, _) = cb_fb_in.get
+                                fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                 yield
-                  token
-              }.repeat(Schedule.forever).interruptWhen(sp).`zipRight s`
+                  ()
+              }.repeat(Schedule.forever).interruptWhen(sp)
               _  <- ZStream.fromZIO(+.release)
+              it <- ZStream.fromZIO(result.get)
             yield
               it
 
@@ -833,40 +776,39 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
-            implicit val ord = dir.ord
             for
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
               continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
               timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- ZStream.fromZIO(promise.await)
-              if cb_fb_tk ne None
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- ZStream.fromZIO(promise.await)
+              if cb_fb_in ne None
               sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
               it <- ( for
                         _  <- ZStream.unit.repeat(Schedule.forever)
                         it <- sΠ.ν
-                        it <- ZStream.fromZIO {
+                        _  <- ZStream.fromZIO {
                           for
                             enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                             _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                             _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                            cb_fb_tk <- continue.get.flatMap(_.await)
+                            cb_fb_in <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                             _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                            token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                            _        <- if cb_fb_in eq None then sp.succeed(())
                                         else
-                                          val (cbarrier, fiber, token) = cb_fb_tk.get
-                                          (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                                          val (cbarrier, fiber, input) = cb_fb_in.get
+                                          input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                           yield
-                            it -> token
+                            ()
                         }
                       yield
                         it
-                    ).interruptWhen(sp).through1(h)
+                    ).interruptWhen(sp)
             yield
-              it._1
+              it
 
           /**
             * replication bound output guard w/ pace
@@ -910,32 +852,31 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
-          implicit val ord = dir.ord
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            if cb_fb_tk ne None
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
             _  <- ZStream.fromZIO {
               for
                 enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                 _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_fb_tk <- continue.get.flatMap(_.await)
+                cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                _        <- if cb_fb_in eq None then sp.succeed(())
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                              val (cbarrier, fiber, input) = cb_fb_in.get
+                              input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
               yield
-                value -> token
-            }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                ()
+            }.repeat(Schedule.forever).interruptWhen(sp)
           yield
             ()
 
@@ -1031,32 +972,30 @@ package object sΠ:
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
-            implicit val ord = dir.ord
             for
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
               continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
               timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-              cb_fb_tk <- ZStream.fromZIO(promise.await)
-              if cb_fb_tk ne None
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+              cb_fb_in <- ZStream.fromZIO(promise.await)
+              if cb_fb_in ne None
               sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
               _  <- ZStream.fromZIO {
                 for
                   enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                   _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
-                  _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                  cb_fb_tk <- continue.get.flatMap(_.await)
+                  cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                  it       <- if cb_fb_tk eq None then sp.succeed(()).as(`null` -> null)
+                  _        <- if cb_fb_in eq None then sp.succeed(())
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                value.map(new `()`(_) -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+                                val (cbarrier, fiber, input) = cb_fb_in.get
+                                value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
                 yield
-                  it
-              }.repeat(Schedule.forever).interruptWhen(sp).through1(h)
+                  ()
+              }.repeat(Schedule.forever).interruptWhen(sp)
             yield
               ()
 
@@ -1102,32 +1041,33 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
-          implicit val ord = dir.ord
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]].flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            result   <- ZStream.fromZIO(Ref.make[`()`](null))
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map -> ord, Some(true), rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            if cb_fb_tk ne None
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-            it <- ZStream.fromZIO {
+            _  <- ZStream.fromZIO {
               for
                 enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                 _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_fb_tk <- continue.get.flatMap(_.await)
+                cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                _        <- if cb_fb_in eq None then sp.succeed(())
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                              val (cbarrier, fiber, _) = cb_fb_in.get
+                              fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
               yield
-                token
-            }.repeat(Schedule.forever).interruptWhen(sp).`zipRight s`
+                ()
+            }.repeat(Schedule.forever).interruptWhen(sp)
+            it <- ZStream.fromZIO(result.get)
           yield
             it
 
@@ -1175,18 +1115,17 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
-          implicit val ord = dir.ord
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            if cb_fb_tk ne None
-            (cbarrier, fiber, token) = cb_fb_tk.get
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            if cb_fb_in ne None
+            (cbarrier, fiber, input) = cb_fb_in.get
             it <- sΠ.ν
-            _  <- ZStream.succeed(it -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).through1(h)
+            _  <- ZStream.fromZIO(input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
           yield
             it
 
@@ -1232,17 +1171,16 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
-        implicit val ord = dir.ord
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
           timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-          cb_fb_tk <- ZStream.fromZIO(promise.await)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          _        <- ZStream.succeed(value -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).through1(h)
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+          cb_fb_in <- ZStream.fromZIO(promise.await)
+          if cb_fb_in ne None
+          (cbarrier, fiber, input) = cb_fb_in.get
+          _  <- ZStream.fromZIO(input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
         yield
           ()
 
@@ -1338,17 +1276,16 @@ package object sΠ:
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
-          implicit val ord = dir.ord
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map -> ord, Some(false), rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            if cb_fb_tk ne None
-            (cbarrier, fiber, token) = cb_fb_tk.get
-            _        <- ZStream.fromZIO(value).map(new `()`(_) -> token).tap(_ => fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).through1(h)
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            if cb_fb_in ne None
+            (cbarrier, fiber, input) = cb_fb_in.get
+            _  <- ZStream.fromZIO(value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit))
           yield
             ()
 
@@ -1394,17 +1331,18 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, `()`] =
-        implicit val ord = dir.ord
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
+          result   <- ZStream.fromZIO(Ref.make[`()`](null))
           timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map -> ord, Some(true), rate))))))
-          cb_fb_tk <- ZStream.fromZIO(promise.await)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          it <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token).`zipRight s.head`
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))))
+          cb_fb_in <- ZStream.fromZIO(promise.await)
+          if cb_fb_in ne None
+          (cbarrier, fiber, _) = cb_fb_in.get
+          _  <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+          it <- ZStream.fromZIO(result.get)
         yield
           it
 
@@ -1456,7 +1394,6 @@ package object sΠ:
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
-            implicit val ord = cap.ord
             for
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
@@ -1464,28 +1401,27 @@ package object sΠ:
               polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               `)(`     <- ZStream.fromZIO(`)(`.get)
               timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-              cb_fb_tk <- ZStream.fromZIO(promise.await)
-              if cb_fb_tk ne None
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+              cb_fb_in <- ZStream.fromZIO(promise.await)
+              if cb_fb_in ne None
               sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-              tks = ZStream.fromZIO {
+              _  <- ZStream.fromZIO {
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                   _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                   _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                  cb_fb_tk <- continue.get.flatMap(_.await)
+                  cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                   _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                  token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                  _        <- if cb_fb_in eq None then sp.succeed(())
                               else
-                                val (cbarrier, fiber, token) = cb_fb_tk.get
-                                (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                                val (cbarrier, fiber, _) = cb_fb_in.get
+                                fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                  yield
-                   token
+                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
-              _  <- if polarity then tks.`zipRight s` else tks.map(unit -> _).through1(h)
               _  <- ZStream.fromZIO(+.release)
             yield
               ()
@@ -1532,7 +1468,6 @@ package object sΠ:
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
-          implicit val ord = cap.ord
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
@@ -1540,26 +1475,25 @@ package object sΠ:
             polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-            cb_fb_tk <- ZStream.fromZIO(promise.await)
-            if cb_fb_tk ne None
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (timestamp, (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+            cb_fb_in <- ZStream.fromZIO(promise.await)
+            if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Throwable, Unit])
-            tks = ZStream.fromZIO {
+            _  <- ZStream.fromZIO {
               for
                 enabled  <- %.modify { m => m(^ + key).asInstanceOf[(Boolean, +)]._1 -> m }
                 _        <- Clock.nanoTime.flatMap(timestamp.set).unless(enabled)
                 _        <- %.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \()
-                cb_fb_tk <- continue.get.flatMap(_.await)
+                cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Throwable, Option[<>]].flatMap(continue.set)
                 _        <- %.update { m => m + (^ + key -> (false, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }
-                token    <- if cb_fb_tk eq None then sp.succeed(()).as(null)
+                _        <- if cb_fb_in eq None then sp.succeed(())
                             else
-                              val (cbarrier, fiber, token) = cb_fb_tk.get
-                              (fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
+                              val (cbarrier, fiber, _) = cb_fb_in.get
+                              fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
                yield
-                 token
+                 ()
             }.interruptWhen(sp)
-            _  <- if polarity then tks.`zipRight s` else tks.map(unit -> _).through1(h)
           yield
             ()
 
@@ -1605,19 +1539,17 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
-        implicit val ord = cap.ord
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Throwable, Option[<>]])
           polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
           `)(`     <- ZStream.fromZIO(`)(`.get)
           timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> cap, (map -> ord, Some(polarity), rate))))))
-          cb_fb_tk <- ZStream.fromZIO(promise.await)
-          if cb_fb_tk ne None
-          (cbarrier, fiber, token) = cb_fb_tk.get
-          tks = ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit).as(token)
-          _  <- if polarity then tks.`zipRight s.head` else tks.map(unit -> _).through1(h)
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (timestamp, (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))))
+          cb_fb_in <- ZStream.fromZIO(promise.await)
+          if cb_fb_in ne None
+          (cbarrier, fiber, _) = cb_fb_in.get
+          _  <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
         yield
           ()
 
@@ -1952,16 +1884,3 @@ package object sΠ:
             yield
               ()
           ).commit
-
-
-  private object `Π-magic`:
-
-    case class ><(hub: Hub[(`()`, Object)],
-                  limit: Semaphore[Task])
-
-    type >*< = Map[Int, ><]
-
-    extension [O](self: ZStream[Any, Throwable, O])
-      def through1(hub: Hub[O])
-                  (using await: Task[Unit]): ZStream[Any, Throwable, O] =
-        self.mapZIO { it => await *> hub.publish(it).map(it -> _) }.takeWhile(_._2).map(_._1)

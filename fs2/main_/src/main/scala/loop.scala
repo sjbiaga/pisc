@@ -33,10 +33,11 @@ import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
+import _root_.cats.syntax.semigroupal.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
-import _root_.cats.effect.{ Deferred, ExitCode, Fiber, Ref, Temporal, Unique }
+import _root_.cats.effect.{ Deferred, ExitCode, Fiber, Ref, Temporal }
 import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
 import _root_.cats.effect.syntax.spawn.*
 
@@ -46,11 +47,11 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, >*< }
+  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
 
-  type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Unique.Token)
+  type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Ref[F, `()`[F]])
 
-  type +[F[_]] = ((Deferred[F, Option[<>[F]]], Ref[F, Deferred[F, Option[<>[F]]]]), (Ref[F, Long], ((`)(`, Ordʹ), ((>*<[F] | Object, Int), Option[Boolean], Rate))))
+  type +[F[_]] = ((Deferred[F, Option[<>[F]]], Ref[F, Deferred[F, Option[<>[F]]]]), (Ref[F, Long], ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate))))
 
   type %[F[_]] = Ref[F, Map[String, Int | (Boolean, +[F])]]
 
@@ -73,7 +74,7 @@ package object `Π-loop`:
                        (implicit ^ : String): F[Unit] =
       m(^ + k).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None).void.whenA(m.contains(^ + k))
 
-    private def `π-discard`(discarded: => `Π-Set`[String])
+    private def `π-discard`(discarded: `Π-Set`[String])
                            (using % : %[F])
                            (implicit ^ : String): F[Unit] =
       for
@@ -110,7 +111,7 @@ package object `Π-loop`:
                              case (key1, (_, (_, (_, (_, (e1, Some(p1), _)))))) =>
                                val ^ = key1.substring(0, 36)
                                !m.exists {
-                                 case (key2, (_, (_, (_, (_, (e2, Some(p2), _)))))) if e1 == e2 && p1 != p2 =>
+                                 case (key2, (_, (_, (_, (_, (e2, Some(p2), _)))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                                    val ^^ = key2.substring(0, 36)
                                    ^ != ^^
                                    || {
@@ -125,12 +126,12 @@ package object `Π-loop`:
                          }
                  }
           } match
-            case (it: Map[String, ((>*<[F] | Object, Int), Option[Boolean], Rate)], exit) =>
+            case (it: Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)], exit) =>
               if it.isEmpty && !exit()
               then
                 *.acquire >> loop(~, snapshot, `}{`)
               else
-                ∥[F](it)(`π-wand`._1)() match
+                ∥(it)(`π-wand`._1)() match
                   case Nil =>
                     *.available.flatMap { n =>
                       if n == 0L && exit()
@@ -140,16 +141,14 @@ package object `Π-loop`:
                         *.acquire >> loop(~, snapshot, `}{`)
                     }
                   case nel =>
-                    nel.parTraverse { case (key1, key2, (delay, duration)) =>
+                    nel.parTraverse { case (key1, key2, in, (delay, duration)) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
+                                      val  ^ = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       Temporal[F].uncancelable { _ =>
                                         for
                                           cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                          _  <- ~.acquire
-                                          tk <- if k1 == k2 then Temporal[F].pure(null) else Temporal[F].unique
                                           sd1 <- Deferred[F, (String, (String, String))]
                                           sd2 <- Deferred[F, (String, (String, String))]
                                           sD <- Deferred[F, String]
@@ -157,56 +156,49 @@ package object `Π-loop`:
                                           p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                           ((d1, c1), (ts1, ((key, ord), _))) = p1
                                           ((d2, c2), (ts2, ((keyʹ, ordʹ), _))) = p2
+                                          _  <- ~.acquire
                                           o1 <- d1.tryGet
                                           o2 <- d2.tryGet
                                           fb <- ( for
                                                     (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
                                                     (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                                    _            <- ( if k1 == k2 then
-                                                                        `}{`.stm.commit {
-                                                                          for
-                                                                            _ <- `2`.acquire
-                                                                            _ <- `2`.acquire
-                                                                          yield
-                                                                            ()
-                                                                        }
-                                                                      else
-                                                                        (ord, ordʹ) match
-                                                                          case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                            `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                          case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                            `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                    )
+                                                    _            <- `}{`.stm.commit {
+                                                                      for
+                                                                        _ <- `2`.acquire
+                                                                        _ <- `2`.acquire
+                                                                      yield
+                                                                        ()
+                                                                    }.whenA(k1 == k2)
+                                                    _            <- { (ord, ordʹ) match
+                                                                        case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                          `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                        case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                          `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                                    }.unlessA(k1 == k2)
                                                     elabel       <- `}{`.stm.commit { `}{`.`}{`(key, snapshot) }
                                                     (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
                                                     _            <- sd1.complete(slabel -> elabel)
-                                                    _            <- if k1 == k2 then Temporal[F].unit
-                                                                    else sd2.complete(slabelʹ -> (elabelʹ -> elabel._2)).void
-                                                    _            <- ( if k1 == k2 then
-                                                                        `}{`.stm.commit {
-                                                                          for
-                                                                            _ <- `2`.release
-                                                                            _ <- `2`.release
-                                                                          yield
-                                                                            ()
-                                                                        }
-                                                                      else
-                                                                        Temporal[F].unit
-                                                                    )
+                                                    _            <- sd2.complete(slabelʹ -> (elabelʹ -> elabel._2)).unlessA(k1 == k2)
+                                                    _            <- `}{`.stm.commit {
+                                                                      for
+                                                                        _ <- `2`.release
+                                                                        _ <- `2`.release
+                                                                      yield
+                                                                        ()
+                                                                    }.whenA(k1 == k2)
                                                   yield
                                                     ()
                                                 ).start
-                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, tk)))).whenA(o1 eq None)
-                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, tk)))).whenA(o2 eq None).unlessA(k1 == k2)
-                                          _  <- c1.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c1 eq null)
-                                          _  <- c2.get.flatTap(_.complete(Some((cb, fb, tk)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, in)))).whenA(o1 eq None)
+                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, in)))).whenA(o2 eq None).unlessA(k1 == k2)
+                                          _  <- c1.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c1 eq null)
+                                          _  <- c2.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                           _  <- ~.release
                                           _  <- cb.await
                                           no <- &.updateAndGet(_ + 1)
+                                          ss <- ts1.get product ts2.get
                                           now <- Temporal[F].monotonic.map(_.toNanos)
-                                          s1 <- ts1.get
-                                          s2 <- ts2.get
-                                          _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration), (sd1, sd2)))
+                                          _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (sd1, sd2)))
                                         yield
                                           ()
                                       }
