@@ -31,6 +31,7 @@ import _root_.java.io.{ PrintStream, FileOutputStream }
 import _root_.scala.collection.immutable.List
 
 import _root_.cats.instances.list.*
+import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.traverse.*
 
@@ -66,7 +67,7 @@ package object `Π-dump`:
                     number, started, ended, name, polarity,
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, fn)
-        }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
+        }.void.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
       case _ =>
         IO.unit
 
@@ -94,8 +95,7 @@ package object `Π-dump`:
              case (no, ((s1, s2), e), (k1, k2), (delay, duration)) =>
                for
                  _ <- record(no, s1, e, delay, duration)(k1)
-                 _ <- if k1 == k2 then IO.unit
-                      else record(no, s2, e, delay, duration)(k2)
+                 _ <- record(no, s2, e, delay, duration)(k2).unlessA(k1 == k2)
                  _ <- IO.cede >> dump
                yield
                  ()

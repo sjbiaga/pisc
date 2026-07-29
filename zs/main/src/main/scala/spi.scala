@@ -31,7 +31,7 @@ package object sΠ:
   import _root_.scala.collection.immutable.{ Map, Set }
 
   import _root_.cats.effect.std.Semaphore
-  import _root_.zio.interop.catz.concurrentInstance
+
   import _root_.zio.{ Duration, Promise, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stream.ZStream
@@ -465,7 +465,11 @@ package object sΠ:
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
-            apply[S](1)(rate, ZIO.attempt(value))(key)(?, -, *, +)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(rate, it)(key)(?, -, *, +)
+              case _ =>
+                apply[S](1)(rate, ZIO.attempt(value))(key)(?, -, *, +)
 
           /**
             * linear variable replication output guard w/ pace
@@ -476,7 +480,11 @@ package object sΠ:
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
-            apply[S](2)(rate, pace, ZIO.attempt(value))(key)(?, -, *, +)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(rate, pace, it)(key)(?, -, *, +)
+              case _ =>
+                apply[S](2)(rate, pace, ZIO.attempt(value))(key)(?, -, *, +)
 
           /**
             * linear variable replication output guard w/ code
@@ -487,7 +495,11 @@ package object sΠ:
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
-            apply[S, T](3)(rate, ZIO.attempt(value))(key)(code)(?, -, *, +)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(rate, it)(key)(code)(?, -, *, +)
+              case _ =>
+                apply[S, T](3)(rate, ZIO.attempt(value))(key)(code)(?, -, *, +)
 
           /**
             * linear variable replication output guard w/ pace w/ code
@@ -498,7 +510,11 @@ package object sΠ:
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
-            apply[S, T](4)(rate, pace, ZIO.attempt(value))(key)(code)(?, -, *, +)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(rate, pace, it)(key)(code)(?, -, *, +)
+              case _ =>
+                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key)(code)(?, -, *, +)
 
           /**
             * linear variable replication output guard
@@ -791,7 +807,11 @@ package object sΠ:
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(rate, ZIO.attempt(value))(key)
+          value match
+            case it: `()` =>
+              self.`(!)`(rate, it)(key)
+            case _ =>
+              apply[S](1)(rate, ZIO.attempt(value))(key)
 
         /**
           * variable replication output guard w/ pace
@@ -802,7 +822,11 @@ package object sΠ:
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](2)(rate, pace, ZIO.attempt(value))(key)
+          value match
+            case it: `()` =>
+              self.`(!)`(rate, pace, it)(key)
+            case _ =>
+              apply[S](2)(rate, pace, ZIO.attempt(value))(key)
 
         /**
           * variable replication output guard w/ code
@@ -813,7 +837,11 @@ package object sΠ:
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S, T](3)(rate, ZIO.attempt(value))(key)(code)
+          value match
+            case it: `()` =>
+              self.`(!)`(rate, it)(key)(code)
+            case _ =>
+              apply[S, T](3)(rate, ZIO.attempt(value))(key)(code)
 
         /**
           * variable replication output guard w/ pace w/ code
@@ -824,7 +852,11 @@ package object sΠ:
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S, T](4)(rate, pace, ZIO.attempt(value))(key)(code)
+          value match
+            case it: `()` =>
+              self.`(!)`(rate, pace, it)(key)(code)
+            case _ =>
+              apply[S, T](4)(rate, pace, ZIO.attempt(value))(key)(code)
 
         /**
           * variable replication output guard
@@ -1064,7 +1096,11 @@ package object sΠ:
                          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                    `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                    ^ : String): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(rate, ZIO.attempt(value))(key)
+        value match
+          case it: `()` =>
+            self(rate, it)(key)
+          case _ =>
+            apply[S](1)(rate, ZIO.attempt(value))(key)
 
       /**
         * variable output prefix w/ pace
@@ -1075,7 +1111,11 @@ package object sΠ:
                          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                    `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                    ^ : String): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(rate, value)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        value match
+          case it: `()` =>
+            self(rate, pace, it)(key)
+          case _ =>
+            apply[S](1)(rate, value)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
 
       /**
         * variable output prefix w/ code
@@ -1086,7 +1126,11 @@ package object sΠ:
                             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                       ^ : String): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(rate, value)(key).tap(_ => code)
+        value match
+          case it: `()` =>
+            self(rate, it)(key)(code)
+          case _ =>
+            apply[S](1)(rate, value)(key).tap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
@@ -1097,7 +1141,11 @@ package object sΠ:
                             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                       `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                       ^ : String): ZStream[Any, Throwable, Unit] =
-        apply[S](2)(rate, pace, value)(key).tap(_ => code)
+        value match
+          case it: `()` =>
+            self(rate, pace, it)(key)(code)
+          case _ =>
+            apply[S](2)(rate, pace, value)(key).tap(_ => code)
 
       /**
         * variable output prefix

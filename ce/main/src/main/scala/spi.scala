@@ -32,12 +32,11 @@ package object sΠ:
 
   import _root_.cats.syntax.applicative.*
 
-  import _root_.cats.effect.{ IO, Deferred, Ref }
+  import _root_.cats.effect.{ IO, Deferred }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Queue, Supervisor }
+  import _root_.cats.effect.std.Supervisor
 
   import `Π-loop`.{ <>, %, /, \ }
-  export `Π-magic`.><
   import `Π-stats`.Rate
 
 
@@ -88,12 +87,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] =
-      ( for
-          q <- Queue.unbounded[IO, Any]
-        yield
-          f(q)
-      ).flatten
+    def flatMap[B](f: `()` => IO[B]): IO[B] = f(new {})
 
 
   /**
@@ -108,11 +102,11 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (new Object, None, rate)))
+        _        <- /.offer(^ -> key -> (deferred -> (new {}, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
       yield
@@ -123,16 +117,56 @@ package object sΠ:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def q = `()`[><]
-
-    def ====(that: `()`) =
-      try
-        this.q eq that.q
-      catch _ =>
-        this.name == that.name
+    def ====(that: `()`) = this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => S)(key: String)
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key)
+        case _ =>
+          apply[S](false)(rate, IO.delay(value))(key)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => S)(key: String)(code: => IO[Any])
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key)(code)
+        case _ =>
+          apply[S](true)(rate, IO.delay(value))(key)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => IO[S])(key: String)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
 
     /**
       * negative prefix i.e. output
@@ -144,12 +178,12 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (q, Some(false), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        _        <- ><(value.name)(q)
+         b, f, i) = opt.get
+        _        <- i.set(value)
         _        <- b.await
         _        <- f.join
       yield
@@ -165,14 +199,15 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (q, Some(false), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        _        <- ><(value.name)(q)(code)
+         b, f, i) = opt.get
+        _        <- i.set(value)
         _        <- b.await
         _        <- f.join
+        _        <- exec(code)
       yield
         delay
 
@@ -186,16 +221,17 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (q, Some(true), rate)))
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        name     <- ><()(q)
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
+        name     <- result.get
       yield
-        new `()`(name) -> delay
+        name -> delay
 
     /**
       * positive prefix i.e. input
@@ -207,34 +243,21 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (q, Some(true), rate)))
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        name     <- ><()(q)(code)
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
+        name     <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
       yield
         new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
 
-  private object `Π-magic`:
+  private object `()`:
 
-    type >< = Queue[IO, Any]
-
-    object >< :
-
-      inline def apply(name: Any)(`>Q`: ><): IO[Unit] =
-        `>Q`.offer(name)
-
-      inline def apply(name: Any)(`>Q`: ><)(code: => IO[Any]): IO[Unit] =
-        `>Q`.offer(name) <* exec(code)
-
-      inline def apply()(`<Q`: ><): IO[Any] =
-        `<Q`.take
-
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
-        `<Q`.take.flatMap { case it: T => (code andThen exec)(it) }
+     val `null` = new `()`(null)

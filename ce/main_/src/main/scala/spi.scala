@@ -32,12 +32,11 @@ package object sΠ:
 
   import _root_.cats.syntax.applicative.*
 
-  import _root_.cats.effect.{ IO, Clock, Deferred, Ref }
+  import _root_.cats.effect.{ IO, Clock, Deferred }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Queue, Supervisor }
 
   import `Π-loop`.{ <>, %, /, \ }
-  export `Π-magic`.><
   import `Π-stats`.Rate
 
 
@@ -88,12 +87,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] =
-      ( for
-          q <- Queue.unbounded[IO, Any]
-        yield
-          f(q)
-      ).flatten
+    def flatMap[B](f: `()` => IO[B]): IO[B] = f(new {})
 
 
   /**
@@ -106,16 +100,16 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[<>]]
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (new Object, None, rate))))
-        opt       <- deferred.get
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _        <- /.offer(^ -> key -> (deferred -> (timestamp, (new {}, None, rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)     = opt.get
-        _         <- b.await
-        _         <- f.join
+         b, f, _) = opt.get
+        _        <- b.await
+        _        <- f.join
       yield
         delay
 
@@ -124,16 +118,56 @@ package object sΠ:
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def q = `()`[><]
-
-    def ====(that: `()`) =
-      try
-        this.q eq that.q
-      catch _ =>
-        this.name == that.name
+    def ====(that: `()`) = this.name == that.name
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => S)(key: String)
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key)
+        case _ =>
+          apply(false)(rate, IO.delay(value))(key)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => S)(key: String)(code: => IO[Any])
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key)(code)
+        case _ =>
+          apply(true)(rate, IO.delay(value))(key)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => IO[S])(key: String)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
 
     /**
       * negative prefix i.e. output
@@ -143,17 +177,17 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[<>]]
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (q, Some(false), rate))))
-        opt       <- deferred.get
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)     = opt.get
-        _         <- ><(value.name)(q)
-        _         <- b.await
-        _         <- f.join
+         b, f, i) = opt.get
+        _        <- i.set(value)
+        _        <- b.await
+        _        <- f.join
       yield
         delay
 
@@ -165,17 +199,18 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[<>]]
-        opt       <- deferred.get
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (q, Some(false), rate))))
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)     = opt.get
-        _         <- ><(value.name)(q)(code)
-        _         <- b.await
-        _         <- f.join
+         b, f, i) = opt.get
+        _        <- i.set(value)
+        _        <- b.await
+        _        <- f.join
+        _        <- exec(code)
       yield
         delay
 
@@ -187,19 +222,20 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[<>]]
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (q, Some(true), rate))))
-        opt       <- deferred.get
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)     = opt.get
-        name      <- ><()(q)
-        _         <- b.await
-        _         <- f.join
+         b, f, _) = opt.get
+        _        <- b.await
+        _        <- f.join
+        name     <- result.get
       yield
-        new `()`(name) -> delay
+        name -> delay
 
     /**
       * positive prefix i.e. input
@@ -209,37 +245,24 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
-        _         <- exclude(key)
-        deferred  <- Deferred[IO, Option[<>]]
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
         timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (q, Some(true), rate))))
-        opt       <- deferred.get
-        _         <- if opt eq None then IO.canceled else IO.unit
+        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)     = opt.get
-        name      <- ><()(q)(code)
-        _         <- b.await
-        _         <- f.join
+         b, f, _) = opt.get
+        _        <- b.await
+        _        <- f.join
+        name     <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
       yield
         new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
 
-  private object `Π-magic`:
+  private object `()`:
 
-    type >< = Queue[IO, Any]
-
-    object >< :
-
-      inline def apply(name: Any)(`>Q`: ><): IO[Unit] =
-        `>Q`.offer(name)
-
-      inline def apply(name: Any)(`>Q`: ><)(code: => IO[Any]): IO[Unit] =
-        `>Q`.offer(name) <* exec(code)
-
-      inline def apply()(`<Q`: ><): IO[Any] =
-        `<Q`.take
-
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
-        `<Q`.take.flatMap { case it: T => (code andThen exec)(it) }
+     val `null` = new `()`(null)

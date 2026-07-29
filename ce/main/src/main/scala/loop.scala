@@ -46,11 +46,11 @@ package object `Π-loop`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, >< }
+  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
-  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit])
+  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
-  type + = (Deferred[IO, Option[<>]], (>< | Object, Option[Boolean], Rate))
+  type + = (Deferred[IO, Option[<>]], ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -136,7 +136,7 @@ package object `Π-loop`:
                            case (key1, (_, (e1, Some(p1), _))) =>
                              val ^ = key1.substring(0, 36)
                              !m.exists {
-                               case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
+                               case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                                  val ^^ = key2.substring(0, 36)
                                  ^ != ^^
                                  || {
@@ -151,7 +151,7 @@ package object `Π-loop`:
                        }
                }
         } match
-          case (it: Map[String, (>< | Object, Option[Boolean], Rate)], exit) =>
+          case (it: Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)], exit) =>
             if it.isEmpty && !exit()
             then
               *.acquire >> loop(parallelism, started)
@@ -167,10 +167,10 @@ package object `Π-loop`:
                   }
                 case nel =>
                   Semaphore[IO](parallelism).flatMap { sem =>
-                    nel.parTraverse { case (key1, key2, delay) =>
+                    nel.parTraverse { case (key1, key2, in, delay) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
+                                      val  ^ = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       IO.uncancelable { _ =>
                                         for
@@ -194,8 +194,8 @@ package object `Π-loop`:
                                                   yield
                                                     ()
                                                 ).start
-                                          _  <- d1.complete(Some((delay, --, fb)))
-                                          _  <- d2.complete(Some((delay, --, fb))).unlessA(k1 == k2)
+                                          _  <- d1.complete(Some((delay, --, fb, in)))
+                                          _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
                                         yield
                                           ()
                                       }
