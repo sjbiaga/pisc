@@ -28,6 +28,8 @@
 
 package object Π:
 
+  import _root_.cats.instances.seq.*
+  import _root_.cats.syntax.traverse.*
   import _root_.cats.effect.{ Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Queue, Supervisor }
@@ -86,6 +88,40 @@ package object Π:
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(value: => S*)(using DummyImplicit): IO[Option[Unit]] =
+      value.headOption match
+        case None => IO.pure(Some(()))
+        case Some(_: `()`) =>
+          apply(value.map(_.asInstanceOf[`()`])*)
+        case _ =>
+          apply(false)(value.map(IO.delay)*)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(value: => S*)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
+      value.headOption match
+        case None => IO.pure(Some(()))
+        case Some(_: `()`) =>
+          apply(value.map(_.asInstanceOf[`()`])*)(code)
+        case _ =>
+          apply(true)(value.map(IO.delay)*)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(value: => IO[S]*): IO[Option[Unit]] =
+      value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(value: => IO[S]*)(code: => IO[Any]): IO[Option[Unit]] =
+      value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)(code))
 
     /**
       * negative prefix i.e. output

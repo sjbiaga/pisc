@@ -271,26 +271,46 @@ package object Π:
           /**
             * linear variable replication output guard
             */
-          def apply[S](_1: 1)(value: () => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            apply[S](1)(value.map { it => Async[F].delay(it()) }*)(-, *, +)
+          def apply[S](_1: 1)(value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            value.headOption match
+              case None => Stream.empty
+              case Some(_: `()`[F]) =>
+                self.`(!)`.`(+)`(1)(value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
+              case _ =>
+                apply[S](1)(value.map(Async[F].delay)*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            apply[S](2)(pace, value.map { it => Async[F].delay(it()) }*)(-, *, +)
+          def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            value.headOption match
+              case None => Stream.empty
+              case Some(_: `()`[F]) =>
+                self.`(!)`.`(+)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
+              case _ =>
+                apply[S](2)(pace, value.map(Async[F].delay)*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](_3: 3)(value: () => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            apply[S, T](3)(value.map { it => Async[F].delay(it()) }*)(code)(-, *, +)
+          def apply[S, T](_3: 3)(value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            value.headOption match
+              case None => Stream.empty
+              case Some(_: `()`[F]) =>
+                self.`(!)`.`(+)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
+              case _ =>
+                apply[S, T](3)(value.map(Async[F].delay)*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            apply[S, T](4)(pace, value.map { it => Async[F].delay(it()) }*)(code)(-, *, +)
+          def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            value.headOption match
+              case None => Stream.empty
+              case Some(_: `()`[F]) =>
+                self.`(!)`.`(+)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
+              case _ =>
+                apply[S, T](4)(pace, value.map(Async[F].delay)*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard
@@ -429,26 +449,46 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: () => S*)(using DummyImplicit): Stream[F, Unit] =
-          apply[S](1)(value.map { it => Async[F].delay(it()) }*)
+        def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
+          value.headOption match
+            case None => Stream.empty
+            case Some(_: `()`[F]) =>
+              self.`(!)`(1)(value.map(_.asInstanceOf[`()`[F]]*))
+            case _ =>
+              apply[S](1)(value.map(Async[F].delay)*)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(using DummyImplicit): Stream[F, Unit] =
-          apply[S](2)(pace, value.map { it => Async[F].delay(it()) }*)
+        def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
+          value.headOption match
+            case None => Stream.empty
+            case Some(_: `()`[F]) =>
+              self.`(!)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+            case _ =>
+              apply[S](2)(pace, value.map(Async[F].delay)*)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-          apply[S](1)(value*).evalTap(_ => code)
+        def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          value.headOption match
+            case None => Stream.empty
+            case Some(_: `()`[F]) =>
+              self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+            case _ =>
+              apply[S](1)(value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-          apply[S](2)(pace, value*).evalTap(_ => code)
+        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          value.headOption match
+            case None => Stream.empty
+            case Some(_: `()`[F]) =>
+              self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+            case _ =>
+              apply[S](2)(pace, value*).evalTap(_ => code)
 
         /**
           * variable replication output guard
@@ -584,26 +624,46 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: () => S*)(using DummyImplicit): Stream[F, Unit] =
-        apply[S](1)(value.map { it => Async[F].delay(it()) }*)
+      def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
+        value.headOption match
+          case None => Stream.empty
+          case Some(_: `()`[F]) =>
+            self(1)(value.map(_.asInstanceOf[`()`[F]]*))
+          case _ =>
+            apply[S](1)(value.map(Async[F].delay)*)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: FiniteDuration, value: () => S*)(using DummyImplicit): Stream[F, Unit] =
-        apply[S](1)(value*) <* Stream.sleep(pace)
+      def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
+        value.headOption match
+          case None => Stream.empty
+          case Some(_: `()`[F]) =>
+            self(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+          case _ =>
+            apply[S](1)(value*) <* Stream.sleep(pace)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-        apply[S](1)(value*).evalTap(_ => code)
+      def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        value.headOption match
+          case None => Stream.empty
+          case Some(_: `()`[F]) =>
+            self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+          case _ =>
+            apply[S](1)(value*).evalTap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: FiniteDuration, value: () => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-        apply[S](2)(pace, value*).evalTap(_ => code)
+      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        value.headOption match
+          case None => Stream.empty
+          case Some(_: `()`[F]) =>
+            self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+          case _ =>
+            apply[S](2)(pace, value*).evalTap(_ => code)
 
       /**
         * variable output prefix
