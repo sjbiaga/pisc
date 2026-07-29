@@ -261,25 +261,41 @@ package object Π:
             * linear variable replication output guard
             */
           def apply[S](_1: 1)(value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            apply[S](1)(ZIO.attempt(value))(-, * ,+)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(it)(-, * ,+)
+              case _ =>
+                apply[S](1)(ZIO.attempt(value))(-, * ,+)
 
           /**
             * linear variable replication output guard w/ pace
             */
           def apply[S](_2: 2)(pace: Duration, value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            apply[S](2)(pace, ZIO.attempt(value))(-, * ,+)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(pace, it)(-, * ,+)
+              case _ =>
+                apply[S](2)(pace, ZIO.attempt(value))(-, * ,+)
 
           /**
             * linear variable replication output guard w/ code
             */
           def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            apply[S, T](3)(ZIO.attempt(value))(code)(-, * ,+)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(it)(code)(-, * ,+)
+              case _ =>
+                apply[S, T](3)(ZIO.attempt(value))(code)(-, * ,+)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
           def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            apply[S, T](4)(pace, ZIO.attempt(value))(code)(-, * ,+)
+            value match
+              case it: `()` =>
+                self.`(!)`.`(+)`(pace, it)(code)(-, * ,+)
+              case _ =>
+                apply[S, T](4)(pace, ZIO.attempt(value))(code)(-, * ,+)
 
           /**
             * linear variable replication output guard
@@ -419,25 +435,41 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(ZIO.attempt(value))
+          value match
+            case it: `()` =>
+              self.`(!)`(it)
+            case _ =>
+              apply[S](1)(ZIO.attempt(value))
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          apply[S](2)(pace, ZIO.attempt(value))
+          value match
+            case it: `()` =>
+              self.`(!)`(pace, it)
+            case _ =>
+              apply[S](2)(pace, ZIO.attempt(value))
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(value).tap(_ => code)
+          value match
+            case it: `()` =>
+              self.`(!)`(it)(code)
+            case _ =>
+              apply[S](1)(value).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          apply[S](2)(pace, value).tap(_ => code)
+          value match
+            case it: `()` =>
+              self.`(!)`(pace, it)(code)
+            case _ =>
+              apply[S](2)(pace, value).tap(_ => code)
 
         /**
           * variable replication output guard
@@ -574,25 +606,41 @@ package object Π:
         * variable output prefix
         */
       def apply[S](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(ZIO.attempt(value))
+        value match
+          case it: `()` =>
+            self(it)
+          case _ =>
+            apply[S](1)(ZIO.attempt(value))
 
       /**
         * variable output prefix w/ pace
         */
       def apply[S](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(value) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        value match
+          case it: `()` =>
+            self(pace, it)
+          case _ =>
+            apply[S](1)(value) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        apply[S](1)(value).tap(_ => code)
+        value match
+          case it: `()` =>
+            self(it)(code)
+          case _ =>
+            apply[S](1)(value).tap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
       def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        apply[S](2)(pace, value).tap(_ => code)
+        value match
+          case it: `()` =>
+            self(pace, it)(code)
+          case _ =>
+            apply[S](2)(pace, value).tap(_ => code)
 
       /**
         * variable output prefix

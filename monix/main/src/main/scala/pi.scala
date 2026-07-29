@@ -232,25 +232,41 @@ package object Π:
           * variable replication output guard
           */
         def apply[S](_1: 1)(value: => S)(using DummyImplicit): Iterant[F, Unit] =
-          apply[S](1)(Concurrent[F].delay(value))
+          value match
+            case it: `()`[F] =>
+              self.`(!)`(it)
+            case _ =>
+              apply[S](1)(Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ pace
           */
         def apply[S](_2: 2)(pace: FiniteDuration, value: => S)(using DummyImplicit): Iterant[F, Unit] =
-          apply[S](2)(pace, Concurrent[F].delay(value))
+          value match
+            case it: `()`[F] =>
+              self.`(!)`(pace, it)
+            case _ =>
+              apply[S](2)(pace, Concurrent[F].delay(value))
 
         /**
           * variable replication output guard w/ code
           */
         def apply[S, T](_3: 3)(value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-          apply[S](1)(value).tapEval(_ => code)
+          value match
+            case it: `()`[F] =>
+              self.`(!)`(it)(code)
+            case _ =>
+              apply[S](1)(value).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-          apply[S](2)(pace, value).tapEval(_ => code)
+          value match
+            case it: `()`[F] =>
+              self.`(!)`(pace, it)(code)
+            case _ =>
+              apply[S](2)(pace, value).tapEval(_ => code)
 
         /**
           * variable replication output guard
@@ -386,25 +402,41 @@ package object Π:
         * variable output prefix
         */
       def apply[S](_1: 1)(value: => S)(using DummyImplicit): Iterant[F, Unit] =
-        apply[S](1)(Concurrent[F].delay(value))
+        value match
+          case it: `()`[F] =>
+            self(it)
+          case _ =>
+            apply[S](1)(Concurrent[F].delay(value))
 
       /**
         * variable output prefix w/ pace
         */
       def apply[S](_2: 2)(pace: FiniteDuration, value: => S)(using DummyImplicit): Iterant[F, Unit] =
-        apply[S](1)(value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
+        value match
+          case it: `()`[F] =>
+            self(pace, it)
+          case _ =>
+            apply[S](1)(value) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
 
       /**
         * variable output prefix w/ code
         */
       def apply[S, T](_3: 3)(value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-        apply[S](1)(value).tapEval(_ => code)
+        value match
+          case it: `()`[F] =>
+            self(it)(code)
+          case _ =>
+            apply[S](1)(value).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
       def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-        apply[S](2)(pace, value).tapEval(_ => code)
+        value match
+          case it: `()`[F] =>
+            self(pace, it)(code)
+          case _ =>
+            apply[S](2)(pace, value).tapEval(_ => code)
 
       /**
         * variable output prefix

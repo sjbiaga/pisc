@@ -83,6 +83,38 @@ package object Π:
     inline def `()`(using DummyImplicit): `()` = this
 
     /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(value: => S)(using DummyImplicit): IO[Option[Unit]] =
+      value match
+        case it: `()` =>
+          apply(it)
+        case _ =>
+          apply(false)(IO.delay(value))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(value: => S)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
+      value match
+        case it: `()` =>
+          apply(it)(code)
+        case _ =>
+          apply(true)(IO.delay(value))(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(value: => IO[S]): IO[Option[Unit]] =
+      value.map(new `()`(_)).flatMap(apply(_))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(value: => IO[S])(code: => IO[Any]): IO[Option[Unit]] =
+      value.map(new `()`(_)).flatMap(apply(_)(code))
+
+    /**
       * negative prefix i.e. output
       */
     def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(q)
