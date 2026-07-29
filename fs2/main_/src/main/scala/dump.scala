@@ -37,7 +37,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.monadError.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ Async, Deferred, ExitCode }
+import _root_.cats.effect.{ Async, ExitCode }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*
@@ -48,7 +48,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type -[F[_]] = Queue[F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[F, (String, (String, String))], Deferred[F, (String, (String, String))]))]
+  type -[F[_]] = Queue[F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
 
   final class πdump[F[_]: Async]:
@@ -98,7 +98,8 @@ package object `Π-dump`:
       else
         %.flatModify { m =>
           m -> (ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
-                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2.get.flatMap(_.complete(None))))
+                ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Async[F].unit
+                                                                                case it => it.get.flatMap(_.complete(None).void) }))
         }.as {
           if !sys.BooleanProp.keyExists(barsx).value
           && ks.forall(_.charAt(36) == '!')
@@ -112,10 +113,8 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((s1, s2), e), (k1, k2), (delay, duration), (d1, d2)) =>
+             case (no, ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2)) =>
                for
-                 l1 <- d1.get
-                 l2 <- if k1 == k2 then Async[F].pure(l1) else d2.get
                  p  <- record(no, s1, e, delay, duration, l1)(k1)
                  _  <- record(no, p, l1._2._2).whenA(snapshot)
                  _  <- { for

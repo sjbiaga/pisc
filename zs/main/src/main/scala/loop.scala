@@ -43,7 +43,7 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `π-enable`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
 
   type <> = (CyclicBarrier, Fiber[Throwable, Unit], Ref[`()`])
 
@@ -63,6 +63,12 @@ package object `Π-loop`:
 
   type \ = () => Task[Unit]
 
+
+  private def enable(key: String)
+                    (using % : %)
+                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+    val (_, spell) = `π-wand`
+    `π-enable`(spell(key))
 
   private def unblock(m: Map[String, Int | (Boolean, +)], k: String)
                      (implicit ^ : String): UIO[Unit] =
@@ -169,12 +175,18 @@ package object `Π-loop`:
                                     for
                                       b1 <- d1.isDone
                                       b2 <- d2.isDone
-                                      fb <- ZIO.unless(k1 == k2) { (ord, ordʹ) match
-                                                                     case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                       `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                     case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                       `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                 }.unit.fork
+                                      fb <- ( for
+                                                _ <- ZIO.unless(k1 == k2) { (ord, ordʹ) match
+                                                                              case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                                `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                              case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                                `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                                          }
+                                                _ <- enable(k1)
+                                                _ <- enable(k2).unless(k1 == k2)
+                                              yield
+                                                ()
+                                            ).fork
                                       _  <- (discard(k1)(using  ^) *> %.update(_ - key1).when(c1 eq null) *> d1.succeed(Some((cb, fb, in)))).unless(b1)
                                       _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null) *> d2.succeed(Some((cb, fb, in)))).unless(b2).unless(k1 == k2)
                                       _  <- ZIO.unless(c1 eq null)(c1.get.tap(_.succeed(Some((cb, fb, in)))))

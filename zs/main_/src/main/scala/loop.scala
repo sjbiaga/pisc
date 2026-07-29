@@ -43,7 +43,7 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `π-enable`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
 
   type <> = (CyclicBarrier, Fiber[Throwable, Unit], Ref[`()`])
 
@@ -63,6 +63,12 @@ package object `Π-loop`:
 
   type \ = () => Task[Unit]
 
+
+  private def enable(key: String)
+                    (using % : %)
+                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+    val (_, spell) = `π-wand`
+    `π-enable`(spell(key))
 
   private def unblock(m: Map[String, Int | (Boolean, +)], k: String)
                      (implicit ^ : String): UIO[Unit] =
@@ -87,7 +93,7 @@ package object `Π-loop`:
 
   def loop(snapshot: Boolean)
           (using % : %, ! : !, & : &, ~ : ~, - : -, * : *)
-          (using `][`: `}{`.`][`, `2`: TSemaphore)
+          (using `][`: `}{`.`][`, `1`: TSemaphore)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): Task[Unit] =
     %.modify { m =>
       {
@@ -144,8 +150,6 @@ package object `Π-loop`:
                               ZIO.uninterruptible {
                                 for
                                   cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  sp1 <- Promise.make[Throwable, (String, (String, String))]
-                                  sp2 <- Promise.make[Throwable, (String, (String, String))]
                                   p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
                                   p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m}
                                   ((d1, c1), (ts1, ((key, ord), _))) = p1
@@ -157,7 +161,7 @@ package object `Π-loop`:
                                       fb <- ( for
                                                 (slabel, _)  <- `}{`.`}{`(key).commit
                                                 (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                _            <- `2`.acquireN(2).commit.when(k1 == k2)
+                                                _            <- `1`.acquire.commit.when(k1 == k2)
                                                 _            <- ZIO.unless(k1 == k2) { (ord, ordʹ) match
                                                                                          case (dir: `π-$`, dirʹ: `π-$`) =>
                                                                                            `}{`.><.π(key, dir, keyʹ, dirʹ)
@@ -166,9 +170,13 @@ package object `Π-loop`:
                                                                                      }
                                                 elabel       <- `}{`.`}{`(key, snapshot).commit
                                                 (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                _            <- sp1.succeed(slabel -> elabel)
-                                                _            <- sp2.succeed(slabelʹ -> (elabelʹ -> elabel._2)).unless(k1 == k2)
-                                                _            <- `2`.releaseN(2).commit.when(k1 == k2)
+                                                _            <- `1`.release.commit
+                                                _            <- enable(k1)
+                                                _            <- enable(k2).unless(k1 == k2)
+                                                no           <- &.updateAndGet(_ + 1)
+                                                ss           <- ts1.get <*> ts2.get
+                                                now          <- Clock.nanoTime
+                                                _            <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))
                                               yield
                                                 ()
                                             ).fork
@@ -180,10 +188,6 @@ package object `Π-loop`:
                                       ()
                                   }
                                   _  <- cb.await.exit
-                                  no <- &.updateAndGet(_ + 1)
-                                  ss <- ts1.get <*> ts2.get
-                                  now <- Clock.nanoTime
-                                  _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (sp1, sp2)))
                                 yield
                                   ()
                               }

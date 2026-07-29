@@ -49,7 +49,7 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `π-enable`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
 
   type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Ref[F, `()`[F]])
 
@@ -71,6 +71,13 @@ package object `Π-loop`:
 
 
   final class πloop[F[_]: Concurrent: Parallel]:
+
+    private def enable(key: String)
+                      (using %[F])
+                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
+      val (_, spell) = `π-wand`
+      `π-enable`[F](spell(key))
+
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
@@ -175,12 +182,18 @@ package object `Π-loop`:
                                           _  <- ~.acquire
                                           o1 <- d1.tryGet
                                           o2 <- d2.tryGet
-                                          fb <- { (ord, ordʹ) match
-                                                    case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                      `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                    case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                      `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                }.unlessA(k1 == k2).start
+                                          fb <- ( for
+                                                    _ <- { (ord, ordʹ) match
+                                                             case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                               `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                             case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                               `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                         }.unlessA(k1 == k2)
+                                                    _ <- enable(k1)
+                                                    _ <- enable(k2).unlessA(k1 == k2)
+                                                  yield
+                                                    ()
+                                                ).start
                                           _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, in)))).whenA(o1 eq None)
                                           _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, in)))).whenA(o2 eq None).unlessA(k1 == k2)
                                           _  <- c1.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c1 eq null)

@@ -55,32 +55,34 @@ object Program:
         case it @ τ(r, Some((Left(enums), _))) =>
           `*.flatMap { null else … }`(Term.Apply(
                                         Term.Apply(\("τ"),
-                                                   Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                                   Term.ArgClause(rate(r.get) :: Nil)),
                                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
                                       enums ::: *)
 
         case it @ τ(r, Some((Right(term), _))) =>
           `*.flatMap { null else … }`(Term.Apply(
                                         Term.Apply(\("τ"),
-                                                   Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                                   Term.ArgClause(rate(r.get) :: Nil)),
                                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
                                       `_ <- IO { * }`(term) :: *)
 
         case it @ τ(r, _) =>
           `*.flatMap { null else … }`(Term.Apply(
                                         Term.Apply(\("τ"),
-                                                   Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                                   Term.ArgClause(rate(r.get) :: Nil)),
                                         Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
                                       *)
 
 
-        case it @ π(dir, λ(Symbol(ch)), arg, None, r, code) =>
+        case it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code) =>
           code match
             case Some((Left(enums), _)) =>
               val expr = `for * yield ()`(enums*)
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
-                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
+                                              Term.Apply(
+                                                Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                                Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                             ),
                                             Term.ArgClause(expr::Nil)),
@@ -89,14 +91,44 @@ object Program:
               val expr = `for * yield ()`(`_ <- IO { * }`(term))
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
-                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
+                                              Term.Apply(
+                                                Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                                Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
                                             ),
                                             Term.ArgClause(expr::Nil)),
                                           *)
             case _ =>
               `*.flatMap { null else … }`(Term.Apply(
-                                            Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: arg.toTerm :: Nil)),
+                                            Term.Apply(
+                                              Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                              Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                            Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                                          *)
+
+        case it @ π(dir, λ(Symbol(ch)), arg, None, r, code) =>
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              `*.flatMap { null else … }`(Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
+                                            ),
+                                            Term.ArgClause(expr::Nil)),
+                                          *)
+            case Some((Right(term), _)) =>
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              `*.flatMap { null else … }`(Term.Apply(
+                                            Term.Apply(
+                                              Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
+                                              Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)
+                                            ),
+                                            Term.ArgClause(expr::Nil)),
+                                          *)
+            case _ =>
+              `*.flatMap { null else … }`(Term.Apply(
+                                            Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                                             Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
                                           *)
 
@@ -122,12 +154,12 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              `*.flatMap { null else … }`(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+              `*.flatMap { null else … }`(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: Nil)),
                                                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)), Term.ArgClause(term::Nil)),
                                           **)(par)
 
             case _ =>
-              `*.flatMap { null else … }`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+              `*.flatMap { null else … }`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: Nil)),
                                                      Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
                                           **)(par)
 
@@ -137,7 +169,7 @@ object Program:
               val expr = `for * yield ()`(enums*)
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
-                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
                                             Term.ArgClause(expr::Nil)),
                                           *)
@@ -145,13 +177,13 @@ object Program:
               val expr = `for * yield ()`(`_ <- IO { * }`(term))
               `*.flatMap { null else … }`(Term.Apply(
                                             Term.Apply(
-                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                              Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
                                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
                                             Term.ArgClause(expr::Nil)),
                                           *)
             case _ =>
               `*.flatMap { null else … }`(Term.Apply(
-                                            Term.Apply(\(name), Term.ArgClause(rate(r.get) :: \("}{") :: Nil)),
+                                            Term.Apply(\(name), Term.ArgClause(rate(r.get) :: Nil)),
                                             Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
                                           *)
 

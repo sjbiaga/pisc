@@ -47,7 +47,7 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `π-enable`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
 
   type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Ref[F, `()`[F]])
 
@@ -69,6 +69,12 @@ package object `Π-loop`:
 
 
   final class πloop[F[_]: Parallel: Temporal]:
+
+    private def enable(key: String)
+                      (using %[F])
+                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
+      val (_, spell) = `π-wand`
+      `π-enable`[F](spell(key))
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
@@ -93,7 +99,7 @@ package object `Π-loop`:
 
     def loop(~ : ~[F], snapshot: Boolean, `}{`: sΠ.`}{`[F])
             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F])
-            (using `][`: `}{`.`][`, `2`: `}{`.stm.TSemaphore)
+            (using `][`: `}{`.`][`, `1`: `}{`.stm.TSemaphore)
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       %.flatModify { m =>
         m -> {
@@ -149,9 +155,6 @@ package object `Π-loop`:
                                       Temporal[F].uncancelable { _ =>
                                         for
                                           cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                          sd1 <- Deferred[F, (String, (String, String))]
-                                          sd2 <- Deferred[F, (String, (String, String))]
-                                          sD <- Deferred[F, String]
                                           p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                           p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                           ((d1, c1), (ts1, ((key, ord), _))) = p1
@@ -162,13 +165,7 @@ package object `Π-loop`:
                                           fb <- ( for
                                                     (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
                                                     (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                                    _            <- `}{`.stm.commit {
-                                                                      for
-                                                                        _ <- `2`.acquire
-                                                                        _ <- `2`.acquire
-                                                                      yield
-                                                                        ()
-                                                                    }.whenA(k1 == k2)
+                                                    _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
                                                     _            <- { (ord, ordʹ) match
                                                                         case (dir: `π-$`, dirʹ: `π-$`) =>
                                                                           `}{`.><.π(key, dir, keyʹ, dirʹ)
@@ -177,15 +174,13 @@ package object `Π-loop`:
                                                                     }.unlessA(k1 == k2)
                                                     elabel       <- `}{`.stm.commit { `}{`.`}{`(key, snapshot) }
                                                     (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                                    _            <- sd1.complete(slabel -> elabel)
-                                                    _            <- sd2.complete(slabelʹ -> (elabelʹ -> elabel._2)).unlessA(k1 == k2)
-                                                    _            <- `}{`.stm.commit {
-                                                                      for
-                                                                        _ <- `2`.release
-                                                                        _ <- `2`.release
-                                                                      yield
-                                                                        ()
-                                                                    }.whenA(k1 == k2)
+                                                    _            <- `}{`.stm.commit { `1`.release }
+                                                    _            <- enable(k1)
+                                                    _            <- enable(k2).unlessA(k1 == k2)
+                                                    no           <- &.updateAndGet(_ + 1)
+                                                    ss           <- ts1.get product ts2.get
+                                                    now          <- Temporal[F].monotonic.map(_.toNanos)
+                                                    _            <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))
                                                   yield
                                                     ()
                                                 ).start
@@ -195,10 +190,6 @@ package object `Π-loop`:
                                           _  <- c2.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                           _  <- ~.release
                                           _  <- cb.await
-                                          no <- &.updateAndGet(_ + 1)
-                                          ss <- ts1.get product ts2.get
-                                          now <- Temporal[F].monotonic.map(_.toNanos)
-                                          _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration), (sd1, sd2)))
                                         yield
                                           ()
                                       }

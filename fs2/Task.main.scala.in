@@ -90,7 +90,7 @@ object App extends CatsApp:
       % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[π.F, (String, (String, String))], Deferred[π.F, (String, (String, String))]))]
+      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
       ~ <- Semaphore[π.F](p)

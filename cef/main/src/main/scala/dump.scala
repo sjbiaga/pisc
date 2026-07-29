@@ -28,7 +28,7 @@
 
 import _root_.scala.collection.immutable.List
 
-import _root_.cats.effect.{ IO, Deferred }
+import _root_.cats.effect.IO
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*
@@ -36,7 +36,7 @@ import `Π-loop`.*
 
 package object `Π-dump`:
 
-  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[IO, (String, (String, String))], Deferred[IO, (String, (String, String))]))]
+  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
 
   def dump(snapshot: Boolean)

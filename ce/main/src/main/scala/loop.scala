@@ -46,11 +46,11 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, >*< }
+  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
 
-  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit])
+  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
-  type + = (Deferred[IO, Option[<>]], ((>*< | Object, Int), Option[Boolean], Rate))
+  type + = (Deferred[IO, Option[<>]], ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)))
 
   type % = Ref[IO, Map[String, Int | +]]
 
@@ -84,9 +84,7 @@ package object `Π-loop`:
 
   private def unblock(m: Map[String, Int | +], k: String)
                      (implicit ^ : String): IO[Unit] =
-    if m.contains(^ + k)
-    then m(^ + k).asInstanceOf[+]._1.complete(None).void
-    else IO.unit
+    m(^ + k).asInstanceOf[+]._1.complete(None).void.whenA(m.contains(^ + k))
 
   private def `π-discard`(discarded: `Π-Set`[String])
                          (using % : %)
@@ -121,24 +119,25 @@ package object `Π-loop`:
       } >>= (!.complete(_).void)
 
 
-  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long])
+  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], `}{`: sΠ.`}{`)
           (using % : %, / : /, ! : !, & : &, - : -, * : *)
+          (using `}{`.`][`, `}{`.stm.TSemaphore)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.flatModify { m =>
       m -> {
         { if m.exists(_._2.isInstanceOf[Int])
           then Map.empty -> { () => false }
           else m
-               .map(_ -> _.asInstanceOf[+]._2)
+               .map(_ -> _.asInstanceOf[+]._2._2)
                .toMap
             -> { () => m.isEmpty
                     || m.keys.forall(_.charAt(36) == '!')
                     && { val (trick, _) = `π-wand`
                          m.forall {
-                           case (key1, (_, (e1, Some(p1), _))) =>
+                           case (key1, (_, (_, (e1, Some(p1), _)))) =>
                              val ^ = key1.substring(0, 36)
                              !m.exists {
-                               case (key2, (_, (e2, Some(p2), _))) if e1 == e2 && p1 != p2 =>
+                               case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                                  val ^^ = key2.substring(0, 36)
                                  ^ != ^^
                                  || {
@@ -153,10 +152,10 @@ package object `Π-loop`:
                        }
                }
         } match
-          case (it: Map[String, ((>*< | Object, Int), Option[Boolean], Rate)], exit) =>
+          case (it: Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)], exit) =>
             if it.isEmpty && !exit()
             then
-              *.acquire >> loop(parallelism, snapshot, started)
+              *.acquire >> loop(parallelism, snapshot, started, `}{`)
             else
               ∥(it)(`π-wand`._1)() match
                 case Nil =>
@@ -165,28 +164,34 @@ package object `Π-loop`:
                     then
                       this.exit(it.keys.toList)
                     else
-                      *.acquire >> loop(parallelism, snapshot, started)
+                      *.acquire >> loop(parallelism, snapshot, started, `}{`)
                   }
                 case nel =>
                   Semaphore[IO](parallelism).flatMap { sem =>
-                    nel.parTraverse { case (key1, key2, delay) =>
+                    nel.parTraverse { case (key1, key2, in, delay) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      val ^  = key1.substring(0, 36)
+                                      val  ^ = key1.substring(0, 36)
                                       val ^^ = key2.substring(0, 36)
                                       IO.uncancelable { _ =>
                                         for
                                           -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                           p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                           p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                          (d1, _) = p1
-                                          (d2, _) = p2
+                                          (d1, ((key, ord), _)) = p1
+                                          (d2, ((keyʹ, ordʹ), _)) = p2
                                           _  <- sem.acquire
                                           _  <- discard(k1)(using  ^)
                                           _  <- discard(k2)(using ^^).unlessA(k1 == k2)
                                           _  <- %.update(_ - key1 - key2)
                                           _  <- started.update(_ + 1)
                                           fb <- ( for
+                                                    _ <- { (ord, ordʹ) match
+                                                             case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                               `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                             case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                               `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                         }.unlessA(k1 == k2)
                                                     _ <- --.await
                                                     _ <- enable(k1)
                                                     _ <- enable(k2).unlessA(k1 == k2)
@@ -196,13 +201,13 @@ package object `Π-loop`:
                                                   yield
                                                     ()
                                                 ).start
-                                          _  <- d1.complete(Some((delay, --, fb)))
-                                          _  <- d2.complete(Some((delay, --, fb))).unlessA(k1 == k2)
+                                          _  <- d1.complete(Some((delay, --, fb, in)))
+                                          _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
                                         yield
                                           ()
                                       }
                                     }
-                  } >> IO.cede >> loop(parallelism, snapshot, started)
+                  } >> IO.cede >> loop(parallelism, snapshot, started, `}{`)
       }
     }
 

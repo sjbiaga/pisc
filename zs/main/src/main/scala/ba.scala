@@ -108,12 +108,6 @@ package object sΠ:
                                  }
     )
 
-  private def enable(key: String)
-                    (using % : %)
-                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
-    val (_, spell) = `π-wand`
-    `π-enable`(spell(key))
-
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): Task[Unit] =
@@ -201,7 +195,7 @@ package object sΠ:
                 _        <- if cb_fb_in eq None then sp.succeed(())
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              fiber.join *> enable(key) *> cbarrier.await.exit
+                              fiber.join *> cbarrier.await.exit
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
@@ -265,7 +259,7 @@ package object sΠ:
               _        <- if cb_fb_in eq None then sp.succeed(())
                           else
                             val (cbarrier, fiber, _) = cb_fb_in.get
-                            fiber.join *> enable(key) *> cbarrier.await.exit
+                            fiber.join *> cbarrier.await.exit
             yield
               ()
           }.repeat(Schedule.forever).interruptWhen(sp)
@@ -318,7 +312,7 @@ package object sΠ:
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
-        _        <- ZStream.fromZIO(fiber.join *> enable(key) *> cbarrier.await.exit)
+        _        <- ZStream.fromZIO(fiber.join *> cbarrier.await.exit)
       yield
         ()
 
@@ -381,7 +375,6 @@ package object sΠ:
               */
             def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                      (using % : %, / : /, \ : \)
-                     (using TSemaphore)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): ZStream[Any, Throwable, `()`] =
@@ -416,7 +409,7 @@ package object sΠ:
                               _        <- if cb_fb_in eq None then sp.succeed(())
                                           else
                                             val (cbarrier, fiber, input) = cb_fb_in.get
-                                            input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                                            input.set(it) *> fiber.join *> cbarrier.await.exit
                             yield
                               ()
                            }
@@ -432,7 +425,6 @@ package object sΠ:
               */
             def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                      (using %, /, \)
-                     (using TSemaphore)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): ZStream[Any, Throwable, `()`] =
@@ -443,7 +435,6 @@ package object sΠ:
               */
             def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                         (using %, /, \)
-                        (using TSemaphore)
                         (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                   `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                   ^ : String): ZStream[Any, Throwable, `()`] =
@@ -454,7 +445,6 @@ package object sΠ:
               */
             def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                         (using %, /, \)
-                        (using TSemaphore)
                         (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                   `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                   ^ : String): ZStream[Any, Throwable, `()`] =
@@ -465,7 +455,6 @@ package object sΠ:
             */
           def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using % : %, / : /, \ : \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
@@ -497,7 +486,7 @@ package object sΠ:
                   _        <- if cb_fb_in eq None then sp.succeed(())
                               else
                                 val (cbarrier, fiber, input) = cb_fb_in.get
-                                input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                                input.set(value) *> fiber.join *> cbarrier.await.exit
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
@@ -510,7 +499,6 @@ package object sΠ:
             */
           def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using %, /, \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
@@ -521,7 +509,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, Unit] =
@@ -532,7 +519,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, Unit] =
@@ -546,11 +532,14 @@ package object sΠ:
             def apply[S](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                (using DummyImplicit)
                                (using %, /, \)
-                               (using TSemaphore)
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): ZStream[Any, Throwable, Unit] =
-             apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+              value match
+                case it: `()` =>
+                  self.π.`(!)`.`(+)`(rate, it)(key, `)(`)(dir)(?, -, *, +)
+                case _ =>
+                  apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
 
             /**
               * linear variable replication output guard w/ pace
@@ -558,11 +547,14 @@ package object sΠ:
             def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                (using DummyImplicit)
                                (using %, /, \)
-                               (using TSemaphore)
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): ZStream[Any, Throwable, Unit] =
-             apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+              value match
+                case it: `()` =>
+                  self.π.`(!)`.`(+)`(rate, pace, it)(key, `)(`)(dir)(?, -, *, +)
+                case _ =>
+                  apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
 
             /**
               * linear variable replication output guard w/ code
@@ -570,11 +562,14 @@ package object sΠ:
             def apply[S, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                   (using DummyImplicit)
                                   (using %, /, \)
-                                  (using TSemaphore)
                                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                             ^ : String): ZStream[Any, Throwable, Unit] =
-             apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+              value match
+                case it: `()` =>
+                  self.π.`(!)`.`(+)`(rate, it)(key, `)(`)(dir)(code)(?, -, *, +)
+                case _ =>
+                  apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
 
             /**
               * linear variable replication output guard w/ pace w/ code
@@ -582,18 +577,20 @@ package object sΠ:
             def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                   (using DummyImplicit)
                                   (using %, /, \)
-                                  (using TSemaphore)
                                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                             ^ : String): ZStream[Any, Throwable, Unit] =
-             apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+              value match
+                case it: `()` =>
+                  self.π.`(!)`.`(+)`(rate, pace, it)(key, `)(`)(dir)(code)(?, -, *, +)
+                case _ =>
+                  apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
 
             /**
               * linear variable replication output guard
               */
             def apply[S](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                (using % : %, / : /, \ : \)
-                               (using TSemaphore)
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -625,7 +622,7 @@ package object sΠ:
                     _        <- if cb_fb_in eq None then sp.succeed(())
                                 else
                                   val (cbarrier, fiber, input) = cb_fb_in.get
-                                  value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+                                  value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> cbarrier.await.exit)
                   yield
                     ()
                 }.repeat(Schedule.forever).interruptWhen(sp)
@@ -638,7 +635,6 @@ package object sΠ:
               */
             def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                (using %, /, \)
-                               (using TSemaphore)
                                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -649,7 +645,6 @@ package object sΠ:
               */
             def apply[S, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                   (using %, /, \)
-                                  (using TSemaphore)
                                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -660,7 +655,6 @@ package object sΠ:
               */
             def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                                   (using %, /, \)
-                                  (using TSemaphore)
                                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -671,7 +665,6 @@ package object sΠ:
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using % : %, / : /, \ : \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
@@ -704,7 +697,7 @@ package object sΠ:
                   _        <- if cb_fb_in eq None then sp.succeed(())
                               else
                                 val (cbarrier, fiber, _) = cb_fb_in.get
-                                fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                                fiber.join *> cbarrier.await.exit
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
@@ -718,7 +711,6 @@ package object sΠ:
             */
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using %, /, \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
@@ -729,7 +721,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, `()`] =
@@ -740,7 +731,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, `()`] =
@@ -753,7 +743,6 @@ package object sΠ:
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                    (using % : %, / : /, \ : \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
@@ -778,7 +767,7 @@ package object sΠ:
                             _        <- if cb_fb_in eq None then sp.succeed(())
                                         else
                                           val (cbarrier, fiber, input) = cb_fb_in.get
-                                          input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                                          input.set(it) *> fiber.join *> cbarrier.await.exit
                           yield
                             ()
                         }
@@ -793,7 +782,6 @@ package object sΠ:
             */
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                    (using %, /, \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, `()`] =
@@ -804,7 +792,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, `()`] =
@@ -815,7 +802,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, `()`] =
@@ -826,7 +812,6 @@ package object sΠ:
           */
         def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /, \ : \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -848,7 +833,7 @@ package object sΠ:
                 _        <- if cb_fb_in eq None then sp.succeed(())
                             else
                               val (cbarrier, fiber, input) = cb_fb_in.get
-                              input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                              input.set(value) *> fiber.join *> cbarrier.await.exit
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
@@ -860,7 +845,6 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /, \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -871,7 +855,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                  (using %, /, \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -882,7 +865,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                  (using %, /, \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -896,11 +878,14 @@ package object sΠ:
           def apply[S](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                              (using DummyImplicit)
                              (using %, /, \)
-                             (using TSemaphore)
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
-           apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)
+            value match
+              case it: `()` =>
+                self.π.`(!)`(rate, it)(key, `)(`)(dir)
+              case _ =>
+                apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)
 
           /**
             * variable replication output guard w/ pace
@@ -908,11 +893,14 @@ package object sΠ:
           def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                              (using DummyImplicit)
                              (using %, /, \)
-                             (using TSemaphore)
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
-           apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)
+            value match
+              case it: `()` =>
+                self.π.`(!)`(rate, pace, it)(key, `)(`)(dir)
+              case _ =>
+                apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)
 
           /**
             * variable replication output guard w/ code
@@ -920,11 +908,14 @@ package object sΠ:
           def apply[S, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                 (using DummyImplicit)
                                 (using %, /, \)
-                                (using TSemaphore)
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
-           apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)
+            value match
+              case it: `()` =>
+                self.π.`(!)`(rate, it)(key, `)(`)(dir)(code)
+              case _ =>
+                apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)
 
           /**
             * variable replication output guard w/ pace w/ code
@@ -932,18 +923,20 @@ package object sΠ:
           def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                 (using DummyImplicit)
                                 (using %, /, \)
-                                (using TSemaphore)
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
-           apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)
+            value match
+              case it: `()` =>
+                self.π.`(!)`(rate, pace, it)(key, `)(`)(dir)(code)
+              case _ =>
+                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)
 
           /**
             * variable replication output guard
             */
           def apply[S](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                              (using % : %, / : /, \ : \)
-                             (using TSemaphore)
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
@@ -965,7 +958,7 @@ package object sΠ:
                   _        <- if cb_fb_in eq None then sp.succeed(())
                               else
                                 val (cbarrier, fiber, input) = cb_fb_in.get
-                                value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+                                value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> cbarrier.await.exit)
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
@@ -977,7 +970,6 @@ package object sΠ:
             */
           def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                              (using %, /, \)
-                             (using TSemaphore)
                              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                        ^ : String): ZStream[Any, Throwable, Unit] =
@@ -988,7 +980,6 @@ package object sΠ:
             */
           def apply[S, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                 (using %, /, \)
-                                (using TSemaphore)
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
@@ -999,7 +990,6 @@ package object sΠ:
             */
           def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                 (using %, /, \)
-                                (using TSemaphore)
                                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                           ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1010,7 +1000,6 @@ package object sΠ:
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /, \ : \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1033,7 +1022,7 @@ package object sΠ:
                 _        <- if cb_fb_in eq None then sp.succeed(())
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                              fiber.join *> cbarrier.await.exit
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
@@ -1046,7 +1035,6 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /, \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1057,7 +1045,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1068,7 +1055,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1081,7 +1067,6 @@ package object sΠ:
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1094,7 +1079,7 @@ package object sΠ:
             if cb_fb_in ne None
             (cbarrier, fiber, input) = cb_fb_in.get
             it <- sΠ.ν
-            _  <- ZStream.fromZIO(input.set(it) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+            _  <- ZStream.fromZIO(input.set(it) *> fiber.join *> cbarrier.await.exit)
           yield
             it
 
@@ -1103,7 +1088,6 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1114,7 +1098,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                     (using %, /)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1125,7 +1108,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                     (using %, /)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1136,7 +1118,6 @@ package object sΠ:
         */
       def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using % : %, / : /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1148,7 +1129,7 @@ package object sΠ:
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, input) = cb_fb_in.get
-          _  <- ZStream.fromZIO(input.set(value) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+          _  <- ZStream.fromZIO(input.set(value) *> fiber.join *> cbarrier.await.exit)
         yield
           ()
 
@@ -1157,7 +1138,6 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1168,7 +1148,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1179,7 +1158,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1193,11 +1171,14 @@ package object sΠ:
         def apply[S](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                            (using DummyImplicit)
                            (using %, /)
-                           (using TSemaphore)
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)
+          value match
+            case it: `()` =>
+              self.π(rate, it)(key, `)(`)(dir)
+            case _ =>
+              apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)
 
         /**
           * variable output prefix w/ pace
@@ -1205,11 +1186,14 @@ package object sΠ:
         def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                            (using DummyImplicit)
                            (using %, /)
-                           (using TSemaphore)
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+          value match
+            case it: `()` =>
+              self.π(rate, pace, it)(key, `)(`)(dir)
+            case _ =>
+              apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
 
         /**
           * variable output prefix w/ code
@@ -1217,11 +1201,14 @@ package object sΠ:
         def apply[S, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                               (using DummyImplicit)
                               (using %, /)
-                              (using TSemaphore)
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](1)(rate, value)(key, `)(`)(dir).tap(_ => code)
+          value match
+            case it: `()` =>
+              self.π(rate, it)(key, `)(`)(dir)(code)
+            case _ =>
+              apply[S](1)(rate, value)(key, `)(`)(dir).tap(_ => code)
 
         /**
           * variable output prefix w/ pace w/ code
@@ -1229,18 +1216,20 @@ package object sΠ:
         def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                               (using DummyImplicit)
                               (using %, /)
-                              (using TSemaphore)
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
-          apply[S](2)(rate, pace, value)(key, `)(`)(dir).tap(_ => code)
+          value match
+            case it: `()` =>
+              self.π(rate, pace, it)(key, `)(`)(dir)(code)
+            case _ =>
+              apply[S](2)(rate, pace, value)(key, `)(`)(dir).tap(_ => code)
 
         /**
           * variable output prefix
           */
         def apply[S](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                            (using % : %, / : /)
-                           (using TSemaphore)
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1252,7 +1241,7 @@ package object sΠ:
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             (cbarrier, fiber, input) = cb_fb_in.get
-            _  <- ZStream.fromZIO(value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit))
+            _  <- ZStream.fromZIO(value.map(new `()`(_)).flatMap(input.set(_) *> fiber.join *> cbarrier.await.exit))
           yield
             ()
 
@@ -1261,7 +1250,6 @@ package object sΠ:
           */
         def apply[S](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                            (using %, /)
-                           (using TSemaphore)
                            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                      `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                      ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1272,7 +1260,6 @@ package object sΠ:
           */
         def apply[S, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                               (using %, /)
-                              (using TSemaphore)
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1283,7 +1270,6 @@ package object sΠ:
           */
         def apply[S, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                               (using %, /)
-                              (using TSemaphore)
                               (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                         `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                         ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1294,7 +1280,6 @@ package object sΠ:
         */
       def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using % : %, / : /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1307,7 +1292,7 @@ package object sΠ:
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, _) = cb_fb_in.get
-          _  <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+          _  <- ZStream.fromZIO(fiber.join *> cbarrier.await.exit)
           it <- ZStream.fromZIO(result.get)
         yield
           it
@@ -1317,7 +1302,6 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1328,7 +1312,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1339,7 +1322,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, `()`] =
@@ -1356,7 +1338,6 @@ package object sΠ:
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using % : %, / : /, \ : \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1381,7 +1362,7 @@ package object sΠ:
                   _        <- if cb_fb_in eq None then sp.succeed(())
                               else
                                 val (cbarrier, fiber, _) = cb_fb_in.get
-                                fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                                fiber.join *> cbarrier.await.exit
                  yield
                    ()
               }.repeat(Schedule.forever).interruptWhen(sp)
@@ -1394,7 +1375,6 @@ package object sΠ:
             */
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                    (using %, /, \)
-                   (using TSemaphore)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1405,7 +1385,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1416,7 +1395,6 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Throwable, Boolean], - : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])
                       (using %, /, \)
-                      (using TSemaphore)
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1427,7 +1405,6 @@ package object sΠ:
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                  (using % : %, / : /, \ : \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1450,7 +1427,7 @@ package object sΠ:
                 _        <- if cb_fb_in eq None then sp.succeed(())
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit
+                              fiber.join *> cbarrier.await.exit
                yield
                  ()
             }.interruptWhen(sp)
@@ -1462,7 +1439,6 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                  (using %, /, \)
-                 (using TSemaphore)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1473,7 +1449,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                     (using %, /, \)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1484,7 +1459,6 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                     (using %, /, \)
-                    (using TSemaphore)
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1495,7 +1469,6 @@ package object sΠ:
         */
       def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                (using % : %, / : /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1508,7 +1481,7 @@ package object sΠ:
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, _) = cb_fb_in.get
-          _  <- ZStream.fromZIO(fiber.join *> `}{`.><.release1 *> enable(key) *> cbarrier.await.exit)
+          _  <- ZStream.fromZIO(fiber.join *> cbarrier.await.exit)
         yield
           ()
 
@@ -1517,7 +1490,6 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                (using %, /)
-               (using TSemaphore)
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1528,7 +1500,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1539,7 +1510,6 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                   (using %, /)
-                  (using TSemaphore)
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): ZStream[Any, Throwable, Unit] =
@@ -1562,14 +1532,14 @@ package object sΠ:
 
     object `}{`:
       def apply(`)(`: FiberRef[`)(`], label: Option[String])
-               (using `][`: `][`, `2`: TSemaphore): UIO[Unit] =
+               (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
         for
           key  <- `)(`.get
           uuid <- sΠ.`)(`()
           node  = Set(uuid)
           _    <- `)(`.set(uuid)
           _    <- ( for
-                      _ <- `2`.acquireN(2)
+                      _ <- `1`.acquire
                       _ <- `][`.update { m =>
                                          val root = m.keys.find(_.contains(key)).get
                                          val tree @ `}{`(_, _, children, _) = m(root)
@@ -1581,7 +1551,7 @@ package object sΠ:
                                            m + (child -> tree.copy(siblings = siblings + node))
                                          }
                                        }
-                      _ <- `2`.releaseN(2)
+                      _ <- `1`.release
                     yield
                       ()
                   ).commit
@@ -1600,14 +1570,11 @@ package object sΠ:
           root  = Set(uuid)
           map   = Map(root -> `}{`(None, null, Set.empty, Set.empty))
           tree <- TRef.make[Map[`)*(`, `}{`]](map).commit
-          sem  <- TSemaphore.make(2).commit
+          sem  <- TSemaphore.make(1).commit
         yield
           (uuid, tree, sem)
 
     object >< :
-
-      def release1(using `2`: TSemaphore): UIO[Unit] =
-        `2`.release.commit
 
       @annotation.tailrec
       private def check(node: `)*(`,
@@ -1633,12 +1600,13 @@ package object sΠ:
       object π:
 
         def apply(key: `)(`, dir: `π-$`, keyʹ: `)(`, dirʹ: `π-$`)
-                 (using `][`: `][`, `2`: TSemaphore): UIO[Unit] =
+                 (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
           ( for
-              _     <- `2`.acquireN(2)
+              _     <- `1`.acquire
               node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
               nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
               _     <- check(node, nodeʹ, dir, dirʹ).flatMap(ZSTM.check(_))
+              _     <- `1`.release
             yield
               ()
           ).commit
@@ -1744,13 +1712,14 @@ package object sΠ:
               apply(nodeʹ, node, capʹ, cap)
 
         def apply(key: `)(`, cap: `π-ζ`, keyʹ: `)(`, capʹ: `π-ζ`)
-                 (using `][`: `][`, `2`: TSemaphore): UIO[Unit] =
+                 (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
           ( for
-              _     <- `2`.acquireN(2)
+              _     <- `1`.acquire
               node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
               nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
               _     <- check(node, nodeʹ, cap, capʹ).flatMap(ZSTM.check(_))
               _     <- this(node, nodeʹ, cap, capʹ)
+              _     <- `1`.release
             yield
               ()
           ).commit

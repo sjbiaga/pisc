@@ -40,7 +40,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Promise[Throwable, (String, (String, String))], Promise[Throwable, (String, (String, String))]))]
+  type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
 
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => Task[String] =
@@ -100,10 +100,8 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((s1, s2), e), (k1, k2), (delay, duration), (p1, p2)) =>
+             case (no, ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2)) =>
                for
-                 l1 <- p1.await
-                 l2 <- if k1 == k2 then ZIO.succeed(l1) else p2.await
                  p  <- record(no, s1, e, delay, duration, l1)(k1)
                  _  <- record(no, p, l1._2._2).when(snapshot)
                  _  <- { for

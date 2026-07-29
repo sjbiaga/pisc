@@ -28,15 +28,15 @@
 
 package object sΠ:
 
-  import _root_.scala.collection.immutable.{ Queue, Map, Set }
+  import _root_.scala.collection.immutable.{ Map, Set }
 
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ IO, IOLocal, Deferred, Ref }
+  import _root_.cats.effect.{ IO, IOLocal, Deferred }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, MapRef, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ CyclicBarrier, Supervisor, UUIDGen }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
@@ -67,8 +67,10 @@ package object sΠ:
   type `)*(` = Set[`)(`]
 
 
-  private abstract trait Ordʹ { val ord: Int }
+  sealed abstract trait Ordʹ { val ord: Int }
   sealed abstract trait Ord(val ord: Int) extends Ordʹ
+
+  val `π-τ` = new Ord(-1) {}
 
   /**
     * Type of directions.
@@ -139,29 +141,18 @@ package object sΠ:
     */
   object ν:
 
-    def apply(ref: Ref[IO, Map[Int, ><]]): MapRef[IO, Int, ><] =
-      { k => Ref.lens(ref)(_.get(k).get, m => v => m + (k -> v)) }
-
-    type > = Deferred[IO, (Any, (`)(`, `π-$` | `π-ζ`))]
-
-    type < = (Any, Deferred[IO, (`)(`, `π-$` | `π-ζ`)])
-
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
-      ( for
-          ref <- Ref.of[IO, Map[Int, ><]] {
-                   Map(
-                     `π-local`.ord  -> ><(Queue.empty, Queue.empty),
-                     `π-s2s`.ord    -> ><(Queue.empty, Queue.empty),
-                     `π-p2c`.ord    -> ><(Queue.empty, Queue.empty),
-                     `π-accept`.ord -> ><(Queue.empty, Queue.empty),
-                     `π-expel`.ord  -> ><(Queue.empty, Queue.empty),
-                     `π-merge+`.ord -> ><(Queue.empty, Queue.empty)
-                   )
-                 }
-        yield
-          f(this(ref))
-      ).flatten
+      f {
+        Map(
+          `π-local`.ord  -> new {},
+          `π-s2s`.ord    -> new {},
+          `π-p2c`.ord    -> new {},
+          `π-accept`.ord -> new {},
+          `π-expel`.ord  -> new {},
+          `π-merge+`.ord -> new {}
+        )
+      }
 
 
   /**
@@ -169,33 +160,35 @@ package object sΠ:
     */
   object τ:
 
-    def apply(rate: Rate, `_}{`: `}{`)(key: String, `_)(`: IOLocal[`)(`])
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (new Object -> -1, None, rate)))
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> `π-τ`, (new {}, None, rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
       yield
         delay
+
 
   /**
     * prefix
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
-    private def ref = `()`[>*<]
+    private def map = `()`[Map[Int, {}]]
 
     def ====(that: `()`) =
       try
-        this.ref eq that.ref
+        this.map eq that.map
       catch _ =>
         this.name == that.name
 
@@ -205,24 +198,20 @@ package object sΠ:
     /**
       * capability prefix
       */
-    def apply(rate: Rate, `}{`: `}{`)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
              (using % : %, / : /)
-             (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        _        <- if polarity
-                    then `}{`.`Π-magic`.><.ζ.<(key, cap)(ref)
-                    else `}{`.`Π-magic`.><.ζ.>(key, cap)(ref)
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
       yield
@@ -231,24 +220,89 @@ package object sΠ:
     /**
       * capability prefix
       */
-    def apply(rate: Rate, `}{`: `}{`)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
              (using % : %, / : /)
-             (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> cap.ord, Some(polarity), rate)))
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        _        <- if polarity
-                    then `}{`.`Π-magic`.><.ζ.<(key, cap)(code)(ref)
-                    else `}{`.`Π-magic`.><.ζ.>(key, cap)(code)(ref)
+         b, f, _) = opt.get
+        _        <- b.await
+        _        <- f.join
+        _        <- exec(code)
+      yield
+        delay
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key, `)(`, dir)
+        case _ =>
+          apply(false)(rate, IO.delay(value))(key, `)(`, dir)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
+                (using DummyImplicit)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value match
+        case it: `()` =>
+          apply(rate, it)(key, `)(`, dir)(code)
+        case _ =>
+          apply(true)(rate, IO.delay(value))(key, `)(`, dir)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir))
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
+                (using %, /)
+                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                          ^ : String): IO[Double] =
+      value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code))
+
+    /**
+      * negative prefix i.e. output
+      */
+    def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+             (using % : %, / : /)
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                       ^ : String): IO[Double] =
+      for
+        _        <- exclude(key)
+        deferred <- Deferred[IO, Option[<>]]
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f, i) = opt.get
+        _        <- i.set(value)
         _        <- b.await
         _        <- f.join
       yield
@@ -257,101 +311,78 @@ package object sΠ:
     /**
       * negative prefix i.e. output
       */
-    def apply(rate: Rate, `}{`: `}{`, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+    def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
              (using % : %, / : /)
-             (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        _        <- `}{`.`Π-magic`.><.π(value.name, key, dir)(ref)
+         b, f, i) = opt.get
+        _        <- i.set(value)
         _        <- b.await
         _        <- f.join
-      yield
-        delay
-
-    /**
-      * negative prefix i.e. output
-      */
-    def apply(rate: Rate, `}{`: `}{`, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-             (using % : %, / : /)
-             (using `}{`.`][`, `}{`.stm.TSemaphore)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(false), rate)))
-        opt      <- deferred.get
-        _        <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        _        <- `}{`.`Π-magic`.><.π(value.name, key, dir)(code)(ref)
-        _        <- b.await
-        _        <- f.join
+        _        <- exec(code)
       yield
         delay
 
     /**
       * positive prefix i.e. input
       */
-    def apply(rate: Rate, `}{`: `}{`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
              (using % : %, / : /)
-             (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, Double)] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        name     <- `}{`.`Π-magic`.><.π(key, dir)(ref)
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
+        name     <- result.get
       yield
-        new `()`(name) -> delay
+        name -> delay
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T](rate: Rate, `}{`: `}{`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
+    def apply[T](rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
                 (using % : %, / : /)
-                (using `}{`.`][`, `}{`.stm.TSemaphore)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
       for
         _        <- exclude(key)
         deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (ref -> dir.ord, Some(true), rate)))
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
-         b, f)    = opt.get
-        key      <- `)(`.get
-        name     <- `}{`.`Π-magic`.><.π(key, dir)(code)(ref)
+         b, f, _) = opt.get
         _        <- b.await
         _        <- f.join
+        name     <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
       yield
         new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
 
-  final case class ><(takers: Queue[ν.>], offerers: Queue[ν.<])
+  private object `()`:
 
-  type >*< = MapRef[IO, Int, ><]
+    val `null` = new `()`(null)
 
 
   final class `}{`(val stm: STM[IO]):
@@ -412,404 +443,154 @@ package object sΠ:
         yield
           (lo, tree, sem)
 
+    object >< :
 
-    private[sΠ] object `Π-magic`:
+      @annotation.tailrec
+      private def check(node: `)*(`,
+                        nodeʹ: `)*(`,
+                        dir_cap: `π-$` | `π-ζ`,
+                        dir_capʹ: `π-$` | `π-ζ`)
+                       (using `][`: `][`): Txn[Boolean] =
+        (dir_cap, dir_capʹ) match
+          case (`π-local`, `π-local`)   =>
+            stm.pure(node == nodeʹ)
+          case (`π-s2s`, `π-s2s`)
+             | (`π-enter`, `π-accept`)
+             | (`π-merge+`, `π-merge-`) =>
+            `][`.get.map(_(node).siblings.contains(nodeʹ))
+          case (`π-p2c`, `π-c2p`)
+             | (`π-expel`, `π-exit`)    =>
+            `][`.get.map(_(nodeʹ).root == node)
+          case (`π-c2p`, `π-p2c`)       => check(nodeʹ, node, dir_capʹ, dir_cap)
+          case (`π-accept`, `π-enter`)  => check(nodeʹ, node, dir_capʹ, dir_cap)
+          case (`π-exit`, `π-expel`)    => check(nodeʹ, node, dir_capʹ, dir_cap)
+          case (`π-merge-`, `π-merge+`) => check(nodeʹ, node, dir_capʹ, dir_cap)
 
-      /**
-        * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
-        *
-        * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
-        */
-      /*
-       *
-       * Copyright (c) 2020 Luis Rodero-Merino
-       *
-       * Licensed under the Apache License, Version 2.0 (the "License");
-       * you may not use this file except in compliance with the License.
-       * You may obtain a copy of the License at.
-       *
-       *     http://www.apache.org/licenses/LICENSE-2.0
-       *
-       * Unless required by applicable law or agreed to in writing, software
-       * distributed under the License is distributed on an "AS IS" BASIS,
-       * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       * See the License for the specific language governing permissions and
-       * limitations under the License.
-       */
+      object π:
 
-      object >< :
+        def apply(key: `)(`, dir: `π-$`, keyʹ: `)(`, dirʹ: `π-$`)
+                 (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+          stm.commit {
+            for
+              _     <- `1`.acquire
+              node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
+              nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
+              _     <- check(node, nodeʹ, dir, dirʹ).flatMap(stm.check(_))
+              _     <- `1`.release
+            yield
+              ()
+          }
+
+      object ζ:
+
+        private def remove(node: `)*(`, tree: `}{`)
+                          (using `][`: `][`): Txn[Unit] =
+          val `}{`(_, root, _, siblings) = tree
+          `][`.modify { m =>
+                        val rtree = m(root)
+                        siblings.foldLeft {
+                          m + (root -> rtree.copy(children = siblings))
+                        } { (m, sibling) =>
+                          val tree @ `}{`(_, _, _, siblings) = m(sibling)
+                          m + (sibling -> tree.copy(siblings = siblings - node))
+                        }
+                      }
+
+        private def insert(node: `)*(`, root: `)*(`)
+                          (using `][`: `][`): Txn[Unit] =
+          for
+            _ <- `][`.modify { m =>
+                               val tree = m(root)
+                               tree.children.foldLeft(m) { (m, child) =>
+                                 val tree @ `}{`(_, _, _, siblings) = m(child)
+                                 m + (child -> tree.copy(siblings = siblings + node))
+                               }
+                             }
+            _ <- `][`.modify { m =>
+                               val ntree = m(node)
+                               val rtree @ `}{`(_, _, children, _) = m(root)
+                               m + (root -> rtree.copy(children = children + node))
+                                 + (node -> ntree.copy(root = root, siblings = children))
+                             }
+          yield
+            ()
+
+        private def update(temp: `}{`, root: `)*(`, join: `)*(`)
+                          (using `][`: `][`): Txn[Unit] =
+          `][`.modify { m =>
+                        val tree @ `}{`(_, _, children, _) = m(temp.root)
+                        temp.siblings.foldLeft {
+                          m + (temp.root -> tree.copy(children = children - root + join))
+                        } { (m, sibling) =>
+                          val tree @ `}{`(_, _, _, siblings) = m(sibling)
+                          m + (sibling -> tree.copy(siblings = siblings - root + join))
+                        }
+                      }
+
+        private def merge(tree: `}{`, join: `)*(`)
+                         (using `][`: `][`): Txn[Unit] =
+          for
+            _ <- `][`.modify { tree.children.foldLeft(_) { (m, node) =>
+                                val tree = m(node)
+                                m + (node -> tree.copy(root = join))
+                               }
+                             }
+            _ <- `][`.modify { m =>
+                               val temp @ `}{`(_, _, children, _) = m(join)
+                               tree.children.foldLeft {
+                                 m + (join -> temp.copy(children = children ++ tree.children))
+                               } { (m, node) =>
+                                 val tree = m(node)
+                                 m + (node -> tree.copy(siblings = tree.siblings ++ children))
+                               }
+                             }
+          yield
+            ()
 
         @annotation.tailrec
-        private def check(node: `)*(`,
-                          nodeʹ: `)*(`,
-                          dir_cap: `π-$` | `π-ζ`,
-                          dir_capʹ: `π-$` | `π-ζ`)
-                         (using `][`: `][`): Txn[Boolean] =
-          (dir_cap, dir_capʹ) match
-            case (`π-local`, `π-local`)   =>
-              stm.pure(node == nodeʹ)
-            case (`π-s2s`, `π-s2s`)
-               | (`π-enter`, `π-accept`)
-               | (`π-merge+`, `π-merge-`) =>
-              `][`.get.map(_(node).siblings.contains(nodeʹ))
-            case (`π-p2c`, `π-c2p`)
-               | (`π-expel`, `π-exit`)    =>
-              `][`.get.map(_(nodeʹ).root == node)
-            case (`π-c2p`, `π-p2c`)       => check(nodeʹ, node, dir_capʹ, dir_cap)
-            case (`π-accept`, `π-enter`)  => check(nodeʹ, node, dir_capʹ, dir_cap)
-            case (`π-exit`, `π-expel`)    => check(nodeʹ, node, dir_capʹ, dir_cap)
-            case (`π-merge-`, `π-merge+`) => check(nodeʹ, node, dir_capʹ, dir_cap)
-
-        object π:
-
-          def apply(name: Any, key: `)(`, dir: `π-$`)
-                   (using `][`: `][`, `1`: TSemaphore)
-                   (`>R`: >*<): IO[Unit] =
-            for
-              offerer <- Deferred[IO, (`)(`, `π-$` | `π-ζ`)]
-              ord      = dir.ord
-              kd      <- `>R`(ord).flatModifyFull { (poll, it) =>
-                           it.takers.dequeueOption match
-                             case Some((taker, queue)) =>
-                               it.copy(takers = queue) -> taker.complete(name -> (key -> dir)).as(None)
-                             case _ =>
-                               val queue = it.offerers.enqueue(name -> offerer)
-                               it.copy(offerers = queue) -> poll(offerer.get).map(Some(_))
-                         }
-              _       <- kd match
-                           case Some((keyʹ, dirʹ: `π-$`)) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, dir, dirʹ).flatMap(stm.check(_))
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }
-                           case _ => IO.cede
-            yield
-              ()
-
-          def apply(name: Any, key: `)(`, dir: `π-$`)
-                   (code: => IO[Any])
-                   (using `][`: `][`, `1`: TSemaphore)
-                   (`>R`: >*<): IO[Unit] =
-            for
-              offerer <- Deferred[IO, (`)(`, `π-$` | `π-ζ`)]
-              ord      = dir.ord
-              kd      <- `>R`(ord).flatModifyFull { (poll, it) =>
-                           it.takers.dequeueOption match
-                             case Some((taker, queue)) =>
-                               it.copy(takers = queue) -> taker.complete(name -> (key -> dir)).as(None)
-                             case _ =>
-                               val queue = it.offerers.enqueue(name -> offerer)
-                               it.copy(offerers = queue) -> poll(offerer.get).map(Some(_))
-                         }
-              _       <- kd match
-                           case Some((keyʹ, dirʹ: `π-$`)) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, dir, dirʹ).flatMap(stm.check(_))
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }
-                           case _ => IO.cede
-              _       <- exec(code)
-            yield
-              ()
-
-          def apply(key: `)(`, dir: `π-$`)
-                   (using `][`: `][`, `1`: TSemaphore)
-                   (`<R`: >*<): IO[Any] =
-            for
-              taker   <- Deferred[IO, (Any, (`)(`, `π-$` | `π-ζ`))]
-              ord      = dir.ord
-              akd     <- `<R`(ord).flatModifyFull { (poll, it) =>
-                           it.offerers.dequeueOption match
-                             case Some(((name, offerer), queue)) =>
-                               it.copy(offerers = queue) -> offerer.complete(key -> dir).as(name -> None)
-                             case _ =>
-                               val queue = it.takers.enqueue(taker)
-                               it.copy(takers = queue) -> poll(taker.get).map(() -> Some(_))
-                         }
-              name    <- akd match
-                           case (_, Some((name, (keyʹ, dirʹ: `π-$`)))) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, dir, dirʹ).flatMap(stm.check(_))
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }.as(name)
-                           case (name, _) => IO.pure(name)
-            yield
-              name
-
-          def apply[T](key: `)(`, dir: `π-$`)
-                      (code: T => IO[T])
-                      (using `][`: `][`, `1`: TSemaphore)
-                      (`<R`: >*<): IO[Any] =
-            for
-              taker   <- Deferred[IO, (Any, (`)(`, `π-$` | `π-ζ`))]
-              ord      = dir.ord
-              akd     <- `<R`(ord).flatModifyFull { (poll, it) =>
-                           it.offerers.dequeueOption match
-                             case Some(((name, offerer), queue)) =>
-                               it.copy(offerers = queue) -> offerer.complete(key -> dir).as(name -> None)
-                             case _ =>
-                               val queue = it.takers.enqueue(taker)
-                               it.copy(takers = queue) -> poll(taker.get).map(() -> Some(_))
-                         }
-              name    <- akd match
-                           case (_, Some((name, (keyʹ, dirʹ: `π-$`)))) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, dir, dirʹ).flatMap(stm.check(_))
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }.as(name)
-                           case (name, _) => IO.pure(name)
-              name    <- (code andThen exec)(name.asInstanceOf[T])
-            yield
-              name
-
-        object ζ:
-
-          private def remove(node: `)*(`, tree: `}{`)
-                            (using `][`: `][`): Txn[Unit] =
-            val `}{`(_, root, _, siblings) = tree
-            `][`.modify { m =>
-                          val rtree = m(root)
-                          siblings.foldLeft {
-                            m + (root -> rtree.copy(children = siblings))
-                          } { (m, sibling) =>
-                            val tree @ `}{`(_, _, _, siblings) = m(sibling)
-                            m + (sibling -> tree.copy(siblings = siblings - node))
-                          }
-                        }
-
-          private def insert(node: `)*(`, root: `)*(`)
-                            (using `][`: `][`): Txn[Unit] =
-            for
-              _ <- `][`.modify { m =>
-                                 val tree = m(root)
-                                 tree.children.foldLeft(m) { (m, child) =>
-                                   val tree @ `}{`(_, _, _, siblings) = m(child)
-                                   m + (child -> tree.copy(siblings = siblings + node))
-                                 }
-                               }
-              _ <- `][`.modify { m =>
-                                 val ntree = m(node)
-                                 val rtree @ `}{`(_, _, children, _) = m(root)
-                                 m + (root -> rtree.copy(children = children + node))
-                                   + (node -> ntree.copy(root = root, siblings = children))
-                               }
-            yield
-              ()
-
-          private def update(temp: `}{`, root: `)*(`, join: `)*(`)
-                            (using `][`: `][`): Txn[Unit] =
-            `][`.modify { m =>
-                          val tree @ `}{`(_, _, children, _) = m(temp.root)
-                          temp.siblings.foldLeft {
-                            m + (temp.root -> tree.copy(children = children - root + join))
-                          } { (m, sibling) =>
-                            val tree @ `}{`(_, _, _, siblings) = m(sibling)
-                            m + (sibling -> tree.copy(siblings = siblings - root + join))
-                          }
-                        }
-
-          private def merge(tree: `}{`, join: `)*(`)
-                           (using `][`: `][`): Txn[Unit] =
-            for
-              _ <- `][`.modify { tree.children.foldLeft(_) { (m, node) =>
-                                  val tree = m(node)
-                                  m + (node -> tree.copy(root = join))
-                                 }
-                               }
-              _ <- `][`.modify { m =>
-                                 val temp @ `}{`(_, _, children, _) = m(join)
-                                 tree.children.foldLeft {
-                                   m + (join -> temp.copy(children = children ++ tree.children))
-                                 } { (m, node) =>
-                                   val tree = m(node)
-                                   m + (node -> tree.copy(siblings = tree.siblings ++ children))
-                                 }
-                               }
-            yield
-              ()
-
-          private def apply(node: `)*(`, nodeʹ: `)*(`, cap: `π-ζ`)
-                           (using `][`: `][`): Txn[Unit] =
-            cap match
-              case `π-enter` | `π-exit` =>
-                for
-                  m            <- `][`.get
-                  (root, tree)  = cap match
-                                    case `π-enter` =>
-                                      (nodeʹ, m(node))
-                                    case `π-exit` =>
-                                      (m(nodeʹ).root, m(node))
-                  _            <- remove(node, tree)
-                  _            <- insert(node, root)
-                yield
-                  ()
-
-              case `π-merge+` =>
-                for
-                  m    <- `][`.get
-                  tree  = m(nodeʹ)
-                  _    <- remove(nodeʹ, tree)
-                  m    <- `][`.get
-                  temp  =  m(node)
-                  join  = node ++ nodeʹ
-                  _    <- `][`.modify { _ - node - nodeʹ + (join -> temp) }
-                  _    <- update(temp, node, join)
-                  _    <- merge(tree, join)
-                yield
-                  ()
-
-          object > :
-
-            def apply(key: `)(`, cap: `π-ζ`)
-                     (using `][`: `][`, `1`: TSemaphore)
-                     (`>R`: >*<): IO[Unit] =
+        private def apply(node: `)*(`, nodeʹ: `)*(`, cap: `π-ζ`, capʹ: `π-ζ`)
+                         (using `][`: `][`): Txn[Unit] =
+          cap match
+            case `π-enter` | `π-exit` =>
               for
-                offerer <- Deferred[IO, (`)(`, `π-$` | `π-ζ`)]
-                ord      = cap.ord
-                kc      <- `>R`(ord).flatModifyFull { (poll, it) =>
-                             it.takers.dequeueOption match
-                               case Some((taker, queue)) =>
-                                 it.copy(takers = queue) -> taker.complete(() -> (key -> cap)).as(None)
-                               case _ =>
-                                 val queue = it.offerers.enqueue(() -> offerer)
-                                 it.copy(offerers = queue) -> poll(offerer.get).map(Some(_))
-                           }
-                _       <- kc match
-                             case Some((keyʹ, capʹ: `π-ζ`)) =>
-                               stm.commit {
-                                 for
-                                   _     <- `1`.acquire
-                                   node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                   nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                   _     <- check(node, nodeʹ, cap, capʹ).flatMap(stm.check(_))
-                                   _     <- ζ(nodeʹ, node, capʹ)
-                                   _     <- `1`.release
-                                 yield
-                                   ()
-                               }
-                             case _ => IO.cede
+                m            <- `][`.get
+                (root, tree)  = cap match
+                                  case `π-enter` =>
+                                    (nodeʹ, m(node))
+                                  case `π-exit` =>
+                                    (m(nodeʹ).root, m(node))
+                _            <- remove(node, tree)
+                _            <- insert(node, root)
               yield
                 ()
 
-            def apply(key: `)(`, cap: `π-ζ`)
-                     (code: => IO[Any])
-                     (using `][`: `][`, `1`: TSemaphore)
-                     (`>R`: >*<): IO[Unit] =
+            case `π-merge+` =>
               for
-                offerer <- Deferred[IO, (`)(`, `π-$` | `π-ζ`)]
-                ord      = cap.ord
-                kc      <- `>R`(ord).flatModifyFull { (poll, it) =>
-                             it.takers.dequeueOption match
-                               case Some((taker, queue)) =>
-                                 it.copy(takers = queue) -> taker.complete(() -> (key -> cap)).as(None)
-                               case _ =>
-                                 val queue = it.offerers.enqueue(() -> offerer)
-                                 it.copy(offerers = queue) -> poll(offerer.get).map(Some(_))
-                           }
-                _       <- kc match
-                             case Some((keyʹ, capʹ: `π-ζ`)) =>
-                               stm.commit {
-                                 for
-                                   _     <- `1`.acquire
-                                   node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                   nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                   _     <- check(node, nodeʹ, cap, capʹ).flatMap(stm.check(_))
-                                   _     <- ζ(nodeʹ, node, capʹ)
-                                   _     <- `1`.release
-                                 yield
-                                   ()
-                               }
-                             case _ => IO.cede
-                _       <- code
+                m    <- `][`.get
+                tree  = m(nodeʹ)
+                _    <- remove(nodeʹ, tree)
+                m    <- `][`.get
+                temp  =  m(node)
+                join  = node ++ nodeʹ
+                _    <- `][`.modify { _ - node - nodeʹ + (join -> temp) }
+                _    <- update(temp, node, join)
+                _    <- merge(tree, join)
               yield
                 ()
 
-          object < :
+            case _ =>
+              apply(nodeʹ, node, capʹ, cap)
 
-            def apply(key: `)(`, cap: `π-ζ`)
-                     (using `][`: `][`, `1`: TSemaphore)
-                     (`<R`: >*<): IO[Unit] =
-              for
-                taker <- Deferred[IO, (Any, (`)(`, `π-$` | `π-ζ`))]
-                ord    = cap.ord
-                ukc   <- `<R`(ord).flatModifyFull { (poll, it) =>
-                           it.offerers.dequeueOption match
-                             case Some(((_, offerer), queue)) =>
-                               it.copy(offerers = queue) -> offerer.complete(key -> cap).as(None)
-                             case _ =>
-                               val queue = it.takers.enqueue(taker)
-                               it.copy(takers = queue) -> poll(taker.get).map(Some(_))
-                         }
-                _     <- ukc match
-                           case Some((_, (keyʹ, capʹ: `π-ζ`))) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, cap, capʹ).flatMap(stm.check(_))
-                                 _     <- ζ(node, nodeʹ, cap)
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }
-                           case _ => IO.cede
-              yield
-                ()
-
-            def apply(key: `)(`, cap: `π-ζ`)
-                     (code: => IO[Any])
-                     (using `][`: `][`, `1`: TSemaphore)
-                     (`<R`: >*<): IO[Unit] =
-              for
-                taker <- Deferred[IO, (Any, (`)(`, `π-$` | `π-ζ`))]
-                ord    = cap.ord
-                ukc   <- `<R`(ord).flatModifyFull { (poll, it) =>
-                           it.offerers.dequeueOption match
-                             case Some(((_, offerer), queue)) =>
-                               it.copy(offerers = queue) -> offerer.complete(key -> cap).as(None)
-                             case _ =>
-                               val queue = it.takers.enqueue(taker)
-                               it.copy(takers = queue) -> poll(taker.get).map(Some(_))
-                         }
-                _     <- ukc match
-                           case Some((_, (keyʹ, capʹ: `π-ζ`))) =>
-                             stm.commit {
-                               for
-                                 _     <- `1`.acquire
-                                 node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
-                                 nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
-                                 _     <- check(node, nodeʹ, cap, capʹ).flatMap(stm.check(_))
-                                 _     <- ζ(node, nodeʹ, cap)
-                                 _     <- `1`.release
-                               yield
-                                 ()
-                             }
-                           case _ => IO.cede
-                _     <- code
-              yield
-                ()
+        def apply(key: `)(`, cap: `π-ζ`, keyʹ: `)(`, capʹ: `π-ζ`)
+                 (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+          stm.commit {
+            for
+              _     <- `1`.acquire
+              node  <- `][`.get.map(_.keys.find(_.contains(key)).get)
+              nodeʹ <- `][`.get.map(_.keys.find(_.contains(keyʹ)).get)
+              _     <- check(node, nodeʹ, cap, capʹ).flatMap(stm.check(_))
+              _     <- this(node, nodeʹ, cap, capʹ)
+              _     <- `1`.release
+            yield
+              ()
+          }

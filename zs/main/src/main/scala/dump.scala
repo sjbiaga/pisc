@@ -28,14 +28,14 @@
 
 import _root_.scala.collection.immutable.List
 
-import _root_.zio.{ Promise, Queue, UIO, ZIO }
+import _root_.zio.{ Queue, UIO, ZIO }
 
 import `Π-loop`.*
 
 
 package object `Π-dump`:
 
-  type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Promise[Throwable, (String, (String, String))], Promise[Throwable, (String, (String, String))]))]
+  type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
   def dump(_snapshot: Boolean)(using % : %, ! : !, - : -): UIO[Unit] =
     ZIO.unit

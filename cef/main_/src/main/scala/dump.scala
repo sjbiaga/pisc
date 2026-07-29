@@ -31,6 +31,7 @@ import _root_.java.io.{ PrintStream, FileOutputStream }
 import _root_.scala.collection.immutable.List
 
 import _root_.cats.instances.list.*
+import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.traverse.*
 
@@ -45,7 +46,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), (Deferred[IO, (String, (String, String))], Deferred[IO, (String, (String, String))]))]
+  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
 
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => IO[String] =
@@ -68,7 +69,7 @@ package object `Π-dump`:
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
           polarity
-        }.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
+        }.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
       case _ =>
         IO.pure(null)
 
@@ -82,7 +83,7 @@ package object `Π-dump`:
         ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
         ps.println("""<?xml version="1.0" ?>""")
         ps.println(snapshot)
-      }.void.attemptTap { _ => if ps == null then IO.unit else IO.blocking { ps.close } }
+      }.void.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
 
 
   private def exit(ks: List[String])
@@ -106,21 +107,16 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (d1, d2)) =>
+             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2)) =>
                for
-                 l1 <- d1.get
-                 l2 <- if k1 == k2 then IO.pure(l1) else d2.get
                  p  <- record(no, ts1, ts, delay, duration, l1)(k1)
-                 _  <- if snapshot then record(no, p, l1._2._2) else IO.unit
-                 _  <- if (k1 == k2)
-                       then
-                         IO.unit
-                       else
-                         for
+                 _  <- record(no, p, l1._2._2).whenA(snapshot)
+                 _  <- ( for
                            p <- record(no, ts2, ts, delay, duration, l2)(k2)
-                           _ <- if snapshot then record(no, p, l2._2._2) else IO.unit
+                           _ <- record(no, p, l2._2._2).whenA(snapshot)
                          yield
                            ()
+                       ).unlessA(k1 == k2)
                  _  <- IO.cede >> dump(snapshot)
                yield
                  ()
