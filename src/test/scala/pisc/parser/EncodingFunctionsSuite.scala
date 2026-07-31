@@ -438,7 +438,7 @@ class EncodingFunctionsSuite extends FunSuite:
             given Int = 1
 
             given Map[String, λ | (+ | `⟦⟧`)]()
-            val `13` = definition(_code, _nest, _dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
+            val `13` = definition(_code, _nest, _settings.dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
 
             `13`.rename()(id) match
               case `⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, Nil) =>
@@ -471,7 +471,7 @@ class EncodingFunctionsSuite extends FunSuite:
             given Int = 1
 
             given Map[String, λ | (+ | `⟦⟧`)]()
-            val `13` = definition(_code, _nest, _dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
+            val `13` = definition(_code, _nest, _settings.dups, duplicated, _.replace{ (_, _) => }.flatten)(id)
 
             `13`.rename()(id) match
               case `⟦⟧`(Definition(_, _, _, variables, _),

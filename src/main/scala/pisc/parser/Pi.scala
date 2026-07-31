@@ -40,6 +40,7 @@ import scala.meta.{ Lit, Term }
 
 import Pi.*
 import Calculus.*
+import Directive.Settings
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.Duplications
@@ -134,7 +135,7 @@ abstract class Pi extends Expression:
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_paceunit)
+        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -169,20 +170,6 @@ abstract class Pi extends Expression:
   private[parser] def pos_(binds: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), binds) }
 
   protected final def path = (0 until _nest).map(_nth(_))
-
-  protected var _dirs = List[Map[String, Any]]()
-
-  protected var _dups: Boolean = false
-
-  protected var _exclude: Boolean = false
-
-  protected var _paceunit: String = null
-
-  protected var _scaling: Boolean = false
-
-  protected var _replication: (Int, Boolean) = (-1, false)
-
-  protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
 
@@ -361,20 +348,9 @@ object Pi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _dups = false
-      _exclude = false
-      _paceunit = "second"
-      _scaling = false
-      _replication = (-1, emitter.featuresLinearReplication)
-      _typeclasses = Nil
-      _dirs = List(Map("echo"         -> (),
-                       "errors"       -> _werr,
-                       "duplications" -> _dups,
-                       "exclude"      -> _exclude,
-                       "paceunit"     -> _paceunit,
-                       "scaling"      -> _scaling,
-                       "replication"  -> _replication,
-                       "typeclasses"  -> _typeclasses))
+      _settings = Settings()
+      _settings.replication = (-1, emitter.featuresLinearReplication)
+      Directive("push" -> "1", _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -385,8 +361,8 @@ object Pi:
       l = (0, 0)
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-      _werr = errors
       _init
+      _settings.werr = errors
 
       given Duplications()
 
@@ -411,7 +387,7 @@ object Pi:
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
                 case Success(Left(equation), _) =>
-                  if !_exclude
+                  if !_settings.exclude
                   then
                     eqtn :+= equation
                     val equations = eqtn.slice(i, eqtn.size)
@@ -430,7 +406,7 @@ object Pi:
           }
 
       val prog =
-        ( if i < eqtn.size && !_exclude
+        ( if i < eqtn.size && !_settings.exclude
           then
             r ::: eqtn.slice(i, eqtn.size).map(Right(_))
           else
@@ -442,5 +418,5 @@ object Pi:
           case _ => true
         }
 
-      Right((`(*)`(null, Nil, λ(if _typeclasses.isEmpty then Lit.Null() else Term.Tuple(_typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
+      Right((`(*)`(null, Nil, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
       prog

@@ -38,6 +38,7 @@ import munit.FunSuite
 
 import _root_.pisc.parser.Pi.*
 import _root_.pisc.parser.Calculus.*
+import _root_.pisc.parser.Directive.Settings
 import _root_.pisc.parser.Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.*
@@ -277,6 +278,7 @@ object ExpansionFunctionsSuite:
     _χ_id = new helper.υidυ
     _cntr = Map(0 -> 0L)
     _nth = Map(0 -> 0L)
+    _settings = Settings()
 
     given Bindings()
     given Duplications()

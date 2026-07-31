@@ -38,6 +38,7 @@ import munit.FunSuite
 
 import Pi.*
 import Calculus.*
+import Directive.Settings
 import Encoding.*
 import CalculusParserSuite.*
 import scala.util.parsing.combinator.pisc.parser.Expansion.Duplications
@@ -539,7 +540,7 @@ class CalculusParserSuite extends FunSuite:
     val `13` = new CalculusParserTest:
       override def test =
         parseAll(leaf, "!.ch(ch).")
-      _werr = true
+      _settings.werr = true
 
     interceptMessage[GuardParsingException]("ch is both the channel name and the binding parameter name in an input guard") {
       `13`.test
@@ -660,7 +661,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        _werr = true
+        _settings.werr = true
         parseAll(equation, "P(ch) = ch(list). !.list::(elem).")
 
     interceptMessage[ConsGuardParsingException]("A name list that knows how to CONS (`::') is used as replication guard") {
@@ -681,6 +682,8 @@ object CalculusParserSuite:
 
     _nest = 0
     _cntr = Map(0 -> 0L)
+
+    _settings = Settings()
 
     given Bindings()
     given Duplications()
