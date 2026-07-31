@@ -30,6 +30,8 @@ package object Π:
 
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.instances.seq.*
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.apply.*
@@ -239,69 +241,69 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Iterant[F, Unit] =
-          value.headOption match
-            case None => Iterant.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(1)(value.map(_.asInstanceOf[`()`[F]]*))
-            case _ =>
-              apply[S](1)(value.map(Concurrent[F].delay)*)
+        def apply[S: ClassTag](_1: 1)(value: => S*)(using DummyImplicit): Iterant[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(1)(value.map(_.asInstanceOf[`()`[F]]*))
+          else
+            apply[S](1)(value.map(Concurrent[F].delay)*)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Iterant[F, Unit] =
-          value.headOption match
-            case None => Iterant.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
-            case _ =>
-              apply[S](2)(pace, value.map(Concurrent[F].delay)*)
+        def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Iterant[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+          else
+            apply[S](2)(pace, value.map(Concurrent[F].delay)*)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-          value.headOption match
-            case None => Iterant.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
-            case _ =>
-              apply[S](1)(value*).tapEval(_ => code)
+        def apply[S: ClassTag, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+          else
+            apply[S](1)(value*).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-          value.headOption match
-            case None => Iterant.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
-            case _ =>
-              apply[S](2)(pace, value*).tapEval(_ => code)
+        def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+          else
+            apply[S](2)(pace, value*).tapEval(_ => code)
 
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => F[S]*): Iterant[F, Unit] =
-          value.traverse(Iterant.liftF).repeat.mapEval { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }.through1(ch)
+        def apply[S: ClassTag](_1: 1)(value: => F[S]*): Iterant[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            Iterant.liftF(Concurrent[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self.`(!)`(1)(_*))
+          else
+            Iterant.repeatEvalF(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(ch)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Iterant[F, Unit] =
+        def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => F[S]*): Iterant[F, Unit] =
           (apply[S](1)(value*) zip Iterant.intervalAtFixedRate(pace)).map(_._1)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
+        def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
           apply[S](1)(value*).tapEval(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
+        def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
           apply[S](2)(pace, value*).tapEval(_ => code)
 
       /**
@@ -413,69 +415,69 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Iterant[F, Unit] =
-        value.headOption match
-          case None => Iterant.empty
-          case Some(_: `()`[F]) =>
-            self(1)(value.map(_.asInstanceOf[`()`[F]]*))
-          case _ =>
-            apply[S](1)(value.map(Concurrent[F].delay)*)
+      def apply[S: ClassTag](_1: 1)(value: => S*)(using DummyImplicit): Iterant[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(1)(value.map(_.asInstanceOf[`()`[F]]*))
+        else
+          apply[S](1)(value.map(Concurrent[F].delay)*)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Iterant[F, Unit] =
-        value.headOption match
-          case None => Iterant.empty
-          case Some(_: `()`[F]) =>
-            self(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
-          case _ =>
-            apply[S](1)(value*) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
+      def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Iterant[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+        else
+          apply[S](1)(value*) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-        value.headOption match
-          case None => Iterant.empty
-          case Some(_: `()`[F]) =>
-            self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
-          case _ =>
-            apply[S](1)(value*).tapEval(_ => code)
+      def apply[S: ClassTag, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+        else
+          apply[S](1)(value*).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
-        value.headOption match
-          case None => Iterant.empty
-          case Some(_: `()`[F]) =>
-            self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
-          case _ =>
-            apply[S](2)(pace, value*).tapEval(_ => code)
+      def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Iterant[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+        else
+          apply[S](2)(pace, value*).tapEval(_ => code)
 
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => F[S]*): Iterant[F, Unit] =
-        Iterant.liftF(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(ch)
+      def apply[S: ClassTag](_1: 1)(value: => F[S]*): Iterant[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          Iterant.liftF(Concurrent[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self(1)(_*))
+        else
+          Iterant.liftF(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(ch)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Iterant[F, Unit] =
+      def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => F[S]*): Iterant[F, Unit] =
         apply[S](1)(value*) <* Iterant.intervalAtFixedRate(pace, pace).take(1)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
+      def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
         apply[S](1)(value*).tapEval(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
+      def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Iterant[F, Unit] =
         apply[S](2)(pace, value*).tapEval(_ => code)
 
     /**

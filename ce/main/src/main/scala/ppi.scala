@@ -28,6 +28,8 @@
 
 package object Π:
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.instances.seq.*
   import _root_.cats.syntax.traverse.*
   import _root_.cats.effect.IO
@@ -87,36 +89,34 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(value: => S*)(using DummyImplicit): IO[Option[Unit]] =
-      value.headOption match
-        case None => IO.pure(Some(()))
-        case Some(_: `()`) =>
-          apply(value.map(_.asInstanceOf[`()`])*)
-        case _ =>
-          apply(false)(value.map(IO.delay)*)
+    def apply[S: ClassTag](_f: false)(value: => S*)(using DummyImplicit): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.map(_.asInstanceOf[`()`])*)
+      else
+        apply(false)(value.map(IO.delay)*)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(value: => S*)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
-      value.headOption match
-        case None => IO.pure(Some(()))
-        case Some(_: `()`) =>
-          apply(value.map(_.asInstanceOf[`()`])*)(code)
-        case _ =>
-          apply(true)(value.map(IO.delay)*)(code)
+    def apply[S: ClassTag](_t: true)(value: => S*)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.map(_.asInstanceOf[`()`])*)(code)
+      else
+        apply(true)(value.map(IO.delay)*)(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
     def apply[S](_f: false)(value: => IO[S]*): IO[Option[Unit]] =
-      value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*))
+      IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)))
 
     /**
       * variable negative prefix i.e. variable output
       */
     def apply[S](_t: true)(value: => IO[S]*)(code: => IO[Any]): IO[Option[Unit]] =
-      value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)(code))
+      IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)(code)))
 
     /**
       * negative prefix i.e. output

@@ -31,6 +31,8 @@ package object Π:
   import _root_.scala.collection.immutable.Seq
   import _root_.scala.concurrent.duration.FiniteDuration
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.instances.seq.*
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.apply.*
@@ -271,77 +273,76 @@ package object Π:
           /**
             * linear variable replication output guard
             */
-          def apply[S](_1: 1)(value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            value.headOption match
-              case None => Stream.empty
-              case Some(_: `()`[F]) =>
-                self.`(!)`.`(+)`(1)(value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
-              case _ =>
-                apply[S](1)(value.map(Async[F].delay)*)(-, *, +)
+          def apply[S: ClassTag](_1: 1)(value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(1)(value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
+            else
+              apply[S](1)(value.map(Async[F].delay)*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            value.headOption match
-              case None => Stream.empty
-              case Some(_: `()`[F]) =>
-                self.`(!)`.`(+)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
-              case _ =>
-                apply[S](2)(pace, value.map(Async[F].delay)*)(-, *, +)
+          def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => S*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))(-, *, +)
+            else
+              apply[S](2)(pace, value.map(Async[F].delay)*)(-, *, +)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](_3: 3)(value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            value.headOption match
-              case None => Stream.empty
-              case Some(_: `()`[F]) =>
-                self.`(!)`.`(+)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
-              case _ =>
-                apply[S, T](3)(value.map(Async[F].delay)*)(code)(-, *, +)
+          def apply[S: ClassTag, T](_3: 3)(value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
+            else
+              apply[S, T](3)(value.map(Async[F].delay)*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
-            value.headOption match
-              case None => Stream.empty
-              case Some(_: `()`[F]) =>
-                self.`(!)`.`(+)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
-              case _ =>
-                apply[S, T](4)(pace, value.map(Async[F].delay)*)(code)(-, *, +)
+          def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])(using DummyImplicit): Stream[F, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)(-, *, +)
+            else
+              apply[S, T](4)(pace, value.map(Async[F].delay)*)(code)(-, *, +)
 
           /**
             * linear variable replication output guard
             */
-          def apply[S](_1: 1)(value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-            Stream.repeatEval {
-              for
-                _  <- -.await
-                _  <- *.fold(Async[F].unit)(_.acquire)
-                it <- value.sequence
-                d  <- Deferred[F, Unit]
-              yield
-                it.map(new `()`[F](_)) -> d
-            }.through1(t).evalTap(_ => +.release).interruptWhen(d.get.attempt)
+          def apply[S: ClassTag](_1: 1)(value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              Stream.eval(Async[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self.`(!)`.`(+)`(1)(_*)(-, *, +))
+            else
+              Stream.repeatEval {
+                for
+                  _  <- -.await
+                  _  <- *.fold(Async[F].unit)(_.acquire)
+                  it <- value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }
+                yield
+                  it
+              }.through1(t).evalTap(_ => +.release).interruptWhen(d.get.attempt)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => F[S]*)(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             apply[S](1)(value*)(-, *, +).spaced(pace)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](_3: 3)(value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             apply[S](1)(value*)(-, *, +).evalTap(_ => code)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
+          def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
             apply[S](2)(pace, value*)(-, *, +).evalTap(_ => code)
 
         /**
@@ -449,69 +450,69 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
-          value.headOption match
-            case None => Stream.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(1)(value.map(_.asInstanceOf[`()`[F]]*))
-            case _ =>
-              apply[S](1)(value.map(Async[F].delay)*)
+        def apply[S: ClassTag](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(1)(value.map(_.asInstanceOf[`()`[F]]*))
+          else
+            apply[S](1)(value.map(Async[F].delay)*)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
-          value.headOption match
-            case None => Stream.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
-            case _ =>
-              apply[S](2)(pace, value.map(Async[F].delay)*)
+        def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+          else
+            apply[S](2)(pace, value.map(Async[F].delay)*)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-          value.headOption match
-            case None => Stream.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
-            case _ =>
-              apply[S](1)(value*).evalTap(_ => code)
+        def apply[S: ClassTag, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+          else
+            apply[S](1)(value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-          value.headOption match
-            case None => Stream.empty
-            case Some(_: `()`[F]) =>
-              self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
-            case _ =>
-              apply[S](2)(pace, value*).evalTap(_ => code)
+        def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+          else
+            apply[S](2)(pace, value*).evalTap(_ => code)
 
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => F[S]*): Stream[F, Unit] =
-          Stream.repeatEval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
+        def apply[S: ClassTag](_1: 1)(value: => F[S]*): Stream[F, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            Stream.eval(Async[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self.`(!)`(1)(_*))
+          else
+            Stream.repeatEval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
+        def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
           apply[S](1)(value*).spaced(pace)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+        def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
           apply[S](1)(value*).evalTap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+        def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
           apply[S](2)(pace, value*).evalTap(_ => code)
 
       /**
@@ -624,69 +625,69 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
-        value.headOption match
-          case None => Stream.empty
-          case Some(_: `()`[F]) =>
-            self(1)(value.map(_.asInstanceOf[`()`[F]]*))
-          case _ =>
-            apply[S](1)(value.map(Async[F].delay)*)
+      def apply[S: ClassTag](_1: 1)(value: => S*)(using DummyImplicit): Stream[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(1)(value.map(_.asInstanceOf[`()`[F]]*))
+        else
+          apply[S](1)(value.map(Async[F].delay)*)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
-        value.headOption match
-          case None => Stream.empty
-          case Some(_: `()`[F]) =>
-            self(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
-          case _ =>
-            apply[S](1)(value*) <* Stream.sleep(pace)
+      def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => S*)(using DummyImplicit): Stream[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(2)(pace, value.map(_.asInstanceOf[`()`[F]]*))
+        else
+          apply[S](1)(value*) <* Stream.sleep(pace)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-        value.headOption match
-          case None => Stream.empty
-          case Some(_: `()`[F]) =>
-            self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
-          case _ =>
-            apply[S](1)(value*).evalTap(_ => code)
+      def apply[S: ClassTag, T](_3: 3)(value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
+        else
+          apply[S](1)(value*).evalTap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
-        value.headOption match
-          case None => Stream.empty
-          case Some(_: `()`[F]) =>
-            self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
-          case _ =>
-            apply[S](2)(pace, value*).evalTap(_ => code)
+      def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => S*)(code: => F[T])(using DummyImplicit): Stream[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
+        else
+          apply[S](2)(pace, value*).evalTap(_ => code)
 
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => F[S]*): Stream[F, Unit] =
-        Stream.eval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
+      def apply[S: ClassTag](_1: 1)(value: => F[S]*): Stream[F, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          Stream.eval(Async[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self(1)(_*))
+        else
+          Stream.eval(value.sequence >>= { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(t).interruptWhen(d.get.attempt)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
+      def apply[S: ClassTag](_2: 2)(pace: FiniteDuration, value: => F[S]*): Stream[F, Unit] =
         apply[S](1)(value*) <* Stream.sleep(pace)
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+      def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
         apply[S](1)(value*).evalTap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
+      def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
         apply[S](2)(pace, value*).evalTap(_ => code)
 
     /**

@@ -28,9 +28,14 @@
 
 package object Π:
 
-  import _root_.scala.util.{ Success, Try }
-  import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
   import _root_.scala.collection.immutable.Queue
+
+  import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
+
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
+  import _root_.scala.util.{ Success, Try }
+
   import _root_.akka.actor.typed.scaladsl.Behaviors
   import _root_.akka.actor.typed.{ ActorRef, Behavior }
 
@@ -72,6 +77,52 @@ package object Π:
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_f: false)(value: => S*)
+                          (using DummyImplicit)
+                          (using ExecutionContext): Future[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.map(_.asInstanceOf[`()`])*)
+      else
+        apply(false)(value.map(Future(_))*)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_t: true)(value: => S*)(code: => Future[Any])
+                          (using DummyImplicit)
+                          (using ExecutionContext): Future[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.map(_.asInstanceOf[`()`])*)(code)
+      else
+        apply(true)(value.map(Future(_))*)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_f: false)(value: => Future[S]*)
+                          (using ExecutionContext): Future[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        Future(Future.sequence(value.map(_.asInstanceOf[Future[`()`]])).flatMap(apply(_*))).flatten
+      else
+        Future(Future.sequence(value.map(_.map(new `()`(_)))).flatMap(apply(_*))).flatten
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_t: true)(value: => Future[S]*)(code: => Future[Any])
+                          (using ExecutionContext): Future[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        Future(Future.sequence(value.map(_.asInstanceOf[Future[`()`]])).flatMap(apply(_*)(code))).flatten
+      else
+        Future(Future.sequence(value.map(_.map(new `()`(_)))).flatMap(apply(_*)(code))).flatten
 
     /**
       * negative prefix i.e. output
