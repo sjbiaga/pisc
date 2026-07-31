@@ -42,11 +42,11 @@ abstract class Calculus extends PolyadicPi:
 
   def equation(using Duplications): Parser[Bind] =
     invocation(true) >> {
-      case (bind, _) if _exclude =>
+      case (bind, _) if _settings.exclude =>
         ".*".r ^^ { _ => bind -> ∅() }
       case (bind, bound) =>
         _code = -1
-        _dir = None
+        _directive = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
         "="~> choice ^^ {
@@ -69,7 +69,7 @@ abstract class Calculus extends PolyadicPi:
           if scalingʹ == 0
           then
             ∅() -> Names()
-          else if _scaling && emitter.canScale
+          else if _settings.scaling && emitter.canScale
           then
             `+`(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -89,7 +89,7 @@ abstract class Calculus extends PolyadicPi:
           if scalingʹ == 0
           then
             ∥(-1, `.`(∅())) -> Names()
-          else if _scaling && emitter.canScale
+          else if _settings.scaling && emitter.canScale
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
           else
@@ -157,8 +157,8 @@ abstract class Calculus extends PolyadicPi:
       case _ ~ _ ~ Some((π(λ(ch: Symbol), Some(cons), _, _*), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), Some(cons), _, params*), _)) =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_replication._2 then parallelismʹ else -parallelismʹ
+        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_settings.replication._2 then parallelismʹ else -parallelismʹ
         if params.filter(_.isSymbol).exists(_.asSymbol == ch)
         then
           if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
@@ -172,8 +172,8 @@ abstract class Calculus extends PolyadicPi:
             `!`(parallelismʹ, pace, Some(π._1), sum) -> (freeʹ ++ (free &~ bound))
         }
       case parallelism ~ pace ~ Some(μ) =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_replication._2 then parallelismʹ else -parallelismʹ
+        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_settings.replication._2 then parallelismʹ else -parallelismʹ
         val (_, freeʹ) = μ._2
         PendingOccurrence(freeʹ)
         choice ^^ {
@@ -181,8 +181,8 @@ abstract class Calculus extends PolyadicPi:
             `!`(parallelismʹ, pace, Some(μ._1), sum) -> (freeʹ ++ free)
         }
       case parallelism ~ pace ~ _ =>
-        var parallelismʹ = if parallelism < 0 then _replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_replication._2 then parallelismʹ else -parallelismʹ
+        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_settings.replication._2 then parallelismʹ else -parallelismʹ
         choice ^^ {
           case (sum, free) =>
             `!`(parallelismʹ, pace, None, sum) -> free

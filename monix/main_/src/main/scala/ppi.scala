@@ -286,7 +286,7 @@ package object Π:
           then
             Iterant.liftF(Concurrent[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self.`(!)`(1)(_*))
           else
-            Iterant.repeatEvalF(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(ch)
+            Iterant.repeatEvalF(Concurrent[F].defer(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) })).through1(ch)
 
         /**
           * variable replication output guard w/ pace
@@ -460,7 +460,7 @@ package object Π:
         then
           Iterant.liftF(Concurrent[F].defer(value.map(_.asInstanceOf[F[`()`[F]]]).sequence)).flatMap(self(1)(_*))
         else
-          Iterant.liftF(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) }).through1(ch)
+          Iterant.liftF(Concurrent[F].defer(value.sequence.flatMap { it => Deferred[F, Unit].map(it.map(new `()`[F](_)) -> _) })).through1(ch)
 
       /**
         * variable output prefix w/ pace

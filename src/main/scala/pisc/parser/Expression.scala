@@ -41,6 +41,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
 
 import PolyadicPi.Names
 import Calculus.{ λ, AST }
+import Directive.Settings
 import Encoding.{ renamed, Bindings }
 import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated, Substitution }
 import Expression.*
@@ -77,18 +78,18 @@ abstract class Expression extends JavaTokenParsers:
 
   protected def in: String
   def ln: String
-  protected var _werr: Boolean = false
+  protected var _settings: Settings = null
 
   final protected def warn(t: => Nothing): Unit =
     try
       t
     catch
-      case t if !_werr =>
+      case t if !_settings.werr =>
         Console.err.println(s"Warning in file `$in' $ln! ${t.getMessage}.")
 
   protected var _code: Int = -1
 
-  protected var _dir: Option[(String, String | List[String])] = None
+  protected var _directive: Option[(String, String | List[String])] = None
 
   private def apply(using params: MutableList[String])
                    (using names: Names): Term => Unit =
@@ -134,7 +135,7 @@ abstract class Expression extends JavaTokenParsers:
   def template: Parser[(Option[Term], Names)] =
     regexMatch(template_r) ^^ { it =>
       _code = if it.group(1).isEmpty then 0 else it.group(1).toInt
-      _dir = None
+      _directive = None
       if it.group(2).isBlank
       then
         None -> Names()
@@ -180,11 +181,11 @@ abstract class Expression extends JavaTokenParsers:
               Some(term) -> given_Names
           case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
               if it.group(1).isEmpty =>
-            _dir = Some(lhs -> rhs.map(_.toString))
+            _directive = Some(lhs -> rhs.map(_.toString))
             Some(term) -> Names()
           case (term @ Term.Assign(Term.Name(lhs), rhs), _)
               if it.group(1).isEmpty =>
-            _dir = Some(lhs -> rhs.toString)
+            _directive = Some(lhs -> rhs.toString)
             Some(term) -> Names()
           case (term, given Names) =>
             given MutableList[String]()
