@@ -149,42 +149,42 @@ package object `Π-loop`:
                 case nel =>
                   Semaphore[IO](parallelism).flatMap { sem =>
                     nel.parTraverse { case (key1, key2, in, (delay, duration)) =>
-                                      val k1 = key1.substring(36)
-                                      val k2 = key2.substring(36)
-                                      val  ^ = key1.substring(0, 36)
-                                      val ^^ = key2.substring(0, 36)
-                                      IO.uncancelable { _ =>
-                                        for
-                                          -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                          p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
-                                          p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                          (d1, (s1, _)) = p1
-                                          (d2, (s2, _)) = p2
-                                          _  <- sem.acquire
-                                          _  <- discard(k1)(using  ^)
-                                          _  <- discard(k2)(using ^^).unlessA(k1 == k2)
-                                          _  <- %.update(_ - key1 - key2)
-                                          _  <- started.update(_ + 1)
-                                          fb <- ( for
-                                                    _  <- --.await
-                                                    _  <- enable(k1)
-                                                    _  <- enable(k2).unlessA(k1 == k2)
-                                                    no <- &.updateAndGet(_ + 1)
-                                                    now <- Clock[IO].monotonic.map(_.toNanos)
-                                                    _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
-                                                    _  <- sem.release
-                                                    _  <- started.update(_ - 1)
-                                                    _  <- *.release
-                                                  yield
-                                                    ()
-                                                ).start
-                                          _  <- d1.complete(Some((delay, --, fb, in)))
-                                          _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
-                                        yield
-                                          ()
-                                      }
-                                    } >> IO.cede >> loop(parallelism, started)
-                  }
+                                        val k1 = key1.substring(36)
+                                        val k2 = key2.substring(36)
+                                        val  ^ = key1.substring(0, 36)
+                                        val ^^ = key2.substring(0, 36)
+                                        IO.uncancelable { _ =>
+                                          for
+                                            -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                            p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
+                                            p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
+                                            (d1, (s1, _)) = p1
+                                            (d2, (s2, _)) = p2
+                                            _  <- sem.acquire
+                                            _  <- discard(k1)(using  ^)
+                                            _  <- discard(k2)(using ^^).unlessA(k1 == k2)
+                                            _  <- %.update(_ - key1 - key2)
+                                            _  <- started.update(_ + 1)
+                                            fb <- ( for
+                                                      _  <- --.await
+                                                      _  <- enable(k1)
+                                                      _  <- enable(k2).unlessA(k1 == k2)
+                                                      no <- &.updateAndGet(_ + 1)
+                                                      now <- Clock[IO].monotonic.map(_.toNanos)
+                                                      _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
+                                                      _  <- sem.release
+                                                      _  <- started.update(_ - 1)
+                                                      _  <- *.release
+                                                    yield
+                                                      ()
+                                                  ).start
+                                            _  <- d1.complete(Some((delay, --, fb, in)))
+                                            _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
+                                          yield
+                                            ()
+                                        }
+                                    }
+                  } >> IO.cede >> loop(parallelism, started)
       }
     }
 

@@ -30,6 +30,8 @@ package object sΠ:
 
   import _root_.scala.collection.immutable.{ Map, Set }
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.syntax.applicative.*
 
   import _root_.cats.effect.{ IO, Clock, Deferred }
@@ -132,48 +134,56 @@ package object sΠ:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(rate: Rate, value: => S)(key: String)
-                (using DummyImplicit)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value match
-        case it: `()` =>
-          apply(rate, it)(key)
-        case _ =>
-          apply(false)(rate, IO.delay(value))(key)
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
+                          (using DummyImplicit)
+                          (using %, /)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key)
+      else
+        apply[S](false)(rate, IO.delay(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(rate: Rate, value: => S)(key: String)(code: => IO[Any])
-                (using DummyImplicit)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value match
-        case it: `()` =>
-          apply(rate, it)(key)(code)
-        case _ =>
-          apply(true)(rate, IO.delay(value))(key)(code)
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => IO[Any])
+                          (using DummyImplicit)
+                          (using %, /)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key)(code)
+      else
+        apply[S](true)(rate, IO.delay(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(rate: Rate, value: => IO[S])(key: String)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value.map(new `()`(_)).flatMap(apply(rate, _)(key))
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String)
+                          (using %, /)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key)))
+      else
+        value.map(new `()`(_)).flatMap(apply(rate, _)(key))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])
+                          (using %, /)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key)(code)))
+      else
+        value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
 
     /**
       * negative prefix i.e. output

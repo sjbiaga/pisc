@@ -28,11 +28,14 @@
 
 package object sΠ:
 
-  import _root_.scala.collection.immutable.{ Map, Set }
+  import _root_.scala.collection.immutable.{ Map, Queue, Set }
+
+  import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
+
+  import _root_.scala.reflect.{ ClassTag, classTag }
 
   import _root_.scala.util.{ Success, Try }
-  import _root_.scala.concurrent.{ ExecutionContext, Future, Promise }
-  import _root_.scala.collection.immutable.Queue
+
   import _root_.org.apache.pekko.actor.typed.scaladsl.{ ActorContext, Behaviors }
   import _root_.org.apache.pekko.actor.typed.{ ActorRef, Behavior }
 
@@ -109,6 +112,64 @@ package object sΠ:
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
+                          (using DummyImplicit)
+                          (using %)
+                          (using ExecutionContext)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): Future[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key)
+      else
+        apply(false)(rate, Future(value))(key)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Future[Any])
+                          (using DummyImplicit)
+                          (using %)
+                          (using ExecutionContext)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): Future[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key)(code)
+      else
+        apply(true)(rate, Future(value))(key)(code)
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => Future[S])(key: String)
+                          (using %)
+                          (using ExecutionContext)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): Future[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        Future(value.asInstanceOf[Future[`()`]].flatMap(apply(rate, _)(key))).flatten
+      else
+        Future(value.map(new `()`(_)).flatMap(apply(rate, _)(key))).flatten
+
+    /**
+      * variable negative prefix i.e. variable output
+      */
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => Future[S])(key: String)(code: => Future[Any])
+                          (using %)
+                          (using ExecutionContext)
+                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                    ^ : String): Future[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        Future(value.asInstanceOf[Future[`()`]].flatMap(apply(rate, _)(key)(code))).flatten
+      else
+        Future(value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))).flatten
 
     /**
       * negative prefix i.e. output
