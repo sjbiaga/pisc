@@ -41,6 +41,7 @@ import scala.meta.dialects.Scala3
 
 import StochasticPi.*
 import Calculus.*
+import Directive.Settings
 import Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.Duplications
@@ -127,10 +128,10 @@ abstract class StochasticPi extends Expression:
                             case ((Right(term), _), free) =>
                               if free.nonEmpty
                               then
-                                val werr = _werr
-                                _werr = false
+                                val werr = _settings.werr
+                                _settings.werr = false
                                 warn(throw RateFreeNamesException(free.map(_.name).toSeq*))
-                                _werr = werr
+                                _settings.werr = werr
                               term
                             case ((Left(enums), _), _) =>
                               throw TermParsingException(enums)
@@ -154,7 +155,7 @@ abstract class StochasticPi extends Expression:
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_paceunit)
+        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -203,24 +204,6 @@ abstract class StochasticPi extends Expression:
   private[parser] def pos_(bound: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), bound) }
 
   protected final def path = (0 until _nest).map(_nth(_))
-
-  protected var _dirs = List[Map[String, Any]]()
-
-  protected var _dups: Boolean = false
-
-  protected var _par: Int = 9
-
-  protected var _traces: Option[Option[String]] = None
-
-  protected var _exclude: Boolean = false
-
-  protected var _paceunit: String = null
-
-  protected var _scaling: Boolean = false
-
-  protected var _replication: (Int, Boolean) = (-1, false)
-
-  protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
 
@@ -723,24 +706,9 @@ object StochasticPi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _dups = false
-      _exclude = false
-      _paceunit = "second"
-      _scaling = false
-      _replication = (-1, emitter.featuresLinearReplication)
-      _typeclasses = Nil
-      _par = 9
-      _traces = None
-      _dirs = List(Map("echo"         -> (),
-                       "errors"       -> _werr,
-                       "duplications" -> _dups,
-                       "exclude"      -> _exclude,
-                       "paceunit"     -> _paceunit,
-                       "scaling"      -> _scaling,
-                       "replication"  -> _replication,
-                       "typeclasses"  -> _typeclasses,
-                       "parallelism"  -> _par,
-                       "traces"       -> _traces))
+      _settings = Settings()
+      _settings.replication = (-1, emitter.featuresLinearReplication)
+      Directive("push" -> "1", _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -752,8 +720,8 @@ object StochasticPi:
       l = (0, 0)
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-      _werr = errors
       _init
+      _settings.werr = errors
 
       given Duplications()
 
@@ -778,7 +746,7 @@ object StochasticPi:
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
                 case Success(Left(equation), _) =>
-                  if !_exclude
+                  if !_settings.exclude
                   then
                     eqtn :+= equation
                     val equations = eqtn.slice(i, eqtn.size)
@@ -803,7 +771,7 @@ object StochasticPi:
           }
 
       val prog =
-        ( if i < eqtn.size && !_exclude
+        ( if i < eqtn.size && !_settings.exclude
           then
             r ::: eqtn.slice(i, eqtn.size).map(Right(_))
           else
@@ -815,12 +783,12 @@ object StochasticPi:
           case _ => true
         }
 
-      if _typeclasses.isEmpty
+      if _settings.typeclasses.isEmpty
       then
         Right((`(*)`(null, λ(Lit.Null())), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_par))), ∅()): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
         prog
       else
-        Right((`(*)`(null, λ(Term.Tuple(_typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_par))), ∅()): Bind) ::
+        Right((`(*)`(null, λ(Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
+        Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
         prog

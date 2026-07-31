@@ -358,7 +358,7 @@ abstract class Expansion extends Encoding:
             given Names()
             idx = 0
 
-            save(expand(in, Nil, Left(end))(_macro(code, term, _dups)(id, sπ_id, χ_id) -> term)._1) match
+            save(expand(in, Nil, Left(end))(_macro(code, term, _settings.dups)(id, sπ_id, χ_id) -> term)._1) match
               case Some(_) if r.nonEmpty => throw AmbiguousParsingException
               case Some((it @ (_, (arity, _)), in)) if arity == given_Substitution.size =>
                 r = Some((it, given_Substitution -> (given_Names -> (given_Bindings, given_Duplications)), in))
@@ -372,7 +372,7 @@ abstract class Expansion extends Encoding:
 
               val tooMP = { (code: Int, amount: Int) => warn(throw TooManyPointersParsingException(code, amount)) }
 
-              val exp = definition(_code, _nest, _dups, duplicated, _.replace(tooMP).flatten)(id, sπ_id)(using duplications)
+              val exp = definition(_code, _nest, _settings.dups, duplicated, _.replace(tooMP).flatten)(id, sπ_id)(using duplications)
 
               bindings ++= purged
 
