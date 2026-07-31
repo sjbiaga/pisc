@@ -51,19 +51,19 @@ object App extends _root_.zio.ZIOAppDefault:
   import `Π-loop`.*
 
 
-  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`)
-                 (% : %, / : /, * : *, - : -, ! : !, & : &, ~ : ~)
+  private def run(args: List[String], parallelism: Int, started: Ref[Long], snapshot: Boolean, uuid: sΠ.`)(`)
+                 (% : %, / : /, * : *, - : -, ! : !, & : &)
                  (using sΠ.`}{`.`][`, TSemaphore) =
     ( for
         r <- ZStream.fromZIO(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
         ^ <- ZStream.fromZIO(π.`π-uuid`)
-        _ <- π.Main(r)(args*)(using ^)(using %, /, () => *.release)
+        _ <- π.Main(r)(args*)(using ^)(using %, /, *.release)
         x <- ZStream.fromZIO(!.await)
         _ <- ZStream.fromZIO(exit(x))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(loop(snapshot)(using %, !, &, ~, -, *)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(loop(parallelism, started, snapshot)(using %, !, &, -, *)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(poll(using %, /, *)))
       .drainFork(ZStream.fromZIO(dump(snapshot)(using %, !, -)))
       .runDrain
@@ -83,10 +83,10 @@ object App extends _root_.zio.ZIOAppDefault:
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
       ! <- Promise.make[Throwable, ExitCode]
       & <- Ref.make(0L)
-      ~ <- SemaphoreZIO.make(p)
-      _ <- sΠ.`π-enable`(π.`π-main`)(using %)
+      n <- Ref.make(0L)
+      _ <- `π-enable`(π.`π-main`)(using %)
       (uuid, tree, semaphore) <- sΠ.`}{`.`][`()
-      _ <- run(args.toList, s, uuid)(%, /, *, -, !, &, ~)(using tree, semaphore)
+      _ <- run(args.toList, p, n, s, uuid)(%, /, *, -, !, &)(using tree, semaphore)
     yield
       ()
 

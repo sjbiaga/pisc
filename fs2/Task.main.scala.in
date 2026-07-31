@@ -58,8 +58,8 @@ object App extends CatsApp:
   import `Π-loop`.*
 
 
-  private def run(args: List[String], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F], ~ : ~[π.F])
+  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
@@ -67,13 +67,13 @@ object App extends CatsApp:
     ( for
         l <- ZStream.fromZIO(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
         ^ <- ZStream.fromZIO(π.`π-uuid`[π.F])
-        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, () => *.release).toZStream[Any]()
+        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, *.release).toZStream[Any]()
         x <- ZStream.fromZIO(!.get)
         _ <- ZStream.fromZIO(exit(ExitCode(x.code)))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(lπ.loop(~, snapshot, `}{`)(using %, !, &, -, *)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(lπ.loop(parallelism, started, snapshot, `}{`)(using %, !, &, -, *)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(lπ.poll(using %, /, *)))
       .drainFork(ZStream.fromZIO(dπ.dump(snapshot)(using %, !, -)))
       .runDrain
@@ -93,12 +93,12 @@ object App extends CatsApp:
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
-      ~ <- Semaphore[π.F](p)
+      n <- Ref[π.F].of(0L)
       _ <- sΠ.`π-enable`[π.F](π.`π-main`)(using %)
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      _ <- run(args.toList, s, uuid, wrapper)(%, /, *, -, !, &, ~)(using tree, semaphore)
+      _ <- run(args.toList, p, n, s, uuid, wrapper)(%, /, *, -, !, &)(using tree, semaphore)
     yield
       ()
 
@@ -111,8 +111,8 @@ object π:
   import _root_.cats.{ Functor, Parallel }
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.{ Async, Concurrent }
-  import _root_.cats.effect.std.UUIDGen
+  import _root_.cats.effect.{ Async, Concurrent, Deferred }
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, UUIDGen }
 
   import _root_.fs2.Stream
 

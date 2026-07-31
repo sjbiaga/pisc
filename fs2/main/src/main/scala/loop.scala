@@ -33,6 +33,7 @@ import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
+import _root_.cats.syntax.semigroupal.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
@@ -63,11 +64,9 @@ package object `Π-loop`:
 
   type &[F[_]] = Ref[F, Long]
 
-  type ~[F[_]] = Semaphore[F]
-
   type *[F[_]] = Semaphore[F]
 
-  type \[F[_]] = () => F[Unit]
+  type \[F[_]] = F[Unit]
 
 
   final class πloop[F[_]: Concurrent: Parallel]:
@@ -77,7 +76,6 @@ package object `Π-loop`:
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       val (_, spell) = `π-wand`
       `π-enable`[F](spell(key))
-
 
     private def unblock(m: Map[String, Int | (Boolean, +[F])], k: String)
                        (implicit ^ : String): F[Unit] =
@@ -117,7 +115,7 @@ package object `Π-loop`:
           else ExitCode.Error
         } >>= (!.complete(_).void)
 
-    def loop(~ : ~[F], _snapshot: Boolean, `}{`: sΠ.`}{`[F])
+    def loop(parallelism: Int, started: Ref[F, Long], _snapshot: Boolean, `}{`: sΠ.`}{`[F])
             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F])
             (using `}{`.`][`, `}{`.stm.TSemaphore)
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
@@ -155,55 +153,70 @@ package object `Π-loop`:
             case (it: Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)], exit) =>
               if it.isEmpty && !exit()
               then
-                *.acquire >> loop(~, _snapshot, `}{`)
+                *.acquire >> loop(parallelism, started, _snapshot, `}{`)
               else
                 ∥(it)(`π-wand`._1)() match
                   case Nil =>
-                    *.available.flatMap { n =>
+                    (started.get product *.available).map(_ + _).flatMap { n =>
                       if n == 0L && exit()
                       then
                         this.exit(it.keys.toList)
                       else
-                        *.acquire >> loop(~, _snapshot, `}{`)
+                        *.acquire >> loop(parallelism, started, _snapshot, `}{`)
                     }
                   case nel =>
-                    nel.parTraverse { case (key1, key2, in, _delay) =>
-                                      val k1 = key1.substring(36)
-                                      val k2 = key2.substring(36)
-                                      val  ^ = key1.substring(0, 36)
-                                      val ^^ = key2.substring(0, 36)
-                                      Concurrent[F].uncancelable { _ =>
-                                        for
-                                          cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
-                                          p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
-                                          p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
-                                          ((d1, c1), ((key, ord), _)) = p1
-                                          ((d2, c2), ((keyʹ, ordʹ), _)) = p2
-                                          _  <- ~.acquire
-                                          o1 <- d1.tryGet
-                                          o2 <- d2.tryGet
-                                          fb <- ( for
-                                                    _ <- { (ord, ordʹ) match
-                                                             case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                               `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                             case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                               `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                         }.unlessA(k1 == k2)
-                                                    _ <- enable(k1)
-                                                    _ <- enable(k2).unlessA(k1 == k2)
-                                                  yield
-                                                    ()
-                                                ).start
-                                          _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null) >> d1.complete(Some((cb, fb, in)))).whenA(o1 eq None)
-                                          _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null) >> d2.complete(Some((cb, fb, in)))).whenA(o2 eq None).unlessA(k1 == k2)
-                                          _  <- c1.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c1 eq null)
-                                          _  <- c2.get.flatTap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
-                                          _  <- ~.release
-                                          _  <- cb.await
-                                        yield
-                                          ()
+                    Semaphore[F](parallelism).flatMap { sem =>
+                      nel.parTraverse { case (key1, key2, in, _delay) =>
+                                          val k1 = key1.substring(36)
+                                          val k2 = key2.substring(36)
+                                          val  ^ = key1.substring(0, 36)
+                                          val ^^ = key2.substring(0, 36)
+                                          Concurrent[F].uncancelable { _ =>
+                                            for
+                                              -- <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                              p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
+                                              p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
+                                              ((d1, c1), ((key, ord), _)) = p1
+                                              ((d2, c2), ((keyʹ, ordʹ), _)) = p2
+                                              _  <- sem.acquire
+                                              o1 <- d1.tryGet
+                                              o2 <- d2.tryGet
+                                              _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null)).whenA(o1 eq None)
+                                              _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null)).whenA(o2 eq None).unlessA(k1 == k2)
+                                              b1 <- CyclicBarrier[F](2)
+                                              b2 <- CyclicBarrier[F](2)
+                                              _  <- started.update(_ + 1)
+                                              fb <- ( for
+                                                        _ <- b1.await.unlessA(c1 eq null)
+                                                        _ <- b2.await.unlessA(c2 eq null).unlessA(k1 == k2)
+                                                        _ <- { (ord, ordʹ) match
+                                                                 case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                   `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                 case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                   `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                             }.unlessA(k1 == k2)
+                                                        _ <- --.await
+                                                        _ <- enable(k1)
+                                                        _ <- enable(k2).unlessA(k1 == k2)
+                                                        _ <- sem.release
+                                                        _ <- started.update(_ - 1)
+                                                        _ <- *.release
+                                                      yield
+                                                        ()
+                                                    ).start
+                                              _  <- d1.complete(Some((--, fb, in))).whenA(o1 eq None)
+                                              _  <- d2.complete(Some((--, fb, in))).whenA(o2 eq None).unlessA(k1 == k2)
+                                              _  <- (c1.get.flatMap(_.complete(Some((--, fb, in))))
+                                                  >> %.update { m => m + (key1 -> (false, m(key1).asInstanceOf[(Boolean, +[F])]._2)) }
+                                                  >> b1.await).unlessA(c1 eq null)
+                                              _  <- (c2.get.flatMap(_.complete(Some((--, fb, in))))
+                                                  >> %.update { m => m + (key2 -> (false, m(key2).asInstanceOf[(Boolean, +[F])]._2)) }
+                                                  >> b2.await).unlessA(c2 eq null).unlessA(k1 == k2)
+                                            yield
+                                              ()
+                                          }
                                       }
-                                    } >> Concurrent[F].cede >> loop(~, _snapshot, `}{`)
+                    } >> Concurrent[F].cede >> loop(parallelism, started, _snapshot, `}{`)
         }
       }
 
@@ -212,26 +225,25 @@ package object `Π-loop`:
         h <- /.take
         ((_, key), it) = h
         ((d, _), _) = it
-        o <- d.tryGet
-        _ <- ( if o eq None
-               then
-                 %.update { m =>
-                            val ^ = h._1._1
-                            val n = m(key).asInstanceOf[Int] - 1
-                            ( if n == 0
-                              then
-                                m - key
-                              else
-                                m + (key -> n)
-                            ) + (^ + key -> (true, it))
-                 }
-               else
-                 %.update { m =>
-                            val ^ = h._1._1
-                            m + (^ + key -> (false, it))
-                 }
-             )
-        _ <- *.release
+        _ <- d.tryGet.map(_ ne None).flatMap {
+          if _
+          then
+            %.update { m =>
+                       val ^ = h._1._1
+                       m + (^ + key -> (false, it))
+            }
+          else
+            %.update { m =>
+                       val ^ = h._1._1
+                       val n = m(key).asInstanceOf[Int] - 1
+                       ( if n == 0
+                         then
+                           m - key
+                         else
+                           m + (key -> n)
+                       ) + (^ + key -> (true, it))
+            } >> *.release
+        }
         _ <- Concurrent[F].cede >> poll
       yield
         ()

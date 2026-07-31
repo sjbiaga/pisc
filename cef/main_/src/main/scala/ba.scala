@@ -30,6 +30,8 @@ package object sΠ:
 
   import _root_.scala.collection.immutable.{ Map, Set }
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.traverse.*
@@ -263,48 +265,56 @@ package object sΠ:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
-                (using DummyImplicit)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value match
-        case it: `()` =>
-          apply(rate, it)(key, `)(`, dir)
-        case _ =>
-          apply(false)(rate, IO.delay(value))(key, `)(`, dir)
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                                     (using DummyImplicit)
+                                     (using %, /)
+                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                               ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)
+      else
+        apply(false)(rate, IO.delay(value))(key, `)(`, dir)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-                (using DummyImplicit)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
+                                    (using DummyImplicit)
+                                    (using %, /)
+                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[java.lang.Double] =
-      value match
-        case it: `()` =>
-          apply(rate, it)(key, `)(`, dir)(code)
-        case _ =>
-          apply(true)(rate, IO.delay(value))(key, `)(`, dir)(code)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)
+      else
+        apply(true)(rate, IO.delay(value))(key, `)(`, dir)(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir))
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
+                                     (using %, /)
+                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                               ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
+      else
+        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-                (using %, /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[java.lang.Double] =
-      value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code))
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
+                                    (using %, /)
+                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                              ^ : String): IO[java.lang.Double] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
+      else
+        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code))
 
     /**
       * negative prefix i.e. output
