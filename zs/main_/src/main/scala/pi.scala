@@ -28,6 +28,8 @@
 
 package object Π:
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.concurrentInstance
   import _root_.zio.{ Duration, Hub, Promise, Schedule, Task, UIO, ZIO }
@@ -260,73 +262,76 @@ package object Π:
           /**
             * linear variable replication output guard
             */
-          def apply[S](_1: 1)(value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            value match
-              case it: `()` =>
-                self.`(!)`.`(+)`(it)(-, * ,+)
-              case _ =>
-                apply[S](1)(ZIO.attempt(value))(-, * ,+)
+          def apply[S: ClassTag](_1: 1)(value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(value.asInstanceOf[`()`])(-, * ,+)
+            else
+              apply[S](1)(ZIO.attempt(value))(-, * ,+)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](_2: 2)(pace: Duration, value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            value match
-              case it: `()` =>
-                self.`(!)`.`(+)`(pace, it)(-, * ,+)
-              case _ =>
-                apply[S](2)(pace, ZIO.attempt(value))(-, * ,+)
+          def apply[S: ClassTag](_2: 2)(pace: Duration, value: => S)(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(pace, value.asInstanceOf[`()`])(-, * ,+)
+            else
+              apply[S](2)(pace, ZIO.attempt(value))(-, * ,+)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            value match
-              case it: `()` =>
-                self.`(!)`.`(+)`(it)(code)(-, * ,+)
-              case _ =>
-                apply[S, T](3)(ZIO.attempt(value))(code)(-, * ,+)
+          def apply[S: ClassTag, T](_3: 3)(value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(value.asInstanceOf[`()`])(code)(-, * ,+)
+            else
+              apply[S, T](3)(ZIO.attempt(value))(code)(-, * ,+)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-            value match
-              case it: `()` =>
-                self.`(!)`.`(+)`(pace, it)(code)(-, * ,+)
-              case _ =>
-                apply[S, T](4)(pace, ZIO.attempt(value))(code)(-, * ,+)
+          def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              self.`(!)`.`(+)`(pace, value.asInstanceOf[`()`])(code)(-, * ,+)
+            else
+              apply[S, T](4)(pace, ZIO.attempt(value))(code)(-, * ,+)
 
           /**
             * linear variable replication output guard
             */
-          def apply[S](_1: 1)(value: => Task[S])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
-            ZStream.fromZIO {
-              for
-                _  <- -.await.exit
-                _  <- *.fold(ZIO.unit)(_.acquire)
-                it <- value
-                p  <- Promise.make[Throwable, Unit]
-              yield
-                new `()`(it) -> p
-            }.repeat(Schedule.forever).through1(h).tap(_ => +.release).interruptWhen(p)
+          def apply[S: ClassTag](_1: 1)(value: => Task[S])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
+            if classTag[S].runtimeClass eq self.getClass
+            then
+              ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]])).flatMap(self.`(!)`.`(+)`(_)(-, *, +))
+            else
+              ZStream.fromZIO {
+                for
+                  _  <- -.await.exit
+                  _  <- *.fold(ZIO.unit)(_.acquire)
+                  it <- value.flatMap { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }
+                yield
+                  new `()`(it) -> p
+              }.repeat(Schedule.forever).through1(h).tap(_ => +.release).interruptWhen(p)
 
           /**
             * linear variable replication output guard w/ pace
             */
-          def apply[S](_2: 2)(pace: Duration, value: => Task[S])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
+          def apply[S: ClassTag](_2: 2)(pace: Duration, value: => Task[S])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
             apply[S](1)(value)(-, * ,+) zipLeft ZStream.tick(pace)
 
           /**
             * linear variable replication output guard w/ code
             */
-          def apply[S, T](_3: 3)(value: => Task[S])(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
+          def apply[S: ClassTag, T](_3: 3)(value: => Task[S])(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
             apply[S](1)(value)(-, * ,+).tap(_ => code)
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
-          def apply[S, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
+          def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T])(- : CyclicBarrier, * : Option[Semaphore[Task]], + : Semaphore[Task]): ZStream[Any, Throwable, Unit] =
             apply[S](2)(pace, value)(-, * ,+).tap(_ => code)
 
         /**
@@ -434,65 +439,69 @@ package object Π:
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          value match
-            case it: `()` =>
-              self.`(!)`(it)
-            case _ =>
-              apply[S](1)(ZIO.attempt(value))
+        def apply[S: ClassTag](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(value.asInstanceOf[`()`])
+          else
+            apply[S](1)(ZIO.attempt(value))
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          value match
-            case it: `()` =>
-              self.`(!)`(pace, it)
-            case _ =>
-              apply[S](2)(pace, ZIO.attempt(value))
+        def apply[S: ClassTag](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(pace, value.asInstanceOf[`()`])
+          else
+            apply[S](2)(pace, ZIO.attempt(value))
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          value match
-            case it: `()` =>
-              self.`(!)`(it)(code)
-            case _ =>
-              apply[S](1)(value).tap(_ => code)
+        def apply[S: ClassTag, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(value.asInstanceOf[`()`])(code)
+          else
+            apply[S](1)(value).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-          value match
-            case it: `()` =>
-              self.`(!)`(pace, it)(code)
-            case _ =>
-              apply[S](2)(pace, value).tap(_ => code)
+        def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            self.`(!)`(pace, value.asInstanceOf[`()`])(code)
+          else
+            apply[S](2)(pace, value).tap(_ => code)
 
         /**
           * variable replication output guard
           */
-        def apply[S](_1: 1)(value: => Task[S]): ZStream[Any, Throwable, Unit] =
-          ZStream.fromZIO(value.flatMap { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }).repeat(Schedule.forever).through1(h).interruptWhen(p)
+        def apply[S: ClassTag](_1: 1)(value: => Task[S]): ZStream[Any, Throwable, Unit] =
+          if classTag[S].runtimeClass eq self.getClass
+          then
+            ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]])).flatMap(self.`(!)`(_))
+          else
+            ZStream.fromZIO(value.flatMap { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }).repeat(Schedule.forever).through1(h).interruptWhen(p)
 
         /**
           * variable replication output guard w/ pace
           */
-        def apply[S](_2: 2)(pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
+        def apply[S: ClassTag](_2: 2)(pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
           apply[S](1)(value) zipLeft ZStream.tick(pace)
 
         /**
           * variable replication output guard w/ code
           */
-        def apply[S, T](_3: 3)(value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+        def apply[S: ClassTag, T](_3: 3)(value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
           apply[S](1)(value).tap(_ => code)
 
         /**
           * variable replication output guard w/ pace w/ code
           */
-        def apply[S, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+        def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
           apply[S](2)(pace, value).tap(_ => code)
 
       /**
@@ -605,65 +614,69 @@ package object Π:
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        value match
-          case it: `()` =>
-            self(it)
-          case _ =>
-            apply[S](1)(ZIO.attempt(value))
+      def apply[S: ClassTag](_1: 1)(value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(value.asInstanceOf[`()`])
+        else
+          apply[S](1)(ZIO.attempt(value))
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        value match
-          case it: `()` =>
-            self(pace, it)
-          case _ =>
-            apply[S](1)(value) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+      def apply[S: ClassTag](_2: 2)(pace: Duration, value: => S)(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(pace, value.asInstanceOf[`()`])
+        else
+          apply[S](1)(value) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        value match
-          case it: `()` =>
-            self(it)(code)
-          case _ =>
-            apply[S](1)(value).tap(_ => code)
+      def apply[S: ClassTag, T](_3: 3)(value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(value.asInstanceOf[`()`])(code)
+        else
+          apply[S](1)(value).tap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
-        value match
-          case it: `()` =>
-            self(pace, it)(code)
-          case _ =>
-            apply[S](2)(pace, value).tap(_ => code)
+      def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => S)(code: => Task[T])(using DummyImplicit): ZStream[Any, Throwable, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          self(pace, value.asInstanceOf[`()`])(code)
+        else
+          apply[S](2)(pace, value).tap(_ => code)
 
       /**
         * variable output prefix
         */
-      def apply[S](_1: 1)(value: => Task[S]): ZStream[Any, Throwable, Unit] =
-        ZStream.fromZIO(value.flatMap { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }).through1(h).interruptWhen(p)
+      def apply[S: ClassTag](_1: 1)(value: => Task[S]): ZStream[Any, Throwable, Unit] =
+        if classTag[S].runtimeClass eq self.getClass
+        then
+          ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]])).flatMap(self(_))
+        else
+          ZStream.fromZIO(value.flatMap { it => Promise.make[Throwable, Unit].map(new `()`(it) -> _) }).through1(h).interruptWhen(p)
 
       /**
         * variable output prefix w/ pace
         */
-      def apply[S](_2: 2)(pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
+      def apply[S: ClassTag](_2: 2)(pace: Duration, value: => Task[S]): ZStream[Any, Throwable, Unit] =
         apply[S](1)(value) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
 
       /**
         * variable output prefix w/ code
         */
-      def apply[S, T](_3: 3)(value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+      def apply[S: ClassTag, T](_3: 3)(value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
         apply[S](1)(value).tap(_ => code)
 
       /**
         * variable output prefix w/ pace w/ code
         */
-      def apply[S, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
+      def apply[S: ClassTag, T](_4: 4)(pace: Duration, value: => Task[S])(code: => Task[T]): ZStream[Any, Throwable, Unit] =
         apply[S](2)(pace, value).tap(_ => code)
 
     /**

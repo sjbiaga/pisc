@@ -267,7 +267,6 @@ object Pi:
                                                         featuresLinearReplication = featuresLinearReplication,
                                                         hasReplicationInputGuardFlaw = {
                                                           case -1|0        => true
-                                                          case 1           => false
                                                           case parallelism => parallelism > 1
                                                         })
     case ce extends Emitter()

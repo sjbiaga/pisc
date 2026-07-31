@@ -589,6 +589,29 @@ object Program:
           * = `_ <- *`("τ")
 
 
+        case π(λ(Symbol(ch)), arg @ λ(_: Term), None, code) =>
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true)::Nil)),
+                               Term.ArgClause(arg.toTerm::Nil)),
+                             Term.ArgClause(expr::Nil)
+                           ))
+            case Some((Right(term), _)) =>
+              val expr = `for * yield ()`(`_ <- Future { * }`(term))
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true)::Nil)),
+                               Term.ArgClause(arg.toTerm::Nil)),
+                             Term.ArgClause(expr::Nil)
+                           ))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(false)::Nil)),
+                             Term.ArgClause(arg.toTerm::Nil)))
+
         case π(λ(Symbol(ch)), arg, nu @ (None | Some("ν")), code) =>
           val argʹ =
             nu match

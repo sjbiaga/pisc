@@ -28,6 +28,8 @@
 
 package object Π:
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
   import _root_.cats.effect.{ Ref, IO }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ CyclicBarrier, Queue, Supervisor }
@@ -56,12 +58,7 @@ package object Π:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
-      ( for
-          q <- Queue.synchronous[IO, (Any, CyclicBarrier[IO])]
-          ref <- Ref.of[IO, ><](><(q, false))
-        yield
-          f(ref)
-      ).flatten
+      Queue.synchronous[IO, (Any, CyclicBarrier[IO])].map(><(_, false)).flatMap(IO.ref).map(`()`).flatMap(f)
 
 
   /**
@@ -90,34 +87,42 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(value: => S)(using DummyImplicit): IO[Option[Unit]] =
-      value match
-        case it: `()` =>
-          apply(it)
-        case _ =>
-          apply(false)(IO.delay(value))
+    def apply[S: ClassTag](_f: false)(value: => S)(using DummyImplicit): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.asInstanceOf[`()`])
+      else
+        apply(false)(IO.delay(value))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(value: => S)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
-      value match
-        case it: `()` =>
-          apply(it)(code)
-        case _ =>
-          apply(true)(IO.delay(value))(code)
+    def apply[S: ClassTag](_t: true)(value: => S)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(value.asInstanceOf[`()`])(code)
+      else
+        apply(true)(IO.delay(value))(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(value: => IO[S]): IO[Option[Unit]] =
-      value.map(new `()`(_)).flatMap(apply(_))
+    def apply[S: ClassTag](_f: false)(value: => IO[S]): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(_)))
+      else
+        IO.defer(value.map(new `()`(_)).flatMap(apply(_)))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(value: => IO[S])(code: => IO[Any]): IO[Option[Unit]] =
-      value.map(new `()`(_)).flatMap(apply(_)(code))
+    def apply[S: ClassTag](_t: true)(value: => IO[S])(code: => IO[Any]): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(_)(code)))
+      else
+        IO.defer(value.map(new `()`(_)).flatMap(apply(_)(code)))
 
     /**
       * negative prefix i.e. output

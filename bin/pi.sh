@@ -21,7 +21,7 @@ function pi() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.19'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.20'
             ;;
         pekko)
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
@@ -84,7 +84,7 @@ function pi_() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.19'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.20'
             ;;
         pekko)
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
