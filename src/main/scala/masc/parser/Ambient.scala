@@ -38,6 +38,7 @@ import scala.collection.mutable.{
 
 import Ambient.*
 import Calculus.{ AST => _, * }
+import Directive.Settings
 import Encoding.*
 import scala.util.parsing.combinator.masc.parser.Expansion
 import Expansion.Duplications
@@ -70,7 +71,7 @@ abstract class Ambient extends Expression:
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_paceunit)
+        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -105,16 +106,6 @@ abstract class Ambient extends Expression:
   private[parser] def pos_(bound: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), bound) }
 
   protected final def path = (0 until _nest).map(_nth(_))
-
-  protected var _dirs = List[Map[String, Any]]()
-
-  protected var _dups: Boolean = false
-
-  protected var _exclude: Boolean = false
-
-  protected var _paceunit: String = null
-
-  protected var _scaling: Boolean = false
 
   private[parser] var _id: helper.υidυ = null
 
@@ -270,15 +261,8 @@ object Ambient:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _dups = false
-      _exclude = false
-      _paceunit = "second"
-      _scaling = false
-      _dirs = List(Map("errors"       -> _werr,
-                       "duplications" -> _dups,
-                       "exclude"      -> _exclude,
-                       "paceunit"     -> _paceunit,
-                       "scaling"      -> _scaling))
+      _settings = Settings()
+      Directive("push" -> "1", _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -289,8 +273,8 @@ object Ambient:
       l = (0, 0)
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-      _werr = errors
       _init
+      _settings.werr = errors
 
       given Duplications()
 
@@ -315,7 +299,7 @@ object Ambient:
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
                 case Success(Left(equation), _) =>
-                  if !_exclude
+                  if !_settings.exclude
                   then
                     eqtn :+= equation
                     val equations = eqtn.slice(i, eqtn.size)
@@ -333,7 +317,7 @@ object Ambient:
                   scala.sys.error(failure.msg)
           }
 
-      ( if i < eqtn.size && !_exclude
+      ( if i < eqtn.size && !_settings.exclude
         then
           r ::: eqtn.slice(i, eqtn.size).map(Right(_))
         else

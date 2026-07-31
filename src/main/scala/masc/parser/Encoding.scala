@@ -50,10 +50,10 @@ abstract class Encoding extends Calculus:
 
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
-      case _ if _dir.isDefined =>
-        Directive()
+      case _ if _directive.isDefined =>
+        Directive(_directive.get, _settings)()
         ".*".r ^^ { _ => None }
-      case _ if _exclude =>
+      case _ if _settings.exclude =>
         ".*".r ^^ { _ => None }
       case (term, _parameters) ~ _constants ~ _variables =>
         val parameters = _parameters.filterNot(_.charAt(0).isUpper)
@@ -80,7 +80,7 @@ abstract class Encoding extends Calculus:
               throw DefinitionFreeNamesException(_code, free &~ bound)
             if parameters.size == _parameters.size
             then
-              if !_exclude
+              if !_settings.exclude
               then
                 val bind: `(*)` = `(*)`("Self_" + _code, Nil, bound.toSeq*)
                 eqtn :+= bind -> par
@@ -169,130 +169,6 @@ abstract class Encoding extends Calculus:
     }
 
   protected final val _cache = Map[CacheKey, CacheValue]()
-
-  private object Directive:
-
-    private def canonical: String => String =
-      case "werr" => "errors"
-      case "dups" => "duplications"
-      case it     => it
-
-    private def key: String => Boolean = canonical andThen {
-      case "echo"
-         | "errors" | "duplications"
-         | "exclude" | "include"
-         | "paceunit"
-         | "scaling" => true
-      case _         => false
-    }
-
-    private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
-
-    extension (self: String | List[String])
-              (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> throw DirectiveValueParsingException(dir, msg) })
-              (using key: () => String = () => _dir.get._1)
-              (using dir: (() => String) ?=> (String, String | List[String]) = { key ?=> key() -> self })
-
-      def boolean: Boolean =
-        self match
-          case it: String =>
-            it.toLowerCase match
-              case "0" | "off" | "false" | "no" | "n" => false
-              case "1" | "on" | "true" | "yes" | "y"  => true
-              case _                                  => throw err("a boolean")
-          case _          => throw err("a boolean")
-
-      def number: Int =
-        self match
-          case it: String =>
-            try
-              it.toInt
-            catch
-              case _: NumberFormatException =>
-                throw err("a number")
-          case _          => throw err("a number")
-
-      def keys: Set[String] =
-        self match
-          case it: String if Directive.key(it)              => Set(canonical(it))
-          case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
-          case _                                            => throw err("a comma separated list of valid keys")
-
-    private def boolean: Boolean = _dir.get._2.boolean
-    private def number: Int = _dir.get._2.number
-    private def keys: Set[String] = _dir.get._2.keys
-
-    def apply(): Unit =
-
-      canonical(_dir.get._1.toLowerCase) match
-
-        case "echo"         =>
-          Console.println(_dir.get._2)
-
-        case "errors"       =>
-          _werr = boolean
-
-        case "duplications" =>
-          _dups = boolean
-
-        case "exclude"      =>
-          _exclude = boolean
-
-        case "include"      =>
-          _exclude = !boolean
-
-        case "paceunit"     =>
-          _paceunit = _dir.get._2 match
-            case it: String => it
-            case _          => throw DirectiveValueParsingException(_dir.get, "a time unit")
-
-        case "scaling"      =>
-          _scaling = boolean
-
-        case "push"         =>
-          try
-            if boolean
-            then
-              _dirs ::= Map("echo"         -> (),
-                            "errors"       -> _werr,
-                            "duplications" -> _dups,
-                            "exclude"      -> _exclude,
-                            "paceunit"     -> _paceunit,
-                            "scaling"      -> _scaling)
-          catch _ =>
-            _dirs ::= Map.from {
-              keys.map {
-                case it @ "echo"           => it -> ()
-                case it @ "errors"         => it -> _werr
-                case it @ "duplications"   => it -> _dups
-                case "exclude" | "include" => "exclude" -> _exclude
-                case it @ "paceunit"       => it -> _paceunit
-                case it @ "scaling"        => it -> _scaling
-              }
-            }
-
-        case "pop"          =>
-          if boolean
-          then
-            _dirs.head.foreach {
-              case ("echo", _)                   =>
-              case ("errors", it: Boolean)       => _werr = it
-              case ("duplications", it: Boolean) => _dups = it
-              case ("exclude", it: Boolean)      => _exclude = it
-              case ("paceunit", it: String)      => _paceunit = it
-              case ("scaling", it: Boolean)      => _scaling = it
-              case _                             => ???
-            }
-            _dirs = _dirs.tail
-
-          if _dirs.isEmpty
-          then
-            val dir = _dir
-            _dir = Some("push" -> "1")
-            this()
-            _dir = dir
-
-        case _              => throw DirectiveKeyParsingException(_dir.get)
 
 
 object Encoding:
@@ -469,21 +345,6 @@ object Encoding:
 
   case class ScopeBindingParsingException(code: Int, nest: Int, name: String)
       extends BindingParsingException(code, nest, s"""An occurrence of a definition parameter ($name) is not in the scope of its binding occurrence""")
-
-  abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
-      extends ParsingException(msg, cause)
-
-  private object DirectiveParsingException:
-    def apply(dir: (String, String | List[String])): String =
-      dir._2 match
-        case it: String => s"⟦ ${dir._1} = $it ⟧"
-        case it: List[String] => s"""⟦ ${dir._1} = ${it.mkString("(", ",", ")")} ⟧"""
-
-  case class DirectiveKeyParsingException(dir: (String, String | List[String]))
-      extends DirectiveParsingException(s"The key in the directive ${DirectiveParsingException(dir)} is not valid")
-
-  case class DirectiveValueParsingException(dir: (String, String | List[String]), `type`: String)
-      extends DirectiveParsingException(s"The value in the directive ${DirectiveParsingException(dir)} is not ${`type`}")
 
 
   // functions

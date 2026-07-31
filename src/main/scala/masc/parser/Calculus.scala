@@ -42,11 +42,11 @@ abstract class Calculus extends Ambient:
 
   def equation(using Duplications): Parser[Bind] =
     invocation(true) >> {
-      case (bind, _) if _exclude =>
+      case (bind, _) if _settings.exclude =>
         ".*".r ^^ { _ => bind -> ∅() }
       case (bind, bound) =>
         _code = -1
-        _dir = None
+        _directive = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
         "="~> parallel ^^ {
@@ -72,7 +72,7 @@ abstract class Calculus extends Ambient:
           if scalingʹ == 0
           then
             ∅() -> Names()
-          else if _scaling && emitter.canScale
+          else if _settings.scaling && emitter.canScale
           then
             ∥(scaling, it*) -> ns.reduce(_ ++ _)
           else
