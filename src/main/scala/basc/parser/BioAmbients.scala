@@ -40,6 +40,7 @@ import scala.meta.{ Lit, Term }
 
 import BioAmbients.*
 import Calculus.*
+import Directive.Settings
 import Encoding.*
 import scala.util.parsing.combinator.basc.parser.Expansion
 import Expansion.Duplications
@@ -145,10 +146,10 @@ abstract class BioAmbients extends Expression:
                             case ((Right(term), _), free) =>
                               if free.nonEmpty
                               then
-                                val werr = _werr
-                                _werr = false
+                                val werr = _settings.werr
+                                _settings.werr = false
                                 warn(throw RateFreeNamesException(free.map(_.name).toSeq*))
-                                _werr = werr
+                                _settings.werr = werr
                               term
                             case ((Left(enums), _), _) =>
                               throw TermParsingException(enums)
@@ -172,7 +173,7 @@ abstract class BioAmbients extends Expression:
   def pace: Parser[(Long, String)] =
     wholeNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_paceunit)
+        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -221,26 +222,6 @@ abstract class BioAmbients extends Expression:
   private[parser] def pos_(bound: Boolean = false) = { _cntr(_nest) += 1; Position(-_cntr(_nest), bound) }
 
   protected final def path = (0 until _nest).map(_nth(_))
-
-  protected var _dirs = List[Map[String, Any]]()
-
-  protected var _dups: Boolean = false
-
-  protected var _par: Int = 9
-
-  protected var _snapshot: Boolean = false
-
-  protected var _traces: Option[Option[String]] = None
-
-  protected var _exclude: Boolean = false
-
-  protected var _paceunit: String = null
-
-  protected var _scaling: Boolean = false
-
-  protected var _replication: (Int, Boolean) = (-1, false)
-
-  protected var _typeclasses: List[String] = Nil
 
   private[parser] var _id: helper.υidυ = null
 
@@ -797,26 +778,9 @@ object BioAmbients:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _dups = false
-      _exclude = false
-      _paceunit = "second"
-      _scaling = false
-      _replication = (-1, emitter.featuresLinearReplication)
-      _typeclasses = Nil
-      _par = 9
-      _snapshot = false
-      _traces = None
-      _dirs = List(Map("echo"         -> (),
-                       "errors"       -> _werr,
-                       "duplications" -> _dups,
-                       "exclude"      -> _exclude,
-                       "paceunit"     -> _paceunit,
-                       "scaling"      -> _scaling,
-                       "replication"  -> _replication,
-                       "typeclasses"  -> _typeclasses,
-                       "parallelism"  -> _par,
-                       "snapshot"     -> _snapshot,
-                       "traces"       -> _traces))
+      _settings = Settings()
+      _settings.replication = (-1, emitter.featuresLinearReplication)
+      Directive("push" -> "1", _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -829,8 +793,8 @@ object BioAmbients:
       l = (0, 0)
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
-      _werr = errors
       _init
+      _settings.werr = errors
 
       given Duplications()
 
@@ -855,7 +819,7 @@ object BioAmbients:
               _nth = Map(0 -> 0L)
               parseAll(line, it) match
                 case Success(Left(equation), _) =>
-                  if !_exclude
+                  if !_settings.exclude
                   then
                     eqtn :+= equation
                     val equations = eqtn.slice(i, eqtn.size)
@@ -880,7 +844,7 @@ object BioAmbients:
           }
 
       val prog =
-        ( if i < eqtn.size && !_exclude
+        ( if i < eqtn.size && !_settings.exclude
           then
             r ::: eqtn.slice(i, eqtn.size).map(Right(_))
           else
@@ -892,7 +856,7 @@ object BioAmbients:
           case _ => true
         }
 
-      Right((`(*)`(null, λ(if _typeclasses.isEmpty then Lit.Null() else Term.Tuple(_typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(Lit.Int(_par))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(Lit.Boolean(_snapshot))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(Lit.Boolean(_settings.snapshot))), ∅()): Bind) ::
       prog
