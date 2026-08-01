@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Monix's `Iterant[_, _]` monad.
@@ -83,7 +83,7 @@ _or_:
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -monix ex
+    sbt:π-Calculus2Scala> pin -monix ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

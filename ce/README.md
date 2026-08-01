@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
@@ -13,11 +13,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `List(...).parSequence.void`.
+Composition: parallel modelled with - `List(...).parSequenceVoid`.
 
-Summation: non-deterministic choice modelled with - `parSequence` and `Semaphore.tryAcquire.ifM`.
+Summation: non-deterministic choice modelled with - `parSequenceVoid` and `Semaphore.tryAcquire.ifM`.
 
-[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequenceVoid` and `lazy val` [or `def`].
 
 
 Program
@@ -116,21 +116,18 @@ named `_<uuid>` to translate lazily `! P` as:
     for
       _<uuid> <- IO {
         lazy val _<uuid>: IO[Any] =
-          NonEmptyList
-            .fromListUnsafe(
-              List(
-                .  // P
-                .
-                .
-              ,
-                for
-                  _ <- IO.unit
-                  _ <- _<uuid>
-                yield
-                  ()
-              )
-            )
-            .parSequence
+          List(
+            .  // P
+            .
+            .
+          ,
+            for
+              _ <- IO.unit
+              _ <- _<uuid>
+            yield
+              ()
+          )
+          .parSequenceVoid
         _<uuid>
       }
       _ <- _<uuid>
@@ -175,7 +172,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -ce ex
+    sbt:π-Calculus2Scala> pin -ce ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

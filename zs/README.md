@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the ZIO's `ZStream[_, _, _]` monad.
@@ -11,9 +11,9 @@ and `Task[_]`.
 Names act as [hub](https://zio.dev/reference/concurrency/hub/)s, with
 possibly multiple publishers and multiple subscribers.
 
-Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain))) *> ZStream.empty`.
+Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain)))`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_)))) *> ZStream.empty`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_))))`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -79,7 +79,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -zs ex
+    sbt:π-Calculus2Scala> pin -zs ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

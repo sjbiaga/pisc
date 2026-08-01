@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The π-calculus inner process nest inside outer processes, as nested methods.
 These define the behavior of `Akka` actors corresponding to processes, but
@@ -829,11 +829,11 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -kk ex
+    sbt:π-Calculus2Scala> pin -kk ex
 
 Or, if you wish to disable the [optimizer](#optimizer):
 
-    sbt:π-Calculus[experimental]2Scala> pin -kk -O0 ex
+    sbt:π-Calculus2Scala> pin -kk -O0 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

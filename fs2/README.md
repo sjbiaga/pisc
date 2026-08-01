@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Pi-calculus in SCala aka PISC ala RISC
+======================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the FS2's `Stream[_, _]` monad.
@@ -11,9 +11,9 @@ and Cats Effect `IO[_]`.
 Names act as [topic](https://fs2.io/#/concurrency-primitives?id=topic)s, with
 possibly multiple [publishers and multiple subscribers](https://fs2.io/#/concurrency-primitives?id=single-publisher-multiple-subscriber).
 
-Composition: parallel modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
+Composition: parallel modelled with - `Stream.eval(List(...).map(_.compile.drain).parSequenceVoid)`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Stream.exec(List(...).map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence.map(_.compile.drain).parSequence.void)`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Stream.eval(List(...).map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).map(_.compile.drain).parSequenceVoid)`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -79,7 +79,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -fs2 ex
+    sbt:π-Calculus2Scala> pin -fs2 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
