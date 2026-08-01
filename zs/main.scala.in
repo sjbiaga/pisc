@@ -30,7 +30,7 @@
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.concurrentInstance
-import _root_.zio.{ FiberRef, Promise, Queue, Semaphore => SemaphoreZIO, Task, ZIO }
+import _root_.zio.{ FiberRef, Promise, Queue, Task, ZIO }
 import _root_.zio.stm.TSemaphore
 import _root_.zio.stream.ZStream
 
@@ -110,8 +110,6 @@ object π:
   extension (self: πLs[ZStream[Any, Throwable, ?]])
     private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
-    private[π] inline def πcollectAllPar(semaphore: SemaphoreZIO): ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain).map(semaphore.tryWithPermit(_))))
 
   val `π-uuid`: UIO[String] =
     Random.nextUUID.map(_.toString)

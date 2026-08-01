@@ -104,9 +104,9 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
 
       def keys: Set[String] =
         self match
-          case it: String if Directive.this.key(it)              => Set(canonical(it))
-          case it: List[String] if it.forall(Directive.this.key) => Set.from(it.map(canonical))
-          case _                                                 => throw err("a comma separated list of valid keys")
+          case it: String if Directive.this.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
+          case it: List[String] if it.map(_.toLowerCase).forall(Directive.this.key) => Set.from(it.map(_.toLowerCase).map(canonical))
+          case _                                                                    => throw err("a comma separated list of valid keys")
 
   private def boolean: Boolean = directive._2.boolean
   private def number: Int = directive._2.number

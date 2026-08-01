@@ -158,7 +158,7 @@ package object `Π-loop`:
                                       val ^^ = key2.substring(0, 36)
                                       IO.uncancelable { _ =>
                                         for
-                                          -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                          cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                           p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                           p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                           (d1, (ts1, ((key, ord), _))) = p1
@@ -181,7 +181,7 @@ package object `Π-loop`:
                                                     elabel       <- `}{`.stm.commit { `}{`.`}{`(key, snapshot) }
                                                     (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
                                                     _            <- `}{`.stm.commit { `1`.release }
-                                                    _            <- --.await
+                                                    _            <- cb.await
                                                     _            <- enable(k1)
                                                     _            <- enable(k2).unlessA(k1 == k2)
                                                     no           <- &.updateAndGet(_ + 1)
@@ -193,8 +193,8 @@ package object `Π-loop`:
                                                   yield
                                                     ()
                                                 ).start
-                                          _  <- d1.complete(Some((delay, --, fb, in)))
-                                          _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
+                                          _  <- d1.complete(Some((delay, cb, fb, in)))
+                                          _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
                                         yield
                                           ()
                                       }

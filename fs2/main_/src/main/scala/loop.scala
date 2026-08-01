@@ -153,7 +153,7 @@ package object `Π-loop`:
                                           val ^^ = key2.substring(0, 36)
                                           Temporal[F].uncancelable { _ =>
                                             for
-                                              -- <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                              cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                               p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +[F])]._2 }
                                               p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +[F])]._2 }
                                               ((d1, c1), (ts1, ((key, ord), _))) = p1
@@ -163,12 +163,11 @@ package object `Π-loop`:
                                               o2 <- d2.tryGet
                                               _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null)).whenA(o1 eq None)
                                               _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null)).whenA(o2 eq None).unlessA(k1 == k2)
-                                              b1 <- CyclicBarrier[F](2)
-                                              b2 <- CyclicBarrier[F](2)
+                                              -- <- CyclicBarrier[F](2)
                                               _  <- started.update(_ + 1)
                                               fb <- ( for
-                                                        _            <- b1.await.unlessA(c1 eq null)
-                                                        _            <- b2.await.unlessA(c2 eq null).unlessA(k1 == k2)
+                                                        _            <- --.await.unlessA(c1 eq null)
+                                                        _            <- --.await.unlessA(c2 eq null).unlessA(k1 == k2)
                                                         (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
                                                         (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
                                                         _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
@@ -181,7 +180,7 @@ package object `Π-loop`:
                                                         elabel       <- `}{`.stm.commit { `}{`.`}{`(key, snapshot) }
                                                         (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
                                                         _            <- `}{`.stm.commit { `1`.release }
-                                                        _            <- --.await
+                                                        _            <- cb.await
                                                         _            <- enable(k1)
                                                         _            <- enable(k2).unlessA(k1 == k2)
                                                         no           <- &.updateAndGet(_ + 1)
@@ -194,14 +193,14 @@ package object `Π-loop`:
                                                       yield
                                                         ()
                                                     ).start
-                                              _  <- d1.complete(Some((--, fb, in))).whenA(o1 eq None)
-                                              _  <- d2.complete(Some((--, fb, in))).whenA(o2 eq None).unlessA(k1 == k2)
-                                              _  <- (c1.get.flatMap(_.complete(Some((--, fb, in))))
+                                              _  <- d1.complete(Some((cb, fb, in))).whenA(o1 eq None)
+                                              _  <- d2.complete(Some((cb, fb, in))).whenA(o2 eq None).unlessA(k1 == k2)
+                                              _  <- (c1.get.flatMap(_.complete(Some((cb, fb, in))))
                                                   >> %.update { m => m + (key1 -> (false, m(key1).asInstanceOf[(Boolean, +[F])]._2)) }
-                                                  >> b1.await).unlessA(c1 eq null)
-                                              _  <- (c2.get.flatMap(_.complete(Some((--, fb, in))))
+                                                  >> --.await).unlessA(c1 eq null)
+                                              _  <- (c2.get.flatMap(_.complete(Some((cb, fb, in))))
                                                   >> %.update { m => m + (key2 -> (false, m(key2).asInstanceOf[(Boolean, +[F])]._2)) }
-                                                  >> b2.await).unlessA(c2 eq null).unlessA(k1 == k2)
+                                                  >> --.await).unlessA(c2 eq null).unlessA(k1 == k2)
                                             yield
                                               ()
                                           }

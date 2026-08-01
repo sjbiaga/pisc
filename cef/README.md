@@ -16,14 +16,11 @@ programmatically typed as `Scala` code using `CE` `IO`.
 The for-comprehensions vertically put the prefix (after "`for`")
 and the composition/summation (before "`yield`").
 
-Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
-producer/consumer but no queue, only `takers` and `offerers`, which can be at most one.
+Composition: parallel modelled with - `List(...).parSequenceVoid`.
 
-Composition: parallel modelled with - `List(...).parSequence`.
+Summation: *probabilistic* choice modelled with - `parSequenceVoid`.
 
-Summation: *probabilistic* choice modelled with - `parSequence`.
-
-[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequenceVoid` and `lazy val` [or `def`].
 
 
 Program
@@ -43,6 +40,16 @@ The inaction - `IO.unit`.
 
 Agent identifiers (literals) start with uppercase, while
 channel names start with lowercase.
+
+The check for ambients' condition required by either a pair of communication or capability
+prefixes is _asynchronous_. This means that the checks for several such pairs happen in
+parallel, in different background fibers, and these are all in contention simultaneously,
+which would not have been the case had the detection of the list of the pairs blocked instead
+with each pair.
+
+Hence, the map of enabled actions/capabilities may be confronted successively, without blocking
+each time, and this may engender more background fibers which might unlock possible livelocks on
+ambients' conditions.
 
 
 Apps (examples)

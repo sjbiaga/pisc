@@ -1,4 +1,4 @@
-BioAmbients Pi-calculus in SCala aka PISC ala RISC (experimental)
+BioAmbients Pi-calculus in SCala aka BASC ala RISC (experimental)
 =================================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
@@ -8,12 +8,9 @@ After code generation, the π-calculus "processes" could be
 programmatically typed as `Scala` code using `FS2` `Stream[_, _]`
 and Cats Effect `IO[_]`.
 
-Names act as [topic](https://fs2.io/#/concurrency-primitives?id=topic)s, with
-possibly multiple [publishers and multiple subscribers](https://fs2.io/#/concurrency-primitives?id=single-publisher-multiple-subscriber).
+Composition: parallel modelled with - `Stream.eval(List(...).map(_.compile.drain).parSequenceVoid)`.
 
-Composition: parallel modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
-
-Summation: probabilistic choice modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
+Summation: probabilistic choice modelled with - `Stream.eval(List(...).map(_.compile.drain).parSequenceVoid)`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -28,24 +25,27 @@ example, the expression `!.a(b). !.b<c>.` can be viewed simply as a `flatMap` of
 infinite streams, rather than a prefix and the spawning of a fiber upon communication
 on the prefix.
 
-A third observation is that it suffices that subscribers and publishers run in parallel
-in order for topics to publish events to subscribers. But this is exactly what parallel
-composition means in π-calculus. So, for example the expression `(!.a(b).) | (!.a<c>.)`
-will lead to the infinite publisher stream `!.a<c>.` emit in parallel with the infinite
-subscriber stream `!.a(b).`
+The check for ambients' condition required by either a pair of communication or capability
+prefixes is _asynchronous_. This means that the checks for several such pairs happen in
+parallel, in different background fibers, and these are all in contention simultaneously,
+which would not have been the case had the detection of the list of the pairs blocked instead
+with each pair.
 
-Fourth, all that needs taken care of is that there should be no output on a
-"channel" (which herein is a `Topic`) yet, lest there is a subscription. Hence, fifth,
-there is no difference between a subscription of a replication input guard and of
-an input prefix. There is, however a difference between a replication input guard like
-`!.a(b).` and a replication with an input prefix like `! a(b).`: the former corresponds
-to just one subscription, while the latter - to many; also in the case of a recursive
-agent like `P(a) = a(b). P(a)`.
+Hence, the map of enabled actions/capabilities may be confronted successively, without blocking
+each time, and this may engender more background fibers which might unlock possible livelocks on
+ambients' conditions.
 
-Awaiting (again) for a subscription is achieved using a `Queue[_, Unit]`. An infinite
-input stream must therefore ensure fairness by enqueuing after each received element.
-Output prefixes that await subscription are always thus started.
+However, in the case of linear replication, when an action/capability always resides in the map
+and is enabled depending on a boolean flag, care must be taken to turn that flag off before the
+server fiber finishes, because otherwise the server loop might detect faster the same enabled
+action/capability more than once.
 
+If everything goes well, the background fiber finishes and still the client fiber may be faster,
+and re-enable the same action/capability by turning that flag on just _before_ it is turned off by
+the server fiber.
+
+Thus, there must be a strict order, that the turning of the flag off occurs before the background
+fiber finishes (which the client fiber awaits on by `join`ing it). A cyclic barrier does the job.
 
 Apps (examples)
 ---------------
@@ -57,7 +57,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `fs2` contains five files: `dump.scala`, `loop.scala`, `stats.scala`, `spi.scala`,
+The root project folder `fs2` contains five files: `dump.scala`, `loop.scala`, `stats.scala`, `ba.scala`,
 and `IO.main.scala.in`.
 
 !!!Warning: do not delete them!!!
@@ -74,7 +74,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
     ./examples $ baio -fs2 ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `spin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `bain` command in the `sbt` shell:
 
     sbt:BioAmbients π-Calculus[experimental]2Scala> bain -fs2 ex
 
