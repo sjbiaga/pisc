@@ -1,5 +1,5 @@
-BioAmbients in SCala aka BASC ala RISC (experimental)
-=====================================================
+BioAmbients in SCala aka BASC ala RISC
+======================================
 
 BioAmbients maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
@@ -186,7 +186,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `bain` command in the `sbt` shell:
 
-    sbt:BioAmbients[experimental]2Scala> bain -ce ex
+    sbt:BioAmbients2Scala> bain -ce ex
 
 where `example/pisc/ex.pisc` contains the bioambients source (equations binding
 agents to process expressions).

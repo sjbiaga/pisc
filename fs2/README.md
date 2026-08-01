@@ -1,5 +1,5 @@
-BioAmbients Pi-calculus in SCala aka BASC ala RISC (experimental)
-=================================================================
+BioAmbients Pi-calculus in SCala aka BASC ala RISC
+==================================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the FS2's `Stream[_, _]` monad.
@@ -76,7 +76,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `bain` command in the `sbt` shell:
 
-    sbt:BioAmbients π-Calculus[experimental]2Scala> bain -fs2 ex
+    sbt:BioAmbients2Scala> bain -fs2 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).

@@ -12,7 +12,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
-    name := "BioAmbients[experimental]2Scala",
+    name := "BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
 
 lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "ce BioAmbients[experimental]2Scala",
+    name := "ce BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -39,7 +39,7 @@ lazy val `ce-main` = (project in file("ce/main"))
 
 lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
-    name := "ce BioAmbients[experimental]2Scala",
+    name := "ce BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -52,7 +52,7 @@ lazy val `ce-main_` = (project in file("ce/main_"))
 
 lazy val `cef-main` = (project in file("cef/main"))
   .settings(
-    name := "cef BioAmbients[experimental]2Scala",
+    name := "cef BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -65,7 +65,7 @@ lazy val `cef-main` = (project in file("cef/main"))
 
 lazy val `cef-main_` = (project in file("cef/main_"))
   .settings(
-    name := "cef BioAmbients[experimental]2Scala",
+    name := "cef BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -78,7 +78,7 @@ lazy val `cef-main_` = (project in file("cef/main_"))
 
 lazy val `fs2-main` = (project in file("fs2/main"))
   .settings(
-    name := "fs2 BioAmbients π-Calculus[experimental]2Scala",
+    name := "fs2 BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -91,7 +91,7 @@ lazy val `fs2-main` = (project in file("fs2/main"))
 
 lazy val `fs2-main_` = (project in file("fs2/main_"))
   .settings(
-    name := "fs2_ BioAmbients π-Calculus[experimental]2Scala",
+    name := "fs2_ BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -104,7 +104,7 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
 
 lazy val `zs-main` = (project in file("zs/main"))
   .settings(
-    name := "zs BioAmbients π-Calculus[experimental]2Scala",
+    name := "zs BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -117,7 +117,7 @@ lazy val `zs-main` = (project in file("zs/main"))
 
 lazy val `zs-main_` = (project in file("zs/main_"))
   .settings(
-    name := "zs_ BioAmbients π-Calculus[experimental]2Scala",
+    name := "zs_ BioAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
