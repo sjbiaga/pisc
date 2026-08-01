@@ -1,10 +1,10 @@
-Polyadic Pi-calculus in SCala aka PISC ala RISC (experimental)
-==============================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
-[π-calculus](https://github.com/sjbiaga/pisc/tree/main-experimental) is a variant.
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-experimental) is in alpha stage.
+[π-calculus](https://github.com/sjbiaga/pisc/tree/main) is a variant.
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
-[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-experimental) is another fruitful
+[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
 combination of ambients with stochastic π-calculus.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
@@ -142,32 +142,32 @@ spliced as `vararg` parameter(s).
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic/ce/README.md)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/polyadic/akka/README.md)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic/pekko/README.md)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/fs2/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic/fs2/README.md)
 
-- [Monix](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/monix/README.md)
+- [Monix](https://github.com/sjbiaga/pisc/tree/polyadic/monix/README.md)
 
-- [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic-experimental/zs/README.md)
+- [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic/zs/README.md)
 
 
 Branches
 --------
 
-- [π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/main-experimental)
+- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
 
-- [Polyadic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/polyadic-experimental)
+- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
 
 - [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
 - [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
 
-- [Ambient Calculus (experimental)](https://github.com/sjbiaga/pisc/tree/ambient-experimental)
+- [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
-- [Stochastic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental)
+- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic)
 
-- [BioAmbients (experimental)](https://github.com/sjbiaga/pisc/tree/bioambients-experimental)
+- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients)

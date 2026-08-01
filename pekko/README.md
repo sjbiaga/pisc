@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus inner process nest inside outer processes, as nested methods.
 These define the behavior of `Pekko` actors corresponding to processes, but
@@ -807,33 +807,33 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `pekko` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
+The root project folder `pekko` contains three files: `ppi.scala`, `ppi_.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/pi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ppi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -pekko ex.scala
+    ./examples $ ppi -pekko ex.scala
 
 or - if stopping output prefix replication -, add an underscore:
 
-    ./examples $ pi_ -pekko ex.scala
+    ./examples $ ppi_ -pekko ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ pio -pekko ex
+    ./examples $ ppio -pekko ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `ppin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -kk ex
+    sbt:Polyadic π-Calculus2Scala> ppin -kk ex
 
 Or, if you wish to disable the [optimizer](#optimizer):
 
-    sbt:π-Calculus[experimental]2Scala> pin -kk -O0 ex
+    sbt:Polyadic π-Calculus2Scala> ppin -kk -O0 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
@@ -842,6 +842,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -pekko --interactive ex1.scala ex2.scala
+    ./examples $ ppi -pekko --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

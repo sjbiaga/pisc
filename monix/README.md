@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Monix's `Iterant[_, _]` monad.
@@ -11,9 +11,9 @@ and either Cats Effect `IO[_]` _or_ Monix `Task[_]`.
 Names act as [concurrent channel](https://monix.io/api/current/monix/catnap/ConcurrentChannel.html)s, with
 possibly multiple producers and multiple consumers (`MPMC`).
 
-Composition: parallel modelled with - `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F]) >> Iterant.empty`.
+Composition: parallel modelled with - `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(_.completedL).completedF[F])`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F]) >> Iterant.empty`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Iterant.liftF(List(...).mapParallelUnorderedF(Int.MaxValue)(Iterant.liftF(semaphore.tryAcquire).ifM(_, Iterant.empty).completedL).completedF[F])`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -57,33 +57,33 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `monix` contains four files: `pi.scala`, `pi_.scala`, `IO.main.scala.in`, and `Task.main.scala.in`.
+The root project folder `monix` contains four files: `ppi.scala`, `ppi_.scala`, `IO.main.scala.in`, and `Task.main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/pi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ppi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -monix ex.scala
+    ./examples $ ppi -monix ex.scala
 
 or - if stopping output prefix replication -, add an underscore:
 
-    ./examples $ pi_ -monix ex.scala
+    ./examples $ ppi_ -monix ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run either:
 
-    ./examples $ pio -monix ex
+    ./examples $ ppio -monix ex
 
 _or_:
 
-    ./examples $ pio -monix -Fmonix.eval.Task ex
+    ./examples $ ppio -monix -Fmonix.eval.Task ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `ppin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -monix ex
+    sbt:Polyadic π-Calculus2Scala> ppin -monix ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
@@ -92,6 +92,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -monix --interactive ex1.scala ex2.scala
+    ./examples $ ppi -monix --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
@@ -13,11 +13,11 @@ and the composition/summation (before "`yield`").
 Channels for names work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `List(...).parSequence.void`.
+Composition: parallel modelled with - `List(...).parSequenceVoid`.
 
-Summation: non-deterministic choice modelled with - `parSequence` and `Semaphore.tryAcquire.ifM`.
+Summation: non-deterministic choice modelled with - `parSequenceVoid` and `Semaphore.tryAcquire.ifM`.
 
-[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequenceVoid` and `lazy val` [or `def`].
 
 
 Program
@@ -116,21 +116,18 @@ named `_<uuid>` to translate lazily `! P` as:
     for
       _<uuid> <- IO {
         lazy val _<uuid>: IO[Any] =
-          NonEmptyList
-            .fromListUnsafe(
-              List(
-                .  // P
-                .
-                .
-              ,
-                for
-                  _ <- IO.unit
-                  _ <- _<uuid>
-                yield
-                  ()
-              )
-            )
-            .parSequence
+          List(
+            .  // P
+            .
+            .
+          ,
+            for
+              _ <- IO.unit
+              _ <- _<uuid>
+            yield
+              ()
+          )
+          .parSequenceVoid
         _<uuid>
       }
       _ <- _<uuid>
@@ -153,29 +150,29 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `ce` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
+The root project folder `ce` contains three files: `ppi.scala`, `ppi_.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/pi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ppi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -ce ex.scala
+    ./examples $ ppi -ce ex.scala
 
 or - if stopping output prefix replication -, add an underscore:
 
-    ./examples $ pi_ -ce ex.scala
+    ./examples $ ppi_ -ce ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ pio -ce ex
+    ./examples $ ppio -ce ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `ppin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -ce ex
+    sbt:Polyadic π-Calculus2Scala> ppin -ce ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
@@ -184,6 +181,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -ce --interactive ex1.scala ex2.scala
+    ./examples $ ppi -ce --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

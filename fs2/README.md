@@ -1,5 +1,5 @@
-Polyadic Pi-calculus in SCala aka PISC ala RISC (experimental)
-==============================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the FS2's `Stream[_, _]` monad.
@@ -11,9 +11,9 @@ and Cats Effect `IO[_]`.
 Names act as [topic](https://fs2.io/#/concurrency-primitives?id=topic)s, with
 possibly multiple [publishers and multiple subscribers](https://fs2.io/#/concurrency-primitives?id=single-publisher-multiple-subscriber).
 
-Composition: parallel modelled with - `Stream.exec(List(...).map(_.compile.drain).parSequence.void)`.
+Composition: parallel modelled with - `Stream.eval(List(...).map(_.compile.drain).parSequenceVoid)`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Stream.exec(List(...).map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence.map(_.compile.drain).parSequence.void)`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[F]` and `Stream.eval(List(...).map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).map(_.compile.drain).parSequenceVoid)`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -57,25 +57,25 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `fs2io` contains two files: `pi.scala` and `main.scala.in`.
+The root project folder `fs2` contains two files: `ppi.scala` and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/pi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ppi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -fs2io ex.scala
+    ./examples $ ppi -fs2 ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ pio -fs2io ex
+    ./examples $ ppio -fs2 ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `ppin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -fs2 ex
+    sbt:Polyadic π-Calculus2Scala> ppin -fs2 ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
@@ -84,6 +84,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -fs2io --interactive ex1.scala ex2.scala
+    ./examples $ ppi -fs2 --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.

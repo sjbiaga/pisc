@@ -1,5 +1,5 @@
-Pi-calculus in SCala aka PISC ala RISC (experimental)
-=====================================================
+Polyadic Pi-calculus in SCala aka PISC ala RISC
+===============================================
 
 The π-calculus maps one to one on `Scala` for-comprehensions
 "inside" the ZIO's `ZStream[_, _, _]` monad.
@@ -11,9 +11,9 @@ and `Task[_]`.
 Names act as [hub](https://zio.dev/reference/concurrency/hub/)s, with
 possibly multiple publishers and multiple subscribers.
 
-Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain))) *> ZStream.empty`.
+Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain)))`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_)))) *> ZStream.empty`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_))))`.
 
 [Guarded] Replication: modelled with infinite streams.
 
@@ -57,25 +57,25 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `zs` contains two files: `pi.scala` and `main.scala.in`.
+The root project folder `zs` contains two files: `ppi.scala` and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
 One can edit'em, though they're ready to generate a main `App`.
 
-To get and run the examples, one can `source` the functions from `bin/pi.sh`.
+To get and run the examples, one can `source` the functions from `bin/ppi.sh`.
 
 To run an example, `cd` to `examples` and execute:
 
-    ./examples $ pi -zs ex.scala
+    ./examples $ ppi -zs ex.scala
 
 To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
-    ./examples $ pio -zs ex
+    ./examples $ ppio -zs ex
 
-To get the intermediary `in/ex.scala.in` file, execute the `pin` command in the `sbt` shell:
+To get the intermediary `in/ex.scala.in` file, execute the `ppin` command in the `sbt` shell:
 
-    sbt:π-Calculus[experimental]2Scala> pin -zs ex
+    sbt:Polyadic π-Calculus2Scala> ppin -zs ex
 
 where `example/pisc/ex.pisc` contains the π-calculus source (equations binding agents to process
 expressions).
@@ -84,6 +84,6 @@ In order to allow multiple `App`s, edit `examples/ex[12].scala` and add a top-le
 
 If there are more `App`s' with agents that depend one to another, pass the `--interactive` option and all source files:
 
-    ./examples $ pi -zs --interactive ex1.scala ex2.scala
+    ./examples $ ppi -zs --interactive ex1.scala ex2.scala
 
 Note that [Scala Cli](https://scala-cli.virtuslab.org/) must be installed.
