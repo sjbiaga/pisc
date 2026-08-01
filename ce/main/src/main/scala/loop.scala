@@ -174,7 +174,7 @@ package object `Π-loop`:
                                         val ^^ = key2.substring(0, 36)
                                         IO.uncancelable { _ =>
                                           for
-                                            -- <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                            cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                             p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
                                             p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
                                             (d1, _) = p1
@@ -185,7 +185,7 @@ package object `Π-loop`:
                                             _  <- %.update(_ - key1 - key2)
                                             _  <- started.update(_ + 1)
                                             fb <- ( for
-                                                      _ <- --.await
+                                                      _ <- cb.await
                                                       _ <- enable(k1)
                                                       _ <- enable(k2).unlessA(k1 == k2)
                                                       _ <- sem.release
@@ -194,8 +194,8 @@ package object `Π-loop`:
                                                     yield
                                                       ()
                                                   ).start
-                                            _  <- d1.complete(Some((delay, --, fb, in)))
-                                            _  <- d2.complete(Some((delay, --, fb, in))).unlessA(k1 == k2)
+                                            _  <- d1.complete(Some((delay, cb, fb, in)))
+                                            _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
                                           yield
                                             ()
                                         }

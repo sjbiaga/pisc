@@ -1,0 +1,52 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@given Conversion[`()`, Long] = _.`()`[Long]
+@given Conversion[`()`, String] = _.`()`[String]
+
+################################################################# Semaphore ✕ ##
+
+⟦ EXCLUDE = yes ⟧
+
+⟦ REPLICATION = (LINEAR,no) ⟧
+
+Sem(s) = ! 2* .s(r). r(r). τ/*ZIO.debug('r)*/.
+
+################################################################# Semaphore ✔ ##
+
+⟦ EXCLUDE = no ⟧
+
+⟦ REPLICATION = (LINEAR,yes) ⟧
+
+Sem(s) = ! 2* .s(r). r(r). τ/*ZIO.debug('r)*/.
+
+##################################################################### Clients ##
+
+⟦ REPLICATION = (LINEAR,no) ⟧
+
+####################################################################### Macro ##
+
+⟦ EXCLUDE = yes ⟧
+
+⟦ 'n ^ 'd ⟧(s) = τ/*ZIO.sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*ZIO.debug('n + ".acq")*/. τ/*ZIO.sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+
+Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100L*/ ⟧ | ⟦ "Q" ^ /*200L*/ ⟧ | ⟦ "R" ^ /*300L*/ ⟧ )
+
+####################################################################### Agent ##
+
+⟦ EXCLUDE = yes ⟧
+
+Main(s, n, d) = τ/*ZIO.sleep(('d: Long).milliseconds)*/. ! 1,second .s<νr>. τ/*ZIO.debug(('n: String) + ".acq")*/. τ/*ZIO.sleep(('d: Long).milliseconds)*/. r</*('n: String) + ".rel"*/>.
+
+Main = ν(s) ( Sem(s) | Main(s, "P", /*100L*/) | Main(s, "Q", /*200L*/) | Main(s, "R", /*300L*/) )
+
+############################################################### Macro / Agent ##
+
+⟦ EXCLUDE = no ⟧
+
+⟦ 'n ^ 'd ⟧(s) = τ/*ZIO.sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*ZIO.debug('n + ".acq")*/. τ/*ZIO.sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+
+P(s) = ⟦ "P" ^ /*100L*/ ⟧
+Q(s) = ⟦ "Q" ^ /*200L*/ ⟧
+R(s) = ⟦ "R" ^ /*300L*/ ⟧
+
+Main = ν(s) ( Sem(s) | P(s) | Q(s) | R(s) )

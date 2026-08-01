@@ -5,31 +5,31 @@
 @given Conversion[`()`[F], Int] = _.`()`[Int]
 @given Conversion[`()`[F], String] = _.`()`[String]
 
-⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
+⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
 ################################################################# Semaphore ✕ ##
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = yes ⟧
 
-⟦ replication = (linear,no) ⟧
+⟦ REPLICATION = (LINEAR,no) ⟧
 
 Sem(s) = ! 2* .s(r). r(r). τ/*Console[F].println('r)*/.
 
 ################################################################# Semaphore ✔ ##
 
-⟦ exclude = no ⟧
+⟦ EXCLUDE = no ⟧
 
-⟦ replication = (linear,yes) ⟧
+⟦ REPLICATION = (LINEAR,yes) ⟧
 
 Sem(s) = ! 2* .s(r). r(r). τ/*Console[F].println('r)*/.
 
 ##################################################################### Clients ##
 
-⟦ replication = (linear,no) ⟧
+⟦ REPLICATION = (LINEAR,no) ⟧
 
 ####################################################################### Macro ##
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = yes ⟧
 
 ⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
 
@@ -37,7 +37,7 @@ Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100*/ ⟧ | ⟦ "Q" ^ /*200*/ ⟧ | ⟦ "R" 
 
 ####################################################################### Agent ##
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = yes ⟧
 
 Main(s, n, d) = τ/*Async[F].sleep(('d: Int).milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println(('n: String) + ".acq")*/. τ/*Async[F].sleep(('d: Int).milliseconds)*/. r</*('n: String) + ".rel"*/>.
 
@@ -45,7 +45,7 @@ Main = ν(s) ( Sem(s) | Main(s, "P", /*100*/) | Main(s, "Q", /*200*/) | Main(s, 
 
 ############################################################### Macro / Agent ##
 
-⟦ exclude = no ⟧
+⟦ EXCLUDE = no ⟧
 
 ⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
 

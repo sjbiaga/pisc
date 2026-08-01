@@ -174,7 +174,7 @@ package object `Π-loop`:
                                   val ^^ = key2.substring(0, 36)
                                   ZIO.uninterruptible {
                                     for
-                                      -- <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                                      cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
                                       p1 <- %.modify { m => m(key1).asInstanceOf[(Boolean, +)]._2 -> m }
                                       p2 <- %.modify { m => m(key2).asInstanceOf[(Boolean, +)]._2 -> m }
                                       ((d1, c1), _) = p1
@@ -184,13 +184,12 @@ package object `Π-loop`:
                                       f2 <- d2.isDone
                                       _  <- (discard(k1)(using  ^) *> %.update(_ - key1).when(c1 eq null)).unless(f1)
                                       _  <- (discard(k2)(using ^^) *> %.update(_ - key2).when(c2 eq null)).unless(f2).unless(k1 == k2)
-                                      b1 <- CyclicBarrier.make(2)
-                                      b2 <- CyclicBarrier.make(2)
+                                      -- <- CyclicBarrier.make(2)
                                       _  <- started.update(_ + 1)
                                       fb <- ( for
-                                                _ <- b1.await.exit.unless(c1 eq null)
-                                                _ <- b2.await.exit.unless(c2 eq null).unless(k1 == k2)
-                                                _ <- --.await.exit
+                                                _ <- --.await.exit.unless(c1 eq null)
+                                                _ <- --.await.exit.unless(c2 eq null).unless(k1 == k2)
+                                                _ <- cb.await.exit
                                                 _ <- enable(k1)
                                                 _ <- enable(k2).unless(k1 == k2)
                                                 _ <- sem.release
@@ -199,14 +198,14 @@ package object `Π-loop`:
                                               yield
                                                 ()
                                             ).fork
-                                      _  <- d1.succeed(Some((--, fb, in))).unless(f1)
-                                      _  <- d2.succeed(Some((--, fb, in))).unless(f2).unless(k1 == k2)
-                                      _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((--, fb, in))))
+                                      _  <- d1.succeed(Some((cb, fb, in))).unless(f1)
+                                      _  <- d2.succeed(Some((cb, fb, in))).unless(f2).unless(k1 == k2)
+                                      _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in))))
                                                                 *> %.update { m => m + (key1 -> (false, m(key1).asInstanceOf[(Boolean, +)]._2)) }
-                                                                *> b1.await.exit)
-                                      _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((--, fb, in))))
+                                                                *> --.await.exit)
+                                      _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))
                                                                 *> %.update { m => m + (key2 -> (false, m(key2).asInstanceOf[(Boolean, +)]._2)) }
-                                                                *> b2.await.exit).unless(k1 == k2)
+                                                                *> --.await.exit).unless(k1 == k2)
                                     yield
                                       ()
                                   }
