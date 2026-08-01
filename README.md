@@ -1,5 +1,5 @@
-Stochastic Pi-calculus in SCala aka PISC ala RISC (experimental)
-================================================================
+Stochastic Pi-calculus in SCala aka PISC ala RISC
+=================================================
 
 The source code is divided in two: the parser in `Calculus.scala` and the
 `Scala` source code emitter(s) in `Program.scala`.
@@ -124,30 +124,30 @@ It facilitates passing from Scala values in expressions to names in the calculus
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/stochastic-experimental/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/stochastic/ce/README.md)
 
-- [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental/cef/README.md)
+- [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/cef/README.md)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/stochastic-experimental/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/stochastic/akka/README.md)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic-experimental/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic/pekko/README.md)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/stochastic-experimental/fs2/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/stochastic/fs2/README.md)
 
 
 Branches
 --------
 
-- [π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/main-experimental)
+- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
 
-- [Polyadic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/polyadic-experimental)
+- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
 
 - [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
 - [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
 
-- [Ambient Calculus (experimental)](https://github.com/sjbiaga/pisc/tree/ambient-experimental)
+- [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
-- [Stochastic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental)
+- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic)
 
-- [BioAmbients (experimental)](https://github.com/sjbiaga/pisc/tree/bioambients-experimental)
+- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients)

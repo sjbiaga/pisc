@@ -17,7 +17,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
-    name := "Stochastic π-Calculus[experimental]2Scala",
+    name := "Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -31,7 +31,7 @@ lazy val root = (project in file("."))
 
 lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "ce Stochastic π-Calculus[experimental]2Scala",
+    name := "ce Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -44,7 +44,7 @@ lazy val `ce-main` = (project in file("ce/main"))
 
 lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
-    name := "ce_ Stochastic π-Calculus[experimental]2Scala",
+    name := "ce_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -57,7 +57,7 @@ lazy val `ce-main_` = (project in file("ce/main_"))
 
 lazy val `cef-main` = (project in file("cef/main"))
   .settings(
-    name := "cef Stochastic π-Calculus[experimental]2Scala",
+    name := "cef Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -70,7 +70,7 @@ lazy val `cef-main` = (project in file("cef/main"))
 
 lazy val `cef-main_` = (project in file("cef/main_"))
   .settings(
-    name := "cef_ Stochastic π-Calculus[experimental]2Scala",
+    name := "cef_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -83,7 +83,7 @@ lazy val `cef-main_` = (project in file("cef/main_"))
 
 lazy val `akka-main` = (project in file("akka/main"))
   .settings(
-    name := "akka Stochastic π-Calculus[experimental]2Scala",
+    name := "akka Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -96,7 +96,7 @@ lazy val `akka-main` = (project in file("akka/main"))
 
 lazy val `akka-main_` = (project in file("akka/main_"))
   .settings(
-    name := "akka_ Stochastic π-Calculus[experimental]2Scala",
+    name := "akka_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -109,7 +109,7 @@ lazy val `akka-main_` = (project in file("akka/main_"))
 
 lazy val `pekko-main` = (project in file("pekko/main"))
   .settings(
-    name := "pekko Stochastic π-Calculus[experimental]2Scala",
+    name := "pekko Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -122,7 +122,7 @@ lazy val `pekko-main` = (project in file("pekko/main"))
 
 lazy val `pekko-main_` = (project in file("pekko/main_"))
   .settings(
-    name := "pekko_ Stochastic π-Calculus[experimental]2Scala",
+    name := "pekko_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -135,7 +135,7 @@ lazy val `pekko-main_` = (project in file("pekko/main_"))
 
 lazy val `fs2-main` = (project in file("fs2/main"))
   .settings(
-    name := "fs2 Stochastic π-Calculus[experimental]2Scala",
+    name := "fs2 Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -148,7 +148,7 @@ lazy val `fs2-main` = (project in file("fs2/main"))
 
 lazy val `fs2-main_` = (project in file("fs2/main_"))
   .settings(
-    name := "fs2_ Stochastic π-Calculus[experimental]2Scala",
+    name := "fs2_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -161,7 +161,7 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
 
 lazy val `zs-main` = (project in file("zs/main"))
   .settings(
-    name := "zs Stochastic π-Calculus[experimental]2Scala",
+    name := "zs Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -174,7 +174,7 @@ lazy val `zs-main` = (project in file("zs/main"))
 
 lazy val `zs-main_` = (project in file("zs/main_"))
   .settings(
-    name := "zs_ Stochastic π-Calculus[experimental]2Scala",
+    name := "zs_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",

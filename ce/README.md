@@ -1,5 +1,5 @@
-Stochastic Pi-calculus in SCala aka sPISC ala RISC (experimental)
-=================================================================
+Stochastic Pi-calculus in SCala aka sPISC ala RISC
+==================================================
 
 
 Program
@@ -35,7 +35,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `spin` command in the `sbt` shell:
 
-    sbt:Stochastic π-Calculus[experimental]2Scala> spin -ce ex
+    sbt:Stochastic π-Calculus2Scala> spin -ce ex
 
 where `example/pisc/ex.pisc` contains the stochastic π-calculus source (equations binding
 agents to process expressions).
