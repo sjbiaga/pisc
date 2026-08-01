@@ -4,12 +4,12 @@ Calculus of Mobile Ambients in SCala
 The `Ambient Calculus` maps one to one on `Scala` for-comprehensions
 "inside" the Cats Effect's `IO[_]` monad.
 
-Unlike [π-calculus](https://github.com/sjbiaga/pisc/tree/main-experimental) with its variants
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic-experimental) and
-[Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic-experimental), the
+Unlike [π-calculus](https://github.com/sjbiaga/pisc/tree/main) with its variants
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) and
+[Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic), the
 implementation of `Ambient Calculus` is much simpler, although the handling
 of capability actions involving operations on ambient trees is more elaborated.
-[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients-experimental) is another fruitful
+[BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
 combination of ambients with stochastic π-calculus.
 
 The source code is divided in two: the parser in `Calculus.scala` and the
@@ -110,22 +110,22 @@ that is found in these terms is considered a _free_ name.
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/ambient-experimental/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/ambient/ce/README.md)
 
 
 Branches
 --------
 
-- [π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/main-experimental)
+- [π-calculus](https://github.com/sjbiaga/pisc/tree/main)
 
-- [Polyadic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/polyadic-experimental)
+- [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic)
 
 - [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
 - [Ambient Calculus async](https://github.com/sjbiaga/pisc/tree/ambient-async)
 
-- [Ambient Calculus (experimental)](https://github.com/sjbiaga/pisc/tree/ambient-experimental)
+- [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient)
 
-- [Stochastic π-calculus (experimental)](https://github.com/sjbiaga/pisc/tree/stochastic-experimental)
+- [Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic)
 
-- [BioAmbients (experimental)](https://github.com/sjbiaga/pisc/tree/bioambients-experimental)
+- [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients)

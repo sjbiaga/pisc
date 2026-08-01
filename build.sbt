@@ -12,7 +12,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 lazy val root = (project in file("."))
   .aggregate(`ce-main`)
   .settings(
-    name := "MobileAmbients[experimental]2Scala",
+    name := "MobileAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
 
 lazy val `ce-main` = (project in file("ce/main"))
   .settings(
-    name := "ce MobileAmbients[experimental]2Scala",
+    name := "ce MobileAmbients2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",

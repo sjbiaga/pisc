@@ -10,11 +10,11 @@ programmatically typed as `Scala` code using `CE` `IO`.
 Communications in ambients work as [CE tutorial](https://typelevel.org/cats-effect/docs/tutorial)'s
 producer/consumer but no queue, only `takers` and `offerers`.
 
-Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parSequence`.
+Composition: parallel modelled with - `NonEmptyList.fromListUnsafe(...).parSequenceVoid`.
 
-Ambient: singly parallelized with - `parSequence` and `IOLocal`.
+Ambient: singly parallelized with - `parSequenceVoid` and `IOLocal`.
 
-[Guarded] Replication: modelled with - `parSequence` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequenceVoid` and `lazy val` [or `def`].
 
 
 Ambients
@@ -183,21 +183,18 @@ named `_<uuid>` to translate lazily `! P` as:
     for
       _<uuid> <- IO {
         lazy val _<uuid>: IO[Any] =
-          NonEmptyList
-            .fromListUnsafe(
-              List(
-                .  // P
-                .
-                .
-              ,
-                for
-                  _ <- IO.unit
-                  _ <- _<uuid>
-                yield
-                  ()
-              )
-            )
-            .parSequence
+          List(
+            .  // P
+            .
+            .
+          ,
+            for
+              _ <- IO.unit
+              _ <- _<uuid>
+            yield
+              ()
+          )
+          .parSequence
         _<uuid>
       }
       _ <- _<uuid>
@@ -238,7 +235,7 @@ To get the final source file `ex.scala` (from `out/ex.scala.out`), run:
 
 To get the intermediary `in/ex.scala.in` file, execute the `main` command in the `sbt` shell:
 
-    sbt:MobileAmbients[experimental]2Scala> main -ce ex
+    sbt:MobileAmbients2Scala> main -ce ex
 
 where `example/masc/ex.masc` contains the `Ambient Calculus` source (equations binding agents to process
 expressions).
