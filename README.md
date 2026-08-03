@@ -144,6 +144,8 @@ Emitters
 
 - [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic/ce/README.md)
 
+- [ZIO](https://github.com/sjbiaga/pisc/tree/polyadic/zio/README.md)
+
 - [Akka](https://github.com/sjbiaga/pisc/tree/polyadic/akka/README.md)
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic/pekko/README.md)

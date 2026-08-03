@@ -41,6 +41,8 @@ abstract trait Meta extends shared.Meta:
 
   protected lazy val \ = ""
 
+  protected lazy val \\ = ""
+
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
   inline implicit def \\(* : Enumerator): Term = \(*)
@@ -76,7 +78,7 @@ abstract trait Meta extends shared.Meta:
       else
         *.last match
           case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")))
-             | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil)) =>
+             | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)), Lit.Unit() :: Nil)) =>
             `for * yield ()`(*.init*)
           case _ =>
             Term.ForYield(*.toList, Lit.Unit())

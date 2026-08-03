@@ -15,7 +15,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `monix-main`, `monix-main_`, `zs-main`, `zs-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `zio-main`, `zio-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `monix-main`, `monix-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "Polyadic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -53,6 +53,32 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(catseffect, munit % Test)
+  )
+
+lazy val `zio-main` = (project in file("zio/main"))
+  .settings(
+    name := "zio Polyadic π-Calculus2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(zc, zic, munit % Test)
+  )
+
+lazy val `zio-main_` = (project in file("zio/main_"))
+  .settings(
+    name := "zio_ Polyadic π-Calculus2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(zc, zic, munit % Test)
   )
 
 lazy val `akka-main` = (project in file("akka/main"))

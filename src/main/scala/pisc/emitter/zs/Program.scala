@@ -64,7 +64,7 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
-                `_ <- ZStream.fromZIO(*)`(`*.tryWithPermit(…)`(semaphore.get, sum.emit))
+                `_ <- ZStream.fromZIO(*)`(`_ <- *.runDrain.whenZIO(….tryAcquire)`(sum.emit, semaphore.get))
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
 
@@ -89,7 +89,7 @@ object Program:
           val zss = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
-            `* <- Semaphore.make(…)`(sem.get, 1),
+            `* <- Semaphore(…)`(sem.get, 1),
             `_ <- *`(`List( *, … ).collectAllPar`(zss*))
           )
 
@@ -99,7 +99,7 @@ object Program:
           val sem = id
 
           * = List(
-            `* <- Semaphore.make(…)`(sem, 1),
+            `* <- Semaphore(…)`(sem, 1),
             `_ <- *`(`List( *, … ).collectAllPar(…)`(zss*)(sem))
           )
 
@@ -640,10 +640,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: (), ⋯): ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body, args*)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: (), ⋯): ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body, args*)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: (), ⋯): ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body, args*)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: (), ⋯): ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body, args*)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
@@ -665,10 +665,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, given Option[(Long, String)], _, sum) =>
           val υidυ = id
@@ -690,10 +690,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 

@@ -40,9 +40,10 @@ object Meta extends emitter.shared.streams.Meta:
 
   override protected lazy val \ = "Stream"
 
-  override protected lazy val \\ = "eval"
+  override protected lazy val \\ = "emit"
 
-  override protected lazy val \\\ = "emit"
+  override protected lazy val \\\ = "eval"
+
 
   def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>

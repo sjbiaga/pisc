@@ -40,12 +40,13 @@ object Meta extends emitter.shared.streams.Meta:
 
   override protected lazy val \ = "Iterant"
 
-  override protected lazy val \\ = "liftF"
+  override protected lazy val \\ = "pure"
 
-  override protected lazy val \\\ = "pure"
+  override protected lazy val \\\ = "liftF"
 
   override lazy val `_ <- \\.unit` =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "pure"), Term.ArgClause(Lit.Unit() :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(Lit.Unit() :: Nil)))
+
 
   def defn(body: Term)(using Set[String]): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
@@ -86,7 +87,7 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `Observable( *, … ).mapParF`(* : Term*): Term =
     *.flatMap {
-      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil) => None
+      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)), Lit.Unit() :: Nil) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)
@@ -94,7 +95,7 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `Observable( *, … ).mapParF(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
-      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")), Lit.Unit() :: Nil) => None
+      case Term.Apply(Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)), Lit.Unit() :: Nil) => None
       case it => Some(it)
     } match
       case Nil => \(Nil)

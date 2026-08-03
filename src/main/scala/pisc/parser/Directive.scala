@@ -34,10 +34,11 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
+import PolyadicPi.Emitter
 import Directive.*
 
 
-case class Directive(directive: (String, String | List[String]), settings: Settings):
+case class Directive(directive: (String, String | List[String]), emitter: Emitter, settings: Settings):
 
   implicit val name: String = directive._1.toLowerCase
 
@@ -83,6 +84,11 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
               throw err("a number")
         case _          => throw err("a number")
 
+    def emitters: List[Emitter] =
+      self match
+        case it: String => List(Emitter.valueOf(it.toLowerCase))
+        case it: List[String] => it.map(_.toLowerCase).map(Emitter.valueOf(_))
+
     def keys: Set[String] =
       self match
         case it: String if this.key(it)              => Set(canonical(it))
@@ -91,6 +97,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
 
   private def boolean: Boolean = directive._2.boolean
   private def number: Int = directive._2.number
+  private def emitters: List[Emitter] = directive._2.emitters
   private def keys: Set[String] = directive._2.keys
 
   def apply(): Unit =
@@ -107,10 +114,22 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
         settings.dups = boolean
 
       case "exclude"      =>
-        settings.exclude = boolean
+        try
+          settings.exclude = boolean
+        catch _ =>
+          try
+            settings.exclude = emitters.contains(emitter)
+          catch _ =>
+            throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "include"      =>
-        settings.exclude = !boolean
+        try
+          settings.exclude = !boolean
+        catch _ =>
+          try
+            settings.exclude = !emitters.contains(emitter)
+          catch _ =>
+            throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "paceunit"     =>
         settings.paceunit = directive._2 match
@@ -129,6 +148,8 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, settings.message)
           case _                => throw DirectiveValueParsingException(directive, settings.message)
+
+      case "typeclasses" if settings.exclude =>
 
       case "typeclasses"  =>
         settings.typeclasses = directive._2 match
@@ -179,7 +200,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
 
         if settings.dirs.isEmpty
         then
-          Directive("push" -> "1", settings)()
+          Directive("push" -> "1", emitter, settings)()
 
       case _              => throw DirectiveKeyParsingException(directive)
 

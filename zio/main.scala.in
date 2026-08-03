@@ -28,7 +28,6 @@
 
 //package main.scala.in
 
-import _root_.zio.stream.ZStream
 import _root_.zio.ZIO
 
 
@@ -36,11 +35,10 @@ object App extends _root_.zio.ZIOAppDefault:
 
   import _root_.zio.{ ExitCode, ZIOAppArgs }
 
-
-  override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+  override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     for
       args <- getArgs
-      _    <- π.Main(args.toSeq*).runDrain
+      _    <- π.Main(args*)
       _    <- exit(ExitCode.success)
     yield
       ()
@@ -51,19 +49,19 @@ object π:
   import _root_.scala.collection.immutable.{ List => πLs }
 
   import _root_.cats.effect.std.Semaphore
-  import _root_.zio.interop.catz.concurrentInstance
+  import _root_.zio.interop.catz.generic.*
 
   import _root_.zio.{ durationLong, Task, UIO }
-  import _root_.zio.concurrent.CyclicBarrier
 
   import _root_.eu.timepit.refined.*
 
-  extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
-      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
-    private[π] inline def πcollectAllPar(semaphore: Semaphore[Task]): ZStream[Any, Throwable, Unit] =
-      self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar
+  import Π.*, Π.given
 
-  import Π.*
+
+  extension (self: πLs[UIO[?]])
+    private[π] inline def πcollectAllPar: UIO[Unit] =
+      ZIO.collectAllParDiscard(self)
+    private[π] inline def πcollectAllPar(semaphore: Semaphore[UIO]): UIO[Unit] =
+      self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar
 
 
