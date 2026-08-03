@@ -1,10 +1,22 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@import scala.concurrent.duration._
+⟦ include = ce ⟧
 
-Main = ν(w) w[ ν(m) ( ( ν(n) go m. <n> )                     \
-                    | m[ τ/*_ <- IO.sleep(1.second)*/. (n).  \
-                         n[ τ/*println("n")*/. ]             \
-                       ]                                     \
-                    )                                        \
+@def println(a: Any) = IO.println(a)
+
+@def sleep(d: FiniteDuration) = IO.sleep(d)
+
+⟦ include = zio ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+@def sleep(d: zio.Duration) = ZIO.sleep(d)
+
+⟦ exclude = 0 ⟧
+
+Main = ν(w) w[ ν(m) ( ( ν(n) go m. <n> )                  \
+                    | m[ τ/*_ <- sleep(1.second)*/. (n).  \
+                         n[ τ/*_ <- println("n")*/. ]     \
+                       ]                                  \
+                    )                                     \
              ]

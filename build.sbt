@@ -10,7 +10,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`)
+  .aggregate(`ce-main`, `zio-main`)
   .settings(
     name := "MobileAmbients2Scala",
     organization := "sjb.ia.ga",
@@ -37,7 +37,20 @@ lazy val `ce-main` = (project in file("ce/main"))
     libraryDependencies ++= Seq(catseffect, catsstm, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce*/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"
+lazy val `zio-main` = (project in file("zio/main"))
+  .settings(
+    name := "zio MobileAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(zio, munit % Test)
+  )
+
+unmanagedSources / excludeFilter := "ce*/*.scala" || "zio/*.scala" || "[fz]s*/*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

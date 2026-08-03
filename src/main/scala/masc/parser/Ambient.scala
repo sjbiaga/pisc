@@ -199,6 +199,7 @@ object Ambient:
 
   enum Emitter(val canScale: Boolean = false):
     case ce extends Emitter()
+    case zio extends Emitter()
     private[parser] case test extends Emitter()
 
   type Names = Set[String]
@@ -262,7 +263,7 @@ object Ambient:
 
     protected def _init: Unit =
       _settings = Settings()
-      Directive("push" -> "1", _settings)()
+      Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -293,7 +294,11 @@ object Ambient:
               None
             else if it.matches("^[ ]*@.*")
             then // Scala
-              Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+              if !_settings.exclude
+              then
+                Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+              else
+                None
             else // Ambient
               _cntr = Map(0 -> 0L)
               _nth = Map(0 -> 0L)

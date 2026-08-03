@@ -4,7 +4,7 @@ function ma() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce)
+        -ce|-zio)
             local emit="${1#?}"
             shift
             ;;
@@ -19,6 +19,10 @@ function ma() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zio)
+            local deps='--dep dev.zio::zio:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -46,7 +50,7 @@ function maio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce)
+        -ce|-zio)
             local emit="${1#?}"
             shift
             ;;

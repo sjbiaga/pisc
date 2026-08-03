@@ -112,6 +112,8 @@ Emitters
 
 - [Cats Effect](https://github.com/sjbiaga/pisc/tree/ambient/ce/README.md)
 
+- [ZIO](https://github.com/sjbiaga/pisc/tree/ambient/zio/README.md)
+
 
 Branches
 --------

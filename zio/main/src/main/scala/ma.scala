@@ -30,28 +30,16 @@ package object Π:
 
   import _root_.scala.collection.immutable.{ Queue, Map, Set }
 
-  import _root_.cats.instances.list.*
-  import _root_.cats.syntax.traverse.*
-
-  import _root_.cats.effect.{ Deferred, IOLocal, IO, Ref }
-  import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Supervisor, UUIDGen }
-
-  import _root_.io.github.timwspence.cats.stm.STM
+  import _root_.zio.{ FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.stm.{ TRef, TSemaphore }
+  import _root_.zio.stm.{ USTM, ZSTM }
 
 
-  /**
-    * Supervised [[code]].
-    * @param code
-    */
-  private def exec[T](code: => IO[T]): IO[T] =
-    Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case             _ => IO.pure(null.asInstanceOf[T]) }
-              )
+  private def exec[T](code: => Task[T]): UIO[T] =
+    code.absorb.either.map {
+      case Right(it) => it
+      case _         => null.asInstanceOf[T]
+    }
 
 
   /**
@@ -59,14 +47,14 @@ package object Π:
     */
   object ν:
 
-    def map[B](f: `)(` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `)(` => IO[B]): IO[B] = f(`)(`(()))
+    def map[B](f: `)(` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
+    def flatMap[B](f: `)(` => UIO[B]): UIO[B] = f(`)(`(()))
 
 
   /**
     * silent transition
     */
-  val τ = IO.unit
+  val τ = ZIO.unit
 
 
   /**
@@ -93,7 +81,7 @@ package object Π:
     /**
       * Initial ambient unique key.
       */
-    def apply(): IO[`)(`] = UUIDGen.randomUUID[IO].map(new `)(`(_))
+    def apply(): UIO[`)(`] = Random.nextUUID.map(new `)(`(_))
     /**
       * Discriminate names from capabilities.
       */
@@ -113,18 +101,16 @@ package object Π:
 
   final case class ζ(op: Option[`ζ-Op`], amb: Either[`)(`, `)(`], next: Option[ζ])
 
-  final class `}{`(val stm: STM[IO]):
-
-    import stm.*
+  object `}{`:
 
     import `Π-magic`.*
 
     object ζ:
 
       private def remove(node: `)*(`, tree: `}{`)
-                        (using `][`: `][`): Txn[Unit] =
+                        (using `][`: `][`): USTM[Unit] =
         val `}{`(_, root, _, siblings) = tree
-        `][`.modify { it =>
+        `][`.update { it =>
                       siblings.foldLeft {
                         val (rtree, reth) = it(root)
                         it + (root -> (rtree.copy(children = siblings), reth))
@@ -135,16 +121,16 @@ package object Π:
                     }
 
       private def insert(node: `)*(`, root: `)*(`)
-                        (using `][`: `][`): Txn[Unit] =
+                        (using `][`: `][`): USTM[Unit] =
         for
           it  <- `][`.get
           tree = it(root)._1
-          _   <- `][`.modify { tree.children.foldLeft(_) { (it, child) =>
+          _   <- `][`.update { tree.children.foldLeft(_) { (it, child) =>
                                  val (tree @ `}{`(_, _, _, siblings), heth) = it(child)
                                  it + (child -> (tree.copy(siblings = siblings + node), heth))
                                }
                              }
-          _   <- `][`.modify { it =>
+          _   <- `][`.update { it =>
                                val (ntree, neth) = it(node)
                                val (rtree @ `}{`(_, _, children, _), reth) = it(root)
                                it + (root -> (rtree.copy(children = children + node), reth))
@@ -154,8 +140,8 @@ package object Π:
           ()
 
       private def update(temp: `}{`, root: `)*(`, join: `)*(`)
-                        (using `][`: `][`): Txn[Unit] =
-        `][`.modify { it =>
+                        (using `][`: `][`): USTM[Unit] =
+        `][`.update { it =>
                       temp.siblings.foldLeft {
                         val (tree @ `}{`(_, _, children, _), reth) = it(temp.root)
                         it + (temp.root -> (tree.copy(children = children - root + join), reth))
@@ -166,10 +152,10 @@ package object Π:
                     }
 
       private def merge(tree: `}{`, join: `)*(`)
-                       (using `][`: `][`): Txn[Unit] =
+                       (using `][`: `][`): USTM[Unit] =
         val children = tree.children
         val siblings = tree.siblings
-        `][`.modify { it =>
+        `][`.update { it =>
                       children.foldLeft {
                         siblings.foldLeft {
                           (children ++ siblings).foldLeft {
@@ -189,18 +175,19 @@ package object Π:
                       }
                     }
 
-      private def ether(lhs: ><, rhs: ><): IO[><] =
+      private def ether(lhs: ><, rhs: ><): UIO[><] =
         val min = lhs.takers.size min rhs.offerers.size
         if min == 0
         then
-          IO.pure(><(lhs.takers, rhs.offerers))
+          ZIO.succeed(><(lhs.takers, rhs.offerers))
         else
-          (lhs.takers.take(min) zip rhs.offerers.take(min))
-            .traverse { (t, o) => t.complete(o._1).void >> o._2.complete(()).void }
-            .as(><(lhs.takers.drop(min), rhs.offerers.drop(min)))
+          ZIO.collectAllDiscard {
+            (lhs.takers.take(min) zip rhs.offerers.take(min))
+              .map { (t, o) => t.succeed(o._1) *> o._2.succeed(()) }
+          }.as(><(lhs.takers.drop(min), rhs.offerers.drop(min)))
 
-      def apply(`)(`: IOLocal[`)(`])(caps: ζ)
-               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+      def apply(`)(`: FiberRef[`)(`])(caps: ζ)
+               (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
 
         caps match
 
@@ -215,14 +202,14 @@ package object Π:
               case `ζ-Op`.in =>
                 { for
                   key <- `)(`.get
-                  _   <- stm.commit {
+                  _   <- {
                     for
                       _   <- `1`.acquire
                       it  <- `][`.get
-                      _   <- stm.check { val node = it.keys.find(_.contains(key)).get
-                                         val tree = it(node)._1
-                                         tree.siblings.exists(it(_)._1.amb eq amb)
-                                       }
+                      _   <- ZSTM.check { val node = it.keys.find(_.contains(key)).get
+                                          val tree = it(node)._1
+                                          tree.siblings.exists(it(_)._1.amb eq amb)
+                                        }
                       node = it.keys.find(_.contains(key)).get
                       tree = it(node)._1
                       root = tree.siblings.find(it(_)._1.amb eq amb).get
@@ -231,22 +218,22 @@ package object Π:
                       _   <- `1`.release
                     yield
                       ()
-                  }
+                  }.commit
                   yield
                     ()
-                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+                } *> next.map(this(`)(`)(_)).getOrElse(ZIO.unit)
 
               case `ζ-Op`.out =>
                 { for
                   key <- `)(`.get
-                  _   <- stm.commit {
+                  _   <- {
                     for
                       _   <- `1`.acquire
                       it  <- `][`.get
-                      _   <- stm.check { val node = it.keys.find(_.contains(key)).get
-                                         val tree = it(node)._1
-                                         it(tree.root)._1.amb eq amb
-                                       }
+                      _   <- ZSTM.check { val node = it.keys.find(_.contains(key)).get
+                                          val tree = it(node)._1
+                                          it(tree.root)._1.amb eq amb
+                                        }
                       node = it.keys.find(_.contains(key)).get
                       tree = it(node)._1
                       root = it(tree.root)._1.root
@@ -255,22 +242,22 @@ package object Π:
                       _   <- `1`.release
                     yield
                       ()
-                  }
+                  }.commit
                   yield
                     ()
-                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+                } *> next.map(this(`)(`)(_)).getOrElse(ZIO.unit)
 
               case `ζ-Op`.open =>
                 { for
                   key    <- `)(`.get
-                  (r, n) <- stm.commit {
+                  (r, n) <- {
                     for
                       _           <- `1`.acquire
                       it          <- `][`.get
-                      _           <- stm.check { val root = it.keys.find(_.contains(key)).get
-                                                 val tree = it(root)._1
-                                                 tree.children.exists(it(_)._1.amb eq amb)
-                                               }
+                      _           <- ZSTM.check { val root = it.keys.find(_.contains(key)).get
+                                                  val tree = it(root)._1
+                                                  tree.children.exists(it(_)._1.amb eq amb)
+                                                }
                       root         = it.keys.find(_.contains(key)).get
                       (temp, reth) = it(root)
                       node         = temp.children.find(it(_)._1.amb eq amb).get
@@ -278,65 +265,65 @@ package object Π:
                     yield
                       (root, temp, reth) ->
                       (node, tree, neth)
-                  }
+                  }.commit
                   (root, temp, reth) = r
                   (node, tree, neth) = n
                   rstate <- reth.get
                   nstate <- neth.get
                   state1 <- ether(rstate, nstate)
                   state2 <- ether(nstate, rstate)
-                  jeth   <- Ref.of[IO, ><](><(state1.takers ++ state2.takers,
-                                              state1.offerers ++ state2.offerers))
+                  jeth   <- Ref.make[><](><(state1.takers ++ state2.takers,
+                                            state1.offerers ++ state2.offerers))
                   join    = root ++ node
-                  _      <- stm.commit {
+                  _      <- {
                     for
                       _ <- remove(node, tree)
-                      _ <- `][`.modify { _ - root - node + (join -> (temp, jeth)) }
+                      _ <- `][`.update { _ - root - node + (join -> (temp, jeth)) }
                       _ <- update(temp, root, join)
                       _ <- merge(tree, join)
                       _ <- `1`.release
                     yield
                       ()
-                  }
+                  }.commit
                   yield
                     ()
-                } >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+                } *> next.map(this(`)(`)(_)).getOrElse(ZIO.unit)
 
           case Π.ζ(Some(_), _, _) => ??? // impossible by syntax
 
           case Π.ζ(_, Left(caps), next) =>
 
-            IO.unit >> this(`)(`)(caps.ζ) >> IO.cede >> next.map(this(`)(`)(_)).getOrElse(IO.cede)
+            ZIO.unit *> this(`)(`)(caps.ζ) *> next.map(this(`)(`)(_)).getOrElse(ZIO.unit)
 
           case _ => ???
 
-      def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
-               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+      def apply(`)(`: FiberRef[`)(`], _amb: `)(`)
+               (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
         val amb = try _amb.ζ.amb.right.get catch _ => _amb
         for
           key  <- `)(`.get
           uuid <- Π.`)(`()
-          _    <- stm.commit {
+          _    <- {
             for
               _   <- `1`.acquire
               it  <- `][`.get
-              _   <- stm.check { val root = it.keys.find(_.contains(key)).get
-                                 val tree = it(root)._1
-                                 tree.children.exists(it(_)._1.amb eq amb)
-                               }
+              _   <- ZSTM.check { val root = it.keys.find(_.contains(key)).get
+                                  val tree = it(root)._1
+                                  tree.children.exists(it(_)._1.amb eq amb)
+                                }
               root = it.keys.find(_.contains(key)).get
               temp = it(root)._1
               node = temp.children.find(it(_)._1.amb eq amb).get
               tree = it(node)._1
               _   <- remove(node, tree)
               join = node + uuid
-              _   <- `][`.modify(_ - node + (join -> it(node)))
+              _   <- `][`.update(_ - node + (join -> it(node)))
               _   <- insert(join, tree.root)
             yield
               ()
-          }
+          }.commit
           _    <- `)(`.set(uuid)
-          _    <- stm.commit { `1`.release }
+          _    <- `1`.release.commit
         yield
           ()
 
@@ -351,18 +338,18 @@ package object Π:
 
     object `}{`:
 
-      def apply(`)(`: IOLocal[`)(`], _amb: `)(`)
-               (using `][`: `][`, `1`: TSemaphore): IO[Unit] =
+      def apply(`)(`: FiberRef[`)(`], _amb: `)(`)
+               (using `][`: `][`, `1`: TSemaphore): UIO[Unit] =
         val amb = try _amb.ζ.amb.right.get catch _ => _amb
         for
           uuid <- Π.`)(`()
           node  = Set(uuid)
-          neth <- Ref.of[IO, ><](><())
+          neth <- Ref.make[><](><())
           key  <- `)(`.get
-          _    <- stm.commit {
+          _    <- {
             for
               _ <- `1`.acquire
-              _ <- `][`.modify { it =>
+              _ <- `][`.update { it =>
                                  val root = it.keys.find(_.contains(key)).get
                                  val (tree @ `}{`(_, _, children, _), reth) = it(root)
                                  children.foldLeft {
@@ -375,9 +362,9 @@ package object Π:
                                }
             yield
               ()
-          }
+          }.commit
           _    <- `)(`.set(uuid)
-          _    <- stm.commit { `1`.release }
+          _    <- `1`.release.commit
         yield
           ()
 
@@ -385,39 +372,39 @@ package object Π:
     /**
       * Type of ambients' trees.
       */
-    type `][` = TVar[Map[`)*(`, (`}{`, >*<)]]
+    type `][` = TRef[Map[`)*(`, (`}{`, >*<)]]
 
     object `][`:
-      def apply(): IO[(IOLocal[`)(`], `][`, TSemaphore)] =
+      def apply(): UIO[(FiberRef[`)(`], `][`, TSemaphore)] =
         for
-          eth  <- Ref.of[IO, ><](><())
+          eth  <- Ref.make[><](><())
           amb   = `)(`(())
           uuid <- `)(`()
           root  = Set(uuid)
-          lo   <- IOLocal[`)(`](uuid)
+          lo   <- ZIO.scoped(FiberRef.make[`)(`](uuid))
           map   = Map(root -> (`}{`(amb, null, Set.empty, Set.empty), eth))
-          tree <- stm.commit { TVar.of[Map[`)*(`, (`}{`, >*<)]](map) }
-          sem  <- stm.commit { TSemaphore.make(1) }
+          tree <- TRef.make[Map[`)*(`, (`}{`, >*<)]](map).commit
+          sem  <- TSemaphore.make(1).commit
         yield
           (lo, tree, sem)
 
       /**
-        * Return the [[>*<]] ether for this [[IOLocal]].
+        * Return the [[>*<]] ether for this [[FiberRef]].
         * Note that the semaphore is acquired and not yet released,
         * but its release delayed until input/output action.
         */
-      def apply(`)(`: IOLocal[`)(`])
-               (using `][`: `][`, `1`: TSemaphore): IO[>*<] =
+      def apply(`)(`: FiberRef[`)(`])
+               (using `][`: `][`, `1`: TSemaphore): UIO[>*<] =
         for
           key  <- `)(`.get
-          neth <- stm.commit {
+          neth <- {
             for
               _   <- `1`.acquire
               it  <- `][`.get
               node = it.keys.find(_.contains(key)).get
             yield
               it(node)._2
-          }
+          }.commit
         yield
           neth
 
@@ -427,16 +414,16 @@ package object Π:
       */
     object <> :
 
-       def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])
-                (using `][`, TSemaphore): IO[Unit] =
+       def apply(wrap: `)(`)(`)(`: FiberRef[`)(`])
+                (using `][`, TSemaphore): UIO[Unit] =
          for
            `>R` <- `][`(`)(`)
            _    <- ><(wrap)(`>R`)
          yield
            ()
 
-       def apply(wrap: `)(`)(`)(`: IOLocal[`)(`])(code: => IO[Any])
-                (using `][`, TSemaphore): IO[Unit] =
+       def apply(wrap: `)(`)(`)(`: FiberRef[`)(`])(code: => Task[Any])
+                (using `][`, TSemaphore): UIO[Unit] =
          for
            `>R` <- `][`(`)(`)
            _    <- ><(wrap)(code)(`>R`)
@@ -448,16 +435,16 @@ package object Π:
       */
     object `()`:
 
-      def apply(`)(`: IOLocal[`)(`])
-               (using `][`, TSemaphore): IO[`)(`] =
+      def apply(`)(`: FiberRef[`)(`])
+               (using `][`, TSemaphore): UIO[`)(`] =
          for
            `<R` <- `][`(`)(`)
            name <- ><()(`<R`)
          yield
            name
 
-      def apply[T](`)(`: IOLocal[`)(`])(code: T => IO[T])
-                  (using `][`, TSemaphore): IO[`)(`] =
+      def apply[T](`)(`: FiberRef[`)(`])(code: T => Task[T])
+                  (using `][`, TSemaphore): UIO[`)(`] =
          for
            `<R` <- `][`(`)(`)
            name <- ><()(code)(`<R`)
@@ -467,91 +454,77 @@ package object Π:
 
     object `Π-magic`:
 
-      /**
-        * Adapted from cats-effect tutorial [[https://typelevel.org/cats-effect/docs/tutorial]].
-        *
-        * @see [[https://github.com/lrodero/cats-effect-tutorial/blob/series/3.x/src/main/scala/catseffecttutorial/producerconsumer/ProducerConsumerBoundedCancelable.scala]]
-        */
-      /*
-       *
-       * Copyright (c) 2020 Luis Rodero-Merino
-       *
-       * Licensed under the Apache License, Version 2.0 (the "License");
-       * you may not use this file except in compliance with the License.
-       * You may obtain a copy of the License at.
-       *
-       *     http://www.apache.org/licenses/LICENSE-2.0
-       *
-       * Unless required by applicable law or agreed to in writing, software
-       * distributed under the License is distributed on an "AS IS" BASIS,
-       * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       * See the License for the specific language governing permissions and
-       * limitations under the License.
-       */
-
-      final case class ><(takers: Queue[Deferred[IO, `)(`]],
-                          offerers: Queue[(`)(`, Deferred[IO, Unit])])
+      final case class ><(takers: Queue[Promise[Nothing, `)(`]],
+                          offerers: Queue[(`)(`, Promise[Nothing, Unit])])
 
       /**
         * Type of ambients' ether.
         */
-      type >*< = Ref[IO, ><]
+      type >*< = Ref[><]
 
       object >< :
 
         inline def apply(): >< = ><(Queue.empty, Queue.empty)
 
-        def apply(wrap: `)(`)(`>R`: Ref[IO, ><])
-                 (using `1`: TSemaphore): IO[Unit] =
-          Deferred[IO, Unit].flatMap { offerer =>
-            `>R`.flatModifyFull { (poll, it) =>
-              it.takers.dequeueOption match
-                case Some((taker, queue)) =>
-                  it.copy(takers = queue) -> (taker.complete(wrap).void <* stm.commit { `1`.release })
-                case _ =>
-                  val queue = it.offerers.enqueue(wrap -> offerer)
-                  it.copy(offerers = queue) -> (stm.commit { `1`.release } *> poll(offerer.get))
+        def apply(wrap: `)(`)(`>R`: Ref[><])
+                 (using `1`: TSemaphore): UIO[Unit] =
+          Promise.make[Nothing, Unit].flatMap { offerer =>
+            ZIO.uninterruptibleMask { restore =>
+              `>R`.modify { it =>
+                it.takers.dequeueOption match
+                  case Some((taker, queue)) =>
+                    (taker.succeed(wrap).unit <* `1`.release.commit) -> it.copy(takers = queue)
+                  case _ =>
+                    val queue = it.offerers.enqueue(wrap -> offerer)
+                    (`1`.release.commit *> restore(offerer.await)) -> it.copy(offerers = queue)
+              }.flatten
             }
           }
 
-        def apply(wrap: `)(`)(code: => IO[Any])(`>R`: Ref[IO, ><])
-                 (using `1`: TSemaphore): IO[Unit] =
-          Deferred[IO, Unit].flatMap { offerer =>
-            `>R`.flatModifyFull { (poll, it) =>
-              it.takers.dequeueOption match
-                case Some((taker, queue)) =>
-                  it.copy(takers = queue) -> (taker.complete(wrap).void <* stm.commit { `1`.release })
-                case _ =>
-                  val queue = it.offerers.enqueue(wrap -> offerer)
-                  it.copy(offerers = queue) -> (stm.commit { `1`.release } *> poll(offerer.get))
+        def apply(wrap: `)(`)(code: => Task[Any])(`>R`: Ref[><])
+                 (using `1`: TSemaphore): UIO[Unit] =
+          Promise.make[Nothing, Unit].flatMap { offerer =>
+            ZIO.uninterruptibleMask { restore =>
+              `>R`.modify { it =>
+                it.takers.dequeueOption match
+                  case Some((taker, queue)) =>
+                    (taker.succeed(wrap).unit <* `1`.release.commit) -> it.copy(takers = queue)
+                  case _ =>
+                    val queue = it.offerers.enqueue(wrap -> offerer)
+                    (`1`.release.commit *> restore(offerer.await)) -> it.copy(offerers = queue)
+              }.flatten
             }
           } <* exec(code)
 
-        def apply()(`<R`: Ref[IO, ><])
-                   (using `1`: TSemaphore): IO[`)(`] =
-          Deferred[IO, `)(`].flatMap { taker =>
-            `<R`.flatModifyFull { (poll, it) =>
-              it.offerers.dequeueOption match
-                case Some(((name, offerer), queue)) =>
-                  it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* stm.commit { `1`.release })
-                case _ =>
-                  val queue = it.takers.enqueue(taker)
-                  it.copy(takers = queue) -> (stm.commit { `1`.release } *> poll(taker.get))
+        def apply()(`<R`: Ref[><])
+                   (using `1`: TSemaphore): UIO[`)(`] =
+          Promise.make[Nothing, `)(`].flatMap { taker =>
+            ZIO.uninterruptibleMask { restore =>
+              `<R`.modify { it =>
+                it.offerers.dequeueOption match
+                  case Some(((name, offerer), queue)) =>
+                    (offerer.succeed(()).as(name) <* `1`.release.commit) -> it.copy(offerers = queue)
+                  case _ =>
+                    val queue = it.takers.enqueue(taker)
+                    (`1`.release.commit *> restore(taker.await)) -> it.copy(takers = queue)
+              }.flatten
             }
           }
 
-        def apply[T]()(code: T => IO[T])(`<R`: Ref[IO, ><])
-                      (using `1`: TSemaphore): IO[`)(`] =
-          Deferred[IO, `)(`].flatMap { taker =>
-            `<R`.flatModifyFull { (poll, it) =>
-              it.offerers.dequeueOption match
-                case Some(((name, offerer), queue)) =>
-                  it.copy(offerers = queue) -> (offerer.complete(()).as(name) <* stm.commit { `1`.release })
-                case _ =>
-                  val queue = it.takers.enqueue(taker)
-                  it.copy(takers = queue) -> (stm.commit { `1`.release } *> poll(taker.get))
+        def apply[T]()(code: T => Task[T])(`<R`: Ref[><])
+                      (using `1`: TSemaphore): UIO[`)(`] =
+          Promise.make[Nothing, `)(`].flatMap { taker =>
+            ZIO.uninterruptibleMask { restore =>
+              `<R`.modify { it =>
+                it.offerers.dequeueOption match
+                  case Some(((name, offerer), queue)) =>
+                    (offerer.succeed(()).as(name) <* `1`.release.commit) -> it.copy(offerers = queue)
+                  case _ =>
+                    val queue = it.takers.enqueue(taker)
+                    (`1`.release.commit *> restore(taker.await)) -> it.copy(takers = queue)
+              }.flatten
             }
           }.flatMap {
-            case null  => IO.pure(null)
+            case null  => ZIO.succeed(null)
             case it: T => (code andThen exec)(it).map(`)(`)
           }

@@ -1,5 +1,15 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ 'n be 'm `.` 'P ⟧ = m[ out n, open n. P{} ] | in m.
+⟦ include = ce ⟧
 
-Main = ν(w) w[ ν(n, m) n[ ⟦ n be m . ν(k) ( ( go k. τ/*println("P")*/. ) | k[ τ/*println("Q")*/. ] ) ⟧ ] ]
+@def println(a: Any) = IO.println(a)
+
+⟦ include = zio ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+⟦ exclude = 0 ⟧
+
+⟦ 'n be 'm `.` 'P ⟧ = m[ out n. open n. P{} ] | in m.
+
+Main = ν(w) w[ ν(n, m) n[ ⟦ n be m . ν(k) ( ( go k. τ/*_ <- println("P")*/. ) | k[ τ/*_ <- println("Q")*/. ] ) ⟧ ] ]

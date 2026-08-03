@@ -1,8 +1,16 @@
 # -*- indent-tabs-mode: nil; -*-
 
+⟦ include = ce ⟧
+
 @val ! : `)(` => IO[`)(`] = IO.pure
 
-Main = ν(w) w[ ν(n, p, m) ( n[ ν(q) m[ out n, in p.   \
+⟦ include = zio ⟧
+
+@val ! : `)(` => Task[`)(`] = ZIO.succeed
+
+⟦ exclude = 0 ⟧
+
+Main = ν(w) w[ ν(n, p, m) ( n[ ν(q) m[ out n. in p.   \
                                      | <q>            \
                                      ]                \
                              ]                        \

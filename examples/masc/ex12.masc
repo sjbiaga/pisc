@@ -1,8 +1,18 @@
 # -*- indent-tabs-mode: nil; -*-
 
+⟦ include = ce ⟧
+
+@def println(a: Any) = IO.println(a)
+
+⟦ include = zio ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+⟦ exclude = 0 ⟧
+
 ⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                                 \
-                            ( p[ in n, out n. q[ out p, open r. P{} ] ]  \
-                            | p[ in m, out m. q[ out p, open r. Q{} ] ]  \
+                            ( p[ in n. out n. q[ out p. open r. P{} ] ]  \
+                            | p[ in m. out m. q[ out p. open r. Q{} ] ]  \
                             | open q. | r[]                              \
                             )
 
@@ -17,54 +27,54 @@
 ⟦ t"inczero ${$P}" ⟧(zero, succ, op) = open zero. ( ⟦ 1 ⟧ | P{} )
 
 ⟦ t"incsucc ${$P}" ⟧(succ, op) = ν(p, q)                                                                     \
-                               ( p[ succ[ open op. ] ] | open q, open p. P{}                                 \
-                               | op[ in succ, in p, in succ. (q[ out succ, out succ, out p. ] | open op.) ]  \
+                               ( p[ succ[ open op. ] ] | open q. open p. P{}                                 \
+                               | op[ in succ. in p. in succ. (q[ out succ. out succ. out p. ] | open op.) ]  \
                                )
 
 ⟦ t"inc ${$P}" ⟧(zero, succ, op) = ⟦ IfZero ⟦ inczero P{} ⟧  \
                                      Else ⟦ incsucc P{} ⟧ ⟧
 
-⟦ t"dec ${$P}" ⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p, open succ. P{} )
+⟦ t"dec ${$P}" ⟧(succ, op) = ν(p) ( op[ in succ. p[ out succ. ]] | open p. open succ. P{} )
 
 Main = ν(w) w[ ν(zero, succ, op)     \
                ν(one, two, three) (  \
-                                  | zero[ ⟦ 1 ⟧                                         \
-                                        | ⟦ dec                                         \
-                                                ⟦ IfZero open zero. τ/*println("0")*/.  \
-                                                  Else () ⟧                             \
-                                                                                        \
-                                          ⟧                                             \
-                                        ]                                               \
-                                  | one[ ⟦ Zero ⟧                                       \
-                                       | ⟦ inc                                         \
-                                               ⟦ IfZero ()                             \
-                                                 Else open succ,                       \
-                                                      open zero. τ/*println("1")*/. ⟧  \
-                                                                                       \
-                                         ⟧                                             \
-                                       ]                                               \
-                                  | two[ ⟦ Zero ⟧                                      \
-                                       | ⟦ inc                                         \
-                                         ⟦ inc                                         \
-                                               ⟦ IfZero ()                             \
-                                                 Else open succ,                       \
-                                                      open succ,                       \
-                                                      open zero. τ/*println("2")*/. ⟧  \
-                                         ⟧                                               \
-                                         ⟧                                               \
-                                       ]                                                 \
-                                  | three[ ⟦ Zero ⟧                                      \
-                                         | ⟦ inc                                         \
-                                           ⟦ inc                                         \
-                                           ⟦ inc                                         \
-                                                 ⟦ IfZero ()                             \
-                                                   Else open succ,                       \
-                                                        open succ,                       \
-                                                        open succ,                       \
-                                                        open zero. τ/*println("3")*/. ⟧  \
-                                           ⟧                                             \
-                                           ⟧                                             \
-                                           ⟧                                             \
-                                         ]                                               \
-                                  )                                                      \
+                                  | zero[ ⟦ 1 ⟧                                              \
+                                        | ⟦ dec                                              \
+                                                ⟦ IfZero open zero. τ/*_ <- println("0")*/.  \
+                                                  Else () ⟧                                  \
+                                                                                             \
+                                          ⟧                                                  \
+                                        ]                                                    \
+                                  | one[ ⟦ Zero ⟧                                           \
+                                       | ⟦ inc                                              \
+                                               ⟦ IfZero ()                                  \
+                                                 Else open succ.                            \
+                                                      open zero. τ/*_ <- println("1")*/. ⟧  \
+                                                                                            \
+                                         ⟧                                                  \
+                                       ]                                                    \
+                                  | two[ ⟦ Zero ⟧                                           \
+                                       | ⟦ inc                                              \
+                                         ⟦ inc                                              \
+                                               ⟦ IfZero ()                                  \
+                                                 Else open succ.                            \
+                                                      open succ.                            \
+                                                      open zero. τ/*_ <- println("2")*/. ⟧  \
+                                         ⟧                                                  \
+                                         ⟧                                                  \
+                                       ]                                                    \
+                                  | three[ ⟦ Zero ⟧                                           \
+                                         | ⟦ inc                                              \
+                                           ⟦ inc                                              \
+                                           ⟦ inc                                              \
+                                                 ⟦ IfZero ()                                  \
+                                                   Else open succ.                            \
+                                                        open succ.                            \
+                                                        open succ.                            \
+                                                        open zero. τ/*_ <- println("3")*/. ⟧  \
+                                           ⟧                                                  \
+                                           ⟧                                                  \
+                                           ⟧                                                  \
+                                         ]                                                    \
+                                  )                                                           \
              ]

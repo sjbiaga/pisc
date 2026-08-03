@@ -1,0 +1,269 @@
+/*
+ * Copyright (c) 2023-2026 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+package masc
+package emitter
+package zio
+
+import scala.meta.*
+import dialects.Scala3
+
+import parser.Ambient.{ AST => _, * }
+import parser.Calculus.*
+import parser.Encoding.*
+import Meta.*
+
+
+object Program:
+
+  extension (node: Pre | AST)
+
+    def emit(using id: => String): List[Enumerator] =
+      var * = List[Enumerator]()
+
+      node match
+
+        // COMPOSITION /////////////////////////////////////////////////////////
+
+        case ∅() =>
+
+        case ∥(_, operand) =>
+          * = operand.emit
+
+        case it: ∥ =>
+          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
+
+          * = `_ <- *`(`List( *, … ).collectAllPar`(ios*))
+
+        ///////////////////////////////////////////////////////// composition //
+
+
+        // SEQUENCE ////////////////////////////////////////////////////////////
+
+        case `.`(end, it*) =>
+          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
+
+        //////////////////////////////////////////////////////////// sequence //
+
+
+        // RESTRICTION | PREFIXES //////////////////////////////////////////////
+
+        case ν(names*) =>
+          * = names.map { it => `* <- *`(it -> "ν") }.toList
+
+
+        case τ(Some((Left(enums), _))) =>
+          * = `_ <- *`("τ")
+          * = * ::: enums
+
+        case τ(Some((Right(term), _))) =>
+          * = `_ <- *`("τ")
+          * :+= `_ <- ZIO.succeed { * }`(term)
+
+        case τ(_) =>
+          * = `_ <- *`("τ")
+
+
+        case `..`() =>
+
+        case `..`(path*) =>
+          * = `_ <- *`(Term.Apply(
+                         Term.Apply(Term.Select("}{", "ζ"), Term.ArgClause(\(")(") :: Nil)),
+                         Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)))
+
+
+        case `()`(name, it) =>
+          val term = Term.Apply(Term.Select("}{", "()"), Term.ArgClause(\(")(") :: Nil))
+          * = it match
+                case Some((Right(code), _)) =>
+                  `* <- *`(name -> Term.Apply(term, Term.ArgClause(code::Nil)))
+                case _ =>
+                  `* <- *`(name -> term)
+
+        ////////////////////////////////////////////// restriction | prefixes //
+
+
+        // REPLICATION /////////////////////////////////////////////////////////
+
+        case !(parallelism, pace, Some(name), par) =>
+          val υidυ = id
+
+          val sem = if parallelism < 0 then null else id
+
+          val `()ʹ` = `()`(name, None)
+
+          val `!.().⋯` =
+            ( if parallelism < 0
+              then
+                `()ʹ`.emit
+              else
+                `()ʹ`.emit :+ `_ <- *.acquire`(sem)
+            ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(name) :: Nil)))
+
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.().⋯`).getOrElse(`!.().⋯`)
+
+          val body =
+            Term.If(Term.ApplyUnary("!", name),
+                    Term.Select("ZIO", "unit"),
+                    `List( *, … ).collectAllPar`(
+                      if parallelism < 0
+                      then par.emit
+                      else par.emit :+ `_ <- *.release`(sem),
+                      `!⋯`
+                    )
+                   )
+
+          if parallelism < 0
+          then
+            * = `* <- *`(υidυ -> `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
+          else
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
+
+        case !(parallelism, pace, _, par) =>
+          val υidυ = id
+
+          val sem = if parallelism < 0 then null else id
+
+          val `!.⋯` =
+            ( if parallelism < 0
+              then
+                Nil
+              else
+                `_ <- *.acquire`(sem) :: Nil
+            ) :+ `_ <- *`(υidυ)
+
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
+
+          val body =
+            `List( *, … ).collectAllPar`(
+              if parallelism < 0
+              then par.emit
+              else par.emit :+ `_ <- *.release`(sem),
+              `_ <- \\.unit` :: `!⋯`
+            )
+
+          if parallelism < 0
+          then
+            * = `* <- *`(υidυ, `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+          else
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ, `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+
+        ///////////////////////////////////////////////////////// replication //
+
+
+        // AMBIENT /////////////////////////////////////////////////////////////
+
+        case `[]`(amb, par) =>
+          val ** = `_ <- *`(Term.Apply(Term.Select("}{", "}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
+
+          * = `_ <- *`(`List( *, … ).collectAllPar`(** ::: par.emit))
+
+        ///////////////////////////////////////////////////////////// ambient //
+
+
+        // GO //////////////////////////////////////////////////////////////////
+
+        case `go.`(amb, par) =>
+          val ** = `_ <- *`(Term.Apply(Term.Select("}{", "ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
+
+          * = `_ <- *`(`List( *, … ).collectAllPar`(** ::: par.emit))
+
+        ////////////////////////////////////////////////////////////////// go //
+
+
+        // OUTPUT //////////////////////////////////////////////////////////////
+
+        case <>(it) =>
+          val term = Term.Apply(`<>(null)`, Term.ArgClause(\(")(") :: Nil))
+          * = it match
+                case Some((Right(code), _)) =>
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil)))
+                case _ =>
+                  `_ <- *`(term)
+
+        case <>(it, path*) =>
+          val term = Term.Apply(
+                       Term.Apply(Term.Select("}{", "<>"), Term.ArgClause(`ζ(op, *, …)`(path.head, path.tail) :: Nil)),
+                       Term.ArgClause(\(")(") :: Nil))
+
+          * = it match
+                case Some((Right(code), _)) =>
+                  `_ <- *`(Term.Apply(term, Term.ArgClause(code::Nil)))
+                case _ =>
+                  `_ <- *`(term)
+
+        ////////////////////////////////////////////////////////////// output //
+
+
+        // INSTANTIATION ///////////////////////////////////////////////////////
+
+        case `⟦⟧`(Definition(_, _, _, variables, _), _par, _, pointers) =>
+          * = (variables zip pointers)
+            .map(Pat.Var(_) -> _)
+            .map(Enumerator.Val(_, _))
+            .toList
+
+          val n = pointers.size
+
+          val par = if (variables.size == n)
+                    then
+                      _par
+                    else
+                      ∥(-1, `.`(_par, ν(variables.drop(n).toSeq*)))
+
+          * = * ::: par.emit
+
+        case _: `{}` => ???
+
+        /////////////////////////////////////////////////////// instantiation //
+
+
+        // INVOCATION //////////////////////////////////////////////////////////
+
+        case `(*)`(identifier, qual, params*) =>
+          val args = params.map(\(_)).toList
+
+          val term = qual match
+            case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
+            case _ => \(identifier)
+
+          * = `_ <- *`(Term.Apply(Term.Apply(term, Term.ArgClause(\(")(") :: Nil)),
+                                  Term.ArgClause(args)))
+
+        ////////////////////////////////////////////////////////// invocation //
+
+      *
+
+
+  final class Main:
+
+    def apply(prog: List[Bind]): List[Stat] =
+      val id = new helper.υidυ
+      prog.map(_ -> _.emit(using id())).map(_.swap).map(defn(_)(_))

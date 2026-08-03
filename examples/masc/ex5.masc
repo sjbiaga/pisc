@@ -1,3 +1,13 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Main = ν(w) w[ ( ν(m) <m> ) | (n). ( ν(m) m[ n[ out m. ] ] | open n. ( τ/*println("m->n")*/. ) ) ]
+⟦ include = ce ⟧
+
+@def println(a: Any) = IO.println(a)
+
+⟦ include = zio ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+⟦ exclude = 0 ⟧
+
+Main = ν(w) w[ ( ν(m) <m> ) | (n). ( ν(m) m[ n[ out m. ] ] | open n. ( τ/*_ <- println("m->n")*/. ) ) ]

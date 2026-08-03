@@ -1,9 +1,19 @@
 # -*- indent-tabs-mode: nil; -*-
 
+⟦ include = ce ⟧
+
+@def println(a: Any) = IO.println(a)
+
+⟦ include = zio ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+⟦ exclude = 0 ⟧
+
 ⟦ 'n `=>` 'P + 'm `=>` 'Q ⟧ = ν(p, q, r)                                 \
-                            ( p[ in n, out n. q[ out p, open r. P{} ] ]  \
-                            | p[ in m, out m. q[ out p, open r. Q{} ] ]  \
+                            ( p[ in n. out n. q[ out p. open r. P{} ] ]  \
+                            | p[ in m. out m. q[ out p. open r. Q{} ] ]  \
                             | open q. | r[]                              \
                             )
 
-Main = ν(w) w[ ν(n, m) ( ⟦ n => τ/*println("P")*/. + m => τ/*println("Q")*/. ⟧ | n[] ) ]
+Main = ν(w) w[ ν(n, m) ( ⟦ n => open n. τ/*_ <- println("P")*/. + m => open m. τ/*_ <- println("Q")*/. ⟧ | n[] | m[] ) ]

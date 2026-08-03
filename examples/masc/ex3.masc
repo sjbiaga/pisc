@@ -1,6 +1,6 @@
 # -*- indent-tabs-mode: nil; -*-
 
-Repl =      ! . (n) . n, n, n .
+Repl =      ! . (n) . n. n. n .
 #           ^ ^^^^^^^
 # __________| |_____|
 # replication  guard

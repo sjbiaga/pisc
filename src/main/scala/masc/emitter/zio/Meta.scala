@@ -28,7 +28,7 @@
 
 package masc
 package emitter
-package ce
+package zio
 
 import scala.meta.*
 import dialects.Scala3
@@ -38,31 +38,30 @@ import parser.Calculus.`(*)`
 
 object Meta extends emitter.shared.effects.Meta:
 
-  override protected lazy val \ = "IO"
+  override protected lazy val \ = "ZIO"
 
-  override protected lazy val \\ = "pure"
+  override protected lazy val \\ = "succeed"
 
 
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: IO[Any]`,
+               "Main", `String*`("args"), `: UIO[Any]`,
                body)
     case `(*)`(identifier, _, params*) =>
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: IO[Any]`,
+               identifier, `(…)`(params*), `: UIO[Any]`,
                body)
 
 
   def `String*`(* : String) =
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
-      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
-                       Term.Param(Nil, \("}{"), Some(Type.Select("Π", \\("}{"))), None) :: Nil,
+      Term.ParamClause(Term.Param(Nil, \(")("), `:`("FiberRef", ")("), None) :: Nil,
                        None) ::
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(\\("String"))), None) :: Nil) ::
       Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", \\("]["))), None) ::
-                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"), \\("TSemaphore"))), None) :: Nil,
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("TSemaphore")), None) :: Nil,
                        Some(Mod.Using())) ::
       Nil
     ) :: Nil
@@ -70,8 +69,7 @@ object Meta extends emitter.shared.effects.Meta:
   def `(…)`(* : String*) =
     Member.ParamClauseGroup(
       Type.ParamClause(Nil),
-      Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
-                       Term.Param(Nil, \("}{"), Some(Type.Select("Π", \\("}{"))), None) :: Nil,
+      Term.ParamClause(Term.Param(Nil, \(")("), `:`("FiberRef", ")("), None) :: Nil,
                        None) ::
       Term.ParamClause(*
                         .map(\(_))
@@ -79,45 +77,51 @@ object Meta extends emitter.shared.effects.Meta:
                         .toList,
                        None) ::
       Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select("}{", \\("]["))), None) ::
-                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(Type.Select(Term.Select("}{", "stm"), \\("TSemaphore"))), None) :: Nil,
+                       Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("TSemaphore")), None) :: Nil,
                        Some(Mod.Using())) ::
       Nil
     ) :: Nil
 
 
-  val `: IO[Any]` = `:`(\, "Any")
-
-  val `IO.cede` = Term.Select(\, "cede")
+  val `: UIO[Any]` = `:`("UIO", "Any")
 
 
-  private val `IO.*`: Term => Boolean =
+  private val `ZIO.*`: Term => Boolean =
     case Term.Select(Term.Name(`\\`), _) => true
-    case Term.Apply(it, _) => `IO.*`(it)
-    case Term.ApplyType(it, _) => `IO.*`(it)
+    case Term.Apply(it, _) => `ZIO.*`(it)
+    case Term.ApplyType(it, _) => `ZIO.*`(it)
     case _ => false
 
-  def `_ <- IO { * }`(* : Term): Enumerator.Generator =
-    if `IO.*`(*)
+  def `_ <- ZIO.succeed { * }`(* : Term): Enumerator.Generator =
+    if `ZIO.*`(*)
     then
       Enumerator.Generator(`* <- …`(), *)
     else
-      Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+      Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
-  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator =
+  def `_ <- ZIO.sleep(*.…)`(* : Long, `…`: String): Enumerator =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
-  def `List( *, … ).parSequence`(* : Term*): Term =
+  def `List( *, … ).collectAllPar`(* : Term*): Term =
     *.flatMap {
-      case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
-      case Nil => `IO.cede`
-      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
+      case Nil => Term.Select(\\, "unit")
+      case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
 
 
-  def `IO { def *(*: )(): IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(\(\),
+  override def `* <- Semaphore(…)`(* : String, `…`: Int = 1): Enumerator =
+    Enumerator.Generator(`* <- …`(*),
+                         Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)),
+                                    Term.ArgClause(Lit.Int(`…`) :: Nil)
+                         )
+    )
+
+
+  def `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -127,19 +131,19 @@ object Meta extends emitter.shared.effects.Meta:
                                                                                 *._2,
                                                                                 Some(\\(")(")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: IO[Any]`,
+                            `: UIO[Any]`,
                              `…`
                    ) :: \(*._1) :: Nil
                  ) :: Nil
                )
     )
 
-  def `IO { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
-    Term.Apply(\(\),
+  def `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
-                                         `: IO[Any]`,
+                                         `: UIO[Any]`,
                                          `…`
                                 ) :: \(*) :: Nil
                               ) :: Nil
