@@ -257,6 +257,7 @@ object Pi:
                                                           case parallelism => parallelism > 1
                                                         })
     case ce extends Emitter()
+    case zio extends Emitter()
     case fs2 extends Emitter(true)
     case monix extends Emitter(false)
     case zs extends Emitter(true)
@@ -350,7 +351,7 @@ object Pi:
     protected def _init: Unit =
       _settings = Settings()
       _settings.replication = (-1, emitter.featuresLinearReplication)
-      Directive("push" -> "1", _settings)()
+      Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
       self = Set()
@@ -381,7 +382,11 @@ object Pi:
               None
             else if it.matches("^[ ]*@.*")
             then // Scala
-              Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+              if !_settings.exclude
+              then
+                Some(Left(it.replaceFirst("^([ ]*)@(.*)$", "$1$2")))
+              else
+                None
             else // Pi
               _cntr = Map(0 -> 0L)
               _nth = Map(0 -> 0L)

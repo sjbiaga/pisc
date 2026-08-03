@@ -30,25 +30,21 @@ package object Π:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.cats.effect.IO
-  import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Queue, Supervisor }
+  import _root_.cats.effect.std.Queue
+  import _root_.zio.interop.catz.concurrentInstance
+  import _root_.zio.{ Promise, Task, UIO, ZIO }
 
   import `Π-magic`.*
 
 
-  /**
-    * Supervised [[code]].
-    * @param code
-    */
-  private def exec[T](code: => IO[T]): IO[T] =
-    Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case _             => IO.pure(null.asInstanceOf[T]) }
-              )
+  given [A]: Conversion[Task[A], UIO[A]] = _.either.map(_.right.get)
+
+
+  private def exec[T](code: => Task[T]): UIO[T] =
+    code.absorb.either.map {
+      case Right(it) => it
+      case _         => null.asInstanceOf[T]
+    }
 
 
   /**
@@ -56,15 +52,15 @@ package object Π:
     */
   object ν:
 
-    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] =
-      Queue.synchronous[IO, Any].map(`()`).flatMap(f)
+    def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
+    def flatMap[B](f: `()` => UIO[B]): UIO[B] =
+      Queue.synchronous[Task, Any].map(`()`).flatMap(f)
 
 
   /**
     * silent transition
     */
-  val τ: IO[Option[Unit]] = IO(Some(()))
+  val τ: UIO[Option[Unit]] = ZIO.succeed(Some(()))
 
 
   /**
@@ -87,80 +83,80 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_f: false)(value: => S)(using DummyImplicit): IO[Option[Unit]] =
+    def apply[S: ClassTag](_f: false)(value: => S)(using DummyImplicit): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.asInstanceOf[`()`])
       else
-        apply(false)(IO.delay(value))
+        apply(false)(ZIO.attempt(value))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(value: => S)(code: => IO[Any])(using DummyImplicit): IO[Option[Unit]] =
+    def apply[S: ClassTag](_t: true)(value: => S)(code: => Task[Any])(using DummyImplicit): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.asInstanceOf[`()`])(code)
       else
-        apply(true)(IO.delay(value))(code)
+        apply(true)(ZIO.attempt(value))(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_f: false)(value: => IO[S]): IO[Option[Unit]] =
+    def apply[S: ClassTag](_f: false)(value: => Task[S]): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
-        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(_)))
+        ZIO.attempt(value.asInstanceOf[UIO[`()`]].flatMap(apply(_))).flatten
       else
-        IO.defer(value.map(new `()`(_)).flatMap(apply(_)))
+        ZIO.attempt(value.map(new `()`(_)).flatMap(apply(_))).flatten
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(value: => IO[S])(code: => IO[Any]): IO[Option[Unit]] =
+    def apply[S: ClassTag](_t: true)(value: => Task[S])(code: => Task[Any]): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
-        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(_)(code)))
+        ZIO.attempt(value.asInstanceOf[UIO[`()`]].flatMap(apply(_)(code))).flatten
       else
-        IO.defer(value.map(new `()`(_)).flatMap(apply(_)(code)))
+        ZIO.attempt(value.map(new `()`(_)).flatMap(apply(_)(code))).flatten
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`): IO[Option[Unit]] = ><(value.name)(q)
+    def apply(value: `()`): UIO[Option[Unit]] = ><(value.name)(q)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`)(code: => IO[Any]): IO[Option[Unit]] = apply(value) <* exec(code)
+    def apply(value: `()`)(code: => Task[Any]): UIO[Option[Unit]] = apply(value) <* exec(code)
 
     /**
       * positive prefix i.e. input
       */
-    def apply(): IO[`()`] = ><()(q).map(new `()`(_))
+    def apply(): UIO[`()`] = ><()(q).map(new `()`(_))
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T]()(code: T => IO[T]): IO[`()`] = ><()(q)(code).map(new `()`(_))
+    def apply[T]()(code: T => Task[T]): UIO[`()`] = ><()(q)(code).map(new `()`(_))
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `Π-magic`:
 
-    type >< = Queue[IO, Any]
+    type >< = Queue[Task, Any]
 
     object >< :
 
-      inline def apply(name: Any)(`>Q`: ><): IO[Option[Unit]] =
+      inline def apply(name: Any)(`>Q`: ><): UIO[Option[Unit]] =
         `>Q`.offer(name).as(Some(()))
 
-      inline def apply()(`<Q`: ><): IO[Any] =
+      inline def apply()(`<Q`: ><): UIO[Any] =
         `<Q`.take
 
-      inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
+      inline def apply[T]()(`<Q`: ><)(code: T => Task[T]): UIO[Any] =
         `<Q`.take.flatMap {
-          case null => IO.pure(null)
+          case null  => ZIO.succeed(null)
           case it: T => (code andThen exec)(it)
         }

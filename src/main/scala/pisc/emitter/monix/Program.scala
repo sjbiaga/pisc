@@ -422,10 +422,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ(Symbol(par)), Some(_), _)), sum) =>
           val υidυ = id
@@ -447,10 +447,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
@@ -472,10 +472,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, given Option[(Long, String)], _, sum) =>
           val υidυ = id
@@ -497,10 +497,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 

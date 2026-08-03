@@ -39,8 +39,6 @@ import dialects.Scala3
 
 abstract trait Meta extends shared.effects.Meta:
 
-  protected lazy val \\ = ""
-
   protected lazy val \\\ = ""
 
   val `: \\[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
@@ -51,13 +49,13 @@ abstract trait Meta extends shared.effects.Meta:
 
 
   def `* <- Stream.evalF(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- Stream.evalF(*)`(* : Term): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(* :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\\), Term.ArgClause(* :: Nil)))
 
   private val `Stream.evalF`: Term => Boolean =
-    case Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)) => true
+    case Term.Select(Term.Name(`\\`), Term.Name(`\\\\\\`)) => true
     case Term.Apply(it, _) => `Stream.evalF`(it)
     case Term.ApplyType(it, _) => `Stream.evalF`(it)
     case _ => false
@@ -65,7 +63,7 @@ abstract trait Meta extends shared.effects.Meta:
   def `Stream.evalF(…)`(`…`: List[Enumerator]): List[Enumerator] =
     `…`.map {
       case it @ Enumerator.Generator(_, rhs) if `Stream.evalF`(rhs) => it
-      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\), Term.ArgClause(it.rhs :: Nil)))
+      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\\), Term.ArgClause(it.rhs :: Nil)))
       case it => it
     }
 
@@ -108,8 +106,8 @@ abstract trait Meta extends shared.effects.Meta:
                                            Term.ArgClause(Lit.Int(`…`) :: Nil))).head
 
 
-  def `\\.\\\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\\),
+  def `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -126,8 +124,8 @@ abstract trait Meta extends shared.effects.Meta:
                )
     )
 
-  def `\\.\\\\\\ { lazy val *: \\[F, Unit] = …; * }`(* : String, `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\\),
+  def `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,

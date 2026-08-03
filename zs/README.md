@@ -13,7 +13,7 @@ possibly multiple publishers and multiple subscribers.
 
 Composition: parallel modelled with - `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain)))`.
 
-Summation: non-deterministic choice modelled with - a `semaphore: Semaphore` and `ZStream.fromZIO(ZIO.collectAllParDiscard(List(...).map(_.runDrain).map(semaphore.tryWithPermit(_))))`.
+Summation: non-deterministic choice modelled with - a `semaphore: Semaphore[Task]` and `List(...).map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar`.
 
 [Guarded] Replication: modelled with infinite streams.
 

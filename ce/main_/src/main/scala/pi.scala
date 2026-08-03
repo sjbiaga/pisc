@@ -47,7 +47,7 @@ package object Π:
       .flatMap(_.join
                 .flatMap
                 { case Succeeded(it) => it
-                  case _ => IO(null.asInstanceOf[T]) }
+                  case _             => IO.pure(null.asInstanceOf[T]) }
               )
 
 
@@ -190,7 +190,7 @@ package object Π:
           case (it: T, b2) => (code andThen exec)(it)
                                 .flatTap {
                                   case null => `<R`.update(_.copy(stop = true))
-                                  case _ => IO.unit
+                                  case _    => IO.unit
                                 }.map(_ -> b2)
         }.flatMap { (name, b2) =>
           IO.pure(name) <* b2.await

@@ -2,9 +2,71 @@
 
 # ./examples $ pi_ hanoi.scala
 
+⟦ include = (ce,zio,zs) ⟧
+
 @given Conversion[`()`, Int] = _.`()`[Int]
 
+⟦ include = (fs2,monix) ⟧
+
+@given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
+
+⟦ include = ce ⟧
+
 @val ! : String => IO[String] = { _ => IO.canceled.as("") }
+
+@def print(a: Any) = IO.print(a)
+
+@def println(a: Any) = IO.println(a)
+
+@def blocking(a: => Any) = IO.blocking(a)
+
+⟦ include = fs2 ⟧
+
+⟦ typeclasses = (Async,Console,Parallel) ⟧
+
+@import cats.effect.std.Console
+
+@def ![F[_]: Async]: String => F[String] = { _ => Async[F].pure(null) }
+
+@def print[F[_]: Console](a: Any) = Console[F].print(a)
+
+@def println[F[_]: Console](a: Any) = Console[F].println(a)
+
+@def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
+
+⟦ include = monix ⟧
+
+⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+
+@def ![F[_]: Concurrent]: String => F[String] = { _ => Concurrent[F].pure(null) }
+
+@def print[F[_]: Concurrent](a: Any) = Concurrent[F].delay(Console.print(a))
+
+@def println[F[_]: Concurrent](a: Any) = Concurrent[F].delay(Console.println(a))
+
+@def blocking[F[_]: Concurrent](a: => Any) = Concurrent[F].delay(a)
+
+⟦ include = (zio,zs) ⟧
+
+@def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
+
+@def println(a: Any) = ZIO.debug(a)
+
+@def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
+
+⟦ include = zio ⟧
+
+@val ! : String => Task[String] = { _ => ZIO.interrupt.as("") }
+
+⟦ include = zs ⟧
+
+@given [A]: Conversion[Task[A], UIO[A]] = _.either.map(_.right.get)
+
+@val ! : String => Task[String] = { _ => ZIO.succeed(null) }
+
+⟦ exclude = 0 ⟧
+
+⟦ replication = (parallelism,1) ⟧
 
 Main = ν(a,b,c)      \
      ( (!.a<"a">.)   \
@@ -14,21 +76,22 @@ Main = ν(a,b,c)      \
      )
 
 Hanoi(a,b,c,n*) = ν(w)                                        \
-                ( τ/* _ <- IO.print("n = ");                  \
-                     'n <- IO.blocking {                      \
+                ( τ/* _ <- print("n = ");                     \
+                     'n <- blocking {                         \
                              try                              \
                                scala.io.StdIn.readLine.toInt  \
                              catch _ => -1                    \
                            }                                  \
                     */.                                       \
                   Hanoi(a,b,c,n,w)                            \
-                | w(w). a(a)/*!*/. b(b)/*!*/. c(c)/*!*/.      \
-                  τ/*println(s"#${'w} moves")*/.              \
+                | w(w).                                       \
+                  τ/*_ <- println(s"#${'w} moves")*/.         \
+                  ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )    \
                 )
 
 
-Move(from,to,z) = from(x).to(y).                    \
-                  τ/*println(s"${'x} -> ${'y}")*/.  \
+Move(from,to,z) = from(x).to(y).                         \
+                  τ/*_ <- println(s"${'x} -> ${'y}")*/.  \
                                 z</*1*/>.
 
 Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                         \
