@@ -298,6 +298,7 @@ object StochasticPi:
     case ce extends Emitter()
     case cef extends Emitter()
     case zio extends Emitter()
+    case ziof extends Emitter()
     case fs2 extends Emitter(true)
     case zs extends Emitter(true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })

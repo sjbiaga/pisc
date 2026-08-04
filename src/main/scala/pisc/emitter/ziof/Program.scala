@@ -28,7 +28,7 @@
 
 package pisc
 package emitter
-package cef
+package ziof
 
 import scala.meta.*
 import dialects.Scala3
@@ -37,7 +37,7 @@ import parser.StochasticPi.Actions
 import parser.Calculus.*
 import parser.Encoding.*
 import parser.μ
-import cef.Meta.*
+import ziof.Meta.*
 
 
 object Program:
@@ -60,7 +60,7 @@ object Program:
         case it @ τ(r, Some((Right(term), _))) =>
           `*.flatMap { null else … }`(Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
                                                  Term.ArgClause(Lit.String(it.υidυ)::Nil)),
-                                      `_ <- IO { * }`(term) :: *)
+                                      `_ <- ZIO { * }`(term) :: *)
 
         case it @ τ(r, _) =>
           `*.flatMap { null else … }`(Term.Apply(Term.Apply(\("τ"), Term.ArgClause(rate(r.get)::Nil)),
@@ -77,7 +77,7 @@ object Program:
                                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(expr::Nil)),
                                           *)
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               `*.flatMap { null else … }`(Term.Apply(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
                                                                            Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(expr::Nil)),
@@ -96,7 +96,7 @@ object Program:
                                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(expr::Nil)),
                                           *)
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               `*.flatMap { null else … }`(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: arg.toTerm :: Nil)),
                                                                 Term.ArgClause(Lit.String(it.υidυ)::Nil)), Term.ArgClause(expr::Nil)),
                                           *)
@@ -107,7 +107,7 @@ object Program:
 
         case it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), _, _) =>
           val parʹ = if ch == par then id else par
-          val ** = if ch == par then `* <- IO.pure(*)`(par -> parʹ) else `_ <- \\.unit`
+          val ** = if ch == par then `* <- ZIO.succeed(*)`(par -> parʹ) else `_ <- \\.unit`
           `for * yield ()`(
             `* <- *`(parʹ -> "ν"),
             `_ <- *`(it.copy(name = λ(Symbol(parʹ)), polarity = None)(it.υidυ).emit(** :: *))
@@ -180,14 +180,14 @@ object Program:
           * = operand.emit
 
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
-          val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val uios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
-          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(uios*))
 
         case it: + =>
-          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val uios = it.choices.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(uios*))
 
         /////////////////////////////////////////////////////////// summation //
 
@@ -198,9 +198,9 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
+          val uios = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(uios*))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -213,10 +213,10 @@ object Program:
 
           * = ps.foldRight(end.emit) {
 
-            case (ν(names*), ios) =>
-              names.map { it => `* <- *`(it -> "ν") }.toList ::: ios
+            case (ν(names*), uios) =>
+              names.map { it => `* <- *`(it -> "ν") }.toList ::: uios
 
-            case (π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code), ios) =>
+            case (π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), _, code), uios) =>
               val args = params.map {
                 case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
                 case λ(Symbol(par)) => par
@@ -237,17 +237,17 @@ object Program:
 
               code match
                 case Some((Right(term), _)) =>
-                  * :+= `_ <- IO { * }`(term)
+                  * :+= `_ <- ZIO { * }`(term)
                 case _ =>
 
-              * ::: ios
+              * ::: uios
 
-            case (it: μ, ios) if υidυ.get eq it.υidυ =>
-              `_ <- *`(it.emit(ios))
+            case (it: μ, uios) if υidυ.get eq it.υidυ =>
+              `_ <- *`(it.emit(uios))
 
-            case (it, ios) =>
-              import ce.Program.{ emit => cemit }
-              it.cemit ::: ios
+            case (it, uios) =>
+              import zio.Program.{ emit => zioemit }
+              it.zioemit ::: uios
 
           }
 
@@ -285,10 +285,10 @@ object Program:
                                               }
                                      }
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val body =
-            `List( *, … ).parSequence`(
+            `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
               else sum.emit :+ `_ <- *.release`(sem),
@@ -297,10 +297,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
@@ -321,7 +321,7 @@ object Program:
                                                }
                                      }
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` =
             λ.`type` match
@@ -333,7 +333,7 @@ object Program:
 
           val body =
             Term.Block(`val` :+
-                       `List( *, … ).parSequence`(
+                       `List( *, … ).collectAllPar`(
                          if parallelism < 0
                          then sum.emit
                          else sum.emit :+ `_ <- *.release`(sem),
@@ -342,10 +342,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
@@ -361,10 +361,10 @@ object Program:
                                               }
                                      }
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val body =
-            `List( *, … ).parSequence`(
+            `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
               else sum.emit :+ `_ <- *.release`(sem),
@@ -373,10 +373,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => UIO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => UIO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 

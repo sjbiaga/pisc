@@ -32,11 +32,7 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.cats.syntax.applicative.*
-
-  import _root_.cats.effect.{ IO, Deferred }
-  import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.Supervisor
+  import _root_.zio.{ Exit, Promise, Ref, Task, UIO, ZIO }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-stats`.Rate
@@ -47,26 +43,30 @@ package object sΠ:
   type `Π-Set`[A] = Set[A]
 
 
-  /**
-    * Supervised [[code]].
-    * @param code
-    */
-  private def exec[T](code: => IO[T]): IO[T] =
-    Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join)
-      .flatMap {
-        case Succeeded(it) => it
-        case _             => IO.pure(null.asInstanceOf[T])
-      }
+  given [A]: Conversion[Task[A], UIO[A]] =
+    _.either.map {
+      case Right(it) => it
+      case _         => null.asInstanceOf[A]
+    }
+
+  extension (self: ZIO.type)
+    def apply[A](a: => A): UIO[A] =
+      ZIO.attempt(a)
+
+
+  private def exec[T](code: Task[T]): UIO[T] =
+    code.fork.flatMap(_.join.exit).map {
+      case Exit.Success(it) => it
+      case _                => null.asInstanceOf[T]
+    }
 
 
   inline def `π-exclude`(enabled: String*)
-                        (using % : %, \ : \): IO[Unit] =
-    `π-exclude`(Set.from(enabled)) >> \
+                        (using % : %, \ : \): UIO[Unit] =
+    `π-exclude`(Set.from(enabled)) *> \
 
   private def `π-exclude`(enabled: `Π-Set`[String])
-                         (using % : %): IO[Unit] =
+                         (using % : %): UIO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>
                                    val n = m(key).asInstanceOf[Int] - 1
                                    if n == 0
@@ -79,8 +79,8 @@ package object sΠ:
 
   private def exclude(key: String)
                      (using % : %)
-                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): IO[Unit] =
-    `π-exclude`(`π-elvis`(key)).whenA(`π-elvis`.contains(key))
+                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
+    ZIO.when(`π-elvis`.contains(key))(`π-exclude`(`π-elvis`(key))).unit
 
 
   /**
@@ -88,8 +88,8 @@ package object sΠ:
     */
   object ν:
 
-    def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] = f(new {})
+    def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
+    def flatMap[B](f: `()` => Task[B]): UIO[B] = f(new {})
 
 
   /**
@@ -100,19 +100,19 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): UIO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (new {}, None, rate)))
-        opt      <- deferred.get
+        promise  <- Promise.make[Nothing, Option[<>]]
+        _        <- /.offer(^ -> key -> (promise -> (new {}, None, rate)))
+        opt      <- promise.await
         delay    <- ( if opt eq None
                       then
-                        IO.pure(null: java.lang.Double)
+                        ZIO.succeed(null: java.lang.Double)
                       else
                         val (delay, b, f, _) = opt.get
                         for
-                          _ <- b.await
+                          _ <- b.await.exit
                           _ <- f.join
                         yield
                           java.lang.Double(delay)
@@ -137,52 +137,52 @@ package object sΠ:
                                      (using DummyImplicit)
                                      (using %, /)
                                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[java.lang.Double] =
+                                               ^ : String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)
       else
-        apply[S](false)(rate, IO.delay(value))(key)
+        apply[S](false)(rate, ZIO.attempt(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => IO[Any])
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Task[Any])
                                     (using DummyImplicit)
                                     (using %, /)
                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): IO[java.lang.Double] =
+                                              ^ : String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
       else
-        apply[S](true)(rate, IO.delay(value))(key)(code)
+        apply[S](true)(rate, ZIO.attempt(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String)
+    def apply[S: ClassTag](_f: false)(rate: Rate, value: => Task[S])(key: String)
                                      (using %, /)
                                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[java.lang.Double] =
+                                               ^ : String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key)))
+        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key))
+        (value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])
+    def apply[S: ClassTag](_t: true)(rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])
                                     (using %, /)
                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): IO[java.lang.Double] =
+                                              ^ : String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key)(code)))
+        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
+        (value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
 
     /**
       * negative prefix i.e. output
@@ -190,20 +190,20 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): UIO[java.lang.Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Left(())), rate)))
-        opt      <- deferred.get
+        promise  <- Promise.make[Nothing, Option[<>]]
+        _        <- /.offer(^ -> key -> (promise -> (`()`[{}], Some(Left(())), rate)))
+        opt      <- promise.await
         delay    <- ( if opt eq None
                       then
-                        IO.pure(null: java.lang.Double)
+                        ZIO.succeed(null: java.lang.Double)
                       else
                         val (delay, b, f, i) = opt.get
                         for
                           _ <- i.set(value)
-                          _ <- b.await
+                          _ <- b.await.exit
                           _ <- f.join
                         yield
                           java.lang.Double(delay)
@@ -214,10 +214,10 @@ package object sΠ:
     /**
       * negative prefix i.e. output
       */
-    def apply(rate: Rate, value: `()`)(key: String)(code: => IO[Any])
+    def apply(rate: Rate, value: `()`)(key: String)(code: => Task[Any])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String): UIO[java.lang.Double] =
       apply(rate, value)(key) <* exec(code)
 
     /**
@@ -226,20 +226,20 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[(`()`, java.lang.Double)] =
+                       ^ : String): UIO[(`()`, java.lang.Double)] =
       for
         _             <- exclude(key)
-        deferred      <- Deferred[IO, Option[<>]]
-        result        <- IO.ref[`()`](sΠ.`()`.`null`)
-        _             <- /.offer(^ -> key -> (deferred -> (`()`[{}], Some(Right(result)), rate)))
-        opt           <- deferred.get
+        promise       <- Promise.make[Nothing, Option[<>]]
+        result        <- Ref.make[`()`](sΠ.`()`.`null`)
+        _             <- /.offer(^ -> key -> (promise -> (`()`[{}], Some(Right(result)), rate)))
+        opt           <- promise.await
         (name, delay) <- ( if opt eq None
                            then
-                             IO.pure(sΠ.`()`.`null` -> (null: java.lang.Double))
+                             ZIO.succeed(sΠ.`()`.`null` -> (null: java.lang.Double))
                            else
                              val (delay, b, f, _) = opt.get
                              for
-                               _    <- b.await
+                               _    <- b.await.exit
                                _    <- f.join
                                name <- result.get
                              yield
@@ -251,14 +251,14 @@ package object sΠ:
     /**
       * positive prefix i.e. input
       */
-    def apply[T](rate: Rate)(key: String)(code: T => IO[T])
+    def apply[T](rate: Rate)(key: String)(code: T => Task[T])
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[(`()`, java.lang.Double)] =
+                          ^ : String): UIO[(`()`, java.lang.Double)] =
       apply(rate)(key)
         .map(_.name -> _)
         .flatMap {
-          case (null, delay)  => IO.pure(sΠ.`()`.`null` -> delay)
+          case (null, delay)  => ZIO.succeed(sΠ.`()`.`null` -> delay)
           case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
         }
 

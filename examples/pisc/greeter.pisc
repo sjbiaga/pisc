@@ -6,7 +6,7 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-⟦ include = (ce,cef,zio,zs) ⟧
+⟦ include = (ce,cef,zio,ziof,zs) ⟧
 
 @given Conversion[`()`, String] = _.`()`[String]
 
@@ -34,7 +34,7 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ include = (zio,zs) ⟧
+⟦ include = (zio,ziof,zs) ⟧
 
 @val nl: String => Task[String] = { it => ZIO.succeed(s"$it\n") }
 

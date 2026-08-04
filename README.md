@@ -130,6 +130,8 @@ Emitters
 
 - [ZIO](https://github.com/sjbiaga/pisc/tree/stochastic/zio/README.md)
 
+- [ZIO (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/ziof/README.md)
+
 - [Akka](https://github.com/sjbiaga/pisc/tree/stochastic/akka/README.md)
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic/pekko/README.md)
