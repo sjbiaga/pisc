@@ -83,7 +83,7 @@ object Program:
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
-          * :+= `_ <- ZIO.succeed { * }`(term)
+          * :+= `_ <- ZIO { * }`(term)
 
         case τ(_) =>
           * = `_ <- *`("τ")

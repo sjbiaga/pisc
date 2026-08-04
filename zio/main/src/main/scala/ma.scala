@@ -30,15 +30,26 @@ package object Π:
 
   import _root_.scala.collection.immutable.{ Queue, Map, Set }
 
-  import _root_.zio.{ FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
 
 
-  private def exec[T](code: => Task[T]): UIO[T] =
-    code.absorb.either.map {
+  given [A]: Conversion[Task[A], UIO[A]] =
+    _.either.map {
       case Right(it) => it
-      case _         => null.asInstanceOf[T]
+      case _         => null.asInstanceOf[A]
+    }
+
+  extension (self: ZIO.type)
+    def apply[A](a: => A): UIO[A] =
+      ZIO.attempt(a)
+
+
+  private def exec[T](code: Task[T]): UIO[T] =
+    code.fork.flatMap(_.join.exit).map {
+      case Exit.Success(it) => it
+      case _                => null.asInstanceOf[T]
     }
 
 

@@ -54,7 +54,7 @@ object π:
   import _root_.zio.{ durationLong, FiberRef, Task, UIO }
   import _root_.zio.stm.TSemaphore
 
-  import Π.*
+  import Π.*, Π.given
 
 
   extension (self: πLs[UIO[?]])

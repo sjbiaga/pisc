@@ -42,19 +42,21 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
   implicit val name: String = directive._1.toLowerCase
 
-    private def canonical: String => String =
-      case "werr" => "errors"
-      case "dups" => "duplications"
-      case it     => it
+  val self = directive._2
 
-    private def key: String => Boolean = canonical andThen {
-      case "echo"
-         | "errors" | "duplications"
-         | "exclude" | "include"
-         | "paceunit"
-         | "scaling" => true
-      case _         => false
-    }
+  private def canonical: String => String =
+    case "werr" => "errors"
+    case "dups" => "duplications"
+    case it     => it
+
+  private def key: String => Boolean = canonical andThen {
+    case "echo"
+       | "errors" | "duplications"
+       | "exclude" | "include"
+       | "paceunit"
+       | "scaling" => true
+    case _         => false
+  }
 
   private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
@@ -93,17 +95,17 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
         case it: List[String] if it.forall(this.key) => Set.from(it.map(canonical))
         case _                                       => throw err("a comma separated list of valid keys")
 
-  private def boolean: Boolean = directive._2.boolean
-  private def number: Int = directive._2.number
-  private def emitters: List[Emitter] = directive._2.emitters
-  private def keys: Set[String] = directive._2.keys
+  private def boolean: Boolean = self.boolean
+  private def number: Int = self.number
+  private def emitters: List[Emitter] = self.emitters
+  private def keys: Set[String] = self.keys
 
   def apply(): Unit =
 
     canonical(name) match
 
       case "echo"         =>
-        Console.println(directive._2)
+        Console.println(self)
 
       case "errors"       =>
         settings.werr = boolean
@@ -130,7 +132,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "paceunit"     =>
-        settings.paceunit = directive._2 match
+        settings.paceunit = self match
           case it: String => it
           case _          => throw DirectiveValueParsingException(directive, "a time unit")
 

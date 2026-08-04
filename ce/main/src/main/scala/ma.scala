@@ -47,11 +47,11 @@ package object Π:
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
       .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case             _ => IO.pure(null.asInstanceOf[T]) }
-              )
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case             _ => IO.pure(null.asInstanceOf[T])
+      }
 
 
   /**
