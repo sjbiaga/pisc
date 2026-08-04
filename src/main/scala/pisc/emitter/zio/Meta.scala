@@ -85,12 +85,12 @@ object Meta extends emitter.shared.effects.Meta:
     case Term.ApplyType(it, _) => `ZIO.*`(it)
     case _ => false
 
-  def `_ <- ZIO.succeed { * }`(* : Term): Enumerator.Generator =
+  def `_ <- ZIO { * }`(* : Term): Enumerator.Generator =
     if `ZIO.*`(*)
     then
       Enumerator.Generator(`* <- …`(), *)
     else
-      Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
+      Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
   def `_ <- ZIO.sleep(*.…)`(* : Long, `…`: String): Enumerator =
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))

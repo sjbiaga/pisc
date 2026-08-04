@@ -46,11 +46,11 @@ package object Π:
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
       .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case _             => IO.pure(null.asInstanceOf[T]) }
-              )
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case _             => IO.pure(null.asInstanceOf[T])
+      }
 
 
   /**
@@ -109,14 +109,22 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_f: false)(value: => IO[S]*): IO[Option[Unit]] =
-      IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)))
+    def apply[S: ClassTag](_f: false)(value: => IO[S]*): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.map(_.asInstanceOf[IO[`()`]]).sequence.flatMap(apply(_*)))
+      else
+        IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)))
 
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S](_t: true)(value: => IO[S]*)(code: => IO[Any]): IO[Option[Unit]] =
-      IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)(code)))
+    def apply[S: ClassTag](_t: true)(value: => IO[S]*)(code: => IO[Any]): IO[Option[Unit]] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.map(_.asInstanceOf[IO[`()`]]).sequence.flatMap(apply(_*)(code)))
+      else
+        IO.defer(value.sequence.map(_.map(new `()`(_))).flatMap(apply(_*)(code)))
 
     /**
       * negative prefix i.e. output

@@ -133,7 +133,7 @@ object Program:
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
-          * :+= `_ <- ZIO.succeed { * }`(term)
+          * :+= `_ <- ZIO { * }`(term)
 
         case τ(_) =>
           * = `_ <- *`("τ")
@@ -152,7 +152,7 @@ object Program:
                              Term.ArgClause(expr::Nil)
                            ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO.succeed { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               * = `_ <- *`(Term.Apply(
                              Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
                                         Term.ArgClause(args)),
@@ -188,7 +188,7 @@ object Program:
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO.succeed { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(\(ch), Term.ArgClause(args)),
                                Term.ArgClause(expr::Nil)
@@ -252,7 +252,7 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              * :+= `_ <- ZIO.succeed { * }`(term)
+              * :+= `_ <- ZIO { * }`(term)
             case _ =>
 
         case _: π => ??? // caught by parser

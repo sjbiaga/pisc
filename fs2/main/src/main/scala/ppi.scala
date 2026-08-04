@@ -41,12 +41,27 @@ package object Π:
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.{ Async, Deferred, Resource }
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
+  import _root_.cats.effect.kernel.Outcome.Succeeded
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor }
 
   import _root_.fs2.{ Pull, Stream }
   import _root_.fs2.concurrent.Topic
 
   import `Π-magic`.*
+
+
+  /**
+    * Supervised [[code]].
+    * @param code
+    */
+  private def exec[F[_]: Async, T](code: => F[T]): F[T] =
+    Supervisor[F](await = true)
+      .use(_.supervise(code))
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case _             => Async[F].pure(null.asInstanceOf[T])
+      }
 
 
   /**
@@ -91,13 +106,13 @@ package object Π:
           * linear replication guard w/ code
           */
         def apply[T]()(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-          apply()(-, *, +).evalTap(_ => code)
+          apply()(-, *, +).evalTap(_ => exec(code))
 
         /**
           * linear replication guard w/ pace w/ code
           */
         def apply[T](pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-          apply(pace)(-, *, +).evalTap(_ => code)
+          apply(pace)(-, *, +).evalTap(_ => exec(code))
 
       /**
         * replication guard
@@ -115,13 +130,13 @@ package object Π:
         * replication guard w/ code
         */
       def apply[T]()(code: => F[T]): Stream[F, Unit] =
-        apply().evalTap(_ => code)
+        apply().evalTap(_ => exec(code))
 
       /**
         * replication guard w/ pace w/ code
         */
       def apply[T](pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
-        apply(pace).evalTap(_ => code)
+        apply(pace).evalTap(_ => exec(code))
 
     /**
       * prefix
@@ -139,13 +154,13 @@ package object Π:
       * prefix w/ code
       */
     def apply[T]()(code: => F[T]): Stream[F, Unit] =
-      apply().evalTap(_ => code)
+      apply().evalTap(_ => exec(code))
 
     /**
       * prefix w/ pace w/ code
       */
     def apply[T](pace: FiniteDuration)(code: => F[T]): Stream[F, Unit] =
-      apply(pace).evalTap(_ => code)
+      apply(pace).evalTap(_ => exec(code))
 
   /**
     * events, i.e., names (topics) and values
@@ -204,13 +219,13 @@ package object Π:
             * linear replication bound output guard w/ code
             */
           def apply[T](arity: Int)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
-            apply(arity)(-, *, +).evalTap(_ => code)
+            apply(arity)(-, *, +).evalTap(_ => exec(code))
 
           /**
             * linear replication bound output guard w/ pace w/ code
             */
           def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
-            apply(arity, pace)(-, *, +).evalTap(_ => code)
+            apply(arity, pace)(-, *, +).evalTap(_ => exec(code))
 
         /**
           * linear constant replication output guard
@@ -228,13 +243,13 @@ package object Π:
           * linear constant replication output guard w/ code
           */
         def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-          apply(1)(value*)(-, *, +).evalTap(_ => code)
+          apply(1)(value*)(-, *, +).evalTap(_ => exec(code))
 
         /**
           * linear constant replication output guard w/ pace w/ code
           */
         def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-          apply(2)(pace, value*)(-, *, +).evalTap(_ => code)
+          apply(2)(pace, value*)(-, *, +).evalTap(_ => exec(code))
 
         object `(null)`:
 
@@ -331,13 +346,13 @@ package object Π:
             * linear variable replication output guard w/ code
             */
           def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-            apply[S](1)(value*)(-, *, +).evalTap(_ => code)
+            apply[S](1)(value*)(-, *, +).evalTap(_ => exec(code))
 
           /**
             * linear variable replication output guard w/ pace w/ code
             */
           def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: F[T])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Unit] =
-            apply[S](2)(pace, value*)(-, *, +).evalTap(_ => code)
+            apply[S](2)(pace, value*)(-, *, +).evalTap(_ => exec(code))
 
         /**
           * linear replication input guard
@@ -355,13 +370,13 @@ package object Π:
           * linear replication input guard w/ code
           */
         def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
-          apply(1)()(-, *, +).map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+          apply(1)()(-, *, +).map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
         /**
           * linear replication input guard w/ pace w/ code
           */
         def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]])(- : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F]): Stream[F, Seq[`()`[F]]] =
-          apply(2)(pace)(-, *, +).map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+          apply(2)(pace)(-, *, +).map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
       object `(ν)`:
 
@@ -405,13 +420,13 @@ package object Π:
         * constant replication output guard w/ code
         */
       def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        apply(1)(value*).evalTap(_ => code)
+        apply(1)(value*).evalTap(_ => exec(code))
 
       /**
         * constant replication output guard w/ pace w/ code
         */
       def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-        apply(2)(pace, value*).evalTap(_ => code)
+        apply(2)(pace, value*).evalTap(_ => exec(code))
 
       object `(null)`:
 
@@ -469,7 +484,7 @@ package object Π:
           then
             self.`(!)`(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
           else
-            apply[S](1)(value*).evalTap(_ => code)
+            apply[S](1)(value*).evalTap(_ => exec(code))
 
         /**
           * variable replication output guard w/ pace w/ code
@@ -479,7 +494,7 @@ package object Π:
           then
             self.`(!)`(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
           else
-            apply[S](2)(pace, value*).evalTap(_ => code)
+            apply[S](2)(pace, value*).evalTap(_ => exec(code))
 
         /**
           * variable replication output guard
@@ -501,13 +516,13 @@ package object Π:
           * variable replication output guard w/ code
           */
         def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](1)(value*).evalTap(_ => code)
+          apply[S](1)(value*).evalTap(_ => exec(code))
 
         /**
           * variable replication output guard w/ pace w/ code
           */
         def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-          apply[S](2)(pace, value*).evalTap(_ => code)
+          apply[S](2)(pace, value*).evalTap(_ => exec(code))
 
       /**
         * replication input guard
@@ -525,13 +540,13 @@ package object Π:
         * replication input guard w/ code
         */
       def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+        s.map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
       /**
         * replication input guard w/ pace w/ code
         */
       def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-        s.spaced(pace).map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+        s.spaced(pace).map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
     object `(ν)`:
 
@@ -555,13 +570,13 @@ package object Π:
         * bound output prefix w/ code
         */
       def apply[T](arity: Int)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-        apply(arity).evalTap(_ => code)
+        apply(arity).evalTap(_ => exec(code))
 
       /**
         * bound output prefix w/ pace w/ code
         */
       def apply[T](arity: Int, pace: FiniteDuration)(code: => F[T]): Stream[F, Seq[`()`[F]]] =
-        apply(arity, pace).evalTap(_ => code)
+        apply(arity, pace).evalTap(_ => exec(code))
 
     /**
       * constant output prefix
@@ -579,13 +594,13 @@ package object Π:
       * constant output prefix w/ code
       */
     def apply[T](_3: 3)(value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      apply(1)(value*).evalTap(_ => code)
+      apply(1)(value*).evalTap(_ => exec(code))
 
     /**
       * constant output prefix w/ pace w/ code
       */
     def apply[T](_4: 4)(pace: FiniteDuration, value: `()`[F]*)(code: => F[T]): Stream[F, Unit] =
-      apply(2)(pace, value*).evalTap(_ => code)
+      apply(2)(pace, value*).evalTap(_ => exec(code))
 
     object `(null)`:
 
@@ -643,7 +658,7 @@ package object Π:
         then
           self(3)(value.map(_.asInstanceOf[`()`[F]]*))(code)
         else
-          apply[S](1)(value*).evalTap(_ => code)
+          apply[S](1)(value*).evalTap(_ => exec(code))
 
       /**
         * variable output prefix w/ pace w/ code
@@ -653,7 +668,7 @@ package object Π:
         then
           self(4)(pace, value.map(_.asInstanceOf[`()`[F]]*))(code)
         else
-          apply[S](2)(pace, value*).evalTap(_ => code)
+          apply[S](2)(pace, value*).evalTap(_ => exec(code))
 
       /**
         * variable output prefix
@@ -675,13 +690,13 @@ package object Π:
         * variable output prefix w/ code
         */
       def apply[S: ClassTag, T](_3: 3)(value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](1)(value*).evalTap(_ => code)
+        apply[S](1)(value*).evalTap(_ => exec(code))
 
       /**
         * variable output prefix w/ pace w/ code
         */
       def apply[S: ClassTag, T](_4: 4)(pace: FiniteDuration, value: => F[S]*)(code: => F[T]): Stream[F, Unit] =
-        apply[S](2)(pace, value*).evalTap(_ => code)
+        apply[S](2)(pace, value*).evalTap(_ => exec(code))
 
     /**
       * input prefix
@@ -699,13 +714,13 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T](_3: 3)()(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      apply(1)().map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+      apply(1)().map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
     /**
       * input prefix w/ pace w/ code
       */
     def apply[T](_4: 4)(pace: FiniteDuration)(code: Seq[T] => F[Seq[T]]): Stream[F, Seq[`()`[F]]] =
-      apply(2)(pace).map(_.map(_.`()`[T])).evalMap(code(_).map(_.map(new `()`[F](_))))
+      apply(2)(pace).map(_.map(_.`()`[T])).evalMap((code andThen exec)(_).map(_.map(new `()`[F](_))))
 
     override def toString: String = if name == null then "null" else name.toString
 
