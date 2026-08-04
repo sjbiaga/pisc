@@ -40,7 +40,8 @@ package object sΠ:
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref }
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
+  import _root_.cats.effect.kernel.Outcome.Succeeded
+  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor }
 
   import _root_.fs2.concurrent.SignallingRef
   import _root_.fs2.Stream
@@ -52,6 +53,20 @@ package object sΠ:
   type `Π-Map`[K, +V] = Map[K, V]
 
   type `Π-Set`[A] = Set[A]
+
+
+  /**
+    * Supervised [[code]].
+    * @param code
+    */
+  private def exec[F[_]: Async, T](code: => F[T]): F[T] =
+    Supervisor[F](await = true)
+      .use(_.supervise(code))
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case _             => Async[F].pure(null.asInstanceOf[T])
+      }
 
 
   inline def `π-exclude`[F[_]: Async](enabled: String*)
@@ -153,7 +168,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
-          apply(rate)(key)(?, -, *, +).evalTap(_ => code)
+          apply(rate)(key)(?, -, *, +).evalTap(_ => exec(code))
 
         /**
           * linear replication guard w/ pace w/ code
@@ -163,7 +178,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
-          apply(rate, pace)(key)(?, -, *, +).evalTap(_ => code)
+          apply(rate, pace)(key)(?, -, *, +).evalTap(_ => exec(code))
 
       /**
         * replication guard
@@ -216,7 +231,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, Unit] =
-        apply(rate)(key).evalTap(_ => code)
+        apply(rate)(key).evalTap(_ => exec(code))
 
       /**
         * replication guard w/ pace w/ code
@@ -226,7 +241,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, Unit] =
-        apply(rate, pace)(key).evalTap(_ => code)
+        apply(rate, pace)(key).evalTap(_ => exec(code))
 
     /**
       * prefix
@@ -265,7 +280,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, Unit] =
-      apply(rate)(key).evalTap(_ => code)
+      apply(rate)(key).evalTap(_ => exec(code))
 
     /**
       * prefix w/ pace w/ code
@@ -275,7 +290,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, Unit] =
-      apply(rate, pace)(key).evalTap(_ => code)
+      apply(rate, pace)(key).evalTap(_ => exec(code))
 
 
   /**
@@ -359,7 +374,7 @@ package object sΠ:
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, `()`[F]] =
-            apply(rate)(key)(?, -, *, +).evalTap(_ => code)
+            apply(rate)(key)(?, -, *, +).evalTap(_ => exec(code))
 
           /**
             * linear replication bound output guard w/ pace w/ code
@@ -369,7 +384,7 @@ package object sΠ:
                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                 ^ : String): Stream[F, `()`[F]] =
-            apply(rate, pace)(key)(?, -, *, +).evalTap(_ => code)
+            apply(rate, pace)(key)(?, -, *, +).evalTap(_ => exec(code))
 
         /**
           * linear constant replication output guard
@@ -430,7 +445,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
-          apply(rate, value)(key)(?, -, *, +).evalTap(_ => code)
+          apply(rate, value)(key)(?, -, *, +).evalTap(_ => exec(code))
 
         /**
           * linear constant replication output guard w/ pace w/ code
@@ -440,7 +455,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, Unit] =
-          apply(rate, pace, value)(key)(?, -, *, +).evalTap(_ => code)
+          apply(rate, pace, value)(key)(?, -, *, +).evalTap(_ => exec(code))
 
         object `(*)`:
 
@@ -567,7 +582,7 @@ package object sΠ:
                                           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                     `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                     ^ : String): Stream[F, Unit] =
-            apply[S](1)(rate, value)(key)(?, -, *, +).evalTap(_ => code)
+            apply[S](1)(rate, value)(key)(?, -, *, +).evalTap(_ => exec(code))
 
           /**
             * linear variable replication output guard w/ pace w/ code
@@ -577,7 +592,7 @@ package object sΠ:
                                           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                     `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                     ^ : String): Stream[F, Unit] =
-            apply[S](2)(rate, pace, value)(key)(?, -, *, +).evalTap(_ => code)
+            apply[S](2)(rate, pace, value)(key)(?, -, *, +).evalTap(_ => exec(code))
 
         /**
           * linear replication input guard
@@ -640,7 +655,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate)(key)(?, -, *, +).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+          apply(rate)(key)(?, -, *, +).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
         /**
           * linear replication input guard w/ pace w/ code
@@ -650,7 +665,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate, pace)(key)(?, -, *, +).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+          apply(rate, pace)(key)(?, -, *, +).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
       object `(ν)`:
 
@@ -711,7 +726,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate)(key).evalTap(_ => code)
+          apply(rate)(key).evalTap(_ => exec(code))
 
         /**
           * replication bound output guard w/ pace w/ code
@@ -721,7 +736,7 @@ package object sΠ:
                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                               `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                               ^ : String): Stream[F, `()`[F]] =
-          apply(rate, pace)(key).evalTap(_ => code)
+          apply(rate, pace)(key).evalTap(_ => exec(code))
 
       /**
         * constant replication output guard
@@ -774,7 +789,7 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
-        apply(rate, value)(key).evalTap(_ => code)
+        apply(rate, value)(key).evalTap(_ => exec(code))
 
       /**
         * constant replication output guard w/ pace w/ code
@@ -784,7 +799,7 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): Stream[F, Unit] =
-        apply(rate, pace, value)(key).evalTap(_ => code)
+        apply(rate, pace, value)(key).evalTap(_ => exec(code))
 
       object `(*)`:
 
@@ -903,7 +918,7 @@ package object sΠ:
                                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                            ^ : String): Stream[F, Unit] =
-          apply[S](1)(rate, value)(key).evalTap(_ => code)
+          apply[S](1)(rate, value)(key).evalTap(_ => exec(code))
 
         /**
           * variable replication output guard w/ pace w/ code
@@ -913,7 +928,7 @@ package object sΠ:
                                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                            ^ : String): Stream[F, Unit] =
-          apply[S](2)(rate, pace, value)(key).evalTap(_ => code)
+          apply[S](2)(rate, pace, value)(key).evalTap(_ => exec(code))
 
       /**
         * replication input guard
@@ -968,7 +983,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+        apply(rate)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
       /**
         * replication input guard w/ pace w/ code
@@ -978,7 +993,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate, pace)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+        apply(rate, pace)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
     object `(ν)`:
 
@@ -1020,7 +1035,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate)(key).evalTap(_ => code)
+        apply(rate)(key).evalTap(_ => exec(code))
 
       /**
         * bound output prefix w/ pace w/ code
@@ -1030,7 +1045,7 @@ package object sΠ:
                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                             ^ : String): Stream[F, `()`[F]] =
-        apply(rate, pace)(key).evalTap(_ => code)
+        apply(rate, pace)(key).evalTap(_ => exec(code))
 
     /**
       * constant output prefix
@@ -1069,7 +1084,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, Unit] =
-      apply(rate, value)(key).evalTap(_ => code)
+      apply(rate, value)(key).evalTap(_ => exec(code))
 
     /**
       * constant output prefix w/ pace w/ code
@@ -1079,7 +1094,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, Unit] =
-      apply(rate, pace, value)(key).evalTap(_ => code)
+      apply(rate, pace, value)(key).evalTap(_ => exec(code))
 
     object `(*)`:
 
@@ -1126,7 +1141,7 @@ package object sΠ:
         then
           self(rate, value.asInstanceOf[`()`[F]])(key)(code)
         else
-          apply[S](1)(rate, value)(key).evalTap(_ => code)
+          apply[S](1)(rate, value)(key).evalTap(_ => exec(code))
 
       /**
         * variable output prefix w/ pace w/ code
@@ -1141,7 +1156,7 @@ package object sΠ:
         then
           self(rate, pace, value.asInstanceOf[`()`[F]])(key)(code)
         else
-          apply[S](2)(rate, pace, value)(key).evalTap(_ => code)
+          apply[S](2)(rate, pace, value)(key).evalTap(_ => exec(code))
 
       /**
         * variable output prefix
@@ -1184,7 +1199,7 @@ package object sΠ:
                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                 ^ : String): Stream[F, Unit] =
-        apply[S](1)(rate, value)(key).evalTap(_ => code)
+        apply[S](1)(rate, value)(key).evalTap(_ => exec(code))
 
       /**
         * variable output prefix w/ pace w/ code
@@ -1194,7 +1209,7 @@ package object sΠ:
                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                 ^ : String): Stream[F, Unit] =
-        apply[S](2)(rate, pace, value)(key).evalTap(_ => code)
+        apply[S](2)(rate, pace, value)(key).evalTap(_ => exec(code))
 
     /**
       * input prefix
@@ -1235,7 +1250,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, `()`[F]] =
-      apply(rate)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+      apply(rate)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
     /**
       * input prefix w/ pace w/ code
@@ -1245,7 +1260,7 @@ package object sΠ:
                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, `()`[F]] =
-      apply(rate, pace)(key).map(_.`()`[T]).evalMap(code(_).map(new `()`[F](_)))
+      apply(rate, pace)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
     override def toString: String = if name == null then "null" else name.toString
 

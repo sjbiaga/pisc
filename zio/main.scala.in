@@ -30,39 +30,34 @@
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.stream.ZStream
-import _root_.zio.{ Promise, ZIO, UIO }
+import _root_.zio.{ Promise, ZIO }
 
 
 object App extends _root_.zio.ZIOAppDefault:
 
-  private val spicsp = "pisc.stochastic.communications.parallelism.level"
-
-
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.zio.{ ExitCode, Queue, Ref }
+  import _root_.zio.{ ExitCode, Queue, Ref, UIO }
 
   import _root_.zio.ZIOAppArgs
 
   import `Π-dump`.*
   import `Π-loop`.*
 
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(parallelism: Int, started: Ref[Long], args: List[String])
-                 (% : %, / : /, * : *, - : -, ! : !, & : &) =
-    ( for
-        ^ <- ZStream.fromZIO(π.`π-uuid`)
-        _ <- π.Main(args*)(using ^)(using %, /, *.release)
-        x <- ZStream.fromZIO(!.await)
-        _ <- ZStream.fromZIO(exit(x))
-      yield
-        ()
-    )
-      .drainFork(ZStream.fromZIO(loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`)))
-      .drainFork(ZStream.fromZIO(poll(using %, /, *)))
-      .drainFork(ZStream.fromZIO(dump(using %, !, -)))
-      .runDrain
+  private def run(parallelism: Int, started: Ref[Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &): UIO[ExitCode] =
+    for
+      l <- loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`).fork
+      _ <- poll(using %, /, *).fork
+      d <- dump(using %, !, -).fork
+      ^ <- π.`π-uuid`
+      _ <- π.`π-supervised`(π.Main(args*)(using ^)(using %, /, *.release))
+      x <- !.await
+      _ <- l.join
+      _ <- d.join
+    yield
+      x
 
   override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     val p = if sys.Prop.IntProp(spicsp).isSet
@@ -70,7 +65,7 @@ object App extends _root_.zio.ZIOAppDefault:
             else π.`π-parallelism`
     for
       args <- getArgs
-      % <- Ref.make(Map[String, Int | (Boolean, +)]())
+      % <- Ref.make(Map[String, Int | +]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
@@ -78,9 +73,9 @@ object App extends _root_.zio.ZIOAppDefault:
       & <- Ref.make(0L)
       n <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      _ <- run(p, n, args.toList)(%, /, *, -, !, &)
+      x <- run(p, n, args.toList)(%, /, *, -, !, &)
     yield
-      ()
+      x
 
 
 object π:
@@ -98,11 +93,14 @@ object π:
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
 
 
-  extension (self: πLs[ZStream[Any, Nothing, ?]])
-    private[π] inline def πcollectAllPar: ZStream[Any, Nothing, Unit] =
-      ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
+  extension (self: πLs[UIO[?]])
+    private[π] inline def πcollectAllPar: UIO[Unit] =
+      ZIO.collectAllParDiscard(self)
 
   val `π-uuid`: UIO[String] =
     Random.nextUUID.map(_.toString)
+
+  def `π-supervised`(uio: => UIO[Any]): UIO[Unit] =
+    uio.fork.flatMap(_.join.exit.unit)
 
 

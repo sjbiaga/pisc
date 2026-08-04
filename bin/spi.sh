@@ -4,7 +4,7 @@ function spi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -18,6 +18,10 @@ function spi() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zio)
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
@@ -67,7 +71,7 @@ function spi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -81,6 +85,10 @@ function spi_() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zio)
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
@@ -130,7 +138,7 @@ function spio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-cef|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;

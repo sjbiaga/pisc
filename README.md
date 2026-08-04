@@ -128,11 +128,15 @@ Emitters
 
 - [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/cef/README.md)
 
+- [ZIO](https://github.com/sjbiaga/pisc/tree/stochastic/zio/README.md)
+
 - [Akka](https://github.com/sjbiaga/pisc/tree/stochastic/akka/README.md)
 
 - [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic/pekko/README.md)
 
 - [FS2](https://github.com/sjbiaga/pisc/tree/stochastic/fs2/README.md)
+
+- [ZStream](https://github.com/sjbiaga/pisc/tree/stochastic/zs/README.md)
 
 
 Branches

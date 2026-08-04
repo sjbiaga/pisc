@@ -92,7 +92,7 @@ object π:
 
   import sΠ.*
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ %, /, \ }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
 
 

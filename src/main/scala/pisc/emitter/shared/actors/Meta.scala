@@ -190,7 +190,7 @@ abstract trait Meta extends shared.Meta:
 
   def `*.release`(* : String) = Term.Select(*, "release")
 
-  def `* = Semaphore(…)`(* : String, `…`: Int = 1): Stat =
+  def `* = Semaphore(…)`(* : String, `…`: Int): Stat =
     Defn.Val(Nil, `* <- …`(*) :: Nil, None, Term.Apply(\("πSem"), Term.ArgClause(Lit.Int(`…`) :: Nil)))
 
 

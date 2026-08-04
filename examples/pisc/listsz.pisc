@@ -14,7 +14,7 @@ Main = ν(ch)                                     \
 
 Client(ch, l) = ch<l>.
 
-Server(ch) = !4*.ch(list: List[Int] /* Size[Even] */).                 \
+Server(ch) = !.ch(list: List[Int] /* Size[Even] */).                 \
              [/*'list.nonEmpty*/ = True]                             \
              list::(head1,head2,tail) /*ZIO.debug('head1+'head2)*/.  \
              ch<tail>.

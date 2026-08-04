@@ -54,11 +54,11 @@ package object sΠ:
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
       .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case _ => IO(null.asInstanceOf[T]) }
-              )
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case _             => IO.pure(null.asInstanceOf[T])
+      }
 
 
   inline def `π-exclude`(enabled: String*)
@@ -220,27 +220,7 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        timestamp <- Clock[IO].monotonic.map(_.toNanos)
-        _         <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Left(())), rate))))
-        opt      <- deferred.get
-        delay    <- ( if opt eq None
-                      then
-                        IO.pure(null: java.lang.Double)
-                      else
-                        val (delay, b, f, i) = opt.get
-                        for
-                          _ <- i.set(value)
-                          _ <- b.await
-                          _ <- f.join
-                          _ <- exec(code)
-                        yield
-                          java.lang.Double(delay)
-                    )
-      yield
-        delay
+      apply(rate, value)(key) <* exec(code)
 
     /**
       * positive prefix i.e. input
@@ -278,27 +258,12 @@ package object sΠ:
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, java.lang.Double)] =
-      for
-        _             <- exclude(key)
-        deferred      <- Deferred[IO, Option[<>]]
-        result        <- IO.ref[`()`](sΠ.`()`.`null`)
-        timestamp     <- Clock[IO].monotonic.map(_.toNanos)
-        _             <- /.offer(^ -> key -> (deferred -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
-        opt           <- deferred.get
-        (name, delay) <- ( if opt eq None
-                           then
-                             IO.pure((null: Any) -> (null: java.lang.Double))
-                           else
-                             val (delay, b, f, _) = opt.get
-                             for
-                               _    <- b.await
-                               _    <- f.join
-                               name <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
-                             yield
-                               name -> java.lang.Double(delay)
-                         )
-      yield
-        new `()`(name) -> delay
+      apply(rate)(key)
+        .map(_.name -> _)
+        .flatMap {
+          case (null, delay)  => IO.pure(sΠ.`()`.`null` -> delay)
+          case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
+        }
 
     override def toString: String = if name == null then "null" else name.toString
 
