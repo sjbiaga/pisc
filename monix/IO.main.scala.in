@@ -43,6 +43,7 @@ object π:
 
   import _root_.scala.concurrent.duration.*
 
+  import _root_.cats.Parallel
   import _root_.cats.syntax.all.*
 
   import _root_.cats.effect.{ Concurrent, ContextShift, Timer }

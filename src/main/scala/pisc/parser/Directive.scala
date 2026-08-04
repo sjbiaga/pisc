@@ -42,6 +42,8 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
   implicit val name: String = directive._1.toLowerCase
 
+  val self = directive._2
+
   private def canonical: String => String =
     case "werr" => "errors"
     case "dups" => "duplications"
@@ -95,17 +97,17 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
         case it: List[String] if it.forall(this.key) => Set.from(it.map(canonical))
         case _                                       => throw err("a comma separated list of valid keys")
 
-  private def boolean: Boolean = directive._2.boolean
-  private def number: Int = directive._2.number
-  private def emitters: List[Emitter] = directive._2.emitters
-  private def keys: Set[String] = directive._2.keys
+  private def boolean: Boolean = self.boolean
+  private def number: Int = self.number
+  private def emitters: List[Emitter] = self.emitters
+  private def keys: Set[String] = self.keys
 
   def apply(): Unit =
 
     canonical(name) match
 
       case "echo"         =>
-        Console.println(directive._2)
+        Console.println(self)
 
       case "errors"       =>
         settings.werr = boolean
@@ -132,7 +134,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "paceunit"     =>
-        settings.paceunit = directive._2 match
+        settings.paceunit = self match
           case it: String => it
           case _          => throw DirectiveValueParsingException(directive, "a time unit")
 
@@ -140,7 +142,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
         settings.scaling = boolean
 
       case "replication"  =>
-        settings.replication = directive._2 match
+        settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
             case List(given String: "parallelism", it: String) =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
@@ -152,7 +154,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "typeclasses" if settings.exclude =>
 
       case "typeclasses"  =>
-        settings.typeclasses = directive._2 match
+        settings.typeclasses = self match
           case it: String       => List(it)
           case it: List[String] => it
 

@@ -133,7 +133,7 @@ object Program:
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
-          * :+= `_ <- ZIO.succeed { * }`(term)
+          * :+= `_ <- ZIO { * }`(term)
 
         case τ(_) =>
           * = `_ <- *`("τ")
@@ -150,7 +150,7 @@ object Program:
                              Term.ArgClause(expr::Nil)
                            ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO.succeed { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               * = `_ <- *`(Term.Apply(
                              Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
                                         Term.ArgClause(arg.toTerm::Nil)),
@@ -179,7 +179,7 @@ object Program:
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO.succeed { * }`(term))
+              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
                                Term.ArgClause(expr::Nil)
@@ -217,7 +217,7 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              * :+= `_ <- ZIO.succeed { * }`(term)
+              * :+= `_ <- ZIO { * }`(term)
             case _ =>
 
         case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>

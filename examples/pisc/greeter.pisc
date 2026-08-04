@@ -32,7 +32,7 @@
 
 ⟦ include = monix ⟧
 
-⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+⟦ typeclasses = (Concurrent,ContextShift,Parallel,Timer,TaskLift,TaskLike) ⟧
 
 @def nl[F[_]: Concurrent]: String => F[String] = { it => Concurrent[F].pure { s"$it\n" } }
 

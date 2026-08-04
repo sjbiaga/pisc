@@ -5,10 +5,12 @@
 ⟦ include = (ce,zio,zs) ⟧
 
 @given Conversion[`()`, Int] = _.`()`[Int]
+@given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
 ⟦ include = (fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
+@given [F[_]]: Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
 
 ⟦ include = ce ⟧
 
@@ -36,7 +38,7 @@
 
 ⟦ include = monix ⟧
 
-⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+⟦ typeclasses = (Concurrent,ContextShift,Parallel,Timer,TaskLift,TaskLike) ⟧
 
 @def ![F[_]: Concurrent]: String => F[String] = { _ => Concurrent[F].pure(null) }
 
@@ -68,25 +70,27 @@
 
 ⟦ replication = (parallelism,1) ⟧
 
-Main = ν(a,b,c)      \
-     ( (!.a<"a">.)   \
-     | (!.b<"b">.)   \
-     | (!.c<"c">.)   \
-     | Hanoi(a,b,c)  \
+Main = ν(a,b,c)                                       \
+     ( (!.a<"a">.)                                    \
+     | (!.b<"b">.)                                    \
+     | (!.c<"c">.)                                    \
+     | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 
-Hanoi(a,b,c,n*) = ν(w)                                        \
-                ( τ/* _ <- print("n = ");                     \
-                     'n <- blocking {                         \
-                             try                              \
-                               scala.io.StdIn.readLine.toInt  \
-                             catch _ => -1                    \
-                           }                                  \
-                    */.                                       \
-                  Hanoi(a,b,c,n,w)                            \
-                | w(w).                                       \
-                  τ/*_ <- println(s"#${'w} moves")*/.         \
-                  ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )    \
+Hanoi(a,b,c,m,n*) = ν(w)                                                      \
+                ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
+                     'n <- blocking {                                         \
+                             try                                              \
+                               'm.getOrElse {                                 \
+                                 scala.io.StdIn.readLine.toInt                \
+                               }                                              \
+                             catch _ => -1                                    \
+                           }                                                  \
+                    */.                                                       \
+                  Hanoi(a,b,c,n,w)                                            \
+                | w(w).                                                       \
+                  τ/*_ <- println(s"#${'w} moves")*/.                         \
+                  ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )                    \
                 )
 
 

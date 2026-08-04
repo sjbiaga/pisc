@@ -32,18 +32,26 @@ package object Π:
 
   import _root_.cats.effect.std.Queue
   import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Promise, Task, UIO, ZIO }
+  import _root_.zio.{ Exit, Promise, Task, UIO, ZIO }
 
   import `Π-magic`.*
 
 
-  given [A]: Conversion[Task[A], UIO[A]] = _.either.map(_.right.get)
-
-
-  private def exec[T](code: => Task[T]): UIO[T] =
-    code.absorb.either.map {
+  given [A]: Conversion[Task[A], UIO[A]] =
+    _.either.map {
       case Right(it) => it
-      case _         => null.asInstanceOf[T]
+      case _         => null.asInstanceOf[A]
+    }
+
+  extension (self: ZIO.type)
+    def apply[A](a: => A): UIO[A] =
+      ZIO.attempt(a)
+
+
+  private def exec[T](code: Task[T]): UIO[T] =
+    code.fork.flatMap(_.join.exit).map {
+      case Exit.Success(it) => it
+      case _                => null.asInstanceOf[T]
     }
 
 
@@ -106,9 +114,9 @@ package object Π:
     def apply[S: ClassTag](_f: false)(value: => Task[S]): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.attempt(value.asInstanceOf[UIO[`()`]].flatMap(apply(_))).flatten
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(_)))
       else
-        ZIO.attempt(value.map(new `()`(_)).flatMap(apply(_))).flatten
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(_)))
 
     /**
       * variable negative prefix i.e. variable output
@@ -116,9 +124,9 @@ package object Π:
     def apply[S: ClassTag](_t: true)(value: => Task[S])(code: => Task[Any]): UIO[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.attempt(value.asInstanceOf[UIO[`()`]].flatMap(apply(_)(code))).flatten
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(_)(code)))
       else
-        ZIO.attempt(value.map(new `()`(_)).flatMap(apply(_)(code))).flatten
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(_)(code)))
 
     /**
       * negative prefix i.e. output

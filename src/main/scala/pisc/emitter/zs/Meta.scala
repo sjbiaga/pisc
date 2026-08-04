@@ -44,19 +44,19 @@ object Meta extends emitter.shared.effects.Meta:
 
   protected lazy val \\\ = "fromZIO"
 
-  val `: ZStream[Any, Throwable, Unit]` =
-    Some(Type.Apply(\\(\), Type.ArgClause(\\("Any") :: \\("Throwable") :: \\("Unit") :: Nil)))
+  val `: ZStream[Any, Nothing, Unit]` =
+    Some(Type.Apply(\\(\), Type.ArgClause(\\("Any") :: \\("Nothing") :: \\("Unit") :: Nil)))
 
 
   def defn(body: Term): `(*)` => Defn.Def =
     case `(*)`("Main", _) =>
       Defn.Def(Nil,
-               "Main", `String*`("args"), `: ZStream[Any, Throwable, Unit]`,
+               "Main", `String*`("args"), `: ZStream[Any, Nothing, Unit]`,
                body)
     case `(*)`(identifier, _, _params*) =>
       val params = _params.map(_.asSymbol.name)
       Defn.Def(Nil,
-               identifier, `(…)`(params*), `: ZStream[Any, Throwable, Unit]`,
+               identifier, `(…)`(params*), `: ZStream[Any, Nothing, Unit]`,
                body)
 
 
@@ -130,7 +130,7 @@ object Meta extends emitter.shared.effects.Meta:
                             Term.ArgClause(`…` :: Nil))
 
 
-  def `\\.\\\\ { def *(*: ()): ZStream[Any, Throwable, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
+  def `\\.\\\\ { def *(*: ()): ZStream[Any, Nothing, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
@@ -141,19 +141,19 @@ object Meta extends emitter.shared.effects.Meta:
                                                                                 *._2,
                                                                                 Some(\\("()")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: ZStream[Any, Throwable, Unit]`,
+                            `: ZStream[Any, Nothing, Unit]`,
                              `…`
                    ) :: \(*._1) :: Nil
                  ) :: Nil
                )
     )
 
-  def `\\.\\\\ { lazy val *: ZStream[Any, Throwable, Unit] = …; * }`(* : String, `…`: Term): Term =
+  def `\\.\\\\ { lazy val *: ZStream[Any, Nothing, Unit] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
-                                         `: ZStream[Any, Throwable, Unit]`,
+                                         `: ZStream[Any, Nothing, Unit]`,
                                          `…`
                                 ) :: \(*) :: Nil
                               ) :: Nil
@@ -178,7 +178,7 @@ object Meta extends emitter.shared.effects.Meta:
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
                         :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
-        `: ZStream[Any, Throwable, Unit]`,
+        `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`_ <- *`(Term.Apply(replication,
@@ -217,7 +217,7 @@ object Meta extends emitter.shared.effects.Meta:
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
                         :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
-        `: ZStream[Any, Throwable, Unit]`,
+        `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
