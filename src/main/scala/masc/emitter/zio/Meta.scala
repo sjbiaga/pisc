@@ -85,6 +85,8 @@ object Meta extends emitter.shared.effects.Meta:
 
   val `: UIO[Any]` = `:`("UIO", "Any")
 
+  val `ZIO.unit` = Term.Select(\, "unit")
+
 
   private val `ZIO.*`: Term => Boolean =
     case Term.Select(Term.Name(`\\`), _) => true
@@ -120,7 +122,7 @@ object Meta extends emitter.shared.effects.Meta:
     )
 
 
-  def `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
+  def `\\.\\\\ { def *(*: )(): UIO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
@@ -138,7 +140,7 @@ object Meta extends emitter.shared.effects.Meta:
                )
     )
 
-  def `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(* : String, `…`: Term): Term =
+  def `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,

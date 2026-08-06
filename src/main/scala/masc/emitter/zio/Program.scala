@@ -113,54 +113,46 @@ object Program:
         case !(parallelism, pace, Some(name), par) =>
           val υidυ = id
 
-          val sem = if parallelism < 0 then null else id
-
           val `()ʹ` = `()`(name, None)
 
-          val `!.().⋯` =
-            ( if parallelism < 0
-              then
-                `()ʹ`.emit
-              else
-                `()ʹ`.emit :+ `_ <- *.acquire`(sem)
-            ) :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(name) :: Nil)))
+          val `!.().⋯` = `()ʹ`.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(name) :: Nil)))
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.().⋯`).getOrElse(`!.().⋯`)
 
-          val body =
+          val sem = if parallelism < 0 then null else id
+
+          val wrap = { (body: Term) =>
             Term.If(Term.ApplyUnary("!", name),
-                    Term.Select("ZIO", "unit"),
-                    `List( *, … ).collectAllPar`(
-                      if parallelism < 0
-                      then par.emit
-                      else par.emit :+ `_ <- *.release`(sem),
-                      `!⋯`
-                    )
-                   )
+                    `ZIO.unit`,
+                    body)
+          }
+
+          var body =
+            `List( *, … ).collectAllPar`(
+              if parallelism < 0
+              then par.emit
+              else par.emit :+ `_ <- *.release`(sem),
+              `!⋯`
+            )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
           else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `ZIO.succeed { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, body)) :: `!.().⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
 
         case !(parallelism, pace, _, par) =>
           val υidυ = id
 
-          val sem = if parallelism < 0 then null else id
-
-          val `!.⋯` =
-            ( if parallelism < 0
-              then
-                Nil
-              else
-                `_ <- *.acquire`(sem) :: Nil
-            ) :+ `_ <- *`(υidυ)
+          val `!.⋯` = `_ <- *`(υidυ) :: Nil
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 
-          val body =
+          val sem = if parallelism < 0 then null else id
+
+          var body =
             `List( *, … ).collectAllPar`(
               if parallelism < 0
               then par.emit
@@ -170,10 +162,11 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ, `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+            * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
           else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ, `ZIO.succeed { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+                `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 
