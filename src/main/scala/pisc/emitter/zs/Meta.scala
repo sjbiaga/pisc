@@ -104,7 +104,7 @@ object Meta extends emitter.shared.effects.Meta:
     `ZStream.fromZIO(…)`(super.`_ <- *.release`(*)).head
 
   override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
-    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)),
+    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)),
                                               Term.ArgClause(Lit.Int(`…`) :: Nil))).head
 
   def `_ <- *.runDrain.whenZIO(….tryAcquire)`(* : Term, `…`: String): Enumerator.Generator =
@@ -176,7 +176,7 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)
@@ -215,7 +215,7 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)) :: Nil))), None) :: Nil) :: Nil
         ) :: Nil,
         `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)

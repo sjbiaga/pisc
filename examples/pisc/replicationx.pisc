@@ -2,11 +2,9 @@
 
 @val gen = new scala.util.Random
 
-⟦ typeclasses = (Concurrent,ContextShift,Timer,TaskLift,TaskLike) ⟧
+⟦ REPLICATION = (PARALLELISM,1) ⟧
 
-⟦ replication = (parallelism,1) ⟧
-
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite producer, one infinite consumer ✔
 
@@ -14,7 +12,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)        \
             | (!.x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two infinite producers, one infinite consumer ✔
 
@@ -23,7 +21,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)    \
             | (!.x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite producers, one infinite consumer ✔
 
@@ -32,7 +30,7 @@ Main = ν(x) ( (x</*gen.nextInt.abs*/>.)                                        
             | (! 100,milliseconds .x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two sequential finite producers, one infinite consumer ✔
 
@@ -40,7 +38,7 @@ Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>.)               
             | (! 100,milliseconds .x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two infinite producers, two infinite consumers ✔
 
@@ -50,7 +48,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)       \
             | (!.x(y). τ/*Concurrent[F].delay(println(2->y))*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite producer, one infinite consumer, bound output guard ✔
 
@@ -58,7 +56,7 @@ Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*Concurrent[F].delay(printl
             | (!.x(y). y</*gen.nextInt*/>.)                                             \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one finite producer, one finite consumer, bound output prefix ✔
 
@@ -66,7 +64,7 @@ Main = ν(x) ! ( (x<νy>. y(z). τ/*Concurrent[F].delay(println(z))*/.)  \
               | (x(y). y</*gen.nextInt*/>.)                           \
               )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one finite producer, one finite consumer, output prefix ✔
 
@@ -74,7 +72,7 @@ Main = ν(x) ! ( (x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
               | (x</*gen.nextInt*/>.)                          \
               )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite producer, multiple finite consumers ✔
 
@@ -82,7 +80,7 @@ Main = ν(x) ( (! x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             | (!.x</*gen.nextInt*/>.)                          \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite producer, multiple finite consumers ✔
 
@@ -92,7 +90,7 @@ Main = ν(x) ( Main(x)                  \
             | (!.x</*gen.nextInt*/>.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite producers, multiple finite consumers ✔
 
@@ -101,7 +99,7 @@ Main = ν(x) ( (! x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             | (x</*gen.nextInt*/>.)                            \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite producers, multiple finite consumers ✔
 
@@ -112,7 +110,7 @@ Main = ν(x) ( Main(x)                \
             | (x</*gen.nextInt*/>.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite producer, two sequential finite consumers ✔
 
@@ -120,7 +118,7 @@ Main = ν(x) ( (x(y). τ/*Concurrent[F].delay(println(1->y))*/. x(z). τ/*Concur
             | (!.x</*gen.nextInt*/>.)                                                                          \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite producers, one infinite consumer ✕
 
@@ -128,7 +126,7 @@ Main = ν(x) ( (!.x(y). τ/*Concurrent[F].delay(println(y))*/. x</*gen.nextInt.a
             | (x</*-gen.nextInt.abs*/>.)                                               \
             )
 
-⟦ exclude = no ⟧
+⟦ EXCLUDE = NO ⟧
 
 # several infinite publishers, several infinite subscribers ✔
 
@@ -136,7 +134,7 @@ Main = ν(x) ( (! 4* .x(y). τ/*Concurrent[F].delay(println(y))*/.)  \
             | (! 4* .x</*gen.nextInt*/>.)                          \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite producers, one infinite consumer, one finite consumer ✔
 

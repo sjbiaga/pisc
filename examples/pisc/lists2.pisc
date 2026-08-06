@@ -7,9 +7,9 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
-⟦ typeclasses = (Async,Console,Parallel) ⟧
+⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ replication = (parallelism,-1) ⟧
+⟦ REPLICATION = (PARALLELISM,-1) ⟧
 
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \

@@ -2,15 +2,15 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-⟦ include = (ce,zio,zs) ⟧
+⟦ INCLUDE = (ce,zio,zs) ⟧
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-⟦ include = (fs2,monix) ⟧
+⟦ INCLUDE = (fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], String] = _.`()`[String]
 
-⟦ include = ce ⟧
+⟦ INCLUDE = ce ⟧
 
 @val nl: String => IO[String] = { it => IO { s"$it\n" } }
 
@@ -18,11 +18,9 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ include = fs2 ⟧
+⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
-
-⟦ typeclasses = (Async,Console,Parallel) ⟧
 
 @def nl[F[_]: Async]: String => F[String] = { it => Async[F].pure { s"$it\n" } }
 
@@ -30,9 +28,9 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ include = monix ⟧
+⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ typeclasses = (Concurrent,ContextShift,Parallel,Timer,TaskLift,TaskLike) ⟧
+⟦ INCLUDE = monix ⟧
 
 @def nl[F[_]: Concurrent]: String => F[String] = { it => Concurrent[F].pure { s"$it\n" } }
 
@@ -40,7 +38,7 @@
 
 @def blocking[F[_]: Concurrent](a: => Any) = Concurrent[F].delay(a)
 
-⟦ include = (zio,zs) ⟧
+⟦ INCLUDE = (zio,zs) ⟧
 
 @val nl: String => Task[String] = { it => ZIO.succeed(s"$it\n") }
 
@@ -48,11 +46,7 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ include = zs ⟧
-
-@given [A]: Conversion[Task[A], UIO[A]] = _.either.map(_.right.get)
-
-⟦ exclude = 0 ⟧
+⟦ EXCLUDE = 0 ⟧
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 

@@ -144,9 +144,8 @@ package object Π:
     private inline def ch = `()`[><[F]].channel
     private inline def l = `()`[><[F]].limit
     private implicit def a: F[Unit] = l.acquire
-    private def o = l.release
     private def s = Iterant
-      .liftF(ch.consume.flatTap(_ => Resource.eval(o)).use(_.pull.map(_.right.get)))
+      .liftF(ch.consume.flatTap(_ => Resource.eval(l.release)).use(_.pull.map(_.right.get)))
       .repeat
       .mapEval { (it, d) => d.complete(()).attempt.map(it -> _.isRight) }
       .filter(_._2)
@@ -290,7 +289,7 @@ package object Π:
           then
             Iterant.eval(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`(_))
           else
-            Iterant.repeatEvalF(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(ch)
+            Iterant.repeatEvalF(Concurrent[F].defer(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(ch)
 
         /**
           * variable replication output guard w/ pace
@@ -464,7 +463,7 @@ package object Π:
         then
           Iterant.eval(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self(_))
         else
-          Iterant.liftF(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(ch)
+          Iterant.liftF(Concurrent[F].defer(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(ch)
 
       /**
         * variable output prefix w/ pace

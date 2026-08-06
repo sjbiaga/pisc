@@ -499,7 +499,7 @@ package object Π:
           then
             Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`(_))
           else
-            Stream.repeatEval(value >>= { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(t)
+            Stream.repeatEval(Async[F].defer(value >>= { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(t)
 
         /**
           * variable replication output guard w/ pace
@@ -673,7 +673,7 @@ package object Π:
         then
           Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self(_))
         else
-          Stream.eval(value >>= { it => Deferred[F, Unit].map(new `()`[F](it) -> _) }).through1(t)
+          Stream.eval(Async[F].defer(value >>= { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(t)
 
       /**
         * variable output prefix w/ pace

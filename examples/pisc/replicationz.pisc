@@ -2,9 +2,9 @@
 
 @val gen = new scala.util.Random
 
-⟦ replication = (parallelism,1) ⟧
+⟦ REPLICATION = (PARALLELISM,1) ⟧
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite publisher, one infinite subscriber ✔
 
@@ -12,7 +12,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)  \
             | (!.x(y). τ/*ZIO.debug(y)*/.)               \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two infinite publishers, one infinite subscriber ✔
 
@@ -21,7 +21,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
             | (!.x(y). τ/*ZIO.debug(y)*/.)                    \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite publishers, one infinite subscriber ✔
 
@@ -30,15 +30,15 @@ Main = ν(x) ( (x</*gen.nextInt.abs*/>.)                       \
             | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two sequential finite publishers, one infinite subscriber ✔
 
-Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>.)  \
-            | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)      \
+Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>. x<>.)  \
+            | (! 100,milliseconds .x(y). τ/*ZIO.debug(y)*/.)           \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two infinite publishers, two infinite subscribers ✔
 
@@ -48,7 +48,7 @@ Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
             | (!.x(y). τ/*ZIO.debug(2->y)*/.)                 \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite publisher, one infinite subscriber, bound output guard ✔
 
@@ -56,7 +56,7 @@ Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*ZIO.debug(z)*/.)  \
             | (!.x(y). y</*gen.nextInt*/>.)                          \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one finite publisher, one finite subscriber, bound output prefix ✔
 
@@ -64,7 +64,7 @@ Main = ν(x) ! ( (x<νy>. y(z). τ/*ZIO.debug(z)*/.)  \
               | (x(y). y</*gen.nextInt*/>.)        \
               )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one finite publisher, one finite subscriber, output prefix ✔
 
@@ -72,7 +72,7 @@ Main = ν(x) ! ( (x(y). τ/*ZIO.debug(y)*/.)  \
               | (x</*gen.nextInt*/>.)       \
               )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite publisher, multiple finite subscribers ✔
 
@@ -80,7 +80,7 @@ Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)  \
             | (!.x</*gen.nextInt*/>.)       \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite publisher, multiple finite subscribers ✔
 
@@ -90,7 +90,7 @@ Main = ν(x) ( Main(x)                  \
             | (!.x</*gen.nextInt*/>.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite publishers, multiple finite subscribers ✔
 
@@ -99,7 +99,7 @@ Main = ν(x) ( (! x(y). τ/*ZIO.debug(y)*/.)  \
             | (x</*gen.nextInt*/>.)         \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # two finite publishers, multiple finite subscribers ✔
 
@@ -110,7 +110,7 @@ Main = ν(x) ( Main(x)                \
             | (x</*gen.nextInt*/>.)  \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # one infinite publisher, two sequential finite subscribers ✔
 
@@ -118,7 +118,7 @@ Main = ν(x) ( (x(y). τ/*ZIO.debug(1->y)*/. x(z). τ/*ZIO.debug(2->z)*/.)  \
             | (!.x</*gen.nextInt*/>.)                                    \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite publishers, one finite subscriber ✔
 
@@ -126,7 +126,7 @@ Main = ν(x) ( (!.x(y). τ/*ZIO.debug(y)*/. x</*gen.nextInt.abs*/>.)  \
             | (x</*-gen.nextInt.abs*/>.)                            \
             )
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite publishers, one infinite subscriber, one finite subscriber ✔
 
@@ -134,9 +134,9 @@ Main = ν(x) ( (!.x(y). τ/*ZIO.debug(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/
             | (x</*-gen.nextInt.abs*/>.)                                                           \
             )
 
-⟦ replication = (linear,yes) ⟧
+⟦ REPLICATION = (LINEAR,YES) ⟧
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite publishers, one infinite subscriber ✔
 
@@ -144,7 +144,7 @@ Main = ν(x) ( (! 4* .x(y : (Int, Int) /**/). τ/*ZIO.debug(y._2)*/. [/*y._1 < 4
             | (x</*1->gen.nextInt*/>.)                                                                                   \
             )
 
-⟦ exclude = no ⟧
+⟦ EXCLUDE = NO ⟧
 
 # several infinite publishers, several infinite subscribers ✔
 
@@ -152,10 +152,10 @@ Main = ν(x) ( (! 4* .x(y). τ/*ZIO.debug(y)*/.)  \
             | (! 4* .x</*gen.nextInt*/>.)       \
             )
 
-⟦ replication = (parallelism,-1) ⟧
-⟦ replication = (linear,no) ⟧
+⟦ REPLICATION = (PARALLELISM,-1) ⟧
+⟦ REPLICATION = (LINEAR,NO) ⟧
 
-⟦ exclude = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
 # multiple finite publishers, one infinite subscriber ✔
 

@@ -497,7 +497,7 @@ package object Π:
           then
             ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.`(!)`(_))
           else
-            ZStream.fromZIO((value: UIO[S]).flatMap { it => Promise.make[Nothing, Unit].map(new `()`(it) -> _) }).repeat(Schedule.forever).through1(h).interruptWhen(p)
+            ZStream.fromZIO(ZIO.suspendSucceed((value: UIO[S]).flatMap { it => Promise.make[Nothing, Unit].map(new `()`(it) -> _) })).repeat(Schedule.forever).through1(h).interruptWhen(p)
 
         /**
           * variable replication output guard w/ pace
@@ -672,7 +672,7 @@ package object Π:
         then
           ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self(_))
         else
-          ZStream.fromZIO((value: UIO[S]).flatMap { it => Promise.make[Nothing, Unit].map(new `()`(it) -> _) }).through1(h).interruptWhen(p)
+          ZStream.fromZIO(ZIO.suspendSucceed((value: UIO[S]).flatMap { it => Promise.make[Nothing, Unit].map(new `()`(it) -> _) })).through1(h).interruptWhen(p)
 
       /**
         * variable output prefix w/ pace
