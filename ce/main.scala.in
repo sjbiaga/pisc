@@ -105,7 +105,7 @@ object π:
   import sΠ.*
   import `π-$`.*, `π-ζ`.*
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ %, /, \ }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
 
   extension (self: πLs[IO[?]])

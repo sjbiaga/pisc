@@ -41,6 +41,8 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
 
   implicit val name: String = directive._1.toLowerCase
 
+  val self = directive._2
+
   private def canonical: String => String =
     case "werr" => "errors"
     case "dups" => "duplications"
@@ -108,18 +110,21 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
           case it: List[String] if it.map(_.toLowerCase).forall(Directive.this.key) => Set.from(it.map(_.toLowerCase).map(canonical))
           case _                                                                    => throw err("a comma separated list of valid keys")
 
-  private def boolean: Boolean = directive._2.boolean
-  private def number: Int = directive._2.number
-  private def file: Option[String] = directive._2.file
-  private def string(`type`: String = "a string"): String = directive._2.string(`type`)
-  private def keys: Set[String] = directive._2.keys
+  private def boolean: Boolean = self.boolean
+  private def number: Int = self.number
+  private def file: Option[String] = self.file
+  private def string(`type`: String = "a string"): String = self.string(`type`)
+  private def keys: Set[String] = self.keys
 
   def apply(): Unit =
 
     canonical(name) match
 
+      case "echo" if settings.exclude =>
+        Console.err.println(self)
+
       case "echo"         =>
-        Console.println(directive._2)
+        Console.println(self)
 
       case "errors"       =>
         settings.werr = boolean
@@ -134,7 +139,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
         settings.exclude = !boolean
 
       case "paceunit"     =>
-        settings.paceunit = directive._2 match
+        settings.paceunit = self match
           case it: String => it
           case _          => throw DirectiveValueParsingException(directive, "a time unit")
 
@@ -142,7 +147,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
         settings.scaling = boolean
 
       case "replication"  =>
-        settings.replication = directive._2 match
+        settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
             case List(given String: "parallelism", it: String) =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
@@ -151,8 +156,10 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
             case _                               => throw DirectiveValueParsingException(directive, settings.message)
           case _                => throw DirectiveValueParsingException(directive, settings.message)
 
+      case "typeclasses" if settings.exclude =>
+
       case "typeclasses"  =>
-        settings.typeclasses = directive._2 match
+        settings.typeclasses = self match
           case it: String       => List(it)
           case it: List[String] => it
 

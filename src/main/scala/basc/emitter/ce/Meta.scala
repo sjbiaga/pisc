@@ -42,10 +42,13 @@ abstract trait Meta extends emitter.shared.effects.Meta:
 
   override protected lazy val \ = "IO"
 
+  override protected lazy val \\ = "pure"
+
   val `IO.cede` = Term.Select(\, "cede")
 
+
   def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 ->Term.Apply(Term.Select(\, "pure"), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 ->Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- IO { * }`(* : Term): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(),
@@ -117,8 +120,8 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
 
 
-  def `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(\("IO"),
+  def `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -143,8 +146,8 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     )
 
 
-  def `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
-    Term.Apply(\("IO"),
+  def `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Val(Mod.Lazy() :: Nil,
@@ -190,8 +193,3 @@ object Meta extends emitter.ce.Meta:
         })*)
       else
         Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.flatMap(`π-supervised(*)`).toList)), "πparSequence")
-
-  def `List( * >> …, … ).parSequence`(* : Term*)(`…`: Term): Term =
-    `List( *, … ).parSequence`(* *) match
-      case Term.Select(Term.Apply(Term.Name("πLs"), (hd @ Term.Apply(Term.Name("π-supervised"), _)) :: tl), Term.Name("πparSequence")) =>
-        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(Term.ApplyInfix(hd, \(">>"), Type.ArgClause(Nil), Term.ArgClause(`…` :: Nil)) :: tl)), "πparSequence")

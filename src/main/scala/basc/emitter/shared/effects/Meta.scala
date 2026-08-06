@@ -41,6 +41,8 @@ abstract trait Meta extends shared.Meta:
 
   protected lazy val \ = ""
 
+  protected lazy val \\ = ""
+
   inline implicit def \(* : Enumerator): List[Enumerator] = * :: Nil
 
   inline implicit def \\(* : Enumerator): Term = \(*)

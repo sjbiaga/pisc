@@ -30,9 +30,11 @@ import _root_.java.io.{ PrintStream, FileOutputStream }
 
 import _root_.scala.collection.immutable.List
 
-import _root_.zio.{ ExitCode, Promise, Queue, Task, UIO, ZIO }
+import _root_.zio.{ ExitCode, Promise, Queue, UIO, ZIO }
 
 import `Π-loop`.*
+
+import sΠ.given
 
 
 package object `Π-dump`:
@@ -43,7 +45,7 @@ package object `Π-dump`:
   type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
 
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => Task[String] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[String] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         ZIO.attemptBlocking {
@@ -63,11 +65,11 @@ package object `Π-dump`:
                     key.stripPrefix("!"), key.startsWith("!"),
                     label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
           polarity
-        }.exit.tap { _ => ZIO.unless(ps eq null)(ZIO.attemptBlocking(ps.close)) }.unexit
+        }.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
       case _ =>
         ZIO.succeed(null)
 
-  private def record(number: Long, polarity: String, snapshot: String): Task[Unit] =
+  private def record(number: Long, polarity: String, snapshot: String): UIO[Unit] =
     if polarity eq null
     then
       ZIO.unit
@@ -77,7 +79,7 @@ package object `Π-dump`:
         ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
         ps.println("""<?xml version="1.0" ?>""")
         ps.println(snapshot)
-      }.exit.tap { _ => ZIO.unless(ps eq null)(ZIO.attemptBlocking(ps.close)) }.unexit
+      }.either.unit.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
 
   private def exit(ks: List[String])
                   (using % : %, ! : !): UIO[Unit] =
@@ -96,7 +98,7 @@ package object `Π-dump`:
         else ExitCode.failure
       }.flatMap(!.succeed(_).unit)
 
-  def dump(snapshot: Boolean)(using % : %, ! : !, - : -): Task[Unit] =
+  def dump(snapshot: Boolean)(using % : %, ! : !, - : -): UIO[Unit] =
     for
       h <- -.take
       _ <- h match

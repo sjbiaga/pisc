@@ -37,10 +37,22 @@ import parser.BioAmbients.Actions
 import parser.Calculus.*
 import parser.Encoding.*
 import parser.μ
+import ce.Program.{ emit => cemit }
 import cef.Meta.*
 
 
 object Program:
+
+  /**
+    * Phantoms help to avoid `flatMap`s, for example:
+    *
+    * `!.a<0>. a<1>.a<2>. (a<3>.(a<4>. | a<5>.) + a<6>.)`
+    *
+    * here, 1, 4 or 5 dont need to become `flatMap`s.
+    *
+    * Phantoms only exist in this emitter's lifetime.
+    */
+  private lazy val phantom: τ = τ(Some(null), None)(null)
 
   extension (self: Pre)(using id: => String)
 
@@ -194,6 +206,23 @@ object Program:
 
   extension (self: AST)(using id: => String, ^ : (Enumerator.Generator, Term.Name))
 
+    /** Called on behalf of a guarded replication definitely not discarded:
+      * emulate the replication guard with a phantom τ in each composition,
+      * eventually dropping head phantoms from these sequences of prefixes;
+      * obviously, it does not apply to sums with zero or multiple choices.
+      * Note: also used while emitting a leaf, otherwise `false` is a noop.
+      */
+    def emit0: List[Enumerator] =
+
+      self match
+
+        case +(-1, ∥(-1, ss*)) =>
+
+          `+`(-1, ∥(-1, ss.map(it => it.copy(prefixes = phantom +: it.prefixes))*)).emit(false)
+
+        case _ =>
+          self.emit(false)
+
     def emitʹ: List[Enumerator] =
 
       self match
@@ -211,13 +240,18 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), `_ <- *`(`π-exclude`(t.enabled)))
               case _ =>
-                sum.emit
+                sum.emit()
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
 
         case _ => ???
 
-    def emit: List[Enumerator] =
+    /**
+      * @param flatMap whether to emit the guard with a "`flatMap`" or not,
+      * if the proximal leaf is a replication; it is meant to fall through
+      * an AST node like `+(_, ∥(_, .(!)))`, otherwise being reset to `true`.
+      */
+    def emit(flatMap: Boolean = true): List[Enumerator] =
 
       var * = List[Enumerator]()
 
@@ -228,7 +262,7 @@ object Program:
         case ∅() =>
 
         case +(_, operand) =>
-          * = operand.emit
+          * = operand.emit(flatMap)
 
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
@@ -236,7 +270,7 @@ object Program:
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
         case it: + =>
-          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val ios = it.choices.foldRight(List[Term]())(_.emit() :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -246,10 +280,10 @@ object Program:
         // COMPOSITION /////////////////////////////////////////////////////////
 
         case ∥(_, operand) =>
-          * = operand.emit
+          * = operand.emit(flatMap)
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
+          val ios = it.components.foldRight(List[Term]())(_.emit(flatMap) :: _)
 
           * = `_ <- *`(`List( *, … ).parSequence`(ios*))
 
@@ -262,7 +296,12 @@ object Program:
 
           val υidυ = Actions(ps*).headOption
 
-          * = ps.foldRight(end.emit) {
+          val endʹ =
+            υidυ match
+              case None => end.emit(flatMap)
+              case _    => end.emit0
+
+          * = ps.foldRight(endʹ) {
 
             case (ν(names*), ios) =>
               names.map { it => `* <- *`(it -> "ν") }.toList ::: ios
@@ -297,7 +336,6 @@ object Program:
               `_ <- *`(it.emit(ios))
 
             case (it, ios) =>
-              import ce.Program.{ emit => cemit }
               it.cemit ::: ios
 
           }
@@ -308,69 +346,36 @@ object Program:
         // (MIS)MATCH | IF THEN ELSE | ELVIS OPERATOR //////////////////////////
 
         case ?:(((lhs, rhs), mismatch), t, f) =>
-          * = f.fold(`_ <- *`(`π-exclude`(t.enabled)): List[Enumerator])(_.emit)
+          * = f.fold(`_ <- *`(`π-exclude`(t.enabled)): List[Enumerator])(_.emit())
 
           if mismatch
           then
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.emit))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), *, t.emit()))
           else
-            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit, *))
+            * = `_ <- *`(`if * then … else …`(====(lhs, rhs), t.emit(), *))
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(parallelism, pace, Some(π @ π(_, _, λ(Symbol(par)), Some("ν"), _, _)), sum) =>
-          val υidυ = id
-
-          val sem = if parallelism < 0 then null else id
-
-          val `!.π⋯` = ( if parallelism < 0
-                         then
-                           Nil
-                         else
-                           `_ <- *.acquire`(sem) :: Nil
-                       ) :+ `_ <- *` { π.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
-                                                                            Term.ArgClause(^._2 :: Nil)))
-                                              }
-                                     }
-
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
-
-          val body =
-            `List( *, … ).parSequence`(
-              if parallelism < 0
-              then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
-              `!⋯`
-            )
-
-          if parallelism < 0
-          then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-          else
-            * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-
         case !(parallelism, pace, Some(π @ π(_, _, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           val υidυ = id
 
-          val sem = if parallelism < 0 then null else id
+          val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
-          val πʹ = π.copy(name = λ.copy()(using None))(π.υidυ)
-
-          val `!.π⋯` = ( if parallelism < 0
-                         then
-                           Nil
-                         else
-                           `_ <- *.acquire`(sem) :: Nil
-                       ) :+ `_ <- *` { πʹ.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                                    Term.ArgClause(^._2 :: Nil)))
-                                               }
-                                     }
+          val `!.π⋯` =
+            if flatMap
+            then
+              `_ <- *` { πʹ.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                                               Term.ArgClause(^._2 :: Nil)))
+                                 }
+                       } :: Nil
+            else
+              πʹ.cemit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                                      Term.ArgClause(^._2 :: Nil)))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -382,52 +387,57 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val body =
-            Term.Block(`val` :+
-                       `List( *, … ).parSequence`(
-                         if parallelism < 0
-                         then sum.emit
-                         else sum.emit :+ `_ <- *.release`(sem),
-                         `!⋯`
-                       ))
-
-          if parallelism < 0
-          then
-            * = `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-          else
-            * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-
-        case !(parallelism, pace, Some(μ), sum) =>
-          val υidυ = id
+          val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
           val sem = if parallelism < 0 then null else id
 
-          val `!.μ⋯` = ( if parallelism < 0
-                         then
-                           Nil
-                         else
-                           `_ <- *.acquire`(sem) :: Nil
-                       ) :+ `_ <- *` { μ.emit { ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
-                                              }
-                                     }
-
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
-
-          val body =
+          var body =
             `List( *, … ).parSequence`(
               if parallelism < 0
-              then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
+              then sum.emit0
+              else sum.emit0 :+ `_ <- *.release`(sem),
               `!⋯`
             )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `IO { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+
+        case !(parallelism, pace, Some(μ), sum) =>
+          val υidυ = id
+
+          val `!.μ⋯` =
+            if flatMap
+            then
+              `_ <- *` { μ.emit { ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+                                }
+                       } :: Nil
+            else
+              μ.cemit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+
+          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+
+          val sem = if parallelism < 0 then null else id
+
+          var body =
+            `List( *, … ).parSequence`(
+              if parallelism < 0
+              then sum.emit0
+              else sum.emit0 :+ `_ <- *.release`(sem),
+              `!⋯`
+            )
+
+          if parallelism < 0
+          then
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+          else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
+            * = `* <- Semaphore(…)`(sem, parallelism) ::
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
@@ -443,7 +453,7 @@ object Program:
 
           * = `_ <- *`(Term.Apply(Term.Select(\("}{"), \("}{")), Term.ArgClause(\(")(") :: labelʹ :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(* ::: sum.emit))
+          * = `_ <- *`(`List( *, … ).parSequence`(* ::: sum.emit()))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -465,7 +475,7 @@ object Program:
                     else
                       `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
-          * = * ::: sum.emit
+          * = * ::: sum.emit()
 
         case _: `{}` => ???
 
@@ -505,6 +515,6 @@ object Program:
       ) ::
       prog
         .drop(3)
-        .map(_ -> _.emit(using id()))
+        .map(_ -> _.emit(using id())())
         .map(_.swap)
         .map(defn(_)(_))

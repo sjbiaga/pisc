@@ -29,8 +29,8 @@
 import _root_.scala.collection.immutable.{ List, Map }
 
 import _root_.cats.effect.std.Semaphore
-import _root_.zio.interop.catz.concurrentInstance
-import _root_.zio.{ ExitCode, Fiber, Promise, Queue, Ref, Task, UIO, ZIO }
+import _root_.zio.interop.catz.generic.*
+import _root_.zio.{ ExitCode, Fiber, Promise, Queue, Ref, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 import _root_.zio.stm.TSemaphore
 
@@ -45,21 +45,21 @@ package object `Π-loop`:
 
   import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
 
-  type <> = (CyclicBarrier, Fiber[Throwable, Unit], Ref[`()`])
+  type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
 
-  type + = ((Promise[Throwable, Option[<>]], Ref[Promise[Throwable, Option[<>]]]), ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[`()`]]], Rate)))
+  type + = ((Promise[Nothing, Option[<>]], Ref[Promise[Nothing, Option[<>]]]), ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[`()`]]], Rate)))
 
   type % = Ref[Map[String, Int | (Boolean, +)]]
 
   type / = Queue[((String, String), +)]
 
-  type ! = Promise[Throwable, ExitCode]
+  type ! = Promise[Nothing, ExitCode]
 
   type & = Ref[Long]
 
-  type * = Semaphore[Task]
+  type * = Semaphore[UIO]
 
-  type \ = Task[Unit]
+  type \ = UIO[Unit]
 
 
   def `π-enable`(enabled: `Π-Set`[String])
@@ -120,7 +120,7 @@ package object `Π-loop`:
   def loop(parallelism: Int, started: Ref[Long], _snapshot: Boolean)
           (using % : %, ! : !, & : &, - : -, * : *)
           (using `}{`.`][`, TSemaphore)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): Task[Unit] =
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modify { m =>
       {
         { if m.exists(_._2.isInstanceOf[Int])
@@ -167,7 +167,7 @@ package object `Π-loop`:
                       *.acquire *> loop(parallelism, started, _snapshot)
                   }
                 case nel =>
-                  Semaphore[Task](parallelism).flatMap { sem =>
+                  Semaphore[UIO](parallelism).flatMap { sem =>
                     ZIO.collectAllParDiscard {
                       nel.map { case (key1, key2, in, _delay) =>
                                   val k1 = key1.substring(36)
@@ -223,7 +223,7 @@ package object `Π-loop`:
       } -> m
     }.flatten
 
-  def poll(using % : %, / : /, * : *): Task[Unit] =
+  def poll(using % : %, / : /, * : *): UIO[Unit] =
     for
       h <- /.take
       ((_, key), it) = h

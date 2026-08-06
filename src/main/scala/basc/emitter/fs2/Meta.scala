@@ -40,9 +40,10 @@ object Meta extends emitter.shared.streams.Meta:
 
   override protected lazy val \ = "Stream"
 
-  override protected lazy val \\ = "eval"
+  override protected lazy val \\ = "emit"
 
-  protected lazy val \\\ = "emit"
+  override protected lazy val \\\ = "eval"
+
 
   def defn(body: Term)(using Type): `(*)` => Defn.Def =
     case `(*)`("Main") =>
@@ -104,8 +105,8 @@ object Meta extends emitter.shared.streams.Meta:
   val `: String => \\[F, Unit]` =
     `: \\[F, Unit]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
 
-  def `\\.\\\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\\),
+  def `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -130,8 +131,8 @@ object Meta extends emitter.shared.streams.Meta:
                )
     )
 
-  def `\\.\\\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\\),
+  def `\\.\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
@@ -190,7 +191,7 @@ object Meta extends emitter.shared.streams.Meta:
 
     `* <- Stream.eval(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
     `* <- Stream.eval(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])
@@ -237,7 +238,7 @@ object Meta extends emitter.shared.streams.Meta:
 
     `* <- Stream.eval(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
     `* <- Stream.eval(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])

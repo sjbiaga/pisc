@@ -29,8 +29,8 @@
 //package main.scala.in
 
 import _root_.cats.effect.std.Semaphore
-import _root_.zio.interop.catz.concurrentInstance
-import _root_.zio.{ FiberRef, Promise, Queue, Task, ZIO }
+import _root_.zio.interop.catz.generic.*
+import _root_.zio.{ FiberRef, Promise, ZIO, UIO }
 import _root_.zio.stm.TSemaphore
 import _root_.zio.stream.ZStream
 
@@ -43,7 +43,7 @@ object App extends _root_.zio.ZIOAppDefault:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.zio.{ ExitCode, Ref }
+  import _root_.zio.{ ExitCode, Queue, Ref }
 
   import _root_.zio.ZIOAppArgs
 
@@ -68,7 +68,7 @@ object App extends _root_.zio.ZIOAppDefault:
       .drainFork(ZStream.fromZIO(dump(snapshot)(using %, !, -)))
       .runDrain
 
-  override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+  override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
@@ -79,9 +79,9 @@ object App extends _root_.zio.ZIOAppDefault:
       args <- getArgs
       % <- Ref.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
-      * <- Semaphore[Task](0)
+      * <- Semaphore[UIO](0)
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
-      ! <- Promise.make[Throwable, ExitCode]
+      ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
@@ -95,7 +95,7 @@ object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
 
-  import _root_.zio.{ durationLong, Random, UIO }
+  import _root_.zio.{ durationLong, Random, Task }
   import _root_.zio.concurrent.CyclicBarrier
 
   import _root_.eu.timepit.refined.*
@@ -107,8 +107,8 @@ object π:
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
 
 
-  extension (self: πLs[ZStream[Any, Throwable, ?]])
-    private[π] inline def πcollectAllPar: ZStream[Any, Throwable, Unit] =
+  extension (self: πLs[ZStream[Any, Nothing, ?]])
+    private[π] inline def πcollectAllPar: ZStream[Any, Nothing, Unit] =
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
 
   val `π-uuid`: UIO[String] =

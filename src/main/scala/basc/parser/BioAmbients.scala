@@ -322,6 +322,8 @@ object BioAmbients:
                                                         })
     case ce extends Emitter()
     case cef extends Emitter()
+    case zio extends Emitter()
+    case ziof extends Emitter()
     case fs2 extends Emitter(true)
     case zs extends Emitter(true)
     private[parser] case test extends Emitter()

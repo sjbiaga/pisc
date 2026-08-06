@@ -4,7 +4,7 @@ function ba() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -19,6 +19,10 @@ function ba() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zio|ziof)
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -62,7 +66,7 @@ function ba_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -77,6 +81,10 @@ function ba_() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            ;;
+        zio|ziof)
+            local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -121,7 +129,7 @@ function baio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-cef|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;

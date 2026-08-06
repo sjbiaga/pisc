@@ -10,7 +10,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `zio-main`, `zio-main_`, `ziof-main`, `ziof-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "BioAmbients2Scala",
     organization := "sjb.ia.ga",
@@ -74,6 +74,58 @@ lazy val `cef-main_` = (project in file("cef/main_"))
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, munit % Test)
+  )
+
+lazy val `zio-main` = (project in file("zio/main"))
+  .settings(
+    name := "zio BioAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zic, munit % Test)
+  )
+
+lazy val `zio-main_` = (project in file("zio/main_"))
+  .settings(
+    name := "zio BioAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zic, munit % Test)
+  )
+
+lazy val `ziof-main` = (project in file("ziof/main"))
+  .settings(
+    name := "ziof BioAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zic, munit % Test)
+  )
+
+lazy val `ziof-main_` = (project in file("ziof/main_"))
+  .settings(
+    name := "ziof BioAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.9.0-RC4",
+    crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(breeze, scaffeine, zc, zic, munit % Test)
   )
 
 lazy val `fs2-main` = (project in file("fs2/main"))

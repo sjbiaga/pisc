@@ -301,7 +301,7 @@ package object sΠ:
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir))
+        IO.defer(value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)))
 
     /**
       * variable negative prefix i.e. variable output
@@ -314,7 +314,7 @@ package object sΠ:
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code))
+        IO.defer(value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code)))
 
     /**
       * negative prefix i.e. output

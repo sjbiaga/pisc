@@ -41,7 +41,7 @@ import parser.BioAmbients.Actions
 
 abstract trait Meta extends shared.effects.Meta:
 
-  protected lazy val \\ = ""
+  protected lazy val \\\ = ""
 
   val `: \\[F, Unit]` = Some(Type.Apply(\\(\), Type.ArgClause(\\("F") :: \\("Unit") :: Nil)))
 
@@ -51,13 +51,13 @@ abstract trait Meta extends shared.effects.Meta:
 
 
   def `* <- Stream.eval(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(*._2 :: Nil)))
 
   def `_ <- Stream.eval(*)`(* : Term): Enumerator.Generator =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\), Term.ArgClause(* :: Nil)))
+    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, \\\), Term.ArgClause(* :: Nil)))
 
   private val `Stream.eval`: Term => Boolean =
-    case Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)) => true
+    case Term.Select(Term.Name(`\\`), Term.Name(`\\\\\\`)) => true
     case Term.Apply(it, _) => `Stream.eval`(it)
     case Term.ApplyType(it, _) => `Stream.eval`(it)
     case _ => false
@@ -65,7 +65,7 @@ abstract trait Meta extends shared.effects.Meta:
   def `Stream.eval(…)`(`…`: List[Enumerator]): List[Enumerator] =
     `…`.map {
       case it @ Enumerator.Generator(_, rhs) if `Stream.eval`(rhs) => it
-      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\), Term.ArgClause(it.rhs :: Nil)))
+      case it: Enumerator.Generator => it.copy(rhs = Term.Apply(Term.Select(\, \\\), Term.ArgClause(it.rhs :: Nil)))
       case it => it
     }
 

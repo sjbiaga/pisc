@@ -38,7 +38,7 @@ package object sΠ:
 
   import _root_.cats.effect.{ IO, IOLocal, Deferred }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ Supervisor, UUIDGen }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
@@ -226,21 +226,7 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
-        opt      <- deferred.get
-        _        <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         b, f, _) = opt.get
-        _        <- b.await
-        _        <- f.join
-        _        <- exec(code)
-      yield
-        delay
+      apply(rate)(key, `)(`, cap) <* exec(code)
 
     /**
       * variable negative prefix i.e. variable output
@@ -281,7 +267,7 @@ package object sΠ:
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir))
+        IO.defer(value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)))
 
     /**
       * variable negative prefix i.e. variable output
@@ -294,7 +280,7 @@ package object sΠ:
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
       else
-        value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code))
+        IO.defer(value.map(new `()`(_)).flatMap(apply(rate, _)(key, `)(`, dir)(code)))
 
     /**
       * negative prefix i.e. output
@@ -325,21 +311,7 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[Double] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))
-        opt      <- deferred.get
-        _        <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         b, f, i) = opt.get
-        _        <- i.set(value)
-        _        <- b.await
-        _        <- f.join
-        _        <- exec(code)
-      yield
-        delay
+      apply(rate, value)(key, `)(`, dir) <* exec(code)
 
     /**
       * positive prefix i.e. input
@@ -371,21 +343,12 @@ package object sΠ:
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, Double)] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        result   <- IO.ref[`()`](sΠ.`()`.`null`)
-        `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))
-        opt      <- deferred.get
-        _        <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         b, f, _) = opt.get
-        _        <- b.await
-        _        <- f.join
-        name     <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
-      yield
-        new `()`(name) -> delay
+      apply(rate)(key, `)(`, dir)
+        .map(_.name -> _)
+        .flatMap {
+          case (null, delay)  => IO.pure(sΠ.`()`.`null` -> delay)
+          case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
+        }
 
     override def toString: String = if name == null then "null" else name.toString
 

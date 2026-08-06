@@ -332,7 +332,13 @@ Emitters
 
 - [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/bioambients/cef/README.md)
 
+- [ZIO](https://github.com/sjbiaga/pisc/tree/bioambients/zio/README.md)
+
+- [ZIO (flatMap)](https://github.com/sjbiaga/pisc/tree/bioambients/ziof/README.md)
+
 - [FS2](https://github.com/sjbiaga/pisc/tree/bioambients/fs2/README.md)
+
+- [ZStream](https://github.com/sjbiaga/pisc/tree/bioambients/zs/README.md)
 
 
 Branches
