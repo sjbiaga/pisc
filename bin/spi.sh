@@ -4,7 +4,7 @@ function spi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -19,7 +19,7 @@ function spi() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
-        zio)
+        zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
@@ -71,7 +71,7 @@ function spi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce
     case "$1" in
-        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -86,7 +86,7 @@ function spi_() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
-        zio)
+        zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             ;;
@@ -138,7 +138,7 @@ function spio() {
     [ $# -gt 0 ] || return
     local emit=ce
     case "$1" in
-        -ce|-cef|-zio|-akka|-pekko|-fs2|-zs)
+        -ce|-cef|-zio|-ziof|-akka|-pekko|-fs2|-zs)
             local emit="${1#?}"
             shift
             ;;

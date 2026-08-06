@@ -6,15 +6,15 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-⟦ include = (ce,cef,zio,ziof,zs) ⟧
+⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-⟦ include = fs2 ⟧
+⟦ INCLUDE = fs2 ⟧
 
 @given [F[_]]: Conversion[`()`[F], String] = _.`()`[String]
 
-⟦ include = (ce,cef) ⟧
+⟦ INCLUDE = (ce,cef) ⟧
 
 @val nl: String => IO[String] = { it => IO.pure { s"$it\n" } }
 
@@ -22,9 +22,9 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ include = fs2 ⟧
+⟦ INCLUDE = fs2 ⟧
 
-⟦ typeclasses = (Async,cats.effect.std.Console,Parallel) ⟧
+⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
 @import cats.effect.std.Console
 
@@ -34,7 +34,7 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ include = (zio,ziof,zs) ⟧
+⟦ INCLUDE = (zio,ziof,zs) ⟧
 
 @val nl: String => Task[String] = { it => ZIO.succeed(s"$it\n") }
 
@@ -42,7 +42,7 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ exclude = 0 ⟧
+⟦ EXCLUDE = 0 ⟧
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 

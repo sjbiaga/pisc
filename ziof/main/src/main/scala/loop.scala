@@ -165,38 +165,38 @@ package object `Π-loop`:
                   Semaphore[UIO](parallelism).flatMap { sem =>
                     ZIO.collectAllParDiscard {
                       nel.map { case (key1, key2, in, delay) =>
-                                          val k1 = key1.substring(36)
-                                          val k2 = key2.substring(36)
-                                          val  ^ = key1.substring(0, 36)
-                                          val ^^ = key2.substring(0, 36)
-                                          ZIO.uninterruptible {
-                                            for
-                                              cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                              p1 <- %.modify { m => m(key1).asInstanceOf[+] -> m }
-                                              p2 <- %.modify { m => m(key2).asInstanceOf[+] -> m }
-                                              (d1, _) = p1
-                                              (d2, _) = p2
-                                              _  <- sem.acquire
-                                              _  <- discard(k1)(using  ^)
-                                              _  <- discard(k2)(using ^^).unless(k1 == k2)
-                                              _  <- %.update(_ - key1 - key2)
-                                              _  <- started.update(_ + 1)
-                                              fb <- ( for
-                                                        _ <- cb.await.exit
-                                                        _ <- enable(k1)
-                                                        _ <- enable(k2).unless(k1 == k2)
-                                                        _ <- sem.release
-                                                        _ <- started.update(_ - 1)
-                                                        _ <- *.release
-                                                      yield
-                                                        ()
-                                                    ).fork
-                                              _  <- d1.succeed(Some((delay, cb, fb, in)))
-                                              _  <- d2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
-                                            yield
-                                              ()
-                                          }
-                                      }
+                                  val k1 = key1.substring(36)
+                                  val k2 = key2.substring(36)
+                                  val  ^ = key1.substring(0, 36)
+                                  val ^^ = key2.substring(0, 36)
+                                  ZIO.uninterruptible {
+                                    for
+                                      cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                                      p1 <- %.modify { m => m(key1).asInstanceOf[+] -> m }
+                                      p2 <- %.modify { m => m(key2).asInstanceOf[+] -> m }
+                                      (d1, _) = p1
+                                      (d2, _) = p2
+                                      _  <- sem.acquire
+                                      _  <- discard(k1)(using  ^)
+                                      _  <- discard(k2)(using ^^).unless(k1 == k2)
+                                      _  <- %.update(_ - key1 - key2)
+                                      _  <- started.update(_ + 1)
+                                      fb <- ( for
+                                                _ <- cb.await.exit
+                                                _ <- enable(k1)
+                                                _ <- enable(k2).unless(k1 == k2)
+                                                _ <- sem.release
+                                                _ <- started.update(_ - 1)
+                                                _ <- *.release
+                                              yield
+                                                ()
+                                            ).fork
+                                      _  <- d1.succeed(Some((delay, cb, fb, in)))
+                                      _  <- d2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                    yield
+                                      ()
+                                  }
+                      }
                     }
                   } *> loop(parallelism, started)
       } -> m

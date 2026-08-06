@@ -201,8 +201,3 @@ object Meta extends emitter.zio.Meta:
         })*)
       else
         Term.Select(Term.Apply(\("πLs"), Term.ArgClause(*.flatMap(`π-supervised(*)`).toList)), "πcollectAllPar")
-
-  def `List( * *> …, … ).collectAllPar`(* : Term*)(`…`: Term): Term =
-    `List( *, … ).collectAllPar`(* *) match
-      case Term.Select(Term.Apply(Term.Name("πLs"), (hd @ Term.Apply(Term.Name("π-supervised"), _)) :: tl), Term.Name("πcollectAllPar")) =>
-        Term.Select(Term.Apply(\("πLs"), Term.ArgClause(Term.ApplyInfix(hd, \("*>"), Type.ArgClause(Nil), Term.ArgClause(`…` :: Nil)) :: tl)), "πcollectAllPar")

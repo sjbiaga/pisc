@@ -1,56 +1,81 @@
 # -*- indent-tabs-mode: nil; -*-
 
+⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+
+@given Conversion[`()`, Long] = _.`()`[Long]
+@given Conversion[`()`, String] = _.`()`[String]
+
+⟦ INCLUDE = fs2 ⟧
+
 @import cats.effect.std.Console
 
-@given Conversion[`()`[F], Int] = _.`()`[Int]
+@given Conversion[`()`[F], Long] = _.`()`[Long]
 @given Conversion[`()`[F], String] = _.`()`[String]
+
+@def println[F[_]: Console](a: Any) = Console[F].println(a)
+
+@def sleep[F[_]: Async](d: FiniteDuration) = Async[F].sleep(d)
 
 ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
+⟦ INCLUDE = (ce,cef) ⟧
+
+@def println(a: Any) = IO.println(a)
+
+@def sleep(d: FiniteDuration) = IO.sleep(d)
+
+⟦ INCLUDE = (zio,ziof,zs) ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+@def sleep(d: zio.Duration) = ZIO.sleep(d)
+
+⟦ EXCLUDE = 0 ⟧
+
 ################################################################# Semaphore ✕ ##
 
-⟦ EXCLUDE = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
-⟦ REPLICATION = (LINEAR,no) ⟧
+⟦ REPLICATION = (LINEAR,NO) ⟧
 
-Sem(s) = ! 2* .s(r). r(r). τ/*Console[F].println('r)*/.
+Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ################################################################# Semaphore ✔ ##
 
-⟦ EXCLUDE = no ⟧
+⟦ EXCLUDE = NO ⟧
 
-⟦ REPLICATION = (LINEAR,yes) ⟧
+⟦ REPLICATION = (LINEAR,YES) ⟧
 
-Sem(s) = ! 2* .s(r). r(r). τ/*Console[F].println('r)*/.
+Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ##################################################################### Clients ##
 
-⟦ REPLICATION = (LINEAR,no) ⟧
+⟦ REPLICATION = (LINEAR,NO) ⟧
 
 ####################################################################### Macro ##
 
-⟦ EXCLUDE = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+⟦ 'n ^ 'd ⟧(s) = τ/*_ <- sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*_ <- println('n + ".acq")*/. τ/*_ <- sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
 
-Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100*/ ⟧ | ⟦ "Q" ^ /*200*/ ⟧ | ⟦ "R" ^ /*300*/ ⟧ )
+Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100L*/ ⟧ | ⟦ "Q" ^ /*200L*/ ⟧ | ⟦ "R" ^ /*300L*/ ⟧ )
 
 ####################################################################### Agent ##
 
-⟦ EXCLUDE = yes ⟧
+⟦ EXCLUDE = YES ⟧
 
-Main(s, n, d) = τ/*Async[F].sleep(('d: Int).milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println(('n: String) + ".acq")*/. τ/*Async[F].sleep(('d: Int).milliseconds)*/. r</*('n: String) + ".rel"*/>.
+Main(s, n, d) = τ/*_ <- sleep(('d: Long).milliseconds)*/. ! 1,second .s<νr>. τ/*_ <- println(('n: String) + ".acq")*/. τ/*_ <- sleep(('d: Long).milliseconds)*/. r</*('n: String) + ".rel"*/>.
 
-Main = ν(s) ( Sem(s) | Main(s, "P", /*100*/) | Main(s, "Q", /*200*/) | Main(s, "R", /*300*/) )
+Main = ν(s) ( Sem(s) | Main(s, "P", /*100L*/) | Main(s, "Q", /*200L*/) | Main(s, "R", /*300L*/) )
 
 ############################################################### Macro / Agent ##
 
-⟦ EXCLUDE = no ⟧
+⟦ EXCLUDE = NO ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+⟦ 'n ^ 'd ⟧(s) = τ/*_ <- sleep('d.milliseconds)*/. ! 1,second .s<νr>. τ/*_ <- println('n + ".acq")*/. τ/*_ <- sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
 
-P(s) = ⟦ "P" ^ /*100*/ ⟧
-Q(s) = ⟦ "Q" ^ /*200*/ ⟧
-R(s) = ⟦ "R" ^ /*300*/ ⟧
+P(s) = ⟦ "P" ^ /*100L*/ ⟧
+Q(s) = ⟦ "Q" ^ /*200L*/ ⟧
+R(s) = ⟦ "R" ^ /*300L*/ ⟧
 
 Main = ν(s) ( Sem(s) | P(s) | Q(s) | R(s) )

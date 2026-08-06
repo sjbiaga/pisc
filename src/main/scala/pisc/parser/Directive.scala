@@ -126,6 +126,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
     canonical(name) match
 
+      case "echo" if settings.exclude =>
+        Console.err.println(self)
+
       case "echo"         =>
         Console.println(self)
 

@@ -169,7 +169,7 @@ package object sΠ:
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
       else
-        (value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key))
+        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)))
 
     /**
       * variable negative prefix i.e. variable output
@@ -182,7 +182,7 @@ package object sΠ:
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
       else
-        (value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)(code))
+        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)(code)))
 
     /**
       * negative prefix i.e. output

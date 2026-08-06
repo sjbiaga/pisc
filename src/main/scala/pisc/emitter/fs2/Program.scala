@@ -491,20 +491,15 @@ object Program:
                                       Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                            sum.emit())
 
-        case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) if λ.`type`.isDefined =>
-          val par = id
+        case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
+          val par = if λ.`type`.isDefined then id else arg
 
           val υidυ = id
 
-          val sem = if parallelism < 0 then null else id
+          val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
-          val πʹ = π.copy(name = λ.copy()(using None))(π.υidυ)
-
-          val `!.π⋯` = ( if parallelism < 0
-                         then πʹ.emit
-                         else `_ <- *.acquire`(sem) :: πʹ.emit
-                       ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                        Term.ArgClause(^._2 :: Nil)))
+          val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
+                                                              Term.ArgClause(^._2 :: Nil)))
 
           val `val` =
             λ.`type` match
@@ -514,34 +509,11 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val body =
-            Term.Block(`val` :+
-                       `List( *, … ).parSequence`(
-                         if parallelism < 0
-                         then sum.emit()
-                         else sum.emit() :+ `_ <- *.release`(sem),
-                         `!.π⋯`
-                       ))
-
-          if parallelism < 0
-          then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-          else
-            * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
-
-        case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ(Symbol(par)), Some(_), _, _)), sum) =>
-          val υidυ = id
+          val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
           val sem = if parallelism < 0 then null else id
 
-          val `!.π⋯` = ( if parallelism < 0
-                         then π.emit
-                         else `_ <- *.acquire`(sem) :: π.emit
-                       ) :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(par :: Nil)),
-                                                        Term.ArgClause(^._2 :: Nil)))
-
-          val body =
+          var body =
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit()
@@ -551,22 +523,20 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
 
+          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+
           val sem = if parallelism < 0 then null else id
 
-          val `!.μ⋯` = ( if parallelism < 0
-                         then μ.emit
-                         else `_ <- *.acquire`(sem) :: μ.emit
-                       ) :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
-
-          val body =
+          var body =
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit()
@@ -578,6 +548,7 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
           else
+            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
 
