@@ -50,7 +50,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ  <- IO {
+    *   _υ1υ  <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       πLs(
     *         for {
@@ -86,7 +86,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -128,11 +128,107 @@ class ProgramSuite extends FunSuite:
   }
 
   /**
+    * `! 13* .guard<νname1,name2>.`
+    *
+    * @example {{{
+    * for {
+    *   _υ3υ  <- Semaphore[IO](13)
+    *   _υ1υ  <- IO.pure {
+    *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
+    *       for {
+    *         _ <- _υ3υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ3υ.release,
+    *             for {
+    *               name1 <- ν
+    *               name2 <- ν
+    *               _υ2υ  <- ???
+    *               _     <-
+    *                 if (_υ2υ eq None)
+    *                   IO.cede
+    *                 else
+    *                   _υ1υ(name1, name2)
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
+    *     _υ1υ
+    *   }
+    *   name1 <- ν
+    *   name2 <- ν
+    *   _υ2υ  <- ???
+    *   _     <-
+    *     if (_υ2υ eq None)
+    *       IO.cede
+    *     else
+    *       _υ1υ(name1, name2)
+    * } yield ()
+    * }}}
+    */
+  test("replication - bound output guard - parallelism >= 0 & no pace") {
+    implicit def id: String = "υidυ"
+
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
+
+    //println(`13`.emit.map(_.structure))
+
+    assertMatches(`13`.emit) {
+      case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
+                                                                                      Type.Name(`\\`) :: Nil),
+                                                                       Lit.Int(13) :: Nil)),
+                Enumerator.Generator(Pat.Var(Term.Name(_)),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
+                                                Term.Block(
+                                                  Defn.Def(Nil,
+                                                           Term.Name(_),
+                                                           Nil,
+                                                           List(
+                                                             Term.Param(Nil, Term.Name("name1"), Some(Type.Name("()")), None),
+                                                             Term.Param(Nil, Term.Name("name2"), Some(Type.Name("()")), None),
+                                                           ) :: Nil,
+                                                           Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name(_)), _),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                                           Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
+                                                                                                                                                   Term.Select(Term.Name(`\\`), Term.Name("cede")),
+                                                                                                                                                   Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")))
+                                                                         ),
+                                                                         Lit.Unit())
+                                                  ) :: Term.Name(_) :: Nil
+                                                ) :: Nil)),
+                Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
+                Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
+                Enumerator.Generator(Pat.Var(Term.Name(_)), _),
+                Enumerator.Generator(Pat.Wildcard(),
+                                     Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
+                                             Term.Select(Term.Name(`\\`), Term.Name("cede")),
+                                             Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
+      ) => true
+    }
+  }
+
+  /**
     * `! 13,seconds .guard<νname1,name2>.`
     *
     * @example {{{
     * for {
-    *   _υ1υ  <- IO {
+    *   _υ1υ  <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       πLs(
     *         for {
@@ -169,7 +265,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -213,123 +309,33 @@ class ProgramSuite extends FunSuite:
   }
 
   /**
-    * `! 13* .guard<νname1,name2>.`
-    *
-    * @example {{{
-    * for {
-    *   _υ3υ  <- Semaphore[IO](13)
-    *   _υ1υ  <- IO {
-    *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
-    *       πLs(
-    *         _υ3υ.release,
-    *         for {
-    *           _     <- _υ3υ.acquire
-    *           name1 <- ν
-    *           name2 <- ν
-    *           _υ2υ  <- ???
-    *           _     <-
-    *             if (_υ2υ eq None)
-    *               IO.cede
-    *             else
-    *               _υ1υ(name1, name2)
-    *         } yield ()
-    *       ).πparSequence
-    *     _υ1υ
-    *   }
-    *   _     <- _υ3υ.acquire
-    *   name1 <- ν
-    *   name2 <- ν
-    *   _υ2υ  <- ???
-    *   _     <-
-    *     if (_υ2υ eq None)
-    *       IO.cede
-    *     else
-    *       _υ1υ(name1, name2)
-    * } yield ()
-    * }}}
-    */
-  test("replication - bound output guard - parallelism >= 0 & no pace") {
-    implicit def id: String = "υidυ"
-
-    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
-
-    //println(`13`.emit.map(_.structure))
-
-    assertMatches(`13`.emit) {
-      case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
-                                                                                      Type.Name(`\\`) :: Nil),
-                                                                       Lit.Int(13) :: Nil)),
-                Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
-                                                Term.Block(
-                                                  Defn.Def(Nil,
-                                                           Term.Name(_),
-                                                           Nil,
-                                                           List(
-                                                             Term.Param(Nil, Term.Name("name1"), Some(Type.Name("()")), None),
-                                                             Term.Param(Nil, Term.Name("name2"), Some(Type.Name("()")), None),
-                                                           ) :: Nil,
-                                                           Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
-                                                                                 Enumerator.Generator(Pat.Wildcard(),
-                                                                                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
-                                                                                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
-                                                  ) :: Term.Name(_) :: Nil
-                                                ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
-                Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
-                Enumerator.Generator(Pat.Var(Term.Name(_)), _),
-                Enumerator.Generator(Pat.Wildcard(),
-                                     Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
-                                             Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                             Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
-      ) => true
-    }
-  }
-
-  /**
     * `! 13* 13,seconds .guard<νname1,name2>.`
     *
     * @example {{{
     * for {
     *   _υ3υ  <- Semaphore[IO](13)
-    *   _υ1υ  <- IO {
+    *   _υ1υ  <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
-    *       πLs(
-    *         _υ3υ.release,
-    *         for {
-    *           _     <- IO.sleep(13L.seconds)
-    *           _     <- _υ3υ.acquire
-    *           name1 <- ν
-    *           name2 <- ν
-    *           _υ2υ  <- ???
-    *           _     <-
-    *             if (_υ2υ eq None)
-    *               IO.cede
-    *             else
-    *               _υ1υ(name1, name2)
-    *         } yield ()
-    *       ).πparSequence
+    *       for {
+    *         _ <- _υ3υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ3υ.release,
+    *             for {
+    *               _     <- IO.sleep(13L.seconds)
+    *               name1 <- ν
+    *               name2 <- ν
+    *               _υ2υ  <- ???
+    *               _     <-
+    *                 if (_υ2υ eq None)
+    *                   IO.cede
+    *                 else
+    *                   _υ1υ(name1, name2)
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
     *     _υ1υ
     *   }
-    *   _     <- _υ3υ.acquire
     *   name1 <- ν
     *   name2 <- ν
     *   _υ2υ  <- ???
@@ -353,7 +359,7 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -363,31 +369,33 @@ class ProgramSuite extends FunSuite:
                                                              Term.Param(Nil, Term.Name("name2"), Some(Type.Name("()")), None),
                                                            ) :: Nil,
                                                            Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
-                                                                                                                                 Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
-                                                                                 Enumerator.Generator(Pat.Wildcard(),
-                                                                                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
-                                                                                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
+                                                                                                                                                                      Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name(_)), _),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                                           Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
+                                                                                                                                                   Term.Select(Term.Name(`\\`), Term.Name("cede")),
+                                                                                                                                                   Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil)))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")))
+                                                                         ),
+                                                                         Lit.Unit())
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name("name1")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Var(Term.Name("name2")), Term.Name("ν")),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
@@ -408,7 +416,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ              <- IO {
+    *   _υ1υ              <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       if (!name1)
     *         IO.cede
@@ -436,7 +444,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -478,23 +486,26 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ2υ              <- Semaphore[IO](13)
-    *   _υ1υ              <- IO {
+    *   _υ1υ              <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       if (!name1)
     *         _υ2υ.release
     *       else {
-    *         πLs(
-    *           _υ2υ.release,
-    *           for {
-    *             _                 <- _υ2υ.acquire
-    *             Seq(name1, name2) <- ???
-    *             _                 <- _υ1υ(name1, name2)
-    *           } yield ()
-    *         ).πparSequence
+    *         for {
+    *           _ <- _υ2υ.acquire
+    *           _ <-
+    *             πLs(
+    *               _υ2υ.release,
+    *               for {
+    *                 _                 <- IO.sleep(13L.seconds)
+    *                 Seq(name1, name2) <- ???
+    *                 _                 <- _υ1υ(name1, name2)
+    *               } yield ()
+    *             ).πparSequence
+    *         } yield ()
     *       }
     *     _υ1υ
     *   }
-    *   _                 <- _υ2υ.acquire
     *   Seq(name1, name2) <- ???
     *   _                 <- _υ1υ(name1, name2)
     * } yield ()
@@ -512,7 +523,7 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -525,26 +536,29 @@ class ProgramSuite extends FunSuite:
                                                            Term.If(Term.ApplyUnary(Term.Name("!"), Term.Name("name1")),
                                                                    Term.Select(Term.Name(`\\`), Term.Name("cede")),
                                                                    Term.Block(
-                                                                     Term.Select(
-                                                                       Term.Apply(
-                                                                         Term.Name("πLs"),
-                                                                         List(
-                                                                           Term.Select(Term.Name(_), Term.Name("release")),
-                                                                           Term.ForYield(List(
-                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                           Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
-                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
-                                                                                         ),
-                                                                                         Lit.Unit())
-                                                                         )
-                                                                       ),
-                                                                       Term.Name("πparSequence")
+                                                                     Term.ForYield(List(
+                                                                                     Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                     Enumerator.Generator(Pat.Wildcard(),
+                                                                                                          Term.Select(
+                                                                                                            Term.Apply(
+                                                                                                              Term.Name("πLs"),
+                                                                                                              List(
+                                                                                                                Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                                Term.ForYield(List(
+                                                                                                                                Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
+                                                                                                                                Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
+                                                                                                                              ),
+                                                                                                                              Lit.Unit())
+                                                                                                              )
+                                                                                                            ),
+                                                                                                            Term.Name("πparSequence")))
+                                                                                   ),
+                                                                                   Lit.Unit()
                                                                      ) :: Nil
                                                                    )
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
       ) => true
@@ -556,7 +570,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ              <- IO {
+    *   _υ1υ              <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       if (!name1)
     *         IO.cede
@@ -585,7 +599,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -629,24 +643,26 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ2υ              <- Semaphore[IO](13)
-    *   _υ1υ              <- IO {
+    *   _υ1υ              <- IO.pure {
     *     def _υ1υ(name1: `()`, name2: `()`): IO[Any] =
     *       if (!name1)
     *         _υ2υ.release
     *       else {
-    *         πLs(
-    *           _υ2υ.release,
-    *           for {
-    *             _                 <- IO.sleep(13L.seconds)
-    *             _                 <- _υ2υ.acquire
-    *             Seq(name1, name2) <- ???
-    *             _                 <- _υ1υ(name1, name2)
-    *           } yield ()
-    *         ).πparSequence
+    *         for {
+    *           _ <- _υ2υ.acquire
+    *           _ <-
+    *             πLs(
+    *               _υ2υ.release,
+    *               for {
+    *                 _                 <- IO.sleep(13L.seconds)
+    *                 Seq(name1, name2) <- ???
+    *                 _                 <- _υ1υ(name1, name2)
+    *               } yield ()
+    *             ).πparSequence
+    *         } yield ()
     *       }
     *     _υ1υ
     *   }
-    *   _                 <- _υ2υ.acquire
     *   Seq(name1, name2) <- ???
     *   _                 <- _υ1υ(name1, name2)
     * } yield ()
@@ -664,7 +680,7 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -677,28 +693,31 @@ class ProgramSuite extends FunSuite:
                                                            Term.If(Term.ApplyUnary(Term.Name("!"), Term.Name("name1")),
                                                                    Term.Select(Term.Name(`\\`), Term.Name("cede")),
                                                                    Term.Block(
-                                                                     Term.Select(
-                                                                       Term.Apply(
-                                                                         Term.Name("πLs"),
-                                                                         List(
-                                                                           Term.Select(Term.Name(_), Term.Name("release")),
-                                                                           Term.ForYield(List(
-                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
-                                                                                                                                           Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                           Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
-                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
-                                                                                         ),
-                                                                                         Lit.Unit())
-                                                                         )
-                                                                       ),
-                                                                       Term.Name("πparSequence")
+                                                                     Term.ForYield(List(
+                                                                                     Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                     Enumerator.Generator(Pat.Wildcard(),
+                                                                                                          Term.Select(
+                                                                                                            Term.Apply(
+                                                                                                              Term.Name("πLs"),
+                                                                                                              List(
+                                                                                                                Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                                Term.ForYield(List(
+                                                                                                                                Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
+                                                                                                                                                                                Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                                                Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
+                                                                                                                                Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
+                                                                                                                              ),
+                                                                                                                              Lit.Unit())
+                                                                                                              )
+                                                                                                            ),
+                                                                                                            Term.Name("πparSequence")))
+                                                                                   ),
+                                                                                   Lit.Unit()
                                                                      ) :: Nil
                                                                    )
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name1")) :: Pat.Var(Term.Name("name2")) :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name1") :: Term.Name("name2") :: Nil))
       ) => true
@@ -714,7 +733,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ2υ      <- IO {
+    *   _υ2υ      <- IO.pure {
     *     def _υ2υ(_υ1υ: `()`): IO[Any] =
     *       if (!_υ1υ)
     *         IO.cede
@@ -743,7 +762,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -784,24 +803,27 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ3υ      <- Semaphore[IO](13)
-    *   _υ2υ      <- IO {
+    *   _υ2υ      <- IO.pure {
     *     def _υ2υ(_υ1υ: `()`): IO[Any] =
     *       if (!_υ1υ)
     *         _υ3υ.release
     *       else {
     *         val name: Int = ???
-    *         πLs(
-    *           _υ3υ.release,
-    *           for {
-    *             _         <- _υ3υ.acquire
-    *             Seq(name) <- ???
-    *             _         <- _υ2υ(name)
-    *           } yield ()
-    *         ).πparSequence
+    *         for {
+    *           _ <- _υ3υ.acquire
+    *           _ <-
+    *             πLs(
+    *               _υ3υ.release,
+    *               for {
+    *                 _         <- IO.sleep(13L.seconds)
+    *                 Seq(name) <- ???
+    *                 _         <- _υ2υ(name)
+    *               } yield ()
+    *             ).πparSequence
+    *         } yield ()
     *       }
     *     _υ2υ
     *   }
-    *   _         <- _υ3υ.acquire
     *   Seq(name) <- ???
     *   _         <- _υ2υ(name)
     * } yield ()
@@ -819,7 +841,7 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -830,27 +852,30 @@ class ProgramSuite extends FunSuite:
                                                                    Term.Select(Term.Name(`\\`), Term.Name("cede")),
                                                                    Term.Block(List(
                                                                                 Defn.Val(Nil, Pat.Var(Term.Name("name")) :: Nil, Some(Type.Name("Int")), _),
-                                                                                Term.Select(
-                                                                                  Term.Apply(
-                                                                                    Term.Name("πLs"),
-                                                                                    List(
-                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
-                                                                                      Term.ForYield(List(
-                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                      Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
-                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                                                                    ),
-                                                                                                    Lit.Unit())
-                                                                                    )
-                                                                                  ),
-                                                                                  Term.Name("πparSequence")
-                                                                                )
+                                                                                Term.ForYield(List(
+                                                                                                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                     Term.Select(
+                                                                                                                       Term.Apply(
+                                                                                                                         Term.Name("πLs"),
+                                                                                                                         List(
+                                                                                                                           Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                                           Term.ForYield(List(
+                                                                                                                                           Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
+                                                                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
+                                                                                                                                         ),
+                                                                                                                                         Lit.Unit())
+                                                                                                                         )
+                                                                                                                       ),
+                                                                                                                       Term.Name("πparSequence")
+                                                                                                                     ))
+                                                                                              ),
+                                                                                              Lit.Unit())
                                                                               )
                                                                    )
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
@@ -862,7 +887,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ2υ      <- IO {
+    *   _υ2υ      <- IO.pure {
     *     def _υ2υ(_υ1υ: `()`): IO[Any] =
     *       if (!_υ1υ)
     *         IO.cede
@@ -892,7 +917,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -935,25 +960,27 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ3υ      <- Semaphore[IO](13)
-    *   _υ2υ      <- IO {
+    *   _υ2υ      <- IO.pure {
     *     def _υ2υ(_υ1υ: `()`): IO[Any] =
     *       if (!_υ1υ)
     *         _υ3υ.release
     *       else {
     *         val name: Int = ???
-    *         πLs(
-    *           _υ3υ.release,
-    *           for {
-    *             _         <- IO.sleep(13L.seconds)
-    *             _         <- _υ3υ.acquire
-    *             Seq(name) <- ???
-    *             _         <- _υ2υ(name)
-    *           } yield ()
-    *         ).πparSequence
+    *         for {
+    *           _ <- _υ3υ.acquire
+    *           _ <-
+    *             πLs(
+    *               _υ3υ.release,
+    *               for {
+    *                 _         <- IO.sleep(13L.seconds)
+    *                 Seq(name) <- ???
+    *                 _         <- _υ2υ(name)
+    *               } yield ()
+    *             ).πparSequence
+    *         } yield ()
     *       }
     *     _υ2υ
     *   }
-    *   _         <- _υ3υ.acquire
     *   Seq(name) <- ???
     *   _         <- _υ2υ(name)
     * } yield ()
@@ -971,7 +998,7 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Def(Nil,
                                                            Term.Name(_),
@@ -982,29 +1009,32 @@ class ProgramSuite extends FunSuite:
                                                                    Term.Select(Term.Name(`\\`), Term.Name("cede")),
                                                                    Term.Block(List(
                                                                                 Defn.Val(Nil, Pat.Var(Term.Name("name")) :: Nil, Some(Type.Name("Int")), _),
-                                                                                Term.Select(
-                                                                                  Term.Apply(
-                                                                                    Term.Name("πLs"),
-                                                                                    List(
-                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
-                                                                                      Term.ForYield(List(
-                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
-                                                                                                                                                      Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                                      Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
-                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
-                                                                                                    ),
-                                                                                                    Lit.Unit())
-                                                                                    )
-                                                                                  ),
-                                                                                  Term.Name("πparSequence")
-                                                                                )
+                                                                                Term.ForYield(List(
+                                                                                                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                                                Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                     Term.Select(
+                                                                                                                       Term.Apply(
+                                                                                                                         Term.Name("πLs"),
+                                                                                                                         List(
+                                                                                                                           Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                                           Term.ForYield(List(
+                                                                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
+                                                                                                                                                                                           Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                                                           Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
+                                                                                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
+                                                                                                                                         ),
+                                                                                                                                         Lit.Unit())
+                                                                                                                         )
+                                                                                                                       ),
+                                                                                                                       Term.Name("πparSequence")
+                                                                                                                     ))
+                                                                                              ),
+                                                                                              Lit.Unit())
                                                                               )
                                                                    )
                                                            )
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Extract(Term.Name("Seq"), Pat.Var(Term.Name("name")) :: Nil), _),
                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Name(_), Term.Name("name") :: Nil))
       ) => true
@@ -1020,7 +1050,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
     *       πLs(
     *         for {
@@ -1052,7 +1082,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
@@ -1090,20 +1120,23 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ3υ <- Semaphore[IO](13)
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
-    *       πLs(
-    *         _υ3υ.release,
-    *         for {
-    *           _    <- _υ3υ.acquire
-    *           _υ2υ <- ???
-    *           _    <-
-    *             if (_υ2υ eq None)
-    *               IO.cede
-    *             else
-    *               _υ1υ
-    *         } yield ()
-    *       ).πparSequence
+    *       for {
+    *         _ <- _υ3υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ3υ.release,
+    *             for {
+    *               _υ2υ <- ???
+    *               _    <-
+    *                 if (_υ2υ eq None)
+    *                   IO.cede
+    *                 else
+    *                   _υ1υ
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
     *     _υ1υ
     *   }
     *   _    <- _υ3υ.acquire
@@ -1128,32 +1161,35 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
                                                            Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
-                                                                                 Enumerator.Generator(Pat.Wildcard(),
-                                                                                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
-                                                                                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.Name(_)))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name(_)), _),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                                           Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
+                                                                                                                                                   Term.Select(Term.Name(`\\`), Term.Name("cede")),
+                                                                                                                                                   Term.Name(_)))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")
+                                                                                                ))
+                                                                         ),
+                                                                         Lit.Unit())
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
@@ -1168,7 +1204,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
     *       πLs(
     *         for {
@@ -1201,7 +1237,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
@@ -1241,23 +1277,24 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ3υ <- Semaphore[IO](13)
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
-    *       πLs(
-    *         _υ3υ.release,
-    *         for {
-    *           _    <- IO.sleep(13L.seconds)
-    *           _υ2υ <- ???
-    *           _    <-
-    *             if (_υ2υ eq None)
-    *               IO.cede
-    *             else
-    *               for {
-    *                 _ <- _υ3υ.acquire
-    *                 _ <- _υ1υ
-    *               } yield ()
-    *         } yield ()
-    *       ).πparSequence
+    *       for {
+    *         _ <- _υ3υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ3υ.release,
+    *             for {
+    *               _    <- IO.sleep(13L.seconds)
+    *               _υ2υ <- ???
+    *               _    <-
+    *                 if (_υ2υ eq None)
+    *                   IO.cede
+    *                 else
+    *                   _υ1υ
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
     *     _υ1υ
     *   }
     *   _υ2υ <- ???
@@ -1265,10 +1302,7 @@ class ProgramSuite extends FunSuite:
     *     if (_υ2υ eq None)
     *       IO.cede
     *     else
-    *       for {
-    *         _ <- _υ3υ.acquire
-    *         _ <- _υ1υ
-    *       } yield ()
+    *       _υ1υ
     * } yield ()
     * }}}
     */
@@ -1284,34 +1318,37 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
                                                            Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
-                                                                                                                                 Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
-                                                                                 Enumerator.Generator(Pat.Wildcard(),
-                                                                                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
-                                                                                                              Term.Select(Term.Name(`\\`), Term.Name("cede")),
-                                                                                                              Term.Name(_)))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
+                                                                                                                                                                      Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                                      Enumerator.Generator(Pat.Var(Term.Name(_)), _),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(),
+                                                                                                                                           Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
+                                                                                                                                                   Term.Select(Term.Name(`\\`), Term.Name("cede")),
+                                                                                                                                                   Term.Name(_)))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")
+                                                                                                ))
+                                                                         ),
+                                                                         Lit.Unit())
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Var(Term.Name(_)), _),
                 Enumerator.Generator(Pat.Wildcard(),
                                      Term.If(Term.ApplyInfix(Term.Name(_), Term.Name("eq"), Nil, Term.Name("None") :: Nil),
@@ -1330,7 +1367,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
     *       πLs(
     *         for {
@@ -1353,7 +1390,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
@@ -1384,19 +1421,21 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ2υ <- Semaphore[IO](13)
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
-    *       πLs(
-    *         _υ2υ.release,
-    *         for {
-    *           _ <- IO.unit
-    *           _ <- _υ2υ.acquire
-    *           _ <- _υ1υ
-    *         } yield ()
-    *       ).πparSequence
+    *       for {
+    *         _ <- _υ2υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ2υ.release,
+    *             for {
+    *               _ <- IO.unit
+    *               _ <- _υ1υ
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
     *     _υ1υ
     *   }
-    *   _    <- _υ2υ.acquire
     *   _    <- _υ1υ
     * } yield ()
     * }}}
@@ -1413,29 +1452,32 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
                                                            Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")
+                                                                                                ))
+                                                                         ),
+                                                                         Lit.Unit())
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
       ) => true
     }
@@ -1446,7 +1488,7 @@ class ProgramSuite extends FunSuite:
     *
     * @example {{{
     * for {
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
     *       πLs(
     *         for {
@@ -1470,7 +1512,7 @@ class ProgramSuite extends FunSuite:
 
     assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
@@ -1503,20 +1545,22 @@ class ProgramSuite extends FunSuite:
     * @example {{{
     * for {
     *   _υ2υ <- Semaphore[IO](13)
-    *   _υ1υ <- IO {
+    *   _υ1υ <- IO.pure {
     *     lazy val _υ1υ: IO[Any] =
-    *       πLs(
-    *         _υ2υ.release,
-    *         for {
-    *           _ <- IO.unit
-    *           _ <- IO.sleep(13L.seconds)
-    *           _ <- _υ2υ.acquire
-    *           _ <- _υ1υ
-    *         } yield ()
-    *       ).πparSequence
+    *       for {
+    *         _ <- _υ2υ.acquire
+    *         _ <-
+    *           πLs(
+    *             _υ2υ.release,
+    *             for {
+    *               _ <- IO.unit
+    *               _ <- IO.sleep(13L.seconds)
+    *               _ <- _υ1υ
+    *             } yield ()
+    *           ).πparSequence
+    *       } yield ()
     *     _υ1υ
     *   }
-    *   _    <- _υ2υ.acquire
     *   _    <- _υ1υ
     * } yield ()
     * }}}
@@ -1533,31 +1577,34 @@ class ProgramSuite extends FunSuite:
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
                 Enumerator.Generator(Pat.Var(Term.Name(_)),
-                                     Term.Apply(Term.Name(`\\`),
+                                     Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
                                                   Defn.Val(Mod.Lazy() :: Nil,
                                                            Pat.Var(Term.Name(_)) :: Nil,
                                                            Some(Type.Apply(Type.Name(`\\`), Type.Name("Any") :: Nil)),
-                                                           Term.Select(
-                                                             Term.Apply(
-                                                               Term.Name("πLs"),
-                                                               List(
-                                                                 Term.Select(Term.Name(_), Term.Name("release")),
-                                                                 Term.ForYield(List(
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
-                                                                                                                                 Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
-                                                                                 Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
-                                                                               ),
-                                                                               Lit.Unit())
-                                                               )
-                                                             ),
-                                                             Term.Name("πparSequence")
-                                                           )
+                                                           Term.ForYield(List(
+                                                                           Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
+                                                                           Enumerator.Generator(Pat.Wildcard(),
+                                                                                                Term.Select(
+                                                                                                  Term.Apply(
+                                                                                                    Term.Name("πLs"),
+                                                                                                    List(
+                                                                                                      Term.Select(Term.Name(_), Term.Name("release")),
+                                                                                                      Term.ForYield(List(
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit"))),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("sleep")),
+                                                                                                                                                                      Term.Select(Lit.Long(13L), Term.Name("seconds")) :: Nil)),
+                                                                                                                      Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
+                                                                                                                    ),
+                                                                                                                    Lit.Unit())
+                                                                                                    )
+                                                                                                  ),
+                                                                                                  Term.Name("πparSequence")
+                                                                                                ))
+                                                                         ),
+                                                                         Lit.Unit())
                                                   ) :: Term.Name(_) :: Nil
                                                 ) :: Nil)),
-                Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(_), Term.Name("acquire"))),
                 Enumerator.Generator(Pat.Wildcard(), Term.Name(_))
       ) => true
     }

@@ -6,9 +6,9 @@
 
 @import cats.effect.std.Console
 
-⟦ typeclasses = (Async,Console,Parallel) ⟧
+⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ replication = (parallelism,-1) ⟧
+⟦ REPLICATION = (PARALLELISM,-1) ⟧
 
 Main = ν(sumlist)ν(print)ν(rch)                                       \
      ( Client(sumlist, print, rch, /*args.map(_.toInt).toList*/)      \

@@ -149,9 +149,8 @@ package object Π:
     private inline def ch = `()`[><[F]].channel
     private inline def l = `()`[><[F]].limit
     private implicit def a: F[Unit] = l.acquire
-    private def o = l.release
     private def s = Iterant
-      .liftF(ch.consume.flatTap(_ => Resource.eval(o)).use(_.pull.map(_.right.getOrElse(Seq.empty -> null))))
+      .liftF(ch.consume.flatTap(_ => Resource.eval(l.release)).use(_.pull.map(_.right.getOrElse(Seq.empty -> null))))
       .repeat
       .mapEval {
         case (it, null) => Concurrent[F].pure(it -> false)

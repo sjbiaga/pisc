@@ -118,8 +118,8 @@ object Meta extends emitter.shared.effects.Meta:
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparTraverse"), Term.ArgClause(`…` :: Nil))
 
 
-  def `IO { def *(*: (), ⋯): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
-    Term.Apply(\(\),
+  def `\\.\\\\ { def *(*: (), ⋯): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
                    Defn.Def(Nil,
@@ -137,8 +137,8 @@ object Meta extends emitter.shared.effects.Meta:
                )
     )
 
-  def `IO { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
-    Term.Apply(\(\),
+  def `\\.\\\\ { lazy val *: IO[Any] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
                Term.ArgClause(Term.Block(
                                 Defn.Val(Mod.Lazy() :: Nil,
                                          `* <- …`(*) :: Nil,
