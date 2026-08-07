@@ -100,7 +100,7 @@ object π:
 
   import _root_.eu.timepit.refined.*
 
-  import sΠ.*
+  import sΠ.*, sΠ.given
   import `π-$`.*, `π-ζ`.*
 
   import `Π-loop`.{ %, /, \ }

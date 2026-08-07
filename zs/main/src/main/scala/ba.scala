@@ -115,7 +115,7 @@ package object sΠ:
 
 
   inline def `π-exclude`(enabled: String*)
-                        (using % : %, \ : \): Task[Unit] =
+                        (using % : %, \ : \): UIO[Unit] =
     `π-exclude`(Set.from(enabled)) *> \
 
   private def `π-exclude`(enabled: `Π-Set`[String])

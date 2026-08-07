@@ -332,6 +332,9 @@ object Program:
 
               * ::: ios
 
+            case (it: τ, uios) if it eq phantom => // drop it
+              uios
+
             case (it: μ, ios) if υidυ.get eq it.υidυ =>
               `_ <- *`(it.emit(ios))
 

@@ -51,7 +51,7 @@ abstract class Encoding extends Calculus:
   def definition(using Duplications): Parser[Option[Define]] =
     template ~ opt( "("~>names<~")" ) ~ opt( pointers ) >> {
       case _ if _directive.isDefined =>
-        Directive(_directive.get, _settings)()
+        Directive(_directive.get, emitter, _settings)()
         ".*".r ^^ { _ => None }
       case _ if _settings.exclude =>
         ".*".r ^^ { _ => None }

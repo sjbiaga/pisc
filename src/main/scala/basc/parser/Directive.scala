@@ -34,10 +34,11 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
+import BioAmbients.Emitter
 import Directive.*
 
 
-case class Directive(directive: (String, String | List[String]), settings: Settings):
+case class Directive(directive: (String, String | List[String]), emitter: Emitter, settings: Settings):
 
   implicit val name: String = directive._1.toLowerCase
 
@@ -104,6 +105,11 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
             it.substring(1, it.length-1)
           case _                                                   => throw err(`type`)
 
+      def emitters: List[Emitter] =
+        self match
+          case it: String => List(Emitter.valueOf(it.toLowerCase))
+          case it: List[String] => it.map(_.toLowerCase).map(Emitter.valueOf(_))
+
       def keys: Set[String] =
         self match
           case it: String if Directive.this.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
@@ -114,6 +120,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
   private def number: Int = self.number
   private def file: Option[String] = self.file
   private def string(`type`: String = "a string"): String = self.string(`type`)
+  private def emitters: List[Emitter] = self.emitters
   private def keys: Set[String] = self.keys
 
   def apply(): Unit =
@@ -133,10 +140,22 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
         settings.dups = boolean
 
       case "exclude"      =>
-        settings.exclude = boolean
+        try
+          settings.exclude = boolean
+        catch _ =>
+          try
+            settings.exclude = emitters.contains(emitter)
+          catch _ =>
+            throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "include"      =>
-        settings.exclude = !boolean
+        try
+          settings.exclude = !boolean
+        catch _ =>
+          try
+            settings.exclude = !emitters.contains(emitter)
+          catch _ =>
+            throw DirectiveValueParsingException(directive, "a boolean or emitter(s)")
 
       case "paceunit"     =>
         settings.paceunit = self match
@@ -235,7 +254,7 @@ case class Directive(directive: (String, String | List[String]), settings: Setti
 
         if settings.dirs.isEmpty
         then
-          Directive("push" -> "1", settings)()
+          Directive("push" -> "1", emitter, settings)()
 
       case _              => throw DirectiveKeyParsingException(directive)
 

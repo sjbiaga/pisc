@@ -1,28 +1,70 @@
 # -*- indent-tabs-mode: nil; -*-
 
-@given Conversion[`()`, Int] = _.`()`[Int]
+⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
 
-Main = ν(a,b,c)      \
-     ( (!.a!{"a"}.)  \
-     | (!.b!{"b"}.)  \
-     | (!.c!{"c"}.)  \
-     | Hanoi(a,b,c)  \
+@given Conversion[`()`, Int] = _.`()`[Int]
+@given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
+
+⟦ INCLUDE = fs2 ⟧
+
+@given Conversion[`()`[F], Int] = _.`()`[Int]
+@given Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
+
+⟦ INCLUDE = (ce,cef) ⟧
+
+@def print(a: Any) = IO.print(a)
+
+@def println(a: Any) = IO.println(a)
+
+@def blocking(a: => Any) = IO.blocking(a)
+
+⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def print(a: Any) = Console[F].print(a)
+
+@def println(a: Any) = Console[F].println(a)
+
+@def blocking(a: => Any) = Async[F].blocking(a)
+
+⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+⟦ INCLUDE = (zio,ziof,zs) ⟧
+
+@def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
+
+@def println(a: Any) = ZIO.debug(a)
+
+@def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
+
+⟦ EXCLUDE = 0 ⟧
+
+⟦ REPLICATION = (PARALLELISM,1) ⟧
+
+Main = ν(a,b,c)                                       \
+     ( (!.a!{"a"}.)                                   \
+     | (!.b!{"b"}.)                                   \
+     | (!.c!{"c"}.)                                   \
+     | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 
-Hanoi(a,b,c,n*) = ν(w)                                        \
-                ( τ/* _ <- IO.print("n = ");                  \
-                     'n <- IO.blocking {                      \
-                             try                              \
-                               scala.io.StdIn.readLine.toInt  \
-                             catch _ => -1                    \
-                           }                                  \
-                    */.                                       \
-                  Hanoi(a,b,c,n,w)                            \
-                | w?{w}. τ/*println(s"#${'w} moves")*/.       \
-                )
+Hanoi(a,b,c,m,n*) = ν(w)                                                        \
+                  ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
+                       'n <- blocking {                                         \
+                               try                                              \
+                                 'm.getOrElse {                                 \
+                                   scala.io.StdIn.readLine.toInt                \
+                                 }                                              \
+                               catch _ => -1                                    \
+                             }                                                  \
+                      */.                                                       \
+                    Hanoi(a,b,c,n,w)                                            \
+                  | w?{w}. τ/*_ <- println(s"#${'w} moves")*/.                  \
+                  )
 
-Move(from,to,z) = from?{x}.to?{y}.                  \
-                  τ/*println(s"${'x} -> ${'y}")*/.  \
+Move(from,to,z) = from?{x}.to?{y}.                       \
+                  τ/*_ <- println(s"${'x} -> ${'y}")*/.  \
                                   z!{/*1*/}.
 
 Hanoi(a,b,c,n,w) = if /*'n <= 1*/ = True                           \

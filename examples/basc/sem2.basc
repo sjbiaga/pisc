@@ -1,11 +1,36 @@
 # -*- indent-tabs-mode: nil; -*-
 
+⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+
+@given Conversion[`()`, Long] = _.`()`[Long]
+@given Conversion[`()`, String] = _.`()`[String]
+
+⟦ INCLUDE = fs2 ⟧
+
 @import cats.effect.std.Console
 
-@given Conversion[`()`[F], Int] = _.`()`[Int]
+@given Conversion[`()`[F], Long] = _.`()`[Long]
 @given Conversion[`()`[F], String] = _.`()`[String]
 
+@def println(a: Any) = Console[F].println(a)
+
+@def sleep(d: FiniteDuration) = Async[F].sleep(d)
+
 ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+⟦ INCLUDE = (ce,cef) ⟧
+
+@def println(a: Any) = IO.println(a)
+
+@def sleep(d: FiniteDuration) = IO.sleep(d)
+
+⟦ INCLUDE = (zio,ziof,zs) ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+@def sleep(d: zio.Duration) = ZIO.sleep(d)
+
+                                                           ⟦ EXCLUDE = 0 ⟧{sem2}
 
 ################################################################# Semaphore ✕ ##
 
@@ -13,7 +38,7 @@
 
 ⟦ REPLICATION = (LINEAR,no) ⟧
 
-Sem(s) = ! 2* .s?{r}. r?{r}. τ/*Console[F].println('r)*/.
+Sem(s) = ! 2* .s?{r}. r?{r}. τ/*_ <- println('r)*/.
 
 ################################################################# Semaphore ✔ ##
 
@@ -21,7 +46,7 @@ Sem(s) = ! 2* .s?{r}. r?{r}. τ/*Console[F].println('r)*/.
 
 ⟦ REPLICATION = (LINEAR,yes) ⟧
 
-Sem(s) = ! 2* .s?{r}. r?{r}. τ/*Console[F].println('r)*/.
+Sem(s) = ! 2* .s?{r}. r?{r}. τ/*_ <- println('r)*/.
 
 ##################################################################### Clients ##
 
@@ -31,7 +56,7 @@ Sem(s) = ! 2* .s?{r}. r?{r}. τ/*Console[F].println('r)*/.
 
 ⟦ EXCLUDE = yes ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s!{νr}. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r!{/*'n + ".rel"*/}.
+⟦ 'n ^ 'd ⟧(s) = τ/*_ <- sleep('d.milliseconds)*/. ! 1,second .s!{νr}. τ/*_ <- println('n + ".acq")*/. τ/*_ <- sleep('d.milliseconds)*/. r!{/*'n + ".rel"*/}.
 
 Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100*/ ⟧ | ⟦ "Q" ^ /*200*/ ⟧ | ⟦ "R" ^ /*300*/ ⟧ )
 
@@ -39,7 +64,7 @@ Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100*/ ⟧ | ⟦ "Q" ^ /*200*/ ⟧ | ⟦ "R" 
 
 ⟦ EXCLUDE = yes ⟧
 
-Main(s, n, d) = τ/*Async[F].sleep(('d: Int).milliseconds)*/. ! 1,second .s!{νr}. τ/*Console[F].println(('n: String) + ".acq")*/. τ/*Async[F].sleep(('d: Int).milliseconds)*/. r!{/*('n: String) + ".rel"*/}.
+Main(s, n, d) = τ/*_ <- sleep(('d: Int).milliseconds)*/. ! 1,second .s!{νr}. τ/*_ <- println(('n: String) + ".acq")*/. τ/*_ <- sleep(('d: Int).milliseconds)*/. r!{/*('n: String) + ".rel"*/}.
 
 Main = ν(s) ( Sem(s) | Main(s, "P", /*100*/) | Main(s, "Q", /*200*/) | Main(s, "R", /*300*/) )
 
@@ -47,7 +72,7 @@ Main = ν(s) ( Sem(s) | Main(s, "P", /*100*/) | Main(s, "Q", /*200*/) | Main(s, 
 
 ⟦ EXCLUDE = no ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*Async[F].sleep('d.milliseconds)*/. ! 1,second .s!{νr}. τ/*Console[F].println('n + ".acq")*/. τ/*Async[F].sleep('d.milliseconds)*/. r!{/*'n + ".rel"*/}.
+⟦ 'n ^ 'd ⟧(s) = τ/*_ <- sleep('d.milliseconds)*/. ! 1,second .s!{νr}. τ/*_ <- println('n + ".acq")*/. τ/*_ <- sleep('d.milliseconds)*/. r!{/*'n + ".rel"*/}.
 
 P(s) = ⟦ "P" ^ /*100*/ ⟧
 Q(s) = ⟦ "Q" ^ /*200*/ ⟧

@@ -124,7 +124,7 @@ object Meta extends emitter.shared.effects.Meta:
     `ZStream.fromZIO(…)`(super.`_ <- *.release`(*)).head
 
   override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
-    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)),
+    `* <- ZStream.fromZIO(*)`(* -> Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)),
                                               Term.ArgClause(Lit.Int(`…`) :: Nil))).head
 
 
@@ -213,7 +213,7 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil)
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)) :: Nil))), None) :: Nil)
        :: Term.ParamClause(Term.Param(Mod.Using() :: Nil,
                                       Name.Anonymous(), Some(\\("String")),
                                       None) :: Nil) :: Nil
@@ -261,7 +261,7 @@ object Meta extends emitter.shared.effects.Meta:
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
           Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("Task") :: Nil)) :: Nil))), None) :: Nil)
+                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)) :: Nil))), None) :: Nil)
        :: Term.ParamClause(Term.Param(Mod.Using() :: Nil,
                                       Name.Anonymous(), Some(\\("String")),
                                       None) :: Nil) :: Nil

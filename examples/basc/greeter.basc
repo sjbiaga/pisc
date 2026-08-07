@@ -2,13 +2,47 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-@given Conversion[`()`, String] = _.`()`[String]
-
-@val nl: String => IO[String] = { it => IO { s"$it\n" } }
-
 @val gen = new scala.util.Random
 
 @def r = 1+math.abs(gen.nextInt%3)
+
+⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+
+@given Conversion[`()`, String] = _.`()`[String]
+
+⟦ INCLUDE = fs2 ⟧
+
+@given Conversion[`()`[F], String] = _.`()`[String]
+
+⟦ INCLUDE = (ce,cef) ⟧
+
+@val nl: String => IO[String] = { it => IO.pure { s"$it\n" } }
+
+@def print(a: Any) = IO.print(a)
+
+@def blocking(a: => Any) = IO.blocking(a)
+
+⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def nl: String => F[String] = { it => Async[F].pure { s"$it\n" } }
+
+@def print(a: Any) = Console[F].print(a)
+
+@def blocking(a: => Any) = Async[F].blocking(a)
+
+⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+⟦ INCLUDE = (zio,ziof,zs) ⟧
+
+@val nl: String => Task[String] = { it => ZIO.succeed(s"$it\n") }
+
+@def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
+
+@def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
+
+                                                        ⟦ EXCLUDE = 0 ⟧{GREETER}
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout, "")
 
@@ -20,10 +54,10 @@ Greeter(stdin, stdout, line) = \
                              ) \
                              | \
                              ( stdout ? { prompt } /* nl */. \
-                               τ /* _    <- IO { print('prompt) }; \
-                                   'line <- IO.blocking { scala.io.StdIn.readLine } */. \
+                               τ /* _    <- print('prompt); \
+                                   'line <- blocking { scala.io.StdIn.readLine } */. \
                                stdin ! { line }. stdout ? { greet } /* nl */. \
-                               τ/*print('greet)*/. \
+                               τ/*_ <- print('greet)*/. \
                              )
 
 Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
