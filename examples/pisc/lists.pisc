@@ -5,6 +5,22 @@
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
 
+                                                               ⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def println(a: Any) = Console[F].println(a)
+
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+                                                                ⟦ INCLUDE = zs ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{lists}
+
+                                                   ⟦ REPLICATION = (LINEAR,NO) ⟧
+
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \
      | Server(ch)                                \

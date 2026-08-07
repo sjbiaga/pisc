@@ -1,18 +1,18 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi_ hanoi.scala
+# ./examples $ spi hanoi.scala
 
-⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+                                              ⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
-@given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
-@given [F[_]]: Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
+@given Conversion[`()`[F], Int] = _.`()`[Int]
+@given Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = (ce,cef) ⟧
+                                                          ⟦ INCLUDE = (ce,cef) ⟧
 
 @def print(a: Any) = IO.print(a)
 
@@ -20,19 +20,19 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
-⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
 @import cats.effect.std.Console
 
-@def print[F[_]: Console](a: Any) = Console[F].print(a)
+@def print(a: Any) = Console[F].print(a)
 
-@def println[F[_]: Console](a: Any) = Console[F].println(a)
+@def println(a: Any) = Console[F].println(a)
 
-@def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
+@def blocking(a: => Any) = Async[F].blocking(a)
 
-⟦ INCLUDE = (zio,ziof,zs) ⟧
+                                                     ⟦ INCLUDE = (zio,ziof,zs) ⟧
 
 @def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
 
@@ -40,9 +40,9 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ EXCLUDE = 0 ⟧
+                                                                 ⟦ EXCLUDE = 0 ⟧{hanoi}
 
-⟦ REPLICATION = (PARALLELISM,1) ⟧
+                                               ⟦ REPLICATION = (PARALLELISM,1) ⟧
 
 Main = ν(a,b,c)                                       \
      ( (!.a<"a">.)                                    \
