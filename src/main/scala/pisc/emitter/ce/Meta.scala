@@ -118,6 +118,22 @@ object Meta extends emitter.shared.effects.Meta:
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparTraverse"), Term.ArgClause(`…` :: Nil))
 
 
+  def `\\.\\\\ { def *(*: Seq[()]): IO[Any] = …; * }`(* : String, ** : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil, **, Some(Type.Apply(\\("Seq"), Type.ArgClause(Type.Name("()") :: Nil))), None) :: Nil,
+                                                                     None) :: Nil) :: Nil,
+                            `: IO[Any]`,
+                             `…`
+                   ) :: \(*) :: Nil
+                 ) :: Nil
+               )
+    )
+
   def `\\.\\\\ { def *(*: (), ⋯): IO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(

@@ -300,7 +300,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
         case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some("ν"), code, params*)), sum) =>
 
@@ -443,6 +443,8 @@ object Program:
           * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))))
 
           * = * ::: sum.emit()
+
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), polarity @ Some(_), code, params*)), sum) =>
           val args = params.map {

@@ -30,9 +30,7 @@ package object Π:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.cats.effect.std.Queue
-  import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Exit, Promise, Task, UIO, ZIO }
+  import _root_.zio.{ Exit, Promise, Queue, Task, UIO, ZIO }
 
   import `Π-magic`.*
 
@@ -62,7 +60,7 @@ package object Π:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
     def flatMap[B](f: `()` => UIO[B]): UIO[B] =
-      Queue.synchronous[Task, Seq[Any]].map(`()`).flatMap(f)
+      Queue.unbounded[Seq[Any]].map(`()`).flatMap(f)
 
 
   /**
@@ -153,7 +151,7 @@ package object Π:
 
   private object `Π-magic`:
 
-    type >< = Queue[Task, Seq[Any]]
+    type >< = Queue[Seq[Any]]
 
     object >< :
 
@@ -165,6 +163,6 @@ package object Π:
 
       inline def apply[T]()(`<Q`: ><)(code: Seq[T] => Task[Seq[T]]): UIO[Seq[Any]] =
         `<Q`.take.flatMap {
-          case it @ Seq(null, _*) => ZIO.succeed(it.asInstanceOf[Seq[T]])
+          case it @ Seq(null, _*) => ZIO.succeed(it)
           case it: Seq[T]         => (code andThen exec)(it)
         }

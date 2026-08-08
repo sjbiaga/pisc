@@ -2,17 +2,17 @@
 
 # ./examples $ pi_ hanoi.scala
 
-⟦ INCLUDE = (ce,zio,zs) ⟧
+                                                       ⟦ INCLUDE = (ce,zio,zs) ⟧
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = (fs2,monix) ⟧
+                                                       ⟦ INCLUDE = (fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
 @given [F[_]]: Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = ce ⟧
+                                                                ⟦ INCLUDE = ce ⟧
 
 @val ! : Seq[Any] => IO[Seq[Any]] = { _ => IO.pure(Seq(null)) }
 
@@ -22,7 +22,7 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -34,9 +34,9 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ INCLUDE = monix ⟧
+                                                             ⟦ INCLUDE = monix ⟧
 
 @def ![F[_]: Concurrent] : Seq[Any] => F[Seq[Any]] = { _ => Concurrent[F].pure(Seq(null)) }
 
@@ -46,7 +46,7 @@
 
 @def blocking[F[_]: Concurrent](a: => Any) = Concurrent[F].delay(a)
 
-⟦ INCLUDE = (zio,zs) ⟧
+                                                          ⟦ INCLUDE = (zio,zs) ⟧
 
 @val ! : Seq[Any] => Task[Seq[Any]] = { _ => ZIO.succeed(Seq(null)) }
 
@@ -56,9 +56,7 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ EXCLUDE = 0 ⟧
-
-⟦ REPLICATION = (PARALLELISM,1) ⟧
+                                                                 ⟦ EXCLUDE = 0 ⟧{hanoi}
 
 Main = ν(a,b,c)                                       \
      ( (!.a<"a">.)                                    \
@@ -67,21 +65,21 @@ Main = ν(a,b,c)                                       \
      | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 
-Hanoi(a,b,c,m,n*) = ν(w)                                                      \
-                ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
-                     'n <- blocking {                                         \
-                             try                                              \
-                               'm.getOrElse {                                 \
-                                 scala.io.StdIn.readLine.toInt                \
-                               }                                              \
-                             catch _ => -1                                    \
-                           }                                                  \
-                    */.                                                       \
-                  Hanoi(a,b,c,n,w)                                            \
-                | w(w).                                                       \
-                  τ/*_ <- println(s"#${'w} moves")*/.                         \
-                  ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )                    \
-                )
+Hanoi(a,b,c,m,n*) = ν(w)                                                        \
+                  ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
+                       'n <- blocking {                                         \
+                               try                                              \
+                                 'm.getOrElse {                                 \
+                                   scala.io.StdIn.readLine.toInt                \
+                                 }                                              \
+                               catch _ => -1                                    \
+                             }                                                  \
+                      */.                                                       \
+                    Hanoi(a,b,c,n,w)                                            \
+                  | w(w).                                                       \
+                    τ/*_ <- println(s"#${'w} moves")*/.                         \
+                    ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )                    \
+                  )
 
 
 Move(from,to,z) = from(x).to(y).                         \

@@ -48,7 +48,7 @@ import Expansion.Duplications
 
 abstract class PolyadicPi extends Expression:
 
-  def μ: Parser[(μ, (Names, Names))] =
+  def μ(parallelism: Option[Int]): Parser[(μ, (Names, Names))] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
         τ(Some(it)) -> (Names(), free)
@@ -60,10 +60,10 @@ abstract class PolyadicPi extends Expression:
         throw PrefixChannelParsingException(ch)
       case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if args.count(_._1.isSymbol) > args.filter(_._1.isSymbol).distinctBy { case (λ(Symbol(it)), _) => it }.size =>
         throw PrefixUniquenessParsingException(ch.asSymbol, args.filter(_._1.isSymbol).map(_._1.asSymbol.name)*)
-      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if !emitter.allowsMixedOutput
+      case (ch, _) ~ _ ~ Some(Some(_) ~ args) ~ _ if !emitter.allowsMixedOutput(parallelism)
                                                   && args.count(_._1.isSymbol) < args.size =>
         throw MixedOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
-      case (ch, _) ~ _ ~ Some(None ~ args) ~ _ if !emitter.allowsMixedOutput
+      case (ch, _) ~ _ ~ Some(None ~ args) ~ _ if !emitter.allowsMixedOutput(parallelism)
                                                && args.map(_._1).exists { case λ(_: Term) => true case _ => false }
                                                && !args.map(_._1).forall { case λ(_: Term) => true case _ => false } =>
         throw MixedOutputNotAllowedParsingException(emitter, ch.asSymbol.name)
@@ -275,18 +275,22 @@ object PolyadicPi:
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
   enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
-               val allowsMixedOutput: Boolean = true,
+               val allowsMixedOutput: Option[Int] => Boolean = { _ => true },
                val canScale: Boolean = false,
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
-    def this(featuresLinearReplication: Boolean) = this(nullOnEmptyOutput = Lit.Null(),
-                                                        allowsMixedOutput = false,
-                                                        featuresLinearReplication = featuresLinearReplication,
-                                                        hasReplicationInputGuardFlaw = {
-                                                          case -1|0        => true
-                                                          case parallelism => parallelism > 1
-                                                        })
-    case ce extends Emitter()
+    def this(_n: Null) =
+      this(allowsMixedOutput = _.fold(true)(_ >= -1),
+           featuresLinearReplication = true,
+           hasReplicationInputGuardFlaw = _ >= -1)
+    def this(featuresLinearReplication: Boolean) =
+      this(nullOnEmptyOutput = Lit.Null(),
+           allowsMixedOutput = { _ => false },
+           featuresLinearReplication = featuresLinearReplication,
+           hasReplicationInputGuardFlaw = if featuresLinearReplication
+                                          then _ >= -1
+                                          else _ != 1)
+    case ce extends Emitter(null)
     case zio extends Emitter()
     case fs2 extends Emitter(true)
     case monix extends Emitter(false)

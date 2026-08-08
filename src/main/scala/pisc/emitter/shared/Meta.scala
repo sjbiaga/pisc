@@ -129,6 +129,9 @@ abstract trait Meta:
     Term.If(*, `…`(0), `…`(1), Nil)
 
 
+  def `val Seq(…) = *`(`…`: String*)(* : Term): Defn.Val =
+    Defn.Val(Nil, Pat.Extract(\("Seq"), Pat.ArgClause(`…`.map(Pat.Var(_)).toList)) :: Nil, None, *)
+
   def `val * = *: *`(* : (String, String, Type)): Defn.Val =
     Defn.Val(Nil,
              Pat.Var(*._1) :: Nil,

@@ -18,6 +18,7 @@ function ppi() {
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/ppim.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -85,6 +86,7 @@ function ppi_() {
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/ppim_.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.26

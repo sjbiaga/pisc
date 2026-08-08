@@ -40,6 +40,11 @@ import ce.Meta.*
 
 object Program:
 
+  private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
+    pace match
+      case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
+      case _ => args
+
   extension (self: Pre | AST)(using id: => String)
 
     def emitʹ(implicit semaphore: Option[String]): List[Enumerator] =
@@ -128,15 +133,15 @@ object Program:
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
         case τ(Some((Left(enums), _))) =>
-          * = `_ <- *`("τ")
+          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
           * = * ::: enums
 
         case τ(Some((Right(term), _))) =>
-          * = `_ <- *`("τ")
+          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
           * :+= `_ <- IO { * }`(term)
 
         case τ(_) =>
-          * = `_ <- *`("τ")
+          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
 
 
         case π(λ(Symbol(ch)), None, code, params*) if params.forall { case λ(_: Term) => true case _ => false } =>
@@ -273,6 +278,144 @@ object Program:
 
         ////////////////////////// (mis)match | if then else | elvis operator //
 
+
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+
+        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some(nu), code, params*)), sum) if parallelism < -1 =>
+          val υidυ = id
+          val υidυʹ = id
+
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
+
+          val `val` = params.zipWithIndex.flatMap {
+            case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
+              val par = args(i)
+              λ.`type`.get match
+                case (tpe, Some(refined)) =>
+                  Some(`val * = *: * …`(arg, par, tpe, refined))
+                case (tpe, _) =>
+                  Some(`val * = *: *`(arg, par, tpe))
+            case _ => None
+          }.toList
+
+          val wrap = { (body: Term) => Term.Block(`val Seq(…) = *`(args*)(υidυʹ) +: `val` :+ body) }
+
+          val arity = Term.ArgClause(Lit.Int(args.size) :: Nil)
+
+          val (chʹ, fun) =
+            nu match
+              case "ν" => (Term.Apply(\(ch), Term.ArgClause(Lit.String(nu) :: Nil)), Term.Apply(_: Term, arity))
+              case _   => (Term.Apply(\(ch), Term.ArgClause(Lit.Null() :: Nil)), identity: Term => Term)
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 fun(Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(true) :: Nil))),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 fun(Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(true) :: Nil))),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               fun(Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(false) :: Nil))),
+                               Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: Seq[()]): IO[Any] = …; * }`(υidυ, υidυʹ, wrap(sum.emit)))
+
+        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, params*)), sum) if parallelism < -1 =>
+          val υidυ = id
+
+          val args = params.map(_.toTerm).toList
+
+          val `*|-` = if params.forall { case λ(_: Term) => true case _ => false }
+                      then "*"
+                      else "-"
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(ch), Term.ArgClause(Lit.String(`*|-`) :: Nil)),
+                                   Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: args))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(ch), Term.ArgClause(Lit.String(`*|-`) :: Nil)),
+                                   Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: args))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(\(ch), Term.ArgClause(Lit.String(`*|-`) :: Nil)),
+                                 Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                               Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: args))),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, sum.emit))
+
+        case !(parallelism, given Option[(Long, String)], opt, sum) if parallelism < -1 =>
+          val υidυ = id
+
+          val code =
+            opt match
+              case Some(τ(code)) => code
+              case _             => None
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                               Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, sum.emit))
 
         // REPLICATION /////////////////////////////////////////////////////////
 
