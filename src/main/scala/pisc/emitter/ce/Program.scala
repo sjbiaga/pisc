@@ -265,7 +265,9 @@ object Program:
 
         // (LINEAR) REPLICATION ////////////////////////////////////////////////
 
-        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some(nu), code)), sum) if parallelism < -1 =>
+        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(nu), code)), sum) if parallelism < -1 =>
+          val par = if λ.`type`.isDefined then id else arg
+
           val υidυ = id
 
           val chʹ =
@@ -299,7 +301,17 @@ object Program:
                                Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
                              Term.ArgClause(\(υidυ) :: Nil)))
 
-          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, sum.emit))
+          val `val` =
+            λ.`type` match
+              case Some((tpe, Some(refined))) =>
+                `val * = *: * …`(arg, par, tpe, refined) :: Nil
+              case Some((tpe, _)) =>
+                `val * = *: *`(arg, par, tpe) :: Nil
+              case _ => Nil
+
+          val wrap = { (body: Term) => Term.Block(`val` :+ body) }
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, wrap(sum.emit)))
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) if parallelism < -1 =>
           val υidυ = id

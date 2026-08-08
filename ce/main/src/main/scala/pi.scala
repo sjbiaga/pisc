@@ -34,7 +34,7 @@ package object Π:
 
   import _root_.cats.effect.IO
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore, Supervisor }
+  import _root_.cats.effect.std.{ Queue, Supervisor }
 
   import `Π-magic`.*
 
