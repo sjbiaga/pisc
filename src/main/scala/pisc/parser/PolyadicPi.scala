@@ -396,7 +396,6 @@ object PolyadicPi:
 
     protected def _init: Unit =
       _settings = Settings()
-      _settings.replication = (-1, emitter.featuresLinearReplication)
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
