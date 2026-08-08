@@ -273,7 +273,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
         case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), code)), sum) =>
 
@@ -388,6 +388,8 @@ object Program:
           * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))))
 
           * = * ::: sum.emit()
+
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg

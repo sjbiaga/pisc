@@ -157,7 +157,8 @@ abstract class Calculus extends Pi:
       case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
         throw ConsGuardParsingException(cons, ch.name)
       case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
+        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         if ch == par
         then
@@ -172,7 +173,8 @@ abstract class Calculus extends Pi:
             `!`(parallelismʹ, pace, Some(π._1), sum) -> (freeʹ ++ (free &~ bound))
         }
       case parallelism ~ pace ~ Some(μ) =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
+        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         val (_, freeʹ) = μ._2
         PendingOccurrence(freeʹ)
@@ -181,7 +183,8 @@ abstract class Calculus extends Pi:
             `!`(parallelismʹ, pace, Some(μ._1), sum) -> (freeʹ ++ free)
         }
       case parallelism ~ pace ~ _ =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
+        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
+        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         choice ^^ {
           case (sum, free) =>

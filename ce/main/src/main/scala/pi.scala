@@ -28,11 +28,13 @@
 
 package object Π:
 
+  import _root_.scala.concurrent.duration.FiniteDuration
+
   import _root_.scala.reflect.{ ClassTag, classTag }
 
   import _root_.cats.effect.IO
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ Queue, Supervisor }
+  import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore, Supervisor }
 
   import `Π-magic`.*
 
@@ -58,21 +60,47 @@ package object Π:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
-      Queue.synchronous[IO, Any].map(`()`).flatMap(f)
+      Queue.unbounded[IO, Any].map(`()`).flatMap(f)
 
 
   /**
     * silent transition
     */
-  val τ: IO[Option[Unit]] = IO(Some(()))
+  object τ extends τ:
+
+    def apply(): IO[Option[Unit]] = IO.cede.as(Some(()))
+
+    /**
+      * linear replication guard
+      */
+    def apply(_f: false)(parallelism: Int)(body: IO[Any]): IO[Unit] =
+      super.silent(false)(parallelism)(body)
+
+    /**
+      * linear replication guard w/ pace
+      */
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int)(body: IO[Any]): IO[Unit] =
+      super.silent(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int)(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      super.silent(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int)(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      super.silent(true)(pace, parallelism)(code)(body)
 
 
   /**
     * prefix
     */
-  implicit final class `()`(private val name: Any) extends AnyVal:
+  implicit final class `()`(private[Π] val name: Any) extends AnyVal with Macros:
 
-    private def q = `()`[><]
+    protected def q = `()`[><]
 
     def ====(that: `()`) =
       try
@@ -83,6 +111,170 @@ package object Π:
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    // LINEAR REPLICATION //////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////// BOUND //
+
+    /**
+      * linear replication bound output guard
+      */
+    def apply(_nu: "ν")(_f: false)(parallelism: Int)(body: `()` => IO[Any]): IO[Unit] =
+      super.output("ν")(false)(parallelism)(body)
+
+    /**
+      * linear replication bound output guard w/ pace
+      */
+    def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()` => IO[Any]): IO[Unit] =
+      super.output("ν")(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication bound output guard w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(parallelism: Int)(code: IO[Any])(body: `()` => IO[Any]): IO[Unit] =
+      super.output("ν")(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication bound output guard w/ pace w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int)(code: IO[Any])(body: `()` => IO[Any]): IO[Unit] =
+      super.output("ν")(true)(pace, parallelism)(code)(body)
+
+    //////////////////////////////////////////////////////////////// CONSTANT //
+
+    /**
+      * linear constant replication output guard
+      */
+    def apply(_f: false)(parallelism: Int, value: `()`)(body: IO[Any]): IO[Unit] =
+      super.output(false)(parallelism, value)(body)
+
+    /**
+      * linear constant replication output guard w/ pace
+      */
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int, value: `()`)(body: IO[Any]): IO[Unit] =
+      super.output(false)(pace, parallelism, value)(body)
+
+    /**
+      * linear constant replication output guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, value: `()`)(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      super.output(true)(parallelism, value)(code)(body)
+
+    /**
+      * linear constant replication output guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, value: `()`)(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      super.output(true)(pace, parallelism, value)(code)(body)
+
+    //////////////////////////////////////////////////////////////// VARIABLE //
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S)(body: IO[Any])(using DummyImplicit): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(parallelism, value.asInstanceOf[`()`])(body)
+     else
+       apply("*")(false)(parallelism, IO.delay(value))(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => S)(body: IO[Any])(using DummyImplicit): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(pace, parallelism, value.asInstanceOf[`()`])(body)
+     else
+       apply("*")(false)(pace, parallelism, IO.delay(value))(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(parallelism, value.asInstanceOf[`()`])(code)(body)
+     else
+       apply("*")(true)(parallelism, IO.delay(value))(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => S)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(pace, parallelism, value.asInstanceOf[`()`])(code)(body)
+     else
+       apply("*")(true)(pace, parallelism, IO.delay(value))(code)(body)
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => IO[S])(body: IO[Any]): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(parallelism, _)(body)))
+      else
+        super.output("*")(false)(parallelism, value)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => IO[S])(body: IO[Any]): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(pace, parallelism, _)(body)))
+      else
+        super.output("*")(false)(pace, parallelism, value)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => IO[S])(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(parallelism, _)(code)(body)))
+      else
+        super.output("*")(true)(parallelism, value)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => IO[S])(code: IO[Any])(body: IO[Any]): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(pace, parallelism, _)(code)(body)))
+      else
+        super.output("*")(true)(pace, parallelism, value)(code)(body)
+
+    /////////////////////////////////////////////////////////////////// INPUT //
+
+    /**
+      * linear replication input guard
+      */
+    def apply(_n: Null)(_f: false)(parallelism: Int)(body: `()` => IO[Any]): IO[Unit] =
+      super.input(false)(parallelism)(body)
+
+    /**
+      * linear replication input guard w/ pace
+      */
+    def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()` => IO[Any]): IO[Unit] =
+      super.input(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication input guard w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(parallelism: Int)(code: T => IO[T])(body: `()` => IO[Any]): IO[Unit] =
+      super.input(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication input guard w/ pace w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int)(code: T => IO[T])(body: `()` => IO[Any]): IO[Unit] =
+      super.input(true)(pace, parallelism)(code)(body)
+
+    ////////////////////////////////////////////////////// linear replication //
 
     /**
       * variable negative prefix i.e. variable output
@@ -147,7 +339,7 @@ package object Π:
     override def toString: String = if name == null then "null" else name.toString
 
 
-  private object `Π-magic`:
+  protected object `Π-magic`:
 
     type >< = Queue[IO, Any]
 
@@ -161,6 +353,6 @@ package object Π:
 
       inline def apply[T]()(`<Q`: ><)(code: T => IO[T]): IO[Any] =
         `<Q`.take.flatMap {
-          case null => IO.pure(null)
+          case null  => IO.pure(null)
           case it: T => (code andThen exec)(it)
         }

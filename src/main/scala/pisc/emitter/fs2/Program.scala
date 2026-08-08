@@ -273,9 +273,9 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -291,7 +291,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code)), sum) =>
 
           val par = if λ.`type`.isDefined then id else arg
 
@@ -312,7 +312,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Lit.Null()), None, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Lit.Null()), None, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -328,7 +328,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -353,7 +353,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg, None, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg, None, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -369,7 +369,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(τ(code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(τ(code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -383,11 +383,13 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], _, sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], _, sum) =>
 
           * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))))
 
           * = * ::: sum.emit()
+
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), code)), sum) if parallelism < -1 =>
 
@@ -529,6 +531,8 @@ object Program:
           * = `_ <- +`(-parallelism,
                        Term.Apply(Term.Select(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
                        sum.emit())
+
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg

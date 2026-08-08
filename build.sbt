@@ -65,7 +65,7 @@ lazy val `zio-main` = (project in file("zio/main"))
     scalaVersion := "3.9.0-RC4",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(zc, zic, munit % Test)
+    libraryDependencies ++= Seq(zc, munit % Test)
   )
 
 lazy val `zio-main_` = (project in file("zio/main_"))
@@ -78,7 +78,7 @@ lazy val `zio-main_` = (project in file("zio/main_"))
     scalaVersion := "3.9.0-RC4",
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC4"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(zc, zic, munit % Test)
+    libraryDependencies ++= Seq(zc, munit % Test)
   )
 
 lazy val `akka-main` = (project in file("akka/main"))

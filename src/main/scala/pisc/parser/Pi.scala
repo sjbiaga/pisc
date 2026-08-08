@@ -250,13 +250,14 @@ object Pi:
                val canScale: Boolean = false,
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
-    def this(featuresLinearReplication: Boolean) = this(nullOnEmptyOutput = Lit.Null(),
-                                                        featuresLinearReplication = featuresLinearReplication,
-                                                        hasReplicationInputGuardFlaw = {
-                                                          case -1|0        => true
-                                                          case parallelism => parallelism > 1
-                                                        })
-    case ce extends Emitter()
+    def this(_n: Null) =
+      this(featuresLinearReplication = true,
+           hasReplicationInputGuardFlaw = parallelism => parallelism == -1 || parallelism > 1)
+    def this(featuresLinearReplication: Boolean) =
+      this(nullOnEmptyOutput = Lit.Null(),
+           featuresLinearReplication = featuresLinearReplication,
+           hasReplicationInputGuardFlaw = parallelism => parallelism == -1 || parallelism > 1)
+    case ce extends Emitter(null)
     case zio extends Emitter()
     case fs2 extends Emitter(true)
     case monix extends Emitter(false)

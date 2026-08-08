@@ -30,9 +30,7 @@ package object Π:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.cats.effect.std.Queue
-  import _root_.zio.interop.catz.concurrentInstance
-  import _root_.zio.{ Exit, Promise, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Exit, Promise, Queue, Ref, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
 
   import `Π-magic`.*
@@ -63,7 +61,7 @@ package object Π:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
     def flatMap[B](f: `()` => UIO[B]): UIO[B] =
-      Queue.synchronous[Task, (Any, CyclicBarrier)].map(><(_, false)).flatMap(Ref.make).map(`()`).flatMap(f)
+      Queue.unbounded[(Any, CyclicBarrier)].map(><(_, false)).flatMap(Ref.make).map(`()`).flatMap(f)
 
 
   /**
@@ -154,7 +152,7 @@ package object Π:
 
   private object `Π-magic`:
 
-    final case class ><(queue: Queue[Task, (Any, CyclicBarrier)], stop: Boolean)
+    final case class ><(queue: Queue[(Any, CyclicBarrier)], stop: Boolean)
 
     type >*< = Ref[><]
 
@@ -183,7 +181,10 @@ package object Π:
       def apply()(`<R`: >*<): UIO[Any] =
         `<R`.modify { case it @ ><(q, _) =>
           q.take -> it
-        }.flatten.flatMap { (name, b2) =>
+        }.flatten.tap {
+          case (null, _) => `<R`.update(_.copy(stop = true))
+          case _         => ZIO.unit
+        }.flatMap { (name, b2) =>
           ZIO.succeed(name) <* b2.await.exit
         }
 
@@ -192,11 +193,10 @@ package object Π:
           q.take -> it
         }.flatten.flatMap {
           case it @ (null, _) => ZIO.succeed(it)
-          case (it: T, b2)    => (code andThen exec)(it)
-                                   .tap {
-                                     case null => `<R`.update(_.copy(stop = true))
-                                     case _    => ZIO.unit
-                                   }.map(_ -> b2)
+          case (it: T, b2)    => (code andThen exec)(it).map(_ -> b2)
+        }.tap {
+          case (null, _) => `<R`.update(_.copy(stop = true))
+          case _         => ZIO.unit
         }.flatMap { (name, b2) =>
           ZIO.succeed(name) <* b2.await.exit
         }

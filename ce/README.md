@@ -150,7 +150,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `ce` contains three files: `pi.scala`, `pi_.scala`, and `main.scala.in`.
+The root project folder `ce` contains three files: `pi.scala`, `pim.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 
