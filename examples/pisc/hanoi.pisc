@@ -2,17 +2,17 @@
 
 # ./examples $ pi_ hanoi.scala
 
-⟦ INCLUDE = (ce,zio,zs) ⟧
+                                                       ⟦ INCLUDE = (ce,zio,zs) ⟧
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = (fs2,monix) ⟧
+                                                       ⟦ INCLUDE = (fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
 @given [F[_]]: Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = ce ⟧
+                                                                ⟦ INCLUDE = ce ⟧
 
 @val ! : String => IO[String] = { _ => IO.canceled.as("") }
 
@@ -22,7 +22,7 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -34,9 +34,9 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ INCLUDE = monix ⟧
+                                                             ⟦ INCLUDE = monix ⟧
 
 @def ![F[_]: Concurrent]: String => F[String] = { _ => Concurrent[F].pure(null) }
 
@@ -46,7 +46,7 @@
 
 @def blocking[F[_]: Concurrent](a: => Any) = Concurrent[F].delay(a)
 
-⟦ INCLUDE = (zio,zs) ⟧
+                                                          ⟦ INCLUDE = (zio,zs) ⟧
 
 @def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
 
@@ -54,17 +54,17 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ INCLUDE = zio ⟧
+                                                               ⟦ INCLUDE = zio ⟧
 
 @val ! : String => Task[String] = { _ => ZIO.interrupt.as("") }
 
-⟦ INCLUDE = zs ⟧
+                                                                ⟦ INCLUDE = zs ⟧
 
 @val ! : String => Task[String] = { _ => ZIO.succeed(null) }
 
-⟦ EXCLUDE = 0 ⟧
+                                                                 ⟦ EXCLUDE = 0 ⟧{hanoi}
 
-⟦ REPLICATION = (PARALLELISM,1) ⟧
+⟦ REPLICATION = (LINEAR,YES) ⟧
 
 Main = ν(a,b,c)                                       \
      ( (!.a<"a">.)                                    \

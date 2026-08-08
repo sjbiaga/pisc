@@ -1,9 +1,27 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi lists.scala -- 1 2  3 5
+# ./examples $ pi_ lists.scala -- 1 2  3 5
 
 @import eu.timepit.refined.collection.*
 @import eu.timepit.refined.numeric.*
+
+                                                               ⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def println[F[_]: Console](a: Any) = Console[F].println(a)
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+
+                                                             ⟦ INCLUDE = monix ⟧
+
+@def println[F[_]: Concurrent](a: Any) = Concurrent[F].delay(Console.println(a))
+
+                                                                ⟦ INCLUDE = zs ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{lists}
 
 Main = ν(ch)                                     \
      ( Client(ch, /*args.map(_.toInt).toList*/)  \

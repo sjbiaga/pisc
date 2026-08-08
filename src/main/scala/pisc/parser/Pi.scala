@@ -252,11 +252,13 @@ object Pi:
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
     def this(_n: Null) =
       this(featuresLinearReplication = true,
-           hasReplicationInputGuardFlaw = parallelism => parallelism == -1 || parallelism > 1)
+           hasReplicationInputGuardFlaw = _ >= -1)
     def this(featuresLinearReplication: Boolean) =
       this(nullOnEmptyOutput = Lit.Null(),
            featuresLinearReplication = featuresLinearReplication,
-           hasReplicationInputGuardFlaw = parallelism => parallelism == -1 || parallelism > 1)
+           hasReplicationInputGuardFlaw = if featuresLinearReplication
+                                          then _ >= -1
+                                          else _ != 1)
     case ce extends Emitter(null)
     case zio extends Emitter()
     case fs2 extends Emitter(true)
@@ -351,7 +353,6 @@ object Pi:
 
     protected def _init: Unit =
       _settings = Settings()
-      _settings.replication = (-1, emitter.featuresLinearReplication)
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

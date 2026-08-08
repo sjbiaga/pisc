@@ -153,42 +153,39 @@ abstract class Calculus extends Pi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> scale ~ opt( pace ) ~ opt( "."~>μ<~"." ) >> { // [guarded] replication
-      case _ ~ _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
-        throw ConsGuardParsingException(cons, ch.name)
-      case parallelism ~ pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
+    "!"~> scale >> { // [guarded] replication
+      case parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
         if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        if ch == par
-        then
-          if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
-          then
-            warn(throw GuardParsingException(ch.name, cons.isEmpty))
-        val (bound, freeʹ) = π._2
-        PendingOccurrence(freeʹ)
-        BindingOccurrence(bound)
-        choice ^^ {
-          case (sum, free) =>
-            `!`(parallelismʹ, pace, Some(π._1), sum) -> (freeʹ ++ (free &~ bound))
-        }
-      case parallelism ~ pace ~ Some(μ) =>
-        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
-        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
-        parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        val (_, freeʹ) = μ._2
-        PendingOccurrence(freeʹ)
-        choice ^^ {
-          case (sum, free) =>
-            `!`(parallelismʹ, pace, Some(μ._1), sum) -> (freeʹ ++ free)
-        }
-      case parallelism ~ pace ~ _ =>
-        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
-        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
-        parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        choice ^^ {
-          case (sum, free) =>
-            `!`(parallelismʹ, pace, None, sum) -> free
+        opt( pace ) ~ opt( "."~>μ<~"." ) >> {
+          case _ ~ Some((π(λ(ch: Symbol), _, Some(cons), _), _)) if cons.nonEmpty && cons != "ν" =>
+            throw ConsGuardParsingException(cons, ch.name)
+          case pace ~ Some(π @ (π(λ(ch: Symbol), λ(par: Symbol), Some(cons), _), _)) =>
+            if ch == par
+            then
+            if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
+            then
+              warn(throw GuardParsingException(ch.name, cons.isEmpty))
+            val (bound, freeʹ) = π._2
+            PendingOccurrence(freeʹ)
+            BindingOccurrence(bound)
+            choice ^^ {
+              case (sum, free) =>
+                `!`(parallelismʹ, pace, Some(π._1), sum) -> (freeʹ ++ (free &~ bound))
+            }
+          case pace ~ Some(μ) =>
+            val (_, freeʹ) = μ._2
+            PendingOccurrence(freeʹ)
+            choice ^^ {
+              case (sum, free) =>
+                `!`(parallelismʹ, pace, Some(μ._1), sum) -> (freeʹ ++ free)
+            }
+          case pace ~ _ =>
+            choice ^^ {
+              case (sum, free) =>
+                `!`(parallelismʹ, pace, None, sum) -> free
+            }
         }
     } |
     capital ^^ {
