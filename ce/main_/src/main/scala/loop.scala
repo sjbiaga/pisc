@@ -47,9 +47,9 @@ package object `Π-loop`:
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
-  type + = (Deferred[IO, Option[<>]], (Long, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)))
+  type + = ((Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]]), (Ref[IO, Long], ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)))
 
-  type % = Ref[IO, Map[String, Int | +]]
+  type % = Ref[IO, Map[String, Int | (Boolean, +)]]
 
   type ! = Deferred[IO, ExitCode]
 
@@ -79,9 +79,9 @@ package object `Π-loop`:
     `π-enable`(spell(key))
 
 
-  private def unblock(m: Map[String, Int | +], k: String)
+  private def unblock(m: Map[String, Int | (Boolean, +)], k: String)
                      (implicit ^ : String): IO[Unit] =
-    m(^ + k).asInstanceOf[+]._1.complete(None).whenA(m.contains(^ + k))
+    m(^ + k).asInstanceOf[(Boolean, +)]._2._1._1.complete(None).whenA(m.contains(^ + k))
 
   private def `π-discard`(discarded: `Π-Set`[String])
                          (using % : %)
@@ -108,16 +108,17 @@ package object `Π-loop`:
         { if m.exists(_._2.isInstanceOf[Int])
           then Map.empty -> { () => false }
           else m
-               .map(_ -> _.asInstanceOf[+]._2._2)
+               .filter(_._2.asInstanceOf[(Boolean, +)]._1)
+               .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2._2)
                .toMap
             -> { () => m.isEmpty
                     || m.keys.forall(_.charAt(36) == '!')
                     && { val (trick, _) = `π-wand`
                          m.forall {
-                           case (key1, (_, (_, (e1, Some(p1), _)))) =>
+                           case (key1, (_, (_, (_, (e1, Some(p1), _))))) =>
                              val ^ = key1.substring(0, 36)
                              !m.exists {
-                               case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                               case (key2, (_, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                                  val ^^ = key2.substring(0, 36)
                                  ^ != ^^
                                  || {
@@ -156,30 +157,41 @@ package object `Π-loop`:
                                         IO.uncancelable { _ =>
                                           for
                                             cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                            p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
-                                            p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                            (d1, (s1, _)) = p1
-                                            (d2, (s2, _)) = p2
+                                            p1 <- %.modify { m => m -> m(key1).asInstanceOf[(Boolean, +)]._2 }
+                                            p2 <- %.modify { m => m -> m(key2).asInstanceOf[(Boolean, +)]._2 }
+                                            ((d1, c1), (ts1, _)) = p1
+                                            ((d2, c2), (ts2, _)) = p2
                                             _  <- sem.acquire
-                                            _  <- discard(k1)(using  ^)
-                                            _  <- discard(k2)(using ^^).unlessA(k1 == k2)
-                                            _  <- %.update(_ - key1 - key2)
+                                            o1 <- d1.tryGet
+                                            o2 <- d2.tryGet
+                                            _  <- (discard(k1)(using  ^) >> %.update(_ - key1).whenA(c1 eq null)).whenA(o1 eq None)
+                                            _  <- (discard(k2)(using ^^) >> %.update(_ - key2).whenA(c2 eq null)).whenA(o2 eq None).unlessA(k1 == k2)
+                                            -- <- CyclicBarrier[IO](2)
                                             _  <- started.update(_ + 1)
                                             fb <- ( for
+                                                      _  <- --.await.unlessA(c1 eq null)
+                                                      _  <- --.await.unlessA(c2 eq null).unlessA(k1 == k2)
                                                       _  <- cb.await
                                                       _  <- enable(k1)
                                                       _  <- enable(k2).unlessA(k1 == k2)
                                                       no <- &.updateAndGet(_ + 1)
+                                                      ss <- ts1.get product ts2.get
                                                       now <- Clock[IO].monotonic.map(_.toNanos)
-                                                      _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
+                                                      _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
                                                       _  <- sem.release
                                                       _  <- started.update(_ - 1)
                                                       _  <- *.release
                                                     yield
                                                       ()
                                                   ).start
-                                            _  <- d1.complete(Some((delay, cb, fb, in)))
-                                            _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                              _  <- d1.complete(Some((delay, cb, fb, in))).whenA(o1 eq None)
+                                              _  <- d2.complete(Some((delay, cb, fb, in))).whenA(o2 eq None).unlessA(k1 == k2)
+                                              _  <- (c1.get.flatMap(_.complete(Some((delay, cb, fb, in))))
+                                                  >> %.update { m => m + (key1 -> (false, m(key1).asInstanceOf[(Boolean, +)]._2)) }
+                                                  >> --.await).unlessA(c1 eq null)
+                                              _  <- (c2.get.flatMap(_.complete(Some((delay, cb, fb, in))))
+                                                  >> %.update { m => m + (key2 -> (false, m(key2).asInstanceOf[(Boolean, +)]._2)) }
+                                                  >> --.await).unlessA(c2 eq null).unlessA(k1 == k2)
                                           yield
                                             ()
                                         }
@@ -192,17 +204,26 @@ package object `Π-loop`:
     for
       h <- /.take
       ((_, key), it) = h
-      _ <- %.update { m =>
-                      val ^ = h._1._1
-                      val n = m(key).asInstanceOf[Int] - 1
-                      ( if n == 0
-                        then
-                          m - key
-                        else
-                          m + (key -> n)
-                      ) + (^ + key -> it)
-           }
-      _ <- *.release
+      ((d, _), _) = it
+      _ <- d.tryGet.map(_ eq None).flatMap {
+        if _
+        then
+          %.update { m =>
+                     val ^ = h._1._1
+                     val n = m(key).asInstanceOf[Int] - 1
+                     ( if n == 0
+                       then
+                         m - key
+                       else
+                         m + (key -> n)
+                     ) + (^ + key -> (true, it))
+          } >> *.release
+        else
+          %.update { m =>
+                     val ^ = h._1._1
+                     m + (^ + key -> (false, it))
+          }
+      }
       _ <- IO.cede >> poll
     yield
       ()

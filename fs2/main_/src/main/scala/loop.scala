@@ -212,14 +212,9 @@ package object `Π-loop`:
         h <- /.take
         ((_, key), it) = h
         ((d, _), _) = it
-        _ <- d.tryGet.map(_ ne None).flatMap {
+        _ <- d.tryGet.map(_ eq None).flatMap {
           if _
           then
-            %.update { m =>
-                       val ^ = h._1._1
-                       m + (^ + key -> (false, it))
-            }
-          else
             %.update { m =>
                        val ^ = h._1._1
                        val n = m(key).asInstanceOf[Int] - 1
@@ -230,6 +225,11 @@ package object `Π-loop`:
                            m + (key -> n)
                        ) + (^ + key -> (true, it))
             } >> *.release
+          else
+            %.update { m =>
+                       val ^ = h._1._1
+                       m + (^ + key -> (false, it))
+            }
         }
         _ <- Temporal[F].cede >> poll
       yield

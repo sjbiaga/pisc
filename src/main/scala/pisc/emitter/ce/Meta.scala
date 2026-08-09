@@ -119,6 +119,9 @@ abstract trait Meta extends emitter.shared.effects.Meta:
   val `: String => IO[Any]` =
     `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
 
+  val `: String ?=> IO[Any]` =
+    `: IO[Any]`.map(Type.ContextFunction(Type.FuncParamClause(\\("String") :: Nil), _))
+
 
   def `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
@@ -162,6 +165,40 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                               ) :: Nil
                             )
                    ) :: \(*) :: Nil
+                 ) :: Nil
+               )
+    )
+
+  def `\\.\\\\ { def *(*: ()): String ?=> IO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *._1,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil,
+                                                                                *._2,
+                                                                                Some(\\("()")),
+                                                                                None) :: Nil, None) :: Nil) :: Nil,
+                            `: String ?=> IO[Any]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*._1), \\("Π-Function1")) :: Nil
+                 ) :: Nil
+               )
+    )
+
+
+  def `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(* : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Nil) :: Nil) :: Nil,
+                            `: String ?=> IO[Any]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*), \\("Π-Function0")) :: Nil
                  ) :: Nil
                )
     )

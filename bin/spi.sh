@@ -18,6 +18,7 @@ function spi() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/spim.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -85,6 +86,7 @@ function spi_() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/spim_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26

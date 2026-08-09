@@ -64,7 +64,7 @@ object App extends _root_.cats.effect.IOApp:
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
     for
-      % <- IO.ref(Map[String, Int | +]())
+      % <- IO.ref(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]

@@ -264,7 +264,7 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(1, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -283,7 +283,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           code match
@@ -304,7 +304,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -332,7 +332,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), arg, None, r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), arg, None, r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -351,7 +351,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>

@@ -79,7 +79,9 @@ package object `Π-dump`:
       !.complete(ExitCode.Success).void
     else
       %.flatModify { m =>
-        m -> ks.traverse(m(_).asInstanceOf[+]._1.complete(None))
+          m -> (ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
+                ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
+                                                                             case it => it.get.flatMap(_.complete(None).void) }))
       }.as {
         if !sys.BooleanProp.keyExists(spirsx).value
         && ks.forall(_.charAt(36) == '!')

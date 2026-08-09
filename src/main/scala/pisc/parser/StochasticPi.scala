@@ -290,13 +290,16 @@ object StochasticPi:
   enum Emitter(val canScale: Boolean = false,
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
-    def this(featuresLinearReplication: Boolean) = this(featuresLinearReplication = featuresLinearReplication,
-                                                        hasReplicationInputGuardFlaw = {
-                                                          case -1|0        => true
-                                                          case parallelism => parallelism > 1
-                                                        })
-    case ce extends Emitter()
-    case cef extends Emitter()
+    def this(_n: Null) =
+      this(featuresLinearReplication = true,
+           hasReplicationInputGuardFlaw = _ >= -1)
+    def this(featuresLinearReplication: Boolean) =
+      this(featuresLinearReplication = featuresLinearReplication,
+           hasReplicationInputGuardFlaw = if featuresLinearReplication
+                                          then _ >= -1
+                                          else _ != 1)
+    case ce extends Emitter(null)
+    case cef extends Emitter(null)
     case zio extends Emitter()
     case ziof extends Emitter()
     case fs2 extends Emitter(true)
@@ -656,8 +659,7 @@ object StochasticPi:
               else Nil
             }
 
-          case !(parallelism, _, Some(μ), sum) if emitter.featuresLinearReplication
-                                               && (parallelism == 1 || parallelism < -1) =>
+          case !(parallelism, _, Some(μ), sum) if parallelism < -1 =>
             Seq(μ -> sum)
 
           case !(_, _, Some(μ), sum) =>
@@ -709,7 +711,6 @@ object StochasticPi:
 
     protected def _init: Unit =
       _settings = Settings()
-      _settings.replication = (-1, emitter.featuresLinearReplication)
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
