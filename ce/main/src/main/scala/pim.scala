@@ -35,7 +35,6 @@ package Π:
   import _root_.cats.effect.IO
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
 
-  import Π.{ exec, ν }
   import Π.`Π-magic`.><
 
 
