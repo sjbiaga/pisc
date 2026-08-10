@@ -262,7 +262,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
         case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
 
@@ -368,6 +368,8 @@ object Program:
                                       Term.ArgClause(Lit.String(it.υidυ) :: Nil)))
 
           * = * ::: sum.emit()
+
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) if parallelism < -1 =>
 
@@ -491,6 +493,8 @@ object Program:
                                       Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                            sum.emit())
 
+        // REPLICATION /////////////////////////////////////////////////////////
+
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
@@ -499,7 +503,7 @@ object Program:
           val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                              Term.ArgClause(^._2 :: Nil)))
+                                                              Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `val` =
             λ.`type` match
@@ -523,16 +527,17 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(Nil)),
+                                                             Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val sem = if parallelism < 0 then null else id
 
@@ -546,11 +551,11 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 

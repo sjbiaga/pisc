@@ -46,6 +46,9 @@ package object sΠ:
 
   type `Π-Set`[A] = Set[A]
 
+  type `Π-Function0` = () => String ?=> ZStream[Any, Nothing, Unit]
+  type `Π-Function1` = `()` => String ?=> ZStream[Any, Nothing, Unit]
+
 
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {

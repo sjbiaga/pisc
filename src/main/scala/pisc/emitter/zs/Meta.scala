@@ -139,10 +139,10 @@ object Meta extends emitter.shared.effects.Meta:
                             Term.ArgClause(`…` :: Nil))
 
 
-  val `: String => ZStream[Any, Nothing, Unit]` =
-    `: ZStream[Any, Nothing, Unit]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
+  val `: String ?=> ZStream[Any, Nothing, Unit]` =
+    `: ZStream[Any, Nothing, Unit]`.map(Type.ContextFunction(Type.FuncParamClause(\\("String") :: Nil), _))
 
-  def `\\.\\\\ { def *(*: ()): String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
+  def `\\.\\\\ { def *(*: ()): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
@@ -153,38 +153,25 @@ object Meta extends emitter.shared.effects.Meta:
                                                                                 *._2,
                                                                                 Some(\\("()")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: String => ZStream[Any, Nothing, Unit]`,
-                            Term.Block(
-                              Term.Function(
-                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                            "^",
-                                                            None,
-                                                            None) :: Nil, None),
-                                `…`
-                              ) :: Nil
-                            )
-                   ) :: \(*._1) :: Nil
+                            `: String ?=> ZStream[Any, Nothing, Unit]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*._1), \\("Π-Function1")) :: Nil
                  ) :: Nil
                )
     )
 
-  def `\\.\\\\ { lazy val *: String => ZStream[Any, Nothing, Unit] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
+  def `\\.\\\\ { def *(): String ?=> ZStream[Any, Nothing, Unit] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
-               Term.ArgClause(Term.Block(
-                                Defn.Val(Mod.Lazy() :: Nil,
-                                         `* <- …`(*) :: Nil,
-                                         `: String => ZStream[Any, Nothing, Unit]`,
-                                         Term.Block(
-                                           Term.Function(
-                                             Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                                         "^",
-                                                                         None,
-                                                                         None) :: Nil, None),
-                                             `…`
-                                           ) :: Nil
-                                         )
-                                ) :: \(*) :: Nil
-                              ) :: Nil
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Nil) :: Nil) :: Nil,
+                            `: String ?=> ZStream[Any, Nothing, Unit]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*), \\("Π-Function0")) :: Nil
+                 ) :: Nil
                )
     )
 

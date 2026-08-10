@@ -55,7 +55,7 @@ object App extends CatsApp:
   import `Π-loop`.*
 
 
-  private def run(parallelism: Int, started: Ref[π.F, Long], args: List[String])
+  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long])
                  (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
@@ -87,7 +87,7 @@ object App extends CatsApp:
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      _ <- run(p, n, args.toList)(%, /, *, -, !, &)
+      _ <- run(args.toList, p, n)(%, /, *, -, !, &)
     yield
       ()
 

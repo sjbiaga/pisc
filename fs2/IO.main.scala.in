@@ -45,7 +45,7 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*
 
 
-  private def run(parallelism: Int, started: Ref[π.F, Long], args: List[String])
+  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long])
                  (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
@@ -78,7 +78,7 @@ object App extends _root_.cats.effect.IOApp:
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run(p, n, args)(%, /, *, -, !, &)
+      x <- run(args, p, n)(%, /, *, -, !, &)
     yield
       x
 

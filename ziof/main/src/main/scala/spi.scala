@@ -42,6 +42,9 @@ package object sΠ:
 
   type `Π-Set`[A] = Set[A]
 
+  type `Π-Function0` = () => String ?=> UIO[Any]
+  type `Π-Function1` = `()` => String ?=> UIO[Any]
+
 
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {
