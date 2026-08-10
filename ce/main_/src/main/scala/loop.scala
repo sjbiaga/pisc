@@ -103,6 +103,12 @@ package object `Π-loop`:
       IO.pure(Set.empty)
 
 
+  private def peekʹ(k1: String, k2: String)
+                   (using % : %, * : *)
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    val (_, spell) = `π-wand`
+    peek.whenA(spell(k1).nonEmpty || k1 != k2 && spell(k2).nonEmpty)
+
   def peek(using % : %, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.evalModify { m =>
@@ -171,14 +177,7 @@ package object `Π-loop`:
                             then IO.pure(Set.empty)
                             else discard(k2, m)(using ^^)
                     yield
-                      s1 ++ s2 ++
-                      ( if k1 == k2
-                        then
-                          when(c1 eq null)(key1)
-                        else
-                          if (c1 eq null) && (c2 eq null) then List(key1, key2)
-                          else when(c1 eq null)(key1) ++ when(c2 eq null)(key2)
-                      )
+                      s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2)
                 }.map(_.foldRight(m)(_.foldLeft(_)(_ - _))) product *.offer((Set.empty -> (() => false), nelʹ))
     }
 
@@ -216,7 +215,7 @@ package object `Π-loop`:
                                               _  <- --.await.unlessA(c1 eq null)
                                               _  <- --.await.unlessA(c2 eq null).unlessA(k1 == k2)
                                               _  <- cb.await
-                                              _  <- peek
+                                              _  <- peekʹ(k1, k2)
                                               _  <- enable(k1)
                                               _  <- enable(k2).unlessA(k1 == k2)
                                               no <- &.updateAndGet(_ + 1)

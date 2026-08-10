@@ -35,8 +35,8 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.cats.effect.{ ExitCode, Deferred, Ref }
-  import _root_.cats.effect.std.{ AtomicCell, Queue, Semaphore }
+  import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.std.{ AtomicCell, Queue }
 
   import `Π-dump`.*
   import `Π-loop`.*
@@ -69,7 +69,7 @@ object App extends _root_.cats.effect.IOApp:
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Queue.unbounded[IO, ((Set[String], () => Boolean), List[((String, String), ^)])]
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
-      ! <- Deferred[IO, ExitCode]
+      ! <- IO.deferred[ExitCode]
       & <- IO.ref(0L)
       n <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
