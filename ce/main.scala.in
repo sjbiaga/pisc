@@ -36,24 +36,25 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.cats.effect.{ ExitCode, Deferred, Ref }
-  import _root_.cats.effect.std.{ Queue, Semaphore }
+  import _root_.cats.effect.std.{ AtomicCell, Queue, Semaphore }
 
   import `Π-dump`.*
   import `Π-loop`.*
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(parallelism: Int, started: Ref[IO, Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &): IO[ExitCode] =
+  private def run(args: List[String], parallelism: Int, started: Ref[IO, Long])
+                 (% : %, / : /, * : *, - : -, ! : !, & : &, \ : \): IO[ExitCode] =
     ( for
         _ <- loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`).background
-        _ <- poll(using %, /, *).background
+        _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
       yield
         ()
     ).use { _ =>
       for
         ^ <- π.`π-uuid`
-        _ <- π.`π-supervised`(π.Main(args*)(using ^)(using %, /, *.release))
+        _ <- π.`π-supervised`(π.Main(args*)(using ^)(using %, /, \))
         x <- !.get
       yield
         x
@@ -64,15 +65,16 @@ object App extends _root_.cats.effect.IOApp:
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
     for
-      % <- IO.ref(Map[String, Int | (Boolean, +)]())
+      % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
-      * <- Semaphore[IO](0)
+      * <- Queue.unbounded[IO, ((Set[String], () => Boolean), List[((String, String), ^)])]
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
       n <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, n, args)(%, /, *, -, !, &)
+      \ <- IO.pure(peek(using %, *)(π.`π-wand`))
+      x <- run(args, p, n)(%, /, *, -, !, &, \)
     yield
       x
 

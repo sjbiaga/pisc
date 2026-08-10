@@ -245,6 +245,7 @@ package sΠ:
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
+            linearD  <- IO.deferred[Unit]
             linearCB <- CyclicBarrier[IO]($parallelism)
             stopR    <- IO.ref(false)
             unfold    = {
@@ -253,6 +254,7 @@ package sΠ:
                   nextS <- Semaphore[IO](0)
                   main   =
                     for
+                      _    <- linearD.get.unlessA(prevS eq None)
                       loop <- ( for
                                   _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
@@ -261,6 +263,7 @@ package sΠ:
                                   _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (new {}, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                  _        <- linearD.complete(()).whenA(prevS eq None)
                                   loop      = {
                                     def loop(enabled: Boolean = prevS eq None): IO[Unit] =
                                       for
@@ -318,6 +321,7 @@ package sΠ:
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
+            linearD  <- IO.deferred[Unit]
             linearCB <- CyclicBarrier[IO]($parallelism)
             stopR    <- IO.ref(false)
             unfold    = {
@@ -326,6 +330,7 @@ package sΠ:
                   nextS <- Semaphore[IO](0)
                   main   =
                     for
+                      _    <- linearD.get.unlessA(prevS eq None)
                       loop <- ( for
                                   _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
@@ -334,6 +339,7 @@ package sΠ:
                                   _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                  _        <- linearD.complete(()).whenA(prevS eq None)
                                   loop      = {
                                     def loop(enabled: Boolean = prevS eq None): IO[Unit] =
                                       for
@@ -390,6 +396,7 @@ package sΠ:
                   (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                   (using Quotes): Expr[IO[Unit]] =
      '{ for
+          linearD  <- IO.deferred[Unit]
           linearCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
@@ -398,6 +405,7 @@ package sΠ:
                 nextS <- Semaphore[IO](0)
                 main   =
                   for
+                    _    <- linearD.get.unlessA(prevS eq None)
                     _    <- prevS.fold(IO.unit)(_.acquire)
                     loop <- ( for
                                 _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
@@ -407,6 +415,7 @@ package sΠ:
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                _        <- linearD.complete(()).whenA(prevS eq None)
                                 loop      = {
                                   def loop(enabled: Boolean = prevS eq None): IO[Unit] =
                                     for
@@ -461,67 +470,70 @@ package sΠ:
                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[() => IO[S]])(key: Expr[String])(body: Expr[`Π-Function0`])
                        (sleep: Expr[IO[Unit]])
                        (% : Expr[%], / : Expr[/], \ : Expr[\])
-                        (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                       (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                        (using Type[S], Quotes): Expr[IO[Unit]] =
        '{ for
-          linearCB <- CyclicBarrier[IO]($parallelism)
-          stopR    <- IO.ref(false)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
-              for
-                nextS <- Semaphore[IO](0)
-                main   =
-                  for
-                    loop <- ( for
-                                _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
-                                continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                deferred <- IO.deferred[Option[<>]]
-                                _        <- deferred.complete(None).unlessA(prevS eq None)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
-                                opt      <- deferred.get
-                                _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
-                                loop      = {
-                                  def loop(enabled: Boolean = prevS eq None): IO[Unit] =
-                                    for
-                                      _ <- linearCB.await
-                                      _ <- prevS.fold(IO.unit)(_.acquire)
-                                      _ <- stopR.get >>= ( for
-                                                             _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
-                                                             opt <- continue.get.flatMap(_.get)
-                                                             _   <- IO.deferred[Option[<>]] >>= continue.set
-                                                             _   <- if (opt eq None)
-                                                                    then
-                                                                      stopR.set(true)
-                                                                    else
-                                                                      val (_, b, f, i) = opt.get
-                                                                      for
-                                                                        _ <- $value().map(new `()`(_)) >>= i.set
-                                                                        _ <- b.await
-                                                                        _ <- f.join
-                                                                      yield ()
-                                                           yield ()
-                                                         ).unlessA
-                                      _ <- stopR.get.ifM(nextS.release >> loop(false).unlessA(remaining == 1),
-                                                         $sleep >> nextS.release >> $body()(using ^) >> loop(false))
-                                    yield ()
-                                  loop()
-                                }
-                                stop     <- stopR.get
-                              yield loop.unlessA(stop)
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                _     <- if remaining == 1
-                         then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
-              yield
-                ()
-            unfold
-          }
-          _        <- unfold($parallelism, None)(${^})
-        yield
-          ()
+            linearD  <- IO.deferred[Unit]
+            linearCB <- CyclicBarrier[IO]($parallelism)
+            stopR    <- IO.ref(false)
+            unfold    = {
+              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+                for
+                  nextS <- Semaphore[IO](0)
+                  main   =
+                    for
+                      _    <- linearD.get.unlessA(prevS eq None)
+                      loop <- ( for
+                                  _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
+                                  continue <- IO.deferred[Option[<>]] >>= IO.ref
+                                  deferred <- IO.deferred[Option[<>]]
+                                  _        <- deferred.complete(None).unlessA(prevS eq None)
+                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
+                                  opt      <- deferred.get
+                                  _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                  _        <- linearD.complete(()).whenA(prevS eq None)
+                                  loop      = {
+                                    def loop(enabled: Boolean = prevS eq None): IO[Unit] =
+                                      for
+                                        _ <- linearCB.await
+                                        _ <- prevS.fold(IO.unit)(_.acquire)
+                                        _ <- stopR.get >>= ( for
+                                                               _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                                               opt <- continue.get.flatMap(_.get)
+                                                               _   <- IO.deferred[Option[<>]] >>= continue.set
+                                                               _   <- if (opt eq None)
+                                                                      then
+                                                                        stopR.set(true)
+                                                                      else
+                                                                        val (_, b, f, i) = opt.get
+                                                                        for
+                                                                          _ <- $value().map(new `()`(_)) >>= i.set
+                                                                          _ <- b.await
+                                                                          _ <- f.join
+                                                                        yield ()
+                                                             yield ()
+                                                           ).unlessA
+                                        _ <- stopR.get.ifM(nextS.release >> loop(false).unlessA(remaining == 1),
+                                                           $sleep >> nextS.release >> $body()(using ^) >> loop(false))
+                                      yield ()
+                                    loop()
+                                  }
+                                  stop     <- stopR.get
+                                yield loop.unlessA(stop)
+                              )
+                      _    <- loop
+                    yield
+                      ()
+                  _     <- if remaining == 1
+                           then main
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                yield
+                  ()
+              unfold
+            }
+            _        <- unfold($parallelism, None)(${^})
+          yield
+            ()
         }
 
 
@@ -535,6 +547,7 @@ package sΠ:
                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                  (using Quotes): Expr[IO[Unit]] =
      '{ for
+          linearD  <- IO.deferred[Unit]
           linearCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
@@ -543,6 +556,7 @@ package sΠ:
                 nextS <- Semaphore[IO](0)
                 main   =
                   for
+                    _    <- linearD.get.unlessA(prevS eq None)
                     loop <- ( for
                                 _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
                                 continue <- IO.deferred[Option[<>]] >>= IO.ref
@@ -552,6 +566,7 @@ package sΠ:
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                _        <- linearD.complete(()).whenA(prevS eq None)
                                 loop      = {
                                   def loop(enabled: Boolean = prevS eq None): IO[Unit] =
                                     for
@@ -605,6 +620,7 @@ package sΠ:
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Type[T], Quotes): Expr[IO[Unit]] =
      '{ for
+          linearD  <- IO.deferred[Unit]
           linearCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
@@ -613,6 +629,7 @@ package sΠ:
                 nextS <- Semaphore[IO](0)
                 main   =
                   for
+                    _    <- linearD.get.unlessA(prevS eq None)
                     loop <- ( for
                                 _        <- exclude($key)(${%})(${`π-elvis`}).whenA(prevS eq None)
                                 continue <- IO.deferred[Option[<>]] >>= IO.ref
@@ -622,6 +639,7 @@ package sΠ:
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- stopR.set(true).whenA(opt eq None).whenA(prevS eq None)
+                                _        <- linearD.complete(()).whenA(prevS eq None)
                                 loop      = {
                                   def loop(enabled: Boolean = prevS eq None): IO[Unit] =
                                     for
