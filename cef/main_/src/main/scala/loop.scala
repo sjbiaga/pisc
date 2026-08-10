@@ -62,7 +62,7 @@ package object `Π-loop`:
 
   type / = Queue[IO, ((String, String), +)]
 
-  type \ = IO[Unit]
+  type \ = IO[Unit] => IO[Unit]
 
   type ^ = ((Double, Double), Ref[IO, `()`], ((++, Ref[IO, Long]), (++, Ref[IO, Long])))
   type * = Queue[IO, ((Set[String], () => Boolean), List[((String, String), ^)])]
@@ -102,12 +102,6 @@ package object `Π-loop`:
     else
       IO.pure(Set.empty)
 
-
-  private def peekʹ(k1: String, k2: String)
-                   (using % : %, * : *)
-                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    val (_, spell) = `π-wand`
-    peek.whenA(spell(k1).nonEmpty || k1 != k2 && spell(k2).nonEmpty)
 
   def peek(using % : %, * : *)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
@@ -183,7 +177,7 @@ package object `Π-loop`:
 
 
   def loop(parallelism: Int, started: Ref[IO, Long])
-          (using % : %, ! : !, & : &, - : -, * : *)
+          (using % : %, ! : !, & : &, - : -, * : *, \ : \)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
       ((keys, exit), nel) <- *.take
@@ -215,16 +209,18 @@ package object `Π-loop`:
                                               _  <- --.await.unlessA(c1 eq null)
                                               _  <- --.await.unlessA(c2 eq null).unlessA(k1 == k2)
                                               _  <- cb.await
-                                              _  <- peekʹ(k1, k2)
-                                              _  <- enable(k1)
-                                              _  <- enable(k2).unlessA(k1 == k2)
-                                              no <- &.updateAndGet(_ + 1)
-                                              ss <- ts1.get product ts2.get
-                                              now <- Clock[IO].monotonic.map(_.toNanos)
-                                              _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
-                                              _  <- sem.release
-                                              _  <- started.update(_ - 1)
-                                              _  <- peek
+                                              _ <- \( for
+                                                        _  <- enable(k1)
+                                                        _  <- enable(k2).unlessA(k1 == k2)
+                                                        no <- &.updateAndGet(_ + 1)
+                                                        ss <- ts1.get product ts2.get
+                                                        now <- Clock[IO].monotonic.map(_.toNanos)
+                                                        _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
+                                                        _  <- sem.release
+                                                        _  <- started.update(_ - 1)
+                                                      yield
+                                                        ()
+                                                    )
                                             yield
                                               ()
                                           ).start
@@ -253,16 +249,18 @@ package object `Π-loop`:
       _ <- d.tryGet.map(_ eq None).flatMap {
         if _
         then
-          %.update { m =>
-                     val ^ = h._1._1
-                     val n = m(key).asInstanceOf[Int] - 1
-                     ( if n == 0
-                       then
-                         m - key
-                       else
-                         m + (key -> n)
-                     ) + (^ + key -> (true, it))
-          } >> \
+         \(
+            %.update { m =>
+                       val ^ = h._1._1
+                       val n = m(key).asInstanceOf[Int] - 1
+                       ( if n == 0
+                         then
+                           m - key
+                         else
+                           m + (key -> n)
+                       ) + (^ + key -> (true, it))
+            }
+          )
         else
           %.update { m =>
                      val ^ = h._1._1

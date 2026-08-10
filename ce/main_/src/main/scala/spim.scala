@@ -271,7 +271,7 @@ package sΠ:
                                         _   <- linearCB.await
                                         _   <- prevS.fold(IO.unit)(_.acquire)
                                         _   <- timeset
-                                        _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                         opt <- continue.get.flatMap(_.get)
                                         _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                         _   <- IO.deferred[Option[<>]] >>= continue.set
@@ -343,7 +343,7 @@ package sΠ:
                                         _   <- linearCB.await
                                         _   <- prevS.fold(IO.unit)(_.acquire)
                                         _   <- timeset
-                                        _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                         opt <- continue.get.flatMap(_.get)
                                         _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                         _   <- IO.deferred[Option[<>]] >>= continue.set
@@ -414,7 +414,7 @@ package sΠ:
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
-                                      _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
@@ -486,7 +486,7 @@ package sΠ:
                                         _   <- timeset
                                         _   <- linearCB.await
                                         _   <- prevS.fold(IO.unit)(_.acquire)
-                                        _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                         opt <- continue.get.flatMap(_.get)
                                         _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                         _   <- IO.deferred[Option[<>]] >>= continue.set
@@ -557,7 +557,7 @@ package sΠ:
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
-                                      _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
@@ -627,7 +627,7 @@ package sΠ:
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
-                                      _   <- (${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) } >> ${\}).unlessA(enabled)
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
