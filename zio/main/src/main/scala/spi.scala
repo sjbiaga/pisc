@@ -63,7 +63,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =

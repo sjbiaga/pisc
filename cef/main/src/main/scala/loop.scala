@@ -145,16 +145,12 @@ package object `Π-loop`:
               case nel =>
                 val nelʹ = nel.map {
                   case (key1, key2, in, delay) =>
-                    val k1 = key1.substring(36)
-                    val k2 = key2.substring(36)
-                    val  ^ = key1.substring(0, 36)
-                    val ^^ = key2.substring(0, 36)
                     val (dc1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
                     val (dc2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
                     (key1, key2) -> (delay, in, (dc1, dc2))
                 }
                 nel.traverse {
-                  case (key1, key2, in, delay) =>
+                  case (key1, key2, _, _) =>
                     val k1 = key1.substring(36)
                     val k2 = key2.substring(36)
                     val  ^ = key1.substring(0, 36)
@@ -172,7 +168,8 @@ package object `Π-loop`:
                             else discard(k2, m)(using ^^)
                     yield
                       s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2)
-                }.map(_.foldRight(m)(_.foldLeft(_)(_ - _))) product *.offer((Set.empty -> (() => false), nelʹ))
+                }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
+                 .flatMap(mʹ => *.offer((Set.empty -> (() => false), nelʹ)).map(mʹ -> _))
     }
 
 
@@ -193,7 +190,7 @@ package object `Π-loop`:
         else ExitCode.Error
       } >>= (!.complete(_).void)
 
-  def loop(parallelism: Int, started: Ref[IO, Long])
+  def loop(parallelism: Int, started: Ref[IO, Int])
           (using % : %, ! : !, & : &, - : -, * : *, \ : \)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -202,18 +199,16 @@ package object `Π-loop`:
         if nel.isEmpty
         then
           (started.get product *.size).map(_ + _).flatMap {
-            case 0L if exit() =>
+            case 0 if exit() =>
               this.exit(keys.toList)
             case _ =>
-              IO.unit
+              loop(parallelism, started)
           }
         else
           Semaphore[IO](parallelism).flatMap { sem =>
             nel.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
-                                val  ^ = key1.substring(0, 36)
-                                val ^^ = key2.substring(0, 36)
                                 IO.uncancelable { _ =>
                                   for
                                     cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
@@ -249,8 +244,7 @@ package object `Π-loop`:
                                     ()
                                 }
                             }
-          }
-      _                   <- IO.cede >> loop(parallelism, started)
+          } >> IO.cede >> loop(parallelism, started)
     yield
       ()
 

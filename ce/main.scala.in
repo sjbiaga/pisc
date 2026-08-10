@@ -43,7 +43,7 @@ object App extends _root_.cats.effect.IOApp:
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
 
-  private def run(args: List[String], parallelism: Int, started: Ref[IO, Long])
+  private def run(args: List[String], parallelism: Int, started: Ref[IO, Int])
                  (% : %, / : /, * : *, - : -, ! : !, & : &, \ : \): IO[ExitCode] =
     ( for
         _ <- loop(parallelism, started)(using %, !, &, -, *, \)(π.`π-wand`).background
@@ -71,7 +71,7 @@ object App extends _root_.cats.effect.IOApp:
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- IO.deferred[ExitCode]
       & <- IO.ref(0L)
-      n <- IO.ref(0L)
+      n <- IO.ref(0)
       _ <- `π-enable`(π.`π-main`)(using %)
       ^ <- Semaphore[IO](1)
       \ <- IO.pure { (it: IO[Unit]) => ^.permit.use(_ => it >> peek(using %, *)(π.`π-wand`)) }
