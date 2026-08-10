@@ -37,7 +37,6 @@ package Π:
   import _root_.cats.effect.IO
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
 
-  import Π.{ exec, ν }
   import Π.`Π-magic`.{ ><, >*< }
 
 
@@ -251,7 +250,7 @@ package Π:
                                              opt <- ><(n.map(_.name))($ref)
                                              _   <- stopR.set(true).whenA(opt eq None)
                                            yield ())
-                        _ <- stopR.get.ifM(nextS.release >> loop.unlessA(remaining == 1),
+                        _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
                                            $sleep >> nextS.release >> $body(n) >> loop)
                       yield
                         ()
@@ -293,7 +292,7 @@ package Π:
                                            opt <- ><($value.map(_.name))($ref)
                                            _   <- stopR.set(true).whenA(opt eq None)
                                          yield ())
-                      _ <- stopR.get.ifM(nextS.release >> loop.unlessA(remaining == 1),
+                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
                                          $sleep >> nextS.release >> $body >> loop)
                     yield
                       ()
@@ -338,7 +337,7 @@ package Π:
                                              opt <- $value.flatMap(><(_)($ref))
                                              _   <- stopR.set(true).whenA(opt eq None)
                                            yield ())
-                        _ <- stopR.get.ifM(nextS.release >> loop.unlessA(remaining == 1),
+                        _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
                                            $sleep >> nextS.release >> $body >> loop)
                       yield
                         ()
@@ -380,7 +379,7 @@ package Π:
                                            name <- ><()($ref)
                                            _    <- stopR.set(true).whenA(name == null)
                                          yield name)
-                      _ <- stopR.get.ifM(nextS.release >> loop.unlessA(remaining == 1),
+                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
                                          $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
                     yield
                       ()
@@ -421,7 +420,7 @@ package Π:
                                            name <- ><()($ref)($code)
                                            _    <- stopR.set(true).whenA(name == null)
                                          yield name)
-                      _ <- stopR.get.ifM(nextS.release >> loop.unlessA(remaining == 1),
+                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
                                          $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
                     yield
                       ()

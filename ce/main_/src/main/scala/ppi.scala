@@ -62,7 +62,7 @@ package object Π:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
     def flatMap[B](f: `()` => IO[B]): IO[B] =
-      Queue.synchronous[IO, (Seq[Any], CyclicBarrier[IO])].map(><(_, false)).flatMap(IO.ref).map(`()`).flatMap(f)
+      Queue.unbounded[IO, (Seq[Any], CyclicBarrier[IO])].map(><(_, false)).flatMap(IO.ref).map(`()`).flatMap(f)
 
 
   /**
