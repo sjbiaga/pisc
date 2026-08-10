@@ -238,6 +238,7 @@ package object `Π-loop`:
                                               _ <- enable(k2).unlessA(k1 == k2)
                                               _ <- sem.release
                                               _ <- started.update(_ - 1)
+                                              _ <- peek
                                             yield
                                               ()
                                           ).start

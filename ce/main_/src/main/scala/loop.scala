@@ -25,6 +25,7 @@
  * or other dealings in this Software without prior written authorization
  * from Sebastian I. Gliţa-Catina.]
  */
+
 import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.Option.when
 
@@ -224,6 +225,7 @@ package object `Π-loop`:
                                               _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
                                               _  <- sem.release
                                               _  <- started.update(_ - 1)
+                                              _  <- peek
                                             yield
                                               ()
                                           ).start
