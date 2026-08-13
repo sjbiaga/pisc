@@ -613,8 +613,16 @@ object Program:
           case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
+      ( prog.tail.tail.head match
+          case (`(*)`(_, λ(Term.Tuple(List(threshold: Lit.Int, _)))), _) =>
+            Defn.Val(Nil, Pat.Var("π-batch-threshold") :: Nil, None, threshold)
+      ) ::
+      ( prog.tail.tail.head match
+          case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
+            Defn.Val(Nil, Pat.Var("π-batch-timeout") :: Nil, None, timeout)
+      ) ::
       prog
-        .drop(2)
+        .drop(3)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

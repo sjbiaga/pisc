@@ -27,7 +27,8 @@
  */
 
 import _root_.scala.collection.immutable.{ List, Map, Set }
-import _root_.scala.Option.when
+import _root_.scala.concurrent.duration.*
+import _root_.scala.Option.{ unless, when }
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
@@ -35,7 +36,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, FiberIO, Ref }
+import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, FiberIO, Ref, Resource }
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
@@ -43,6 +44,9 @@ import `Π-stats`.*
 
 
 package object `Π-loop`:
+
+  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
+
 
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
@@ -61,8 +65,12 @@ package object `Π-loop`:
 
   type \ = IO[Unit] => IO[Unit]
 
-  type ^ = ((Double, Double), Ref[IO, `()`], ((++, Ref[IO, Long]), (++, Ref[IO, Long])))
-  type * = Queue[IO, ((Set[String], () => Boolean), List[((String, String), ^)])]
+  type ++++ = ((Double, Double), Ref[IO, `()`], ((++, Ref[IO, Long]), (++, Ref[IO, Long])))
+  type ** = Queue[IO, ((Set[String], () => Boolean), List[((String, String), ++++)])]
+
+  type * = Semaphore[IO]
+
+  type ^ = Resource[IO, Unit]
 
 
   def `π-enable`(enabled: `Π-Set`[String])
@@ -100,7 +108,7 @@ package object `Π-loop`:
       IO.pure(Set.empty)
 
 
-  def peek(using % : %, * : *)
+  def peek(using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.evalModify { m =>
       { if m.exists(_._2.isInstanceOf[Int])
@@ -134,101 +142,120 @@ package object `Π-loop`:
         case (it: Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)], exit) =>
           if it.isEmpty
           then
-            *.offer((Set.empty -> exit, Nil)).map(m -> _)
+            **.offer((Set.empty -> exit, Nil)).map(m -> _)
           else
-            ∥(it)(`π-wand`._1)() match
-              case Nil =>
-                *.offer((it.keySet -> exit, Nil)).map(m -> _)
-              case nel =>
-                val nelʹ = nel.map {
-                  case (key1, key2, in, dd) =>
-                    val (dc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
-                    val (dc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
-                    (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
-                }
-                nel.traverse {
-                  case (key1, key2, _, _) =>
-                    val k1 = key1.substring(36)
-                    val k2 = key2.substring(36)
-                    val  ^ = key1.substring(0, 36)
-                    val ^^ = key2.substring(0, 36)
-                    val ((d1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-                    val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
-                    for
-                      o1 <- d1.tryGet
-                      o2 <- d2.tryGet
-                      s1 <- if o1 ne None
-                            then IO.pure(Set.empty)
-                            else discard(k1, m)(using ^)
-                      s2 <- if k1 == k2 || (o2 ne None)
-                            then IO.pure(Set.empty)
-                            else discard(k2, m)(using ^^)
-                    yield
-                      s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2)
-                }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
-                 .flatMap(mʹ => *.offer((Set.empty -> (() => false), nelʹ)).map(mʹ -> _))
+            val nel = ∥(it)(`π-wand`._1)()
+            val nelʹ = nel.map {
+              case (key1, key2, in, dd) =>
+                val (dc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
+                val (dc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
+                (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
+            }
+            nel.traverse {
+              case (key1, key2, in, delay) =>
+                val k1 = key1.substring(36)
+                val k2 = key2.substring(36)
+                val  ^ = key1.substring(0, 36)
+                val ^^ = key2.substring(0, 36)
+                val ((d1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+                val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+                for
+                  s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
+                  s2 <- d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
+                yield
+                  (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
+               -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
+            }.map(_.foldRight(m) {
+                    case ((ks, ls), map) =>
+                      ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
+                        .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
+                  }
+            ).flatMap(mʹ => **.offer((it.keySet -> exit, nelʹ)).map(mʹ -> _))
     }
 
 
-  def loop(parallelism: Int, started: Ref[IO, Int])
-          (using % : %, ! : !, & : &, - : -, * : *, \ : \)
+  private def exit(ks: List[String])
+                  (using % : %, ! : !): IO[Unit] =
+    if ks.isEmpty
+    then
+      !.complete(ExitCode.Success).void
+    else
+      %.get.flatMap { m =>
+        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
+        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
+                                                                     case it => it.get.flatMap(_.complete(None).void) })
+      }.as {
+        if !sys.BooleanProp.keyExists(spirsx).value
+        && ks.forall(_.charAt(36) == '!')
+        then ExitCode.Success
+        else ExitCode.Error
+      } >>= (!.complete(_).void)
+
+  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Boolean])
+          (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      ((keys, exit), nel) <- *.take
-      _                   <-
-        if nel.isEmpty
-        then
-          (started.get product *.size).map(_ + _).flatMap {
-            case 0 if exit() =>
-              -.offer(keys.toList)
-            case _ =>
-              loop(parallelism, started)
-          }
-        else
-          Semaphore[IO](parallelism).flatMap { sem =>
-            nel.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), ts1), ((d2, c2), ts2)))) =>
-                                val k1 = key1.substring(36)
-                                val k2 = key2.substring(36)
-                                IO.uncancelable { _ =>
-                                  for
-                                    cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                    o1 <- d1.tryGet
-                                    o2 <- d2.tryGet
-                                    _  <- sem.acquire
-                                    -- <- CyclicBarrier[IO](2)
-                                    _  <- started.update(_ + 1)
-                                    fb <- ( for
-                                              _  <- --.await.unlessA(c1 eq null)
-                                              _  <- --.await.unlessA(c2 eq null).unlessA(k1 == k2)
-                                              _  <- cb.await
-                                              _ <- \( for
-                                                        _  <- enable(k1)
-                                                        _  <- enable(k2).unlessA(k1 == k2)
-                                                        no <- &.updateAndGet(_ + 1)
-                                                        ss <- ts1.get product ts2.get
-                                                        now <- Clock[IO].monotonic.map(_.toNanos)
-                                                        _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
-                                                        _  <- sem.release
-                                                        _  <- started.update(_ - 1)
-                                                      yield
-                                                        ()
-                                                    )
-                                            yield
-                                              ()
-                                          ).start
-                                    _  <- d1.complete(Some((delay, cb, fb, in))).whenA(o1 eq None)
-                                    _  <- d2.complete(Some((delay, cb, fb, in))).whenA(o2 eq None).unlessA(k1 == k2)
-                                    _  <- (c1.get.flatMap(_.complete(Some((delay, cb, fb, in))))
-                                        >> %.update { m => m + (key1 -> (false, m(key1).asInstanceOf[(Boolean, +)]._2)) }
-                                        >> --.await).unlessA(c1 eq null)
-                                    _  <- (c2.get.flatMap(_.complete(Some((delay, cb, fb, in))))
-                                        >> %.update { m => m + (key2 -> (false, m(key2).asInstanceOf[(Boolean, +)]._2)) }
-                                        >> --.await).unlessA(c2 eq null).unlessA(k1 == k2)
-                                  yield
-                                    ()
+      _ <- (batch.set(false) >> *.acquire.guarantee(batch.set(true)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
+      m  =
+        for
+          ((keys, exit), nel) <- **.take
+          l                   <-
+            if nel.isEmpty
+            then
+              (started.get product *.available).map(_ + _).flatMap {
+                case 0L if exit() =>
+                  this.exit(keys.toList) >> IO.pure(false)
+                case _ =>
+                  IO.pure(true)
+              }
+            else
+              Semaphore[IO](parallelism).flatMap { sem =>
+                nel.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), ts1), ((d2, c2), ts2)))) =>
+
+                                    val k1 = key1.substring(36)
+                                    val k2 = key2.substring(36)
+                                    IO.uncancelable { _ =>
+                                      for
+                                        cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        _  <- sem.acquire
+                                        _  <- started.update(_ + 1)
+                                        fb <- ( for
+                                                  _  <- cb.await
+                                                  e   = ( for
+                                                            _ <- enable(k1)
+                                                            _ <- enable(k2).unlessA(k1 == k2)
+                                                          yield
+                                                            ()
+                                                        )
+                                                  _  <- if threshold > 0
+                                                        then e
+                                                        else ^.use(_ => e >> peek)
+                                                  no <- &.updateAndGet(_ + 1)
+                                                  ss <- ts1.get product ts2.get
+                                                  now <- Clock[IO].monotonic.map(_.toNanos)
+                                                  _  <- -.offer((no, (ss, now), (k1, k2), (delay, duration)))
+                                                  _  <- sem.release
+                                                  _  <- started.update(_ - 1)
+                                                yield
+                                                  ()
+                                              ).start
+                                        _  <- d1.complete(Some((delay, cb, fb, in)))
+                                        _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                      yield
+                                        ()
+                                    }
                                 }
-                            }
-          } >> IO.cede >> loop(parallelism, started)
+              } >> IO.pure(true)
+        yield
+          l
+      l <- if threshold > 0
+           then (batch.get product started.get)
+                .map(_ || _ == 0L)
+                .ifM(^.use(_ => (*.available >>= *.acquireN) >> peek >> m), IO.pure(true))
+           else m
+      _ <- loop(parallelism, threshold, timeout, started, batch).whenA(l)
     yield
       ()
 

@@ -614,7 +614,6 @@ object Program:
         (`* <- Stream.eval(*)`(`^-υidυ` -> Term.ApplyType(\("π-uuid"), Type.ArgClause(\\("F") :: Nil))), \(`^-υidυ`))
 
       prog
-        .drop(2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

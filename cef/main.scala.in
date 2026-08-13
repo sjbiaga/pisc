@@ -42,11 +42,17 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicbh = "pisc.stochastic.communications.batch.threshold"
+  private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
-  private def run(args: List[String], parallelism: Int, started: Ref[IO, Int])
-                 (% : %, / : /, * : *, - : -, ! : !, & : &, \ : \): IO[ExitCode] =
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Boolean])
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): IO[ExitCode] =
+    val \ =
+      if threshold > 0
+      then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- loop(parallelism, started)(using %, !, &, -, *, \)(π.`π-wand`).background
+        _ <- loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
       yield
@@ -64,18 +70,25 @@ object App extends _root_.cats.effect.IOApp:
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(spicbh).isSet
+            then sys.Prop.IntProp(spicbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(spicbt).isSet
+            then sys.Prop.IntProp(spicbt).value
+            else π.`π-batch-timeout`
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
-      * <- Queue.unbounded[IO, ((Set[String], () => Boolean), List[((String, String), ^)])]
+      * <- Semaphore[IO](0)
+      ** <- Queue.unbounded[IO, ((Set[String], () => Boolean), List[((String, String), ++++)])]
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- IO.deferred[ExitCode]
       & <- IO.ref(0L)
-      n <- IO.ref(0)
-      _ <- `π-enable`(π.`π-main`)(using %)
+      n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
-      \ <- IO.pure { (it: IO[Unit]) => ^.permit.use(_ => it >> peek(using %, *)(π.`π-wand`)) }
-      x <- run(args, p, n)(%, /, *, -, !, &, \)
+      b <- IO.ref(true)
+      _ <- `π-enable`(π.`π-main`)(using %)
+      x <- run(args, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       x
 

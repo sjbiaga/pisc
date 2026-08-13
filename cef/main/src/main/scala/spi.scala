@@ -456,7 +456,26 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[java.lang.Double] =
-      apply(rate, value)(key) <* exec(code)
+      for
+        _        <- exclude(key)
+        deferred <- IO.deferred[Option[<>]]
+        _        <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Left(())), rate)))
+        opt      <- deferred.get
+        delay    <- ( if opt eq None
+                      then
+                        IO.pure(null: java.lang.Double)
+                      else
+                        val (delay, b, f, i) = opt.get
+                        for
+                          _ <- i.set(value)
+                          _ <- b.await
+                          _ <- f.join
+                          _ <- exec(code)
+                        yield
+                          java.lang.Double(delay)
+                    )
+      yield
+        delay
 
     /**
       * positive prefix i.e. input
@@ -493,16 +512,33 @@ package object sΠ:
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, java.lang.Double)] =
+      for
+        _             <- exclude(key)
+        deferred      <- IO.deferred[Option[<>]]
+        result        <- IO.ref[`()`](sΠ.`()`.`null`)
+        _             <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Right(result)), rate)))
+        opt           <- deferred.get
+        (name, delay) <- ( if opt eq None
+                           then
+                             IO.pure(sΠ.`()`.`null` -> (null: java.lang.Double))
+                           else
+                             val (delay, b, f, _) = opt.get
+                             for
+                               _    <- b.await
+                               _    <- f.join
+                               name <- result.get.map(_.name).flatMap { case null  => IO.pure(sΠ.`()`.`null`)
+                                                                        case it: T => (code andThen exec)(it).map(new `()`(_))
+                                                                      }
+                             yield
+                               name -> java.lang.Double(delay)
+                         )
+      yield
+        name -> delay
       apply(rate)(key)
-        .map(_.name -> _)
-        .flatMap {
-          case (null, delay)  => IO.pure(sΠ.`()`.`null` -> delay)
-          case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
-        }
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `()`:
 
-     val `null` = new `()`(null)
+    val `null` = new `()`(null)

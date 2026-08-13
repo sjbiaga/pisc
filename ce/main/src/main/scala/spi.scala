@@ -441,9 +441,8 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String)(code: => IO[Any])
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
+             (using %, /)
+             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       apply(rate, value)(key) <* exec(code)
 
     /**
@@ -472,9 +471,8 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply[T](rate: Rate)(key: String)(code: T => IO[T])
-                (using % : %, / : /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[(`()`, Double)] =
+                (using %, /)
+                (using `Π-Map`[String, `Π-Set`[String]], String): IO[(`()`, Double)] =
       apply(rate)(key)
         .map(_.name -> _)
         .flatMap {

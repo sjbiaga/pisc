@@ -85,11 +85,21 @@ object Main extends helper.Main:
               case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
                 Defn.Val(Nil, Pat.Var(Term.Name("π-parallelism")) :: Nil, None, parallelism)
           )
-          :: Program.Main()(prog)
+          ::
+          ( prog.tail.tail.head match
+              case (`(*)`(_, λ(Term.Tuple(List(threshold: Lit.Int, _)))), _) =>
+                Defn.Val(Nil, Pat.Var(Term.Name("π-batch-threshold")) :: Nil, None, threshold)
+          )
+          ::
+          ( prog.tail.tail.head match
+              case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
+                Defn.Val(Nil, Pat.Var(Term.Name("π-batch-timeout")) :: Nil, None, timeout)
+          )
+          :: Program.Main()(prog.drop(3))
 
-        val is = prog_.drop(2).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(3).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(2).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(3).filter(_._1.isLeft).map(_.left.get -> _)
 
         val tc: String => Type =
           _.split('.').reverse match
@@ -102,7 +112,7 @@ object Main extends helper.Main:
             case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
               typeclasses.args.map { case Term.Name(it) => it }.toSet
 
-        val code = (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = (ps.drop(1+3).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
           .sortBy(_._2)
           .map(_._1)
 
@@ -117,7 +127,7 @@ object Main extends helper.Main:
                               Ctor.Primary(Nil, Name.Anonymous(), Seq.empty),
                               Template(None, Nil, Template.Body(None, code), Nil))
 
-        val codeʹ = ps.take(2).mkString("\n\n") + "\n\n" + main.toString
+        val codeʹ = ps.take(1+3).mkString("\n\n") + "\n\n" + main.toString
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString

@@ -35,7 +35,7 @@ package sΠ:
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ Clock, IO }
+  import _root_.cats.effect.{ IO, Clock }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
   import `Π-loop`.{ <>, +, %, /, \ }
@@ -150,7 +150,7 @@ package sΠ:
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
       ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
-    // /////////////////////////////////////////////////////////////////// INPUT //
+    /////////////////////////////////////////////////////////////////// INPUT //
 
     /**
       * linear replication input guard
@@ -248,7 +248,7 @@ package sΠ:
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
                 for
                   nextS <- Semaphore[IO](0)
                   main   =
@@ -261,45 +261,43 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, (new {}, Some(Left(())), $rate))))
+                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, (new {}, None, $rate))))
                                   opt      <- deferred.get
-                                  _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                  loop      = {
-                                    def loop(enabled: Boolean = prevS eq None)
-                                            (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                      for
-                                        _   <- linearCB.await
-                                        _   <- prevS.fold(IO.unit)(_.acquire)
-                                        _   <- timeset
-                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                        opt <- continue.get.flatMap(_.get)
-                                        _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                        _   <- IO.deferred[Option[<>]] >>= continue.set
-                                        (_, b,
-                                         f, _) = opt.get
-                                        _   <- b.await
-                                        _   <- f.join
-                                        _   <- $sleep
-                                        _   <- nextS.release
-                                        _   <- $body()(using ^)
-                                        _   <- loop(false)()
-                                      yield ()
-                                    loop()(IO.unit)
-                                  }
-                                yield
-                                  loop
+                                  _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                                yield {
+                                  def loop(enabled: Boolean = prevS eq None)
+                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                    for
+                                      _   <- linearCB.await
+                                      _   <- prevS.fold(IO.unit)(_.acquire)
+                                      _   <- timeset
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      opt <- continue.get.flatMap(_.get)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- IO.deferred[Option[<>]] >>= continue.set
+                                      (_, b,
+                                       f, _) = opt.get
+                                      _   <- b.await
+                                      _   <- f.join
+                                      _   <- $sleep
+                                      _   <- nextS.release
+                                      _   <- $body()(using ^^)
+                                      _   <- loop(false)()
+                                    yield ()
+                                  loop()(IO.unit)
+                                }
                               )
                       _    <- loop
                     yield
                       ()
                   _     <- if remaining == 1
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
                 yield
                   ()
               unfold
             }
-            _        <- supervise(unfold($parallelism, None)(${^}))
+            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -320,7 +318,7 @@ package sΠ:
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
                 for
                   nextS <- Semaphore[IO](0)
                   main   =
@@ -335,45 +333,43 @@ package sΠ:
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
                                   opt      <- deferred.get
-                                  _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                  loop      = {
-                                    def loop(enabled: Boolean = prevS eq None)
-                                            (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                      for
-                                        _   <- linearCB.await
-                                        _   <- prevS.fold(IO.unit)(_.acquire)
-                                        _   <- timeset
-                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                        opt <- continue.get.flatMap(_.get)
-                                        _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                        _   <- IO.deferred[Option[<>]] >>= continue.set
-                                        (_, b,
-                                         f, i) = opt.get
-                                        n   <- ν
-                                        _   <- i.set(n)
-                                        _   <- b.await
-                                        _   <- f.join
-                                        _   <- $sleep
-                                        _   <- nextS.release
-                                        _   <- $body(n)(using ^)
-                                        _   <- loop(false)()
-                                      yield ()
-                                    loop()(IO.unit)
-                                  }
-                                yield
-                                  loop
+                                  _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                                yield {
+                                  def loop(enabled: Boolean = prevS eq None)
+                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                    for
+                                      _   <- linearCB.await
+                                      _   <- prevS.fold(IO.unit)(_.acquire)
+                                      _   <- timeset
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      opt <- continue.get.flatMap(_.get)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- IO.deferred[Option[<>]] >>= continue.set
+                                      (_, b,
+                                       f, i) = opt.get
+                                      n   <- ν
+                                      _   <- i.set(n)
+                                      _   <- b.await
+                                      _   <- f.join
+                                      _   <- $sleep
+                                      _   <- nextS.release
+                                      _   <- $body(n)(using ^^)
+                                      _   <- loop(false)()
+                                    yield ()
+                                  loop()(IO.unit)
+                                }
                               )
                       _    <- loop
                     yield
                       ()
                   _     <- if remaining == 1
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
                 yield
                   ()
               unfold
             }
-            _        <- supervise(unfold($parallelism, None)(${^}))
+            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -391,7 +387,7 @@ package sΠ:
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
               for
                 nextS <- Semaphore[IO](0)
                 main   =
@@ -406,43 +402,42 @@ package sΠ:
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
                                 opt      <- deferred.get
-                                _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                loop      = {
-                                  def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                    for
-                                      _   <- linearCB.await
-                                      _   <- prevS.fold(IO.unit)(_.acquire)
-                                      _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, i) = opt.get
-                                      _   <- i.set($value)
-                                      _   <- b.await
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body()(using ^)
-                                      _   <- loop(false)()
-                                    yield ()
-                                  loop()(IO.unit)
-                                }
-                              yield loop
+                                _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                              yield {
+                                def loop(enabled: Boolean = prevS eq None)
+                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                  for
+                                    _   <- linearCB.await
+                                    _   <- prevS.fold(IO.unit)(_.acquire)
+                                    _   <- timeset
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    opt <- continue.get.flatMap(_.get)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- IO.deferred[Option[<>]] >>= continue.set
+                                    (_, b,
+                                     f, i) = opt.get
+                                    _   <- i.set($value)
+                                    _   <- b.await
+                                    _   <- f.join
+                                    _   <- $sleep
+                                    _   <- nextS.release
+                                    _   <- $body()(using ^^)
+                                    _   <- loop(false)()
+                                  yield ()
+                                loop()(IO.unit)
+                              }
                             )
                     _    <- loop
                   yield
                     ()
                 _     <- if remaining == 1
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
               yield
                 ()
             unfold
           }
-          _        <- supervise(unfold($parallelism, None)(${^}))
+          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }
@@ -463,7 +458,7 @@ package sΠ:
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
                 for
                   nextS <- Semaphore[IO](0)
                   main   =
@@ -478,43 +473,42 @@ package sΠ:
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
                                   opt      <- deferred.get
-                                  _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                  loop      = {
-                                    def loop(enabled: Boolean = prevS eq None)
-                                            (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                      for
-                                        _   <- timeset
-                                        _   <- linearCB.await
-                                        _   <- prevS.fold(IO.unit)(_.acquire)
-                                        _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                        opt <- continue.get.flatMap(_.get)
-                                        _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                        _   <- IO.deferred[Option[<>]] >>= continue.set
-                                        (_, b,
-                                         f, i) = opt.get
-                                        _   <- $value().map(new `()`(_)) >>= i.set
-                                        _   <- b.await
-                                        _   <- f.join
-                                        _   <- $sleep
-                                        _   <- nextS.release
-                                        _   <- $body()(using ^)
-                                        _   <- loop(false)()
-                                      yield ()
-                                    loop()(IO.unit)
-                                  }
-                                yield loop
+                                  _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                                yield {
+                                  def loop(enabled: Boolean = prevS eq None)
+                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                    for
+                                      _   <- linearCB.await
+                                      _   <- prevS.fold(IO.unit)(_.acquire)
+                                      _   <- timeset
+                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      opt <- continue.get.flatMap(_.get)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- IO.deferred[Option[<>]] >>= continue.set
+                                      (_, b,
+                                       f, i) = opt.get
+                                      _   <- $value().map(new `()`(_)) >>= i.set
+                                      _   <- b.await
+                                      _   <- f.join
+                                      _   <- $sleep
+                                      _   <- nextS.release
+                                      _   <- $body()(using ^^)
+                                      _   <- loop(false)()
+                                    yield ()
+                                  loop()(IO.unit)
+                                }
                               )
                       _    <- loop
                     yield
                       ()
                   _     <- if remaining == 1
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
                 yield
                   ()
               unfold
             }
-            _        <- supervise(unfold($parallelism, None)(${^}))
+            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -533,7 +527,7 @@ package sΠ:
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
               for
                 nextS <- Semaphore[IO](0)
                 main   =
@@ -549,43 +543,42 @@ package sΠ:
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Right(result)), $rate))))
                                 opt      <- deferred.get
-                                _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                loop      = {
-                                  def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                    for
-                                      _   <- linearCB.await
-                                      _   <- prevS.fold(IO.unit)(_.acquire)
-                                      _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, _) = opt.get
-                                      _   <- b.await
-                                      _   <- f.join
-                                      n   <- result.get
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body(n)(using ^)
-                                      _   <- loop(false)()
-                                    yield ()
-                                  loop()(IO.unit)
-                                }
-                              yield loop
+                                _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                              yield {
+                                def loop(enabled: Boolean = prevS eq None)
+                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                  for
+                                    _   <- linearCB.await
+                                    _   <- prevS.fold(IO.unit)(_.acquire)
+                                    _   <- timeset
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    opt <- continue.get.flatMap(_.get)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- IO.deferred[Option[<>]] >>= continue.set
+                                    (_, b,
+                                     f, _) = opt.get
+                                    _   <- b.await
+                                    _   <- f.join
+                                    n   <- result.get
+                                    _   <- $sleep
+                                    _   <- nextS.release
+                                    _   <- $body(n)(using ^^)
+                                    _   <- loop(false)()
+                                  yield ()
+                                loop()(IO.unit)
+                              }
                             )
                     _    <- loop
                   yield
                     ()
                 _     <- if remaining == 1
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
               yield
                 ()
             unfold
           }
-          _        <- supervise(unfold($parallelism, None)(${^}))
+          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }
@@ -603,7 +596,7 @@ package sΠ:
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Option[Semaphore[IO]])(^ : String)(^^ : String): IO[Unit] =
               for
                 nextS <- Semaphore[IO](0)
                 main   =
@@ -619,43 +612,42 @@ package sΠ:
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Right(result)), $rate))))
                                 opt      <- deferred.get
-                                _        <- (linearD.complete(opt eq None) >> IO.never.whenA(opt eq None)).whenA(prevS eq None)
-                                loop      = {
-                                  def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
-                                    for
-                                      _   <- linearCB.await
-                                      _   <- prevS.fold(IO.unit)(_.acquire)
-                                      _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, _) = opt.get
-                                      _   <- b.await
-                                      _   <- f.join
-                                      n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body(n)(using ^)
-                                      _   <- loop(false)()
-                                    yield ()
-                                  loop()(IO.unit)
-                                }
-                              yield loop
+                                _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
+                              yield {
+                                def loop(enabled: Boolean = prevS eq None)
+                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                  for
+                                    _   <- linearCB.await
+                                    _   <- prevS.fold(IO.unit)(_.acquire)
+                                    _   <- timeset
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    opt <- continue.get.flatMap(_.get)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- IO.deferred[Option[<>]] >>= continue.set
+                                    (_, b,
+                                     f, _) = opt.get
+                                    _   <- b.await
+                                    _   <- f.join
+                                    n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
+                                    _   <- $sleep
+                                    _   <- nextS.release
+                                    _   <- $body(n)(using ^^)
+                                    _   <- loop(false)()
+                                  yield ()
+                                loop()(IO.unit)
+                              }
                             )
                     _    <- loop
                   yield
                     ()
                 _     <- if remaining == 1
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS)) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, Some(nextS))(^^) }
               yield
                 ()
             unfold
           }
-          _        <- supervise(unfold($parallelism, None)(${^}))
+          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }

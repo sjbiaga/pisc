@@ -58,7 +58,7 @@ function spi() {
     done
     set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC4 \
+                  -q -O -nowarn -S 3.9.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -66,6 +66,8 @@ function spi() {
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                  -Dpisc.stochastic.communications.parallelism.level=9 \
+#                  -Dpisc.stochastic.communications.batch.threshold=0 \
+#                  -Dpisc.stochastic.communications.batch.timeout=1 \
 }
 
 function spi_() {
@@ -126,7 +128,7 @@ function spi_() {
     done
     set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC4 \
+                  -q -O -nowarn -S 3.9.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -134,6 +136,8 @@ function spi_() {
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                  -Dpisc.stochastic.communications.parallelism.level=9 \
+#                  -Dpisc.stochastic.communications.batch.threshold=0 \
+#                  -Dpisc.stochastic.communications.batch.timeout=1 \
 }
 
 function spio() {
