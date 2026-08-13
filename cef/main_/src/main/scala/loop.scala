@@ -152,7 +152,7 @@ package object `Π-loop`:
                 (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
             }
             nel.traverse {
-              case (key1, key2, in, delay) =>
+              case (key1, key2, _, _) =>
                 val k1 = key1.substring(36)
                 val k2 = key2.substring(36)
                 val  ^ = key1.substring(0, 36)
@@ -202,7 +202,7 @@ package object `Π-loop`:
           l                   <-
             if nel.isEmpty
             then
-              (started.get product *.available).map(_ + _).flatMap {
+              (started.get product (if threshold > 0 then *.available else **.size.map(_.toLong))).map(_ + _).flatMap {
                 case 0L if exit() =>
                   this.exit(keys.toList) >> IO.pure(false)
                 case _ =>
@@ -253,7 +253,7 @@ package object `Π-loop`:
       l <- if threshold > 0
            then (batch.get product started.get)
                 .map(_ || _ == 0L)
-                .ifM(^.use(_ => (*.available >>= *.acquireN) >> peek >> m), IO.pure(true))
+                .ifM(^.use(_ => peek *> m <* (*.available >>= *.acquireN)), IO.pure(true))
            else m
       _ <- loop(parallelism, threshold, timeout, started, batch).whenA(l)
     yield

@@ -37,7 +37,7 @@ object App extends _root_.zio.ZIOAppDefault:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.zio.{ ExitCode, Queue, Ref }
+  import _root_.zio.{ ExitCode, Queue, Ref, Semaphore => SemaphoreZIO }
 
   import _root_.zio.ZIOAppArgs
 
@@ -45,14 +45,21 @@ object App extends _root_.zio.ZIOAppDefault:
   import `Π-loop`.*
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicbh = "pisc.stochastic.communications.batch.threshold"
+  private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
-  private def run(parallelism: Int, started: Ref[Long], args: List[String])(% : %, / : /, * : *, - : -, ! : !, & : &): UIO[ExitCode] =
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Boolean])
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
+    val \ =
+      if threshold > 0
+      then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
+      else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
-      l <- loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`).fork
-      _ <- poll(using %, /, *).fork
+      l <- loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
+      _ <- poll(using %, /, \).fork
       d <- dump(using %, !, -).fork
       ^ <- π.`π-uuid`
-      _ <- π.Main(args*)(using ^)(using %, /, *.release)
+      _ <- π.Main(args*)(using ^)(using %, /, \)
       x <- !.await
       _ <- l.join
       _ <- d.join
@@ -63,17 +70,26 @@ object App extends _root_.zio.ZIOAppDefault:
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(spicbh).isSet
+            then sys.Prop.IntProp(spicbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(spicbt).isSet
+            then sys.Prop.IntProp(spicbt).value
+            else π.`π-batch-timeout`
     for
       args <- getArgs
-      % <- Ref.make(Map[String, Int | +]())
+      % <- Ref.Synchronized.make(Map[String, Int | +]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
+      ** <- Queue.unbounded[((Set[String], () => Boolean), List[((String, String), ++++)])]
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(p, n, args.toList)(%, /, *, -, !, &)
+      ^ <- SemaphoreZIO.make(1)
+      b <- Ref.make(true)
+      x <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^, -, !, &)
       _ <- exit(x)
     yield
       ()

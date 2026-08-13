@@ -276,7 +276,7 @@ object Directive:
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
-                      var par: Int = 9,
+                      var par: Int = Int.MaxValue,
                       var batch: (Int, Int) = (0, 1),
                       var traces: Option[Option[String]] = None):
 

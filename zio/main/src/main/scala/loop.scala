@@ -26,11 +26,11 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.{ List, Map }
+import _root_.scala.collection.immutable.{ List, Map, Set }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ ExitCode, Fiber, Promise, Queue, Ref, UIO, ZIO }
+import _root_.zio.{ durationInt, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 
 import `Π-dump`.*
@@ -59,8 +59,12 @@ package object `Π-loop`:
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ^ = (Double, Ref[`()`], (++, ++))
-  type * = Queue[((Set[String], () => Boolean), List[((String, String), ^)])]
+  type ++++ = (Double, Ref[`()`], (++, ++))
+  type ** = Queue[((Set[String], () => Boolean), List[((String, String), ++++)])]
+
+  type * = Semaphore[UIO]
+
+  type ^ = SemaphoreZIO
 
 
   def `π-enable`(enabled: `Π-Set`[String])
@@ -89,7 +93,6 @@ package object `Π-loop`:
     ZIO.collectAllParDiscard(discarded.toList.map(unblock(map, _))).as(discarded.map(^ + _))
 
   private def discard(key: String, map: Map[String, Int | +])(using String)
-                     (using %)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Set[String]] =
     val (trick, _) = `π-wand`
     if trick.contains(key)
@@ -99,7 +102,7 @@ package object `Π-loop`:
       ZIO.succeed(Set.empty)
 
 
-  def peek(using % : %, * : *)
+  def peek(using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modifyZIO { m =>
       { if m.exists(_._2.isInstanceOf[Int])
@@ -132,34 +135,32 @@ package object `Π-loop`:
         case (it: Map[String, ({}, Option[Either[Unit, Ref[`()`]]], Rate)], exit) =>
           if it.isEmpty
           then
-            *.offer((Set.empty -> exit, Nil)).unit.map(_ -> m)
+            **.offer((Set.empty -> exit, Nil)).unit.map(_ -> m)
           else
-            ∥(it)(`π-wand`._1)() match
-              case Nil =>
-                *.offer((it.keySet -> exit, Nil)).unit.map(_ -> m)
-              case nel =>
-                val nelʹ = nel.map {
-                  case (key1, key2, in, delay) =>
-                    val (p1, _) = m(key1).asInstanceOf[+]
-                    val (p2, _) = m(key2).asInstanceOf[+]
-                    (key1, key2) -> (delay, in, (p1, p2))
-                }
-                ZIO.collectAll {
-                  nel.map { case (key1, key2, _, _) =>
-                              val k1 = key1.substring(36)
-                              val k2 = key2.substring(36)
-                              val  ^ = key1.substring(0, 36)
-                              val ^^ = key2.substring(0, 36)
-                              for
-                                s1 <- discard(k1, m)(using ^)
-                                s2 <- if k1 == k2
-                                      then ZIO.succeed(Set.empty)
-                                      else discard(k2, m)(using ^^)
-                              yield
-                                s1 ++ s2 + key1 + key2
-                          }
-                }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
-                 .flatMap(mʹ => *.offer((Set.empty -> (() => false), nelʹ)).unit.map(_ -> mʹ))
+            val nel = ∥(it)(`π-wand`._1)()
+            val nelʹ = nel.map {
+              case (key1, key2, in, delay) =>
+                val (p1, _) = m(key1).asInstanceOf[+]
+                val (p2, _) = m(key2).asInstanceOf[+]
+                (key1, key2) -> (delay, in, (p1, p2))
+            }
+            ZIO.collectAll {
+              nel.map {
+                case (key1, key2, _, _) =>
+                  val k1 = key1.substring(36)
+                  val k2 = key2.substring(36)
+                  val  ^ = key1.substring(0, 36)
+                  val ^^ = key2.substring(0, 36)
+                  for
+                    s1 <- discard(k1, m)(using  ^)
+                    s2 <- if k1 == k2
+                          then ZIO.succeed(Set.empty)
+                          else discard(k2, m)(using ^^)
+                  yield
+                    s1 ++ s2 + key1 + key2
+              }
+            }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
+             .flatMap(mʹ => **.offer((it.keySet -> exit, nelʹ)).unit.map(_ -> mʹ))
     }
 
 
@@ -178,53 +179,70 @@ package object `Π-loop`:
         else ExitCode.failure
       }.flatMap(!.succeed(_).unit)
 
-
-  def loop(parallelism: Int, started: Ref[Int])
-          (using % : %, ! : !, & : &, - : -, * : *, \ : \)
+  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Boolean])
+          (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      ((keys, exit), nel) <- *.take
-      _                   <-
-        if nel.isEmpty
-        then
-          (started.get <*> *.size).map(_ + _).flatMap {
-            case 0 if exit() =>
-              this.exit(keys.toList)
-            case _ =>
-              loop(parallelism, started)
-          }
-        else
-          Semaphore[UIO](parallelism).flatMap { sem =>
-            ZIO.collectAllParDiscard {
-              nel.map { case ((key1, key2), (delay, in, (p1, p2))) =>
-                          val k1 = key1.substring(36)
-                          val k2 = key2.substring(36)
-                          ZIO.uninterruptible {
-                            for
-                              cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                              _  <- sem.acquire
-                              _  <- started.update(_ + 1)
-                              fb <- ( for
-                                        _ <- cb.await.exit
-                                        _ <- \( for
-                                                  _ <- enable(k1)
-                                                  _ <- enable(k2).unless(k1 == k2)
-                                                  _ <- sem.release
-                                                  _ <- started.update(_ - 1)
-                                                yield
-                                                  ()
-                                              )
-                                      yield
-                                        ()
-                                    ).fork
-                              _  <- p1.succeed(Some((delay, cb, fb, in)))
-                              _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
-                            yield
-                              ()
-                          }
+      _ <- (batch.set(false) *> *.acquire.ensuring(batch.set(true)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
+      m  =
+        for
+          ((keys, exit), nel) <- **.take
+          l                   <-
+            if nel.isEmpty
+            then
+              (started.get <*> (if threshold > 0 then *.available else **.size.map(_.toLong))).map(_ + _).flatMap {
+                case 0L if exit() =>
+                  this.exit(keys.toList) *> ZIO.succeed(false)
+                case _ =>
+                  ZIO.succeed(true)
               }
-            }
-          } *> loop(parallelism, started)
+            else
+              Semaphore[UIO](parallelism).flatMap { sem =>
+                ZIO.collectAllParDiscard {
+                  nel.map { case ((key1, key2), (delay, in, (p1, p2))) =>
+                              val k1 = key1.substring(36)
+                              val k2 = key2.substring(36)
+                              ZIO.uninterruptible {
+                                for
+                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                                  _  <- sem.acquire
+                                  _  <- started.update(_ + 1)
+                                  fb <- ( for
+                                            _ <- cb.await.exit
+                                            e  = ( for
+                                                     _ <- enable(k1)
+                                                     _ <- enable(k2).unless(k1 == k2)
+                                                   yield
+                                                     ()
+                                                 )
+                                            _ <- if threshold > 0
+                                                 then e
+                                                 else ^.withPermit(e *> peek)
+                                            _ <- sem.release
+                                            _ <- started.update(_ - 1)
+                                          yield
+                                            ()
+                                        ).fork
+                                  _  <- p1.succeed(Some((delay, cb, fb, in)))
+                                  _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                yield
+                                  ()
+                              }
+                          }
+                }
+              } *> ZIO.succeed(true)
+        yield
+          l
+      l <- if threshold > 0
+           then (batch.get <*> started.get)
+                .map(_ || _ == 0L)
+                .flatMap {
+                  if _
+                  then ^.withPermit(peek *> m <* *.available.flatMap(*.acquireN))
+                  else ZIO.succeed(true)
+                }
+           else m
+      _ <- loop(parallelism, threshold, timeout, started, batch).when(l)
     yield
       ()
 

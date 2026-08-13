@@ -66,7 +66,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
@@ -140,8 +140,7 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): UIO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)
@@ -154,8 +153,7 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Task[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): UIO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
@@ -167,8 +165,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => Task[S])(key: String)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): UIO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
@@ -180,8 +177,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): UIO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
@@ -223,7 +219,27 @@ package object sΠ:
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): UIO[java.lang.Double] =
-      apply(rate, value)(key) <* exec(code)
+      for
+        _        <- exclude(key)
+        promise  <- Promise.make[Nothing, Option[<>]]
+        timestamp <- Clock.nanoTime
+        _        <- /.offer(^ -> key -> (promise -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        opt      <- promise.await
+        delay    <- ( if opt eq None
+                      then
+                        ZIO.succeed(null: java.lang.Double)
+                      else
+                        val (delay, b, f, i) = opt.get
+                        for
+                          _ <- i.set(value)
+                          _ <- b.await.exit
+                          _ <- f.join
+                          _ <- exec(code)
+                        yield
+                          java.lang.Double(delay)
+                    )
+      yield
+        delay
 
     /**
       * positive prefix i.e. input
@@ -261,16 +277,33 @@ package object sΠ:
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): UIO[(`()`, java.lang.Double)] =
-      apply(rate)(key)
-        .map(_.name -> _)
-        .flatMap {
-          case (null, delay)  => ZIO.succeed(sΠ.`()`.`null` -> delay)
-          case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
-        }
+      for
+        _             <- exclude(key)
+        promise       <- Promise.make[Nothing, Option[<>]]
+        result        <- Ref.make[`()`](sΠ.`()`.`null`)
+        timestamp <- Clock.nanoTime
+        _        <- /.offer(^ -> key -> (promise, (timestamp -> (`()`[{}], Some(Right(result)), rate))))
+        opt           <- promise.await
+        (name, delay) <- ( if opt eq None
+                           then
+                             ZIO.succeed(sΠ.`()`.`null` -> (null: java.lang.Double))
+                           else
+                             val (delay, b, f, _) = opt.get
+                             for
+                               _    <- b.await.exit
+                               _    <- f.join
+                               name <- result.get.map(_.name).flatMap { case null  => ZIO.succeed(sΠ.`()`.`null`)
+                                                                        case it: T => (code andThen exec)(it).map(new `()`(_))
+                                                                      }
+                             yield
+                               name -> java.lang.Double(delay)
+                         )
+      yield
+        name -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 
 
   private object `()`:
 
-     val `null` = new `()`(null)
+    val `null` = new `()`(null)

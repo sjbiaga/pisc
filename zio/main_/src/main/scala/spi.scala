@@ -132,10 +132,9 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
-                          (using DummyImplicit)
-                          (using %, /)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): UIO[Double] =
+                                     (using DummyImplicit)
+                                     (using %, /)
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)
@@ -146,10 +145,9 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Task[Any])
-                          (using DummyImplicit)
-                          (using %, /)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): UIO[Double] =
+                                    (using DummyImplicit)
+                                    (using %, /)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
@@ -160,9 +158,8 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => Task[S])(key: String)
-                          (using %, /)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): UIO[Double] =
+                                     (using %, /)
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
@@ -173,9 +170,8 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])
-                          (using %, /)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): UIO[Double] =
+                                    (using %, /)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
@@ -208,9 +204,8 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String)(code: => Task[Any])
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): UIO[Double] =
+             (using %, /)
+             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
       apply(rate, value)(key) <* exec(code)
 
     /**
@@ -240,9 +235,8 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply[T](rate: Rate)(key: String)(code: T => Task[T])
-                (using % : %, / : /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): UIO[(`()`, Double)] =
+                (using %, /)
+                (using `Π-Map`[String, `Π-Set`[String]], String): UIO[(`()`, Double)] =
       apply(rate)(key)
         .map(_.name -> _)
         .flatMap {
@@ -255,4 +249,4 @@ package object sΠ:
 
   private object `()`:
 
-     val `null` = new `()`(null)
+    val `null` = new `()`(null)
