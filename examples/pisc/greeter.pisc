@@ -2,15 +2,15 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
-⟦ INCLUDE = (ce,zio,zs) ⟧
+                                                       ⟦ INCLUDE = (ce,zio,zs) ⟧
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-⟦ INCLUDE = (fs2,monix) ⟧
+                                                       ⟦ INCLUDE = (fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], String] = _.`()`[String]
 
-⟦ INCLUDE = ce ⟧
+                                                                ⟦ INCLUDE = ce ⟧
 
 @val nl: Seq[String] => IO[Seq[String]] = { case Seq(it) => IO.pure { Seq(s"$it\n") } }
 
@@ -18,7 +18,7 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -28,9 +28,9 @@
 
 @def blocking[F[_]: Async](a: => Any) = Async[F].blocking(a)
 
-⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
-⟦ INCLUDE = monix ⟧
+                                                             ⟦ INCLUDE = monix ⟧
 
 @def nl[F[_]: Concurrent]: Seq[String] => F[Seq[String]] = { case Seq(it) => Concurrent[F].pure { Seq(s"$it\n") } }
 
@@ -38,7 +38,7 @@
 
 @def blocking[F[_]: Concurrent](a: => Any) = Concurrent[F].delay(a)
 
-⟦ INCLUDE = (zio,zs) ⟧
+                                                          ⟦ INCLUDE = (zio,zs) ⟧
 
 @val nl: Seq[String] => Task[Seq[String]] = { case Seq(it) => ZIO.succeed { Seq(s"$it\n") } }
 
@@ -46,7 +46,7 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ EXCLUDE = 0 ⟧
+                                                                 ⟦ EXCLUDE = 0 ⟧{greeter}
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout)
 

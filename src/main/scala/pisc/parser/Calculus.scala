@@ -153,11 +153,11 @@ abstract class Calculus extends PolyadicPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> scale >> { // [guarded] replication
-      case parallelism =>
+    ("!"|"¡") ~ scale >> { // [guarded] replication
+      case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
-        if parallelismʹ.abs == 1 && _settings.replication._2 && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
-        parallelismʹ = if parallelismʹ < 2 || !emitter.featuresLinearReplication || !_settings.replication._2 then parallelismʹ else -parallelismʹ
+        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡") && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
+        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡") || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         opt( pace ) ~ opt( "."~>μ(Some(parallelismʹ))<~"." ) >> {
           case _ ~ Some((π(λ(ch: Symbol), Some(cons), _, _*), _)) if cons.nonEmpty && cons != "ν" =>
             throw ConsGuardParsingException(cons, ch.name)
