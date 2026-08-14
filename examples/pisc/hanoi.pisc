@@ -64,12 +64,10 @@
 
                                                                  ⟦ EXCLUDE = 0 ⟧{hanoi}
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
-
 Main = ν(a,b,c)                                       \
-     ( (!.a<"a">.)                                    \
-     | (!.b<"b">.)                                    \
-     | (!.c<"c">.)                                    \
+     ( (¡.a<"a">.)                                    \
+     | (¡.b<"b">.)                                    \
+     | (¡.c<"c">.)                                    \
      | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 

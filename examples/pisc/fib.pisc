@@ -2,13 +2,37 @@
 
 @import eu.timepit.refined.numeric.*
 
-@given Conversion[`()`, Long] = _.`()`[Long]
-
 @val max = 13
 
 @val gen = new scala.util.Random
 
 @def random = 3+gen.nextLong(max)
+
+                                                    ⟦ INCLUDE = (ce,zio,kk,zs) ⟧
+
+@given Conversion[`()`, Long] = _.`()`[Long]
+
+                                                       ⟦ INCLUDE = (fs2,monix) ⟧
+
+@given [F[_]]: Conversion[`()`[F], Long] = _.`()`[Long]
+
+                                                               ⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def println[F[_]: Console](a: Any) = Console[F].println(a)
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+
+                                                             ⟦ INCLUDE = monix ⟧
+
+@def println[F[_]: Concurrent](a: Any) = Concurrent[F].delay(Console.println(a))
+
+                                                                ⟦ INCLUDE = zs ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{fib}
 
 Main = 1 * 1 * ν(num) Main(num)
 
