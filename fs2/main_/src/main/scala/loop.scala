@@ -169,7 +169,9 @@ package object `Π-loop`:
               val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +[F])]._2
               for
                 s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else Temporal[F].pure(Set.empty) }
-                s2 <- d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else Temporal[F].pure(Set.empty) }
+                s2 <- if k1 == k2
+                      then Temporal[F].pure(Set.empty)
+                      else d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else Temporal[F].pure(Set.empty) }
               yield
                 (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
              -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)

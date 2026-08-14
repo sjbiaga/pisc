@@ -93,9 +93,9 @@ object App extends _root_.cats.effect.IOApp:
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
-      _ <- `π-enable`[π.F](π.`π-main`)(using %)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      _ <- `π-enable`[π.F](π.`π-main`)(using %)
       x <- run(args, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       x

@@ -66,7 +66,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
@@ -133,7 +133,7 @@ package object sΠ:
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -197,7 +197,7 @@ package object sΠ:
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
@@ -338,7 +338,7 @@ package object sΠ:
                           for
                             _        <- -.await.exit
                             _        <- *.fold(ZIO.unit)(_.acquire)
-                            _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                            _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                             cb_fb_in <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                             _        <- enabled.set(false)
@@ -415,7 +415,7 @@ package object sΠ:
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -555,7 +555,7 @@ package object sΠ:
                   for
                     _        <- -.await.exit
                     _        <- *.fold(ZIO.unit)(_.acquire)
-                    _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                    _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                     _        <- enabled.set(false)
@@ -630,7 +630,7 @@ package object sΠ:
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -700,7 +700,7 @@ package object sΠ:
                       it <- sΠ.ν
                       _ <- ZStream.fromZIO {
                         for
-                          _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                          _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                           cb_fb_in <- continue.get.flatMap(_.await)
                           _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                           _        <- enabled.set(false)
@@ -766,7 +766,7 @@ package object sΠ:
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
@@ -895,7 +895,7 @@ package object sΠ:
               sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
               _  <- ZStream.fromZIO {
                 for
-                  _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
@@ -959,7 +959,7 @@ package object sΠ:
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)

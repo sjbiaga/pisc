@@ -102,9 +102,9 @@ object App extends CatsApp:
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
-      _ <- `π-enable`[π.F](π.`π-main`)(using %)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      _ <- `π-enable`[π.F](π.`π-main`)(using %)
       _ <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       ()

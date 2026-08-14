@@ -41,9 +41,11 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-dump`.*
   import `Π-loop`.*
 
+
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
   private val spicbh = "pisc.stochastic.communications.batch.threshold"
   private val spicbt = "pisc.stochastic.communications.batch.timeout"
+
 
   private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Long])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): IO[ExitCode] =

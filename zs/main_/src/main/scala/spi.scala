@@ -66,7 +66,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
@@ -135,7 +135,7 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- Clock.nanoTime.flatMap(timestamp.set)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -201,7 +201,7 @@ package object sΠ:
           _  <- ZStream.fromZIO {
             for
               _        <- Clock.nanoTime.flatMap(timestamp.set)
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
@@ -345,7 +345,7 @@ package object sΠ:
                             _        <- -.await.exit
                             _        <- *.fold(ZIO.unit)(_.acquire)
                             _        <- Clock.nanoTime.flatMap(timestamp.set)
-                            _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                            _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                             cb_fb_in <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                             _        <- enabled.set(false)
@@ -424,7 +424,7 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- Clock.nanoTime.flatMap(timestamp.set)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -566,7 +566,7 @@ package object sΠ:
                     _        <- -.await.exit
                     _        <- *.fold(ZIO.unit)(_.acquire)
                     _        <- Clock.nanoTime.flatMap(timestamp.set)
-                    _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                    _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                     _        <- enabled.set(false)
@@ -643,7 +643,7 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- Clock.nanoTime.flatMap(timestamp.set)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -715,7 +715,7 @@ package object sΠ:
                       _ <- ZStream.fromZIO {
                         for
                           _        <- Clock.nanoTime.flatMap(timestamp.set)
-                          _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                          _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                           cb_fb_in <- continue.get.flatMap(_.await)
                           _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                           _        <- enabled.set(false)
@@ -783,7 +783,7 @@ package object sΠ:
           _  <- ZStream.fromZIO {
             for
               _        <- Clock.nanoTime.flatMap(timestamp.set)
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
@@ -914,7 +914,7 @@ package object sΠ:
               _  <- ZStream.fromZIO {
                 for
                   _        <- Clock.nanoTime.flatMap(timestamp.set)
-                  _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
@@ -980,7 +980,7 @@ package object sΠ:
           _  <- ZStream.fromZIO {
             for
               _        <- Clock.nanoTime.flatMap(timestamp.set)
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)

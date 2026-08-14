@@ -36,12 +36,9 @@ import _root_.zio.{ Promise, ZIO, UIO }
 
 object App extends _root_.zio.ZIOAppDefault:
 
-  private val spicsp = "pisc.stochastic.communications.parallelism.level"
-
-
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.zio.{ ExitCode, Queue, Ref }
+  import _root_.zio.{ ExitCode, Queue, Ref, Semaphore => SemaphoreZIO }
 
   import _root_.zio.ZIOAppArgs
 
@@ -49,18 +46,27 @@ object App extends _root_.zio.ZIOAppDefault:
   import `Π-loop`.*
 
 
-  private def run(args: List[String], parallelism: Int, started: Ref[Long])
-                 (% : %, / : /, * : *, - : -, ! : !, & : &) =
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicbh = "pisc.stochastic.communications.batch.threshold"
+  private val spicbt = "pisc.stochastic.communications.batch.timeout"
+
+
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Long])
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &) =
+    val \ =
+      if threshold > 0
+      then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
+      else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     ( for
         ^ <- ZStream.fromZIO(π.`π-uuid`)
-        _ <- π.Main(args*)(using ^)(using %, /, *.release)
+        _ <- π.Main(args*)(using ^)(using %, /, \)
         x <- ZStream.fromZIO(!.await)
         _ <- ZStream.fromZIO(exit(x))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`)))
-      .drainFork(ZStream.fromZIO(poll(using %, /, *)))
+      .drainFork(ZStream.fromZIO(loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dump(using %, !, -)))
       .runDrain
 
@@ -68,17 +74,26 @@ object App extends _root_.zio.ZIOAppDefault:
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(spicbh).isSet
+            then sys.Prop.IntProp(spicbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(spicbt).isSet
+            then sys.Prop.IntProp(spicbt).value
+            else π.`π-batch-timeout`
     for
       args <- getArgs
-      % <- Ref.make(Map[String, Int | (Boolean, +)]())
+      % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
+      ** <- Queue.unbounded[((() => Set[String], () => Boolean), List[((String, String), ++++)])]
       - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
+      ^ <- SemaphoreZIO.make(1)
+      b <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      _ <- run(args.toList, p, n)(%, /, *, -, !, &)
+      _ <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^, -, !, &)
     yield
       ()
 
