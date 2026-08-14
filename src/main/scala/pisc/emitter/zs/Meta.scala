@@ -176,6 +176,9 @@ object Meta extends emitter.shared.effects.Meta:
     )
 
 
+  private def `given String = ^._2`(using ^ : (Enumerator.Generator, Term.Name)) =
+    Enumerator.Val(Pat.Given(\\("String")), ^._2)
+
   private def `_ <- +`(parallelism: Int,
                        promise: String,
                        cbarrier: String,
@@ -200,17 +203,17 @@ object Meta extends emitter.shared.effects.Meta:
         ) :: Nil,
         `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                    Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                                                                    Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
                                                "drainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),
-                                                                    `for * yield ()`(^._1
-                                                                                  :: `_ <- *`(Term.Apply(Term.Apply(\(name),
-                                                                                                                    Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                                                                :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil)),
-                                                                                                         Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))*)) :: Nil)))*)
+                                                                    Term.Apply(Term.Apply(\(name),
+                                                                                          Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
+                                                                                                      :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil)),
+                                                                               Term.ArgClause(^._2 :: Nil, Some(Mod.Using())))) :: Nil)))*)
       )
 
     `* <- ZStream.fromZIO(*)`(promise, Term.ApplyType(Term.Select("Promise", "make"), Type.ArgClause(\\("Nothing") :: \\("Boolean") :: Nil))) ::
@@ -248,17 +251,17 @@ object Meta extends emitter.shared.effects.Meta:
         ) :: Nil,
         `: ZStream[Any, Nothing, Unit]`,
         `for * yield ()`(`* <- Semaphore(…)`(release, 0)
+                      :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                 Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
+                                                                                                 Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
                                                "drainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),
-                                                                    `for * yield ()`(^._1
-                                                                                  :: `_ <- *`(Term.Apply(Term.Apply(\(name),
-                                                                                                                    Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                                                                :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil)),
-                                                                                                         Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))*)) :: Nil)))*)
+                                                                    Term.Apply(Term.Apply(\(name),
+                                                                                          Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
+                                                                                                      :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil)),
+                                                                               Term.ArgClause(^._2 :: Nil, Some(Mod.Using())))) :: Nil)))*)
       )
 
     `* <- ZStream.fromZIO(*)`(promise, Term.ApplyType(Term.Select("Promise", "make"), Type.ArgClause(\\("Nothing") :: \\("Boolean") :: Nil))) ::

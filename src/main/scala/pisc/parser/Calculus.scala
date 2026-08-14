@@ -159,7 +159,7 @@ abstract class Calculus extends StochasticPi:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    ("¡"|"!") ~ scale >> { // [guarded] replication
+    ("!"|"¡") ~ scale >> { // [guarded] replication
       case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
         if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡" ) && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
