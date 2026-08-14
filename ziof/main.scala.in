@@ -48,7 +48,7 @@ object App extends _root_.zio.ZIOAppDefault:
   private val spicbh = "pisc.stochastic.communications.batch.threshold"
   private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Boolean])
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Long])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
     val \ =
       if threshold > 0
@@ -88,7 +88,7 @@ object App extends _root_.zio.ZIOAppDefault:
       n <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
       ^ <- SemaphoreZIO.make(1)
-      b <- Ref.make(true)
+      b <- Ref.make(0L)
       x <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^, -, !, &)
       _ <- exit(x)
     yield

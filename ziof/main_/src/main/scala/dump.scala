@@ -71,9 +71,9 @@ package object `Π-dump`:
     then
       !.succeed(ExitCode.success).unit
     else
-      %.modify { m =>
-        ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1.succeed(None))) -> m
-      }.flatten.as {
+      %.get.flatMap { m =>
+        ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1.succeed(None)))
+      }.as {
         if !sys.BooleanProp.keyExists(spirsx).value
         && ks.forall(_.charAt(36) == '!')
         then ExitCode.success

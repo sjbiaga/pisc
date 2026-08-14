@@ -179,11 +179,11 @@ package object `Π-loop`:
         else ExitCode.failure
       }.flatMap(!.succeed(_).unit)
 
-  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Boolean])
+  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Long])
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- (batch.set(false) *> *.acquire.ensuring(batch.set(true)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
+      _ <- (batch.set(0L) *> *.acquire.ensuring(batch.update(_ + 1)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
       m  =
         for
           ((keys, exit), nel) <- **.take
@@ -192,7 +192,12 @@ package object `Π-loop`:
             then
               if threshold > 0
               then
-                ZIO.succeed(true)
+                (started.get <*> batch.get).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit(keys().toList) *> ZIO.succeed(false)
+                  case _ =>
+                    ZIO.succeed(true)
+                }
               else
                 (started.get <*> **.size.map(_.toLong)).map(_ + _).flatMap {
                   case 0L if exit() =>
@@ -238,12 +243,7 @@ package object `Π-loop`:
         yield
           l
       l <- if threshold > 0
-           then batch.get
-                .flatMap {
-                  if _
-                  then ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-                  else ZIO.succeed(true)
-                }
+           then ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
            else m
       _ <- loop(parallelism, threshold, timeout, started, batch).when(l)
     yield

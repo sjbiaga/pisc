@@ -45,7 +45,7 @@ object App extends _root_.cats.effect.IOApp:
   private val spicbh = "pisc.stochastic.communications.batch.threshold"
   private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Boolean])
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Long])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): IO[ExitCode] =
     val \ =
       if threshold > 0
@@ -86,7 +86,7 @@ object App extends _root_.cats.effect.IOApp:
       & <- IO.ref(0L)
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
-      b <- IO.ref(true)
+      b <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
       x <- run(args, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield

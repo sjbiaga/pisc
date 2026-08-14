@@ -191,11 +191,11 @@ package object `Π-loop`:
         else ExitCode.Error
       } >>= (!.complete(_).void)
 
-  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Boolean])
+  def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Long])
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- (batch.set(false) >> *.acquire.guarantee(batch.set(true)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
+      _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
       m  =
         for
           ((keys, exit), nel) <- **.take
@@ -204,7 +204,12 @@ package object `Π-loop`:
             then
               if threshold > 0
               then
-                IO.pure(true)
+                (started.get product batch.get).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit(keys().toList) >> IO.pure(false)
+                  case _ =>
+                    IO.pure(true)
+                }
               else
                 (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
                   case 0L if exit() =>
@@ -250,7 +255,7 @@ package object `Π-loop`:
         yield
           l
       l <- if threshold > 0
-           then batch.get.ifM(^.use(_ => (*.available >>= *.acquireN) >> peek >> m), IO.pure(true))
+           then ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
            else m
       _ <- IO.cede >> loop(parallelism, threshold, timeout, started, batch).whenA(l)
     yield
