@@ -35,31 +35,40 @@ import _root_.cats.effect.std.{ Queue, Semaphore }
 object App extends _root_.cats.effect.IOApp:
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicbh = "pisc.stochastic.communications.batch.threshold"
+  private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
 
   import _root_.scala.collection.immutable.{ List, Map }
 
+  import _root_.cats.syntax.flatMap.*
+
   import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.std.AtomicCell
 
   import `Π-dump`.*
   import `Π-loop`.*
 
 
-  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[π.F, Long], batch: Ref[π.F, Boolean])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val mπ = π.πmain[π.F]()
+    val \ =
+      if threshold > 0
+      then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- lπ.loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`).background
-        _ <- lπ.poll(using %, /, *).background
+        _ <- lπ.loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+        _ <- lπ.poll(using %, /, \).background
         _ <- dπ.dump(using %, !, -).background
       yield
         ()
     ).use { _ =>
       for
         ^ <- π.`π-uuid`[π.F]
-        _ <- mπ.Main(args*)(using ^)(using %, /, *.release).compile.drain
+        _ <- mπ.Main(args*)(using ^)(using %, /, \).compile.drain
         x <- !.get
       yield
         x
@@ -69,16 +78,25 @@ object App extends _root_.cats.effect.IOApp:
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(spicbh).isSet
+            then sys.Prop.IntProp(spicbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(spicbt).isSet
+            then sys.Prop.IntProp(spicbt).value
+            else π.`π-batch-timeout`
     for
-      % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
+      ** <- Queue.unbounded[π.F, ((() => Set[String], () => Boolean), List[((String, String), ++++[π.F])])]
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run(args, p, n)(%, /, *, -, !, &)
+      ^ <- Semaphore[π.F](1)
+      b <- Ref[π.F].of(true)
+      x <- run(args, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       x
 

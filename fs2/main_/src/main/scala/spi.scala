@@ -74,7 +74,7 @@ package object sΠ:
 
   inline def `π-exclude`[F[_]: Async](enabled: String*)
                                      (using % : %[F], \ : \[F]): F[Unit] =
-    `π-exclude`[F](Set.from(enabled)) >> \
+    \(`π-exclude`[F](Set.from(enabled)))
 
   private def `π-exclude`[F[_]](enabled: `Π-Set`[String])
                                (using % : %[F]): F[Unit] =
@@ -140,7 +140,7 @@ package object sΠ:
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
                 _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
@@ -206,7 +206,7 @@ package object sΠ:
           _  <- Stream.repeatEval {
             for
               _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-              _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+              _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
               _        <- enabled.set(false)
@@ -348,7 +348,7 @@ package object sΠ:
                             _        <- -.await
                             _        <- *.fold(Async[F].unit)(_.acquire)
                             _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                            _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                            _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                             cb_fb_in <- continue.get.flatMap(_.get)
                             _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                             _        <- enabled.set(false)
@@ -424,7 +424,7 @@ package object sΠ:
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
                 _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
@@ -563,7 +563,7 @@ package object sΠ:
                     _        <- -.await
                     _        <- *.fold(Async[F].unit)(_.acquire)
                     _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                    _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                    _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                     cb_fb_in <- continue.get.flatMap(_.get)
                     _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                     _        <- enabled.set(false)
@@ -637,7 +637,7 @@ package object sΠ:
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
                 _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
@@ -709,7 +709,7 @@ package object sΠ:
                       _  <- Stream.eval {
                         for
                           _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                          _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                          _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                           cb_fb_in <- continue.get.flatMap(_.get)
                           _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                           _        <- enabled.set(false)
@@ -777,7 +777,7 @@ package object sΠ:
           _  <- Stream.repeatEval {
             for
               _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-              _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+              _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
               _        <- enabled.set(false)
@@ -908,7 +908,7 @@ package object sΠ:
               _  <- Stream.repeatEval {
                 for
                   _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-                  _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+                  _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- enabled.set(false)
@@ -974,7 +974,7 @@ package object sΠ:
           _  <- Stream.repeatEval {
             for
               _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
-              _        <- enabled.get >>= ((%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) } >> \).unlessA(_))
+              _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
               _        <- enabled.set(false)

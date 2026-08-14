@@ -42,11 +42,16 @@ implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
 object App extends CatsApp:
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicbh = "pisc.stochastic.communications.batch.threshold"
+  private val spicbt = "pisc.stochastic.communications.batch.timeout"
 
 
   import _root_.scala.collection.immutable.{ List, Map }
 
+  import _root_.cats.syntax.flatMap.*
+
   import _root_.cats.effect.Ref
+  import _root_.cats.effect.std.AtomicCell
 
   import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
   import _root_.zio.stream.ZStream
@@ -55,21 +60,25 @@ object App extends CatsApp:
   import `Π-loop`.*
 
 
-  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[π.F, Long], batch: Ref[π.F, Boolean])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val mπ = π.πmain[π.F]()
+    val \ =
+      if threshold > 0
+      then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
         ^ <- ZStream.fromZIO(π.`π-uuid`[π.F])
-        _ <- mπ.Main(args*)(using ^)(using %, /, *.release).toZStream[Any]()
+        _ <- mπ.Main(args*)(using ^)(using %, /, \).toZStream[Any]()
         x <- ZStream.fromZIO(!.get)
         _ <- ZStream.fromZIO(exit(ExitCode(x.code)))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(lπ.loop(parallelism, started)(using %, !, &, -, *)(π.`π-wand`)))
-      .drainFork(ZStream.fromZIO(lπ.poll(using %, /, *)))
+      .drainFork(ZStream.fromZIO(lπ.loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(lπ.poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dπ.dump(using %, !, -)))
       .runDrain
 
@@ -77,17 +86,26 @@ object App extends CatsApp:
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(spicbh).isSet
+            then sys.Prop.IntProp(spicbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(spicbt).isSet
+            then sys.Prop.IntProp(spicbt).value
+            else π.`π-batch-timeout`
     for
       args <- getArgs
-      % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
+      ** <- Queue.unbounded[π.F, ((() => Set[String], () => Boolean), List[((String, String), ++++[π.F])])]
       - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      _ <- run(args.toList, p, n)(%, /, *, -, !, &)
+      ^ <- Semaphore[π.F](1)
+      b <- Ref[π.F].of(true)
+      _ <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       ()
 

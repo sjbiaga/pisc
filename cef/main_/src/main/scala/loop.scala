@@ -257,7 +257,7 @@ package object `Π-loop`:
       l <- if threshold > 0
            then batch.get.ifM(^.use(_ => (*.available >>= *.acquireN) >> peek >> m), IO.pure(true))
            else m
-      _ <- loop(parallelism, threshold, timeout, started, batch).whenA(l)
+      _ <- IO.cede >> loop(parallelism, threshold, timeout, started, batch).whenA(l)
     yield
       ()
 
