@@ -80,7 +80,7 @@ object App extends _root_.cats.effect.IOApp:
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      ** <- Queue.unbounded[IO, ((Set[String], () => Boolean), List[((String, String), ++++)])]
+      ** <- Queue.unbounded[IO, ((() => Set[String], () => Boolean), List[((String, String), ++++)])]
       - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
       ! <- IO.deferred[ExitCode]
       & <- IO.ref(0L)

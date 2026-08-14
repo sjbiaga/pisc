@@ -60,7 +60,7 @@ package object `Π-loop`:
   type \ = UIO[Unit] => UIO[Unit]
 
   type ++++ = ((Double, Double), Ref[`()`], ((++, Long), (++, Long)))
-  type ** = Queue[((Set[String], () => Boolean), List[((String, String), ++++)])]
+  type ** = Queue[((() => Set[String], () => Boolean), List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
 
@@ -105,47 +105,47 @@ package object `Π-loop`:
   def peek(using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modifyZIO { m =>
-      { if m.exists(_._2.isInstanceOf[Int])
-        then Map.empty -> { () => false }
+      val it =
+        if m.exists(_._2.isInstanceOf[Int])
+        then Map.empty
         else m
              .map(_ -> _.asInstanceOf[+]._2._2)
              .toMap
-          -> { () => m.isEmpty
-                  || m.keys.forall(_.charAt(36) == '!')
-                  && { val (trick, _) = `π-wand`
-                       m.forall {
-                         case (key1, (_, (_, (e1, Some(p1), _)))) =>
-                           val ^ = key1.substring(0, 36)
-                           !m.exists {
-                             case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
-                               val ^^ = key2.substring(0, 36)
-                               ^ != ^^
-                               || {
-                                 val k1 = key1.substring(36)
-                                 val k2 = key2.substring(36)
-                                 !trick.contains(k1) || !trick(k1).contains(k2)
-                               }
-                             case _ => false
-                           }
-                         case _ => false
-                       }
-                     }
-             }
-      } match
-        case (it: Map[String, ({}, Option[Either[Unit, Ref[`()`]]], Rate)], exit) =>
-          if it.isEmpty
-          then
-            **.offer((Set.empty -> exit, Nil)).unit.map(_ -> m)
-          else
-            val nel = ∥(it)(`π-wand`._1)()
-            val nelʹ = nel.map {
-              case (key1, key2, in, dd) =>
-                val (p1, (s1, _)) = m(key1).asInstanceOf[+]
-                val (p2, (s2, _)) = m(key2).asInstanceOf[+]
-                (key1, key2) -> (dd, in, ((p1, s1), (p2, s2)))
-            }
-            ZIO.collectAll {
-              nel.map {
+      val (trick, _) = `π-wand`
+      def keys(mʹ: Map[String, Int | +]) =
+        () => mʹ.keySet
+      def exit(mʹ: Map[String, Int | +]) =
+        { () => !mʹ.exists(_._2.isInstanceOf[Int])
+             && mʹ.forall {
+                  case (key1, (_, (_, (e1, Some(p1), _)))) =>
+                    val ^ = key1.substring(0, 36)
+                    !mʹ.exists {
+                      case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                        val ^^ = key2.substring(0, 36)
+                        ^ != ^^
+                        || {
+                          val k1 = key1.substring(36)
+                          val k2 = key2.substring(36)
+                          !trick.contains(k1) || !trick(k1).contains(k2)
+                        }
+                      case _ => false
+                    }
+                  case _ => false
+                }
+        }
+      if it.isEmpty
+      then
+        **.offer((keys(m) -> exit(m), Nil)).unit.map(_ -> m)
+      else
+        val nel = ∥(it)(trick)()
+        val nelʹ = nel.map {
+          case (key1, key2, in, dd) =>
+            val (p1, (s1, _)) = m(key1).asInstanceOf[+]
+            val (p2, (s2, _)) = m(key2).asInstanceOf[+]
+            (key1, key2) -> (dd, in, ((p1, s1), (p2, s2)))
+        }
+        ZIO.collectAll {
+          nel.map {
                 case (key1, key2, _, _) =>
                   val k1 = key1.substring(36)
                   val k2 = key2.substring(36)
@@ -160,7 +160,7 @@ package object `Π-loop`:
                     s1 ++ s2 + key1 + key2
               }
             }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
-             .flatMap(mʹ => **.offer((it.keySet -> exit, nelʹ)).unit.map(_ -> mʹ))
+             .flatMap(mʹ => **.offer((keys(mʹ) -> exit(mʹ), nelʹ)).unit.map(_ -> mʹ))
     }
 
 
@@ -190,12 +190,16 @@ package object `Π-loop`:
           l                   <-
             if nel.isEmpty
             then
-              (started.get <*> (if threshold > 0 then *.available else **.size.map(_.toLong))).map(_ + _).flatMap {
-                case 0L if exit() =>
-                  this.exit(keys.toList) *> ZIO.succeed(false)
-                case _ =>
-                  ZIO.succeed(true)
-              }
+              if threshold > 0
+              then
+                ZIO.succeed(true)
+              else
+                (started.get <*> **.size.map(_.toLong)).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit(keys().toList) *> ZIO.succeed(false)
+                  case _ =>
+                    ZIO.succeed(true)
+                }
             else
               Semaphore[UIO](parallelism).flatMap { sem =>
                 ZIO.collectAllParDiscard {
@@ -237,11 +241,10 @@ package object `Π-loop`:
         yield
           l
       l <- if threshold > 0
-           then (batch.get <*> started.get)
-                .map(_ || _ == 0L)
+           then batch.get
                 .flatMap {
                   if _
-                  then ^.withPermit(peek *> m <* *.available.flatMap(*.acquireN))
+                  then ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
                   else ZIO.succeed(true)
                 }
            else m

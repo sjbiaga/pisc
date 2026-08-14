@@ -66,7 +66,7 @@ package object `Π-loop`:
   type \ = IO[Unit] => IO[Unit]
 
   type ++++ = ((Double, Double), Ref[IO, `()`], ((++, Ref[IO, Long]), (++, Ref[IO, Long])))
-  type ** = Queue[IO, ((Set[String], () => Boolean), List[((String, String), ++++)])]
+  type ** = Queue[IO, ((() => Set[String], () => Boolean), List[((String, String), ++++)])]
 
   type * = Semaphore[IO]
 
@@ -111,66 +111,66 @@ package object `Π-loop`:
   def peek(using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     %.evalModify { m =>
-      { if m.exists(_._2.isInstanceOf[Int])
-        then Map.empty -> { () => false }
+      val it =
+        if m.exists(_._2.isInstanceOf[Int])
+        then Map.empty
         else m
              .filter(_._2.asInstanceOf[(Boolean, +)]._1)
              .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2._2)
              .toMap
-          -> { () => m.isEmpty
-                  || m.keys.forall(_.charAt(36) == '!')
-                  && { val (trick, _) = `π-wand`
-                       m.forall {
-                         case (key1, (_, (_, (_, (e1, Some(p1), _))))) =>
-                           val ^ = key1.substring(0, 36)
-                           !m.exists {
-                             case (key2, (_, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
-                               val ^^ = key2.substring(0, 36)
-                               ^ != ^^
-                               || {
-                                 val k1 = key1.substring(36)
-                                 val k2 = key2.substring(36)
-                                 !trick.contains(k1) || !trick(k1).contains(k2)
-                               }
-                             case _ => false
-                           }
-                         case _ => false
-                       }
-                     }
-             }
-      } match
-        case (it: Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)], exit) =>
-          if it.isEmpty
-          then
-            **.offer((Set.empty -> exit, Nil)).map(m -> _)
-          else
-            val nel = ∥(it)(`π-wand`._1)()
-            val nelʹ = nel.map {
-              case (key1, key2, in, dd) =>
-                val (dc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
-                val (dc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
-                (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
-            }
-            nel.traverse {
-              case (key1, key2, _, _) =>
-                val k1 = key1.substring(36)
-                val k2 = key2.substring(36)
-                val  ^ = key1.substring(0, 36)
-                val ^^ = key2.substring(0, 36)
-                val ((d1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-                val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
-                for
-                  s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
-                  s2 <- d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
-                yield
-                  (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
-               -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
-            }.map(_.foldRight(m) {
-                    case ((ks, ls), map) =>
-                      ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
-                        .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
-                  }
-            ).flatMap(mʹ => **.offer((it.keySet -> exit, nelʹ)).map(mʹ -> _))
+      val (trick, _) = `π-wand`
+      def keys(mʹ: Map[String, Int | (Boolean, +)]) =
+        () => mʹ.filter(_._2.asInstanceOf[(Boolean, +)]._1).keySet
+      def exit(mʹ: Map[String, Int | (Boolean, +)]) =
+        { () => !mʹ.exists(_._2.isInstanceOf[Int])
+             && mʹ.forall {
+                  case (key1, (true, (_, (_, (e1, Some(p1), _))))) =>
+                    val ^ = key1.substring(0, 36)
+                    !mʹ.exists {
+                      case (key2, (true, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                        val ^^ = key2.substring(0, 36)
+                        ^ != ^^
+                        || {
+                          val k1 = key1.substring(36)
+                          val k2 = key2.substring(36)
+                          !trick.contains(k1) || !trick(k1).contains(k2)
+                        }
+                      case _ => false
+                    }
+                  case _ => false
+                }
+        }
+      if it.isEmpty
+      then
+        **.offer((keys(m) -> exit(m), Nil)).map(m -> _)
+      else
+        val nel = ∥(it)(trick)()
+        val nelʹ = nel.map {
+          case (key1, key2, in, dd) =>
+            val (dc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (dc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
+        }
+        nel.traverse {
+          case (key1, key2, _, _) =>
+            val k1 = key1.substring(36)
+            val k2 = key2.substring(36)
+            val  ^ = key1.substring(0, 36)
+            val ^^ = key2.substring(0, 36)
+            val ((d1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            for
+              s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
+              s2 <- d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
+            yield
+              (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
+           -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
+        }.map(_.foldRight(m) {
+                case ((ks, ls), map) =>
+                  ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
+                    .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
+              }
+        ).flatMap(mʹ => **.offer((keys(mʹ) -> exit(mʹ), nelʹ)).map(mʹ -> _))
     }
 
 
@@ -202,12 +202,16 @@ package object `Π-loop`:
           l                   <-
             if nel.isEmpty
             then
-              (started.get product (if threshold > 0 then *.available else **.size.map(_.toLong))).map(_ + _).flatMap {
-                case 0L if exit() =>
-                  this.exit(keys.toList) >> IO.pure(false)
-                case _ =>
-                  IO.pure(true)
-              }
+              if threshold > 0
+              then
+                IO.pure(true)
+              else
+                (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit(keys().toList) >> IO.pure(false)
+                  case _ =>
+                    IO.pure(true)
+                }
             else
               Semaphore[IO](parallelism).flatMap { sem =>
                 nel.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), ts1), ((d2, c2), ts2)))) =>
@@ -251,9 +255,7 @@ package object `Π-loop`:
         yield
           l
       l <- if threshold > 0
-           then (batch.get product started.get)
-                .map(_ || _ == 0L)
-                .ifM(^.use(_ => peek *> m <* (*.available >>= *.acquireN)), IO.pure(true))
+           then batch.get.ifM(^.use(_ => (*.available >>= *.acquireN) >> peek >> m), IO.pure(true))
            else m
       _ <- loop(parallelism, threshold, timeout, started, batch).whenA(l)
     yield
