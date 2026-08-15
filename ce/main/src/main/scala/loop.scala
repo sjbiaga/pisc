@@ -66,7 +66,7 @@ package object `Π-loop`:
   type \ = IO[Unit] => IO[Unit]
 
   type ++++ = (Double, Ref[IO, `()`], (++, ++))
-  type ** = Queue[IO, ((() => Set[String], () => Boolean), List[((String, String), ++++)])]
+  type ** = Queue[IO, (() => Boolean, List[((String, String), ++++)])]
 
   type * = Semaphore[IO]
 
@@ -119,8 +119,6 @@ package object `Π-loop`:
              .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2)
              .toMap
       val (trick, _) = `π-wand`
-      def keys(mʹ: Map[String, Int | (Boolean, +)]) =
-        () => mʹ.filter(_._2.asInstanceOf[(Boolean, +)]._1).keySet
       def exit(mʹ: Map[String, Int | (Boolean, +)]) =
         { () => !mʹ.exists(_._2.isInstanceOf[Int])
              && mʹ.forall {
@@ -142,7 +140,7 @@ package object `Π-loop`:
         }
       if it.isEmpty
       then
-        **.offer((keys(m) -> exit(m), Nil)).map(m -> _)
+        **.offer(exit(m) -> Nil).map(m -> _)
       else
         val nel = ∥(it)(trick)()
         val nelʹ = nel.map {
@@ -172,26 +170,27 @@ package object `Π-loop`:
                   ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
                     .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
               }
-        ).flatMap(mʹ => **.offer((keys(mʹ) -> exit(mʹ), nelʹ)).map(mʹ -> _))
+        ).flatMap(mʹ => **.offer(exit(mʹ) -> nelʹ).map(mʹ -> _))
     }
 
 
-  private def exit(ks: List[String])
-                  (using % : %, ! : !): IO[Unit] =
-    if ks.isEmpty
-    then
-      !.complete(ExitCode.Success).void
-    else
-      %.get.flatMap { m =>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
-                                                                     case it => it.get.flatMap(_.complete(None).void) })
-      }.as {
-        if !sys.BooleanProp.keyExists(spirsx).value
-        && ks.forall(_.charAt(36) == '!')
-        then ExitCode.Success
-        else ExitCode.Error
-      } >>= (!.complete(_).void)
+  private def exit(using % : %, ! : !): IO[Unit] =
+    %.get.flatMap { m =>
+      val ks = m.keys.toList
+      val ec =
+        if ks.isEmpty
+        then
+          ExitCode.Success
+        else
+          if !sys.BooleanProp.keyExists(spirsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.Success
+          else ExitCode.Error
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
+                                                                   case it => it.get.flatMap(_.complete(None).void) }) >>
+      !.complete(ec).void
+    }
 
   def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Long])
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
@@ -200,22 +199,22 @@ package object `Π-loop`:
       _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
       m  =
         for
-          ((keys, exit), nel) <- **.take
-          l                   <-
+          (exit, nel) <- **.take
+          l           <-
             if nel.isEmpty
             then
               if threshold > 0
               then
                 (started.get product batch.get).map(_ + _).flatMap {
                   case 0L if exit() =>
-                    this.exit(keys().toList) >> IO.pure(false)
+                    this.exit >> IO.pure(false)
                   case _ =>
                     IO.pure(true)
                 }
               else
                 (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
                   case 0L if exit() =>
-                    this.exit(keys().toList) >> IO.pure(false)
+                    this.exit >> IO.pure(false)
                   case _ =>
                     IO.pure(true)
                 }
@@ -242,6 +241,7 @@ package object `Π-loop`:
                                                        else ^.use(_ => e >> peek)
                                                   _ <- sem.release
                                                   _ <- started.update(_ - 1)
+                                                  _ <- peek.unlessA(threshold > 0)
                                                 yield
                                                   ()
                                               ).start

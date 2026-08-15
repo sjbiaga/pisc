@@ -60,7 +60,7 @@ package object `Π-loop`:
   type \ = UIO[Unit] => UIO[Unit]
 
   type ++++ = ((Double, Double), Ref[`()`], ((++, Long), (++, Long)))
-  type ** = Queue[((() => Set[String], () => Boolean), List[((String, String), ++++)])]
+  type ** = Queue[(() => Boolean, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
 
@@ -112,8 +112,6 @@ package object `Π-loop`:
              .map(_ -> _.asInstanceOf[+]._2._2)
              .toMap
       val (trick, _) = `π-wand`
-      def keys(mʹ: Map[String, Int | +]) =
-        () => mʹ.keySet
       def exit(mʹ: Map[String, Int | +]) =
         { () => !mʹ.exists(_._2.isInstanceOf[Int])
              && mʹ.forall {
@@ -135,7 +133,7 @@ package object `Π-loop`:
         }
       if it.isEmpty
       then
-        **.offer((keys(m) -> exit(m), Nil)).unit.map(_ -> m)
+        **.offer(exit(m) -> Nil).unit.map(_ -> m)
       else
         val nel = ∥(it)(trick)()
         val nelʹ = nel.map {
@@ -160,7 +158,7 @@ package object `Π-loop`:
                     s1 ++ s2 + key1 + key2
               }
             }.map(_.foldRight(m)(_.foldLeft(_)(_ - _)))
-             .flatMap(mʹ => **.offer((keys(mʹ) -> exit(mʹ), nelʹ)).unit.map(_ -> mʹ))
+             .flatMap(mʹ => **.offer(exit(mʹ) -> nelʹ).unit.map(_ -> mʹ))
     }
 
 
@@ -171,22 +169,22 @@ package object `Π-loop`:
       _ <- (batch.set(0L) *> *.acquire.ensuring(batch.update(_ + 1)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
       m  =
         for
-          ((keys, exit), nel) <- **.take
-          l                   <-
+          (exit, nel) <- **.take
+          l           <-
             if nel.isEmpty
             then
               if threshold > 0
               then
                 (started.get <*> batch.get).map(_ + _).flatMap {
                   case 0L if exit() =>
-                    -.offer(keys().toList) *> ZIO.succeed(false)
+                    -.offer(None) *> ZIO.succeed(false)
                   case _ =>
                     ZIO.succeed(true)
                 }
               else
                 (started.get <*> **.size.map(_.toLong)).map(_ + _).flatMap {
                   case 0L if exit() =>
-                    -.offer(keys().toList) *> ZIO.succeed(false)
+                    -.offer(None) *> ZIO.succeed(false)
                   case _ =>
                     ZIO.succeed(true)
                 }
@@ -214,9 +212,10 @@ package object `Π-loop`:
                                                   else ^.withPermit(e *> peek)
                                             no <- &.updateAndGet(_ + 1)
                                             now <- Clock.nanoTime
-                                            _  <- -.offer((no, ((s1, s2), now), (k1, k2), (delay, duration)))
+                                            _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration))))
                                             _  <- sem.release
                                             _  <- started.update(_ - 1)
+                                            _  <- peek.unless(threshold > 0)
                                           yield
                                             ()
                                         ).fork

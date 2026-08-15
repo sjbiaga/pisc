@@ -89,7 +89,8 @@ package object `Π-dump`:
             else ExitCode.Error
         ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
         ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Async[F].unit
-                                                                        case it => it.get.flatMap(_.complete(None).void) }) >> !.complete(ec).void
+                                                                        case it => it.get.flatMap(_.complete(None).void) }) >>
+        !.complete(ec).void
       }
 
     def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =

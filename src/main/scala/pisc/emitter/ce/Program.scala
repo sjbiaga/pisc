@@ -594,7 +594,7 @@ object Program:
             Defn.Val(Nil, Pat.Var("π-batch-timeout") :: Nil, None, timeout)
       ) ::
       prog
-        .drop(3)
+        .drop(1+2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

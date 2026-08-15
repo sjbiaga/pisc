@@ -46,7 +46,7 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
+  type - = Queue[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
 
 
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
@@ -71,37 +71,36 @@ package object `Π-dump`:
       case _ =>
         IO.unit
 
-
-  private def exit(ks: List[String])
-                  (using % : %, ! : !): IO[Unit] =
-    if ks.isEmpty
-    then
-      !.complete(ExitCode.Success).void
-    else
-      %.get.flatMap { m =>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
-                                                                     case it => it.get.flatMap(_.complete(None).void) })
-      }.as {
-        if !sys.BooleanProp.keyExists(spirsx).value
-        && ks.forall(_.charAt(36) == '!')
-        then ExitCode.Success
-        else ExitCode.Error
-      } >>= (!.complete(_).void)
-
+  private def exit(using % : %, ! : !): IO[Unit] =
+    %.get.flatMap { m =>
+      val ks = m.keys.toList
+      val ec =
+        if ks.isEmpty
+        then
+          ExitCode.Success
+        else
+          if !sys.BooleanProp.keyExists(spirsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.Success
+          else ExitCode.Error
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1.complete(None)) >>
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._2 match { case null => IO.unit
+                                                                   case it => it.get.flatMap(_.complete(None).void) }) >>
+      !.complete(ec).void
+    }
 
   def dump(using % : %, ! : !, - : -): IO[Unit] =
     for
       h <- -.take
       _ <- h match
-             case (no, ((s1, s2), e), (k1, k2), (delay, duration)) =>
+             case Some((no, ((s1, s2), e), (k1, k2), (delay, duration))) =>
                for
                  _ <- record(no, s1, e, delay, duration)(k1)
                  _ <- record(no, s2, e, delay, duration)(k2).unlessA(k1 == k2)
                  _ <- IO.cede >> dump
                yield
                  ()
-             case ks: List[String] =>
-               exit(ks)
+             case _ =>
+               exit
     yield
       ()

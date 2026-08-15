@@ -196,7 +196,8 @@ package object `Π-loop`:
             else ExitCode.Error
         ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
         ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Temporal[F].unit
-                                                                        case it => it.get.flatMap(_.complete(None).void) }) >> !.complete(ec).void
+                                                                        case it => it.get.flatMap(_.complete(None).void) }) >>
+        !.complete(ec).void
       }
 
     def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[F, Long], batch: Ref[F, Long])

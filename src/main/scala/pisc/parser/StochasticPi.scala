@@ -790,14 +790,7 @@ object StochasticPi:
           case _ => true
         }
 
-      if _settings.typeclasses.isEmpty
-      then
-        Right((`(*)`(null, λ(Lit.Null())), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Term.Tuple(List(Lit.Int(_settings.batch._1), Lit.Int(_settings.batch._2))))), ∅()): Bind) ::
-        prog
-      else
-        Right((`(*)`(null, λ(Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
-        Right((`(*)`(null, λ(Term.Tuple(List(Lit.Int(_settings.batch._1), Lit.Int(_settings.batch._2))))), ∅()): Bind) ::
-        prog
+      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(Term.Tuple(List(Lit.Int(_settings.batch._1), Lit.Int(_settings.batch._2))))), ∅()): Bind) ::
+      prog

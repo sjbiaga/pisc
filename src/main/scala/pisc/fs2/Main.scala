@@ -95,11 +95,11 @@ object Main extends helper.Main:
               case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
                 Defn.Val(Nil, Pat.Var(Term.Name("π-batch-timeout")) :: Nil, None, timeout)
           )
-          :: Program.Main()(prog.drop(3))
+          :: Program.Main()(prog.drop(1+2))
 
-        val is = prog_.drop(3).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(3).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
 
         val tc: String => Type =
           _.split('.').reverse match

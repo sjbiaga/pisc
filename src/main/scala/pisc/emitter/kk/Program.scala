@@ -822,7 +822,7 @@ object Program:
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
       prog
-        .drop(3)
+        .drop(1+2)
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>
