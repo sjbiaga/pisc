@@ -154,10 +154,10 @@ package object `Π-loop`:
                   val ((p1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
                   val ((p2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
                   for
-                    s1 <- p1.isDone.flatMap { if _ then ZIO.succeed(Set.empty) else discard(k1, m)(using  ^) }
+                    s1 <- p1.isDone.negate.flatMap { if _ then discard(k1, m)(using  ^) else ZIO.succeed(Set.empty) }
                     s2 <- if k1 == k2
                           then ZIO.succeed(Set.empty)
-                          else p2.isDone.flatMap { if _ then ZIO.succeed(Set.empty) else discard(k2, m)(using ^^) }
+                          else p2.isDone.negate.flatMap { if _ then discard(k2, m)(using ^^) else ZIO.succeed(Set.empty) }
                   yield
                     (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
                  -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
@@ -266,14 +266,9 @@ package object `Π-loop`:
       h <- /.take
       ((_, key), it) = h
       ((d, _), _) = it
-      _ <- d.isDone.flatMap {
+      _ <- d.isDone.negate.flatMap {
         if _
         then
-          %.update { m =>
-                     val ^ = h._1._1
-                     m + (^ + key -> (false, it))
-          }
-        else
          \(
             %.update { m =>
                        val ^ = h._1._1
@@ -286,6 +281,11 @@ package object `Π-loop`:
                        ) + (^ + key -> (true, it))
             }
           )
+        else
+          %.update { m =>
+                     val ^ = h._1._1
+                     m + (^ + key -> (false, it))
+          }
       }
       _ <- poll
     yield
