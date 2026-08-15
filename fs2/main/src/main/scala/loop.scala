@@ -72,7 +72,7 @@ package object `Π-loop`:
   type \[F[_]] = F[Unit] => F[Unit]
 
   type ++++[F[_]] = (Double, Ref[F, `()`[F]], (++[F], ++[F]))
-  type **[F[_]] = Queue[F, ((() => Set[String], () => Boolean), List[((String, String), ++++[F])])]
+  type **[F[_]] = Queue[F, (() => Boolean, List[((String, String), ++++[F])])]
 
   type *[F[_]] = Semaphore[F]
 
@@ -127,8 +127,6 @@ package object `Π-loop`:
                .map(_ -> _.asInstanceOf[(Boolean, +[F])]._2._2)
                .toMap
         val (trick, _) = `π-wand`
-        def keys(mʹ: Map[String, Int | (Boolean, +[F])]) =
-          () => mʹ.filter(_._2.asInstanceOf[(Boolean, +[F])]._1).keySet
         def exit(mʹ: Map[String, Int | (Boolean, +[F])]) =
           { () => !mʹ.exists(_._2.isInstanceOf[Int])
                && mʹ.forall {
@@ -150,7 +148,7 @@ package object `Π-loop`:
           }
         if it.isEmpty
         then
-          **.offer((keys(m) -> exit(m), Nil)).map(m -> _)
+          **.offer(exit(m) -> Nil).map(m -> _)
         else
           val nel = ∥(it)(trick)()
           val nelʹ = nel.map {
@@ -180,26 +178,26 @@ package object `Π-loop`:
                     ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +[F])]._2) }
                       .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
                 }
-          ).flatMap(mʹ => **.offer((keys(mʹ) -> exit(mʹ), nelʹ)).map(mʹ -> _))
+          ).flatMap(mʹ => **.offer(exit(mʹ) -> nelʹ).map(mʹ -> _))
       }
 
 
-    private def exit(ks: List[String])
-                    (using % : %[F], ! : ![F]): F[Unit] =
-      if ks.isEmpty
-      then
-        !.complete(ExitCode.Success).void
-      else
-        %.get.flatMap { m =>
-          ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
-          ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Temporal[F].unit
-                                                                          case it => it.get.flatMap(_.complete(None).void) })
-        }.as {
-          if !sys.BooleanProp.keyExists(spirsx).value
-          && ks.forall(_.charAt(36) == '!')
-          then ExitCode.Success
-          else ExitCode.Error
-        } >>= (!.complete(_).void)
+    private def exit(using % : %[F], ! : ![F]): F[Unit] =
+      %.get.flatMap { m =>
+        val ks = m.keys.toList
+        val ec =
+          if ks.isEmpty
+          then
+            ExitCode.Success
+          else
+            if !sys.BooleanProp.keyExists(spirsx).value
+            && ks.forall(_.charAt(36) == '!')
+            then ExitCode.Success
+            else ExitCode.Error
+        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
+        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Temporal[F].unit
+                                                                        case it => it.get.flatMap(_.complete(None).void) }) >> !.complete(ec).void
+      }
 
     def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[F, Long], batch: Ref[F, Long])
             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
@@ -208,7 +206,7 @@ package object `Π-loop`:
         _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(Temporal[F].unit)).whenA(threshold > 0)
         m  =
           for
-            ((keys, exit), nel) <- **.take
+            (exit, nel) <- **.take
             l                   <-
               if nel.isEmpty
               then
@@ -216,14 +214,14 @@ package object `Π-loop`:
                 then
                   (started.get product batch.get).map(_ + _).flatMap {
                     case 0L if exit() =>
-                      this.exit(keys().toList) >> Temporal[F].pure(false)
+                      this.exit >> Temporal[F].pure(false)
                     case _ =>
                       Temporal[F].pure(true)
                   }
                 else
                   (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
                     case 0L if exit() =>
-                      this.exit(keys().toList) >> Temporal[F].pure(false)
+                      this.exit >> Temporal[F].pure(false)
                     case _ =>
                       Temporal[F].pure(true)
                   }
@@ -250,6 +248,7 @@ package object `Π-loop`:
                                                          else ^.use(_ => e >> peek)
                                                     _ <- sem.release
                                                     _ <- started.update(_ - 1)
+                                                    _ <- peek.unlessA(threshold > 0)
                                                   yield
                                                     ()
                                                 ).start

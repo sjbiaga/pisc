@@ -148,6 +148,7 @@ package object sΠ:
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
             _  <- ZStream.fromZIO(+.release)
+            _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             ()
 
@@ -214,6 +215,7 @@ package object sΠ:
             yield
               ()
           }.repeat(Schedule.forever).interruptWhen(sp)
+          _  <- ZStream.unit.whenZIO(sp.isDone.negate)
         yield
           ()
 
@@ -363,6 +365,7 @@ package object sΠ:
                          it
                     ).interruptWhen(sp)
               _  <- ZStream.fromZIO(+.release)
+              _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               it
 
@@ -440,6 +443,7 @@ package object sΠ:
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
             _  <- ZStream.fromZIO(+.release)
+            _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             ()
 
@@ -583,6 +587,7 @@ package object sΠ:
                     ()
                 }.repeat(Schedule.forever).interruptWhen(sp)
                 _  <- ZStream.fromZIO(+.release)
+                _  <- ZStream.unit.whenZIO(sp.isDone.negate)
               yield
                 ()
 
@@ -662,6 +667,7 @@ package object sΠ:
             }.repeat(Schedule.forever).interruptWhen(sp)
             _  <- ZStream.fromZIO(+.release)
             it <- ZStream.fromZIO(result.get)
+            _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             it
 
@@ -736,6 +742,7 @@ package object sΠ:
                     yield
                       it
                   ).interruptWhen(sp)
+            _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             it
 
@@ -802,6 +809,7 @@ package object sΠ:
             yield
               ()
           }.repeat(Schedule.forever).interruptWhen(sp)
+          _  <- ZStream.unit.whenZIO(sp.isDone.negate)
         yield
           ()
 
@@ -934,6 +942,7 @@ package object sΠ:
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
+              _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               ()
 
@@ -1002,6 +1011,7 @@ package object sΠ:
               ()
           }.repeat(Schedule.forever).interruptWhen(sp)
           it <- ZStream.fromZIO(result.get)
+          _  <- ZStream.unit.whenZIO(sp.isDone.negate)
         yield
           it
 

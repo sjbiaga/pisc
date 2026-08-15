@@ -88,8 +88,8 @@ object App extends _root_.cats.effect.IOApp:
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- Queue.unbounded[π.F, ((() => Set[String], () => Boolean), List[((String, String), ++++[π.F])])]
-      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
+      ** <- Queue.unbounded[π.F, (() => Boolean, List[((String, String), ++++[π.F])])]
+      - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)

@@ -85,8 +85,8 @@ object App extends _root_.zio.ZIOAppDefault:
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- Queue.unbounded[((() => Set[String], () => Boolean), List[((String, String), ++++)])]
-      - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double))]
+      ** <- Queue.unbounded[(() => Boolean, List[((String, String), ++++)])]
+      - <- Queue.unbounded[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)

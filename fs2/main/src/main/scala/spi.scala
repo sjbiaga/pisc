@@ -150,6 +150,7 @@ package object sΠ:
                 ()
             }.interruptWhen(sr)
             _  <- Stream.eval(+.release)
+            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
 
@@ -213,6 +214,7 @@ package object sΠ:
             yield
               ()
           }.interruptWhen(sr)
+          _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
         yield
           ()
 
@@ -356,6 +358,7 @@ package object sΠ:
                         it
                     ).interruptWhen(sr)
               _  <- Stream.eval(+.release)
+              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               it
 
@@ -427,6 +430,7 @@ package object sΠ:
                 ()
             }.interruptWhen(sr)
             _  <- Stream.eval(+.release)
+            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
 
@@ -564,6 +568,7 @@ package object sΠ:
                     ()
                 }.interruptWhen(sr)
                 _  <- Stream.eval(+.release)
+                _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
               yield
                 ()
 
@@ -637,6 +642,7 @@ package object sΠ:
             }.interruptWhen(sr)
             _  <- Stream.eval(+.release)
             it <- Stream.eval(result.get)
+            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             it
 
@@ -708,6 +714,7 @@ package object sΠ:
                     yield
                       it
                   ).interruptWhen(sr)
+            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             it
 
@@ -771,6 +778,7 @@ package object sΠ:
             yield
               ()
           }.interruptWhen(sr)
+          _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
         yield
           ()
 
@@ -900,6 +908,7 @@ package object sΠ:
                 yield
                   ()
               }.interruptWhen(sr)
+              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               ()
 
@@ -965,6 +974,7 @@ package object sΠ:
               ()
           }.interruptWhen(sr)
           it <- Stream.eval(result.get)
+          _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
         yield
           it
 
