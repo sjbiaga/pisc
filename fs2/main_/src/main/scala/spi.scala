@@ -134,12 +134,13 @@ package object sΠ:
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
+            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
-                _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                _        <- enabled.get >>= timeset.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -202,10 +203,11 @@ package object sΠ:
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new {}, None, rate)))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
+          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
-              _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+              _        <- enabled.get >>= timeset.unlessA
               _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -339,6 +341,7 @@ package object sΠ:
               _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
+              timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
               sr <- Stream.eval(SignallingRef[F].of(false))
               it <- ( for
                         _  <- Stream.unit.repeat
@@ -347,7 +350,7 @@ package object sΠ:
                           for
                             _        <- -.await
                             _        <- *.fold(Async[F].unit)(_.acquire)
-                            _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                            _        <- enabled.get >>= timeset.unlessA
                             _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                             cb_fb_in <- continue.get.flatMap(_.get)
                             _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -418,12 +421,13 @@ package object sΠ:
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
+            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
-                _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                _        <- enabled.get >>= timeset.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -557,12 +561,13 @@ package object sΠ:
                 _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
+                timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
                 sr <- Stream.eval(SignallingRef[F].of(false))
                 _  <- Stream.repeatEval {
                   for
                     _        <- -.await
                     _        <- *.fold(Async[F].unit)(_.acquire)
-                    _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                    _        <- enabled.get >>= timeset.unlessA
                     _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                     cb_fb_in <- continue.get.flatMap(_.get)
                     _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -631,12 +636,13 @@ package object sΠ:
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
+            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- -.await
                 _        <- *.fold(Async[F].unit)(_.acquire)
-                _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                _        <- enabled.get >>= timeset.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -702,13 +708,14 @@ package object sΠ:
             _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
+            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             it <- ( for
                       _  <- Stream.unit.repeat
                       it <- sΠ.ν[F]
                       _  <- Stream.eval {
                         for
-                          _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                          _        <- enabled.get >>= timeset.unlessA
                           _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                           cb_fb_in <- continue.get.flatMap(_.get)
                           _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -773,10 +780,11 @@ package object sΠ:
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
+          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
-              _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+              _        <- enabled.get >>= timeset.unlessA
               _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -904,10 +912,11 @@ package object sΠ:
               _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
               cb_fb_in <- Stream.eval(deferred.get)
               if cb_fb_in ne None
+              timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
               sr <- Stream.eval(SignallingRef[F].of(false))
               _  <- Stream.repeatEval {
                 for
-                  _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                  _        <- enabled.get >>= timeset.unlessA
                   _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -970,10 +979,11 @@ package object sΠ:
           _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Right(result)), rate)))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
+          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
-              _        <- Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+              _        <- enabled.get >>= timeset.unlessA
               _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set

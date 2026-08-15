@@ -294,7 +294,9 @@ package sΠ:
                   ()
               unfold
             }
-            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+            _        <- if $parallelism == 1
+                        then supervise(unfold($parallelism, None)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -363,7 +365,9 @@ package sΠ:
                   ()
               unfold
             }
-            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+            _        <- if $parallelism == 1
+                        then supervise(unfold($parallelism, None)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -428,7 +432,9 @@ package sΠ:
                 ()
             unfold
           }
-          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+          _        <- if $parallelism == 1
+                      then supervise(unfold($parallelism, None)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }
@@ -496,7 +502,9 @@ package sΠ:
                   ()
               unfold
             }
-            _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+            _        <- if $parallelism == 1
+                        then supervise(unfold($parallelism, None)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
           yield
             ()
         }
@@ -563,7 +571,9 @@ package sΠ:
                 ()
             unfold
           }
-          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+          _        <- if $parallelism == 1
+                      then supervise(unfold($parallelism, None)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }
@@ -629,7 +639,9 @@ package sΠ:
                 ()
             unfold
           }
-          _        <- supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
+          _        <- if $parallelism == 1
+                      then supervise(unfold($parallelism, None)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, None)(${^}))
         yield
           ()
       }
