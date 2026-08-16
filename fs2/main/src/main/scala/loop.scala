@@ -41,6 +41,7 @@ import _root_.cats.syntax.traverse.*
 
 import _root_.cats.Parallel
 import _root_.cats.effect.{ Deferred, Fiber, ExitCode, Ref, Resource, Temporal }
+import _root_.cats.effect.kernel.Outcome.Succeeded
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
 import _root_.cats.effect.syntax.monadCancel.*
 import _root_.cats.effect.syntax.spawn.*
@@ -54,7 +55,9 @@ package object `Π-loop`:
 
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
+
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+
 
   type <>[F[_]] = (CyclicBarrier[F], Fiber[F, Throwable, Unit], Ref[F, `()`[F]])
 
@@ -204,7 +207,7 @@ package object `Π-loop`:
             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
-        _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(Temporal[F].unit)).whenA(threshold > 0)
+        _ <- (batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(threshold).timeout(timeout.nanoseconds).orElse(Temporal[F].unit)).whenA(threshold > 0)
         m  =
           for
             (exit, nel) <- **.take
@@ -228,7 +231,7 @@ package object `Π-loop`:
                   }
               else
                 Semaphore[F](parallelism).flatMap { sem =>
-                  nel.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
+                  nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
                                       Temporal[F].uncancelable { _ =>
@@ -248,8 +251,11 @@ package object `Π-loop`:
                                                          then e
                                                          else ^.use(_ => e >> peek)
                                                     _ <- sem.release
-                                                    _ <- started.update(_ - 1)
-                                                    _ <- peek.unlessA(threshold > 0)
+                                                    _ <- if threshold > 0
+                                                         then
+                                                           started.update(_ - 1)
+                                                         else
+                                                           started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                                   yield
                                                     ()
                                                 ).start

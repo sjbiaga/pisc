@@ -30,7 +30,7 @@ import _root_.scala.Option.{ unless, when }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ durationInt, Clock, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
+import _root_.zio.{ durationInt, Clock, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 
 import `Π-dump`.*
@@ -46,8 +46,8 @@ package object `Π-loop`:
 
   type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
 
-  type ++ = (Promise[Nothing, Option[<>]], Ref[Promise[Nothing, Option[<>]]])
-  type + = (++, (Ref[Long], ({}, Option[Either[Unit, Ref[`()`]]], Rate)))
+  type ++ = ((Promise[Nothing, Option[<>]], Ref[Promise[Nothing, Option[<>]]]), Ref[Long])
+  type + = (++, ({}, Option[Either[Unit, Ref[`()`]]], Rate))
 
   type % = Ref.Synchronized[Map[String, Int | (Boolean, +)]]
 
@@ -59,7 +59,7 @@ package object `Π-loop`:
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ++++ = ((Double, Double), Ref[`()`], ((++, Ref[Long]), (++, Ref[Long])))
+  type ++++ = ((Double, Double), Ref[`()`], (++, ++))
   type ** = Queue[(() => Boolean, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
@@ -86,7 +86,7 @@ package object `Π-loop`:
 
   private def unblock(map: Map[String, Int | (Boolean, +)], key: String)
                      (implicit ^ : String): UIO[Unit] =
-    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1.succeed(None).unit
+    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1._1.succeed(None).unit
 
   private def `π-discard`(map: Map[String, Int | (Boolean, +)], discarded: `Π-Set`[String])
                          (implicit ^ : String): UIO[Set[String]] =
@@ -110,16 +110,16 @@ package object `Π-loop`:
         then Map.empty
         else m
              .filter(_._2.asInstanceOf[(Boolean, +)]._1)
-             .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2._2)
+             .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2)
              .toMap
       val (trick, _) = `π-wand`
       def exit(mʹ: Map[String, Int | (Boolean, +)]) =
         { () => !mʹ.exists(_._2.isInstanceOf[Int])
              && mʹ.forall {
-                  case (key1, (true, (_, (_, (e1, Some(p1), _))))) =>
+                  case (key1, (true, (_, (e1, Some(p1), _)))) =>
                     val ^ = key1.substring(0, 36)
                     !mʹ.exists {
-                      case (key2, (true, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                      case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                         val ^^ = key2.substring(0, 36)
                         ^ != ^^
                         || {
@@ -139,9 +139,9 @@ package object `Π-loop`:
         val nel = ∥(it)(trick)()
         val nelʹ = nel.map {
           case (key1, key2, in, dd) =>
-            val (pc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
-            val (pc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (dd, in, (pc1 -> ts1, pc2 -> ts2))
+            val (pcts1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (pcts2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (dd, in, (pcts1, pcts2))
         }
         ZIO.collectAll {
           nel.map {
@@ -150,8 +150,8 @@ package object `Π-loop`:
                   val k2 = key2.substring(36)
                   val  ^ = key1.substring(0, 36)
                   val ^^ = key2.substring(0, 36)
-                  val ((p1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-                  val ((p2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+                  val (((p1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+                  val (((p2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
                   for
                     s1 <- p1.isDone.negate.flatMap { if _ then discard(k1, m)(using  ^) else ZIO.succeed(Set.empty) }
                     s2 <- if k1 == k2
@@ -174,7 +174,7 @@ package object `Π-loop`:
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- (batch.set(0L) *> *.acquire.ensuring(batch.update(_ + 1)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
+      _ <- (batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
       m  =
         for
           (exit, nel) <- **.take
@@ -223,8 +223,11 @@ package object `Π-loop`:
                                             now <- Clock.nanoTime
                                             _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
                                             _  <- sem.release
-                                            _  <- started.update(_ - 1)
-                                            _  <- peek.unless(threshold > 0)
+                                            _  <- if threshold > 0
+                                                  then
+                                                    started.update(_ - 1)
+                                                  else
+                                                    started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
                                             ()
                                         ).fork
@@ -251,7 +254,7 @@ package object `Π-loop`:
     for
       h <- /.take
       ((_, key), it) = h
-      ((d, _), _) = it
+      (((d, _), _), _) = it
       _ <- d.isDone.negate.flatMap {
         if _
         then

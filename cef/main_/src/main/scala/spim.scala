@@ -261,7 +261,7 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, (new {}, None, $rate))))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), (new {}, None, $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
@@ -333,7 +333,7 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
@@ -404,7 +404,7 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
@@ -477,7 +477,7 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
                                   timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Left(())), $rate))))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
@@ -549,7 +549,7 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
                                 result   <- IO.ref(`null`)
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Right(result)), $rate))))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
@@ -620,7 +620,7 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
                                 result   <- IO.ref(`null`)
                                 timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> (timestamp, ($ether, Some(Right(result)), $rate))))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
@@ -664,9 +664,10 @@ package sΠ:
           ()
       }
 
-    // duplicated method to avoid cyclic dependencies
+    // duplicated value to avoid cyclic dependencies
     private val `null` = new `()`(null)
 
+    // duplicated method to avoid cyclic dependencies
     private def supervise(code: IO[Unit]): IO[Unit] =
       Supervisor[IO](await = true)
         .use(_.supervise(code))

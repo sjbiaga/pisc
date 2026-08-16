@@ -111,7 +111,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-        _        <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (new {}, None, rate))))
+        _        <- /.offer(^ -> key -> ((deferred -> null, timestamp), (new {}, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -429,7 +429,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-        _         <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -460,7 +460,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
-        _         <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,

@@ -290,16 +290,13 @@ object StochasticPi:
   enum Emitter(val canScale: Boolean = false,
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
-    def this(_n: Null) =
-      this(featuresLinearReplication = true,
-           hasReplicationInputGuardFlaw = _ >= -1)
     def this(featuresLinearReplication: Boolean) =
       this(featuresLinearReplication = featuresLinearReplication,
            hasReplicationInputGuardFlaw = if featuresLinearReplication
                                           then _ >= -1
                                           else _ != 1)
-    case ce extends Emitter(null)
-    case cef extends Emitter(null)
+    case ce extends Emitter(true)
+    case cef extends Emitter(true)
     case zio extends Emitter()
     case ziof extends Emitter()
     case fs2 extends Emitter(true)

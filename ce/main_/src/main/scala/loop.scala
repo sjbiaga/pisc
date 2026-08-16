@@ -37,6 +37,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, FiberIO, Ref, Resource }
+import _root_.cats.effect.kernel.Outcome.Succeeded
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
@@ -52,8 +53,8 @@ package object `Π-loop`:
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
-  type ++ = (Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]])
-  type + = (++, (Ref[IO, Long], ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)))
+  type ++ = ((Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]]), Ref[IO, Long])
+  type + = (++, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate))
 
   type % = AtomicCell[IO, Map[String, Int | (Boolean, +)]]
 
@@ -65,7 +66,7 @@ package object `Π-loop`:
 
   type \ = IO[Unit] => IO[Unit]
 
-  type ++++ = ((Double, Double), Ref[IO, `()`], ((++, Ref[IO, Long]), (++, Ref[IO, Long])))
+  type ++++ = ((Double, Double), Ref[IO, `()`], (++, ++))
   type ** = Queue[IO, (() => Boolean, List[((String, String), ++++)])]
 
   type * = Semaphore[IO]
@@ -92,7 +93,7 @@ package object `Π-loop`:
 
   private def unblock(map: Map[String, Int | (Boolean, +)], key: String)
                      (implicit ^ : String): IO[Unit] =
-    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1.complete(None).void
+    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None).void
 
   private def `π-discard`(map: Map[String, Int | (Boolean, +)], discarded: `Π-Set`[String])
                          (implicit ^ : String): IO[Set[String]] =
@@ -116,16 +117,16 @@ package object `Π-loop`:
         then Map.empty
         else m
              .filter(_._2.asInstanceOf[(Boolean, +)]._1)
-             .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2._2)
+             .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2)
              .toMap
       val (trick, _) = `π-wand`
       def exit(mʹ: Map[String, Int | (Boolean, +)]) =
         { () => !mʹ.exists(_._2.isInstanceOf[Int])
              && mʹ.forall {
-                  case (key1, (true, (_, (_, (e1, Some(p1), _))))) =>
+                  case (key1, (true, (_, (e1, Some(p1), _)))) =>
                     val ^ = key1.substring(0, 36)
                     !mʹ.exists {
-                      case (key2, (true, (_, (_, (e2, Some(p2), _))))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                      case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                         val ^^ = key2.substring(0, 36)
                         ^ != ^^
                         || {
@@ -145,9 +146,9 @@ package object `Π-loop`:
         val nel = ∥(it)(trick)()
         val nelʹ = nel.map {
           case (key1, key2, in, dd) =>
-            val (dc1, (ts1, _)) = m(key1).asInstanceOf[(Boolean, +)]._2
-            val (dc2, (ts2, _)) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (dd, in, (dc1 -> ts1, dc2 -> ts2))
+            val (dcts1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (dcts2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (dd, in, (dcts1, dcts2))
         }
         nel.traverse {
           case (key1, key2, _, _) =>
@@ -155,8 +156,8 @@ package object `Π-loop`:
             val k2 = key2.substring(36)
             val  ^ = key1.substring(0, 36)
             val ^^ = key2.substring(0, 36)
-            val ((d1, c1), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-            val ((d2, c2), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            val (((d1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (((d2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
             for
               s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
               s2 <- if k1 == k2
@@ -178,7 +179,7 @@ package object `Π-loop`:
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
+      _ <- (batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
       m  =
         for
           (exit, nel) <- **.take
@@ -227,8 +228,11 @@ package object `Π-loop`:
                                                   now <- Clock[IO].monotonic.map(_.toNanos)
                                                   _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
                                                   _  <- sem.release
-                                                  _  <- started.update(_ - 1)
-                                                  _  <- peek.unlessA(threshold > 0)
+                                                  _  <- if threshold > 0
+                                                        then
+                                                          started.update(_ - 1)
+                                                        else
+                                                          started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                                 yield
                                                   ()
                                               ).start
@@ -254,7 +258,7 @@ package object `Π-loop`:
     for
       h <- /.take
       ((_, key), it) = h
-      ((d, _), _) = it
+      (((d, _), _), _) = it
       _ <- d.tryGet.map(_ eq None).flatMap {
         if _
         then

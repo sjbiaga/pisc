@@ -37,6 +37,7 @@ import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref, Resource }
+import _root_.cats.effect.kernel.Outcome.Succeeded
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
@@ -196,7 +197,7 @@ package object `Π-loop`:
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- (batch.set(0L) >> *.acquire.guarantee(batch.update(_ + 1)).replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
+      _ <- (batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
       m  =
         for
           (exit, nel) <- **.take
@@ -240,8 +241,11 @@ package object `Π-loop`:
                                                        then e
                                                        else ^.use(_ => e >> peek)
                                                   _ <- sem.release
-                                                  _ <- started.update(_ - 1)
-                                                  _ <- peek.unlessA(threshold > 0)
+                                                  _ <- if threshold > 0
+                                                       then
+                                                         started.update(_ - 1)
+                                                       else
+                                                         started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                                 yield
                                                   ()
                                               ).start

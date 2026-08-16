@@ -646,9 +646,10 @@ package sΠ:
           ()
       }
 
-    // duplicated method to avoid cyclic dependencies
+    // duplicated value to avoid cyclic dependencies
     private val `null` = new `()`(null)
 
+    // duplicated method to avoid cyclic dependencies
     private def supervise(code: IO[Unit]): IO[Unit] =
       Supervisor[IO](await = true)
         .use(_.supervise(code))

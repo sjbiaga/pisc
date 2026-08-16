@@ -108,7 +108,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> (promise -> (timestamp, (new {}, None, rate))))
+        _        <- /.offer(^ -> key -> ((promise, timestamp), (new {}, None, rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -195,7 +195,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> (promise -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        _        <- /.offer(^ -> key -> ((promise, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -223,7 +223,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> (promise -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        _        <- /.offer(^ -> key -> ((promise, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -253,7 +253,7 @@ package object sΠ:
         promise       <- Promise.make[Nothing, Option[<>]]
         result        <- Ref.make[`()`](sΠ.`()`.`null`)
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> (promise, (timestamp -> (`()`[{}], Some(Right(result)), rate))))
+        _        <- /.offer(^ -> key -> ((promise, timestamp) -> (`()`[{}], Some(Right(result)), rate)))
         opt           <- promise.await
         (name, delay) <- ( if opt eq None
                            then
@@ -282,7 +282,7 @@ package object sΠ:
         promise       <- Promise.make[Nothing, Option[<>]]
         result        <- Ref.make[`()`](sΠ.`()`.`null`)
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> (promise, (timestamp -> (`()`[{}], Some(Right(result)), rate))))
+        _        <- /.offer(^ -> key -> ((promise, timestamp) -> (`()`[{}], Some(Right(result)), rate)))
         opt           <- promise.await
         (name, delay) <- ( if opt eq None
                            then

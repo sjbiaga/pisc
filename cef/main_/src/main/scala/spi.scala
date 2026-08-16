@@ -111,7 +111,7 @@ package object sΠ:
         _         <- exclude(key)
         deferred  <- IO.deferred[Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= Ref.of
-        _         <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (new {}, None, rate))))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (new {}, None, rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then
@@ -435,7 +435,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= Ref.of
-        _         <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -463,7 +463,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= Ref.of
-        _         <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate))))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -493,7 +493,7 @@ package object sΠ:
         deferred      <- IO.deferred[Option[<>]]
         result        <- IO.ref[`()`](sΠ.`()`.`null`)
         timestamp     <- Clock[IO].monotonic.map(_.toNanos) >>= Ref.of
-        _             <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
+        _             <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
         opt           <- deferred.get
         (name, delay) <- ( if opt eq None
                            then
@@ -522,7 +522,7 @@ package object sΠ:
         deferred      <- IO.deferred[Option[<>]]
         result        <- IO.ref[`()`](sΠ.`()`.`null`)
         timestamp     <- Clock[IO].monotonic.map(_.toNanos) >>= Ref.of
-        _             <- /.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Right(result)), rate))))
+        _             <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
         opt           <- deferred.get
         (name, delay) <- ( if opt eq None
                            then

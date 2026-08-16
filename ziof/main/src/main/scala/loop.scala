@@ -30,7 +30,7 @@ import _root_.scala.collection.immutable.{ List, Map, Set }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ durationInt, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
+import _root_.zio.{ durationInt, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 
 import `Π-dump`.*
@@ -182,7 +182,7 @@ package object `Π-loop`:
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- (batch.set(0L) *> *.acquire.ensuring(batch.update(_ + 1)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
+      _ <- (batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
       m  =
         for
           (exit, nel) <- **.take
@@ -227,8 +227,11 @@ package object `Π-loop`:
                                                  then e
                                                  else ^.withPermit(e *> peek)
                                             _ <- sem.release
-                                            _ <- started.update(_ - 1)
-                                            _ <- peek.unless(threshold > 0)
+                                            _ <- if threshold > 0
+                                                 then
+                                                   started.update(_ - 1)
+                                                 else
+                                                   started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
                                             ()
                                         ).fork

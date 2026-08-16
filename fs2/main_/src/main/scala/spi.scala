@@ -129,7 +129,7 @@ package object sΠ:
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new {}, None, rate)))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (new {}, None, rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -201,7 +201,7 @@ package object sΠ:
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (new {}, None, rate)))))
+          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (new {}, None, rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -266,7 +266,7 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (new {}, None, rate)))))
+        _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (new {}, None, rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -338,7 +338,7 @@ package object sΠ:
                           else Stream.eval(deferred.complete(None))
               enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+              _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -419,7 +419,7 @@ package object sΠ:
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -560,7 +560,7 @@ package object sΠ:
                             else Stream.eval(deferred.complete(None))
                 enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
                 timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+                _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
                 cb_fb_in <- Stream.eval(deferred.get)
                 _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -636,7 +636,7 @@ package object sΠ:
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             result   <- Stream.eval(Ref[F].of[`()`[F]](null))
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Right(result)), rate)))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -711,7 +711,7 @@ package object sΠ:
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
             enabled  <- Stream.eval(Ref[F].of(true))
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
             timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -784,7 +784,7 @@ package object sΠ:
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -917,7 +917,7 @@ package object sΠ:
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               enabled  <- Stream.eval(Ref[F].of(true))
               timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+              _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               if cb_fb_in ne None
               timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -985,7 +985,7 @@ package object sΠ:
           enabled  <- Stream.eval(Ref[F].of(true))
           result   <- Stream.eval(Ref[F].of[`()`[F]](null))
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue -> (timestamp, (`()`[{}], Some(Right(result)), rate)))))
+          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -1053,7 +1053,7 @@ package object sΠ:
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           (cbarrier, fiber, input) = cb_fb_in.get
@@ -1104,7 +1104,7 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+        _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, input) = cb_fb_in.get
@@ -1220,7 +1220,7 @@ package object sΠ:
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Left(())), rate)))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
             (cbarrier, fiber, input) = cb_fb_in.get
@@ -1271,7 +1271,7 @@ package object sΠ:
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         result   <- Stream.eval(Ref[F].of[`()`[F]](null))
         timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null -> (timestamp, (`()`[{}], Some(Right(result)), rate)))))
+        _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get

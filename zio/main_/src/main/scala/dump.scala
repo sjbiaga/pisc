@@ -77,7 +77,7 @@ package object `Π-dump`:
           && ks.forall(_.charAt(36) == '!')
           then ExitCode.success
           else ExitCode.failure
-      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1.succeed(None))) *>
+      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1._1.succeed(None))) *>
       !.succeed(ec).unit
     }
 

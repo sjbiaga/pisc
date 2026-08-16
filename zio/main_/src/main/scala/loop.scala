@@ -30,7 +30,7 @@ import _root_.scala.collection.immutable.{ List, Map, Set }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ durationInt, Clock, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
+import _root_.zio.{ durationInt, Clock, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 
 import `Π-dump`.*
@@ -46,8 +46,8 @@ package object `Π-loop`:
 
   type <> = (Double, CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
 
-  type ++ = Promise[Nothing, Option[<>]]
-  type + = (++, (Long, ({}, Option[Either[Unit, Ref[`()`]]], Rate)))
+  type ++ = (Promise[Nothing, Option[<>]], Long)
+  type + = (++, ({}, Option[Either[Unit, Ref[`()`]]], Rate))
 
   type % = Ref.Synchronized[Map[String, Int | +]]
 
@@ -59,7 +59,7 @@ package object `Π-loop`:
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ++++ = ((Double, Double), Ref[`()`], ((++, Long), (++, Long)))
+  type ++++ = ((Double, Double), Ref[`()`], (++, ++))
   type ** = Queue[(() => Boolean, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
@@ -86,7 +86,7 @@ package object `Π-loop`:
 
   private def unblock(map: Map[String, Int | +], key: String)
                      (implicit ^ : String): UIO[Unit] =
-    map(^ + key).asInstanceOf[+]._1.succeed(None).unit
+    map(^ + key).asInstanceOf[+]._1._1.succeed(None).unit
 
   private def `π-discard`(map: Map[String, Int | +], discarded: `Π-Set`[String])
                          (implicit ^ : String): UIO[Set[String]] =
@@ -109,16 +109,16 @@ package object `Π-loop`:
         if m.exists(_._2.isInstanceOf[Int])
         then Map.empty
         else m
-             .map(_ -> _.asInstanceOf[+]._2._2)
+             .map(_ -> _.asInstanceOf[+]._2)
              .toMap
       val (trick, _) = `π-wand`
       def exit(mʹ: Map[String, Int | +]) =
         { () => !mʹ.exists(_._2.isInstanceOf[Int])
              && mʹ.forall {
-                  case (key1, (_, (_, (e1, Some(p1), _)))) =>
+                  case (key1, (_, (e1, Some(p1), _))) =>
                     val ^ = key1.substring(0, 36)
                     !mʹ.exists {
-                      case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                      case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                         val ^^ = key2.substring(0, 36)
                         ^ != ^^
                         || {
@@ -138,9 +138,9 @@ package object `Π-loop`:
         val nel = ∥(it)(trick)()
         val nelʹ = nel.map {
           case (key1, key2, in, dd) =>
-            val (p1, (s1, _)) = m(key1).asInstanceOf[+]
-            val (p2, (s2, _)) = m(key2).asInstanceOf[+]
-            (key1, key2) -> (dd, in, ((p1, s1), (p2, s2)))
+            val (ps1, _) = m(key1).asInstanceOf[+]
+            val (ps2, _) = m(key2).asInstanceOf[+]
+            (key1, key2) -> (dd, in, (ps1, ps2))
         }
         ZIO.collectAll {
           nel.map {
@@ -166,7 +166,7 @@ package object `Π-loop`:
           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- (batch.set(0L) *> *.acquire.ensuring(batch.update(_ + 1)).repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
+      _ <- (batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(threshold-1).timeout(timeout.nanoseconds)).when(threshold > 0)
       m  =
         for
           (exit, nel) <- **.take
@@ -214,8 +214,11 @@ package object `Π-loop`:
                                             now <- Clock.nanoTime
                                             _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration))))
                                             _  <- sem.release
-                                            _  <- started.update(_ - 1)
-                                            _  <- peek.unless(threshold > 0)
+                                            _  <- if threshold > 0
+                                                  then
+                                                    started.update(_ - 1)
+                                                  else
+                                                    started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
                                             ()
                                         ).fork

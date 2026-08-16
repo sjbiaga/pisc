@@ -87,9 +87,9 @@ package object `Π-dump`:
             && ks.forall(_.charAt(36) == '!')
             then ExitCode.Success
             else ExitCode.Error
-        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1.complete(None)) >>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._2 match { case null => Async[F].unit
-                                                                        case it => it.get.flatMap(_.complete(None).void) }) >>
+        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1._1.complete(None)) >>
+        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1._2 match { case null => Async[F].unit
+                                                                           case it => it.get.flatMap(_.complete(None).void) }) >>
         !.complete(ec).void
       }
 
