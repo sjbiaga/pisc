@@ -167,8 +167,8 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `ce` contains five files: `dump.scala`, `loop.scala`, `stats.scala`, `ba.scala`,
-and `main.scala.in`.
+The root project folder `ce` contains six files: `dump.scala`, `loop.scala`, `stats.scala`, `ba.scala`,
+`bam.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

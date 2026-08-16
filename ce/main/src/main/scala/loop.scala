@@ -26,7 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.{ List, Map }
+import _root_.scala.collection.immutable.{ List, Map, Set }
+import _root_.scala.concurrent.duration.*
+import _root_.scala.Option.{ unless, when }
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
@@ -34,8 +36,9 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref }
-import _root_.cats.effect.std.{ CyclicBarrier, Queue, Semaphore }
+import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref, Resource }
+import _root_.cats.effect.kernel.Outcome.Succeeded
+import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
 
 import `Π-dump`.*
 import `Π-stats`.*
@@ -50,28 +53,34 @@ package object `Π-loop`:
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
-  type + = (Deferred[IO, Option[<>]], ((`)(`, Ordʹ), ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)))
+  type ++ = ((Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]]), (`)(`, Ordʹ))
+  type + = (++, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate))
 
-  type % = Ref[IO, Map[String, Int | +]]
+  type % = AtomicCell[IO, Map[String, Int | (Boolean, +)]]
 
   type ! = Deferred[IO, ExitCode]
 
   type & = Ref[IO, Long]
 
-  type * = Semaphore[IO]
-
   type / = Queue[IO, ((String, String), +)]
 
-  type \ = IO[Unit]
+  type \ = IO[Unit] => IO[Unit]
+
+  type ++++ = (Double, Ref[IO, `()`], (++, ++))
+  type ** = Queue[IO, (() => Boolean, List[((String, String), ++++)])]
+
+  type * = Semaphore[IO]
+
+  type ^ = Resource[IO, Unit]
 
 
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): IO[Unit] =
     %.update(enabled.foldLeft(_) { (m, key) =>
-                                   val n = if m.contains(key)
-                                           then m(key).asInstanceOf[Int]
-                                           else 0
-                                   m + (key -> (n + 1))
+                                    val n = if m.contains(key)
+                                            then m(key).asInstanceOf[Int]
+                                            else 0
+                                    m + (key -> (n + 1))
                                  }
     )
 
@@ -82,150 +91,215 @@ package object `Π-loop`:
     `π-enable`(spell(key))
 
 
-  private def unblock(m: Map[String, Int | +], k: String)
+  private def unblock(map: Map[String, Int | (Boolean, +)], key: String)
                      (implicit ^ : String): IO[Unit] =
-    m(^ + k).asInstanceOf[+]._1.complete(None).void.whenA(m.contains(^ + k))
+    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None).void
 
-  private def `π-discard`(discarded: `Π-Set`[String])
-                         (using % : %)
-                         (implicit ^ : String): IO[Unit] =
+  private def `π-discard`(map: Map[String, Int | (Boolean, +)], discarded: `Π-Set`[String])
+                         (implicit ^ : String): IO[Set[String]] =
+    discarded.toList.traverse(unblock(map, _)).as(discarded.map(^ + _))
+
+  private def discard(key: String, map: Map[String, Int | (Boolean, +)])(using String)
+                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Set[String]] =
+    val (trick, _) = `π-wand`
+    if trick.contains(key)
+    then
+      `π-discard`(map, trick(key))
+    else
+      IO.pure(Set.empty)
+
+
+  def peek(using % : %, ** : **)
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    %.evalModify { m =>
+      val it =
+        if m.exists(_._2.isInstanceOf[Int])
+        then Map.empty
+        else m
+             .filter(_._2.asInstanceOf[(Boolean, +)]._1)
+             .map(_ -> _.asInstanceOf[(Boolean, +)]._2._2)
+             .toMap
+      val (trick, _) = `π-wand`
+      def exit(mʹ: Map[String, Int | (Boolean, +)]) =
+        { () => !mʹ.exists(_._2.isInstanceOf[Int])
+             && mʹ.forall {
+                  case (key1, (true, (_, (e1, Some(p1), _)))) =>
+                    val ^ = key1.substring(0, 36)
+                    !mʹ.exists {
+                      case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                        val ^^ = key2.substring(0, 36)
+                        ^ != ^^
+                        || {
+                          val k1 = key1.substring(36)
+                          val k2 = key2.substring(36)
+                          !trick.contains(k1) || !trick(k1).contains(k2)
+                        }
+                      case _ => false
+                    }
+                  case _ => false
+                }
+        }
+      if it.isEmpty
+      then
+        **.offer(exit(m) -> Nil).map(m -> _)
+      else
+        val nel = ∥(it)(trick)()
+        val nelʹ = nel.map {
+          case (key1, key2, in, delay) =>
+            val (dcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (dcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (delay, in, (dcko1, dcko2))
+        }
+        nel.traverse {
+          case (key1, key2, _, _) =>
+            val k1 = key1.substring(36)
+            val k2 = key2.substring(36)
+            val  ^ = key1.substring(0, 36)
+            val ^^ = key2.substring(0, 36)
+            val (((d1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (((d2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            for
+              s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
+              s2 <- if k1 == k2
+                    then IO.pure(Set.empty)
+                    else d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
+            yield
+              (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
+           -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
+        }.map(_.foldRight(m) {
+                case ((ks, ls), map) =>
+                  ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
+                    .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
+              }
+        ).flatMap(mʹ => **.offer(exit(mʹ) -> nelʹ).map(mʹ -> _))
+    }
+
+
+  private def exit(using % : %, ! : !): IO[Unit] =
+    %.get.flatMap { m =>
+      val ks = m.keys.toList
+      val ec =
+        if ks.isEmpty
+        then
+          ExitCode.Success
+        else
+          if !sys.BooleanProp.keyExists(barsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.Success
+          else ExitCode.Error
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None)) >>
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => IO.unit
+                                                                      case it => it.get.flatMap(_.complete(None).void) }) >>
+      !.complete(ec).void
+    }
+
+  def loop(parallelism: Int, threshold: Int, timeout: Int, _snapshot: Boolean, started: Ref[IO, Long], batch: Ref[IO, Long], `}{`: sΠ.`}{`)
+          (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
+          (using `}{`.`][`, `}{`.stm.TSemaphore)
+          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      m <- %.get
-      _ <- discarded.toList.traverse(unblock(m, _)).void
-      _ <- %.update(discarded.map(^ + _).foldLeft(_)(_ - _))
+      _ <- (batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(threshold).timeout(timeout.nanoseconds).orElse(IO.unit)).whenA(threshold > 0)
+      m  =
+        for
+          (exit, nel) <- **.take
+          l           <-
+            if nel.isEmpty
+            then
+              if threshold > 0
+              then
+                (started.get product batch.get).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit >> IO.pure(false)
+                  case _ =>
+                    IO.pure(true)
+                }
+              else
+                (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
+                  case 0L if exit() =>
+                    this.exit >> IO.pure(false)
+                  case _ =>
+                    IO.pure(true)
+                }
+            else
+              Semaphore[IO](parallelism).flatMap { sem =>
+                nel.parTraverse { case ((key1, key2), (delay, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
+                                    val k1 = key1.substring(36)
+                                    val k2 = key2.substring(36)
+                                    IO.uncancelable { _ =>
+                                      for
+                                        cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        _  <- sem.acquire
+                                        _  <- started.update(_ + 1)
+                                        fb <- ( for
+                                                  _ <- { (ord, ordʹ) match
+                                                           case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                             `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                           case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                             `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                       }.unlessA(k1 == k2)
+                                                  _ <- cb.await
+                                                  e  = ( for
+                                                           _ <- enable(k1)
+                                                           _ <- enable(k2).unlessA(k1 == k2)
+                                                         yield
+                                                           ()
+                                                       )
+                                                  _ <- if threshold > 0
+                                                       then e
+                                                       else ^.use(_ => e >> peek)
+                                                  _ <- sem.release
+                                                  _ <- if threshold > 0
+                                                       then
+                                                         started.update(_ - 1)
+                                                       else
+                                                         started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
+                                                yield
+                                                  ()
+                                              ).start
+                                        _  <- d1.complete(Some((delay, cb, fb, in)))
+                                        _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                      yield
+                                        ()
+                                    }
+                                }
+              } >> IO.pure(true)
+        yield
+          l
+      l <- if threshold > 0
+           then ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
+           else m
+      _ <- IO.cede >> loop(parallelism, threshold, timeout, _snapshot, started, batch, `}{`).whenA(l)
     yield
       ()
 
-  private def discard(key: String)(using ^ : String)
-                     (using %)
-                     (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    val (trick, _) = `π-wand`
-    `π-discard`(trick(key)).whenA(trick.contains(key))
-
-
-  private def exit(ks: List[String])
-                  (using % : %, ! : !): IO[Unit] =
-    if ks.isEmpty
-    then
-      !.complete(ExitCode.Success).void
-    else
-      %.flatModify { m =>
-        m -> ks.traverse(m(_).asInstanceOf[+]._1.complete(None))
-      }.as {
-        if !sys.BooleanProp.keyExists(barsx).value
-        && ks.forall(_.charAt(36) == '!')
-        then ExitCode.Success
-        else ExitCode.Error
-      } >>= (!.complete(_).void)
-
-
-  def loop(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], `}{`: sΠ.`}{`)
-          (using % : %, / : /, ! : !, & : &, - : -, * : *)
-          (using `}{`.`][`, `}{`.stm.TSemaphore)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
-    %.flatModify { m =>
-      m -> {
-        { if m.exists(_._2.isInstanceOf[Int])
-          then Map.empty -> { () => false }
-          else m
-               .map(_ -> _.asInstanceOf[+]._2._2)
-               .toMap
-            -> { () => m.isEmpty
-                    || m.keys.forall(_.charAt(36) == '!')
-                    && { val (trick, _) = `π-wand`
-                         m.forall {
-                           case (key1, (_, (_, (e1, Some(p1), _)))) =>
-                             val ^ = key1.substring(0, 36)
-                             !m.exists {
-                               case (key2, (_, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
-                                 val ^^ = key2.substring(0, 36)
-                                 ^ != ^^
-                                 || {
-                                   val k1 = key1.substring(36)
-                                   val k2 = key2.substring(36)
-                                   !trick.contains(k1) || !trick(k1).contains(k2)
-                                 }
-                               case _ => false
-                             }
-                           case _ => false
-                         }
-                       }
-               }
-        } match
-          case (it: Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)], exit) =>
-            if it.isEmpty && !exit()
-            then
-              *.acquire >> loop(parallelism, snapshot, started, `}{`)
-            else
-              ∥(it)(`π-wand`._1)() match
-                case Nil =>
-                  (started.get product *.available).map(_ + _).flatMap { n =>
-                    if n == 0L && exit()
-                    then
-                      this.exit(it.keys.toList)
-                    else
-                      *.acquire >> loop(parallelism, snapshot, started, `}{`)
-                  }
-                case nel =>
-                  Semaphore[IO](parallelism).flatMap { sem =>
-                    nel.parTraverse { case (key1, key2, in, delay) =>
-                                      val k1 = key1.substring(36)
-                                      val k2 = key2.substring(36)
-                                      val  ^ = key1.substring(0, 36)
-                                      val ^^ = key2.substring(0, 36)
-                                      IO.uncancelable { _ =>
-                                        for
-                                          cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                          p1 <- %.modify { m => m -> m(key1).asInstanceOf[+] }
-                                          p2 <- %.modify { m => m -> m(key2).asInstanceOf[+] }
-                                          (d1, ((key, ord), _)) = p1
-                                          (d2, ((keyʹ, ordʹ), _)) = p2
-                                          _  <- sem.acquire
-                                          _  <- discard(k1)(using  ^)
-                                          _  <- discard(k2)(using ^^).unlessA(k1 == k2)
-                                          _  <- %.update(_ - key1 - key2)
-                                          _  <- started.update(_ + 1)
-                                          fb <- ( for
-                                                    _ <- { (ord, ordʹ) match
-                                                             case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                               `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                             case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                               `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                         }.unlessA(k1 == k2)
-                                                    _ <- cb.await
-                                                    _ <- enable(k1)
-                                                    _ <- enable(k2).unlessA(k1 == k2)
-                                                    _ <- sem.release
-                                                    _ <- started.update(_ - 1)
-                                                    _ <- *.release
-                                                  yield
-                                                    ()
-                                                ).start
-                                          _  <- d1.complete(Some((delay, cb, fb, in)))
-                                          _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                        yield
-                                          ()
-                                      }
-                                    }
-                  } >> IO.cede >> loop(parallelism, snapshot, started, `}{`)
-      }
-    }
-
-  def poll(using % : %, / : /, * : *): IO[Unit] =
+  def poll(using % : %, / : /, \ : \): IO[Unit] =
     for
       h <- /.take
       ((_, key), it) = h
-      _ <- %.update { m =>
-                      val ^ = h._1._1
-                      val n = m(key).asInstanceOf[Int] - 1
-                      ( if n == 0
-                        then
-                          m - key
-                        else
-                          m + (key -> n)
-                      ) + (^ + key -> it)
-           }
-      _ <- *.release
+      (((d, _), _), _) = it
+      _ <- d.tryGet.map(_ eq None).flatMap {
+        if _
+        then
+         \(
+            %.update { m =>
+                       val ^ = h._1._1
+                       val n = m(key).asInstanceOf[Int] - 1
+                       ( if n == 0
+                         then
+                           m - key
+                         else
+                           m + (key -> n)
+                       ) + (^ + key -> (true, it))
+            }
+          )
+        else
+          %.update { m =>
+                     val ^ = h._1._1
+                     m + (^ + key -> (false, it))
+          }
+      }
       _ <- IO.cede >> poll
     yield
       ()

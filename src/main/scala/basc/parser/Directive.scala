@@ -58,6 +58,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
        | "replication"
        | "typeclasses"
        | "parallelism"
+       | "batch"
        | "snapshot"
        | "traces"      => true
     case _             => false
@@ -185,6 +186,16 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "parallelism"  =>
         settings.par = 1 max number
 
+      case "batch"        =>
+        settings.batch = self match
+          case it: List[String] => it.map(_.toLowerCase) match
+            case List(given String: "threshold", it: String) =>
+              (0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.batch._2)
+            case List(given String: "timeout", it: String) =>
+              (settings.batch._1, 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case _                                         => throw DirectiveValueParsingException(directive, settings.message)
+          case _                => throw DirectiveValueParsingException(directive, settings.message)
+
       case "snapshot" =>
         settings.snapshot = boolean
 
@@ -214,6 +225,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                                   "replication"  -> settings.replication,
                                   "typeclasses"  -> settings.typeclasses,
                                   "parallelism"  -> settings.par,
+                                  "batch"        -> settings.batch,
                                   "snapshot"     -> settings.snapshot,
                                   "traces"       -> settings.traces)
         catch _ =>
@@ -228,6 +240,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               case it @ "replication"    => it -> settings.replication
               case it @ "typeclasses"    => it -> settings.typeclasses
               case it @ "parallelism"    => it -> settings.par
+              case it @ "batch"          => it -> settings.batch
               case it @ "snapshot"       => it -> settings.snapshot
               case it @ "traces"         => it -> settings.traces
             }
@@ -246,6 +259,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case ("replication", it: (Int, Boolean))    => settings.replication = it
             case ("typeclasses", it: List[String])      => settings.typeclasses = it
             case ("parallelism", it: Int)               => settings.par = it
+            case ("batch", it: (Int, Int))              => settings.batch = it
             case ("snapshot", it: Boolean)              => settings.snapshot = it
             case ("traces", it: Option[Option[String]]) => settings.traces = it
             case _                                      => ???
@@ -269,11 +283,13 @@ object Directive:
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
-                      var par: Int = 9,
+                      var par: Int = Int.MaxValue,
+                      var batch: (Int, Int) = (0, 1),
                       var snapshot: Boolean = false,
                       var traces: Option[Option[String]] = None):
 
-    private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
+    private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
+                                    "batch"       -> "a <threshold> number or a <timeout> number setting")
     def message(implicit name: String) = messages(name)
 
 

@@ -40,6 +40,11 @@ import ce.Meta.*
 
 object Program:
 
+  private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
+    pace match
+      case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
+      case _ => args
+
   extension (self: Pre | AST)(using id: => String, ^ : (Enumerator.Generator, Term.Name))
 
     def emitʹ: List[Enumerator] =
@@ -314,6 +319,222 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+
+        case !(parallelism, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(nu), r, code)), sum) if parallelism < -1 =>
+          val par = if λ.`type`.isDefined then id else arg
+
+          val υidυ = id
+
+          val chʹ =
+            nu match
+              case "ν" => Term.Apply(\(ch), Term.ArgClause(Lit.String(nu) :: Nil))
+              case _   => Term.Apply(\(ch), Term.ArgClause(Lit.Null() :: Nil))
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(chʹ, Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          val `val` =
+            λ.`type` match
+              case Some((tpe, Some(refined))) =>
+                `val * = *: * …`(arg, par, tpe, refined) :: Nil
+              case Some((tpe, _)) =>
+                `val * = *: *`(arg, par, tpe) :: Nil
+              case _ => Nil
+
+          val wrap = { (body: Term) => Term.Block(`val` :+ body) }
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> IO[Any] = …; * }`(υidυ -> par, wrap(sum.emit)))
+
+        case !(parallelism, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) if parallelism < -1 =>
+          val υidυ = id
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(
+                                     Term.Apply(\(ch), Term.ArgClause(Lit.String("*") :: Nil)),
+                                     Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(
+                                     Term.Apply(\(ch), Term.ArgClause(Lit.String("*") :: Nil)),
+                                     Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(ch), Term.ArgClause(Lit.String("*") :: Nil)),
+                                   Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, sum.emit))
+
+        case !(parallelism, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg, None, r, code)), sum) if parallelism < -1 =>
+          val υidυ = id
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: arg.toTerm :: Nil))),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$dir") :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, sum.emit))
+
+        case !(parallelism, given Option[(Long, String)], Some(it @ ζ(cap, name, _, r, code)), sum) if parallelism < -1 =>
+          val υidυ = id
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(
+                                     Term.Apply(\(name), Term.ArgClause(Lit.String("ζ") :: Nil)),
+                                     Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(
+                                     Term.Apply(\(name), Term.ArgClause(Lit.String("ζ") :: Nil)),
+                                     Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\(name), Term.ArgClause(Lit.String("ζ") :: Nil)),
+                                   Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: \(s"π-$cap") :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, sum.emit))
+
+        case !(parallelism, given Option[(Long, String)], Some(it @ τ(r, code)), sum) if parallelism < -1 =>
+          val υidυ = id
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr = `for * yield ()`(enums*)
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(
+                                   Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(true) :: Nil)),
+                                   Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                                 Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
+                               Term.ArgClause(expr :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+            case _ =>
+              * = `_ <- *`(Term.Apply(
+                             Term.Apply(
+                               Term.Apply(
+                                 Term.Apply(\("τ"), Term.ArgClause(Lit.Boolean(false) :: Nil)),
+                                 Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: rate(r.get) :: Nil))),
+                               Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
+                             Term.ArgClause(\(υidυ) :: Nil)))
+
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, sum.emit))
+
         // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, pace, Some(π @ π(_, _, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
@@ -324,7 +545,7 @@ object Program:
           val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                              Term.ArgClause(^._2 :: Nil)))
+                                                              Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -350,16 +571,17 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> IO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> IO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(Nil)),
+                                                             Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
@@ -375,11 +597,11 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> IO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
@@ -452,11 +674,19 @@ object Program:
             Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
       ) ::
       ( prog.tail.tail.head match
+          case (`(*)`(_, λ(Term.Tuple(List(threshold: Lit.Int, _)))), _) =>
+            Defn.Val(Nil, Pat.Var("π-batch-threshold") :: Nil, None, threshold)
+      ) ::
+      ( prog.tail.tail.head match
+          case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
+            Defn.Val(Nil, Pat.Var("π-batch-timeout") :: Nil, None, timeout)
+      ) ::
+      ( prog.tail.tail.tail.head match
           case (`(*)`(_, λ(snapshot: Lit.Boolean)), _) =>
             Defn.Val(Nil, Pat.Var("π-snapshot") :: Nil, None, snapshot)
       ) ::
       prog
-        .drop(3)
+        .drop(1+3)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

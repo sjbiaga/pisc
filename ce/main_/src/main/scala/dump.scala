@@ -46,7 +46,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
+  type - = Queue[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => IO[String] =
@@ -85,29 +85,30 @@ package object `Π-dump`:
         ps.println(snapshot)
       }.void.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
 
-
-  private def exit(ks: List[String])
-                  (using % : %, ! : !): IO[Unit] =
-    if ks.isEmpty
-    then
-      !.complete(ExitCode.Success).void
-    else
-      %.flatModify { m =>
-        m -> ks.traverse(m(_).asInstanceOf[+]._1.complete(None))
-      }.as {
-        if !sys.BooleanProp.keyExists(barsx).value
-        && ks.forall(_.charAt(36) == '!')
-        then ExitCode.Success
-        else ExitCode.Error
-      } >>= (!.complete(_).void)
-
+  private def exit(using % : %, ! : !): IO[Unit] =
+    %.get.flatMap { m =>
+      val ks = m.keys.toList
+      val ec =
+        if ks.isEmpty
+        then
+          ExitCode.Success
+        else
+          if !sys.BooleanProp.keyExists(barsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.Success
+          else ExitCode.Error
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None)) >>
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => IO.unit
+                                                                      case it => it.get.flatMap(_.complete(None).void) }) >>
+      !.complete(ec).void
+    }
 
   def dump(snapshot: Boolean)
           (using % : %, ! : !, - : -): IO[Unit] =
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2)) =>
+             case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
                  p  <- record(no, ts1, ts, delay, duration, l1)(k1)
                  _  <- record(no, p, l1._2._2).whenA(snapshot)
@@ -120,7 +121,7 @@ package object `Π-dump`:
                  _  <- IO.cede >> dump(snapshot)
                yield
                  ()
-             case ks: List[String] =>
-               exit(ks)
+             case _ =>
+               exit
     yield
       ()

@@ -19,6 +19,7 @@ function ba() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/bam.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -52,7 +53,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC4 \
+                  -q -O -nowarn -S 3.9.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -60,6 +61,9 @@ function ba() {
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
 #                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.communications.batch.threshold=0 \
+#                  -Dpisc.bioambients.communications.batch.timeout=1 \
+#                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 
 function ba_() {
@@ -81,6 +85,7 @@ function ba_() {
             local deps='--dep org.typelevel::cats-effect:3.7.0
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/bam_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -114,7 +119,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC4 \
+                  -q -O -nowarn -S 3.9.0-RC5 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -122,6 +127,8 @@ function ba_() {
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
 #                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.communications.batch.threshold=0 \
+#                  -Dpisc.bioambients.communications.batch.timeout=1 \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 

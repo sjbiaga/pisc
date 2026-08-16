@@ -164,53 +164,53 @@ abstract class Calculus extends BioAmbients:
       case cond ~ _ ~ t ~ _ ~ f =>
         ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
     } |
-    "!"~> scale ~ opt( pace ) ~ opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
-      case _ ~ _ ~ Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
-        throw ConsGuardParsingException(cons, ch.name)
-      case parallelism ~ pace ~ Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        if ch == par
-        then
-          if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
-          then
-            warn(throw GuardParsingException(ch.name, cons.isEmpty))
-        val (bound, freeʹ) = π._2
-        PendingOccurrence(freeʹ)
-        BindingOccurrence(bound)
-        choice ^^ {
-          case (sum, free) =>
-            val πʹ: π = {
-              π._1 match
-                case it: π =>
-                  it.copy()('!' + it.υidυ)
+    ("!"|"¡") ~ scale >> { // [guarded] replication
+      case lin ~ parallelism =>
+        var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
+        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡" ) && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
+        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡" ) || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        opt( pace ) ~ opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
+          case _ ~ Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
+            throw ConsGuardParsingException(cons, ch.name)
+          case pace ~ Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
+            if ch == par
+            then
+              if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
+              then
+                warn(throw GuardParsingException(ch.name, cons.isEmpty))
+            val (bound, freeʹ) = π._2
+            PendingOccurrence(freeʹ)
+            BindingOccurrence(bound)
+            choice ^^ {
+              case (sum, free) =>
+                val πʹ: π = {
+                  π._1 match
+                    case it: π =>
+                      it.copy()('!' + it.υidυ)
+                }
+                `!`(parallelismʹ, pace, Some(πʹ), sum) -> (freeʹ ++ (free &~ bound))
             }
-            `!`(parallelismʹ, pace, Some(πʹ), sum) -> (freeʹ ++ (free &~ bound))
-        }
-      case parallelism ~ pace ~ Some(μ) =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        val (_, freeʹ) = μ._2
-        PendingOccurrence(freeʹ)
-        choice ^^ {
-          case (sum, free) =>
-            val μʹ: μ | ζ = {
-              μ._1 match
-                case it: π =>
-                  it.copy()('!' + it.υidυ)
-                case it: τ =>
-                  it.copy()('!' + it.υidυ)
-                case it: ζ =>
-                  it.copy()('!' + it.υidυ)
+          case pace ~ Some(μ) =>
+            val (_, freeʹ) = μ._2
+            PendingOccurrence(freeʹ)
+            choice ^^ {
+              case (sum, free) =>
+                val μʹ: μ | ζ = {
+                  μ._1 match
+                    case it: π =>
+                      it.copy()('!' + it.υidυ)
+                    case it: τ =>
+                      it.copy()('!' + it.υidυ)
+                    case it: ζ =>
+                      it.copy()('!' + it.υidυ)
+                }
+                `!`(parallelismʹ, pace, Some(μʹ), sum) -> (freeʹ ++ free)
             }
-            `!`(parallelismʹ, pace, Some(μʹ), sum) -> (freeʹ ++ free)
-        }
-      case parallelism ~ pace ~ _ =>
-        var parallelismʹ = if parallelism < 0 then _settings.replication._1 else parallelism
-        parallelismʹ = if parallelismʹ < 2 || !_settings.replication._2 || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        choice ^^ {
-          case (sum, free) =>
-            `!`(parallelismʹ, pace, None, sum) -> free
+          case pace ~ _ =>
+            choice ^^ {
+              case (sum, free) =>
+                `!`(parallelismʹ, pace, None, sum) -> free
+            }
         }
     } |
     opt(stringLiteral) ~ ("["~>choice<~"]") ^^ { // ambient

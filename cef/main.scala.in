@@ -36,7 +36,7 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.scala.collection.immutable.Map
 
   import _root_.cats.effect.{ ExitCode, Deferred, Ref }
-  import _root_.cats.effect.std.{ Queue, Semaphore }
+  import _root_.cats.effect.std.{ AtomicCell, Queue, Semaphore }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
@@ -44,22 +44,28 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-dump`.*
 
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val bacbh = "pisc.bioambients.communications.batch.threshold"
+  private val bacbt = "pisc.bioambients.communications.batch.timeout"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, snapshot: Boolean, started: Ref[IO, Long], args: List[String])
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[IO, Long], batch: Ref[IO, Long])
                  (lo: IOLocal[sΠ.`)(`], `}{`: sΠ.`}{`)
-                 (% : %, / : /, * : *, - : -, ! : !, & : &)
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
                  (using `}{`.`][`, `}{`.stm.TSemaphore): IO[ExitCode] =
+    val \ =
+      if threshold > 0
+      then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- loop(parallelism, snapshot, started, `}{`)(using %, /, !, &, -, *)(π.`π-wand`).background
-        _ <- poll(using %, /, *).background
+        _ <- loop(parallelism, threshold, timeout, snapshot, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+        _ <- poll(using %, /, \).background
         _ <- dump(snapshot)(using %, !, -).background
       yield
         ()
     ).use { _ =>
       for
         ^ <- π.`π-uuid`
-        _ <- π.Main(lo, `}{`)(args*)(using ^)(using %, /, *.release)
+        _ <- π.Main(lo, `}{`)(args*)(using ^)(using %, /, \)
         x <- !.get
       yield
         x
@@ -69,22 +75,31 @@ object App extends _root_.cats.effect.IOApp:
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(bacbh).isSet
+            then sys.Prop.IntProp(bacbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(bacbt).isSet
+            then sys.Prop.IntProp(bacbt).value
+            else π.`π-batch-timeout`
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-snapshot`
     for
-      % <- IO.ref(Map[String, Int | +]())
+      % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      - <- Queue.unbounded[IO, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
+      ** <- Queue.unbounded[IO, (() => Boolean, List[((String, String), ++++)])]
+      - <- Queue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)
       n <- IO.ref(0L)
+      ^ <- Semaphore[IO](1)
+      b <- IO.ref(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
       stm <- STM.runtime[IO]
       wrapper = new sΠ.`}{`(stm)
       (lo, tree, semaphore) <- wrapper.`][`()
-      x <- run(p, s, n, args)(lo, wrapper)(%, /, *, -, !, &)(using tree, semaphore)
+      x <- run(args, p, h, t, s, n, b)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
     yield
       x
 

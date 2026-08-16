@@ -28,6 +28,8 @@
 
 package object sΠ:
 
+  import _root_.scala.concurrent.duration.FiniteDuration
+
   import _root_.scala.collection.immutable.{ Map, Set }
 
   import _root_.scala.reflect.{ ClassTag, classTag }
@@ -36,7 +38,7 @@ package object sΠ:
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ IO, IOLocal, Deferred }
+  import _root_.cats.effect.{ IO, IOLocal }
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.{ Supervisor, UUIDGen }
 
@@ -46,6 +48,14 @@ package object sΠ:
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
+
+
+  type `Π-Map`[K, +V] = Map[K, V]
+
+  type `Π-Set`[A] = Set[A]
+
+  type `Π-Function0` = () => String ?=> IO[Any]
+  type `Π-Function1` = `()` => String ?=> IO[Any]
 
 
   /**
@@ -97,11 +107,6 @@ package object sΠ:
   }
 
 
-  type `Π-Map`[K, +V] = Map[K, V]
-
-  type `Π-Set`[A] = Set[A]
-
-
   /**
     * Supervised [[code]].
     * @param code
@@ -109,16 +114,16 @@ package object sΠ:
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
       .use(_.supervise(code))
-      .flatMap(_.join
-                .flatMap
-                { case Succeeded(it) => it
-                  case _ => IO(null.asInstanceOf[T]) }
-              )
+      .flatMap(_.join)
+      .flatMap {
+        case Succeeded(it) => it
+        case _             => IO.pure(null.asInstanceOf[T])
+      }
 
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): IO[Unit] =
-    `π-exclude`(Set.from(enabled)) >> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): IO[Unit] =
@@ -160,7 +165,7 @@ package object sΠ:
   /**
     * silent transition
     */
-  object τ:
+  object τ extends τ:
 
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
@@ -168,9 +173,9 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
+        deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> `π-τ`, (new {}, None, rate))))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`), (new {}, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -180,13 +185,45 @@ package object sΠ:
       yield
         delay
 
+    /**
+      * linear replication guard
+      */
+    def apply(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.silent(false)(parallelism, rate)(key, `)(`, `π-τ`)(body)
+
+    /**
+      * linear replication guard w/ pace
+      */
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.silent(false)(pace, parallelism, rate)(key, `)(`, `π-τ`)(body)
+
+    /**
+      * linear replication guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: IO[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.silent(true)(parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
+    /**
+      * linear replication guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: IO[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
 
   /**
-    * prefix
+    * names and values
     */
-  final implicit class `()`(private val name: Any) extends AnyVal:
+  final implicit class `()`(private[sΠ] val name: Any) extends AnyVal with Macros:
 
-    private def map = `()`[Map[Int, {}]]
+    protected def map = `()`[Map[Int, {}]]
 
     def ====(that: `()`) =
       try
@@ -197,36 +234,209 @@ package object sΠ:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
 
-    /**
-      * capability prefix
-      */
-    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
-      for
-        _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
-        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
-        opt      <- deferred.get
-        _        <- if opt eq None then IO.canceled else IO.unit
-        (delay,
-         b, f, _) = opt.get
-        _        <- b.await
-        _        <- f.join
-      yield
-        delay
+    // LINEAR REPLICATION ///////////////////////////////////////////////// π //
+
+    /////////////////////////////////////////////////////////////////// BOUND //
 
     /**
-      * capability prefix
+      * linear replication bound output guard
       */
-    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
-      apply(rate)(key, `)(`, cap) <* exec(code)
+    def apply(_nu: "ν")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output("ν")(false)(parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication bound output guard w/ pace
+      */
+    def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output("ν")(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication bound output guard w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function1`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output("ν")(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear replication bound output guard w/ pace w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function1`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output("ν")(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    //////////////////////////////////////////////////////////////// CONSTANT //
+
+    /**
+      * linear constant replication output guard
+      */
+    def apply(_f: false)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output(false)(parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear constant replication output guard w/ pace
+      */
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output(false)(pace, parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear constant replication output guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear constant replication output guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.output(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    //////////////////////////////////////////////////////////////// VARIABLE //
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
+     else
+       apply("*")(false)(parallelism, rate, IO.delay(value))(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
+     else
+       apply("*")(false)(pace, parallelism, rate, IO.delay(value))(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
+     else
+       apply("*")(true)(parallelism, rate, IO.delay(value))(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
+     else
+       apply("*")(true)(pace, parallelism, rate, IO.delay(value))(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(parallelism, rate, _)(key, `)(`, dir)(body)))
+      else
+        super.output("*")(false)(parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(pace, parallelism, rate, _)(key, `)(`, dir)(body)))
+      else
+        super.output("*")(false)(pace, parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(parallelism, rate, _)(key, `)(`, dir)(code)(body)))
+      else
+        super.output("*")(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(pace, parallelism, rate, _)(key, `)(`, dir)(code)(body)))
+      else
+        super.output("*")(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /////////////////////////////////////////////////////////////////// INPUT //
+
+    /**
+      * linear replication input guard
+      */
+    def apply(_n: Null)(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.input(false)(parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication input guard w/ pace
+      */
+    def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.input(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication input guard w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])(body: `Π-Function1`)
+                                    (using %, /, \)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.input(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear replication input guard w/ pace w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])(body: `Π-Function1`)
+                                    (using %, /, \)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.input(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    // π ///////////////////////////////////////////////// linear replication //
 
     /**
       * variable negative prefix i.e. variable output
@@ -234,8 +444,7 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)
@@ -248,8 +457,7 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)
@@ -261,8 +469,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
@@ -274,8 +481,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): IO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
@@ -291,9 +497,9 @@ package object sΠ:
                        ^ : String): IO[Double] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
+        deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))
+        _        <- /.offer(^ -> key -> ((deferred -> null ,`)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -308,9 +514,8 @@ package object sΠ:
       * negative prefix i.e. output
       */
     def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[Double] =
+             (using %, /)
+             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       apply(rate, value)(key, `)(`, dir) <* exec(code)
 
     /**
@@ -322,10 +527,10 @@ package object sΠ:
                        ^ : String): IO[(`()`, Double)] =
       for
         _        <- exclude(key)
-        deferred <- Deferred[IO, Option[<>]]
+        deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (deferred -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -340,15 +545,80 @@ package object sΠ:
       * positive prefix i.e. input
       */
     def apply[T](rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
-                (using % : %, / : /)
-                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[(`()`, Double)] =
+                (using %, /)
+                (using `Π-Map`[String, `Π-Set`[String]], String): IO[(`()`, Double)] =
       apply(rate)(key, `)(`, dir)
         .map(_.name -> _)
         .flatMap {
           case (null, delay)  => IO.pure(sΠ.`()`.`null` -> delay)
           case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
         }
+
+    // LINEAR REPLICATION ///////////////////////////////////////////////// ζ //
+
+    /**
+      * linear capability replication guard
+      */
+    def apply(_z: "ζ")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.capability(false)(parallelism, rate)(key, `)(`, cap)(body)
+
+    /**
+      * linear capability constant replication guard w/ pace
+      */
+    def apply(_z: "ζ")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.capability(false)(pace, parallelism, rate)(key, `)(`, cap)(body)
+
+    /**
+      * linear capability replication guard w/ code
+      */
+    def apply(_z: "ζ")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: IO[Any])(body: `Π-Function0`)
+                                (using %, /, \)
+                                (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.capability(true)(parallelism, rate)(key, `)(`, cap)(code)(body)
+
+    /**
+      * linear capability replication guard w/ pace w/ code
+      */
+    def apply(_z: "ζ")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: IO[Any])(body: `Π-Function0`)
+                                (using %, /, \)
+                                (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+      super.capability(true)(pace, parallelism, rate)(key, `)(`, cap)(code)(body)
+
+    // ζ ///////////////////////////////////////////////// linear replication //
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
+             (using % : %, / : /)
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                       ^ : String): IO[Double] =
+      for
+        _        <- exclude(key)
+        deferred <- IO.deferred[Option[<>]]
+        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        opt      <- deferred.get
+        _        <- if opt eq None then IO.canceled else IO.unit
+        (delay,
+         b, f, _) = opt.get
+        _        <- b.await
+        _        <- f.join
+      yield
+        delay
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
+             (using % , /)
+             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
+      apply(rate)(key, `)(`, cap) <* exec(code)
 
     override def toString: String = if name == null then "null" else name.toString
 

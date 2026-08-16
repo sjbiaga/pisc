@@ -42,6 +42,11 @@ package object sΠ:
   import `π-$`.*, `π-ζ`.*
 
 
+  type `Π-Map`[K, +V] = Map[K, V]
+
+  type `Π-Set`[A] = Set[A]
+
+
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {
       case Right(it) => it
@@ -107,11 +112,6 @@ package object sΠ:
     case `π-merge+` extends `π-ζ` with Ord(5)
     case `π-merge-` extends `π-ζ` with Ord(5)
   }
-
-
-  type `Π-Map`[K, +V] = Map[K, V]
-
-  type `Π-Set`[A] = Set[A]
 
 
   inline def `π-exclude`(enabled: String*)
@@ -186,7 +186,7 @@ package object sΠ:
         delay
 
   /**
-    * prefix
+    * names and values
     */
   final implicit class `()`(private val name: Any) extends AnyVal:
 
@@ -266,8 +266,7 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): UIO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)
@@ -280,8 +279,7 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): UIO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)
@@ -293,8 +291,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): UIO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
@@ -306,8 +303,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): UIO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))

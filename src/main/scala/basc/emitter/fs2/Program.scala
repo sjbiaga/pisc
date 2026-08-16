@@ -767,7 +767,6 @@ object Program:
         ,\(sg_υidυ))
 
       prog
-        .drop(3)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))
