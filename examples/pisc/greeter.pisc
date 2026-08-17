@@ -49,7 +49,8 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout)
 Greeter(stdin, stdout, line*) = \
                               ( stdout<"What's your name?">.stdin(name). \
                                                                          if /* 'name.isBlank */ = True \
-                                                                         then Greeter(stdin, stdout) \
+                                                                         then stdout<"Try again!">. \
+                                                                              Greeter(stdin, stdout) \
                                                                          else Chooser(stdout, name) \
                               ) \
                               | \

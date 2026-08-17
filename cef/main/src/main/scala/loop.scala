@@ -97,13 +97,14 @@ package object `Π-loop`:
 
   private def unblock(map: Map[String, Int | (Boolean, +)], key: String)
                      (implicit ^ : String): IO[Unit] =
-    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1.complete(None).void
+    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1.complete(None).void.whenA(map.contains(^ + key))
 
   private def `π-discard`(map: Map[String, Int | (Boolean, +)], discarded: `Π-Set`[String])
                          (implicit ^ : String): IO[Set[String]] =
     discarded.toList.traverse(unblock(map, _)).as(discarded.map(^ + _))
 
-  private def discard(key: String, map: Map[String, Int | (Boolean, +)])(using String)
+  private def discard(key: String, map: Map[String, Int | (Boolean, +)])
+                     (using String)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Set[String]] =
     val (trick, _) = `π-wand`
     if trick.contains(key)

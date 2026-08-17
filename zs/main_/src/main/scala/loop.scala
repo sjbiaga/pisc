@@ -91,13 +91,14 @@ package object `Π-loop`:
 
   private def unblock(map: Map[String, Int | (Boolean, +)], key: String)
                      (implicit ^ : String): UIO[Unit] =
-    map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1._1.succeed(None).unit
+    ZIO.when(map.contains(^ + key))(map(^ + key).asInstanceOf[(Boolean, +)]._2._1._1._1.succeed(None)).unit
 
   private def `π-discard`(map: Map[String, Int | (Boolean, +)], discarded: `Π-Set`[String])
                          (implicit ^ : String): UIO[Set[String]] =
     ZIO.collectAllParDiscard(discarded.toList.map(unblock(map, _))).as(discarded.map(^ + _))
 
-  private def discard(key: String, map: Map[String, Int | (Boolean, +)])(using String)
+  private def discard(key: String, map: Map[String, Int | (Boolean, +)])
+                     (using String)
                      (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Set[String]] =
     val (trick, _) = `π-wand`
     if trick.contains(key)
