@@ -184,7 +184,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
           case it: List[String] => it
 
       case "parallelism"  =>
-        settings.par = 1 max number
+        settings.parallelism = 1 max number
 
       case "batch"        =>
         settings.batch = self match
@@ -224,7 +224,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                                   "scaling"      -> settings.scaling,
                                   "replication"  -> settings.replication,
                                   "typeclasses"  -> settings.typeclasses,
-                                  "parallelism"  -> settings.par,
+                                  "parallelism"  -> settings.parallelism,
                                   "batch"        -> settings.batch,
                                   "snapshot"     -> settings.snapshot,
                                   "traces"       -> settings.traces)
@@ -239,7 +239,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               case it @ "scaling"        => it -> settings.scaling
               case it @ "replication"    => it -> settings.replication
               case it @ "typeclasses"    => it -> settings.typeclasses
-              case it @ "parallelism"    => it -> settings.par
+              case it @ "parallelism"    => it -> settings.parallelism
               case it @ "batch"          => it -> settings.batch
               case it @ "snapshot"       => it -> settings.snapshot
               case it @ "traces"         => it -> settings.traces
@@ -258,7 +258,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case ("scaling", it: Boolean)               => settings.scaling = it
             case ("replication", it: (Int, Boolean))    => settings.replication = it
             case ("typeclasses", it: List[String])      => settings.typeclasses = it
-            case ("parallelism", it: Int)               => settings.par = it
+            case ("parallelism", it: Int)               => settings.parallelism = it
             case ("batch", it: (Int, Int))              => settings.batch = it
             case ("snapshot", it: Boolean)              => settings.snapshot = it
             case ("traces", it: Option[Option[String]]) => settings.traces = it
@@ -283,8 +283,8 @@ object Directive:
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
-                      var par: Int = Int.MaxValue,
-                      var batch: (Int, Int) = (0, 1),
+                      var parallelism: Int = Int.MaxValue,
+                      var batch: (Int, Int) = (0, 123456),
                       var snapshot: Boolean = false,
                       var traces: Option[Option[String]] = None):
 

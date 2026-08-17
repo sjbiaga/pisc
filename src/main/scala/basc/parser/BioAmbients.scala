@@ -427,7 +427,12 @@ object BioAmbients:
 
 
   class Main(override protected val emitter: Emitter,
-             override protected val in: String) extends Expansion:
+             override protected val in: String,
+             parallelism: Int = Int.MaxValue,
+             threshold: Int = 0,
+             timeout: Int = 123456,
+             snapshot: Boolean = false
+  ) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -779,7 +784,7 @@ object BioAmbients:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings()
+      _settings = Settings(parallelism = parallelism, batch = (threshold, timeout), snapshot = snapshot)
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -861,7 +866,7 @@ object BioAmbients:
         }
 
       Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(Lit.Int(_settings.par))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(Lit.Int(_settings.parallelism))), ∅()): Bind) ::
       Right((`(*)`(null, λ(Term.Tuple(List(Lit.Int(_settings.batch._1), Lit.Int(_settings.batch._2))))), ∅()): Bind) ::
       Right((`(*)`(null, λ(Lit.Boolean(_settings.snapshot))), ∅()): Bind) ::
       prog

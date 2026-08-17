@@ -60,9 +60,9 @@ function ba() {
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
-#                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.communications.parallelism.level=2147483647 \
 #                  -Dpisc.bioambients.communications.batch.threshold=0 \
-#                  -Dpisc.bioambients.communications.batch.timeout=1 \
+#                  -Dpisc.bioambients.communications.batch.timeout=123456 \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 
@@ -126,9 +126,9 @@ function ba_() {
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
-#                  -Dpisc.bioambients.communications.parallelism.level=9 \
+#                  -Dpisc.bioambients.communications.parallelism.level=2147483647 \
 #                  -Dpisc.bioambients.communications.batch.threshold=0 \
-#                  -Dpisc.bioambients.communications.batch.timeout=1 \
+#                  -Dpisc.bioambients.communications.batch.timeout=123456 \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 

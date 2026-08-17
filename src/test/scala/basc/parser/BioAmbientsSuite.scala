@@ -41,6 +41,21 @@ import BioAmbientsSuite.*
 
 class BioAmbientsSuite extends FunSuite:
 
+  test("agent-no-binding-1") {
+
+    Main(Emitter.test, getClass.getSimpleName) {
+      source("""
+             ⟦ t"Output" ⟧{x} = x!{x}.
+             ⟦1 t"$x Hardcoded ${$P}" 1⟧{u} = u?{x}. P{u}
+             ⟦2 t"Encoded $x" 2⟧{u} = ⟦1 x Hardcoded ⟦ Output ⟧{x} 1⟧
+             ⟦3 t"Encoded $x" 3⟧{u} = ⟦2 Encoded x 2⟧
+             ⟦4 t"Encoded $x" 4⟧{u} = ⟦1 x Hardcoded x?{y}. 1⟧
+             Main = ⟦4 Encoded x 4⟧
+             """)
+    }
+
+  }
+
   test("agent-no-binding") {
 
     interceptMessage[NoBindingParsingException]("No binding for z at nesting level #1") {

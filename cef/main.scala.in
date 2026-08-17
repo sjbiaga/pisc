@@ -36,17 +36,19 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.scala.collection.immutable.Map
 
   import _root_.cats.effect.{ ExitCode, Deferred, Ref }
-  import _root_.cats.effect.std.{ AtomicCell, Queue, Semaphore }
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
-  import `Π-loop`.*
   import `Π-dump`.*
+  import `Π-loop`.*, `Π-loop`.given
+
 
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val bacbh = "pisc.bioambients.communications.batch.threshold"
   private val bacbt = "pisc.bioambients.communications.batch.timeout"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
+
 
   private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[IO, Long], batch: Ref[IO, Long])
                  (lo: IOLocal[sΠ.`)(`], `}{`: sΠ.`}{`)
@@ -57,7 +59,9 @@ object App extends _root_.cats.effect.IOApp:
       then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- loop(parallelism, threshold, timeout, snapshot, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+        _ <- if threshold > 0
+             then loopʹ(parallelism, threshold, timeout, snapshot, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+             else loop0(parallelism, timeout, snapshot, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(snapshot)(using %, !, -).background
       yield
@@ -88,7 +92,7 @@ object App extends _root_.cats.effect.IOApp:
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      ** <- Queue.unbounded[IO, (() => Boolean, List[((String, String), ++++)])]
+      ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
       - <- Queue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[IO, ExitCode]
       & <- IO.ref(0L)

@@ -25,7 +25,13 @@ object CommandBAin {
       fileExamples().map(_.stripSuffix(".basc")).toSeq
     }
 
-    val opts = Map("-ce" -> Nil, "-cef" -> Nil, "-zio" -> Nil, "-ziof" -> Nil, "-fs2" -> Seq("cats.effect.IO", "zio.Task").map("-F" + _), "-zs" -> Nil)
+    val opts = Map("-ce" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
+                   "-cef" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
+                   "-zio" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
+                   "-ziof" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
+                   "-fs2" -> (Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse") ++ Seq("cats.effect.IO", "zio.Task").map("-F" + _)),
+                   "-zs" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse")
+               )
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {

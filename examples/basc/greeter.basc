@@ -6,15 +6,15 @@
 
 @def r = 1+math.abs(gen.nextInt%3)
 
-⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+                                              ⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @given Conversion[`()`[F], String] = _.`()`[String]
 
-⟦ INCLUDE = (ce,cef) ⟧
+                                                          ⟦ INCLUDE = (ce,cef) ⟧
 
 @val nl: String => IO[String] = { it => IO.pure { s"$it\n" } }
 
@@ -22,7 +22,7 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -32,9 +32,9 @@
 
 @def blocking(a: => Any) = Async[F].blocking(a)
 
-⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
-⟦ INCLUDE = (zio,ziof,zs) ⟧
+                                                     ⟦ INCLUDE = (zio,ziof,zs) ⟧
 
 @val nl: String => Task[String] = { it => ZIO.succeed(s"$it\n") }
 
@@ -42,14 +42,15 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-                                                        ⟦ EXCLUDE = 0 ⟧{GREETER}
+                                                                 ⟦ EXCLUDE = 0 ⟧{greeter}
 
 Main = ν(stdin, stdout) Greeter(stdin, stdout, "")
 
 Greeter(stdin, stdout, line) = \
                              ( stdout ! { "What's your name?" }.stdin ? { name }. \
                                                                                   if /* 'name.isBlank */ = True \
-                                                                                  then Greeter(stdin, stdout, line) \
+                                                                                  then stdout ! { "Try again!" }. \
+                                                                                       Greeter(stdin, stdout, line) \
                                                                                   else Chooser(stdout, name) \
                              ) \
                              | \

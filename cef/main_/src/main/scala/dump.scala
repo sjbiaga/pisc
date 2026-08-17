@@ -85,7 +85,7 @@ package object `Π-dump`:
         ps.println(snapshot)
       }.void.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
 
-  private def exit(using % : %, ! : !): IO[Unit] =
+  private def doExit(using % : %, ! : !): IO[Unit] =
     %.get.flatMap { m =>
       val ks = m.keys.toList
       val ec =
@@ -122,6 +122,6 @@ package object `Π-dump`:
                yield
                  ()
              case _ =>
-               exit
+               doExit
     yield
       ()
