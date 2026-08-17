@@ -48,14 +48,18 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    args.foreach { arg =>
+    var P = Int.MaxValue
+    var H = 0
+    var T = 123456
+
+    def spin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("pisc") + "scala.in").toString
       var source: Source = null
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.ce, in)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.ce, in, P, H, T)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -107,4 +111,13 @@ object Main extends helper.Main:
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
         if source ne null then source.close()
+
+    args.foreach {
+      case "-P" => P = Int.MaxValue
+      case "-H" => H = 0
+      case "-T" => T = 123456
+      case it if it.startsWith("-P") => P = it.substring(2).toInt
+      case it if it.startsWith("-H") => H = it.substring(2).toInt
+      case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it => spin(it)
     }

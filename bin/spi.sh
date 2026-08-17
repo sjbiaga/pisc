@@ -65,9 +65,9 @@ function spi() {
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
-#                  -Dpisc.stochastic.communications.parallelism.level=9 \
+#                  -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                  -Dpisc.stochastic.communications.batch.threshold=0 \
-#                  -Dpisc.stochastic.communications.batch.timeout=1 \
+#                  -Dpisc.stochastic.communications.batch.timeout=123456 \
 }
 
 function spi_() {
@@ -135,9 +135,9 @@ function spi_() {
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
-#                  -Dpisc.stochastic.communications.parallelism.level=9 \
+#                  -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                  -Dpisc.stochastic.communications.batch.threshold=0 \
-#                  -Dpisc.stochastic.communications.batch.timeout=1 \
+#                  -Dpisc.stochastic.communications.batch.timeout=123456 \
 }
 
 function spio() {

@@ -29,8 +29,7 @@
 //package main.scala.in
 
 import _root_.cats.effect.Deferred
-import _root_.cats.effect.std.{ Queue, Semaphore }
-
+import _root_.cats.effect.std.Semaphore
 
 object App extends _root_.cats.effect.IOApp:
 
@@ -44,10 +43,10 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ ExitCode, Ref }
-  import _root_.cats.effect.std.AtomicCell
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
   import `Π-dump`.*
-  import `Π-loop`.*
+  import `Π-loop`.*, `Π-loop`.given
 
 
   private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[π.F, Long], batch: Ref[π.F, Long])
@@ -60,7 +59,9 @@ object App extends _root_.cats.effect.IOApp:
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- lπ.loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+        _ <- if threshold > 0
+             then lπ.loopʹ(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parallelism, timeout, started)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
         _ <- dπ.dump(using %, !, -).background
       yield
@@ -88,7 +89,7 @@ object App extends _root_.cats.effect.IOApp:
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- Queue.unbounded[π.F, (() => Boolean, List[((String, String), ++++[π.F])])]
+      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
       - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Deferred[π.F, ExitCode]
       & <- Ref[π.F].of(0L)

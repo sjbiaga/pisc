@@ -29,7 +29,7 @@
 //package main.scala.in
 
 import _root_.cats.effect.Deferred
-import _root_.cats.effect.std.{ Queue, Semaphore }
+import _root_.cats.effect.std.Semaphore
 
 import _root_.zio.interop.catz.*
 import _root_.zio.stream.interop.fs2z.*
@@ -50,14 +50,14 @@ object App extends CatsApp:
 
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.Ref
-  import _root_.cats.effect.std.AtomicCell
+  import _root_.cats.effect.{ Deferred, Ref }
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
 
   import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
   import _root_.zio.stream.ZStream
 
   import `Π-dump`.*
-  import `Π-loop`.*
+  import `Π-loop`.*, `Π-loop`.given
 
 
   private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[π.F, Long], batch: Ref[π.F, Long])
@@ -77,7 +77,9 @@ object App extends CatsApp:
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(lπ.loop(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(if threshold > 0
+                                 then lπ.loopʹ(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else lπ.loop0(parallelism, timeout, started)(using %, !, &, -, *, **)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(lπ.poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dπ.dump(using %, !, -)))
       .runDrain
@@ -97,7 +99,7 @@ object App extends CatsApp:
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- Queue.unbounded[π.F, (() => Boolean, List[((String, String), ++++[π.F])])]
+      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
       - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)

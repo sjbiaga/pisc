@@ -75,7 +75,7 @@ package object `Π-dump`:
         case _ =>
           Async[F].unit
 
-    private def exit(using % : %[F], ! : ![F]): F[Unit] =
+    private def doExit(using % : %[F], ! : ![F]): F[Unit] =
       %.get.flatMap { m =>
         val ks = m.keys.toList
         val ec =
@@ -105,6 +105,6 @@ package object `Π-dump`:
                  yield
                    ()
                case _ =>
-                 exit
+                 doExit
       yield
         ()

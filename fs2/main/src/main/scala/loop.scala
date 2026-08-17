@@ -30,6 +30,7 @@ import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.concurrent.duration.*
 import _root_.scala.Option.{ unless, when }
 
+import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.applicativeError.*
@@ -42,7 +43,7 @@ import _root_.cats.syntax.traverse.*
 import _root_.cats.Parallel
 import _root_.cats.effect.{ Deferred, Fiber, ExitCode, Ref, Resource, Temporal }
 import _root_.cats.effect.kernel.Outcome.Succeeded
-import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, Queue, Semaphore }
+import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, PQueue, Queue, Semaphore }
 import _root_.cats.effect.syntax.monadCancel.*
 import _root_.cats.effect.syntax.spawn.*
 import _root_.cats.effect.syntax.temporal.*
@@ -75,11 +76,14 @@ package object `Π-loop`:
   type \[F[_]] = F[Unit] => F[Unit]
 
   type ++++[F[_]] = (Double, Ref[F, `()`[F]], (++[F], ++[F]))
-  type **[F[_]] = Queue[F, (() => Boolean, List[((String, String), ++++[F])])]
+  type **[F[_]] = PQueue[F, (Int, List[((String, String), ++++[F])])]
 
   type *[F[_]] = Semaphore[F]
 
   type ^[F[_]] = Resource[F, Unit]
+
+
+  given [F[_]]: Order[(Int, List[((String, String), ++++[F])])] = Order.fromLessThan(_._1 < _._1)
 
 
   def `π-enable`[F[_]](enabled: `Π-Set`[String])
@@ -129,31 +133,11 @@ package object `Π-loop`:
                .filter(_._2.asInstanceOf[(Boolean, +[F])]._1)
                .map(_ -> _.asInstanceOf[(Boolean, +[F])]._2._2)
                .toMap
-        val (trick, _) = `π-wand`
-        def exit(mʹ: Map[String, Int | (Boolean, +[F])]) =
-          { () => !mʹ.exists(_._2.isInstanceOf[Int])
-               && mʹ.forall {
-                    case (key1, (true, (_, (e1, Some(p1), _)))) =>
-                      val ^ = key1.substring(0, 36)
-                      !mʹ.exists {
-                        case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
-                          val ^^ = key2.substring(0, 36)
-                          ^ != ^^
-                          || {
-                            val k1 = key1.substring(36)
-                            val k2 = key2.substring(36)
-                            !trick.contains(k1) || !trick(k1).contains(k2)
-                          }
-                        case _ => false
-                      }
-                    case _ => false
-                  }
-          }
         if it.isEmpty
         then
-          **.offer(exit(m) -> Nil).map(m -> _)
+          **.size.flatMap(size => **.offer(size -> Nil)).map(m -> _)
         else
-          val nel = ∥(it)(trick)()
+          val nel = ∥(it)(`π-wand`._1)()
           val nelʹ = nel.map {
             case (key1, key2, in, delay) =>
               val (dc1, _) = m(key1).asInstanceOf[(Boolean, +[F])]._2
@@ -181,11 +165,35 @@ package object `Π-loop`:
                     ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +[F])]._2) }
                       .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
                 }
-          ).flatMap(mʹ => **.offer(exit(mʹ) -> nelʹ).map(mʹ -> _))
+          ).flatMap(mʹ => **.size.flatMap(size => **.offer(size -> nelʹ)).map(mʹ -> _))
       }
 
 
-    private def exit(using % : %[F], ! : ![F]): F[Unit] =
+    private def canExit(using % : %[F])
+                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Boolean] =
+      def exit(m: Map[String, Int | (Boolean, +[F])]): Boolean =
+        val (trick, _) = `π-wand`
+        !m.exists(_._2.isInstanceOf[Int])
+        && m.forall {
+             case (_, (true, (_, (_, None, _)))) => false
+             case (key1, (true, (_, (e1, Some(p1), _)))) =>
+               val ^ = key1.substring(0, 36)
+               !m.exists {
+                 case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+                   val ^^ = key2.substring(0, 36)
+                   ^ != ^^
+                   || {
+                     val k1 = key1.substring(36)
+                     val k2 = key2.substring(36)
+                     !trick.contains(k1) || !trick(k1).contains(k2)
+                   }
+                 case _ => false
+               }
+             case _ => true
+           }
+      %.modify { m => m -> exit(m) }
+
+    private def doExit(using % : %[F], ! : ![F]): F[Unit] =
       %.get.flatMap { m =>
         val ks = m.keys.toList
         val ec =
@@ -203,32 +211,23 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loop(parallelism: Int, threshold: Int, timeout: Int, started: Ref[F, Long], batch: Ref[F, Long])
-            (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
-            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
+    def loopʹ(parallelism: Int, threshold: Int, timeout: Int, started: Ref[F, Long], batch: Ref[F, Long])
+             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
+             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
-        _ <- (batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(threshold).timeout(timeout.nanoseconds).orElse(Temporal[F].unit)).whenA(threshold > 0)
+        _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(threshold).timeout(timeout.microseconds).orElse(Temporal[F].unit)
         m  =
           for
-            (exit, nel) <- **.take
-            l                   <-
+            (_, nel) <- **.take
+            l        <-
               if nel.isEmpty
               then
-                if threshold > 0
-                then
-                  (started.get product batch.get).map(_ + _).flatMap {
-                    case 0L if exit() =>
-                      this.exit >> Temporal[F].pure(false)
-                    case _ =>
-                      Temporal[F].pure(true)
-                  }
-                else
-                  (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
-                    case 0L if exit() =>
-                      this.exit >> Temporal[F].pure(false)
-                    case _ =>
-                      Temporal[F].pure(true)
-                  }
+                (started.get product batch.get).map(_ + _).flatMap {
+                  case 0L =>
+                    canExit.ifM(doExit >> Temporal[F].pure(false), Temporal[F].pure(true))
+                  case _  =>
+                    Temporal[F].pure(true)
+                }
               else
                 Semaphore[F](parallelism).flatMap { sem =>
                   nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
@@ -241,21 +240,10 @@ package object `Π-loop`:
                                           _  <- started.update(_ + 1)
                                           fb <- ( for
                                                     _ <- cb.await
-                                                    e  = ( for
-                                                             _ <- enable(k1)
-                                                             _ <- enable(k2).unlessA(k1 == k2)
-                                                           yield
-                                                             ()
-                                                         )
-                                                    _ <- if threshold > 0
-                                                         then e
-                                                         else ^.use(_ => e >> peek)
+                                                    _ <- enable(k1)
+                                                    _ <- enable(k2).unlessA(k1 == k2)
                                                     _ <- sem.release
-                                                    _ <- if threshold > 0
-                                                         then
-                                                           started.update(_ - 1)
-                                                         else
-                                                           started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
+                                                    _ <- started.update(_ - 1)
                                                   yield
                                                     ()
                                                 ).start
@@ -270,10 +258,59 @@ package object `Π-loop`:
                 } >> Temporal[F].pure(true)
           yield
             l
-        l <- if threshold > 0
-             then ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-             else m
-        _ <- Temporal[F].cede >> loop(parallelism, threshold, timeout, started, batch).whenA(l)
+        l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
+        _ <- Temporal[F].cede >> loopʹ(parallelism, threshold, timeout, started, batch).whenA(l)
+      yield
+        ()
+
+    def loop0(parallelism: Int, timeout: Int, started: Ref[F, Long])
+             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
+             (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
+      for
+        (_, nel) <- **.take
+        l        <-
+          if nel.isEmpty
+          then
+            (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
+              case 0L =>
+                Temporal[F].sleep(timeout.microseconds).race(**.take).flatMap {
+                  case Right((_, nel)) =>
+                    **.offer(-1 -> nel) >> Temporal[F].pure(true)
+                  case _               =>
+                    canExit.ifM(doExit >> Temporal[F].pure(false), Temporal[F].pure(true))
+                }
+              case _  =>
+                Temporal[F].pure(true)
+            }
+          else
+            Semaphore[F](parallelism).flatMap { sem =>
+              nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
+                                  val k1 = key1.substring(36)
+                                  val k2 = key2.substring(36)
+                                  Temporal[F].uncancelable { _ =>
+                                    for
+                                      cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
+                                      _  <- sem.acquire
+                                      _  <- started.update(_ + 1)
+                                      fb <- ( for
+                                                _ <- cb.await
+                                                _ <- enable(k1)
+                                                _ <- enable(k2).unlessA(k1 == k2)
+                                                _ <- sem.release
+                                                _ <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
+                                              yield
+                                                ()
+                                            ).start
+                                      _  <- d1.complete(Some((cb, fb, in)))
+                                      _  <- d2.complete(Some((cb, fb, in))).unlessA(k1 == k2)
+                                      _  <- c1.get.flatMap(_.complete(Some((cb, fb, in)))).unlessA(c1 eq null)
+                                      _  <- c2.get.flatMap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                    yield
+                                      ()
+                                  }
+                              }
+            } >> Temporal[F].pure(true)
+        _        <- Temporal[F].cede >> loop0(parallelism, timeout, started).whenA(l)
       yield
         ()
 

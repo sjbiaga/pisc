@@ -48,16 +48,17 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    var opt = 1
+    var P = Int.MaxValue
+    var O = 1
 
-    def pin(arg: String) =
+    def spin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("pisc") + "scala.in").toString
       var source: Source = null
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.kk, in)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.kk, in, P)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -72,7 +73,7 @@ object Main extends helper.Main:
 
         val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
-        val ps = Program.Main(opt)(prog)
+        val ps = Program.Main(O)(prog)
         val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
@@ -111,10 +112,9 @@ object Main extends helper.Main:
         if source ne null then source.close()
 
     args.foreach {
-      case "-O" => opt = 1
-      case it if it.startsWith("-O") =>
-        val arg = it.substring(2)
-        try opt = arg.toInt min 1 max 0
-        catch _ => { opt = 1; pin(arg) }
-      case it => pin(it)
+      case "-P" => P = Int.MaxValue
+      case "-O" => O = 1
+      case it if it.startsWith("-P") => P = it.substring(2).toInt
+      case it if it.startsWith("-O") => O = it.substring(2).toInt min 1 max 0
+      case it => spin(it)
     }

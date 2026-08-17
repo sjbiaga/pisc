@@ -72,25 +72,23 @@ package object `Π-loop`:
 
               case Nil =>
 
-                if %.isEmpty ||
-                   %.keys.forall(_.charAt(36) == '!')
-                && { val (trick, _) = `π-wand`
-                     %.forall {
-                       case (key1, (_, (e1, Some(p1), _))) =>
-                         val ^ = key1.substring(0, 36)
-                         ! %.exists {
-                           case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
-                             val ^^ = key2.substring(0, 36)
-                             ^ != ^^
-                             || {
-                               val k1 = key1.substring(36)
-                               val k2 = key2.substring(36)
-                               !trick.contains(k1) || !trick(k1).contains(k2)
-                             }
-                           case _ => false
-                         }
-                       case _ => false
-                     }
+                val (trick, _) = `π-wand`
+                if ! %.exists(_._2.isInstanceOf[Int]) &&
+                   %.forall {
+                     case (key1, (_, (e1, Some(p1), _))) =>
+                       val ^ = key1.substring(0, 36)
+                       ! %.exists {
+                         case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
+                           val ^^ = key2.substring(0, 36)
+                           ^ != ^^
+                           || {
+                             val k1 = key1.substring(36)
+                             val k2 = key2.substring(36)
+                             !trick.contains(k1) || !trick(k1).contains(k2)
+                           }
+                         case _ => false
+                       }
+                     case _ => false
                    }
                 then
                   %.keys.foreach(%(_).asInstanceOf[+]._1.success(None))
