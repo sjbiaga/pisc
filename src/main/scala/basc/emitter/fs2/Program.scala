@@ -306,9 +306,9 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
 
           * :+= sg._2
 
@@ -332,7 +332,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           * :+= sg._2
@@ -358,7 +358,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
  
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -388,7 +388,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg, None, r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg, None, r, code)), sum) =>
 
           * :+= sg._2
 
@@ -412,7 +412,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
 
           * :+= sg._2
 
@@ -432,7 +432,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ ζ(cap, name, _, r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ ζ(cap, name, _, r, code)), sum) =>
 
           * :+= sg._2
 
@@ -455,6 +455,8 @@ object Program:
                                         Term.ArgClause(\(s"π-$cap") :: Nil)))
 
           * = * ::: sum.emit()
+
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) if parallelism < -1 =>
 
@@ -627,6 +629,8 @@ object Program:
                                             Term.ArgClause(\(s"π-$cap") :: Nil)),
                                  sum.emit())
 
+        // REPLICATION /////////////////////////////////////////////////////////
+
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, _, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
@@ -635,7 +639,7 @@ object Program:
           val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                              Term.ArgClause(^._2 :: Nil)))
+                                                              Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `val` =
             λ.`type` match
@@ -659,16 +663,17 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String ?=> \\[F, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): String ?=> \\[F, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(Nil)),
+                                                             Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val sem = if parallelism < 0 then null else id
 
@@ -682,11 +687,11 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => \\[F, Unit] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 

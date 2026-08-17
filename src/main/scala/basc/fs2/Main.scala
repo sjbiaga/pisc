@@ -54,6 +54,10 @@ object Main extends helper.Main:
 
   def main(args: Array[String]): Unit =
     var F = "cats.effect.IO"
+    var P = Int.MaxValue
+    var H = 0
+    var T = 123456
+    var S = false
 
     def bain(arg: String) =
       val in = if arg.endsWith(".basc") then arg else arg + ".basc"
@@ -62,7 +66,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, P, H, T, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"
@@ -166,6 +170,14 @@ object Main extends helper.Main:
 
     args.foreach {
       case "-F" => F = "cats.effect.IO"
+      case "-P" => P = Int.MaxValue
+      case "-H" => H = 0
+      case "-T" => T = 123456
+      case "-S" => S = false
       case it if it.startsWith("-F") => F = it.substring(2)
+      case it if it.startsWith("-P") => P = it.substring(2).toInt
+      case it if it.startsWith("-H") => H = it.substring(2).toInt
+      case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

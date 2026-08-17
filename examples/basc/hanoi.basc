@@ -1,16 +1,16 @@
 # -*- indent-tabs-mode: nil; -*-
 
-⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
+                                                        ⟦ INCLUDE = (ce,cef,zio,ziof,zs) ⟧
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @given Conversion[`()`[F], Int] = _.`()`[Int]
 @given Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
 
-⟦ INCLUDE = (ce,cef) ⟧
+                                                          ⟦ INCLUDE = (ce,cef) ⟧
 
 @def print(a: Any) = IO.print(a)
 
@@ -18,7 +18,7 @@
 
 @def blocking(a: => Any) = IO.blocking(a)
 
-⟦ INCLUDE = fs2 ⟧
+                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -28,9 +28,9 @@
 
 @def blocking(a: => Any) = Async[F].blocking(a)
 
-⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 
-⟦ INCLUDE = (zio,ziof,zs) ⟧
+                                                     ⟦ INCLUDE = (zio,ziof,zs) ⟧
 
 @def print(a: Any): UIO[Unit] = ZIO.attempt(Console.print(a))
 
@@ -38,14 +38,12 @@
 
 @def blocking(a: => Any): UIO[Any] = ZIO.attemptBlocking(a)
 
-⟦ EXCLUDE = 0 ⟧
-
-⟦ REPLICATION = (PARALLELISM,1) ⟧
+                                                                 ⟦ EXCLUDE = 0 ⟧{hanoi}
 
 Main = ν(a,b,c)                                       \
-     ( (!.a!{"a"}.)                                   \
-     | (!.b!{"b"}.)                                   \
-     | (!.c!{"c"}.)                                   \
+     ( (¡.a!{"a"}.)                                   \
+     | (¡.b!{"b"}.)                                   \
+     | (¡.c!{"c"}.)                                   \
      | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 

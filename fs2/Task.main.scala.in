@@ -28,6 +28,9 @@
 
 //package main.scala.in
 
+import _root_.cats.effect.{ Deferred, IOLocal }
+import _root_.cats.effect.std.Semaphore
+
 import _root_.zio.FiberRef
 
 import _root_.zio.interop.catz.*
@@ -41,13 +44,15 @@ implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
 object App extends CatsApp:
 
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val bacbh = "pisc.bioambients.communications.batch.threshold"
+  private val bacbt = "pisc.bioambients.communications.batch.timeout"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.cats.effect.{ Deferred, Ref }
-  import _root_.cats.effect.std.{ Queue, Semaphore }
+  import _root_.cats.effect.Ref
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
   import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
   import _root_.zio.stream.ZStream
@@ -55,26 +60,32 @@ object App extends CatsApp:
   import _root_.io.github.timwspence.cats.stm.STM
 
   import `Π-dump`.*
-  import `Π-loop`.*
+  import `Π-loop`.*, `Π-loop`.given
 
 
-  private def run(args: List[String], parallelism: Int, started: Ref[π.F, Long], snapshot: Boolean, uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val mπ = π.πmain[π.F]()
+    val \ =
+      if threshold > 0
+      then { (it: π.F[Unit]) => ^.use(_ => it *> *.release) }
+      else { (it: π.F[Unit]) => ^.use(_ => it *> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
         l <- ZStream.fromZIO(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
         ^ <- ZStream.fromZIO(π.`π-uuid`[π.F])
-        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, *.release).toZStream[Any]()
+        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, \).toZStream[Any]()
         x <- ZStream.fromZIO(!.get)
         _ <- ZStream.fromZIO(exit(ExitCode(x.code)))
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(lπ.loop(parallelism, started, snapshot, `}{`)(using %, !, &, -, *)(π.`π-wand`)))
-      .drainFork(ZStream.fromZIO(lπ.poll(using %, /, *)))
+      .drainFork(ZStream.fromZIO(if threshold > 0
+                                 then lπ.loopʹ(parallelism, threshold, timeout, snapshot, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else lπ.loop0(parallelism, timeout, snapshot, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(lπ.poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dπ.dump(snapshot)(using %, !, -)))
       .runDrain
 
@@ -82,23 +93,32 @@ object App extends CatsApp:
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(bacbh).isSet
+            then sys.Prop.IntProp(bacbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(bacbt).isSet
+            then sys.Prop.IntProp(bacbt).value
+            else π.`π-batch-timeout`
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-snapshot`
     for
       args <- getArgs
-      % <- Ref[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      - <- Queue.unbounded[π.F, List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
+      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
+      - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
-      _ <- sΠ.`π-enable`[π.F](π.`π-main`)(using %)
+      ^ <- Semaphore[π.F](1)
+      b <- Ref[π.F].of(0L)
+      _ <- `π-enable`[π.F](π.`π-main`)(using %)
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      _ <- run(args.toList, p, n, s, uuid, wrapper)(%, /, *, -, !, &)(using tree, semaphore)
+      _ <- run(args.toList, p, h, t, s, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
     yield
       ()
 
@@ -111,8 +131,8 @@ object π:
   import _root_.cats.{ Functor, Parallel }
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.{ Async, Concurrent, Deferred }
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, UUIDGen }
+  import _root_.cats.effect.{ Async, Concurrent }
+  import _root_.cats.effect.std.{ CyclicBarrier, UUIDGen }
 
   import _root_.fs2.Stream
 

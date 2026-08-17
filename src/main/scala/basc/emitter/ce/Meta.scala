@@ -117,55 +117,6 @@ abstract trait Meta extends emitter.shared.effects.Meta:
   val `: IO[Any]` = `:`(\, "Any")
 
 
-  val `: String => IO[Any]` =
-    `: IO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
-
-  def `\\.\\\\ { def *(*: ()): String => IO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\),
-               Term.ArgClause(
-                 Term.Block(
-                   Defn.Def(Nil,
-                            *._1,
-                            Member.ParamClauseGroup(Type.ParamClause(Nil),
-                                                    Term.ParamClause(Term.Param(Nil,
-                                                                                *._2,
-                                                                                Some(\\("()")),
-                                                                                None) :: Nil, None) :: Nil) :: Nil,
-                            `: String => IO[Any]`,
-                            Term.Block(
-                              Term.Function(
-                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                            "^",
-                                                            None,
-                                                            None) :: Nil, None), `…`
-                              ) :: Nil
-                            )
-                   ) :: \(*._1) :: Nil
-                 ) :: Nil
-               )
-    )
-
-
-  def `\\.\\\\ { lazy val *: String => IO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
-    Term.Apply(Term.Select(\, \\),
-               Term.ArgClause(
-                 Term.Block(
-                   Defn.Val(Mod.Lazy() :: Nil,
-                            `* <- …`(*) :: Nil,
-                            `: String => IO[Any]`,
-                            Term.Block(
-                              Term.Function(
-                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                            "^",
-                                                            None,
-                                                            None) :: Nil, None), `…`
-                              ) :: Nil
-                            )
-                   ) :: \(*) :: Nil
-                 ) :: Nil
-               )
-    )
-
   val `: String ?=> IO[Any]` =
     `: IO[Any]`.map(Type.ContextFunction(Type.FuncParamClause(\\("String") :: Nil), _))
 
