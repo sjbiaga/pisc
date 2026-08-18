@@ -42,7 +42,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
+  type - = Queue[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[String] =
@@ -81,29 +81,28 @@ package object `Π-dump`:
         ps.println(snapshot)
       }.either.unit.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
 
-
-  private def exit(ks: List[String])
-                  (using % : %, ! : !): UIO[Unit] =
-    if ks.isEmpty
-    then
-      !.succeed(ExitCode.success).unit
-    else
-      %.modify { m =>
-        ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1.succeed(None))) -> m
-      }.flatten.as {
-        if !sys.BooleanProp.keyExists(barsx).value
-        && ks.forall(_.charAt(36) == '!')
-        then ExitCode.success
-        else ExitCode.failure
-      }.flatMap(!.succeed(_).unit)
-
+  private def doExit(using % : %, ! : !): UIO[Unit] =
+    %.get.flatMap { m =>
+      val ks = m.keys.toList
+      val ec =
+        if ks.isEmpty
+        then
+          ExitCode.success
+        else
+          if !sys.BooleanProp.keyExists(barsx).value
+          && ks.forall(_.charAt(36) == '!')
+          then ExitCode.success
+          else ExitCode.failure
+      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1._1.succeed(None))) *>
+      !.succeed(ec).unit
+    }
 
   def dump(snapshot: Boolean)
           (using % : %, ! : !, - : -): UIO[Unit] =
     for
       h <- -.take
       _ <- h match
-             case (no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2)) =>
+             case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
                  p  <- record(no, ts1, ts, delay, duration, l1)(k1)
                  _  <- record(no, p, l1._2._2).when(snapshot)
@@ -116,7 +115,7 @@ package object `Π-dump`:
                  _  <- dump(snapshot)
                yield
                  ()
-             case ks: List[String] =>
-               exit(ks)
+             case _ =>
+               doExit
     yield
       ()

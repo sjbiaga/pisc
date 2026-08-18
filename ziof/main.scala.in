@@ -38,26 +38,37 @@ object App extends _root_.zio.ZIOAppDefault:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
-  import _root_.zio.{ ExitCode, FiberRef, Queue, Ref }
+  import _root_.zio.{ ExitCode, FiberRef, Queue, Ref, Semaphore => SemaphoreZIO }
+  import _root_.zio.stm.TPriorityQueue
 
   import _root_.zio.ZIOAppArgs
 
   import `Π-dump`.*
-  import `Π-loop`.*
+  import `Π-loop`.*, `Π-loop`.given
+
 
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val bacbh = "pisc.bioambients.communications.batch.threshold"
+  private val bacbt = "pisc.bioambients.communications.batch.timeout"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
-  private def run(parallelism: Int, snapshot: Boolean, started: Ref[Long], args: List[String])
+
+  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[Long], batch: Ref[Long])
                  (ref: FiberRef[sΠ.`)(`])
-                 (% : %, / : /, * : *, - : -, ! : !, & : &)
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
                  (using sΠ.`}{`.`][`, TSemaphore): UIO[ExitCode] =
+    val \ =
+      if threshold > 0
+      then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
+      else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
-      l <- loop(parallelism, snapshot, started)(using %, !, &, -, *)(π.`π-wand`).fork
-      _ <- poll(using %, /, *).fork
+      l <- if threshold > 0
+           then loopʹ(parallelism, threshold, timeout, snapshot, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
+           else loop0(parallelism, timeout, snapshot, started)(using %, !, &, -, *, **)(π.`π-wand`).fork
+      _ <- poll(using %, /, \).fork
       d <- dump(snapshot)(using %, !, -).fork
       ^ <- π.`π-uuid`
-      _ <- π.Main(ref)(args*)(using ^)(using %, /, *.release)
+      _ <- π.Main(ref)(args*)(using ^)(using %, /, \)
       x <- !.await
       _ <- l.join
       _ <- d.join
@@ -68,21 +79,30 @@ object App extends _root_.zio.ZIOAppDefault:
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parallelism`
+    val h = if sys.Prop.IntProp(bacbh).isSet
+            then sys.Prop.IntProp(bacbh).value
+            else π.`π-batch-threshold`
+    val t = if sys.Prop.IntProp(bacbt).isSet
+            then sys.Prop.IntProp(bacbt).value
+            else π.`π-batch-timeout`
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-snapshot`
     for
       args <- getArgs
-      % <- Ref.make(Map[String, Int | +]())
+      % <- Ref.Synchronized.make(Map[String, Int | +]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      - <- Queue.unbounded[List[String] | (Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]
+      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
+      - <- Queue.unbounded[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
+      ^ <- SemaphoreZIO.make(1)
+      b <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
       (ref, tree, semaphore) <- sΠ.`}{`.`][`()
-      x <- run(p, s, n, args.toList)(ref)(%, /, *, -, !, &)(using tree, semaphore)
+      x <- run(args.toList, p, h, t, s, n, b)(ref)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
       _ <- exit(x)
     yield
       ()

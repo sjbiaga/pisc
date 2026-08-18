@@ -49,14 +49,19 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
-    args.foreach { arg =>
+    var P = Int.MaxValue
+    var H = 0
+    var T = 123456
+    var S = false
+
+    def bain(arg: String) =
       val in = if arg.endsWith(".basc") then arg else arg + ".basc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("basc") + "scala.in").toString
       var source: Source = null
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.zio, in)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.zio, in, P, H, T, S)
 
       try
         source = Source.fromFile(s"$examples/basc/$in")
@@ -107,4 +112,15 @@ object Main extends helper.Main:
         if bwr ne null then bwr.close()
         if fwr ne null then fwr.close()
         if source ne null then source.close()
+
+    args.foreach {
+      case "-P" => P = Int.MaxValue
+      case "-H" => H = 0
+      case "-T" => T = 123456
+      case "-S" => S = false
+      case it if it.startsWith("-P") => P = it.substring(2).toInt
+      case it if it.startsWith("-H") => H = it.substring(2).toInt
+      case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it if it.startsWith("-S") => S = it.substring(2).toBoolean
+      case it => bain(it)
     }

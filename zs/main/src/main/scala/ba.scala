@@ -119,7 +119,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
@@ -185,7 +185,7 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> `π-τ`, (new {}, None, rate)))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (new {}, None, rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
@@ -196,7 +196,7 @@ package object sΠ:
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -249,13 +249,13 @@ package object sΠ:
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> `π-τ`, (new {}, None, rate)))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (new {}, None, rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
@@ -305,7 +305,7 @@ package object sΠ:
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> `π-τ`, (new {}, None, rate)))))
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`), (new {}, None, rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -379,7 +379,7 @@ package object sΠ:
                             else ZStream.fromZIO(promise.succeed(None))
                 enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                             else ZStream.succeed(false)
@@ -393,7 +393,7 @@ package object sΠ:
                             for
                               _        <- -.await.exit
                               _        <- *.fold(ZIO.unit)(_.acquire)
-                              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                               cb_fb_in <- continue.get.flatMap(_.await)
                               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                               _        <- enabled.set(false)
@@ -454,7 +454,7 @@ package object sΠ:
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
@@ -465,7 +465,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
@@ -581,7 +581,7 @@ package object sΠ:
                               else ZStream.fromZIO(promise.succeed(None))
                   enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                   `)(`     <- ZStream.fromZIO(`)(`.get)
-                  _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+                  _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
                   cb_fb_in <- ZStream.fromZIO(promise.await)
                   _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                               else ZStream.succeed(false)
@@ -592,7 +592,7 @@ package object sΠ:
                     for
                       _        <- -.await.exit
                       _        <- *.fold(ZIO.unit)(_.acquire)
-                      _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                      _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                       cb_fb_in <- continue.get.flatMap(_.await)
                       _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                       _        <- enabled.set(false)
@@ -651,7 +651,7 @@ package object sΠ:
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
               result   <- ZStream.fromZIO(Ref.make[`()`](null))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate)))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
@@ -662,7 +662,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
@@ -718,7 +718,7 @@ package object sΠ:
               continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
               enabled  <- ZStream.fromZIO(Ref.make(true))
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
               sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
@@ -727,7 +727,7 @@ package object sΠ:
                         it <- sΠ.ν
                         _  <- ZStream.fromZIO {
                           for
-                            _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                            _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                             cb_fb_in <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                             _        <- enabled.set(false)
@@ -782,13 +782,13 @@ package object sΠ:
             continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-              _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -898,13 +898,13 @@ package object sΠ:
                 continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
                 enabled  <- ZStream.fromZIO(Ref.make(true))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 if cb_fb_in ne None
                 sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
                 _  <- ZStream.fromZIO {
                   for
-                    _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                    _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                     _        <- enabled.set(false)
@@ -957,13 +957,13 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
             result   <- ZStream.fromZIO(Ref.make[`()`](null))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate)))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -1016,7 +1016,7 @@ package object sΠ:
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             (cbarrier, fiber, input) = cb_fb_in.get
@@ -1060,7 +1060,7 @@ package object sΠ:
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, input) = cb_fb_in.get
@@ -1161,7 +1161,7 @@ package object sΠ:
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate)))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
               (cbarrier, fiber, input) = cb_fb_in.get
@@ -1205,7 +1205,7 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
           result   <- ZStream.fromZIO(Ref.make[`()`](null))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate)))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, _) = cb_fb_in.get
@@ -1258,7 +1258,7 @@ package object sΠ:
               enabled  <- ZStream.fromZIO(Ref.make(true))
               polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
               sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
@@ -1266,7 +1266,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
@@ -1320,13 +1320,13 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(Ref.make(true))
             polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> continue -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-                _        <- (%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) } *> \).unlessZIO(enabled.get)
+                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
@@ -1377,7 +1377,7 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> (promise -> null -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           (cbarrier, fiber, _) = cb_fb_in.get

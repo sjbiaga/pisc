@@ -120,10 +120,6 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
-  val `: String => UIO[Any]` =
-    `: UIO[Any]`.map(Type.Function(Type.FuncParamClause(\\("String") :: Nil), _))
-
-
   override def `* <- Semaphore(…)`(* : String, `…`: Int): Enumerator =
     Enumerator.Generator(`* <- …`(*),
                          Term.Apply(Term.ApplyType(\("Semaphore"), Type.ArgClause(\\("UIO") :: Nil)),
@@ -132,7 +128,10 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     )
 
 
-  def `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(* : (String, String), `…`: Term): Term =
+  val `: String ?=> UIO[Any]` =
+    `: UIO[Any]`.map(Type.ContextFunction(Type.FuncParamClause(\\("String") :: Nil), _))
+
+  def `\\.\\\\ { def *(*: ()): String ?=> UIO[Any] = …; * }`(* : (String, String), `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
@@ -143,37 +142,24 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                                                                                 *._2,
                                                                                 Some(\\("()")),
                                                                                 None) :: Nil, None) :: Nil) :: Nil,
-                            `: String => UIO[Any]`,
-                            Term.Block(
-                              Term.Function(
-                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                            "^",
-                                                            None,
-                                                            None) :: Nil, None), `…`
-                              ) :: Nil
-                            )
-                   ) :: \(*._1) :: Nil
+                            `: String ?=> UIO[Any]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*._1), \\("Π-Function1")) :: Nil
                  ) :: Nil
                )
     )
 
-
-  def `\\.\\\\ { lazy val *: String => UIO[Any] = { implicit ^ => … }; * }`(* : String, `…`: Term): Term =
+  def `\\.\\\\ { def *(): String ?=> UIO[Any] = …; * }`(* : String, `…`: Term): Term =
     Term.Apply(Term.Select(\, \\),
                Term.ArgClause(
                  Term.Block(
-                   Defn.Val(Mod.Lazy() :: Nil,
-                            `* <- …`(*) :: Nil,
-                            `: String => UIO[Any]`,
-                            Term.Block(
-                              Term.Function(
-                                Term.ParamClause(Term.Param(Mod.Implicit() :: Nil,
-                                                            "^",
-                                                            None,
-                                                            None) :: Nil, None), `…`
-                              ) :: Nil
-                            )
-                   ) :: \(*) :: Nil
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Nil) :: Nil) :: Nil,
+                            `: String ?=> UIO[Any]`,
+                            `…`
+                   ) :: Term.Ascribe(\(*), \\("Π-Function0")) :: Nil
                  ) :: Nil
                )
     )

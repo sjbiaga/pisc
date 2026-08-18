@@ -42,6 +42,11 @@ package object sΠ:
   import `π-$`.*, `π-ζ`.*
 
 
+  type `Π-Map`[K, +V] = Map[K, V]
+
+  type `Π-Set`[A] = Set[A]
+
+
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {
       case Right(it) => it
@@ -58,11 +63,6 @@ package object sΠ:
       case Exit.Success(it) => it
       case _                => null.asInstanceOf[T]
     }
-
-
-  type `Π-Map`[K, +V] = Map[K, V]
-
-  type `Π-Set`[A] = Set[A]
 
 
   /**
@@ -116,7 +116,7 @@ package object sΠ:
 
   inline def `π-exclude`(enabled: String*)
                         (using % : %, \ : \): UIO[Unit] =
-    `π-exclude`(Set.from(enabled)) *> \
+    \(`π-exclude`(Set.from(enabled)))
 
   private def `π-exclude`(enabled: `Π-Set`[String])
                          (using % : %): UIO[Unit] =
@@ -168,7 +168,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (promise -> (`)(` -> `π-τ`, (new {}, None, rate))))
+        _        <- /.offer(^ -> key -> ((promise, `)(` -> `π-τ`), (new {}, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -194,36 +194,6 @@ package object sΠ:
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
-
-    /**
-      * capability prefix
-      */
-    def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)
-             (using % : %, / : /)
-             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): UIO[Double] =
-      for
-        _        <- exclude(key)
-        promise  <- Promise.make[Nothing, Option[<>]]
-        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
-        `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (promise -> (`)(` -> cap, (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
-        opt      <- promise.await
-        _        <- if opt eq None then ZIO.interrupt else ZIO.unit
-        (delay,
-         b, f, _) = opt.get
-        _        <- b.await.exit
-        _        <- f.join
-      yield
-        delay
-
-    /**
-      * capability prefix
-      */
-    def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(code: => Task[Any])
-             (using %, /)
-             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
-      apply(rate)(key, `)(`, cap) <* exec(code)
 
     /**
       * variable negative prefix i.e. variable output
@@ -286,7 +256,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (promise -> (`)(` -> dir, (map(dir.ord), Some(Left(())), rate))))
+        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -317,7 +287,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> (promise -> (`)(` -> dir, (map(dir.ord), Some(Right(result)), rate))))
+        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -340,6 +310,36 @@ package object sΠ:
           case (null, delay)  => ZIO.succeed(sΠ.`()`.`null` -> delay)
           case (it: T, delay) => (code andThen exec)(it).map(new `()`(_) -> delay)
         }
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)
+             (using % : %, / : /)
+             (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                       ^ : String): UIO[Double] =
+      for
+        _        <- exclude(key)
+        promise  <- Promise.make[Nothing, Option[<>]]
+        polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
+        `)(`     <- `)(`.get
+        _        <- /.offer(^ -> key -> ((promise, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        opt      <- promise.await
+        _        <- if opt eq None then ZIO.interrupt else ZIO.unit
+        (delay,
+         b, f, _) = opt.get
+        _        <- b.await.exit
+        _        <- f.join
+      yield
+        delay
+
+    /**
+      * capability prefix
+      */
+    def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(code: => Task[Any])
+             (using %, /)
+             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+      apply(rate)(key, `)(`, cap) <* exec(code)
 
     override def toString: String = if name == null then "null" else name.toString
 

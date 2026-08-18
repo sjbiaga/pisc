@@ -47,10 +47,8 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val barsx = "pisc.bioambients.replications.exitcode.ignore"
-
-
   import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
+
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 

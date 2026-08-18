@@ -324,7 +324,7 @@ object Program:
           val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
 
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
-                                                              Term.ArgClause(^._2 :: Nil)))
+                                                              Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -350,16 +350,17 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> UIO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String => UIO[Any] = { implicit ^ => … }; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): String ?=> UIO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(^._2 :: Nil)))
+          val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(Nil)),
+                                                             Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
@@ -375,11 +376,11 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => UIO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> UIO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: String => UIO[Any] = { implicit ^ => … }; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(): String ?=> UIO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case _ : ! => ??? // caught by 'parse'
 
