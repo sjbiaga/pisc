@@ -1,0 +1,191 @@
+# -*- indent-tabs-mode: nil; -*-
+
+@val gen = new scala.util.Random
+
+                                           ⟦ INCLUDE = (ce,cef,zio,ziof,kk,zs) ⟧
+
+@given Conversion[`()`, Int] = _.`()`[Int]
+
+                                                               ⟦ INCLUDE = fs2 ⟧
+
+@given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
+
+                                                               ⟦ INCLUDE = fs2 ⟧
+
+@import cats.effect.std.Console
+
+@def println[F[_]: Console](a: Any) = Console[F].println(a)
+
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+                                                                ⟦ INCLUDE = zs ⟧
+
+@def println(a: Any) = ZIO.debug(a)
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{replication}
+
+                                                                 ⟦ TRACES = on ⟧
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one infinite publisher, one infinite subscriber ✔
+
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt*/>.)  \
+            | (!.x(y). τ/*println(y)*/.)                 \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two infinite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*println(y)*/.)                      \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (x</*gen.nextInt.abs*/>.)                     \
+            | (x</*-gen.nextInt.abs*/>.)                    \
+            | (! 100,milliseconds .x(y). τ/*println(y)*/.)  \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two sequential finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>.)  \
+            | (! 100,milliseconds .x(y). τ/*println(y)*/.)        \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two infinite publishers, two infinite subscribers ✔
+
+Main = ν(x) ( (! 100,milliseconds .x</*gen.nextInt.abs*/>.)   \
+            | (! 100,milliseconds .x</*-gen.nextInt.abs*/>.)  \
+            | (!.x(y). τ/*println(1->y)*/.)        \
+            | (!.x(y). τ/*println(2->y)*/.)        \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one infinite publisher, one infinite subscriber, bound output guard ✔
+
+Main = ν(x) ( (! 100,milliseconds .x<νy>. y(z). τ/*println(z)*/.)  \
+            | (!.x(y). y</*gen.nextInt*/>.)                        \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one finite publisher, one finite subscriber, bound output prefix ✔
+
+Main = ν(x) ! ( (x<νy>. y(z). τ/*println(z)*/.)  \
+              | (x(y). y</*gen.nextInt*/>.)      \
+              )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one finite publisher, one finite subscriber, output prefix ✔
+
+Main = ν(x) ! ( (x(y). τ/*println(y)*/.)  \
+              | (x</*gen.nextInt*/>.)     \
+              )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one infinite publisher, multiple finite subscribers ✔
+
+Main = ν(x) ( (! x(y). τ/*println(y)*/.)  \
+            | (!.x</*gen.nextInt*/>.)     \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one infinite publisher, multiple finite subscribers ✔
+
+Main(x) = x(y). τ/*println(y)*/. Main(x)
+
+Main = ν(x) ( Main(x)                  \
+            | (!.x</*gen.nextInt*/>.)  \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two finite publishers, multiple finite subscribers ✔
+
+Main = ν(x) ( (! x(y). τ/*println(y)*/.)  \
+            | (x</*gen.nextInt*/>.)       \
+            | (x</*gen.nextInt*/>.)       \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# two finite publishers, multiple finite subscribers ✔
+
+Main(x) = x(y). τ/*println(y)*/. Main(x)
+
+Main = ν(x) ( Main(x)                \
+            | (x</*gen.nextInt*/>.)  \
+            | (x</*gen.nextInt*/>.)  \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# one infinite publisher, two sequential finite subscribers ✔
+
+Main = ν(x) ( (x(y). τ/*println(1->y)*/. x(z). τ/*println(2->z)*/.)  \
+            | (!.x</*gen.nextInt*/>.)                                \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# multiple finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*println(y)*/. x</*gen.nextInt.abs*/>.)  \
+            | (x</*-gen.nextInt.abs*/>.)                          \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# multiple finite publishers, one infinite subscriber, one finite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*println(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/*println(2->y)*/.)  \
+            | (x</*-gen.nextInt.abs*/>.)                                                       \
+            )
+
+⟦ replication = (linear,yes) ⟧
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# multiple finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (¡ 4* .x(y : (Int, Int) /**/). τ/*println(y._2)*/. [/*y._1 < 4*/ = True] x</*(y._1+1)->gen.nextInt*/>.)  \
+            | (x</*1->gen.nextInt*/>.)                                                                                 \
+            )
+
+                                                               ⟦ EXCLUDE = no ⟧
+
+# several infinite publishers, several infinite subscribers ✔
+
+Main = ν(x) ( (¡ 4* .x(y). τ/*println(y)*/.)  \
+            | (¡ 4* .x</*gen.nextInt*/>.)     \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# several infinite publishers, several infinite subscribers ✔
+
+Main = ν(x) ( (! 4* .x(y). τ/*println(y)*/.)                                          \
+            | ( (! 4* .x</*gen.nextInt.abs*/>.) + (! 4* .x</*-gen.nextInt.abs*/>.) )  \
+            )
+
+                                                               ⟦ EXCLUDE = yes ⟧
+
+# multiple finite publishers, one infinite subscriber ✔
+
+Main = ν(x) ( (!.x(y). τ/*println(y)*/. x</*gen.nextInt.abs*/>. x</*-gen.nextInt.abs*/>. )  \
+            | (x</*-gen.nextInt.abs*/>.)                                                    \
+            )

@@ -47,10 +47,8 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
-
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 

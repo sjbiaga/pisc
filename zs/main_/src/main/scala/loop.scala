@@ -41,10 +41,8 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
-
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+
 
   type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
 
@@ -299,8 +297,8 @@ package object `Π-loop`:
     for
       h <- /.take
       ((_, key), it) = h
-      (((d, _), _), _) = it
-      _ <- d.isDone.negate.flatMap {
+      (((p, _), _), _) = it
+      _ <- p.isDone.negate.flatMap {
         if _
         then
          \(

@@ -42,12 +42,10 @@
 
                                                                  ⟦ EXCLUDE = 0 ⟧{hanoi}
 
-                                               ⟦ REPLICATION = (PARALLELISM,1) ⟧
-
 Main = ν(a,b,c)                                       \
-     ( (!.a<"a">.)                                    \
-     | (!.b<"b">.)                                    \
-     | (!.c<"c">.)                                    \
+     ( (¡.a<"a">.)                                    \
+     | (¡.b<"b">.)                                    \
+     | (¡.c<"c">.)                                    \
      | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 

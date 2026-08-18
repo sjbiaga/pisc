@@ -54,9 +54,6 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
-
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
 

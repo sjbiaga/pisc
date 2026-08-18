@@ -309,8 +309,8 @@ package object `Π-loop`:
     for
       h <- /.take
       ((_, key), it) = h
-      ((d, _), _) = it
-      _ <- d.isDone.negate.flatMap {
+      ((p, _), _) = it
+      _ <- p.isDone.negate.flatMap {
         if _
         then
          \(
