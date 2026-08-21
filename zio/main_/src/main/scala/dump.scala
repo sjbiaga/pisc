@@ -26,13 +26,13 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.List
+import _root_.scala.Option.unless
 
 import _root_.zio.{ ExitCode, Queue, UIO, ZIO }
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 import sΠ.given
 
@@ -45,41 +45,19 @@ package object `Π-dump`:
   type - = Queue[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[String] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
-        ZIO.attemptBlocking {
-          printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 number, started, ended, name, polarity,
-                 key.stripPrefix("!"), key.startsWith("!"),
-                 label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1)
-          polarity
+         ZIO.attemptBlocking {
+          val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
+          `π-traces`(number, started, ended,
+                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     key.stripPrefix("!"), key.startsWith("!"), label,
+                     rate, delay, duration,
+                     dir_cap, ambient._1, ambient._2._1, Option(snapshot))
         }
-      case Array(key, name, polarity, label, rate, agent, dir_cap, filename*) =>
-        var ps: PrintStream = null
-        ZIO.attemptBlocking {
-          val fn = filename.mkString(",")
-          ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    number, started, ended, name, polarity,
-                    key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
-          polarity
-        }.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
       case _ =>
-        ZIO.succeed(null)
-
-  private def record(number: Long, polarity: String, snapshot: String): UIO[Unit] =
-    if polarity eq null
-    then
-      ZIO.unit
-    else
-      var ps: PrintStream = null
-      ZIO.attemptBlocking {
-        ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
-        ps.println("""<?xml version="1.0" ?>""")
-        ps.println(snapshot)
-      }.either.unit.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
+        ZIO.unit
 
   private def doExit(using % : %, ! : !): UIO[Unit] =
     %.get.flatMap { m =>
@@ -97,22 +75,15 @@ package object `Π-dump`:
       !.succeed(ec).unit
     }
 
-  def dump(snapshot: Boolean)
-          (using % : %, ! : !, - : -): UIO[Unit] =
+  def dump(using % : %, ! : !, - : -): UIO[Unit] =
     for
       h <- -.take
       _ <- h match
              case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
-                 p  <- record(no, ts1, ts, delay, duration, l1)(k1)
-                 _  <- record(no, p, l1._2._2).when(snapshot)
-                 _  <- ( for
-                           p <- record(no, ts2, ts, delay, duration, l2)(k2)
-                           _ <- record(no, p, l2._2._2).when(snapshot)
-                         yield
-                           ()
-                       ).unless(k1 == k2)
-                 _  <- dump(snapshot)
+                 _ <- record(no, ts1, ts, delay, duration, l1)(k1)
+                 _ <- record(no, ts2, ts, delay, duration, l2)(k2).unless(k1 == k2)
+                 _ <- dump
                yield
                  ()
              case _ =>

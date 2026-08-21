@@ -75,6 +75,22 @@ package object `Π-loop`:
   type ^ = Resource[IO, Unit]
 
 
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean,
+                                  snapshot: Boolean)
+
+  final case class Feedback(pauseRD: Ref[IO, Deferred[IO, Unit]],
+                            paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
+                            paramsR: Ref[IO, `Π-Parameters`],
+                            tracesR: Ref[IO, Boolean],
+                            lastR: Ref[IO, Long],
+                            stopR: Ref[IO, Boolean],
+                            doneR: Ref[IO, Boolean],
+                            exitRD: Ref[IO, Deferred[IO, Unit]])
+
+
   given Order[(Int, List[((String, String), ++++)])] = Order.fromLessThan(_._1 < _._1)
 
 
@@ -201,12 +217,12 @@ package object `Π-loop`:
       !.complete(ec).void
     }
 
-  def loopʹ(parallelism: Int, threshold: Int, timeout: Int, _snapshot: Boolean, started: Ref[IO, Long], batch: Ref[IO, Long], `}{`: sΠ.`}{`)
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], _feedback: Feedback, `}{`: sΠ.`}{`)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (using `}{`.`][`, `}{`.stm.TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(threshold).timeout(timeout.microseconds).orElse(IO.unit)
+      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(IO.unit)
       m  =
         for
           (_, nel) <- **.take
@@ -220,7 +236,7 @@ package object `Π-loop`:
                   IO.pure(true)
               }
             else
-              Semaphore[IO](parallelism).flatMap { sem =>
+              Semaphore[IO](parameters.parallelism).flatMap { sem =>
                 nel.parTraverse { case ((key1, key2), (delay, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
@@ -256,11 +272,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-      _ <- IO.cede >> loopʹ(parallelism, threshold, timeout, _snapshot, started, batch, `}{`).whenA(l)
+      _ <- IO.cede >> loopʹ(parameters, started, batch, _feedback, `}{`).whenA(l)
     yield
       ()
 
-  def loop0(parallelism: Int, timeout: Int, _snapshot: Boolean, started: Ref[IO, Long], `}{`: sΠ.`}{`)
+  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], _feedback: Feedback, `}{`: sΠ.`}{`)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (using `}{`.`][`, `}{`.stm.TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
@@ -271,7 +287,7 @@ package object `Π-loop`:
         then
           (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
             case 0L =>
-              IO.sleep(timeout.microseconds).race(**.take).flatMap {
+              IO.sleep(parameters.timeout.microseconds).race(**.take).flatMap {
                 case Right((_, nel)) =>
                   **.offer(-1 -> nel) >> IO.pure(true)
                 case _               =>
@@ -281,7 +297,7 @@ package object `Π-loop`:
               IO.pure(true)
           }
         else
-          Semaphore[IO](parallelism).flatMap { sem =>
+          Semaphore[IO](parameters.parallelism).flatMap { sem =>
             nel.parTraverse { case ((key1, key2), (delay, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
@@ -314,7 +330,7 @@ package object `Π-loop`:
                                 }
                             }
           } >> IO.pure(true)
-      _        <- IO.cede >> loop0(parallelism, timeout, _snapshot, started, `}{`).whenA(l)
+      _        <- IO.cede >> loop0(parameters, started, _feedback, `}{`).whenA(l)
     yield
       ()
 

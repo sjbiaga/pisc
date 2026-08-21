@@ -101,4 +101,4 @@ P(x) = expel x /*println("expelled")*/.
 
 Main = ν(x) ! 2 "p"[ "c"[ C(x) ] | P(x) ]
 
-⟦ SNAPSHOT = y ⟧
+⟦ PARAMETER = (SNAPSHOT, y) ⟧

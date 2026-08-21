@@ -45,7 +45,7 @@ and re-enable the same action/capability by turning that flag on just _before_ i
 the server fiber.
 
 Thus, there must be a strict order, that the turning of the flag off occurs before the background
-fiber finishes (which the client fiber awaits on by `join`ing it). A cyclic barrier does the job.
+fiber finishes (which the client fiber awaits on by `join`ing it).
 
 
 Apps (examples)
@@ -58,7 +58,8 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `zs` contains four files: `dump.scala`, `loop.scala`, `stats.scala`, and `ba.scala`.
+The root project folder `zs` contains six files: `dump.scala`, `loop.scala`, `stats.scala`,
+`traces.scala`, and `ba.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

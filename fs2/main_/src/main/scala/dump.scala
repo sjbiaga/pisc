@@ -26,21 +26,20 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.List
+import _root_.scala.Option.unless
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
-import _root_.cats.syntax.monadError.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.effect.{ Async, ExitCode }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 
 package object `Π-dump`:
@@ -53,41 +52,19 @@ package object `Π-dump`:
 
   final class πdump[F[_]: Async]:
 
-    private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => F[String] =
+    private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => F[Unit] =
       _.split(",") match
         case Array(key, name, polarity, label, rate, agent, dir_cap) =>
           Async[F].blocking {
-            printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                   number, started, ended, name, polarity,
-                   key.stripPrefix("!"), key.startsWith("!"),
-                   label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1)
-            polarity
+            val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
+            `π-traces`(number, started, ended,
+                       agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                       key.stripPrefix("!"), key.startsWith("!"), label,
+                       rate, delay, duration,
+                       dir_cap, ambient._1, ambient._2._1, Option(snapshot))
           }
-        case Array(key, name, polarity, label, rate, agent, dir_cap, filename*) =>
-          var ps: PrintStream = null
-          Async[F].blocking {
-            val fn = filename.mkString(",")
-            ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-            ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                      number, started, ended, name, polarity,
-                      key.stripPrefix("!"), key.startsWith("!"),
-                      label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
-            polarity
-          }.attemptTap { _ => Async[F].blocking(ps.close).unlessA(ps eq null) }
         case _ =>
-          Async[F].pure(null)
-
-    private def record(number: Long, polarity: String, snapshot: String): F[Unit] =
-      if polarity eq null
-      then
-        Async[F].unit
-      else
-        var ps: PrintStream = null
-        Async[F].blocking {
-          ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
-          ps.println("""<?xml version="1.0" ?>""")
-          ps.println(snapshot)
-        }.void.attemptTap { _ => Async[F].blocking(ps.close).unlessA(ps eq null) }
+          Async[F].unit
 
     private def doExit(using % : %[F], ! : ![F]): F[Unit] =
       %.get.flatMap { m =>
@@ -107,22 +84,15 @@ package object `Π-dump`:
         !.complete(ec).void
       }
 
-    def dump(snapshot: Boolean)
-            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+    def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
     for
       h <- -.take
       _ <- h match
              case Some((no, ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
                for
-                 p  <- record(no, s1, e, delay, duration, l1)(k1)
-                 _  <- record(no, p, l1._2._2).whenA(snapshot)
-                 _  <- { for
-                           p <- record(no, s2, e, delay, duration, l2)(k2)
-                           _ <- record(no, p, l2._2._2).whenA(snapshot)
-                         yield
-                           ()
-                       }.unlessA(k1 == k2)
-                 _  <- Async[F].cede >> dump(snapshot)
+                 _ <- record(no, s1, e, delay, duration, l1)(k1)
+                 _ <- record(no, s2, e, delay, duration, l2)(k2).unlessA(k1 == k2)
+                 _ <- Async[F].cede >> dump
                yield
                  ()
              case _ =>

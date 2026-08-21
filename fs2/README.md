@@ -57,8 +57,8 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `fs2` contains five files: `dump.scala`, `loop.scala`, `stats.scala`, `ba.scala`,
-and `IO.main.scala.in`.
+The root project folder `fs2` contains seven files: `dump.scala`, `loop.scala`, `stats.scala`,
+`traces.scala`, `ba.scala`, `IO.main.scala.in`, and `Task.main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

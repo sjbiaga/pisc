@@ -41,6 +41,5 @@ package object `Π-dump`:
 
   final class πdump[F[_]: Concurrent]:
 
-    def dump(_snapshot: Boolean)
-            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+    def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
       Concurrent[F].unit

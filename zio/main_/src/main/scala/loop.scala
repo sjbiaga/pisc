@@ -66,6 +66,13 @@ package object `Π-loop`:
   type ^ = SemaphoreZIO
 
 
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean,
+                                  snapshot: Boolean)
+
+
   given Ordering[(Int, List[((String, String), ++++)])] = Ordering.fromLessThan(_._1 < _._1)
 
 
@@ -168,12 +175,12 @@ package object `Π-loop`:
          }
     %.modify { m => exit(m) -> m }
 
-  def loopʹ(parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[Long], batch: Ref[Long])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(threshold-1).timeout(timeout.nanoseconds)
+      _ <- batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(parameters.threshold-1).timeout(parameters.timeout.microseconds)
       m  =
         for
           (_, nel) <- **.take.commit
@@ -187,7 +194,7 @@ package object `Π-loop`:
                   ZIO.succeed(true)
               }
             else
-              Semaphore[UIO](parallelism).flatMap { sem =>
+              Semaphore[UIO](parameters.parallelism).flatMap { sem =>
                 ZIO.collectAllParDiscard {
                   nel.map { case ((key1, key2), ((delay, duration), in, ((p1, (key, ord), ts1), (p2, (keyʹ, ordʹ), ts2)))) =>
                               val k1 = key1.substring(36)
@@ -208,7 +215,7 @@ package object `Π-loop`:
                                                                  case (cap: `π-ζ`, capʹ: `π-ζ`) =>
                                                                    `}{`.><.ζ(key, cap, keyʹ, capʹ)
                                                             }
-                                            elabel       <- `}{`.`}{`(key, snapshot).commit
+                                            elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
                                             (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
                                             _            <- `1`.release.commit
                                             _            <- cb.await.exit
@@ -233,11 +240,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parallelism, threshold, timeout, snapshot, started, batch).when(l)
+      _ <- loopʹ(parameters, started, batch).when(l)
     yield
       ()
 
-  def loop0(parallelism: Int, timeout: Int, snapshot: Boolean, started: Ref[Long])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
@@ -248,7 +255,7 @@ package object `Π-loop`:
         then
           (started.get <*> **.size.commit.map(_.toLong)).map(_ + _).flatMap {
             case 0L =>
-              ZIO.sleep(timeout.microseconds).raceEither(**.take.commit).flatMap {
+              ZIO.sleep(parameters.timeout.microseconds).raceEither(**.take.commit).flatMap {
                 case Right((_, nel)) =>
                   **.offer(-1 -> nel).commit *> ZIO.succeed(true)
                 case _               =>
@@ -258,7 +265,7 @@ package object `Π-loop`:
               ZIO.succeed(true)
           }
         else
-          Semaphore[UIO](parallelism).flatMap { sem =>
+          Semaphore[UIO](parameters.parallelism).flatMap { sem =>
             ZIO.collectAllParDiscard {
               nel.map { case ((key1, key2), ((delay, duration), in, ((p1, (key, ord), ts1), (p2, (keyʹ, ordʹ), ts2)))) =>
                           val k1 = key1.substring(36)
@@ -279,7 +286,7 @@ package object `Π-loop`:
                                                              case (cap: `π-ζ`, capʹ: `π-ζ`) =>
                                                                `}{`.><.ζ(key, cap, keyʹ, capʹ)
                                                         }
-                                        elabel       <- `}{`.`}{`(key, snapshot).commit
+                                        elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
                                         (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
                                         _            <- `1`.release.commit
                                         _            <- cb.await.exit
@@ -301,7 +308,7 @@ package object `Π-loop`:
                       }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parallelism, timeout, snapshot, started).when(l)
+      _        <- loop0(parameters, started).when(l)
     yield
       ()
 

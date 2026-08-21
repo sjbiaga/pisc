@@ -37,5 +37,5 @@ package object `Π-dump`:
 
   type - = Queue[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
-  def dump(_snapshot: Boolean)(using % : %, ! : !, - : -): UIO[Unit] =
+  def dump(using % : %, ! : !, - : -): UIO[Unit] =
     ZIO.unit

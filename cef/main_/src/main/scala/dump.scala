@@ -26,19 +26,18 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.List
+import _root_.scala.Option.unless
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
-import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Deferred, ExitCode }
+import _root_.cats.effect.{ IO, ExitCode }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 
 package object `Π-dump`:
@@ -49,41 +48,19 @@ package object `Π-dump`:
   type - = Queue[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => IO[String] =
+  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         IO.blocking {
-          printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 number, started, ended, name, polarity,
-                 key.stripPrefix("!"), key.startsWith("!"),
-                 label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1)
-          polarity
+          val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
+          `π-traces`(number, started, ended,
+                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     key.stripPrefix("!"), key.startsWith("!"), label,
+                     rate, delay, duration,
+                     dir_cap, ambient._1, ambient._2._1, Option(snapshot))
         }
-      case Array(key, name, polarity, label, rate, agent, dir_cap, filename*) =>
-        var ps: PrintStream = null
-        IO.blocking {
-          val fn = filename.mkString(",")
-          ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    number, started, ended, name, polarity,
-                    key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, dir_cap, ambient._1, ambient._2._1, fn)
-          polarity
-        }.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
       case _ =>
-        IO.pure(null)
-
-  private def record(number: Long, polarity: String, snapshot: String): IO[Unit] =
-    if polarity eq null
-    then
-      IO.unit
-    else
-      var ps: PrintStream = null
-      IO.blocking {
-        ps = PrintStream(FileOutputStream("" + number + "-" + polarity + ".xml", false), true)
-        ps.println("""<?xml version="1.0" ?>""")
-        ps.println(snapshot)
-      }.void.attemptTap { _ => IO.blocking(ps.close).unlessA(ps eq null) }
+        IO.unit
 
   private def doExit(using % : %, ! : !): IO[Unit] =
     %.get.flatMap { m =>
@@ -103,25 +80,18 @@ package object `Π-dump`:
       !.complete(ec).void
     }
 
-  def dump(snapshot: Boolean)
-          (using % : %, ! : !, - : -): IO[Unit] =
+  def dump(using % : %, ! : !, - : -): IO[Unit] =
     for
       h <- -.take
       _ <- h match
              case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
-                 p  <- record(no, ts1, ts, delay, duration, l1)(k1)
-                 _  <- record(no, p, l1._2._2).whenA(snapshot)
-                 _  <- ( for
-                           p <- record(no, ts2, ts, delay, duration, l2)(k2)
-                           _ <- record(no, p, l2._2._2).whenA(snapshot)
-                         yield
-                           ()
-                       ).unlessA(k1 == k2)
-                 _  <- IO.cede >> dump(snapshot)
+                 _ <- record(no, ts1, ts, delay, duration, l1)(k1)
+                 _ <- record(no, ts2, ts, delay, duration, l2)(k2).unlessA(k1 == k2)
+                 _ <- IO.cede >> dump
                yield
                  ()
              case _ =>
-               doExit
+               IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
     yield
       ()

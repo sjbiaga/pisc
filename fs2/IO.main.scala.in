@@ -34,12 +34,6 @@ import _root_.cats.effect.std.Semaphore
 
 object App extends _root_.cats.effect.IOApp:
 
-  private val bacsp = "pisc.bioambients.communications.parallelism.level"
-  private val bacbh = "pisc.bioambients.communications.batch.threshold"
-  private val bacbt = "pisc.bioambients.communications.batch.timeout"
-  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
-
-
   import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.cats.effect.{ ExitCode, Ref }
@@ -51,22 +45,28 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*, `Π-loop`.given
 
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val bacsh = "pisc.bioambients.communications.batch.threshold"
+  private val bacst = "pisc.bioambients.communications.timeout.microseconds"
+  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
+
+
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
                  (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val mπ = π.πmain[π.F]()
     val \ =
-      if threshold > 0
+      if parameters.threshold > 0
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- if threshold > 0
-             then lπ.loopʹ(parallelism, threshold, timeout, snapshot, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
-             else lπ.loop0(parallelism, timeout, snapshot, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
+        _ <- if parameters.threshold > 0
+             then lπ.loopʹ(parameters, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
-        _ <- dπ.dump(snapshot)(using %, !, -).background
+        _ <- dπ.dump(using %, !, -).background
       yield
         ()
     ).use { _ =>
@@ -82,16 +82,17 @@ object App extends _root_.cats.effect.IOApp:
   override def run(args: List[String]) =
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
-            else π.`π-parallelism`
-    val h = if sys.Prop.IntProp(bacbh).isSet
-            then sys.Prop.IntProp(bacbh).value
-            else π.`π-batch-threshold`
-    val t = if sys.Prop.IntProp(bacbt).isSet
-            then sys.Prop.IntProp(bacbt).value
-            else π.`π-batch-timeout`
+            else π.`π-parameters`.parallelism
+    val h = if sys.Prop.IntProp(bacsh).isSet
+            then sys.Prop.IntProp(bacsh).value
+            else π.`π-parameters`.threshold
+    val t = if sys.Prop.IntProp(bacst).isSet
+            then sys.Prop.IntProp(bacst).value
+            else π.`π-parameters`.timeout
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
-            else π.`π-snapshot`
+            else π.`π-parameters`.snapshot
+    val params = `Π-Parameters`(p, h, t, true, s)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
@@ -107,7 +108,7 @@ object App extends _root_.cats.effect.IOApp:
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      x <- run(args, p, h, t, s, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
+      x <- run(args, params, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
     yield
       x
 
@@ -130,8 +131,9 @@ object π:
   import sΠ.*
   import `π-$`.*, `π-ζ`.*
 
-  import `Π-loop`.{ %, /, \ }
+  import `Π-loop`.{ %, /, \, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
 
   extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])

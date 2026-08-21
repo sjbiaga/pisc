@@ -20,7 +20,7 @@ Composition: parallel modelled with - `List(...).parSequenceVoid`.
 
 Summation: *probabilistic* choice modelled with - `parSequenceVoid`.
 
-[Guarded] Replication: modelled with - `parSequenceVoid` and `lazy val` [or `def`].
+[Guarded] Replication: modelled with - `parSequenceVoid` and `def`.
 
 
 Program
@@ -167,8 +167,8 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `ce` contains six files: `dump.scala`, `loop.scala`, `stats.scala`, `ba.scala`,
-`bam.scala`, and `main.scala.in`.
+The root project folder `ce` contains eight files: `dump.scala`, `loop.scala`, `stats.scala`,
+`traces.scala`, `http4s.scala`, `ba.scala`, `bam.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

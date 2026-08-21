@@ -52,6 +52,7 @@ object Main extends helper.Main:
     var P = Int.MaxValue
     var H = 0
     var T = 123456
+    var E = true
     var S = false
 
     def bain(arg: String) =
@@ -61,7 +62,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.cef, in, P, H, T, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.cef, in, P, H, T, E, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"
@@ -77,12 +78,12 @@ object Main extends helper.Main:
         val (prog, (discarded, excluded, enabled)) = ba(prog_.map(_._1))
 
         val ps = Program.Main()(prog)
-        val is = prog_.drop(1+3).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(1+3).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.take(4).mkString("\n\n") + "\n\n"
-                 + (ps.drop(4).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = ps.take(2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")
@@ -118,10 +119,12 @@ object Main extends helper.Main:
       case "-P" => P = Int.MaxValue
       case "-H" => H = 0
       case "-T" => T = 123456
+      case "-E" => E = true
       case "-S" => S = false
       case it if it.startsWith("-P") => P = it.substring(2).toInt
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

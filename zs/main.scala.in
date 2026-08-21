@@ -37,12 +37,6 @@ import _root_.zio.stream.ZStream
 
 object App extends _root_.zio.ZIOAppDefault:
 
-  private val bacsp = "pisc.bioambients.communications.parallelism.level"
-  private val bacbh = "pisc.bioambients.communications.batch.threshold"
-  private val bacbt = "pisc.bioambients.communications.batch.timeout"
-  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
-
-
   import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.zio.{ ExitCode, Queue, Ref, Semaphore => SemaphoreZIO }
@@ -54,11 +48,17 @@ object App extends _root_.zio.ZIOAppDefault:
   import `Π-loop`.*, `Π-loop`.given
 
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, snapshot: Boolean, started: Ref[Long], batch: Ref[Long], uuid: sΠ.`)(`)
+  private val bacsp = "pisc.bioambients.communications.parallelism.level"
+  private val bacsh = "pisc.bioambients.communications.batch.threshold"
+  private val bacst = "pisc.bioambients.communications.timeout.microseconds"
+  private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
+
+
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], uuid: sΠ.`)(`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
                  (using sΠ.`}{`.`][`, TSemaphore) =
     val \ =
-      if threshold > 0
+      if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     ( for
@@ -70,26 +70,27 @@ object App extends _root_.zio.ZIOAppDefault:
       yield
         ()
     )
-      .drainFork(ZStream.fromZIO(if threshold > 0
-                                 then loopʹ(parallelism, threshold, timeout, snapshot, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)
-                                 else loop0(parallelism, timeout, snapshot, started)(using %, !, &, -, *, **)(π.`π-wand`)))
+      .drainFork(ZStream.fromZIO(if parameters.threshold > 0
+                                 then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(poll(using %, /, \)))
-      .drainFork(ZStream.fromZIO(dump(snapshot)(using %, !, -)))
+      .drainFork(ZStream.fromZIO(dump(using %, !, -)))
       .runDrain
 
   override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
-            else π.`π-parallelism`
-    val h = if sys.Prop.IntProp(bacbh).isSet
-            then sys.Prop.IntProp(bacbh).value
-            else π.`π-batch-threshold`
-    val t = if sys.Prop.IntProp(bacbt).isSet
-            then sys.Prop.IntProp(bacbt).value
-            else π.`π-batch-timeout`
+            else π.`π-parameters`.parallelism
+    val h = if sys.Prop.IntProp(bacsh).isSet
+            then sys.Prop.IntProp(bacsh).value
+            else π.`π-parameters`.threshold
+    val t = if sys.Prop.IntProp(bacst).isSet
+            then sys.Prop.IntProp(bacst).value
+            else π.`π-parameters`.timeout
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
-            else π.`π-snapshot`
+            else π.`π-parameters`.snapshot
+    val params = `Π-Parameters`(p, h, t, true, s)
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
@@ -104,7 +105,7 @@ object App extends _root_.zio.ZIOAppDefault:
       b <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
       (uuid, tree, semaphore) <- sΠ.`}{`.`][`()
-      _ <- run(args.toList, p, h, t, s, n, b, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
+      _ <- run(args.toList, params, n, b, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
     yield
       ()
 
@@ -121,8 +122,9 @@ object π:
   import sΠ.*, sΠ.given
   import `π-$`.*, `π-ζ`.*
 
-  import `Π-loop`.{ %, /, \ }
+  import `Π-loop`.{ %, /, \, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
 
   extension (self: πLs[ZStream[Any, Nothing, ?]])

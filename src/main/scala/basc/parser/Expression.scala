@@ -181,11 +181,11 @@ abstract class Expression extends JavaTokenParsers:
               Some(term) -> given_Names
           case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
               if it.group(1).isEmpty =>
-            _directive = Some(lhs -> rhs.map(_.toString))
+            _directive = Some(lhs -> rhs.map { case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString })
             Some(term) -> Names()
           case (term @ Term.Assign(Term.Name(lhs), rhs), _)
               if it.group(1).isEmpty =>
-            _directive = Some(lhs -> rhs.toString)
+            _directive = Some(lhs -> (rhs match { case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString }))
             Some(term) -> Names()
           case (term, given Names) =>
             given MutableList[String]()

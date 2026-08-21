@@ -101,7 +101,7 @@ class BioAmbientsSuite extends FunSuite:
              Main = ν(x) ⟦ λ x . () ⟧
              """)
     } match
-      case _ :: _ :: _ :: _ :: Right((`(*)`("Main"), +(_, ∥(_, `.`(exp, ν("x")))))) :: Nil =>
+      case _ :: _ :: _ :: Right((`(*)`("Main"), +(_, ∥(_, `.`(exp, ν("x")))))) :: Nil =>
         assertMatches(exp) {
           case `⟦⟧`(_, +(_, ∥(_, `.`(∅(), π(_, λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), _, None)))), _, _) => true
         }
