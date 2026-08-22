@@ -176,7 +176,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (new {}, None, rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -506,7 +506,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -535,7 +535,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -566,7 +566,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         (name,
@@ -597,7 +597,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         (name,
@@ -664,7 +664,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -693,7 +693,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None

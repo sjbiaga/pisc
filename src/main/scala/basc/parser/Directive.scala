@@ -54,27 +54,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
   val self = directive._2
 
-  private def canonical: String => String =
-    case "werr"      => "errors"
-    case "dups"      => "duplications"
-    case "params"
-       | "param"
-       | "parameter" => "parameters"
-    case it          => it
-
-  private def key: String => Boolean = canonical andThen {
-    case "echo"
-       | "errors" | "duplications"
-       | "exclude" | "include"
-       | "paceunit"
-       | "scaling"
-       | "replication"
-       | "typeclasses"
-       | "parameters"
-       | "traces"      => true
-    case _             => false
-  }
-
   private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
   given `_String | List[String]_`: {} with
@@ -161,9 +140,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
       def keys: Set[String] =
         self match
-          case it: String if Directive.this.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
-          case it: List[String] if it.map(_.toLowerCase).forall(Directive.this.key) => Set.from(it.map(_.toLowerCase).map(canonical))
-          case _                                                                    => throw err("a comma separated list of valid keys")
+          case it: String if Directive.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
+          case it: List[String] if it.map(_.toLowerCase).forall(Directive.key) => Set.from(it.map(_.toLowerCase).map(canonical))
+          case _                                                               => throw err("a comma separated list of valid keys")
 
   private def boolean: Boolean = self.boolean
   private def number: Int = self.number
@@ -332,7 +311,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case ("scaling", it: Boolean)            => settings.scaling = it
             case ("replication", it: (Int, Boolean)) => settings.replication = it
             case ("typeclasses", it: List[String])   => settings.typeclasses = it
-            case ("parmeters", it: Parameters)       => settings.parameters = it
+            case ("parameters", it: Parameters)      => settings.parameters = it
             case ("traces", it: Option[Traces])      => settings.traces = it
             case _                                   => ???
           }
@@ -346,6 +325,27 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
 
 object Directive:
+
+  def canonical: String => String =
+    case "werr"      => "errors"
+    case "dups"      => "duplications"
+    case "params"
+       | "param"
+       | "parameter" => "parameters"
+    case it          => it
+
+  def key: String => Boolean = canonical andThen {
+    case "echo"
+       | "errors" | "duplications"
+       | "exclude" | "include"
+       | "paceunit"
+       | "scaling"
+       | "replication"
+       | "typeclasses"
+       | "parameters"
+       | "traces"      => true
+    case _             => false
+  }
 
   case class Settings(var dirs: List[Map[String, Any]] = Nil,
                       var werr: Boolean = false,
@@ -456,9 +456,9 @@ object Directive:
       trait Portʹ(override val number: Int) extends Port
 
     private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
-                                    "batch"       -> "a <threshold> number or a <timeout> number setting",
+                                    "parameters"  -> "a <parallelism> number or a <threshold> number or a <timeout> number or an <exit> boolean or a <snapshot> boolean setting",
                                     "traces"      -> "a <Kafka> cluster config or a <RabbitMQ> config or an <AmazonSQS> client config or an <ElasticMQ> endpoint setting")
-    def message(implicit name: String) = messages(name)
+    def message(implicit key: String) = messages(canonical(key))
 
     def s(it: String): String =
       if (it.startsWith("\"") || it.startsWith("'"))

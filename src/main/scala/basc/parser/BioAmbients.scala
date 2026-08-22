@@ -431,7 +431,7 @@ object BioAmbients:
              parallelism: Int = Int.MaxValue,
              threshold: Int = 0,
              timeout: Int = 123456,
-             exit: Boolean = false,
+             exit: Boolean = true,
              snapshot: Boolean = false
   ) extends Expansion:
 

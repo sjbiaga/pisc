@@ -37,7 +37,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, FiberIO, Ref, Resource }
+import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref, Resource }
 import _root_.cats.effect.kernel.Outcome.Succeeded
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, PQueue, Queue, Semaphore }
 
@@ -241,7 +241,7 @@ package object `Π-loop`:
                                                   _            <- enable(k2).unlessA(k1 == k2)
                                                   no           <- &.updateAndGet(_ + 1)
                                                   ss           <- ts1.get product ts2.get
-                                                  now          <- Clock[IO].monotonic.map(_.toNanos)
+                                                  now          <- IO.monotonic.map(_.toNanos)
                                                   _            <- feedback.lastR.set(now)
                                                   _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                                   _            <- sem.release
@@ -338,7 +338,7 @@ package object `Π-loop`:
                                               _            <- enable(k2).unlessA(k1 == k2)
                                               no           <- &.updateAndGet(_ + 1)
                                               ss           <- ts1.get product ts2.get
-                                              now          <- Clock[IO].monotonic.map(_.toNanos)
+                                              now          <- IO.monotonic.map(_.toNanos)
                                               _            <- feedback.lastR.set(now)
                                               _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                               _            <- sem.release

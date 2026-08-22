@@ -134,8 +134,8 @@ function ba_() {
                   --dep org.apache.kafka:kafka-clients:4.3.1 \
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1 \
-                  --dep com.rabbitmq:amqp-client:5.34.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.1 \
+                  --dep com.rabbitmq:amqp-client:5.35.0 \
+                  --dep software.amazon.awssdk:sqs:2.54.2 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
