@@ -199,7 +199,7 @@ package object `Π-http4s`:
       .build
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Check: ConsulCheck)
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck)
 
   val serviceName = "BioAmbients2Scala"
 
@@ -209,13 +209,13 @@ package object `Π-http4s`:
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => queue
-        case Kafka(topic) => topic
-        case RabbitMQ(queue) => queue
+        case AmazonSQS(queue) => "amazonsqs" -> queue
+        case Kafka(topic) => "kafka" -> topic
+        case RabbitMQ(queue) => "rabbitmq" -> queue
         case _ => null
       }
     } match
-      case Some(name) =>
+      case Some((tag, name)) =>
         val host = server.address.getAddress.getHostAddress
         val port = server.address.getPort
         val consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
@@ -226,6 +226,7 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
+          Tags = List(tag),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",

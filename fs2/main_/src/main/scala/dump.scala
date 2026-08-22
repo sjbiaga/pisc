@@ -88,6 +88,8 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
+             case Some(_) if `π-traces` eq null =>
+               dump
              case Some((no, ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
                for
                  _ <- record(no, s1, e, delay, duration, l1)(k1)
@@ -96,6 +98,6 @@ package object `Π-dump`:
                yield
                  ()
              case _ =>
-               doExit
+               Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
     yield
       ()

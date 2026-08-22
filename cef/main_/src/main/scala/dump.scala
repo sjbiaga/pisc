@@ -84,6 +84,8 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
+             case Some(_) if `π-traces` eq null =>
+               dump
              case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
                  _ <- record(no, ts1, ts, delay, duration, l1)(k1)

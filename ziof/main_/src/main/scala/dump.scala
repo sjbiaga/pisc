@@ -34,8 +34,6 @@ import _root_.zio.{ ExitCode, Queue, UIO, ZIO }
 import `Π-loop`.*
 import `Π-traces`.*
 
-import sΠ.given
-
 
 package object `Π-dump`:
 
@@ -48,14 +46,14 @@ package object `Π-dump`:
   private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
-         ZIO.attemptBlocking {
+        ZIO.attemptBlocking {
           val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
           `π-traces`(number, started, ended,
                      agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
-        }
+        }.either.unit
       case _ =>
         ZIO.unit
 
@@ -79,6 +77,8 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
+             case Some(_) if `π-traces` eq null =>
+               dump
              case Some((no, ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
                for
                  _ <- record(no, ts1, ts, delay, duration, l1)(k1)
@@ -87,6 +87,6 @@ package object `Π-dump`:
                yield
                  ()
              case _ =>
-               doExit
+               ZIO.attemptBlocking(`π-traces`.close).when(`π-traces` ne null).either *> doExit
     yield
       ()

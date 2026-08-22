@@ -309,7 +309,7 @@ package sΠ:
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, _) = opt.get
@@ -379,7 +379,7 @@ package sΠ:
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, i) = opt.get
@@ -448,7 +448,7 @@ package sΠ:
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, i) = opt.get
@@ -519,7 +519,7 @@ package sΠ:
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, i) = opt.get
@@ -589,7 +589,7 @@ package sΠ:
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, _) = opt.get
@@ -658,7 +658,7 @@ package sΠ:
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, _) = opt.get
@@ -727,7 +727,7 @@ package sΠ:
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, _) = opt.get

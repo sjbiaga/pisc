@@ -85,7 +85,7 @@ object Main extends helper.Main:
         val ps =
           ( F.split('.').reverse match
               case Array(tpe, _path*) =>
-                val path = _path.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _))
+                val path = _path.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _))
                 Defn.Type(Nil, Type.Name("F"), Type.ParamClause(Nil),
                           Type.Select(path.asInstanceOf[Term.Select], Type.Name(tpe)),
                           Type.Bounds(None, None, Nil, Nil))
@@ -107,7 +107,7 @@ object Main extends helper.Main:
         val tc: String => Type =
           _.split('.').reverse match
             case Array(it) => Type.Name(it)
-            case Array(hd, tl*) => Type.Select(tl.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
+            case Array(hd, tl*) => Type.Select(tl.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
 
         val tcs =
           prog.head match

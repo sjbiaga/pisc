@@ -41,19 +41,21 @@ package object `Π-traces`:
               dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit
     def close: Unit
 
+
   case object `Π-ConsoleCSV` extends `Π-Traces`:
     override def apply(number: Long, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+      printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              number, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
              rate, delay, duration,
              dir_cap, from, to)
     override def close: Unit = {}
+
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`:
     import _root_.java.io.{ PrintStream, FileOutputStream }
@@ -62,7 +64,7 @@ package object `Π-traces`:
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      `Π-FileCSV`.csv.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
+      `Π-FileCSV`.csv.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                          number, started, ended,
                          agent, name, polarity.getOrElse(""),
                          key, guard, label,
@@ -129,6 +131,7 @@ package object `Π-traces`:
         .endpointOverride(URI.create(config.endpoint))
         .build
       _client -> _client.createQueue(CreateQueueRequest.builder().queueName(config.queue).build).queueUrl
+
 
   case class `Π-Kafka`(servers: List[String], topic: String) extends `Π-Traces`:
     import org.apache.avro.generic.{ GenericData, GenericRecord }
@@ -206,6 +209,7 @@ package object `Π-traces`:
       props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer]) //.getCanonicalName)
       props.put("schema.registry.url", "http://localhost:8081")
       KafkaProducer[String, GenericRecord](props)
+
 
   case class `Π-RabbitMQ`(host: String, port: Int, queue: String) extends `Π-Traces`:
     override def apply(number: Long, started: Long, ended: Long,
