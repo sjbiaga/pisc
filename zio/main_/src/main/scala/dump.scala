@@ -26,13 +26,13 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.List
+import _root_.scala.Option.unless
 
 import _root_.zio.{ ExitCode, Queue, UIO, ZIO }
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 
 package object `Π-dump`:
@@ -47,21 +47,11 @@ package object `Π-dump`:
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         ZIO.attemptBlocking {
-          printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                 number, started, ended, name, polarity,
-                 key.stripPrefix("!"), key.startsWith("!"),
-                 label, rate, delay, duration, agent)
+          `π-traces`(number, started, ended,
+                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     key.stripPrefix("!"), key.startsWith("!"), label,
+                     rate, delay, duration)
         }.either.unit
-      case Array(key, name, polarity, label, rate, agent, filename*) =>
-        var ps: PrintStream = null
-        ZIO.attemptBlocking {
-          val fn = filename.mkString(",")
-          ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    number, started, ended, name, polarity,
-                    key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, fn)
-        }.either.unit.tap { _ => ZIO.attemptBlocking(ps.close).either.unless(ps eq null) }
       case _ =>
         ZIO.unit
 
@@ -93,6 +83,6 @@ package object `Π-dump`:
                yield
                  ()
              case _ =>
-               doExit
+               ZIO.attemptBlocking(`π-traces`.close).either.when(`π-traces` ne null) *> doExit
     yield
       ()

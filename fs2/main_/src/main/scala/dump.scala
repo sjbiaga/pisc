@@ -26,21 +26,20 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.List
+import _root_.scala.Option.unless
 
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
-import _root_.cats.syntax.monadError.*
 import _root_.cats.syntax.traverse.*
 
 import _root_.cats.effect.{ Async, ExitCode }
 import _root_.cats.effect.std.Queue
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 
 package object `Π-dump`:
@@ -57,21 +56,11 @@ package object `Π-dump`:
       _.split(",") match
         case Array(key, name, polarity, label, rate, agent) =>
           Async[F].blocking {
-            printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-                   number, started, ended, name, polarity,
-                   key.stripPrefix("!"), key.startsWith("!"),
-                   label, rate, delay, duration, agent)
+            `π-traces`(number, started, ended,
+                       agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                       key.stripPrefix("!"), key.startsWith("!"), label,
+                       rate, delay, duration)
           }
-        case Array(key, name, polarity, label, rate, agent, filename*) =>
-          var ps: PrintStream = null
-          Async[F].blocking {
-            val fn = filename.mkString(",")
-            ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-            ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                      number, started, ended, name, polarity,
-                      key.stripPrefix("!"), key.startsWith("!"),
-                      label, rate, delay, duration, agent, fn)
-          }.void.attemptTap { _ => Async[F].blocking(ps.close).unlessA(ps eq null) }
         case _ =>
           Async[F].unit
 
@@ -105,6 +94,6 @@ package object `Π-dump`:
                  yield
                    ()
                case _ =>
-                 doExit
+                 Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
       yield
         ()

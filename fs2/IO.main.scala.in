@@ -33,11 +33,6 @@ import _root_.cats.effect.std.Semaphore
 
 object App extends _root_.cats.effect.IOApp:
 
-  private val spicsp = "pisc.stochastic.communications.parallelism.level"
-  private val spicbh = "pisc.stochastic.communications.batch.threshold"
-  private val spicbt = "pisc.stochastic.communications.batch.timeout"
-
-
   import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.cats.syntax.flatMap.*
@@ -49,19 +44,24 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*, `Π-loop`.given
 
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[π.F, Long], batch: Ref[π.F, Long])
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicsh = "pisc.stochastic.communications.batch.threshold"
+  private val spicst = "pisc.stochastic.communications.timeout.microseconds"
+
+
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long])
                  (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F]) =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val mπ = π.πmain[π.F]()
     val \ =
-      if threshold > 0
+      if parameters.threshold > 0
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- if threshold > 0
-             then lπ.loopʹ(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
-             else lπ.loop0(parallelism, timeout, started)(using %, !, &, -, *, **)(π.`π-wand`).background
+        _ <- if parameters.threshold > 0
+             then lπ.loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
         _ <- dπ.dump(using %, !, -).background
       yield
@@ -78,13 +78,14 @@ object App extends _root_.cats.effect.IOApp:
   override def run(args: List[String]) =
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
-            else π.`π-parallelism`
-    val h = if sys.Prop.IntProp(spicbh).isSet
-            then sys.Prop.IntProp(spicbh).value
-            else π.`π-batch-threshold`
-    val t = if sys.Prop.IntProp(spicbt).isSet
-            then sys.Prop.IntProp(spicbt).value
-            else π.`π-batch-timeout`
+            else π.`π-parameters`.parallelism
+    val h = if sys.Prop.IntProp(spicsh).isSet
+            then sys.Prop.IntProp(spicsh).value
+            else π.`π-parameters`.threshold
+    val t = if sys.Prop.IntProp(spicst).isSet
+            then sys.Prop.IntProp(spicst).value
+            else π.`π-parameters`.timeout
+    val params = `Π-Parameters`(p, h, t, true)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
@@ -97,7 +98,7 @@ object App extends _root_.cats.effect.IOApp:
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run(args, p, h, t, n, b)(%, /, *, **, ^.permit, -, !, &)
+      x <- run(args, params, n, b)(%, /, *, **, ^.permit, -, !, &)
     yield
       x
 
@@ -119,8 +120,9 @@ object π:
 
   import sΠ.*
 
-  import `Π-loop`.{ %, /, \ }
+  import `Π-loop`.{ %, /, \, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
 
   extension [F[_]: Concurrent: Parallel](self: πLs[Stream[F, ?]])

@@ -60,7 +60,7 @@ abstract class Calculus extends StochasticPi:
               throw EquationFreeNamesException(bind.identifier, free &~ bound)
             if _settings.traces.isDefined
             then
-              bind -> sum.labelʹ(using bind.identifier -> _settings.traces.get.getOrElse(""))
+              bind -> sum.labelʹ(using bind.identifier)
             else
               bind -> sum
         }
@@ -696,7 +696,7 @@ object Calculus:
 
         case _ => ast
 
-    def labelʹ(using (String, String)): T =
+    def labelʹ(using String): T =
 
       ast match
 
@@ -706,7 +706,7 @@ object Calculus:
         case _ =>
           ast.label("")
 
-    def label(l: String)(using (String, String)): T =
+    def label(l: String)(using String): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -717,8 +717,7 @@ object Calculus:
         inline implicit def lʹ(i: Int): String = l + "∥" + i
 
       inline def idʹ(id: => String, ch: String, p: String, r: Any): String =
-        val (identifier, filename) = summon[(String, String)]
-        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + identifier + "," + filename
+        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + summon[String]
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {

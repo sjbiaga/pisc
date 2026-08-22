@@ -37,7 +37,7 @@ import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.parallel.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, Clock, Deferred, ExitCode, FiberIO, Ref, Resource }
+import _root_.cats.effect.{ IO, Deferred, ExitCode, FiberIO, Ref, Resource }
 import _root_.cats.effect.kernel.Outcome.Succeeded
 import _root_.cats.effect.std.{ AtomicCell, CyclicBarrier, PQueue, Queue, Semaphore }
 
@@ -47,10 +47,8 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
-
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
 
@@ -73,6 +71,21 @@ package object `Π-loop`:
   type * = Semaphore[IO]
 
   type ^ = Resource[IO, Unit]
+
+
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean)
+
+  final case class Feedback(pauseRD: Ref[IO, Deferred[IO, Unit]],
+                            paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
+                            paramsR: Ref[IO, `Π-Parameters`],
+                            tracesR: Ref[IO, Boolean],
+                            lastR: Ref[IO, Long],
+                            stopR: Ref[IO, Boolean],
+                            doneR: Ref[IO, Boolean],
+                            exitRD: Ref[IO, Deferred[IO, Unit]])
 
 
   given Order[(Int, List[((String, String), ++++)])] = Order.fromLessThan(_._1 < _._1)
@@ -184,11 +197,11 @@ package object `Π-loop`:
          }
     %.modify { m => m -> exit(m) }
 
-  def loopʹ(parallelism: Int, threshold: Int, timeout: Int, started: Ref[IO, Long], batch: Ref[IO, Long])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(threshold).timeout(timeout.microseconds).orElse(IO.unit)
+      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(IO.unit)
       m  =
         for
           (_, nel) <- **.take
@@ -197,37 +210,55 @@ package object `Π-loop`:
             then
               (started.get product batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.ifM(-.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(feedback.doneR.set(true) >> feedback.exitRD.get.flatMap(_.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
                 case _  =>
                   IO.pure(true)
               }
             else
-              Semaphore[IO](parallelism).flatMap { sem =>
+              Semaphore[IO](parameters.parallelism).flatMap { sem =>
                 nel.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), ts1), ((d2, c2), ts2)))) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
                                     IO.uncancelable { _ =>
                                       for
                                         cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                        _  <- sem.acquire
-                                        _  <- started.update(_ + 1)
-                                        fb <- ( for
+                                        io  = ( for
                                                   _  <- cb.await
                                                   _  <- enable(k1)
                                                   _  <- enable(k2).unlessA(k1 == k2)
                                                   no <- &.updateAndGet(_ + 1)
                                                   ss <- ts1.get product ts2.get
-                                                  now <- Clock[IO].monotonic.map(_.toNanos)
-                                                  _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
+                                                  now <- IO.monotonic.map(_.toNanos)
+                                                  _  <- feedback.lastR.set(now)
+                                                  _  <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2), (delay, duration)))).whenA
                                                   _  <- sem.release
                                                   _  <- started.update(_ - 1)
                                                 yield
                                                   ()
-                                              ).start
-                                        _  <- d1.complete(Some((delay, cb, fb, in)))
-                                        _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                              )
+                                        st <- feedback.stopR.get
+                                        _  <- ( if st
+                                                then
+                                                  for
+                                                    _ <- **.offer(-1 -> Nil)
+                                                    _ <- d1.complete(None)
+                                                    _ <- d2.complete(None).unlessA(k1 == k2)
+                                                    _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                                    _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                                  yield
+                                                    ()
+                                                else
+                                                  for
+                                                    _  <- sem.acquire
+                                                    _  <- started.update(_ + 1)
+                                                    fb <- io.start
+                                                    _  <- d1.complete(Some((delay, cb, fb, in)))
+                                                    _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                                    _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                                    _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                                  yield
+                                                    ()
+                                              )
                                       yield
                                         ()
                                     }
@@ -236,11 +267,19 @@ package object `Π-loop`:
         yield
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-      _ <- IO.cede >> loopʹ(parallelism, threshold, timeout, started, batch).whenA(l)
+      _ <- feedback.pauseRD.get.flatMap(_.get)
+      _ <- feedback.paramsRD.get
+             .flatMap(_.tryGet)
+             .flatTap(_.fold(IO.unit)(feedback.paramsR.set))
+             .flatMap(
+               _.fold(IO.cede >> loopʹ(parameters, started, batch, feedback))
+                     (IO.cede >> (IO.deferred[`Π-Parameters`] >>= feedback.paramsRD.set)
+                              >> loopʹ(_, started, batch, feedback))
+             ).whenA(l)
     yield
       ()
 
-  def loop0(parallelism: Int, timeout: Int, started: Ref[IO, Long])
+  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -250,48 +289,74 @@ package object `Π-loop`:
         then
           (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
             case 0L =>
-              IO.sleep(timeout.microseconds).race(**.take).flatMap {
+              IO.sleep(parameters.timeout.microseconds).race(**.take).flatMap {
                 case Right((_, nel)) =>
                   **.offer(-1 -> nel) >> IO.pure(true)
                 case _               =>
-                  canExit.ifM(-.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(feedback.doneR.set(true) >> feedback.exitRD.get.flatMap(_.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
               }
             case _  =>
               IO.pure(true)
           }
         else
-          Semaphore[IO](parallelism).flatMap { sem =>
+          Semaphore[IO](parameters.parallelism).flatMap { sem =>
             nel.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), ts1), ((d2, c2), ts2)))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
                                 IO.uncancelable { _ =>
                                   for
                                     cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                    _  <- sem.acquire
-                                    _  <- started.update(_ + 1)
-                                    fb <- ( for
+                                    io  = ( for
                                               _  <- cb.await
                                               _  <- enable(k1)
                                               _  <- enable(k2).unlessA(k1 == k2)
                                               no <- &.updateAndGet(_ + 1)
                                               ss <- ts1.get product ts2.get
-                                              now <- Clock[IO].monotonic.map(_.toNanos)
-                                              _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
+                                              now <- IO.monotonic.map(_.toNanos)
+                                              _  <- feedback.lastR.set(now)
+                                              _  <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2), (delay, duration)))).whenA
                                               _  <- sem.release
                                               _  <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                             yield
                                               ()
-                                          ).start
-                                    _  <- d1.complete(Some((delay, cb, fb, in)))
-                                    _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                    _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                    _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                          )
+                                    st <- feedback.stopR.get
+                                    _  <- ( if st
+                                            then
+                                              for
+                                                _ <- **.offer(-1 -> Nil)
+                                                _ <- d1.complete(None)
+                                                _ <- d2.complete(None).unlessA(k1 == k2)
+                                                _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                                _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                              yield
+                                                ()
+                                            else
+                                              for
+                                                _  <- sem.acquire
+                                                _  <- started.update(_ + 1)
+                                                fb <- io.start
+                                                _  <- d1.complete(Some((delay, cb, fb, in)))
+                                                _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                                _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                                _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                              yield
+                                                ()
+                                          )
                                   yield
                                     ()
                                 }
                             }
           } >> IO.pure(true)
-      _        <- IO.cede >> loop0(parallelism, timeout, started).whenA(l)
+      _        <- feedback.pauseRD.get.flatMap(_.get)
+      _        <- feedback.paramsRD.get
+                   .flatMap(_.tryGet)
+                   .flatTap(_.fold(IO.unit)(feedback.paramsR.set))
+                   .flatMap(
+                     _.fold(IO.cede >> loop0(parameters, started, feedback))
+                           (IO.cede >> (IO.deferred[`Π-Parameters`] >>= feedback.paramsRD.set)
+                                    >> loop0(_, started, feedback))
+                   ).whenA(l)
     yield
       ()
 

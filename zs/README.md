@@ -36,8 +36,8 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `zs` contains five files: `dump.scala`, `loop.scala`, `stats.scala`, `spi.scala`,
-and `IO.main.scala.in`.
+The root project folder `zs` contains six files: `dump.scala`, `loop.scala`, `stats.scala`,
+`traces.scala`, `spi.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

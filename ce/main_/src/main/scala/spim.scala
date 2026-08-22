@@ -35,7 +35,7 @@ package sΠ:
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ IO, Clock }
+  import _root_.cats.effect.IO
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
   import `Π-loop`.{ <>, +, %, /, \ }
@@ -260,20 +260,20 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
-                                  timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), (new {}, None, $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
                                   def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, _) = opt.get
@@ -332,20 +332,20 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
-                                  timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
                                   def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, i) = opt.get
@@ -403,20 +403,20 @@ package sΠ:
                                 continue <- IO.deferred[Option[<>]] >>= IO.ref
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
-                                timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
                                 def loop(enabled: Boolean = prevS eq None)
-                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- linearCB.await
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- timeset
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, i) = opt.get
@@ -476,20 +476,20 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(prevS eq None)
-                                  timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                                 yield {
                                   def loop(enabled: Boolean = prevS eq None)
-                                          (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- linearCB.await
                                       _   <- prevS.fold(IO.unit)(_.acquire)
                                       _   <- timeset
                                       _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
-                                      _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                      _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
                                        f, i) = opt.get
@@ -548,20 +548,20 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
                                 result   <- IO.ref(`null`)
-                                timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
                                 def loop(enabled: Boolean = prevS eq None)
-                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- linearCB.await
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- timeset
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, _) = opt.get
@@ -619,20 +619,20 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(prevS eq None)
                                 result   <- IO.ref(`null`)
-                                timestamp <- Clock[IO].monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)).whenA(prevS eq None)
                               yield {
                                 def loop(enabled: Boolean = prevS eq None)
-                                        (timeset: IO[Unit] = Clock[IO].monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- linearCB.await
                                     _   <- prevS.fold(IO.unit)(_.acquire)
                                     _   <- timeset
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- (IO.canceled.whenA(remaining == 1) >> IO.never).whenA(opt eq None)
+                                    _   <- (IO.canceled.whenA(remaining == 1) >> nextS.release >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, _) = opt.get

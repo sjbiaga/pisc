@@ -17,8 +17,10 @@ function spi() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
+                        --dep org.http4s::http4s-ember-client:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.36
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
-            local srcs=\ ../${emit}/spim.scala
+            local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -56,9 +58,9 @@ function spi() {
         args="$args $1"
         shift
     done
-    set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala
+    set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala ../${emit}/traces.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC5 \
+                  -q -O -nowarn -S 3.9.0-RC6 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -67,7 +69,7 @@ function spi() {
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                  -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                  -Dpisc.stochastic.communications.batch.threshold=0 \
-#                  -Dpisc.stochastic.communications.batch.timeout=123456 \
+#                  -Dpisc.stochastic.communications.timeout.microseconds=123456 \
 }
 
 function spi_() {
@@ -87,8 +89,13 @@ function spi_() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.0
+                        --dep io.circe::circe-generic:0.14.16
+                        --dep org.http4s::http4s-circe:0.23.36
+                        --dep org.http4s::http4s-dsl:0.23.36
+                        --dep org.http4s::http4s-ember-client:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.36
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
-            local srcs=\ ../${emit}/spim_.scala
+            local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http4s_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
@@ -126,18 +133,25 @@ function spi_() {
         args="$args $1"
         shift
     done
-    set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
+    set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala ../${emit}/traces_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC5 \
+                  -q -O -nowarn -S 3.9.0-RC6 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
+                  --repo https://packages.confluent.io/maven \
+                  --dep org.apache.kafka:kafka-clients:4.3.1 \
+                  --dep org.apache.avro:avro:1.12.2 \
+                  --dep io.confluent:kafka-avro-serializer:8.3.1 \
+                  --dep com.rabbitmq:amqp-client:5.35.0 \
+                  --dep software.amazon.awssdk:sqs:2.54.2 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                  -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                  -Dpisc.stochastic.communications.batch.threshold=0 \
-#                  -Dpisc.stochastic.communications.batch.timeout=123456 \
+#                  -Dpisc.stochastic.communications.timeout.microseconds=123456 \
+#                  -Dpisc.stochastic.communications.exit.passthrough=true \
 }
 
 function spio() {

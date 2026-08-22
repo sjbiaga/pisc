@@ -59,7 +59,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.ziof, in, P, H, T)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.ziof, in, P, H, T, true)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -79,8 +79,8 @@ object Main extends helper.Main:
 
         val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.take(3).mkString("\n\n") + "\n\n"
-                 + (ps.drop(3).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = ps.take(2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")

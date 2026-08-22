@@ -83,6 +83,12 @@ package object `Π-loop`:
   type ^[F[_]] = Resource[F, Unit]
 
 
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean)
+
+
   given [F[_]]: Order[(Int, List[((String, String), ++++[F])])] = Order.fromLessThan(_._1 < _._1)
 
 
@@ -212,11 +218,11 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loopʹ(parallelism: Int, threshold: Int, timeout: Int, started: Ref[F, Long], batch: Ref[F, Long])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
-        _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(threshold).timeout(timeout.microseconds).orElse(Temporal[F].unit)
+        _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(Temporal[F].unit)
         m  =
           for
             (_, nel) <- **.take
@@ -230,7 +236,7 @@ package object `Π-loop`:
                     Temporal[F].pure(true)
                 }
               else
-                Semaphore[F](parallelism).flatMap { sem =>
+                Semaphore[F](parameters.parallelism).flatMap { sem =>
                   nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
@@ -260,11 +266,11 @@ package object `Π-loop`:
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parallelism, threshold, timeout, started, batch).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch).whenA(l)
       yield
         ()
 
-    def loop0(parallelism: Int, timeout: Int, started: Ref[F, Long])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -274,7 +280,7 @@ package object `Π-loop`:
           then
             (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
               case 0L =>
-                Temporal[F].sleep(timeout.microseconds).race(**.take).flatMap {
+                Temporal[F].sleep(parameters.timeout.microseconds).race(**.take).flatMap {
                   case Right((_, nel)) =>
                     **.offer(-1 -> nel) >> Temporal[F].pure(true)
                   case _               =>
@@ -284,7 +290,7 @@ package object `Π-loop`:
                 Temporal[F].pure(true)
             }
           else
-            Semaphore[F](parallelism).flatMap { sem =>
+            Semaphore[F](parameters.parallelism).flatMap { sem =>
               nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
@@ -311,7 +317,7 @@ package object `Π-loop`:
                                   }
                               }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parallelism, timeout, started).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started).whenA(l)
       yield
         ()
 

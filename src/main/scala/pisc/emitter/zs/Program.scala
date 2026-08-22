@@ -610,16 +610,12 @@ object Program:
         (`* <- ZStream.fromZIO(*)`(`^-υidυ` -> \("π-uuid")), \(`^-υidυ`))
 
       ( prog.tail.head match
-          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
+          case (`(*)`(_, λ(parameters: Term)), _) =>
+            Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
       ) ::
       ( prog.tail.tail.head match
-          case (`(*)`(_, λ(Term.Tuple(List(threshold: Lit.Int, _)))), _) =>
-            Defn.Val(Nil, Pat.Var("π-batch-threshold") :: Nil, None, threshold)
-      ) ::
-      ( prog.tail.tail.head match
-          case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
-            Defn.Val(Nil, Pat.Var("π-batch-timeout") :: Nil, None, timeout)
+          case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+            Term.Assign(\("π-traces"), traces)
       ) ::
       prog
         .drop(1+2)

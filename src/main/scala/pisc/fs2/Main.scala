@@ -41,6 +41,7 @@ import dialects.Scala3
 import parser.StochasticPi
 import parser.Calculus.{ `(*)`, λ }
 import emitter.fs2.Program
+import emitter.fs2.Meta.\
 
 
 object Main extends helper.Main:
@@ -60,7 +61,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.fs2, in, P, H, T)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.fs2, in, P, H, T, true)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -78,27 +79,20 @@ object Main extends helper.Main:
         val ps =
           ( F.split('.').reverse match
               case Array(tpe, _path*) =>
-                val path = _path.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _))
+                val path = _path.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _))
                 Defn.Type(Nil, Type.Name("F"), Type.ParamClause(Nil),
                           Type.Select(path.asInstanceOf[Term.Select], Type.Name(tpe)),
                           Type.Bounds(None, None, Nil, Nil))
-          )
-          ::
+          ) ::
           ( prog.tail.head match
-              case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-                Defn.Val(Nil, Pat.Var(Term.Name("π-parallelism")) :: Nil, None, parallelism)
-          )
-          ::
+              case (`(*)`(_, λ(parameters: Term)), _) =>
+                Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
+          ) ::
           ( prog.tail.tail.head match
-              case (`(*)`(_, λ(Term.Tuple(List(threshold: Lit.Int, _)))), _) =>
-                Defn.Val(Nil, Pat.Var(Term.Name("π-batch-threshold")) :: Nil, None, threshold)
-          )
-          ::
-          ( prog.tail.tail.head match
-              case (`(*)`(_, λ(Term.Tuple(List(_, timeout: Lit.Int)))), _) =>
-                Defn.Val(Nil, Pat.Var(Term.Name("π-batch-timeout")) :: Nil, None, timeout)
-          )
-          :: Program.Main()(prog.drop(1+2))
+              case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+                Term.Assign(\("π-traces"), traces)
+          ) ::
+          Program.Main()(prog.drop(1+2))
 
         val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
@@ -107,7 +101,7 @@ object Main extends helper.Main:
         val tc: String => Type =
           _.split('.').reverse match
             case Array(it) => Type.Name(it)
-            case Array(hd, tl*) => Type.Select(tl.reverse.map(Term.Name(_)).foldLeft(Term.Name("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
+            case Array(hd, tl*) => Type.Select(tl.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
 
         val tcs =
           prog.head match
@@ -115,7 +109,7 @@ object Main extends helper.Main:
             case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
               typeclasses.args.map { case Term.Name(it) => it }.toSet
 
-        val code = (ps.drop(1+3).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = (ps.drop(1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
           .sortBy(_._2)
           .map(_._1)
 
@@ -130,7 +124,7 @@ object Main extends helper.Main:
                               Ctor.Primary(Nil, Name.Anonymous(), Seq.empty),
                               Template(None, Nil, Template.Body(None, code), Nil))
 
-        val codeʹ = ps.take(1+3).mkString("\n\n") + "\n\n" + main.toString
+        val codeʹ = ps.take(1+2).mkString("\n\n") + "\n\n" + main.toString
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString

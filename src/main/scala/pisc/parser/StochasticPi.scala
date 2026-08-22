@@ -397,7 +397,8 @@ object StochasticPi:
              override protected val in: String,
              parallelism: Int = Int.MaxValue,
              threshold: Int = 0,
-             timeout: Int = 123456
+             timeout: Int = 123456,
+             exit: Boolean = true
   ) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
@@ -711,7 +712,7 @@ object StochasticPi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parallelism = parallelism, batch = (threshold, timeout))
+      _settings = Settings(parameters = Settings.Parameters(parallelism, threshold, timeout, exit))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -792,6 +793,6 @@ object StochasticPi:
         }
 
       Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(Lit.Int(_settings.parallelism))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(Term.Tuple(List(Lit.Int(_settings.batch._1), Lit.Int(_settings.batch._2))))), ∅()): Bind) ::
+      Right((`(*)`(null, λ(_settings.parameters.reify)), ∅()): Bind) ::
+      Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), ∅()): Bind) ::
       prog

@@ -47,20 +47,20 @@ object App extends _root_.zio.ZIOAppDefault:
 
 
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
-  private val spicbh = "pisc.stochastic.communications.batch.threshold"
-  private val spicbt = "pisc.stochastic.communications.batch.timeout"
+  private val spicsh = "pisc.stochastic.communications.batch.threshold"
+  private val spicst = "pisc.stochastic.communications.timeout.microseconds"
 
 
-  private def run(args: List[String], parallelism: Int, threshold: Int, timeout: Int, started: Ref[Long], batch: Ref[Long])
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
     val \ =
-      if threshold > 0
+      if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
-      l <- if threshold > 0
-           then loopʹ(parallelism, threshold, timeout, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else loop0(parallelism, timeout, started)(using %, !, &, -, *, **)(π.`π-wand`).fork
+      l <- if parameters.threshold > 0
+           then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
+           else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`).fork
       _ <- poll(using %, /, \).fork
       d <- dump(using %, !, -).fork
       ^ <- π.`π-uuid`
@@ -74,13 +74,14 @@ object App extends _root_.zio.ZIOAppDefault:
   override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
-            else π.`π-parallelism`
-    val h = if sys.Prop.IntProp(spicbh).isSet
-            then sys.Prop.IntProp(spicbh).value
-            else π.`π-batch-threshold`
-    val t = if sys.Prop.IntProp(spicbt).isSet
-            then sys.Prop.IntProp(spicbt).value
-            else π.`π-batch-timeout`
+            else π.`π-parameters`.parallelism
+    val h = if sys.Prop.IntProp(spicsh).isSet
+            then sys.Prop.IntProp(spicsh).value
+            else π.`π-parameters`.threshold
+    val t = if sys.Prop.IntProp(spicst).isSet
+            then sys.Prop.IntProp(spicst).value
+            else π.`π-parameters`.timeout
+    val params = `Π-Parameters`(p, h, t, true)
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | +]())
@@ -94,7 +95,7 @@ object App extends _root_.zio.ZIOAppDefault:
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args.toList, p, h, t, n, b)(%, /, *, **, ^, -, !, &)
+      x <- run(args.toList, params, n, b)(%, /, *, **, ^, -, !, &)
       _ <- exit(x)
     yield
       ()
@@ -111,8 +112,9 @@ object π:
 
   import sΠ.*, sΠ.given
 
-  import `Π-loop`.{ %, /, \ }
+  import `Π-loop`.{ %, /, \, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
 
   extension (self: πLs[UIO[?]])

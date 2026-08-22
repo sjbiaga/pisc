@@ -29,10 +29,16 @@
 package pisc
 package parser
 
+import java.nio.file.Path
+import java.net.URI
+
 import scala.collection.mutable.{
   LinkedHashMap => Map,
   LinkedHashSet => Set
 }
+
+import scala.meta.{ Lit, Term }
+import emitter.shared.Meta.\
 
 import StochasticPi.Emitter
 import Directive.*
@@ -40,28 +46,13 @@ import Directive.*
 
 case class Directive(directive: (String, String | List[String]), emitter: Emitter, settings: Settings):
 
+  import Directive.Settings.*
+  import Traces.*
+  import Uri.*
+
   implicit val name: String = directive._1.toLowerCase
 
   val self = directive._2
-
-  private def canonical: String => String =
-    case "werr" => "errors"
-    case "dups" => "duplications"
-    case it     => it
-
-  private def key: String => Boolean = canonical andThen {
-    case "echo"
-       | "errors" | "duplications"
-       | "exclude" | "include"
-       | "paceunit"
-       | "scaling"
-       | "replication"
-       | "typeclasses"
-       | "parallelism"
-       | "batch"
-       | "traces"      => true
-    case _             => false
-  }
 
   private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
@@ -69,8 +60,8 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
     extension (self: String | List[String])
               (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
-              (using dir: String ?=> (String, String | List[String]) = { key ?=> key -> self })
               (using key: String)
+              (using dir: (String, String | List[String]) = key -> self)
 
       def boolean: Boolean =
         self match
@@ -93,17 +84,54 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
       def file: Option[String] =
         self match
-          case it: String if it.toLowerCase == "console" => None
-          case _: String                                 => Some(self.string("<console> or a filename"))
-          case _                                         => throw err("<console> or a filename")
+          case it: String if it.toLowerCase == "console"                  => None
+          case it: String if (try { Path.of(it); true } catch _ => false) => Some(s(it))
+          case _                                                          => throw err("<console> or a filename")
 
       def string(`type`: String = "a string"): String =
         self match
           case it: String
               if (it.startsWith("\"") || it.startsWith("'"))
-              && it.endsWith(s"${it.charAt(0)}") && it.length >= 2 =>
+              && it.endsWith(s"${it.charAt(0)}")
+              && it.length >= 2                              =>
             it.substring(1, it.length-1)
-          case _                                                   => throw err(`type`)
+          case _                                             => throw err(`type`)
+
+      def uri[F[_]: Parse](defaultPort: Int, cluster: Boolean = false): F[Config[Host, Port]] | Config[Hosts[F], Ports[F]] =
+        self match
+          case it: String                                                     =>
+            val uri = URI(s(it))
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+            else
+              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+          case List(it: String)                                               =>
+            val uri = URI(s(it))
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+            else
+              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+          case List(host: String, port: String)                               =>
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(null, s(host), s(port))
+            else
+              Parse[F].outer(defaultPort)(null, s(host), s(port))
+          case List(scheme: String, host: String, port: String)               =>
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(s(scheme), s(host), s(port))
+            else
+              Parse[F].outer(defaultPort)(s(scheme), s(host), s(port))
+          case List(scheme: String, host: String, port: String, path: String) =>
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(s(scheme), s(host), s(port), s(path))
+            else
+              Parse[F].outer(defaultPort)(s(scheme), s(host), s(port), s(path))
+          case _                                                              => throw err("a [scheme://]host[:port[/path]] URI")
 
       def emitters: List[Emitter] =
         self match
@@ -112,14 +140,15 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
       def keys: Set[String] =
         self match
-          case it: String if Directive.this.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
-          case it: List[String] if it.map(_.toLowerCase).forall(Directive.this.key) => Set.from(it.map(_.toLowerCase).map(canonical))
-          case _                                                                    => throw err("a comma separated list of valid keys")
+          case it: String if Directive.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
+          case it: List[String] if it.map(_.toLowerCase).forall(Directive.key) => Set.from(it.map(_.toLowerCase).map(canonical))
+          case _                                                               => throw err("a comma separated list of valid keys")
 
   private def boolean: Boolean = self.boolean
   private def number: Int = self.number
   private def file: Option[String] = self.file
   private def string(`type`: String = "a string"): String = self.string(`type`)
+  //private def uri[F[_]: Parse](defaultPort: Int, cluster: Boolean = false): F[Config[Host, Port]] | Config[Hosts[F], Ports[F]] = self.uri[F](defaultPort, cluster)
   private def emitters: List[Emitter] = self.emitters
   private def keys: Set[String] = self.keys
 
@@ -168,12 +197,14 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "replication"  =>
         settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
-            case List(given String: "parallelism", it: String) =>
+            case List(given String, it: String)
+                if given_String == "parallelism" =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
-            case List(given String: "linear", it: String)      =>
+            case List(given String, it: String)
+                if given_String == "linear"      =>
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case _                               => throw DirectiveValueParsingException(directive, settings.message)
-          case _                => throw DirectiveValueParsingException(directive, settings.message)
+            case _                               => throw DirectiveValueParsingException(directive, message)
+          case _                => throw DirectiveValueParsingException(directive, message)
 
       case "typeclasses" if settings.exclude =>
 
@@ -182,31 +213,58 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
           case it: String       => List(it)
           case it: List[String] => it
 
-      case "parallelism"  =>
-        settings.parallelism = 1 max number
-
-      case "batch"        =>
-        settings.batch = self match
+      case "parameters"        =>
+        settings.parameters = self match
           case it: List[String] => it.map(_.toLowerCase) match
-            case List(given String: "threshold", it: String) =>
-              (0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.batch._2)
-            case List(given String: "timeout", it: String) =>
-              (settings.batch._1, 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case _                                         => throw DirectiveValueParsingException(directive, settings.message)
-          case _                => throw DirectiveValueParsingException(directive, settings.message)
+            case List(given String, it: String)
+                if given_String == "parallelism" =>
+              settings.parameters.copy(parallelism = 1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case List(given String, it: String)
+                if given_String == "threshold"   =>
+              settings.parameters.copy(threshold = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case List(given String, it: String)
+                if given_String == "timeout"     =>
+              settings.parameters.copy(timeout = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case List(given String, it: String)
+                if given_String == "exit"        =>
+              settings.parameters.copy(exit = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case _                               => throw DirectiveValueParsingException(directive, message)
+          case _                => throw DirectiveValueParsingException(directive, message)
 
       case "traces"       =>
         try
           if boolean
           then
-            settings.traces = Some(None)
+            settings.traces = Some(ConsoleCSV)
           else
             settings.traces = None
         catch _ =>
-           try
-             settings.traces = Some(file)
-           catch _ =>
-             throw DirectiveValueParsingException(directive, "a boolean, <console> or a filename")
+          val `type` = "a boolean, <console> or a filename, or " + message(using "traces")
+          try
+            self match
+              case _: String                                 =>
+                settings.traces = Some(file.fold(ConsoleCSV)(FileCSV.apply))
+              // case given String :: (topic: String) :: it
+              //     if given_String.toLowerCase == "kafka"     =>
+              //   val hp = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[List](9092, true).cluster._2
+              //   settings.traces = Some(Kafka(hp.name, hp.number, s(topic)))
+              case given String :: (queue: String) :: it
+                  if given_String.toLowerCase == "rabbitmq"  =>
+                val hp = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](5672).node._2
+                settings.traces = Some(RabbitMQ(hp.name, hp.number, s(queue)))
+              case given String :: (queue: String) :: it
+                  if given_String.toLowerCase == "elasticmq" =>
+                val (scheme, hp, _) = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](9324).node
+                settings.traces = Some(ElasticMQ(scheme.getOrElse("http") -> hp, queue))
+              case given String :: (queue: String) :: (region: String) :: (accessKey: String) :: (secretKey: String) :: it
+                  if given_String.toLowerCase == "amazonsqs" =>
+                val (scheme, hp, _) = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](443).node
+                val schemeʹ = scheme.getOrElse(if hp.number == 443 then "https" else "http")
+                assert(schemeʹ == "https" && hp.number == 443 || schemeʹ == "http" && hp.number == 80)
+                settings.traces = Some(AmazonSQS(schemeʹ -> hp, s(region), s(accessKey), s(secretKey), s(queue)))
+              case _                                         => throw DirectiveValueParsingException(directive, `type`)
+          catch _ =>
+            throw DirectiveValueParsingException(directive, `type`)
 
       case "push"         =>
         try
@@ -220,8 +278,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                                   "scaling"      -> settings.scaling,
                                   "replication"  -> settings.replication,
                                   "typeclasses"  -> settings.typeclasses,
-                                  "parallelism"  -> settings.parallelism,
-                                  "batch"        -> settings.batch,
+                                  "parameters"   -> settings.parameters,
                                   "traces"       -> settings.traces)
         catch _ =>
           settings.dirs ::= Map.from {
@@ -234,8 +291,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               case it @ "scaling"        => it -> settings.scaling
               case it @ "replication"    => it -> settings.replication
               case it @ "typeclasses"    => it -> settings.typeclasses
-              case it @ "parallelism"    => it -> settings.parallelism
-              case it @ "batch"          => it -> settings.batch
+              case it @ "parameters"     => it -> settings.parameters
               case it @ "traces"         => it -> settings.traces
             }
           }
@@ -244,18 +300,17 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
         if boolean
         then
           settings.dirs.head.foreach {
-            case ("echo", _)                            =>
-            case ("errors", it: Boolean)                => settings.werr = it
-            case ("duplications", it: Boolean)          => settings.dups = it
-            case ("exclude", it: Boolean)               => settings.exclude = it
-            case ("paceunit", it: String)               => settings.paceunit = it
-            case ("scaling", it: Boolean)               => settings.scaling = it
-            case ("replication", it: (Int, Boolean))    => settings.replication = it
-            case ("typeclasses", it: List[String])      => settings.typeclasses = it
-            case ("parallelism", it: Int)               => settings.parallelism = it
-            case ("batch", it: (Int, Int))              => settings.batch = it
-            case ("traces", it: Option[Option[String]]) => settings.traces = it
-            case _                                      => ???
+            case ("echo", _)                         =>
+            case ("errors", it: Boolean)             => settings.werr = it
+            case ("duplications", it: Boolean)       => settings.dups = it
+            case ("exclude", it: Boolean)            => settings.exclude = it
+            case ("paceunit", it: String)            => settings.paceunit = it
+            case ("scaling", it: Boolean)            => settings.scaling = it
+            case ("replication", it: (Int, Boolean)) => settings.replication = it
+            case ("typeclasses", it: List[String])   => settings.typeclasses = it
+            case ("parameters", it: Parameters)      => settings.parameters = it
+            case ("traces", it: Option[Traces])      => settings.traces = it
+            case _                                   => ???
           }
           settings.dirs = settings.dirs.tail
 
@@ -268,6 +323,27 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
 object Directive:
 
+  def canonical: String => String =
+    case "werr"      => "errors"
+    case "dups"      => "duplications"
+    case "params"
+       | "param"
+       | "parameter" => "parameters"
+    case it          => it
+
+  def key: String => Boolean = canonical andThen {
+    case "echo"
+       | "errors" | "duplications"
+       | "exclude" | "include"
+       | "paceunit"
+       | "scaling"
+       | "replication"
+       | "typeclasses"
+       | "parameters"
+       | "traces"      => true
+    case _             => false
+  }
+
   case class Settings(var dirs: List[Map[String, Any]] = Nil,
                       var werr: Boolean = false,
                       var dups: Boolean = false,
@@ -276,13 +352,115 @@ object Directive:
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
-                      var parallelism: Int = Int.MaxValue,
-                      var batch: (Int, Int) = (0, 123456),
-                      var traces: Option[Option[String]] = None):
+                      var parameters: Settings.Parameters = Parameters(),
+                      var traces: Option[Settings.Traces] = None)
+
+  object Settings:
+
+    case class Parameters(parallelism: Int = Int.MaxValue,
+                          threshold: Int = 0,
+                          timeout: Int = 123456,
+                          exit: Boolean = true):
+      lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.Int(parallelism)
+                                                                       :: Lit.Int(threshold)
+                                                                       :: Lit.Int(timeout)
+                                                                       :: Lit.Boolean(exit)
+                                                                       :: Nil))
+
+    trait Traces:
+      lazy val reify: Term
+
+    object Traces:
+
+      import Uri.*
+
+      case object ConsoleCSV extends Traces:
+        lazy val reify = \("Π-ConsoleCSV")
+
+      case class FileCSV(filename: String) extends Traces:
+        lazy val reify = Term.Apply(\("Π-FileCSV"), Term.ArgClause(Lit.String(filename) :: Nil))
+
+      case class Kafka(name: List[String], number: List[Int], topic: String) extends Traces with Hosts[List] with Ports[List]:
+        require(name.size == number.size)
+        lazy val reify = Term.Apply(\("Π-Kafka"), Term.ArgClause(Term.Apply(\("List"),
+                                                                            Term.ArgClause((name zip number).map(_ + ":" + _).map(Lit.String(_))))
+                                                              :: Lit.String(topic) :: Nil))
+
+      case class RabbitMQ(name: String, number: Int, queue: String) extends Traces with Host with Port:
+        lazy val reify = Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name) :: Lit.Int(number) :: Lit.String(queue) :: Nil))
+
+      case class AmazonSQS(endpoint: (String, Host & Port), region: String, accessKey: String, secretKey: String, queue: String) extends Traces:
+        lazy val reify = Term.Apply(\("Π-AmazonSQS"), Term.ArgClause(Lit.String(s"${endpoint._1}://${endpoint._2.name}:${endpoint._2.number}")
+                                                                  :: Lit.String(region)
+                                                                  :: Lit.String(accessKey)
+                                                                  :: Lit.String(secretKey)
+                                                                  :: Lit.String(queue)
+                                                                  :: Nil))
+
+      class ElasticMQ(endpoint: (String, Host & Port), queue: String) extends AmazonSQS(endpoint, "elasticmq", "x", "x", queue)
+
+    object Uri:
+
+      type Id[X] = X
+
+      type Config[H <: Hosts[?], P <: Ports[?]] = (Option[String], H & P, String)
+
+      extension [F[_]](self: F[Config[Host, Port]] | Config[Hosts[F], Ports[F]])
+        def cluster = self.asInstanceOf[Config[Hosts[F], Ports[F]]]
+        def node = self.asInstanceOf[F[Config[Host, Port]]]
+
+      trait Parse[F[_]]:
+        def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): F[(Option[String], Host & Port, String)]
+        def inner(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): (Option[String], Hosts[F] & Ports[F], String)
+
+      object Parse:
+        inline def apply[F[_]](using Parse[F]): Parse[F] = summon[Parse[F]]
+        private def apply(defaultPort: Int)(uri: URI) =
+          val portʹ = if uri.getPort == -1 then defaultPort else uri.getPort
+          (Option(uri.getScheme), new Hostʹ(uri.getHost) with Portʹ(portʹ), uri.getPath)
+        given Parse[Id] with
+          def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String) =
+            Parse(defaultPort)(URI(scheme, null, host, port.toInt, path, null, null))
+          def inner(defaultPort: Int)(scheme: String, host: String, port: String, path: String) =
+            outer(defaultPort)(scheme, host, port, path)
+        given Parse[List] with
+          def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String) =
+            (host.split(",") zip port.split(",").map(_.toInt)).map(URI(scheme, null, _, _, path, null, null)).map(Parse.apply(defaultPort)).toList
+          def inner(defaultPort: Int)(scheme: String, host: String, port: String, path: String) =
+            val hosts = host.split(",").toList
+            val ports = port.split(",").map(_.toInt).map { it => if it == -1 then defaultPort else it }.toList
+            val uri = URI(scheme, null, hosts.head, ports.head, path, null, null)
+            (Option(uri.getScheme), new Hostsʹ(hosts) with Portsʹ(ports), uri.getPath)
+
+      trait Hosts[F[_]]:
+        val name: F[String]
+
+      trait Hostsʹ[F[_]](override val name: F[String]) extends Hosts[F]
+
+      trait Host extends Hosts[Id]
+
+      trait Hostʹ(override val name: String) extends Host
+
+      trait Ports[F[_]]:
+        val number: F[Int]
+
+      trait Portsʹ[F[_]](override val number: F[Int]) extends Ports[F]
+
+      trait Port extends Ports[Id]
+
+      trait Portʹ(override val number: Int) extends Port
 
     private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
-                                    "batch"       -> "a <threshold> number or a <timeout> number setting")
-    def message(implicit name: String) = messages(name)
+                                    "parameters"  -> "a <parallelism> number or a <threshold> number or a <timeout> number or an <exit> boolean setting",
+                                    "traces"      -> "a <Kafka> cluster config or a <RabbitMQ> config or an <AmazonSQS> client config or an <ElasticMQ> endpoint setting")
+    def message(implicit key: String) = messages(canonical(key))
+
+    def s(it: String): String =
+      if (it.startsWith("\"") || it.startsWith("'"))
+      && it.endsWith(s"${it.charAt(0)}")
+      && it.length >= 2
+      then it.substring(1, it.length-1)
+      else it
 
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
