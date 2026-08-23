@@ -84,6 +84,7 @@ package object `Π-http4s`:
   case class State(parameters: Parameters,
                    traces: Option[Traces],
                    last: Option[Long],
+                   clock: Option[Double],
                    idle: Option[Long],
                    started: Option[Long],
                    done: Option[Boolean])
@@ -139,31 +140,33 @@ package object `Π-http4s`:
     def apply(batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback) = HttpRoutes.of[IO] {
       case GET -> Root =>
         for
-          started  <- startedR.get
-          params   <- feedback.paramsR.get
-          last     <- feedback.lastR.get
-          idle     <- IO.monotonic.map(_.toNanos - last)
-          done     <- feedback.doneR.get
-          state     = State(Parameters(params), Traces(), Some(last), Some(idle), Some(started), Some(done))
-          response <- Ok(state)
+          started       <- startedR.get
+          params        <- feedback.paramsR.get
+          (last, clock) <- feedback.lastR.get
+          idle          <- IO.monotonic.map(_.toNanos - last)
+          done          <- feedback.doneR.get
+          state          = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
+          response      <- Ok(state)
         yield
           response
 
       case request @ PUT -> Root =>
         request.decode[State] {
-          case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+          case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
             BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value")
-          case State(_, Some(_), _, _, _, _)    =>
+          case State(_, Some(_), _, _, _, _, _)    =>
             BadRequest("attempt to alter the `traces' read-only value")
-          case State(_, _, Some(_), _, _, _)    =>
+          case State(_, _, Some(_), _, _, _, _)    =>
             BadRequest("attempt to alter the `last' read-only value")
-          case State(_, _, _, Some(_), _, _)    =>
+          case State(_, _, _, Some(_), _, _, _)    =>
+            BadRequest("attempt to alter the `clock' read-only value")
+          case State(_, _, _, _, Some(_), _, _)    =>
             BadRequest("attempt to alter the `idle' read-only value")
-          case State(_, _, _, _, Some(_), _)    =>
+          case State(_, _, _, _, _, Some(_), _)    =>
             BadRequest("attempt to alter the `started' read-only counter")
-          case State(_, _, _, _, _, Some(_))    =>
+          case State(_, _, _, _, _, _, Some(_))    =>
             BadRequest("attempt to alter the `done' read-only flag")
-          case State(parameters, _, _, _, _, _) =>
+          case State(parameters, _, _, _, _, _, _) =>
             feedback.paramsR.get.flatMap { default =>
               var params = parameters(default)
               params = params.copy(parallelism = 1 max params.parallelism,

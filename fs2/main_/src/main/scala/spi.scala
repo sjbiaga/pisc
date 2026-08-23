@@ -129,7 +129,7 @@ package object sΠ:
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (new {}, None, rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (τ.`new {}`, None, rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
@@ -201,7 +201,7 @@ package object sΠ:
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
           timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (new {}, None, rate))))
+          _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (τ.`new {}`, None, rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
@@ -266,7 +266,7 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
-        _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (new {}, None, rate))))
+        _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (τ.`new {}`, None, rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -303,6 +303,10 @@ package object sΠ:
                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): Stream[F, Unit] =
       apply(rate, pace)(key).evalTap(_ => exec(code))
+
+  object τ:
+
+    private val `new {}` = new {}
 
 
   /**

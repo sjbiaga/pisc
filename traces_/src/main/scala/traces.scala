@@ -34,7 +34,7 @@ package object `Π-traces`:
   var `π-traces`: `Π-Traces` = null
 
   sealed trait `Π-Traces`:
-    def apply(number: Long, started: Long, ended: Long,
+    def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
               key: String, guard: Boolean, label: String,
               rate: String, delay: Double, duration: Double): Unit
@@ -42,12 +42,12 @@ package object `Π-traces`:
 
 
   case object `Π-ConsoleCSV` extends `Π-Traces`:
-    override def apply(number: Long, started: Long, ended: Long,
+    override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double): Unit =
-      printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-             number, started, ended,
+      printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+             number, clock, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
              rate, delay, duration)
@@ -56,12 +56,12 @@ package object `Π-traces`:
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`:
     import _root_.java.io.{ PrintStream, FileOutputStream }
-    override def apply(number: Long, started: Long, ended: Long,
+    override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double): Unit =
-      `Π-FileCSV`.csv.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                             number, started, ended,
+      `Π-FileCSV`.csv.printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                             number, clock, started, ended,
                              agent, name, polarity.getOrElse(""),
                              key, guard, label,
                              rate, delay, duration)
@@ -77,13 +77,13 @@ package object `Π-traces`:
 
   case class `Π-AmazonSQS`(endpoint: String, region: String, accessKey: String, secretKey: String, queue: String) extends `Π-Traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
-    override def apply(number: Long, started: Long, ended: Long,
+    override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
       val message = s"""
-                    {"number":$number,"started":$started,"ended":$ended,
+                    {"number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
                      "rate":"$rate","delay":$delay,"duration":$duration
@@ -121,12 +121,13 @@ package object `Π-traces`:
   case class `Π-Kafka`(servers: List[String], topic: String) extends `Π-Traces`:
     import org.apache.avro.generic.{ GenericData, GenericRecord }
     import org.apache.kafka.clients.producer.ProducerRecord
-    override def apply(number: Long, started: Long, ended: Long,
+    override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double): Unit =
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
       avroRecord.put("number", number)
+      avroRecord.put("clock", clock)
       avroRecord.put("started", started)
       avroRecord.put("ended", ended)
       avroRecord.put("agent", agent)
@@ -157,6 +158,7 @@ package object `Π-traces`:
       "name": "pisc",
       "fields": [
         { "name" : "number", "type": "long" },
+        { "name" : "clock", "type": "number" },
         { "name" : "started", "type": "long" },
         { "name" : "ended", "type": "long" },
 
@@ -187,12 +189,12 @@ package object `Π-traces`:
 
 
   case class `Π-RabbitMQ`(host: String, port: Int, queue: String) extends `Π-Traces`:
-    override def apply(number: Long, started: Long, ended: Long,
+    override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double): Unit =
       val message = s"""
-                    {"number":$number,"started":$started,"ended":$ended,
+                    {"number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
                      "rate":"$rate","delay":$delay,"duration":$duration

@@ -100,6 +100,8 @@ package object sΠ:
     */
   object τ:
 
+    private val `new {}` = new {}
+
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -108,7 +110,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, timestamp), (new {}, None, rate)))
+        _        <- /.offer(^ -> key -> ((promise, timestamp), (`new {}`, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -117,6 +119,7 @@ package object sΠ:
         _        <- f.join
       yield
         delay
+
 
   /**
     * prefix

@@ -103,6 +103,8 @@ package object sΠ:
     */
   object τ extends τ:
 
+    private val `new {}` = new {}
+
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -111,7 +113,7 @@ package object sΠ:
         _         <- exclude(key)
         deferred  <- IO.deferred[Option[<>]]
         timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
-        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (new {}, None, rate)))
+        _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`new {}`, None, rate)))
         opt       <- deferred.get
         delay     <- ( if opt eq None
                        then

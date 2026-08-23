@@ -36,7 +36,7 @@ import `Π-loop`.*
 
 package object `Π-dump`:
 
-  type -[F[_]] = Queue[F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
+  type -[F[_]] = Queue[F, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
 
   final class πdump[F[_]: Concurrent]:
 

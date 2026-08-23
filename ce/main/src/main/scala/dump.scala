@@ -36,7 +36,7 @@ import `Π-loop`.*
 
 package object `Π-dump`:
 
-  type - = Queue[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
+  type - = Queue[IO, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
 
   def dump(using % : %, ! : !, - : -): IO[Unit] =
     IO.unit

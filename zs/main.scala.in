@@ -52,7 +52,7 @@ object App extends _root_.zio.ZIOAppDefault:
   private val spicst = "pisc.stochastic.communications.timeout.microseconds"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &) =
     val \ =
       if parameters.threshold > 0
@@ -67,8 +67,8 @@ object App extends _root_.zio.ZIOAppDefault:
         ()
     )
       .drainFork(ZStream.fromZIO(if parameters.threshold > 0
-                                 then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)
-                                 else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`)))
+                                 then loopʹ(parameters, started, batch, clock)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else loop0(parameters, started, clock)(using %, !, &, -, *, **)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dump(using %, !, -)))
       .runDrain
@@ -89,15 +89,16 @@ object App extends _root_.zio.ZIOAppDefault:
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
-      - <- Queue.unbounded[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
+      ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
+      - <- Queue.unbounded[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
+      c <- Ref.make(.0)
       _ <- `π-enable`(π.`π-main`)(using %)
-      _ <- run(args.toList, params, n, b)(%, /, *, **, ^, -, !, &)
+      _ <- run(args.toList, params, n, b, c)(%, /, *, **, ^, -, !, &)
     yield
       ()
 

@@ -46,14 +46,14 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double))]]
+  type - = Queue[IO, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
 
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
-          `π-traces`(number, started, ended,
+          `π-traces`(number, clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration)
@@ -83,10 +83,12 @@ package object `Π-dump`:
     for
       h <- -.take
       _ <- h match
-             case Some((no, ((s1, s2), e), (k1, k2), (delay, duration))) =>
+             case Some(_) if `π-traces` eq null =>
+               dump
+             case Some((no, ((s1, s2), (e, c)), (k1, k2), (delay, duration))) =>
                for
-                 _ <- record(no, s1, e, delay, duration)(k1)
-                 _ <- record(no, s2, e, delay, duration)(k2).unlessA(k1 == k2)
+                 _ <- record(no, c, s1, e, delay, duration)(k1)
+                 _ <- record(no, c, s2, e, delay, duration)(k2).unlessA(k1 == k2)
                  _ <- IO.cede >> dump
                yield
                  ()

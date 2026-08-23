@@ -68,7 +68,7 @@ package object `Π-loop`:
   type \ = IO[Unit] => IO[Unit]
 
   type ++++ = (Double, Ref[IO, `()`], (++, ++))
-  type ** = PQueue[IO, (Int, List[((String, String), ++++)])]
+  type ** = PQueue[IO, (Int, List[List[((String, String), ++++)]])]
 
   type * = Semaphore[IO]
 
@@ -84,13 +84,13 @@ package object `Π-loop`:
                             paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],
                             tracesR: Ref[IO, Boolean],
-                            lastR: Ref[IO, Long],
+                            lastR: Ref[IO, (Long, Double)],
                             stopR: Ref[IO, Boolean],
                             doneR: Ref[IO, Boolean],
                             exitRD: Ref[IO, Deferred[IO, Unit]])
 
 
-  given Order[(Int, List[((String, String), ++++)])] = Order.fromLessThan(_._1 < _._1)
+  given Order[(Int, List[List[((String, String), ++++)]])] = Order.fromLessThan(_._1 < _._1)
 
 
   def `π-enable`(enabled: `Π-Set`[String])
@@ -145,12 +145,14 @@ package object `Π-loop`:
       else
         val nel = ∥(it)(`π-wand`._1)()
         val nelʹ = nel.map {
-          case (key1, key2, in, delay) =>
-            val (dc1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
-            val (dc2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (delay, in, (dc1, dc2))
+          _.map {
+            case (key1, key2, in, (delay, _)) =>
+              val (dc1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+              val (dc2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+              (key1, key2) -> (delay, in, (dc1, dc2))
+          }
         }
-        nel.traverse {
+        nel.flatten.traverse {
           case (key1, key2, _, _) =>
             val k1 = key1.substring(36)
             val k2 = key2.substring(36)
@@ -217,7 +219,7 @@ package object `Π-loop`:
       !.complete(ec).void
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], _feedback: Feedback)
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], _clock: Ref[IO, Double], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -236,7 +238,8 @@ package object `Π-loop`:
               }
             else
               Semaphore[IO](parameters.parallelism).flatMap { sem =>
-                nel.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
+                nel.traverse {
+                  _.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
                                     IO.uncancelable { _ =>
@@ -261,15 +264,16 @@ package object `Π-loop`:
                                         ()
                                     }
                                 }
+                }
               } >> IO.pure(true)
         yield
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-      _ <- IO.cede >> loopʹ(parameters, started, batch, _feedback).whenA(l)
+      _ <- IO.cede >> loopʹ(parameters, started, batch, _clock, _feedback).whenA(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], _feedback: Feedback)
+  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], _clock: Ref[IO, Double], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -290,7 +294,8 @@ package object `Π-loop`:
           }
         else
           Semaphore[IO](parameters.parallelism).flatMap { sem =>
-            nel.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
+            nel.traverse {
+              _.parTraverse { case ((key1, key2), (delay, in, ((d1, c1), (d2, c2)))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
                                 IO.uncancelable { _ =>
@@ -315,8 +320,9 @@ package object `Π-loop`:
                                     ()
                                 }
                             }
+            }
           } >> IO.pure(true)
-      _        <- IO.cede >> loop0(parameters, started, _feedback).whenA(l)
+      _        <- IO.cede >> loop0(parameters, started, _clock, _feedback).whenA(l)
     yield
       ()
 

@@ -76,7 +76,7 @@ package object `Π-loop`:
   type \[F[_]] = F[Unit] => F[Unit]
 
   type ++++[F[_]] = (Double, Ref[F, `()`[F]], (++[F], ++[F]))
-  type **[F[_]] = PQueue[F, (Int, List[((String, String), ++++[F])])]
+  type **[F[_]] = PQueue[F, (Int, List[List[((String, String), ++++[F])]])]
 
   type *[F[_]] = Semaphore[F]
 
@@ -89,7 +89,7 @@ package object `Π-loop`:
                                   exit: Boolean)
 
 
-  given [F[_]]: Order[(Int, List[((String, String), ++++[F])])] = Order.fromLessThan(_._1 < _._1)
+  given [F[_]]: Order[(Int, List[List[((String, String), ++++[F])]])] = Order.fromLessThan(_._1 < _._1)
 
 
   def `π-enable`[F[_]](enabled: `Π-Set`[String])
@@ -146,12 +146,14 @@ package object `Π-loop`:
         else
           val nel = ∥(it)(`π-wand`._1)()
           val nelʹ = nel.map {
-            case (key1, key2, in, delay) =>
-              val (dc1, _) = m(key1).asInstanceOf[(Boolean, +[F])]._2
-              val (dc2, _) = m(key2).asInstanceOf[(Boolean, +[F])]._2
-              (key1, key2) -> (delay, in, (dc1, dc2))
+            _.map {
+              case (key1, key2, in, (delay, _)) =>
+                val (dc1, _) = m(key1).asInstanceOf[(Boolean, +[F])]._2
+                val (dc2, _) = m(key2).asInstanceOf[(Boolean, +[F])]._2
+                (key1, key2) -> (delay, in, (dc1, dc2))
+            }
           }
-          nel.traverse {
+          nel.flatten.traverse {
             case (key1, key2, _, _) =>
               val k1 = key1.substring(36)
               val k2 = key2.substring(36)
@@ -218,7 +220,7 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], _clock: Ref[F, Double])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -237,7 +239,8 @@ package object `Π-loop`:
                 }
               else
                 Semaphore[F](parameters.parallelism).flatMap { sem =>
-                  nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
+                  nel.traverse {
+                    _.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
                                       Temporal[F].uncancelable { _ =>
@@ -262,15 +265,16 @@ package object `Π-loop`:
                                           ()
                                       }
                                   }
+                  }
                 } >> Temporal[F].pure(true)
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, _clock).whenA(l)
       yield
         ()
 
-    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], _clock: Ref[F, Double])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -291,7 +295,8 @@ package object `Π-loop`:
             }
           else
             Semaphore[F](parameters.parallelism).flatMap { sem =>
-              nel.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
+              nel.traverse {
+                _.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
                                   Temporal[F].uncancelable { _ =>
@@ -316,8 +321,9 @@ package object `Π-loop`:
                                       ()
                                   }
                               }
+              }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parameters, started).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started, _clock).whenA(l)
       yield
         ()
 
