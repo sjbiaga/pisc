@@ -29,6 +29,7 @@
 import _root_.scala.collection.immutable.Map
 
 import _root_.scala.concurrent.Promise
+
 import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
 import _root_.org.apache.pekko.actor.typed.{ ActorRef, Behavior }
 
@@ -38,11 +39,18 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, >< }
+  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
-  type + = (Promise[Option[Double]], (Long, (>< | Object, Option[Boolean], Rate)))
+  type + = (Promise[Option[(Promise[`()`], Double)]], (Long, ({}, Option[Either[Unit, Promise[`()`]]], Rate)))
 
   type % = ActorRef[Loop]
+
+
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean)
+
 
   enum Loop:
 
@@ -53,6 +61,7 @@ package object `Π-loop`:
   object Loop:
 
     var no = 0
+    var clock = 0.0
 
     def apply(parallelism: Int)
              (dump: ActorRef[-])
@@ -134,26 +143,28 @@ package object `Π-loop`:
                     `π-discard`(trick(key))
 
                 nel
+                  .flatten
                   .sliding(parallelism, parallelism)
                   .toList
                   .foreach {
-                    _.foreach { case (key1, key2, (delay, duration)) =>
-                                val k1 = key1.substring(36)
-                                val k2 = key2.substring(36)
-                                val ^  = key1.substring(0, 36)
-                                val ^^ = key2.substring(0, 36)
-                                val (p1, (ts1, _)) = m(key1).asInstanceOf[+]
-                                val (p2, (ts2, _)) = m(key2).asInstanceOf[+]
-                                discard(k1)(using ^)
-                                if k1 != k2 then discard(k2)(using ^^)
-                                m -= key1
-                                m -= key2
-                                enable(k1)
-                                if k1 != k2 then enable(k2)
-                                p1.success(Some((delay)))
-                                if k1 != k2 then p2.success(Some((delay)))
-                                no += 1
-                                dump ! (no, ((ts1, ts2), System.nanoTime), (k1, k2), (delay, duration))
+                    _.foreach { case (key1, key2, in, (delay, duration)) =>
+                                  val k1 = key1.substring(36)
+                                  val k2 = key2.substring(36)
+                                  val  ^ = key1.substring(0, 36)
+                                  val ^^ = key2.substring(0, 36)
+                                  val (p1, (ts1, _)) = m(key1).asInstanceOf[+]
+                                  val (p2, (ts2, _)) = m(key2).asInstanceOf[+]
+                                  discard(k1)(using ^)
+                                  if k1 != k2 then discard(k2)(using ^^)
+                                  m -= key1
+                                  m -= key2
+                                  enable(k1)
+                                  if k1 != k2 then enable(k2)
+                                  p1.success(Some((in, delay)))
+                                  if k1 != k2 then p2.success(Some((in, delay)))
+                                  no += 1
+                                  clock += delay
+                                  dump ! (no, ((ts1, ts2), (System.nanoTime, clock)), (k1, k2), (delay, duration))
                               }
                   }
 

@@ -78,8 +78,8 @@ object Main extends helper.Main:
 
         val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.take(1).mkString("\n\n") + "\n\n"
-                 + (ps.drop(1).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = ps.take(2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")

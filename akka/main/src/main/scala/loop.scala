@@ -29,6 +29,7 @@
 import _root_.scala.collection.immutable.Map
 
 import _root_.scala.concurrent.Promise
+
 import _root_.akka.actor.typed.scaladsl.Behaviors
 import _root_.akka.actor.typed.{ ActorRef, Behavior }
 
@@ -38,11 +39,18 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, >< }
+  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
 
-  type + = (Promise[Option[Double]], (>< | Object, Option[Boolean], Rate))
+  type + = (Promise[Option[(Promise[`()`], Double)]], ({}, Option[Either[Unit, Promise[`()`]]], Rate))
 
   type % = ActorRef[Loop]
+
+
+  final case class `Π-Parameters`(parallelism: Int,
+                                  threshold: Int,
+                                  timeout: Int,
+                                  exit: Boolean)
+
 
   enum Loop:
 
@@ -72,23 +80,25 @@ package object `Π-loop`:
 
               case Nil =>
 
-                val (trick, _) = `π-wand`
-                if ! %.exists(_._2.isInstanceOf[Int]) &&
-                   %.forall {
-                     case (key1, (_, (e1, Some(p1), _))) =>
-                       val ^ = key1.substring(0, 36)
-                       ! %.exists {
-                         case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
-                           val ^^ = key2.substring(0, 36)
-                           ^ != ^^
-                           || {
-                             val k1 = key1.substring(36)
-                             val k2 = key2.substring(36)
-                             !trick.contains(k1) || !trick(k1).contains(k2)
-                           }
-                         case _ => false
-                       }
-                     case _ => false
+                if %.isEmpty ||
+                   %.keys.forall(_.charAt(36) == '!')
+                && { val (trick, _) = `π-wand`
+                     %.forall {
+                       case (key1, (_, (e1, Some(p1), _))) =>
+                         val ^ = key1.substring(0, 36)
+                         ! %.exists {
+                           case (key2, (_, (e2, Some(p2), _))) if (e1 eq e2) && p1 != p2 =>
+                             val ^^ = key2.substring(0, 36)
+                             ^ != ^^
+                             || {
+                               val k1 = key1.substring(36)
+                               val k2 = key2.substring(36)
+                               !trick.contains(k1) || !trick(k1).contains(k2)
+                             }
+                           case _ => false
+                         }
+                       case _ => false
+                     }
                    }
                 then
                   %.keys.foreach(%(_).asInstanceOf[+]._1.success(None))
@@ -131,24 +141,25 @@ package object `Π-loop`:
                     `π-discard`(trick(key))
 
                 nel
+                  .flatten
                   .sliding(parallelism, parallelism)
                   .toList
                   .foreach {
-                    _.foreach { case (key1, key2, delay) =>
-                                val k1 = key1.substring(36)
-                                val k2 = key2.substring(36)
-                                val ^  = key1.substring(0, 36)
-                                val ^^ = key2.substring(0, 36)
-                                val (p1, _) = m(key1).asInstanceOf[+]
-                                val (p2, _) = m(key2).asInstanceOf[+]
-                                discard(k1)(using ^)
-                                if k1 != k2 then discard(k2)(using ^^)
-                                m -= key1
-                                m -= key2
-                                enable(k1)
-                                if k1 != k2 then enable(k2)
-                                p1.success(Some((delay)))
-                                if k1 != k2 then p2.success(Some((delay)))
+                    _.foreach { case (key1, key2, in, (delay, _)) =>
+                                  val k1 = key1.substring(36)
+                                  val k2 = key2.substring(36)
+                                  val  ^ = key1.substring(0, 36)
+                                  val ^^ = key2.substring(0, 36)
+                                  val (p1, _) = m(key1).asInstanceOf[+]
+                                  val (p2, _) = m(key2).asInstanceOf[+]
+                                  discard(k1)(using ^)
+                                  if k1 != k2 then discard(k2)(using ^^)
+                                  m -= key1
+                                  m -= key2
+                                  enable(k1)
+                                  if k1 != k2 then enable(k2)
+                                  p1.success(Some((in, delay)))
+                                  if k1 != k2 then p2.success(Some((in, delay)))
                               }
                   }
 

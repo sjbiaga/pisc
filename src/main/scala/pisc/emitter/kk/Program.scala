@@ -818,8 +818,12 @@ object Program:
       given opt: Opt = Opt(Mapʹ())
 
       ( prog.tail.head match
-          case (`(*)`(_, λ(parallelism: Lit.Int)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parallelism") :: Nil, None, parallelism)
+          case (`(*)`(_, λ(parameters: Term)), _) =>
+            Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
+      ) ::
+      ( prog.tail.tail.head match
+          case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+            Term.Assign(\("π-traces"), traces)
       ) ::
       prog
         .drop(1+2)

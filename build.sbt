@@ -169,6 +169,7 @@ lazy val `ziof-main_` = (project in file("ziof/main_"))
   )
 
 lazy val `akka-main` = (project in file("akka/main"))
+  .dependsOn(traces)
   .settings(
     name := "akka Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -182,6 +183,7 @@ lazy val `akka-main` = (project in file("akka/main"))
   )
 
 lazy val `akka-main_` = (project in file("akka/main_"))
+  .dependsOn(traces_)
   .settings(
     name := "akka_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -195,6 +197,7 @@ lazy val `akka-main_` = (project in file("akka/main_"))
   )
 
 lazy val `pekko-main` = (project in file("pekko/main"))
+  .dependsOn(traces)
   .settings(
     name := "pekko Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -208,6 +211,7 @@ lazy val `pekko-main` = (project in file("pekko/main"))
   )
 
 lazy val `pekko-main_` = (project in file("pekko/main_"))
+  .dependsOn(traces_)
   .settings(
     name := "pekko_ Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",

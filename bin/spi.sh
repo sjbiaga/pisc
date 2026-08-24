@@ -28,10 +28,10 @@ function spi() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.20'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.21'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.0'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -103,10 +103,10 @@ function spi_() {
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.20'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.21'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.6.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.0'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0

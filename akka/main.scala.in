@@ -48,7 +48,7 @@ object App:
   private def apply(args: Array[String]): Behavior[Either[Unit, Unit]] =
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
-            else π.`π-parallelism`
+            else π.`π-parameters`.parallelism
     Behaviors.setup[Either[Unit, Unit]] { context =>
       val % : Map[String, Int | +] = `π-main`.foldLeft(Map.empty)(_.updated(_, 1))
       val dump = context.spawnAnonymous(Dump())
@@ -109,7 +109,8 @@ object π:
 
   def `π-uuid` = UUID.randomUUID.toString
 
-  import `Π-loop`.%
+  import `Π-loop`.{ %, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
 

@@ -26,38 +26,27 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.java.io.{ PrintStream, FileOutputStream }
-
 import _root_.scala.collection.immutable.Map
+import _root_.scala.Option.unless
 
 import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
 import _root_.org.apache.pekko.actor.typed.Behavior
 
 import `Π-loop`.*
+import `Π-traces`.*
 
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | (Long, ((Long, Long), Long), (String, String), (Double, Double))
+  type - = Map[String, Int | +] | (Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double): String => Unit =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => Unit =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
-        printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n",
-               number, started, ended, name, polarity,
-               key.stripPrefix("!"), key.startsWith("!"),
-               label, rate, delay, duration, agent)
-      case Array(key, name, polarity, label, rate, agent, filename*) =>
-        var ps: PrintStream = null
-        try
-          val fn = filename.mkString(",")
-          ps = PrintStream(FileOutputStream(fn + ".csv", true), true)
-          ps.printf("%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                    number, started, ended, name, polarity,
-                    key.stripPrefix("!"), key.startsWith("!"),
-                    label, rate, delay, duration, agent, fn)
-        finally
-          if ps != null then ps.close
+        `π-traces`(number, clock, started, ended,
+                   agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                   key.stripPrefix("!"), key.startsWith("!"), label,
+                   rate, delay, duration)
       case _ =>
 
   object Dump:
@@ -66,12 +55,17 @@ package object `Π-dump`:
 
       Behaviors.receive[-] {
 
-        case (_, (no, ((ts1, ts2), ts), (k1, k2), (delay, duration))) =>
-          record(no, ts1, ts, delay, duration)(k1)
-          if k1 != k2 then record(no, ts2, ts, delay, duration)(k2)
+        case (_, (no, ((ts1, ts2), (ts, cl)), (k1, k2), (delay, duration))) =>
+          if `π-traces` ne null
+          then
+            record(no, cl, ts1, ts, delay, duration)(k1)
+            if k1 != k2 then record(no, cl, ts2, ts, delay, duration)(k2)
           Behaviors.same
 
         case (context, it: Map[String, Int | +]) =>
+          if `π-traces` ne null
+          then
+            `π-traces`.close
           it.keys.foreach(it(_).asInstanceOf[+]._1.success(None))
           context.system.unsafeUpcast[Either[Unit, Unit]] ! Right(())
           Behaviors.stopped

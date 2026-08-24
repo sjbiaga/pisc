@@ -34,17 +34,14 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.scala.util.{ Success, Try }
+  import _root_.scala.util.Success
 
-  import _root_.akka.actor.typed.scaladsl.{ ActorContext, Behaviors }
-  import _root_.akka.actor.typed.{ ActorRef, Behavior }
+  import _root_.akka.actor.typed.scaladsl.Behaviors
+  import _root_.akka.actor.typed.Behavior
 
   import `Π-loop`.Loop.*
   import `Π-loop`.%
   import `Π-stats`.Rate
-
-  export `Π-magic`.><
-  import `Π-magic`.*
 
 
   type `Π-Map`[K, +V] = Map[K, V]
@@ -69,16 +66,16 @@ package object sΠ:
     */
   object ν:
 
-    def apply(): Behavior[Request] =
-      val i = Queue.empty[Request.Input]
-      val o = Queue.empty[Request.Output]
-      νActor(i, o)
+    def apply(): Behavior[Unit] =
+      Behaviors.receiveMessage { _ => Behaviors.same }
 
 
   /**
     * silent transition
     */
   object τ:
+
+    private val `new {}` = new {}
 
     def apply(rate: Rate)(key: String)
              (using % : %)
@@ -87,11 +84,17 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (new Object, None, rate))) }
-        delay <- cancel.future
+        cancel = Promise[Option[(Promise[`()`], Double)]]()
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`new {}`, None, rate))) }
+        opt   <- cancel.future
+        delay <- if (opt eq None)
+                 then
+                   Future.successful(null: java.lang.Double)
+                 else
+                   val (_, delay) = opt.get
+                   Future.successful(java.lang.Double(delay))
       yield
-        if delay eq None then null else delay.get
+        delay
 
 
   /**
@@ -99,15 +102,8 @@ package object sΠ:
     */
   implicit final class `()`(private val name: Any) extends AnyVal:
 
-    import Request.*
-
-    private def a = `()`[><]
-
     def ====(that: `()`) =
-      try
-        this.a eq that.a
-      catch _ =>
-        this.name == that.name
+      this.name == that.name
 
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
@@ -117,11 +113,10 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
-                          (using DummyImplicit)
-                          (using %)
-                          (using ExecutionContext)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): Future[java.lang.Double] =
+                                     (using DummyImplicit)
+                                     (using %)
+                                     (using ExecutionContext)
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): Future[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)
@@ -132,11 +127,10 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Future[Any])
-                          (using DummyImplicit)
-                          (using %)
-                          (using ExecutionContext)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): Future[java.lang.Double] =
+                                    (using DummyImplicit)
+                                    (using %)
+                                    (using ExecutionContext)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): Future[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
@@ -147,10 +141,9 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => Future[S])(key: String)
-                          (using %)
-                          (using ExecutionContext)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): Future[java.lang.Double] =
+                                     (using %)
+                                     (using ExecutionContext)
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): Future[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         Future(value.asInstanceOf[Future[`()`]].flatMap(apply(rate, _)(key))).flatten
@@ -161,10 +154,9 @@ package object sΠ:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => Future[S])(key: String)(code: => Future[Any])
-                          (using %)
-                          (using ExecutionContext)
-                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                    ^ : String): Future[java.lang.Double] =
+                                    (using %)
+                                    (using ExecutionContext)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): Future[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         Future(value.asInstanceOf[Future[`()`]].flatMap(apply(rate, _)(key)(code))).flatten
@@ -181,16 +173,17 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(false), rate))) }
-        delay <- cancel.future
-        _     <- if (delay eq None)
+        cancel = Promise[Option[(Promise[`()`], Double)]]()
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Left(())), rate))) }
+        opt   <- cancel.future
+        delay <- if (opt eq None)
                  then
-                   Future.unit
+                   Future.successful(null: java.lang.Double)
                  else
-                   Future { a ! Output(value.name, null, None) }
+                   val (result, delay) = opt.get
+                   Future.successful(result.complete(Success(value))).map(_ => java.lang.Double(delay))
       yield
-        if delay eq None then null else delay.get
+        delay
 
     /**
       * negative prefix i.e. output
@@ -202,22 +195,17 @@ package object sΠ:
                        ^ : String): Future[java.lang.Double] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(false), rate))) }
-        delay <- cancel.future
-        _     <- if (delay eq None)
+        cancel = Promise[Option[(Promise[`()`], Double)]]()
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Left(())), rate))) }
+        opt   <- cancel.future
+        delay <- if (opt eq None)
                  then
-                   Future.unit
+                   Future.successful(null: java.lang.Double)
                  else
-                   for
-                      _      <- Future.unit
-                      promise = Promise[Unit]()
-                      _      <- Future { a ! Output(value.name, promise, Some(code)) }
-                      _      <- promise.future
-                   yield
-                     ()
+                   val (result, delay) = opt.get
+                   Future.successful(result.complete(Success(value))).flatMap(_ => code).map(_ => java.lang.Double(delay))
       yield
-        if delay eq None then null else delay.get
+        delay
 
     /**
       * positive prefix i.e. input
@@ -229,22 +217,18 @@ package object sΠ:
                        ^ : String): Future[(`()`, java.lang.Double)] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(true), rate))) }
-        delay <- cancel.future
-        name  <- if (delay eq None)
+        cancel = Promise[Option[(Promise[`()`], Double)]]()
+        result = Promise[`()`]()
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Right(result)), rate))) }
+        opt   <- cancel.future
+        n_d   <- if (opt eq None)
                  then
-                   Future.successful(new `()`(null))
+                   Future.successful(new `()`(null) -> (null: java.lang.Double))
                  else
-                   for
-                     _      <- Future.unit
-                     promise = Promise[`()`]()
-                     _      <- Future { a ! Input(promise, None) }
-                     name   <- promise.future
-                   yield
-                     name
+                   val (_, delay) = opt.get
+                   result.future.map(_ -> java.lang.Double(delay))
       yield
-        (name, if delay eq None then null else delay.get)
+        n_d
 
     /**
       * positive prefix i.e. input
@@ -256,74 +240,20 @@ package object sΠ:
                           ^ : String): Future[(`()`, java.lang.Double)] =
       for
         _     <- Future { exclude(key) }
-        cancel = Promise[Option[Double]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (a, Some(true), rate))) }
-        delay <- cancel.future
-        name  <- if (delay eq None)
+        cancel = Promise[Option[(Promise[`()`], Double)]]()
+        result = Promise[`()`]()
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Right(result)), rate))) }
+        opt   <- cancel.future
+        n_d   <- if (opt eq None)
                  then
-                   Future.successful(new `()`(null))
+                   Future.successful(new `()`(null) -> (null: java.lang.Double))
                  else
-                   for
-                     _      <- Future.unit
-                     promise = Promise[`()`]()
-                     _      <- Future { a ! Input(promise, Some(code.asInstanceOf[Any => Future[Any]])) }
-                     name   <- promise.future
-                   yield
-                     name
+                   val (_, delay) = opt.get
+                   result.future.map(_.name).flatMap {
+                     case null  => null
+                     case it: T => code(it)
+                   }.map(new `()`(_) -> java.lang.Double(delay))
       yield
-        (name, if delay eq None then null else delay.get)
+        n_d
 
     override def toString: String = if name == null then "null" else name.toString
-
-
-  private object `Π-magic`:
-
-    import Request.*
-
-    enum Request:
-      private[`Π-magic`] case Execute(promise: Promise[Unit])
-      private[`Π-magic`] case Compute(promise: Promise[`()`], result: Try[Any])
-      case Input(wrap: Promise[`()`], code: Option[Any => Future[Any]])
-      case Output(name: Any, done: Promise[Unit], exec: Option[Future[Any]])
-
-    type >< = ActorRef[Request]
-
-    def νActor(i: Queue[Input], o: Queue[Output]): Behavior[Request] =
-
-      Behaviors.receive[Request] {
-
-        case (_, Execute(promise))                    =>
-          promise.success(())
-          Behaviors.same
-
-        case (_, Compute(promise, result))            =>
-          promise.success(result.fold(_ => `()`(null), `()`))
-          Behaviors.same
-
-        case (context, it @ Output(name, done, exec)) =>
-
-          i.dequeueOption.fold(νActor(i, o.enqueue(it))) {
-            case (Input(wrap, Some(code)), i) if name != null =>
-              context.pipeToSelf(code(name))(Compute(wrap, _))
-              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
-              νActor(i, o)
-            case (Input(wrap, _), i)                          =>
-              wrap.success(`()`(name))
-              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
-              νActor(i, o)
-          }
-
-        case (context, it @ Input(wrap, code))        =>
-
-          o.dequeueOption.fold(νActor(i.enqueue(it), o)) {
-            case (Output(name, done, exec), o) if name != null && code.isDefined =>
-              context.pipeToSelf(code.get(name))(Compute(wrap, _))
-              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
-              νActor(i, o)
-            case (Output(name, done, exec), o)                                   =>
-              wrap.success(`()`(name))
-              if exec.isDefined then context.pipeToSelf(exec.get)(_ => Execute(done))
-              νActor(i, o)
-          }
-
-      }

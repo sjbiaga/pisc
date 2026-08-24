@@ -33,6 +33,7 @@ package object `Π-traces`:
 
   var `π-traces`: `Π-Traces` = null
 
+
   sealed trait `Π-Traces`:
     def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
