@@ -29,11 +29,6 @@
 package masc
 package parser
 
-import scala.collection.mutable.{
-  LinkedHashMap => Map,
-  LinkedHashSet => Set
-}
-
 import Ambient.Emitter
 import Directive.*
 
@@ -44,26 +39,12 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
   val self = directive._2
 
-  private def canonical: String => String =
-    case "werr" => "errors"
-    case "dups" => "duplications"
-    case it     => it
-
-  private def key: String => Boolean = canonical andThen {
-    case "echo"
-       | "errors" | "duplications"
-       | "exclude" | "include"
-       | "paceunit"
-       | "scaling" => true
-    case _         => false
-  }
-
   private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
   extension (self: String | List[String])
             (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
-            (using dir: String ?=> (String, String | List[String]) = { key ?=> key -> self })
             (using key: String)
+            (using dir: (String, String | List[String]) = key -> self)
 
     def boolean: Boolean =
       self match
@@ -91,9 +72,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
     def keys: Set[String] =
       self match
-        case it: String if this.key(it)              => Set(canonical(it))
-        case it: List[String] if it.forall(this.key) => Set.from(it.map(canonical))
-        case _                                       => throw err("a comma separated list of valid keys")
+        case it: String if Directive.key(it)              => Set(canonical(it))
+        case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+        case _                                            => throw err("a comma separated list of valid keys")
 
   private def boolean: Boolean = self.boolean
   private def number: Int = self.number
@@ -185,6 +166,20 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
 
 object Directive:
+
+  def canonical: String => String =
+    case "werr" => "errors"
+    case "dups" => "duplications"
+    case it     => it
+
+  def key: String => Boolean = canonical andThen {
+    case "echo"
+       | "errors" | "duplications"
+       | "exclude" | "include"
+       | "paceunit"
+       | "scaling" => true
+    case _         => false
+  }
 
   case class Settings(var dirs: List[Map[String, Any]] = Nil,
                       var werr: Boolean = false,

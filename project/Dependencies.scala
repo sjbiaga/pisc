@@ -6,5 +6,5 @@ object Dependencies {
   lazy val zio = "dev.zio" %% "zio" % "2.1.26"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
   lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.3"
-  lazy val munit = "org.scalameta" %% "munit" % "1.3.4"
+  lazy val munit = "org.scalameta" %% "munit" % "1.3.5"
 }
