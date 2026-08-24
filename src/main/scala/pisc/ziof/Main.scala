@@ -51,6 +51,7 @@ object Main extends helper.Main:
     var P = Int.MaxValue
     var H = 0
     var T = 123456
+    var E = true
 
     def spin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
@@ -59,7 +60,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.ziof, in, P, H, T, true)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.ziof, in, P, H, T, E)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -116,8 +117,10 @@ object Main extends helper.Main:
       case "-P" => P = Int.MaxValue
       case "-H" => H = 0
       case "-T" => T = 123456
+      case "-E" => E = true
       case it if it.startsWith("-P") => P = it.substring(2).toInt
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it => spin(it)
     }

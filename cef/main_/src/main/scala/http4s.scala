@@ -226,7 +226,7 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
-          Tags = List(tag),
+          Tags = List(tag, "cef_emitter"),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",

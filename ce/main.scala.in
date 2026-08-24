@@ -41,7 +41,7 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
 
   import `Π-dump`.*
-  import `Π-http4s`.*
+  import `Π-http4s`.http4s
   import `Π-loop`.*, `Π-loop`.given
 
 

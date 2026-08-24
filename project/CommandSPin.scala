@@ -27,8 +27,8 @@ object CommandSPin {
 
     val opts = Map("-ce" -> Seq("-P" + Int.MaxValue, "-H0", "-Etrue", "-T123456"),
                    "-cef" -> Seq("-P" + Int.MaxValue, "-H0", "-Etrue", "-T123456"),
-                   "-zio" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456"),
-                   "-ziof" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456"),
+                   "-zio" -> Seq("-P" + Int.MaxValue, "-H0", "-Etrue", "-T123456"),
+                   "-ziof" -> Seq("-P" + Int.MaxValue, "-H0", "-Etrue", "-T123456"),
                    "-fs2" -> (Seq("-P" + Int.MaxValue, "-H0", "-T123456") ++ Seq("cats.effect.IO", "zio.Task").map("-F" + _)),
                    "-zs" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456"),
                    "-kk" -> (Seq("-P" + Int.MaxValue) ++ (0 to 1).map("-O" + _))

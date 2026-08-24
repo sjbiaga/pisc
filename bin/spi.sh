@@ -16,7 +16,7 @@ function spi() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0
+            local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep org.http4s::http4s-ember-client:0.23.36
                         --dep org.http4s::http4s-ember-server:0.23.36
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
@@ -24,7 +24,9 @@ function spi() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
+            local srcs=\ ../${emit}/http.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
@@ -88,7 +90,7 @@ function spi_() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0
+            local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.circe::circe-generic:0.14.16
                         --dep org.http4s::http4s-circe:0.23.36
                         --dep org.http4s::http4s-dsl:0.23.36
@@ -99,7 +101,9 @@ function spi_() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
+            local srcs=\ ../${emit}/http_.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure

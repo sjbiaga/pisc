@@ -73,6 +73,15 @@ package object `Π-loop`:
                                   timeout: Int,
                                   exit: Boolean)
 
+  final case class Feedback(pauseRP: Ref[Promise[Nothing, Unit]],
+                            paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
+                            paramsR: Ref[`Π-Parameters`],
+                            tracesR: Ref[Boolean],
+                            lastR: Ref[(Long, Double)],
+                            stopR: Ref[Boolean],
+                            doneR: Ref[Boolean],
+                            exitRP: Ref[Promise[Nothing, Unit]])
+
 
   given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
 
@@ -178,7 +187,7 @@ package object `Π-loop`:
          }
     %.modify { m => exit(m) -> m }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -191,7 +200,7 @@ package object `Π-loop`:
             then
               (started.get <*> batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.flatMap(if _ then -.offer(None) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.exitRP.get.flatMap(_.await) *> -.offer(None) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case _  =>
                   ZIO.succeed(true)
               }
@@ -206,22 +215,38 @@ package object `Π-loop`:
                                   ZIO.uninterruptible {
                                     for
                                       cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                      _  <- sem.acquire
-                                      _  <- started.update(_ + 1)
-                                      fb <- ( for
+                                      uio = ( for
                                                 _ <- cb.await.exit
                                                 _ <- enable(k1)
                                                 _ <- enable(k2).unless(k1 == k2)
                                                 no <- &.updateAndGet(_ + 1)
                                                 now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                                _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration))))
+                                                _  <- feedback.lastR.set(now)
+                                                _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
                                                 _ <- sem.release
                                                 _ <- started.update(_ - 1)
                                               yield
                                                 ()
-                                            ).fork
-                                      _  <- p1.succeed(Some((delay, cb, fb, in)))
-                                      _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                            )
+                                      st <- feedback.stopR.get
+                                      _  <- ( if st
+                                              then
+                                                for
+                                                  _ <- **.offer(-1 -> Nil).commit
+                                                  _ <- p1.succeed(None)
+                                                  _ <- p2.succeed(None).unless(k1 == k2)
+                                                yield
+                                                  ()
+                                              else
+                                                for
+                                                  _  <- sem.acquire
+                                                  _  <- started.update(_ + 1)
+                                                  fb <- uio.fork
+                                                  _  <- p1.succeed(Some((delay, cb, fb, in)))
+                                                  _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                                yield
+                                                  ()
+                                            )
                                     yield
                                       ()
                                   }
@@ -233,11 +258,24 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch, clock).when(l)
+      _ <- feedback.pauseRP.get.flatMap(_.await)
+      _ <- feedback.paramsRP.get.flatMap(_.isDone).flatMap {
+             if _
+             then
+               feedback.paramsRP.get.flatMap {
+                 _.await.flatMap { params =>
+                   feedback.paramsR.set(params) *>
+                   Promise.make[Nothing, `Π-Parameters`].flatMap(feedback.paramsRP.set) *>
+                   loopʹ(params, started, batch, clock, feedback)
+                 }
+               }
+             else
+               loopʹ(parameters, started, batch, clock, feedback)
+           }.when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -251,7 +289,7 @@ package object `Π-loop`:
                 case Right((_, nel)) =>
                   **.offer(-1 -> nel).commit *> ZIO.succeed(true)
                 case _               =>
-                  canExit.flatMap(if _ then -.offer(None) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.exitRP.get.flatMap(_.await) *> -.offer(None) *> ZIO.succeed(false) else ZIO.succeed(true))
               }
             case _  =>
               ZIO.succeed(true)
@@ -267,22 +305,38 @@ package object `Π-loop`:
                               ZIO.uninterruptible {
                                 for
                                   cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  _  <- sem.acquire
-                                  _  <- started.update(_ + 1)
-                                  fb <- ( for
+                                  uio = ( for
                                             _  <- cb.await.exit
                                             _  <- enable(k1)
                                             _  <- enable(k2).unless(k1 == k2)
                                             no <- &.updateAndGet(_ + 1)
                                             now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                            _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration))))
+                                            _  <- feedback.lastR.set(now)
+                                            _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
                                             _  <- sem.release
                                             _  <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
                                             ()
-                                        ).fork
-                                  _  <- p1.succeed(Some((delay, cb, fb, in)))
-                                  _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                        )
+                                  st <- feedback.stopR.get
+                                  _  <- ( if st
+                                          then
+                                            for
+                                              _ <- **.offer(-1 -> Nil).commit
+                                              _ <- p1.succeed(None)
+                                              _ <- p2.succeed(None).unless(k1 == k2)
+                                            yield
+                                              ()
+                                          else
+                                            for
+                                              _  <- sem.acquire
+                                              _  <- started.update(_ + 1)
+                                              fb <- uio.fork
+                                              _  <- p1.succeed(Some((delay, cb, fb, in)))
+                                              _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                            yield
+                                              ()
+                                        )
                                 yield
                                   ()
                               }
@@ -291,7 +345,20 @@ package object `Π-loop`:
               }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started, clock).when(l)
+      _        <- feedback.pauseRP.get.flatMap(_.await)
+      _        <- feedback.paramsRP.get.flatMap(_.isDone).flatMap {
+                    if _
+                    then
+                      feedback.paramsRP.get.flatMap {
+                        _.await.flatMap { params =>
+                          feedback.paramsR.set(params) *>
+                          Promise.make[Nothing, `Π-Parameters`].flatMap(feedback.paramsRP.set) *>
+                          loop0(params, started, clock, feedback)
+                        }
+                      }
+                    else
+                      loop0(parameters, started, clock, feedback)
+                  }.when(l)
     yield
       ()
 

@@ -73,6 +73,15 @@ package object `Π-loop`:
                                   timeout: Int,
                                   exit: Boolean)
 
+  final case class Feedback(pauseRP: Ref[Promise[Nothing, Unit]],
+                            paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
+                            paramsR: Ref[`Π-Parameters`],
+                            tracesR: Ref[Boolean],
+                            lastR: Ref[(Long, Double)],
+                            stopR: Ref[Boolean],
+                            doneR: Ref[Boolean],
+                            exitRP: Ref[Promise[Nothing, Unit]])
+
 
   given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
 
@@ -194,7 +203,7 @@ package object `Π-loop`:
       !.succeed(ec).unit
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], _clock: Ref[Double])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], _clock: Ref[Double], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -246,11 +255,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch, _clock).when(l)
+      _ <- loopʹ(parameters, started, batch, _clock, _feedback).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long], _clock: Ref[Double])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], _clock: Ref[Double], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -301,7 +310,7 @@ package object `Π-loop`:
               }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started, _clock).when(l)
+      _        <- loop0(parameters, started, _clock, _feedback).when(l)
     yield
       ()
 

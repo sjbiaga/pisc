@@ -274,14 +274,14 @@ package object `Π-loop`:
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
       _ <- feedback.pauseRD.get.flatMap(_.get)
-      _ <- feedback.paramsRD.get
-             .flatMap(_.tryGet)
-             .flatTap(_.fold(IO.unit)(feedback.paramsR.set))
-             .flatMap(
-               _.fold(IO.cede >> loopʹ(parameters, started, batch, clock, feedback))
-                     (IO.cede >> (IO.deferred[`Π-Parameters`] >>= feedback.paramsRD.set)
-                              >> loopʹ(_, started, batch, clock, feedback))
-             ).whenA(l)
+      _ <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
+             case Some(params) =>
+               feedback.paramsR.set(params) >>
+               IO.deferred[`Π-Parameters`].flatMap(feedback.paramsRD.set) >>
+               loopʹ(params, started, batch, clock, feedback)
+             case _ =>
+               loopʹ(parameters, started, batch, clock, feedback)
+           }.whenA(l)
     yield
       ()
 
@@ -357,14 +357,14 @@ package object `Π-loop`:
             }
           } >> IO.pure(true)
       _        <- feedback.pauseRD.get.flatMap(_.get)
-      _        <- feedback.paramsRD.get
-                   .flatMap(_.tryGet)
-                   .flatTap(_.fold(IO.unit)(feedback.paramsR.set))
-                   .flatMap(
-                     _.fold(IO.cede >> loop0(parameters, started, clock, feedback))
-                           (IO.cede >> (IO.deferred[`Π-Parameters`] >>= feedback.paramsRD.set)
-                                    >> loop0(_, started, clock, feedback))
-                   ).whenA(l)
+      _        <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
+                    case Some(params) =>
+                      feedback.paramsR.set(params) >>
+                      IO.deferred[`Π-Parameters`].flatMap(feedback.paramsRD.set) >>
+                      loop0(params, started, clock, feedback)
+                    case _ =>
+                      loop0(parameters, started, clock, feedback)
+                  }.whenA(l)
     yield
       ()
 
