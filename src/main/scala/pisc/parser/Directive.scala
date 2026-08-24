@@ -29,43 +29,24 @@
 package pisc
 package parser
 
-import scala.collection.mutable.{
-  LinkedHashMap => Map,
-  LinkedHashSet => Set
-}
-
 import PolyadicPi.Emitter
 import Directive.*
 
 
 case class Directive(directive: (String, String | List[String]), emitter: Emitter, settings: Settings):
 
+  import Settings.*
+
   implicit val name: String = directive._1.toLowerCase
 
   val self = directive._2
-
-  private def canonical: String => String =
-    case "werr" => "errors"
-    case "dups" => "duplications"
-    case it     => it
-
-  private def key: String => Boolean = canonical andThen {
-    case "echo"
-       | "errors" | "duplications"
-       | "exclude" | "include"
-       | "paceunit"
-       | "scaling"
-       | "replication"
-       | "typeclasses" => true
-    case _             => false
-  }
 
   private implicit def ?[S, T](fun: S => T): S ?=> T = { it ?=> fun(it) }
 
   extension (self: String | List[String])
             (using err: String => ((String, String | List[String])) ?=> Throwable = { msg => dir ?=> DirectiveValueParsingException(dir, msg) })
-            (using dir: String ?=> (String, String | List[String]) = { key ?=> key -> self })
             (using key: String)
+            (using dir: (String, String | List[String]) = key -> self)
 
     def boolean: Boolean =
       self match
@@ -93,9 +74,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
     def keys: Set[String] =
       self match
-        case it: String if this.key(it)              => Set(canonical(it))
-        case it: List[String] if it.forall(this.key) => Set.from(it.map(canonical))
-        case _                                       => throw err("a comma separated list of valid keys")
+        case it: String if Directive.key(it)              => Set(canonical(it))
+        case it: List[String] if it.forall(Directive.key) => Set.from(it.map(canonical))
+        case _                                            => throw err("a comma separated list of valid keys")
 
   private def boolean: Boolean = self.boolean
   private def number: Int = self.number
@@ -147,12 +128,14 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "replication"  =>
         settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
-            case List(given String: "parallelism", it: String) =>
+            case List(given String, it: String)
+                if given_String == "parallelism" =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
-            case List(given String: "linear", it: String)      =>
+            case List(given String, it: String)
+                if given_String == "linear"      =>
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case _                               => throw DirectiveValueParsingException(directive, settings.message)
-          case _                => throw DirectiveValueParsingException(directive, settings.message)
+            case _                               => throw DirectiveValueParsingException(directive, message)
+          case _                => throw DirectiveValueParsingException(directive, message)
 
       case "typeclasses" if settings.exclude =>
 
@@ -212,6 +195,22 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
 
 object Directive:
 
+  def canonical: String => String =
+    case "werr" => "errors"
+    case "dups" => "duplications"
+    case it     => it
+
+  def key: String => Boolean = canonical andThen {
+    case "echo"
+       | "errors" | "duplications"
+       | "exclude" | "include"
+       | "paceunit"
+       | "scaling"
+       | "replication"
+       | "typeclasses" => true
+    case _             => false
+  }
+
   case class Settings(var dirs: List[Map[String, Any]] = Nil,
                       var werr: Boolean = false,
                       var dups: Boolean = false,
@@ -219,10 +218,12 @@ object Directive:
                       var paceunit: String = "second",
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
-                      var typeclasses: List[String] = Nil):
+                      var typeclasses: List[String] = Nil)
+
+  object Settings:
 
     private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
-    def message(implicit name: String) = messages(name)
+    def message(implicit key: String) = messages(canonical(key))
 
 
   abstract sealed class DirectiveParsingException(msg: String, cause: Throwable = null)
