@@ -29,6 +29,8 @@
 import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.Option.{ unless, when }
 
+import Double.NaN
+
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
 import _root_.zio.{ durationInt, Clock, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
@@ -185,7 +187,7 @@ package object `Π-loop`:
          }
     %.modify { m => exit(m) -> m }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
@@ -232,7 +234,7 @@ package object `Π-loop`:
                                             _            <- enable(k2).unless(k1 == k2)
                                             no           <- &.updateAndGet(_ + 1)
                                             ss           <- ts1.get <*> ts2.get
-                                            now          <- Clock.nanoTime
+                                            now          <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
                                             _            <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                             _            <- sem.release
                                             _            <- started.update(_ - 1)
@@ -252,11 +254,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch).when(l)
+      _ <- loopʹ(parameters, started, batch, clock).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
@@ -305,7 +307,7 @@ package object `Π-loop`:
                                         _            <- enable(k2).unless(k1 == k2)
                                         no           <- &.updateAndGet(_ + 1)
                                         ss           <- ts1.get <*> ts2.get
-                                        now          <- Clock.nanoTime
+                                        now          <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
                                         _            <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                         _            <- sem.release
                                         _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
@@ -322,7 +324,7 @@ package object `Π-loop`:
                       }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started).when(l)
+      _        <- loop0(parameters, started, clock).when(l)
     yield
       ()
 

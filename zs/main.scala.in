@@ -54,7 +54,7 @@ object App extends _root_.zio.ZIOAppDefault:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], uuid: sΠ.`)(`)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], uuid: sΠ.`)(`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
                  (using sΠ.`}{`.`][`, TSemaphore) =
     val \ =
@@ -71,8 +71,8 @@ object App extends _root_.zio.ZIOAppDefault:
         ()
     )
       .drainFork(ZStream.fromZIO(if parameters.threshold > 0
-                                 then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`)
-                                 else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`)))
+                                 then loopʹ(parameters, started, batch, clock)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else loop0(parameters, started, clock)(using %, !, &, -, *, **)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dump(using %, !, -)))
       .runDrain
@@ -97,15 +97,16 @@ object App extends _root_.zio.ZIOAppDefault:
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
-      - <- Queue.unbounded[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
       & <- Ref.make(0L)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
+      c <- Ref.make(.0)
       _ <- `π-enable`(π.`π-main`)(using %)
       (uuid, tree, semaphore) <- sΠ.`}{`.`][`()
-      _ <- run(args.toList, params, n, b, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
+      _ <- run(args.toList, params, n, b, c, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
     yield
       ()
 

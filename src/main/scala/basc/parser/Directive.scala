@@ -32,11 +32,6 @@ package parser
 import java.nio.file.Path
 import java.net.URI
 
-import scala.collection.mutable.{
-  LinkedHashMap => Map,
-  LinkedHashSet => Set
-}
-
 import scala.meta.{ Lit, Term }
 import emitter.shared.Meta.\
 

@@ -219,7 +219,7 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], `}{`: sΠ.`}{`[F])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], _clock: Ref[F, Double], `}{`: sΠ.`}{`[F])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
@@ -274,11 +274,11 @@ package object `Π-loop`:
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, `}{`).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, _clock, `}{`).whenA(l)
       yield
         ()
 
-    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], `}{`: sΠ.`}{`[F])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], _clock: Ref[F, Double], `}{`: sΠ.`}{`[F])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
              (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
@@ -332,7 +332,7 @@ package object `Π-loop`:
                                   }
                               }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parameters, started, `}{`).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started, _clock, `}{`).whenA(l)
       yield
         ()
 

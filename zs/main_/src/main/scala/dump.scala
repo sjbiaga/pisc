@@ -40,15 +40,15 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+  type - = Queue[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
-  private def record(number: Long, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[Unit] =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         ZIO.attemptBlocking {
           val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
-          `π-traces`(number, started, ended,
+          `π-traces`(number, clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration,
@@ -81,10 +81,10 @@ package object `Π-dump`:
       _ <- h match
              case Some(_) if `π-traces` eq null =>
                dump
-             case Some((no, ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
+             case Some((no, ((s1, s2), (e, c)), (k1, k2), (delay, duration), (l1, l2))) =>
                for
-                 _ <- record(no, s1, e, delay, duration, l1)(k1)
-                 _ <- record(no, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
+                 _ <- record(no, c, s1, e, delay, duration, l1)(k1)
+                 _ <- record(no, c, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
                  _ <- dump
                yield
                  ()

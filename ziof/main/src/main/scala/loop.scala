@@ -194,7 +194,7 @@ package object `Π-loop`:
       !.succeed(ec).unit
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (using `}{`.`][`, TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
@@ -250,11 +250,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch).when(l)
+      _ <- loopʹ(parameters, started, batch, clock).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (using `}{`.`][`, TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
@@ -309,7 +309,7 @@ package object `Π-loop`:
                       }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started).when(l)
+      _        <- loop0(parameters, started, clock).when(l)
     yield
       ()
 

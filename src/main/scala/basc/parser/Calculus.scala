@@ -756,8 +756,8 @@ object Calculus:
 
       ast match
 
-        case +(_, ∥(_, `.`(!(_, _, Some(_), _)))) =>
-          ast.label("+0")
+        case +(_, ∥(_, `.`(!(_, _, Some(_), _), _*))) =>
+          ast.label("+0/-1")
 
         case _ =>
           ast.label("")
@@ -767,10 +767,10 @@ object Calculus:
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
       object Sum:
-        inline implicit def lʹ(i: Int): String = l + "+" + i
+        inline implicit def lʹ(i: Int)(using n: Int): String = l + "+" + i + "/" + n
 
       object Par:
-        inline implicit def lʹ(i: Int): String = l + "∥" + i
+        inline implicit def lʹ(i: Int)(using n: Int): String = l + "∥" + i + "/" + n
 
       inline def idʹ(id: => String, ch: String, p: String, r: Any, dc: String): String =
         id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + summon[String] + "," + dc
@@ -799,10 +799,12 @@ object Calculus:
 
         case +(sc, ∥(scʹ, it*)) =>
           import Par.*
+          given Int = it.size
           `+`(sc, ∥(scʹ, it.zipWithIndex.map(_.label(_))*))
 
         case +(sc, it*) =>
           import Sum.*
+          given Int = it.size
           `+`(sc, it.zipWithIndex.map(_.label(_))*)
 
         case ∥(sc, it*) =>
@@ -813,6 +815,7 @@ object Calculus:
 
         case ?:(cond, t, Some(f)) =>
           import Sum.*
+          given Int = 0
           ?:(cond, t.label(0), Some(f.label(1)))
 
         case ?:(cond, t, _) =>

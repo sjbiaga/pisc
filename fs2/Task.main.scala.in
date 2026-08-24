@@ -63,7 +63,7 @@ object App extends CatsApp:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], clock: Ref[π.F, Double], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
                  (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore) =
     val lπ = πloop[π.F]()
@@ -83,8 +83,8 @@ object App extends CatsApp:
         ()
     )
       .drainFork(ZStream.fromZIO(if parameters.threshold > 0
-                                 then lπ.loopʹ(parameters, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`)
-                                 else lπ.loop0(parameters, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`)))
+                                 then lπ.loopʹ(parameters, started, batch, clock, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`)
+                                 else lπ.loop0(parameters, started, clock, `}{`)(using %, !, &, -, *, **)(π.`π-wand`)))
       .drainFork(ZStream.fromZIO(lπ.poll(using %, /, \)))
       .drainFork(ZStream.fromZIO(dπ.dump(using %, !, -)))
       .runDrain
@@ -109,17 +109,18 @@ object App extends CatsApp:
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
       ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
-      - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[π.F, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       & <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      c <- Ref[π.F].of(.0)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      _ <- run(args.toList, params, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
+      _ <- run(args.toList, params, n, b, c, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
     yield
       ()
 

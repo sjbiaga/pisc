@@ -30,6 +30,8 @@ import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.concurrent.duration.*
 import _root_.scala.Option.{ unless, when }
 
+import Double.NaN
+
 import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
@@ -198,7 +200,7 @@ package object `Π-loop`:
            }
       %.modify { m => m -> exit(m) }
 
-    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], `}{`: sΠ.`}{`[F])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], clock: Ref[F, Double], `}{`: sΠ.`}{`[F])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (using `][`: `}{`.`][`, `1`: `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
@@ -244,7 +246,7 @@ package object `Π-loop`:
                                                     _            <- enable(k2).unlessA(k1 == k2)
                                                     no           <- &.updateAndGet(_ + 1)
                                                     ss           <- ts1.get product ts2.get
-                                                    now          <- Temporal[F].monotonic.map(_.toNanos)
+                                                    now          <- Temporal[F].monotonic.map(_.toNanos) product (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
                                                     _            <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                                     _            <- sem.release
                                                     _            <- started.update(_ - 1)
@@ -263,11 +265,11 @@ package object `Π-loop`:
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, `}{`).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, clock, `}{`).whenA(l)
       yield
         ()
 
-    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], `}{`: sΠ.`}{`[F])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], clock: Ref[F, Double], `}{`: sΠ.`}{`[F])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
              (using `][`: `}{`.`][`, `1`: `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
@@ -315,7 +317,7 @@ package object `Π-loop`:
                                                 _            <- enable(k2).unlessA(k1 == k2)
                                                 no           <- &.updateAndGet(_ + 1)
                                                 ss           <- ts1.get product ts2.get
-                                                now          <- Temporal[F].monotonic.map(_.toNanos)
+                                                now          <- Temporal[F].monotonic.map(_.toNanos) product (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
                                                 _            <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                                 _            <- sem.release
                                                 _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
@@ -331,7 +333,7 @@ package object `Π-loop`:
                                   }
                               }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parameters, started, `}{`).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started, clock, `}{`).whenA(l)
       yield
         ()
 

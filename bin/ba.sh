@@ -16,7 +16,7 @@ function ba() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0
+            local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep org.http4s::http4s-ember-client:0.23.36
                         --dep org.http4s::http4s-ember-server:0.23.36
@@ -84,7 +84,7 @@ function ba_() {
     esac
     case "$emit" in
         ce|cef)
-            local deps='--dep org.typelevel::cats-effect:3.7.0
+            local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
                         --dep org.http4s::http4s-circe:0.23.36

@@ -137,9 +137,9 @@ abstract class BioAmbients extends Expression:
 
   def rate: Parser[Any] = "("~>rate<~")" |
                           "∞" ^^ { _ => -1L } |
-                          wholeNumber<~"∞" ^^ { -_.toLong.abs } |
+                          naturalNumber<~"∞" ^^ { -_.toLong } |
                           "⊤" ^^ { _ => 1L } |
-                          wholeNumber<~"⊤" ^^ { _.toLong.abs } |
+                          naturalNumber<~"⊤" ^^ { _.toLong } |
                           floatingPointNumber ^^ { BigDecimal(_) } |
                           super.ident ^^ { Symbol(_) } |
                           expression ^^ {
@@ -168,12 +168,12 @@ abstract class BioAmbients extends Expression:
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
-    opt( wholeNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt.abs) }
+    opt( naturalNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt) }
 
   def pace: Parser[(Long, String)] =
-    wholeNumber ~ opt( ","~> ident ) ^^ {
+    naturalNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
+        amount.toLong -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -185,19 +185,8 @@ abstract class BioAmbients extends Expression:
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
-  /** A natural number. */
-  override def wholeNumber: Parser[String] =
-    """\d+""".r ^^ { s =>
-      try
-        if s.toLong == 0
-        then
-          throw WholeNumberFormatException("not be zero")
-        else
-          s
-      catch
-        case t: NumberFormatException =>
-          throw WholeNumberFormatException("be a Long", t)
-    }
+  def naturalNumber: Parser[BigInt] =
+    """\d+""".r ^^ { BigInt(_) } ^? { case it if it > 0 => it }
 
   protected val emitter: Emitter
 
@@ -384,9 +373,6 @@ object BioAmbients:
 
   abstract class PrefixParsingException(msg: String, cause: Throwable = null)
       extends ParsingException(msg, cause)
-
-  case class WholeNumberFormatException(msg: String, cause: Throwable = null)
-      extends PrefixParsingException("The weight is a natural number that must " + msg, cause)
 
   case class RateFreeNamesException(names: String*)
       extends PrefixParsingException(s"""A rate that is a Scalameta Term may have free names '${names.mkString(", ")}' which are ignored""")
