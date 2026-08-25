@@ -46,7 +46,7 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
+  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
 
 
   private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
@@ -85,10 +85,10 @@ package object `Π-dump`:
       _ <- h match
              case Some(_) if `π-traces` eq null =>
                dump
-             case Some((no, ((s1, s2), (e, c)), (k1, k2), (delay, duration))) =>
+             case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration))) =>
                for
-                 _ <- record(no, c, s1, e, delay, duration)(k1)
-                 _ <- record(no, c, s2, e, delay, duration)(k2).unlessA(k1 == k2)
+                 _ <- record(no, cl, s1, e, delay, duration)(k1)
+                 _ <- record(no, cl, s2, e, delay, duration)(k2).unlessA(k1 == k2)
                  _ <- IO.cede >> dump
                yield
                  ()

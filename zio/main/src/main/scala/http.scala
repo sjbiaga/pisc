@@ -35,9 +35,9 @@ package object `Π-http`:
   import `Π-loop`.Feedback
 
 
-  def http(): ZLayer[Any, Throwable, Server.Config] =
+  def http(_address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default)
 
-  def http(_batch: Boolean, _started: Ref[Long], _feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
+  def http(_address: String, _batch: Boolean, _started: Ref[Long], _feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
     body
 

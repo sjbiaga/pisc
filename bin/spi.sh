@@ -17,7 +17,6 @@ function spi() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep org.http4s::http4s-ember-client:0.23.36
                         --dep org.http4s::http4s-ember-server:0.23.36
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
@@ -152,6 +151,7 @@ function spi_() {
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
+#                  -Dpisc.stochastic.communications.bind.address=localhost \
 #                  -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                  -Dpisc.stochastic.communications.batch.threshold=0 \
 #                  -Dpisc.stochastic.communications.timeout.microseconds=123456 \

@@ -28,6 +28,8 @@
 
 import _root_.scala.collection.immutable.Map
 
+import Double.NaN
+
 import _root_.scala.concurrent.Promise
 
 import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
@@ -46,7 +48,8 @@ package object `Π-loop`:
   type % = ActorRef[Loop]
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -163,8 +166,9 @@ package object `Π-loop`:
                                   p1.success(Some((in, delay)))
                                   if k1 != k2 then p2.success(Some((in, delay)))
                                   no += 1
-                                  clock += delay
-                                  dump ! (no, ((ts1, ts2), (System.nanoTime, clock)), (k1, k2), (delay, duration))
+                                  duration match { case 0.0 | NaN =>
+                                                   case _         => clock += delay }
+                                  dump ! ((no, clock), ((ts1, ts2), System.nanoTime), (k1, k2), (delay, duration))
                               }
                   }
 

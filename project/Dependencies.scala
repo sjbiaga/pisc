@@ -3,6 +3,7 @@ import sbt._
 object Dependencies {
   lazy val breeze = "org.scalanlp" %% "breeze" % "2.1.0"
   lazy val scaffeine = "com.github.blemale" %% "scaffeine" % "5.3.0"
+  lazy val ip4s = "com.comcast" %% "ip4s-core" % "3.8.0"
   lazy val catseffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val akka = "com.typesafe.akka" %% "akka-actor-typed" % "2.10.21"
   lazy val pekko = "org.apache.pekko" %% "pekko-actor-typed" % "1.7.0"

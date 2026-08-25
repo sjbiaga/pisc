@@ -54,7 +54,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[Long]
+  type & = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -68,7 +68,8 @@ package object `Π-loop`:
   type ^ = SemaphoreZIO
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -187,7 +188,7 @@ package object `Π-loop`:
          }
     %.modify { m => exit(m) -> m }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback)
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -215,19 +216,20 @@ package object `Π-loop`:
                                   ZIO.uninterruptible {
                                     for
                                       cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                      uio = ( for
+                                      fb  = ( for
                                                 _ <- cb.await.exit
                                                 _ <- enable(k1)
                                                 _ <- enable(k2).unless(k1 == k2)
-                                                no <- &.updateAndGet(_ + 1)
-                                                now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                                _  <- feedback.lastR.set(now)
-                                                _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
+                                                nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                now <- Clock.nanoTime
+                                                _  <- feedback.lastR.set(now -> nc._2)
+                                                _  <- -.offer(Some((nc, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
                                                 _ <- sem.release
                                                 _ <- started.update(_ - 1)
                                               yield
                                                 ()
-                                            )
+                                            ).fork
                                       st <- feedback.stopR.get
                                       _  <- ( if st
                                               then
@@ -241,7 +243,7 @@ package object `Π-loop`:
                                                 for
                                                   _  <- sem.acquire
                                                   _  <- started.update(_ + 1)
-                                                  fb <- uio.fork
+                                                  fb <- fb
                                                   _  <- p1.succeed(Some((delay, cb, fb, in)))
                                                   _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
                                                 yield
@@ -266,16 +268,16 @@ package object `Π-loop`:
                  _.await.flatMap { params =>
                    feedback.paramsR.set(params) *>
                    Promise.make[Nothing, `Π-Parameters`].flatMap(feedback.paramsRP.set) *>
-                   loopʹ(params, started, batch, clock, feedback)
+                   loopʹ(params, started, batch, feedback)
                  }
                }
              else
-               loopʹ(parameters, started, batch, clock, feedback)
+               loopʹ(parameters, started, batch, feedback)
            }.when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double], feedback: Feedback)
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -305,19 +307,20 @@ package object `Π-loop`:
                               ZIO.uninterruptible {
                                 for
                                   cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  uio = ( for
+                                  fb  = ( for
                                             _  <- cb.await.exit
                                             _  <- enable(k1)
                                             _  <- enable(k2).unless(k1 == k2)
-                                            no <- &.updateAndGet(_ + 1)
-                                            now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                            _  <- feedback.lastR.set(now)
-                                            _  <- -.offer(Some((no, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
+                                            nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                   case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                            now <- Clock.nanoTime
+                                            _  <- feedback.lastR.set(now -> nc._2)
+                                            _  <- -.offer(Some((nc, ((s1, s2), now), (k1, k2), (delay, duration)))).whenZIO(feedback.tracesR.get)
                                             _  <- sem.release
                                             _  <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
                                             ()
-                                        )
+                                        ).fork
                                   st <- feedback.stopR.get
                                   _  <- ( if st
                                           then
@@ -331,7 +334,7 @@ package object `Π-loop`:
                                             for
                                               _  <- sem.acquire
                                               _  <- started.update(_ + 1)
-                                              fb <- uio.fork
+                                              fb <- fb
                                               _  <- p1.succeed(Some((delay, cb, fb, in)))
                                               _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
                                             yield
@@ -353,11 +356,11 @@ package object `Π-loop`:
                         _.await.flatMap { params =>
                           feedback.paramsR.set(params) *>
                           Promise.make[Nothing, `Π-Parameters`].flatMap(feedback.paramsRP.set) *>
-                          loop0(params, started, clock, feedback)
+                          loop0(params, started, feedback)
                         }
                       }
                     else
-                      loop0(parameters, started, clock, feedback)
+                      loop0(parameters, started, feedback)
                   }.when(l)
     yield
       ()

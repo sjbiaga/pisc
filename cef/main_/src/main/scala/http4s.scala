@@ -28,7 +28,7 @@
 
 import _root_.cats.syntax.functor.*
 import _root_.cats.effect.{ IO, Ref, Resource }
-import _root_.com.comcast.ip4s.{ host, port }
+import _root_.com.comcast.ip4s.{ host, port, IpAddress, Hostname }
 import _root_.io.circe.generic.auto.*
 import _root_.org.http4s.circe.CirceEntityCodec.*
 import _root_.org.http4s.dsl.Http4sDsl
@@ -63,19 +63,22 @@ package object `Π-http4s`:
       }
 
 
-  case class Parameters(parallelism: Option[Int],
+  case class Parameters(address: Option[String],
+                        parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
-      `Π-Parameters`(parallelism.getOrElse(default.parallelism),
+      `Π-Parameters`(address.getOrElse(default.address),
+                     parallelism.getOrElse(default.parallelism),
                      threshold.getOrElse(default.threshold),
                      timeout.getOrElse(default.timeout),
                      exit.getOrElse(default.exit))
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
-      Parameters(Some(parameters.parallelism),
+      Parameters(Some(parameters.address),
+                 Some(parameters.parallelism),
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit))
@@ -152,8 +155,6 @@ package object `Π-http4s`:
 
       case request @ PUT -> Root =>
         request.decode[State] {
-          case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
-            BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value")
           case State(_, Some(_), _, _, _, _, _)    =>
             BadRequest("attempt to alter the `traces' read-only value")
           case State(_, _, Some(_), _, _, _, _)    =>
@@ -166,6 +167,10 @@ package object `Π-http4s`:
             BadRequest("attempt to alter the `started' read-only counter")
           case State(_, _, _, _, _, _, Some(_))    =>
             BadRequest("attempt to alter the `done' read-only flag")
+          case State(Parameters(Some(_), _, _, _, _), _, _, _, _, _, _) =>
+            BadRequest(s"attempt to change the `address' read-only parameter")
+          case State(Parameters(_, _, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+            BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
           case State(parameters, _, _, _, _, _, _) =>
             feedback.paramsR.get.flatMap { default =>
               var params = parameters(default)
@@ -181,21 +186,21 @@ package object `Π-http4s`:
   object HealthCheckEndpoint extends Http4sDsl[IO]:
 
     def apply() = HttpRoutes.of[IO] {
-      case GET -> Root / "health" => Ok("OK")
+      case GET -> Root => Ok("OK")
     }
 
 
-  def http4s(batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback): Resource[IO, Server] =
-    val bascApp = Router[IO](
+  def http4s(address: String, batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback): Resource[IO, Server] =
+    val spiApp = Router[IO](
       "feedback" -> FeedbackEndpoint(feedback),
       "state" -> StateEndpoint(batch, startedR, feedback),
-      "" -> HealthCheckEndpoint()
+      "health" -> HealthCheckEndpoint()
     ).orNotFound
     EmberServerBuilder
       .default[IO]
-      .withHost(host"127.0.0.1")
+      .withHost(IpAddress.fromString(address).orElse(Hostname.fromString(address)).getOrElse(host"localhost"))
       .withPort(port"0")
-      .withHttpApp(bascApp)
+      .withHttpApp(spiApp)
       .build
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
@@ -237,7 +242,7 @@ package object `Π-http4s`:
           Resource.make {
             client.successful(Request[IO](PUT, consulBase / "service" / "register").withEntity(registrationPayload)).flatTap {
               if _
-              then IO.println(s"✅ Successfully registered '$serviceId' to Consul on port $port")
+              then IO.println(s"✅ Successfully registered '$serviceId' to Consul on port $port.")
               else IO.println(s"⚠ Failed to register '$serviceId' to Consul on port $port.")
             }.handleErrorWith(err => IO.println(s"🛑 Error during Consul setup (on port $port): ${err.getMessage}").as(false))
           } {

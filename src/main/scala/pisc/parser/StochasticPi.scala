@@ -380,6 +380,7 @@ object StochasticPi:
 
   class Main(override protected val emitter: Emitter,
              override protected val in: String,
+             address: String = "localhost",
              parallelism: Int = Int.MaxValue,
              threshold: Int = 0,
              timeout: Int = 123456,
@@ -697,7 +698,7 @@ object StochasticPi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(parallelism, threshold, timeout, exit))
+      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

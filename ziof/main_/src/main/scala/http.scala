@@ -57,19 +57,22 @@ package object `Π-http`:
       }
 
 
-  case class Parameters(parallelism: Option[Int],
+  case class Parameters(address: Option[String],
+                        parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
-      `Π-Parameters`(parallelism.getOrElse(default.parallelism),
+      `Π-Parameters`(address.getOrElse(default.address),
+                     parallelism.getOrElse(default.parallelism),
                      threshold.getOrElse(default.threshold),
                      timeout.getOrElse(default.timeout),
                      exit.getOrElse(default.exit))
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
-      Parameters(Some(parameters.parallelism),
+      Parameters(Some(parameters.address),
+                 Some(parameters.parallelism),
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit))
@@ -164,8 +167,6 @@ package object `Π-http`:
             ZIO.succeed(Response.badRequest)
           case Right(state) =>
             state match
-              case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
-                ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(_, Some(_), _, _, _, _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `traces' read-only value"))
               case State(_, _, Some(_), _, _, _, _)    =>
@@ -178,6 +179,10 @@ package object `Π-http`:
                 ZIO.succeed(Response.badRequest("attempt to alter the `started' read-only counter"))
               case State(_, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
+              case State(Parameters(Some(_), _, _, _, _), _, _, _, _, _, _) =>
+                ZIO.succeed(Response.badRequest("attempt to change the `address' read-only parameter"))
+              case State(Parameters(_, _, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+                ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(parameters, _, _, _, _, _, _) =>
                 feedback.paramsR.get.flatMap { default =>
                   var params = parameters(default)
@@ -205,10 +210,10 @@ package object `Π-http`:
 
   val serviceName = "StochasticPiCalculus2Scala"
 
-  def http(): ZLayer[Any, Throwable, Server.Config] =
-    ZLayer.succeed(Server.Config.default.binding("127.0.0.1", 0))
+  def http(address: String): ZLayer[Any, Throwable, Server.Config] =
+    ZLayer.succeed(Server.Config.default.binding(address, 0))
 
-  def http(batch: Boolean, started: Ref[Long], feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
+  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
     Option {
       Traces().fold(null) {
         case AmazonSQS(queue) => "amazonsqs" -> queue
@@ -220,7 +225,7 @@ package object `Π-http`:
       case Some((tag, name)) =>
         for
           port <- Server.install(FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes())
-          host  = "127.0.0.1"
+          host  = address
           consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
           consulBase = URL.decode(s"http://$consulAddr/v1/agent").right.get
           serviceId = s"$serviceName-$name-$port"
@@ -247,7 +252,7 @@ package object `Π-http`:
                         then
                           ZIO.debug(s"⚠ Failed to register '$serviceId' to Consul on port $port.").as(false)
                         else
-                          ZIO.debug(s"✅ Successfully registered '$serviceId' to Consul on port $port").as(true)
+                          ZIO.debug(s"✅ Successfully registered '$serviceId' to Consul on port $port.").as(true)
                     }
           code <- body
           _    <- ( if cons

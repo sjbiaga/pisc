@@ -61,7 +61,7 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
-  type & = Ref[IO, Long]
+  type & = Ref[IO, (Long, Double)]
 
   type / = Queue[IO, ((String, String), +)]
 
@@ -75,7 +75,8 @@ package object `Π-loop`:
   type ^ = Resource[IO, Unit]
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -219,7 +220,7 @@ package object `Π-loop`:
       !.complete(ec).void
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], _clock: Ref[IO, Double], _feedback: Feedback)
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -269,11 +270,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-      _ <- IO.cede >> loopʹ(parameters, started, batch, _clock, _feedback).whenA(l)
+      _ <- IO.cede >> loopʹ(parameters, started, batch, _feedback).whenA(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], _clock: Ref[IO, Double], _feedback: Feedback)
+  def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], _feedback: Feedback)
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -322,7 +323,7 @@ package object `Π-loop`:
                             }
             }
           } >> IO.pure(true)
-      _        <- IO.cede >> loop0(parameters, started, _clock, _feedback).whenA(l)
+      _        <- IO.cede >> loop0(parameters, started, _feedback).whenA(l)
     yield
       ()
 

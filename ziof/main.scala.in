@@ -49,13 +49,14 @@ object App extends _root_.zio.ZIOAppDefault:
   import `Π-loop`.*, `Π-loop`.given
 
 
+  private val spicba = "pisc.stochastic.communications.bind.address"
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
   private val spicsh = "pisc.stochastic.communications.batch.threshold"
   private val spicst = "pisc.stochastic.communications.timeout.microseconds"
   private val spicse = "pisc.stochastic.communications.exit.passthrough"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], feedback: Feedback)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
     val \ =
       if parameters.threshold > 0
@@ -63,11 +64,11 @@ object App extends _root_.zio.ZIOAppDefault:
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
       l <- if parameters.threshold > 0
-           then loopʹ(parameters, started, batch, clock, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else loop0(parameters, started, clock, feedback)(using %, !, &, -, *, **)(π.`π-wand`).fork
+           then loopʹ(parameters, started, batch, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
+           else loop0(parameters, started, feedback)(using %, !, &, -, *, **)(π.`π-wand`).fork
       _ <- poll(using %, /, \).fork
       d <- dump(using %, !, -).fork
-      x <- http(parameters.threshold > 0, started, feedback) {
+      x <- http(parameters.address, parameters.threshold > 0, started, feedback) {
              for
                ^ <- π.`π-uuid`
                _ <- π.Main(args*)(using ^)(using %, /, \)
@@ -76,11 +77,14 @@ object App extends _root_.zio.ZIOAppDefault:
                _ <- d.join
              yield
                x
-           }.provide(http(), Server.live, Client.default).either
+           }.provide(http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
 
   override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
+    val a = if sys.Prop.StringProp(spicba).isSet
+            then sys.Prop.StringProp(spicba).value
+            else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parameters`.parallelism
@@ -93,20 +97,19 @@ object App extends _root_.zio.ZIOAppDefault:
     val e = if sys.BooleanProp.keyExists(spicse).value
             then true
             else π.`π-parameters`.exit
-    val params = `Π-Parameters`(p, h, t, e)
+    val params = `Π-Parameters`(a, p, h, t, e)
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | +]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
-      - <- Queue.unbounded[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))]]
+      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Promise.make[Nothing, ExitCode]
-      & <- Ref.make(0L)
+      & <- Ref.make(0L -> .0)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
-      c <- Ref.make(.0)
       pauseRP  <- Promise.make[Nothing, Unit].tap(_.succeed(())).flatMap(Ref.make)
       paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
       paramsR  <- Ref.make(params)
@@ -118,7 +121,7 @@ object App extends _root_.zio.ZIOAppDefault:
       _        <- exitRP.get.flatMap(_.succeed(())).when(e)
       feedback  = Feedback(pauseRP, paramsRP, paramsR, tracesR, lastR, stopR, doneR, exitRP)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args.toList, params, n, b, c, feedback)(%, /, *, **, ^, -, !, &)
+      x <- run(args.toList, params, n, b, feedback)(%, /, *, **, ^, -, !, &)
       _ <- exit(x)
     yield
       ()

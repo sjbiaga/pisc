@@ -27,7 +27,7 @@ lazy val root = (project in file("."))
     crossScalaVersions ++= Seq("2.13.18", "3.9.0-RC6"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += spin,
-    libraryDependencies ++= Seq(scalameta, parsercombinators, munit % Test)
+    libraryDependencies ++= Seq(scalameta, parsercombinators, ip4s, munit % Test)
   )
 
 lazy val traces = (project in file("traces"))

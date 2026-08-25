@@ -55,7 +55,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[Long]
+  type & = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -69,7 +69,8 @@ package object `Π-loop`:
   type ^ = SemaphoreZIO
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -206,7 +207,7 @@ package object `Π-loop`:
       !.succeed(ec).unit
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], _clock: Ref[Double])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -260,11 +261,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch, _clock).when(l)
+      _ <- loopʹ(parameters, started, batch).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long], _clock: Ref[Double])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -317,7 +318,7 @@ package object `Π-loop`:
               }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started, _clock).when(l)
+      _        <- loop0(parameters, started).when(l)
     yield
       ()
 

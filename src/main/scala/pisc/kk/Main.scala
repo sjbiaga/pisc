@@ -58,7 +58,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.kk, in, P)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.kk, in, "localhost", P)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"

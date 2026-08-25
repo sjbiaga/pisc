@@ -55,7 +55,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[Long]
+  type & = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -69,7 +69,8 @@ package object `Π-loop`:
   type ^ = SemaphoreZIO
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -188,7 +189,7 @@ package object `Π-loop`:
          }
     %.modify { m => exit(m) -> m }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -222,10 +223,11 @@ package object `Π-loop`:
                                                 _  <- cb.await.exit
                                                 _  <- enable(k1)
                                                 _  <- enable(k2).unless(k1 == k2)
-                                                no <- &.updateAndGet(_ + 1)
+                                                nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                 ss <- ts1.get <*> ts2.get
-                                                now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                                _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
+                                                now <- Clock.nanoTime
+                                                _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
                                                 _  <- sem.release
                                                 _  <- started.update(_ - 1)
                                               yield
@@ -246,11 +248,11 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch, clock).when(l)
+      _ <- loopʹ(parameters, started, batch).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long], clock: Ref[Double])
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
            (using % : %, ! : !, & : &, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -286,10 +288,11 @@ package object `Π-loop`:
                                             _  <- cb.await.exit
                                             _  <- enable(k1)
                                             _  <- enable(k2).unless(k1 == k2)
-                                            no <- &.updateAndGet(_ + 1)
+                                            nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                   case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                             ss <- ts1.get <*> ts2.get
-                                            now <- Clock.nanoTime <*> (duration match { case 0.0 | NaN => clock.get case _ => clock.updateAndGet(_ + delay) })
-                                            _  <- -.offer(Some((no, (ss, now), (k1, k2), (delay, duration))))
+                                            now <- Clock.nanoTime
+                                            _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
                                             _  <- sem.release
                                             _  <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
@@ -307,7 +310,7 @@ package object `Π-loop`:
               }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started, clock).when(l)
+      _        <- loop0(parameters, started).when(l)
     yield
       ()
 

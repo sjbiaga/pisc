@@ -38,7 +38,7 @@ import `Π-traces`.*
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | (Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double))
+  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))
 
   private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => Unit =
     _.split(",") match
@@ -55,7 +55,7 @@ package object `Π-dump`:
 
       Behaviors.receive[-] {
 
-        case (_, (no, ((ts1, ts2), (ts, cl)), (k1, k2), (delay, duration))) =>
+        case (_, ((no, cl), ((ts1, ts2), ts), (k1, k2), (delay, duration))) =>
           if `π-traces` ne null
           then
             record(no, cl, ts1, ts, delay, duration)(k1)

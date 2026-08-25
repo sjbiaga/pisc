@@ -69,7 +69,7 @@ package object `Π-loop`:
 
   type ![F[_]] = Deferred[F, ExitCode]
 
-  type &[F[_]] = Ref[F, Long]
+  type &[F[_]] = Ref[F, (Long, Double)]
 
   type /[F[_]] = Queue[F, ((String, String), +[F])]
 
@@ -83,7 +83,8 @@ package object `Π-loop`:
   type ^[F[_]] = Resource[F, Unit]
 
 
-  final case class `Π-Parameters`(parallelism: Int,
+  final case class `Π-Parameters`(address: String,
+                                  parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
@@ -220,7 +221,7 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], _clock: Ref[F, Double])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -270,11 +271,11 @@ package object `Π-loop`:
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, _clock).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch).whenA(l)
       yield
         ()
 
-    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], _clock: Ref[F, Double])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long])
              (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -323,7 +324,7 @@ package object `Π-loop`:
                               }
               }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parameters, started, _clock).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started).whenA(l)
       yield
         ()
 
