@@ -163,6 +163,8 @@ package object sΠ:
     */
   object τ:
 
+    private val `new {}` = new {}
+
     object `(!)`:
 
       object `(+)`:
@@ -186,7 +188,7 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
             timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (new {}, None, rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
@@ -252,7 +254,7 @@ package object sΠ:
           enabled  <- ZStream.fromZIO(Ref.make(true))
           `)(`     <- ZStream.fromZIO(`)(`.get)
           timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (new {}, None, rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
@@ -310,7 +312,7 @@ package object sΠ:
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
         timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (new {}, None, rate))))
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get

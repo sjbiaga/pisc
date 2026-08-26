@@ -168,7 +168,11 @@ abstract class BioAmbients extends Expression:
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
-    opt( naturalNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt) }
+    opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
+      case Some(_: String)  => Some(BigInt(0))
+      case Some(it: BigInt) => Some(it)
+      case _                => None
+    } ^^ { _.fold(-1)(_.toInt) }
 
   def pace: Parser[(Long, String)] =
     naturalNumber ~ opt( ","~> ident ) ^^ {
@@ -414,6 +418,7 @@ object BioAmbients:
 
   class Main(override protected val emitter: Emitter,
              override protected val in: String,
+             address: String = "localhost",
              parallelism: Int = Int.MaxValue,
              threshold: Int = 0,
              timeout: Int = 123456,
@@ -771,7 +776,7 @@ object BioAmbients:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(parallelism, threshold, timeout, exit, snapshot))
+      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, snapshot))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

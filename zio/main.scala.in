@@ -30,52 +30,67 @@
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ Promise, ZIO, UIO }
+import _root_.zio.{ Promise, UIO, ZIO }
 import _root_.zio.stm.TSemaphore
 
 
-object App extends _root_.zio.ZIOAppDefault:
+object App extends _root_.zio.ZIOApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.zio.{ ExitCode, FiberRef, Queue, Ref, Semaphore => SemaphoreZIO }
   import _root_.zio.stm.TPriorityQueue
 
-  import _root_.zio.ZIOAppArgs
+  import _root_.zio.http.{ Client, Server }
+
+  import _root_.zio.{ EnvironmentTag, Exit, Scope, URIO, ZIOAppArgs, ZLayer }
 
   import `Π-dump`.*
+  import `Π-http`.http
   import `Π-loop`.*, `Π-loop`.given
 
 
+  private val bacsa = "pisc.bioambients.communications.bind.address"
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
+  private val bacse = "pisc.bioambients.communications.exit.passthrough"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double])
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], feedback: Feedback)
                  (ref: FiberRef[sΠ.`)(`])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
-                 (using sΠ.`}{`.`][`, TSemaphore): UIO[ExitCode] =
+                 (using sΠ.`}{`.`][`, TSemaphore): URIO[Scope, ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
       l <- if parameters.threshold > 0
-           then loopʹ(parameters, started, batch, clock)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else loop0(parameters, started, clock)(using %, !, &, -, *, **)(π.`π-wand`).fork
-      _ <- poll(using %, /, \).fork
-      d <- dump(using %, !, -).fork
-      ^ <- π.`π-uuid`
-      _ <- π.`π-supervised`(π.Main(ref)(args*)(using ^)(using %, /, \))
-      x <- !.await
-      _ <- l.join
-      _ <- d.join
+           then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
+           else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, !, &, -, *, **)(π.`π-wand`) }.disconnect.fork
+      p <- poll(using %, /, \).uninterruptible.disconnect.fork
+      d <- dump(using %, !, -).uninterruptible.disconnect.fork
+      x <- http(parameters.address, parameters.threshold > 0, started, feedback) {
+             for
+               ^ <- π.`π-uuid`
+               _ <- π.`π-supervised`(π.Main(ref)(args*)(using ^)(using %, /, \))
+               _ <- /.offer(null)
+               x <- !.await
+               _ <- l.join.exit
+               _ <- p.join.exit
+               _ <- d.join.exit
+             yield
+               x
+           }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
-      x
+      x.getOrElse(ExitCode.failure)
 
-  override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
+  override val bootstrap: ZLayer[ZIOAppArgs, Nothing, Scope with Feedback] =
+    val a = if sys.Prop.StringProp(bacsa).isSet
+            then sys.Prop.StringProp(bacsa).value
+            else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parameters`.parallelism
@@ -85,26 +100,64 @@ object App extends _root_.zio.ZIOAppDefault:
     val t = if sys.Prop.IntProp(bacst).isSet
             then sys.Prop.IntProp(bacst).value
             else π.`π-parameters`.timeout
+    val e = if sys.BooleanProp.keyExists(bacse).value
+            then true
+            else π.`π-parameters`.exit
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(p, h, t, true, s)
+    val params = `Π-Parameters`(a, p, h, t, e, s)
+    ZLayer.fromZIO {
+      for
+        paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
+        paramsR  <- Ref.make(params)
+        tracesR  <- Ref.make(true)
+        lastR    <- Ref.make(0L -> .0)
+        doneR    <- Ref.make(false)
+        ps_st_ex <- (Promise.make[Nothing, Unit].tap(_.succeed(())) <*> Promise.make[Nothing, Unit]).flatMap { (pauseP, exitP) => Ref.Synchronized.make(pauseP -> false -> exitP) }
+        _        <- ps_st_ex.get.flatMap(_._2.succeed(())).when(e)
+      yield
+        Feedback(paramsRP, paramsR, tracesR, lastR, ps_st_ex, doneR)
+    }.flatMap { feedbackEnv =>
+      ZLayer.scoped {
+        Scope.make.flatMap { scope =>
+          ZIO.acquireRelease(ZIO.succeed(scope))
+                            (feedbackEnv.get
+                               .pauseRP_stopR_exitRP
+                               .modifyZIO { case ((pauseP, _), exitP) =>
+                                 (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
+                               } *> _.close(Exit.unit))
+        }
+      } ++ ZLayer.fromZIOEnvironment(ZIO.succeed(feedbackEnv))
+    }
+
+  override type Environment = Scope with Feedback
+
+  override implicit val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
+
+  override def run: ZIO[ZIOAppArgs with Scope with Feedback, Nothing, Unit] =
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | +]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
-      - <- Queue.unbounded[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
+      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
-      & <- Ref.make(0L)
+      & <- Ref.make(0L -> .0)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
-      c <- Ref.make(.0)
+      f <- ZIO.service[Feedback]
+      p <- f.paramsR.get
       _ <- `π-enable`(π.`π-main`)(using %)
+      st = f
+        .pauseRP_stopR_exitRP
+        .modifyZIO { case ((pauseP, _), exitP) =>
+          (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
+        }
       (ref, tree, semaphore) <- sΠ.`}{`.`][`()
-      x <- run(args.toList, params, n, b, c)(ref)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
+      x <- run(args.toList, p, n, b, f)(ref)(%, /, *, **, ^, -, !, &)(using tree, semaphore).onInterrupt(st)
       _ <- exit(x)
     yield
       ()
@@ -125,6 +178,9 @@ object π:
   import `Π-loop`.{ %, /, \, `Π-Parameters` }
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
   import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
+
+  import _root_.zio.{ durationLong, Random, Task }
+  import _root_.zio.concurrent.CyclicBarrier
 
 
   extension (self: πLs[UIO[?]])

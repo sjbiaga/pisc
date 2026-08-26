@@ -28,7 +28,7 @@
 
 import _root_.cats.syntax.functor.*
 import _root_.cats.effect.{ IO, Ref, Resource }
-import _root_.com.comcast.ip4s.{ host, port }
+import _root_.com.comcast.ip4s.{ host, port, IpAddress, Hostname }
 import _root_.io.circe.generic.auto.*
 import _root_.org.http4s.circe.CirceEntityCodec.*
 import _root_.org.http4s.dsl.Http4sDsl
@@ -69,7 +69,8 @@ package object `Π-http4s`:
                         exit: Option[Boolean],
                         snapshot: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
-      `Π-Parameters`(parallelism.getOrElse(default.parallelism),
+      `Π-Parameters`(default.address,
+                     parallelism.getOrElse(default.parallelism),
                      threshold.getOrElse(default.threshold),
                      timeout.getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
@@ -103,38 +104,69 @@ package object `Π-http4s`:
   object FeedbackEndpoint extends Http4sDsl[IO]:
     def apply(feedback: Feedback) = HttpRoutes.of[IO] {
       case GET -> Root / "pause" =>
-        feedback.pauseRD.get.flatMap(_.tryGet).map(_ eq None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.tryGet).map(_ eq None).map(_.toString).flatMap(Ok(_))
 
       case GET -> Root / "traces" =>
         feedback.tracesR.get.map(_.toString).flatMap(Ok(_))
 
       case GET -> Root / "stop" =>
-        feedback.stopR.get.map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.map(_._1._2.toString).flatMap(Ok(_))
 
       case GET -> Root / "exit" =>
-        feedback.exitRD.get.flatMap(_.tryGet).map(_ ne None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.tryGet).map(_ ne None).map(_.toString).flatMap(Ok(_))
 
       case PUT -> Root / "pause" / BooleanVar(it) =>
-        if it
-        then
-          feedback.pauseRD.get.flatMap(_.tryGet).map(_ eq None)
-          .ifM(Ok(), IO.deferred[Unit].flatMap(feedback.pauseRD.set) >> Ok())
-        else
-          feedback.pauseRD.get.flatMap(_.complete(())) >> Ok()
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if stop
+            then
+              (if it then Conflict() else Ok()).map(pauseD -> stop -> exitD -> _)
+            else if it
+            then
+              pauseD.tryGet.map(_ eq None)
+                .flatMap {
+                  if _
+                  then
+                    Ok().map(pauseD -> stop -> exitD -> _)
+                  else
+                    (IO.deferred[Unit] product Ok()).map(_ -> stop -> exitD -> _)
+                }
+            else
+              (pauseD.complete(()) >> Ok()).map(pauseD -> stop -> exitD -> _)
+          }
 
       case PUT -> Root / "traces" / BooleanVar(it) =>
         feedback.tracesR.set(it) >> Ok()
 
       case PUT -> Root / "stop" / BooleanVar(it) =>
-        feedback.stopR.get.ifM(Ok(), feedback.stopR.set(it) >> Ok())
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if stop
+            then
+              (if it then Ok() else Conflict()).map(pauseD -> stop -> exitD -> _)
+            else
+              (pauseD.complete(()) >> Ok()).map(pauseD -> it -> exitD -> _)
+          }
 
       case PUT -> Root / "exit" / BooleanVar(it) =>
-        if it
-        then
-          feedback.exitRD.get.flatMap(_.complete(())) >> Ok()
-        else
-          feedback.exitRD.get.flatMap(_.tryGet).map(_ eq None)
-            .ifM(Ok(), IO.deferred[Unit].flatMap(feedback.exitRD.set) >> Ok())
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if it
+            then
+              (exitD.complete(()) >> Ok()).map(pauseD -> stop -> exitD -> _)
+            else if stop
+            then
+              Conflict().map(pauseD -> stop -> exitD -> _)
+            else
+              exitD.tryGet.map(_ eq None)
+                .flatMap {
+                  if _
+                  then
+                    Ok().map(pauseD -> stop -> exitD -> _)
+                  else
+                    (IO.deferred[Unit] product Ok()).map(pauseD -> stop -> _ -> _)
+                }
+          }
     }
 
 
@@ -156,8 +188,6 @@ package object `Π-http4s`:
 
       case request @ PUT -> Root =>
         request.decode[State] {
-          case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
-            BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value")
           case State(_, Some(_), _, _, _, _, _)    =>
             BadRequest("attempt to alter the `traces' read-only value")
           case State(_, _, Some(_), _, _, _, _)    =>
@@ -170,6 +200,8 @@ package object `Π-http4s`:
             BadRequest("attempt to alter the `started' read-only counter")
           case State(_, _, _, _, _, _, Some(_))    =>
             BadRequest("attempt to alter the `done' read-only flag")
+          case State(Parameters(_,Some(threshold), _, _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+            BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
           case State(parameters, _, _, _, _, _, _) =>
             feedback.paramsR.get.flatMap { default =>
               var params = parameters(default)
@@ -185,21 +217,21 @@ package object `Π-http4s`:
   object HealthCheckEndpoint extends Http4sDsl[IO]:
 
     def apply() = HttpRoutes.of[IO] {
-      case GET -> Root / "health" => Ok("OK")
+      case GET -> Root => Ok("OK")
     }
 
 
-  def http4s(batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback): Resource[IO, Server] =
-    val bascApp = Router[IO](
+  def http4s(address: String, batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback): Resource[IO, Server] =
+    val baApp = Router[IO](
       "feedback" -> FeedbackEndpoint(feedback),
       "state" -> StateEndpoint(batch, startedR, feedback),
-      "" -> HealthCheckEndpoint()
+      "health" -> HealthCheckEndpoint()
     ).orNotFound
     EmberServerBuilder
       .default[IO]
-      .withHost(host"127.0.0.1")
+      .withHost(IpAddress.fromString(address).orElse(Hostname.fromString(address)).getOrElse(host"localhost"))
       .withPort(port"0")
-      .withHttpApp(bascApp)
+      .withHttpApp(baApp)
       .build
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
@@ -213,9 +245,9 @@ package object `Π-http4s`:
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> queue
-        case Kafka(topic) => "kafka" -> topic
-        case RabbitMQ(queue) => "rabbitmq" -> queue
+        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
+        case Kafka(topic) => "kafka" -> s"topic_$topic"
+        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
         case _ => null
       }
     } match
@@ -230,7 +262,7 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
-          Tags = List(tag, "cef_emitter"),
+          Tags = List(tag, name, "cef_emitter"),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",
@@ -241,7 +273,7 @@ package object `Π-http4s`:
           Resource.make {
             client.successful(Request[IO](PUT, consulBase / "service" / "register").withEntity(registrationPayload)).flatTap {
               if _
-              then IO.println(s"✅ Successfully registered '$serviceId' to Consul on port $port")
+              then IO.println(s"✅ Successfully registered '$serviceId' to Consul on port $port.")
               else IO.println(s"⚠ Failed to register '$serviceId' to Consul on port $port.")
             }.handleErrorWith(err => IO.println(s"🛑 Error during Consul setup (on port $port): ${err.getMessage}").as(false))
           } {

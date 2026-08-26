@@ -25,7 +25,9 @@ function ba() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
+            local srcs=\ ../${emit}/http.scala
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -96,7 +98,9 @@ function ba_() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
+                        --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
+            local srcs=\ ../${emit}/http_.scala
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.13.0
@@ -135,10 +139,11 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1 \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.2 \
+                  --dep software.amazon.awssdk:sqs:2.54.4 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
+#                  -Dpisc.bioambients.communications.bind.address=localhost \
 #                  -Dpisc.bioambients.communications.parallelism.level=2147483647 \
 #                  -Dpisc.bioambients.communications.batch.threshold=0 \
 #                  -Dpisc.bioambients.communications.timeout.microseconds=123456 \

@@ -33,20 +33,22 @@ import _root_.cats.effect.{ IO, IOLocal }
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.Map
+  import _root_.scala.collection.immutable.{ List, Map }
 
   import _root_.cats.syntax.applicative.*
 
   import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
   import `Π-dump`.*
-  import `Π-http4s`.*
+  import `Π-http4s`.http4s
   import `Π-loop`.*, `Π-loop`.given
 
 
+  private val bacsa = "pisc.bioambients.communications.bind.address"
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
@@ -54,7 +56,7 @@ object App extends _root_.cats.effect.IOApp:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], clock: Ref[IO, Double], feedback: Feedback)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
                  (lo: IOLocal[sΠ.`)(`], `}{`: sΠ.`}{`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
                  (using `}{`.`][`, `}{`.stm.TSemaphore): IO[ExitCode] =
@@ -63,24 +65,29 @@ object App extends _root_.cats.effect.IOApp:
       then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
+        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
         _ <- if parameters.threshold > 0
-             then loopʹ(parameters, started, batch, clock, feedback, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
-             else loop0(parameters, started, clock, feedback, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
+             then loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
+             else loop0(parameters, started, feedback, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
-        _ <- http4s(parameters.threshold > 0, started, feedback).flatMap(http4s)
+        ^ <- Resource.eval(π.`π-uuid`)
+        _ <- π.Main(lo, `}{`)(args*)(using ^)(using %, /, \).background
       yield
         ()
     ).use { _ =>
-      for
-        ^ <- π.`π-uuid`
-        _ <- π.Main(lo, `}{`)(args*)(using ^)(using %, /, \)
-        x <- !.get
-      yield
-        x
+      val stop = feedback
+        .pauseRD_stopR_exitRD
+        .evalModify { case ((pauseD, _), exitD) =>
+          (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
+        }
+      !.get.onCancel(stop.void).guarantee(!.get.void)
     }
 
   override def run(args: List[String]): IO[ExitCode] =
+    val a = if sys.Prop.StringProp(bacsa).isSet
+            then sys.Prop.StringProp(bacsa).value
+            else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parameters`.parallelism
@@ -96,34 +103,32 @@ object App extends _root_.cats.effect.IOApp:
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(p, h, t, e, s)
+    val params = `Π-Parameters`(a, p, h, t, e, s)
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
-      - <- Queue.unbounded[IO, Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
+      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
-      & <- IO.ref(0L)
+      & <- IO.ref(0L -> .0)
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       b <- IO.ref(0L)
-      c <- IO.ref(.0)
       pauseRD  <- IO.deferred[Unit].flatTap(_.complete(())).flatMap(IO.ref)
       paramsRD <- IO.deferred[`Π-Parameters`].flatMap(IO.ref)
       paramsR  <- IO.ref(params)
       tracesR  <- IO.ref(true)
       lastR    <- IO.ref(0L -> .0)
-      stopR    <- IO.ref(false)
+      ps_st_ex <- (IO.deferred[Unit].flatTap(_.complete(())) product IO.deferred[Unit]).flatMap { (pauseD, exitD) => AtomicCell[IO].of(pauseD -> false -> exitD) }
+      _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
       doneR    <- IO.ref(false)
-      exitRD   <- IO.deferred[Unit].flatMap(IO.ref)
-      _        <- exitRD.get.flatMap(_.complete(())).whenA(e)
-      feedback  = Feedback(pauseRD, paramsRD, paramsR, tracesR, lastR, stopR, doneR, exitRD)
+      feedback  = Feedback(paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
       _ <- `π-enable`(π.`π-main`)(using %)
       stm <- STM.runtime[IO]
       wrapper = new sΠ.`}{`(stm)
       (lo, tree, semaphore) <- wrapper.`][`()
-      x <- run(args, params, n, b, c, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
+      x <- run(args, params, n, b, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
     yield
       x
 
@@ -148,11 +153,12 @@ object π:
   import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
   import `Π-traces`.{ `π-traces`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
 
+
   extension (self: πLs[IO[?]])
     private[π] inline def πparSequence: IO[Unit] =
       self.parSequenceVoid
 
   val `π-uuid`: IO[String] =
-    UUIDGen.randomString
+    UUIDGen.randomString[IO]
 
 

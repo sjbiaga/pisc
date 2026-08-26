@@ -54,28 +54,27 @@ object App extends _root_.zio.ZIOAppDefault:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], uuid: sΠ.`)(`)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], uuid: sΠ.`)(`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
-                 (using sΠ.`}{`.`][`, TSemaphore) =
+                 (using sΠ.`}{`.`][`, TSemaphore): UIO[ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
-    ( for
-        r <- ZStream.fromZIO(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
-        ^ <- ZStream.fromZIO(π.`π-uuid`)
-        _ <- π.Main(r)(args*)(using ^)(using %, /, \)
-        x <- ZStream.fromZIO(!.await)
-        _ <- ZStream.fromZIO(exit(x))
-      yield
-        ()
-    )
-      .drainFork(ZStream.fromZIO(if parameters.threshold > 0
-                                 then loopʹ(parameters, started, batch, clock)(using %, !, &, -, *, **, ^)(π.`π-wand`)
-                                 else loop0(parameters, started, clock)(using %, !, &, -, *, **)(π.`π-wand`)))
-      .drainFork(ZStream.fromZIO(poll(using %, /, \)))
-      .drainFork(ZStream.fromZIO(dump(using %, !, -)))
-      .runDrain
+    for
+      l <- if parameters.threshold > 0
+           then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
+           else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`).fork
+      _ <- poll(using %, /, \).fork
+      d <- dump(using %, !, -).fork
+      r <- ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid))
+      ^ <- π.`π-uuid`
+      _ <- π.Main(r)(args*)(using ^)(using %, /, \).runDrain
+      x <- !.await
+      _ <- l.join
+      _ <- d.join
+    yield
+      x
 
   override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
     val p = if sys.Prop.IntProp(bacsp).isSet
@@ -90,23 +89,23 @@ object App extends _root_.zio.ZIOAppDefault:
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(p, h, t, true, s)
+    val params = `Π-Parameters`(π.`π-parameters`.address, p, h, t, π.`π-parameters`.exit, s)
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
-      - <- Queue.unbounded[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
+      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
-      & <- Ref.make(0L)
+      & <- Ref.make(0L -> .0)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
-      c <- Ref.make(.0)
       _ <- `π-enable`(π.`π-main`)(using %)
       (uuid, tree, semaphore) <- sΠ.`}{`.`][`()
-      _ <- run(args.toList, params, n, b, c, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
+      x <- run(args.toList, params, n, b, uuid)(%, /, *, **, ^, -, !, &)(using tree, semaphore)
+      _ <- exit(x)
     yield
       ()
 

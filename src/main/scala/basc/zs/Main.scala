@@ -60,7 +60,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.zs, in, P, H, T, true, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.zs, in, "localhost", P, H, T, true, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"

@@ -32,6 +32,8 @@ package parser
 import java.nio.file.Path
 import java.net.URI
 
+import com.comcast.ip4s.{ host, IpAddress, Hostname }
+
 import scala.meta.{ Lit, Term }
 import emitter.shared.Meta.\
 
@@ -92,6 +94,13 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             it.substring(1, it.length-1)
           case _                                             => throw err(`type`)
 
+      def host(`type`: String = "an ip/hostname"): String =
+        val address = string("an ip/hostname")
+        IpAddress.fromString(address)
+                 .orElse(Hostname.fromString(address)) match
+          case Some(host) => host.toString
+          case _          => throw err(`type`)
+
       def uri[F[_]: Parse](defaultPort: Int, cluster: Boolean = false): F[Config[Host, Port]] | Config[Hosts[F], Ports[F]] =
         self match
           case it: String                                                     =>
@@ -143,6 +152,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
   private def number: Int = self.number
   private def file: Option[String] = self.file
   private def string(`type`: String = "a string"): String = self.string(`type`)
+  private def host(`type`: String = "an ip/hostname"): String = self.host(`type`)
   //private def uri[F[_]: Parse](defaultPort: Int, cluster: Boolean = false): F[Config[Host, Port]] | Config[Hosts[F], Ports[F]] = self.uri[F](defaultPort, cluster)
   private def emitters: List[Emitter] = self.emitters
   private def keys: Set[String] = self.keys
@@ -211,6 +221,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "parameters"        =>
         settings.parameters = self match
           case it: List[String] => it.map(_.toLowerCase) match
+            case List(given String, it: String)
+                if given_String == "address" =>
+              settings.parameters.copy(address = it.host(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })())
             case List(given String, it: String)
                 if given_String == "parallelism" =>
               settings.parameters.copy(parallelism = 1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
@@ -355,12 +368,14 @@ object Directive:
 
   object Settings:
 
-    case class Parameters(parallelism: Int = Int.MaxValue,
+    case class Parameters(address: String = "localhost",
+                          parallelism: Int = Int.MaxValue,
                           threshold: Int = 0,
                           timeout: Int = 123456,
                           exit: Boolean = true,
                           snapshot: Boolean = false):
-      lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.Int(parallelism)
+      lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
+                                                                       :: Lit.Int(parallelism)
                                                                        :: Lit.Int(threshold)
                                                                        :: Lit.Int(timeout)
                                                                        :: Lit.Boolean(exit)
@@ -451,7 +466,7 @@ object Directive:
       trait Portʹ(override val number: Int) extends Port
 
     private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
-                                    "parameters"  -> "a <parallelism> number or a <threshold> number or a <timeout> number or an <exit> boolean or a <snapshot> boolean setting",
+                                    "parameters"  -> "an <address> ip/hostname or a <parallelism> number or a <threshold> number or a <timeout> number or an <exit> boolean setting or a <snapshot> boolean setting",
                                     "traces"      -> "a <Kafka> cluster config or a <RabbitMQ> config or an <AmazonSQS> client config or an <ElasticMQ> endpoint setting")
     def message(implicit key: String) = messages(canonical(key))
 

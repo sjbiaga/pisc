@@ -25,12 +25,15 @@ object CommandBAin {
       fileExamples().map(_.stripSuffix(".basc")).toSeq
     }
 
-    val opts = Map("-ce" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Etrue", "-Sfalse"),
-                   "-cef" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Etrue", "-Sfalse"),
-                   "-zio" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
-                   "-ziof" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse"),
-                   "-fs2" -> (Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse") ++ Seq("cats.effect.IO", "zio.Task").map("-F" + _)),
-                   "-zs" -> Seq("-P" + Int.MaxValue, "-H0", "-T123456", "-Sfalse")
+    val A = Seq("127.0.0.1", "localhost").map("-A" + _)
+    val F = Seq("cats.effect.IO", "zio.Task").map("-F" + _)
+    val P = "-P" + Int.MaxValue
+    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
+                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
+                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
+                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Sfalse") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Sfalse")
                )
 
     def suggestions(args: Seq[String]): Seq[String] =

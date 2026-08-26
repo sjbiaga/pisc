@@ -26,16 +26,21 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
-
-import _root_.zio.{ Queue, UIO, ZIO }
-
-import `Π-loop`.*
+import zio.{ Cause, Exit, ExitCode, Ref, Scope, UIO, URIO, ZLayer }
+import zio.http.{ Client, Server }
 
 
-package object `Π-dump`:
+package object `Π-http`:
 
-  type - = Queue[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+  import `Π-loop`.Feedback
 
-  def dump(using % : %, ! : !, - : -): UIO[Unit] =
-    ZIO.unit
+
+  def http(_address: String): ZLayer[Any, Throwable, Server.Config] =
+    ZLayer.succeed(Server.Config.default)
+
+  def http(_address: String, _batch: Boolean, _started: Ref[Long], feedback: Feedback)(main: UIO[ExitCode]): URIO[Client & Server & Scope, ExitCode] =
+    main.exit.map {
+      case Exit.Success(code)                  => code
+      case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+      case _                                   => ExitCode.failure
+    }.uninterruptible.disconnect

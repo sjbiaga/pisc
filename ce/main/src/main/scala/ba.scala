@@ -167,6 +167,8 @@ package object sΠ:
     */
   object τ extends τ:
 
+    private val `new {}` = new {}
+
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -175,7 +177,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`), (new {}, None, rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`), (`new {}`, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,

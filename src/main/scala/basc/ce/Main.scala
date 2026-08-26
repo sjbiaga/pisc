@@ -38,6 +38,8 @@ import scala.io.Source
 import scala.meta.*
 import dialects.Scala3
 
+import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
+
 import parser.{ BioAmbients, Calculus }
 import BioAmbients.Actions
 import Calculus.`(*)`
@@ -49,6 +51,7 @@ object Main extends helper.Main:
   val examples = "examples"
 
   def main(args: Array[String]): Unit =
+    var A: Host = host"localhost"
     var P = Int.MaxValue
     var H = 0
     var T = 123456
@@ -62,7 +65,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.ce, in, P, H, T, E, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.ce, in, A.toString, P, H, T, E, S)
 
       try
         source = Source.fromFile(s"$examples/basc/$in")
@@ -115,11 +118,15 @@ object Main extends helper.Main:
         if source ne null then source.close()
 
     args.foreach {
+      case "-A" => A = host"localhost"
       case "-P" => P = Int.MaxValue
       case "-H" => H = 0
       case "-T" => T = 123456
       case "-E" => E = true
       case "-S" => S = false
+      case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
+                                                     .orElse(Hostname.fromString(it.substring(2)))
+                                                     .getOrElse(host"localhost")
       case it if it.startsWith("-P") => P = it.substring(2).toInt
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt

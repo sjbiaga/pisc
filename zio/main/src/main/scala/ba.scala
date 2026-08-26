@@ -163,6 +163,8 @@ package object sΠ:
     */
   object τ:
 
+    private val `new {}` = new {}
+
     def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -171,7 +173,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> `π-τ`), (new {}, None, rate)))
+        _        <- /.offer(^ -> key -> ((promise, `)(` -> `π-τ`), (`new {}`, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,

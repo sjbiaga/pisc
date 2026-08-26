@@ -40,7 +40,7 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[Option[(Long, ((Long, Long), (Long, Double)), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+  type - = Queue[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
 
 
   private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double, ambient: (String, (String, String))): String => UIO[Unit] =
@@ -81,10 +81,10 @@ package object `Π-dump`:
       _ <- h match
              case Some(_) if `π-traces` eq null =>
                dump
-             case Some((no, ((s1, s2), (e, c)), (k1, k2), (delay, duration), (l1, l2))) =>
+             case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
                for
-                 _ <- record(no, c, s1, e, delay, duration, l1)(k1)
-                 _ <- record(no, c, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
+                 _ <- record(no, cl, s1, e, delay, duration, l1)(k1)
+                 _ <- record(no, cl, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
                  _ <- dump
                yield
                  ()

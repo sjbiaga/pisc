@@ -35,7 +35,7 @@ package object `Π-http4s`:
   import `Π-loop`.Feedback
 
 
-  def http4s(_batch: Boolean, _started: Ref[IO, Long], _feedback: Feedback): Resource[IO, Server] =
+  def http4s(_address: String, _batch: Boolean, _started: Ref[IO, Long], _feedback: Feedback): Resource[IO, Server] =
     Resource.pure[IO, Server](null)
 
   def http4s(_server: Server): Resource[IO, Unit] =

@@ -163,6 +163,8 @@ package object sΠ:
     */
   object τ:
 
+    private val `new {}` = new {}
+
     object `(!)`:
 
       object `(+)`:
@@ -185,7 +187,7 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (new {}, None, rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (`new {}`, None, rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
@@ -249,7 +251,7 @@ package object sΠ:
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (new {}, None, rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`), (`new {}`, None, rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
@@ -305,7 +307,7 @@ package object sΠ:
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`), (new {}, None, rate))))
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`), (`new {}`, None, rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -336,6 +338,7 @@ package object sΠ:
                 (using %, /)
                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
       apply(rate, pace)(key, `)(`).tap(_ => exec(code))
+
 
   /**
     * names and values
