@@ -57,13 +57,12 @@ package object `Π-http`:
       }
 
 
-  case class Parameters(address: Option[String],
-                        parallelism: Option[Int],
+  case class Parameters(parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
-      `Π-Parameters`(address.getOrElse(default.address),
+      `Π-Parameters`(default.address,
                      parallelism.getOrElse(default.parallelism),
                      threshold.getOrElse(default.threshold),
                      timeout.getOrElse(default.timeout),
@@ -71,8 +70,7 @@ package object `Π-http`:
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
-      Parameters(Some(parameters.address),
-                 Some(parameters.parallelism),
+      Parameters(Some(parameters.parallelism),
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit))
@@ -95,53 +93,68 @@ package object `Π-http`:
 
     def apply(feedback: Feedback) = Routes(
       Method.GET / "feedback" / "pause" -> handler(
-        feedback.pauseRP.get.flatMap(_.isDone.negate).map(_.toString).map(Response.text)
+        feedback.pauseRP_stopR_exitRP.get.flatMap(_._1._1.isDone.negate).map(_.toString).map(Response.text)
       ),
       Method.GET / "feedback" / "traces" -> handler(
         feedback.tracesR.get.map(_.toString).map(Response.text)
       ),
       Method.GET / "feedback" / "stop" -> handler(
-        feedback.stopR.get.map(_.toString).map(Response.text)
+        feedback.pauseRP_stopR_exitRP.get.map(_._1._2.toString).map(Response.text)
       ),
       Method.GET / "feedback" / "exit" -> handler(
-        feedback.exitRP.get.flatMap(_.isDone).map(_.toString).map(Response.text)
+        feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.isDone).map(_.toString).map(Response.text)
       ),
-      Method.PUT / "feedback" / "pause" / boolean("it") -> handler { (it: Boolean, _: Request) =>
-        if it
-        then
-          feedback.pauseRP.get.flatMap(_.isDone.negate).flatMap {
-            if _
+      Method.PUT / "feedback" / "pause" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
+        feedback.pauseRP_stopR_exitRP
+          .modifyZIO { case ((pauseP, stop), exitP) =>
+            if stop
             then
-              ZIO.succeed(Response.ok)
+              ZIO.succeed((if it then Response.error(Status.Conflict) else Response.ok) -> (pauseP -> stop -> exitP))
+            else if it
+            then
+              pauseP.isDone.negate
+                .flatMap {
+                  if _
+                  then
+                    ZIO.succeed(Response.ok -> (pauseP -> stop -> exitP))
+                  else
+                    Promise.make[Nothing, Unit].map { pauseP => Response.ok -> (pauseP -> stop -> exitP) }
+                }
             else
-              Promise.make[Nothing, Unit].flatMap(feedback.pauseRP.set).as(Response.ok)
+              pauseP.succeed(()).as(Response.ok -> (pauseP -> stop -> exitP))
           }
-        else
-          feedback.pauseRP.get.flatMap(_.succeed(())).as(Response.ok)
       },
-      Method.PUT / "feedback" / "traces" / boolean("it") -> handler { (it: Boolean, _: Request) =>
+      Method.PUT / "feedback" / "traces" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
         feedback.tracesR.set(it).as(Response.ok)
       },
-      Method.PUT / "feedback" / "stop" / boolean("it") -> handler { (it: Boolean, _: Request) =>
-        feedback.stopR.get.flatMap {
-          if _
-          then
-            ZIO.succeed(Response.ok)
-          else
-            feedback.stopR.set(it).as(Response.ok)
-        }
-      },
-      Method.PUT / "feedback" / "exit" / boolean("it") -> handler { (it: Boolean, _: Request) =>
-        if it
-        then
-          feedback.exitRP.get.flatMap(_.succeed(())).as(Response.ok)
-        else
-          feedback.exitRP.get.flatMap(_.isDone).flatMap {
-            if _
+      Method.PUT / "feedback" / "stop" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
+        feedback.pauseRP_stopR_exitRP
+          .modifyZIO { case ((pauseP, stop), exitP) =>
+            if stop
             then
-              Promise.make[Nothing, Unit].flatMap(feedback.exitRP.set).as(Response.ok)
+              ZIO.succeed((if it then Response.ok else Response.error(Status.Conflict)) -> (pauseP -> stop -> exitP))
             else
-              ZIO.succeed(Response.ok)
+              pauseP.succeed(()).as(Response.ok -> (pauseP -> it -> exitP))
+          }
+      },
+      Method.PUT / "feedback" / "exit" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
+        feedback.pauseRP_stopR_exitRP
+          .modifyZIO { case ((pauseP, stop), exitP) =>
+            if it
+            then
+              exitP.succeed(()).as(Response.ok -> (pauseP -> stop -> exitP))
+            else if stop
+            then
+              ZIO.succeed(Response.error(Status.Conflict) -> (pauseP -> stop -> exitP))
+            else
+              exitP.isDone.negate
+                .flatMap {
+                  if _
+                  then
+                    ZIO.succeed(Response.ok -> (pauseP -> stop -> exitP))
+                  else
+                    Promise.make[Nothing, Unit].map { exitP => Response.ok -> (pauseP -> stop -> exitP) }
+                }
           }
       }
     )
@@ -179,9 +192,7 @@ package object `Π-http`:
                 ZIO.succeed(Response.badRequest("attempt to alter the `started' read-only counter"))
               case State(_, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
-              case State(Parameters(Some(_), _, _, _, _), _, _, _, _, _, _) =>
-                ZIO.succeed(Response.badRequest("attempt to change the `address' read-only parameter"))
-              case State(Parameters(_, _, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+              case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
                 ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(parameters, _, _, _, _, _, _) =>
                 feedback.paramsR.get.flatMap { default =>
@@ -213,12 +224,12 @@ package object `Π-http`:
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
 
-  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
+  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)(main: UIO[ExitCode]): URIO[Client & Server & Scope, ExitCode] =
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> queue
-        case Kafka(topic) => "kafka" -> topic
-        case RabbitMQ(queue) => "rabbitmq" -> queue
+        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
+        case Kafka(topic) => "kafka" -> s"topic_$topic"
+        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
         case _ => null
       }
     } match
@@ -234,28 +245,29 @@ package object `Π-http`:
             Name = serviceName,
             Address = host,
             Port = port,
-            Tags = List(tag, "zio_emitter"),
+            Tags = List(tag, name, "zio_emitter"),
             Check = ConsulCheck(
               HTTP = s"http://$host:$port/health",
               Interval = "10s",
               Timeout = "2s"
             )
           )
-          cons <- Client
-                    .batched(Request.put(consulBase / "service" / "register", Body.from(registrationPayload)))
-                    .either
-                    .flatMap {
-                      case Left(err)   =>
-                        ZIO.debug(s"🛑 Error during Consul setup (on port $port): ${err.getMessage}").as(false)
-                      case Right(resp) =>
-                        if resp.status.isError
-                        then
-                          ZIO.debug(s"⚠ Failed to register '$serviceId' to Consul on port $port.").as(false)
-                        else
-                          ZIO.debug(s"✅ Successfully registered '$serviceId' to Consul on port $port.").as(true)
-                    }
-          code <- body
-          _    <- ( if cons
+          code <- ZIO.acquireReleaseWith {
+                    Client
+                      .batched(Request.put(consulBase / "service" / "register", Body.from(registrationPayload)))
+                      .either
+                      .flatMap {
+                        case Left(err)   =>
+                          ZIO.debug(s"🛑 Error during Consul setup (on port $port): ${err.getMessage}").as(false)
+                        case Right(resp) =>
+                          if resp.status.isError
+                          then
+                            ZIO.debug(s"⚠ Failed to register '$serviceId' to Consul on port $port.").as(false)
+                          else
+                            ZIO.debug(s"✅ Successfully registered '$serviceId' to Consul on port $port.").as(true)
+                      }
+                  } {
+                    if _
                     then
                       Client
                         .batched(Request.put(consulBase / "service" / "deregister" / serviceId, Body.empty))
@@ -272,8 +284,18 @@ package object `Π-http`:
                         }
                     else
                       ZIO.unit
-                  )
+                  } { _ =>
+                     main.exit.map {
+                       case Exit.Success(code)                  => code
+                       case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+                       case _                                   => ExitCode.failure
+                     }.uninterruptible.disconnect
+                  }
         yield
           code
       case _ =>
-        body
+        main.exit.map {
+          case Exit.Success(code)                  => code
+          case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+          case _                                   => ExitCode.failure
+        }.uninterruptible.disconnect

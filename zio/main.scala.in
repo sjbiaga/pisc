@@ -33,7 +33,7 @@ import _root_.zio.interop.catz.generic.*
 import _root_.zio.{ Promise, UIO, ZIO }
 
 
-object App extends _root_.zio.ZIOAppDefault:
+object App extends _root_.zio.ZIOApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
@@ -42,7 +42,7 @@ object App extends _root_.zio.ZIOAppDefault:
 
   import _root_.zio.http.{ Client, Server }
 
-  import _root_.zio.ZIOAppArgs
+  import _root_.zio.{ EnvironmentTag, Exit, Scope, URIO, ZIOAppArgs, ZLayer }
 
   import `Π-dump`.*
   import `Π-http`.http
@@ -57,31 +57,33 @@ object App extends _root_.zio.ZIOAppDefault:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], feedback: Feedback)
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): URIO[Scope, ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
       l <- if parameters.threshold > 0
-           then loopʹ(parameters, started, batch, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else loop0(parameters, started, feedback)(using %, !, &, -, *, **)(π.`π-wand`).fork
-      _ <- poll(using %, /, \).fork
-      d <- dump(using %, !, -).fork
+           then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
+           else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, !, &, -, *, **)(π.`π-wand`) }.disconnect.fork
+      p <- poll(using %, /, \).uninterruptible.disconnect.fork
+      d <- dump(using %, !, -).uninterruptible.disconnect.fork
       x <- http(parameters.address, parameters.threshold > 0, started, feedback) {
              for
                ^ <- π.`π-uuid`
                _ <- π.`π-supervised`(π.Main(args*)(using ^)(using %, /, \))
+               _ <- /.offer(null)
                x <- !.await
-               _ <- l.join
-               _ <- d.join
+               _ <- l.join.exit
+               _ <- p.join.exit
+               _ <- d.join.exit
              yield
                x
-           }.provide(http(parameters.address), Server.live, Client.default).either
+           }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
 
-  override def run: ZIO[ZIOAppArgs, Nothing, Unit] =
+  override val bootstrap: ZLayer[ZIOAppArgs, Nothing, Scope with Feedback] =
     val a = if sys.Prop.StringProp(spicba).isSet
             then sys.Prop.StringProp(spicba).value
             else π.`π-parameters`.address
@@ -98,6 +100,35 @@ object App extends _root_.zio.ZIOAppDefault:
             then true
             else π.`π-parameters`.exit
     val params = `Π-Parameters`(a, p, h, t, e)
+    ZLayer.fromZIO {
+      for
+        paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
+        paramsR  <- Ref.make(params)
+        tracesR  <- Ref.make(true)
+        lastR    <- Ref.make(0L -> .0)
+        doneR    <- Ref.make(false)
+        ps_st_ex <- (Promise.make[Nothing, Unit].tap(_.succeed(())) <*> Promise.make[Nothing, Unit]).flatMap { (pauseP, exitP) => Ref.Synchronized.make(pauseP -> false -> exitP) }
+        _        <- ps_st_ex.get.flatMap(_._2.succeed(())).when(e)
+      yield
+        Feedback(paramsRP, paramsR, tracesR, lastR, ps_st_ex, doneR)
+    }.flatMap { feedbackEnv =>
+      ZLayer.scoped {
+        Scope.make.flatMap { scope =>
+          ZIO.acquireRelease(ZIO.succeed(scope))
+                            (feedbackEnv.get
+                               .pauseRP_stopR_exitRP
+                               .modifyZIO { case ((pauseP, _), exitP) =>
+                                 (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
+                               } *> _.close(Exit.unit))
+        }
+      } ++ ZLayer.fromZIOEnvironment(ZIO.succeed(feedbackEnv))
+    }
+
+  override type Environment = Scope with Feedback
+
+  override implicit val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
+
+  override def run: ZIO[ZIOAppArgs with Scope with Feedback, Nothing, Unit] =
     for
       args <- getArgs
       % <- Ref.Synchronized.make(Map[String, Int | +]())
@@ -110,18 +141,15 @@ object App extends _root_.zio.ZIOAppDefault:
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
-      pauseRP  <- Promise.make[Nothing, Unit].tap(_.succeed(())).flatMap(Ref.make)
-      paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
-      paramsR  <- Ref.make(params)
-      tracesR  <- Ref.make(true)
-      lastR    <- Ref.make(0L -> .0)
-      stopR    <- Ref.make(false)
-      doneR    <- Ref.make(false)
-      exitRP   <- Promise.make[Nothing, Unit].flatMap(Ref.make)
-      _        <- exitRP.get.flatMap(_.succeed(())).when(e)
-      feedback  = Feedback(pauseRP, paramsRP, paramsR, tracesR, lastR, stopR, doneR, exitRP)
+      f <- ZIO.service[Feedback]
+      p <- f.paramsR.get
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args.toList, params, n, b, feedback)(%, /, *, **, ^, -, !, &)
+      st = f
+        .pauseRP_stopR_exitRP
+        .modifyZIO { case ((pauseP, _), exitP) =>
+          (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
+        }
+      x <- run(args.toList, p, n, b, f)(%, /, *, **, ^, -, !, &).onInterrupt(st)
       _ <- exit(x)
     yield
       ()

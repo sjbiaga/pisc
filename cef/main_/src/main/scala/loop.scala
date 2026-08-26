@@ -81,14 +81,12 @@ package object `Π-loop`:
                                   timeout: Int,
                                   exit: Boolean)
 
-  final case class Feedback(pauseRD: Ref[IO, Deferred[IO, Unit]],
-                            paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
+  final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],
                             tracesR: Ref[IO, Boolean],
                             lastR: Ref[IO, (Long, Double)],
-                            stopR: Ref[IO, Boolean],
-                            doneR: Ref[IO, Boolean],
-                            exitRD: Ref[IO, Deferred[IO, Unit]])
+                            pauseRD_stopR_exitRD: AtomicCell[IO, ((Deferred[IO, Unit], Boolean), Deferred[IO, Unit])],
+                            doneR: Ref[IO, Boolean])
 
 
   given Order[(Int, List[List[((String, String), ++++)]])] = Order.fromLessThan(_._1 < _._1)
@@ -206,7 +204,7 @@ package object `Π-loop`:
            (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
-      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(IO.unit)
+      _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(parameters.threshold).timeoutTo(parameters.timeout.microseconds, IO.unit)
       m  =
         for
           (_, nel) <- **.take
@@ -215,7 +213,7 @@ package object `Π-loop`:
             then
               (started.get product batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.ifM(feedback.doneR.set(true) >> feedback.exitRD.get.flatMap(_.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
                 case _  =>
                   IO.pure(true)
               }
@@ -243,7 +241,7 @@ package object `Π-loop`:
                                                 yield
                                                   ()
                                               ).start
-                                        st <- feedback.stopR.get
+                                        st <- feedback.pauseRD_stopR_exitRD.get.map(_._1._2)
                                         _  <- ( if st
                                                 then
                                                   for
@@ -275,7 +273,7 @@ package object `Π-loop`:
         yield
           l
       l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-      _ <- feedback.pauseRD.get.flatMap(_.get)
+      _ <- feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
       _ <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
              case Some(params) =>
                feedback.paramsR.set(params) >>
@@ -297,11 +295,11 @@ package object `Π-loop`:
         then
           (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
             case 0L =>
-              IO.sleep(parameters.timeout.microseconds).race(**.take).flatMap {
-                case Right((_, nel)) =>
+              **.take.map(Some(_)).timeoutTo(parameters.timeout.microseconds, IO.none).flatMap {
+                case Some((_, nel)) =>
                   **.offer(-1 -> nel) >> IO.pure(true)
                 case _               =>
-                  canExit.ifM(feedback.doneR.set(true) >> feedback.exitRD.get.flatMap(_.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
               }
             case _  =>
               IO.pure(true)
@@ -315,7 +313,7 @@ package object `Π-loop`:
                                 IO.uncancelable { _ =>
                                   for
                                     cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                    io  = ( for
+                                    fb  = ( for
                                               _  <- cb.await
                                               _  <- enable(k1)
                                               _  <- enable(k2).unlessA(k1 == k2)
@@ -329,8 +327,8 @@ package object `Π-loop`:
                                               _  <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                             yield
                                               ()
-                                          )
-                                    st <- feedback.stopR.get
+                                          ).start
+                                    st <- feedback.pauseRD_stopR_exitRD.get.map(_._1._2)
                                     _  <- ( if st
                                             then
                                               for
@@ -345,7 +343,7 @@ package object `Π-loop`:
                                               for
                                                 _  <- sem.acquire
                                                 _  <- started.update(_ + 1)
-                                                fb <- io.start
+                                                fb <- fb
                                                 _  <- d1.complete(Some((delay, cb, fb, in)))
                                                 _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
                                                 _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
@@ -359,7 +357,7 @@ package object `Π-loop`:
                             }
             }
           } >> IO.pure(true)
-      _        <- feedback.pauseRD.get.flatMap(_.get)
+      _        <- feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
       _        <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
                     case Some(params) =>
                       feedback.paramsR.set(params) >>
@@ -379,9 +377,9 @@ package object `Π-loop`:
       _ <- d.tryGet.map(_ eq None).flatMap {
         if _
         then
-         \(
+          val ^ = h._1._1
+          \(
             %.update { m =>
-                       val ^ = h._1._1
                        val n = m(key).asInstanceOf[Int] - 1
                        ( if n == 0
                          then
@@ -392,10 +390,8 @@ package object `Π-loop`:
             }
           )
         else
-          %.update { m =>
-                     val ^ = h._1._1
-                     m + (^ + key -> (false, it))
-          }
+          val ^ = h._1._1
+          %.update(_ + (^ + key -> (false, it)))
       }
       _ <- IO.cede >> poll
     yield

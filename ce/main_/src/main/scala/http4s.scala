@@ -63,13 +63,12 @@ package object `Π-http4s`:
       }
 
 
-  case class Parameters(address: Option[String],
-                        parallelism: Option[Int],
+  case class Parameters(parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
-      `Π-Parameters`(address.getOrElse(default.address),
+      `Π-Parameters`(default.address,
                      parallelism.getOrElse(default.parallelism),
                      threshold.getOrElse(default.threshold),
                      timeout.getOrElse(default.timeout),
@@ -77,8 +76,7 @@ package object `Π-http4s`:
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
-      Parameters(Some(parameters.address),
-                 Some(parameters.parallelism),
+      Parameters(Some(parameters.parallelism),
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit))
@@ -103,38 +101,69 @@ package object `Π-http4s`:
   object FeedbackEndpoint extends Http4sDsl[IO]:
     def apply(feedback: Feedback) = HttpRoutes.of[IO] {
       case GET -> Root / "pause" =>
-        feedback.pauseRD.get.flatMap(_.tryGet).map(_ eq None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.tryGet).map(_ eq None).map(_.toString).flatMap(Ok(_))
 
       case GET -> Root / "traces" =>
         feedback.tracesR.get.map(_.toString).flatMap(Ok(_))
 
       case GET -> Root / "stop" =>
-        feedback.stopR.get.map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.map(_._1._2.toString).flatMap(Ok(_))
 
       case GET -> Root / "exit" =>
-        feedback.exitRD.get.flatMap(_.tryGet).map(_ ne None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.tryGet).map(_ ne None).map(_.toString).flatMap(Ok(_))
 
       case PUT -> Root / "pause" / BooleanVar(it) =>
-        if it
-        then
-          feedback.pauseRD.get.flatMap(_.tryGet).map(_ eq None)
-          .ifM(Ok(), IO.deferred[Unit].flatMap(feedback.pauseRD.set) >> Ok())
-        else
-          feedback.pauseRD.get.flatMap(_.complete(())) >> Ok()
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if stop
+            then
+              (if it then Conflict() else Ok()).map(pauseD -> stop -> exitD -> _)
+            else if it
+            then
+              pauseD.tryGet.map(_ eq None)
+                .flatMap {
+                  if _
+                  then
+                    Ok().map(pauseD -> stop -> exitD -> _)
+                  else
+                    (IO.deferred[Unit] product Ok()).map(_ -> stop -> exitD -> _)
+                }
+            else
+              (pauseD.complete(()) >> Ok()).map(pauseD -> stop -> exitD -> _)
+          }
 
       case PUT -> Root / "traces" / BooleanVar(it) =>
         feedback.tracesR.set(it) >> Ok()
 
       case PUT -> Root / "stop" / BooleanVar(it) =>
-        feedback.stopR.get.ifM(Ok(), feedback.stopR.set(it) >> Ok())
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if stop
+            then
+              (if it then Ok() else Conflict()).map(pauseD -> stop -> exitD -> _)
+            else
+              (pauseD.complete(()) >> Ok()).map(pauseD -> it -> exitD -> _)
+          }
 
       case PUT -> Root / "exit" / BooleanVar(it) =>
-        if it
-        then
-          feedback.exitRD.get.flatMap(_.complete(())) >> Ok()
-        else
-          feedback.exitRD.get.flatMap(_.tryGet).map(_ eq None)
-            .ifM(Ok(), IO.deferred[Unit].flatMap(feedback.exitRD.set) >> Ok())
+        feedback.pauseRD_stopR_exitRD
+          .evalModify { case ((pauseD, stop), exitD) =>
+            if it
+            then
+              (exitD.complete(()) >> Ok()).map(pauseD -> stop -> exitD -> _)
+            else if stop
+            then
+              Conflict().map(pauseD -> stop -> exitD -> _)
+            else
+              exitD.tryGet.map(_ eq None)
+                .flatMap {
+                  if _
+                  then
+                    Ok().map(pauseD -> stop -> exitD -> _)
+                  else
+                    (IO.deferred[Unit] product Ok()).map(pauseD -> stop -> _ -> _)
+                }
+          }
     }
 
 
@@ -167,9 +196,7 @@ package object `Π-http4s`:
             BadRequest("attempt to alter the `started' read-only counter")
           case State(_, _, _, _, _, _, Some(_))    =>
             BadRequest("attempt to alter the `done' read-only flag")
-          case State(Parameters(Some(_), _, _, _, _), _, _, _, _, _, _) =>
-            BadRequest(s"attempt to change the `address' read-only parameter")
-          case State(Parameters(_, _, Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+          case State(Parameters(_,Some(threshold), _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
             BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
           case State(parameters, _, _, _, _, _, _) =>
             feedback.paramsR.get.flatMap { default =>
@@ -214,9 +241,9 @@ package object `Π-http4s`:
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> queue
-        case Kafka(topic) => "kafka" -> topic
-        case RabbitMQ(queue) => "rabbitmq" -> queue
+        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
+        case Kafka(topic) => "kafka" -> s"topic_$topic"
+        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
         case _ => null
       }
     } match

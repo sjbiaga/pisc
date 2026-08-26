@@ -38,6 +38,7 @@ object App extends _root_.cats.effect.IOApp:
   import _root_.cats.syntax.applicative.*
 
   import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
 
   import `Π-dump`.*
@@ -64,16 +65,18 @@ object App extends _root_.cats.effect.IOApp:
              else loop0(parameters, started, feedback)(using %, !, &, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
+        ^ <- Resource.eval(π.`π-uuid`)
+        _ <- π.Main(args*)(using ^)(using %, /, \).background
         _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
       yield
         ()
     ).use { _ =>
-      for
-        ^ <- π.`π-uuid`
-        _ <- π.Main(args*)(using ^)(using %, /, \)
-        x <- !.get
-      yield
-        x
+      val stop = feedback
+        .pauseRD_stopR_exitRD
+        .evalModify { case ((pauseD, _), exitD) =>
+          (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
+        }
+      !.get.onCancel(stop.void).guarantee(!.get.void)
     }
 
   override def run(args: List[String]): IO[ExitCode] =
@@ -109,11 +112,10 @@ object App extends _root_.cats.effect.IOApp:
       paramsR  <- IO.ref(params)
       tracesR  <- IO.ref(true)
       lastR    <- IO.ref(0L -> .0)
-      stopR    <- IO.ref(false)
+      ps_st_ex <- (IO.deferred[Unit].flatTap(_.complete(())) product IO.deferred[Unit]).flatMap { (pauseD, exitD) => AtomicCell[IO].of(pauseD -> false -> exitD) }
+      _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
       doneR    <- IO.ref(false)
-      exitRD   <- IO.deferred[Unit].flatMap(IO.ref)
-      _        <- exitRD.get.flatMap(_.complete(())).whenA(e)
-      feedback  = Feedback(pauseRD, paramsRD, paramsR, tracesR, lastR, stopR, doneR, exitRD)
+      feedback  = Feedback(paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
       _ <- `π-enable`(π.`π-main`)(using %)
       x <- run(args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &)
     yield

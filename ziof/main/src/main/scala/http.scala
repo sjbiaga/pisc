@@ -26,8 +26,8 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import zio.*
-import zio.http.*
+import zio.{ Cause, Exit, ExitCode, Ref, Scope, UIO, URIO, ZLayer }
+import zio.http.{ Client, Server }
 
 
 package object `Π-http`:
@@ -38,6 +38,9 @@ package object `Π-http`:
   def http(_address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default)
 
-  def http(_address: String, _batch: Boolean, _started: Ref[Long], _feedback: Feedback)(body: UIO[ExitCode]): URIO[Client & Server, ExitCode] =
-    body
-
+  def http(_address: String, _batch: Boolean, _started: Ref[Long], feedback: Feedback)(main: UIO[ExitCode]): URIO[Client & Server & Scope, ExitCode] =
+    main.exit.map {
+      case Exit.Success(code)                  => code
+      case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+      case _                                   => ExitCode.failure
+    }.uninterruptible.disconnect

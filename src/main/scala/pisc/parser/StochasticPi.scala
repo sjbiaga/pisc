@@ -118,9 +118,9 @@ abstract class StochasticPi extends Expression:
                                  }
 
   def rate: Parser[Any] = "∞" ^^ { _ => -1L } |
-                          naturalNumber<~"∞" ^^ { -_.toLong.abs } |
+                          naturalNumber<~"∞" ^^ { -_.toLong } |
                           "⊤" ^^ { _ => 1L } |
-                          naturalNumber<~"⊤" ^^ { _.toLong.abs } |
+                          naturalNumber<~"⊤" ^^ { _.toLong } |
                           floatingPointNumber ^^ { BigDecimal(_) } |
                           super.ident ^^ { Symbol(_) } |
                           expression ^^ {

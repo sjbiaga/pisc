@@ -147,7 +147,7 @@ function spi_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1 \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.2 \
+                  --dep software.amazon.awssdk:sqs:2.54.3 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
