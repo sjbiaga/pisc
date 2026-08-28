@@ -292,7 +292,7 @@ package object `Π-http`:
                        case Exit.Success(code)                  => code
                        case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
                        case _                                   => ExitCode.failure
-                     }.uninterruptible.disconnect
+                     }
                   }
         yield
           code
@@ -301,4 +301,4 @@ package object `Π-http`:
           case Exit.Success(code)                  => code
           case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
           case _                                   => ExitCode.failure
-        }.uninterruptible.disconnect
+        }

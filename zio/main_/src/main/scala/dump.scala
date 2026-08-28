@@ -69,7 +69,9 @@ package object `Π-dump`:
           && ks.forall(_.charAt(36) == '!')
           then ExitCode.success
           else ExitCode.failure
-      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[+]._1._1.succeed(None))) *>
+      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.succeed(None))) *>
+      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => ZIO.unit
+                                                                                          case it => it.get.flatMap(_.succeed(None).unit) })) *>
       !.succeed(ec).unit
     }
 
@@ -83,7 +85,7 @@ package object `Π-dump`:
                for
                  _ <- record(no, cl, ts1, ts, delay, duration, l1)(k1)
                  _ <- record(no, cl, ts2, ts, delay, duration, l2)(k2).unless(k1 == k2)
-                 _ <- dump
+                 _ <- ZIO.yieldNow *> dump
                yield
                  ()
              case _ =>

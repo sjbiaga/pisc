@@ -32,7 +32,7 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.zio.{ Clock, Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Clock, Duration, Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
 
@@ -161,9 +161,7 @@ package object sΠ:
   /**
     * silent transition
     */
-  object τ:
-
-    private val `new {}` = new {}
+  object τ extends τ:
 
     def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])
              (using % : %, / : /)
@@ -173,8 +171,8 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -190,13 +188,45 @@ package object sΠ:
       yield
         delay
 
+    /**
+      * linear replication guard
+      */
+    def apply(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`])(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.silent(false)(parallelism, rate)(key, `)(`, `π-τ`)(body)
+
+    /**
+      * linear replication guard w/ pace
+      */
+    def apply(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`])(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.silent(false)(pace, parallelism, rate)(key, `)(`, `π-τ`)(body)
+
+    /**
+      * linear replication guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.silent(true)(parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
+    /**
+      * linear replication guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
 
   /**
     * names and values
     */
-  final implicit class `()`(private val name: Any) extends AnyVal:
+  final implicit class `()`(private[sΠ] val name: Any) extends AnyVal with Macros:
 
-    private def map = `()`[Map[Int, {}]]
+    protected def map = `()`[Map[Int, {}]]
 
     def ====(that: `()`) =
       try
@@ -206,6 +236,210 @@ package object sΠ:
 
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    // LINEAR REPLICATION ///////////////////////////////////////////////// π //
+
+    /////////////////////////////////////////////////////////////////// BOUND //
+
+    /**
+      * linear replication bound output guard
+      */
+    def apply(_nu: "ν")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output("ν")(false)(parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication bound output guard w/ pace
+      */
+    def apply(_nu: "ν")(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output("ν")(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication bound output guard w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function1`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output("ν")(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear replication bound output guard w/ pace w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function1`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output("ν")(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    //////////////////////////////////////////////////////////////// CONSTANT //
+
+    /**
+      * linear constant replication output guard
+      */
+    def apply(_f: false)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output(false)(parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear constant replication output guard w/ pace
+      */
+    def apply(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                        (using %, /, \)
+                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output(false)(pace, parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear constant replication output guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear constant replication output guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)
+                       (using %, /, \)
+                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.output(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    //////////////////////////////////////////////////////////////// VARIABLE //
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
+     else
+       apply("*")(false)(parallelism, rate, ZIO.attempt(value))(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
+     else
+       apply("*")(false)(pace, parallelism, rate, ZIO.attempt(value))(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)(using DummyImplicit)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
+     else
+       apply("*")(true)(parallelism, rate, ZIO.attempt(value))(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)(using DummyImplicit)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+     if classTag[S].runtimeClass eq getClass
+     then
+       apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
+     else
+       apply("*")(true)(pace, parallelism, rate, ZIO.attempt(value))(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(parallelism, rate, _)(key, `)(`, dir)(body)))
+      else
+        super.output("*")(false)(parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function0`)
+                                              (using %, /, \)
+                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(pace, parallelism, rate, _)(key, `)(`, dir)(body)))
+      else
+        super.output("*")(false)(pace, parallelism, rate, value)(key, `)(`, dir)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(parallelism, rate, _)(key, `)(`, dir)(code)(body)))
+      else
+        super.output("*")(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: => Task[Any])(body: `Π-Function0`)
+                                             (using %, /, \)
+                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(pace, parallelism, rate, _)(key, `)(`, dir)(code)(body)))
+      else
+        super.output("*")(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
+
+    /////////////////////////////////////////////////////////////////// INPUT //
+
+    /**
+      * linear replication input guard
+      */
+    def apply(_n: Null)(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.input(false)(parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication input guard w/ pace
+      */
+    def apply(_n: Null)(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(body: `Π-Function1`)
+                                  (using %, /, \)
+                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.input(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
+
+    /**
+      * linear replication input guard w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: T => Task[T])(body: `Π-Function1`)
+                                    (using %, /, \)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.input(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    /**
+      * linear replication input guard w/ pace w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], dir: `π-$`)(code: T => Task[T])(body: `Π-Function1`)
+                                    (using %, /, \)
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.input(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
+
+    // π ///////////////////////////////////////////////// linear replication //
 
     /**
       * variable negative prefix i.e. variable output
@@ -268,8 +502,8 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -297,8 +531,8 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -328,8 +562,8 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- promise.await
         (name,
          delay)  <- ( if opt eq None
@@ -359,8 +593,8 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- promise.await
         (name,
          delay)  <- ( if opt eq None
@@ -378,6 +612,42 @@ package object sΠ:
       yield
         new `()`(name) -> delay
 
+    // LINEAR REPLICATION ///////////////////////////////////////////////// ζ //
+
+    /**
+      * linear capability replication guard
+      */
+    def apply(_z: "ζ")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.capability(false)(parallelism, rate)(key, `)(`, cap)(body)
+
+    /**
+      * linear capability constant replication guard w/ pace
+      */
+    def apply(_z: "ζ")(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
+                                 (using %, /, \)
+                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.capability(false)(pace, parallelism, rate)(key, `)(`, cap)(body)
+
+    /**
+      * linear capability replication guard w/ code
+      */
+    def apply(_z: "ζ")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(code: => Task[Any])(body: `Π-Function0`)
+                                (using %, /, \)
+                                (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.capability(true)(parallelism, rate)(key, `)(`, cap)(code)(body)
+
+    /**
+      * linear capability replication guard w/ pace w/ code
+      */
+    def apply(_z: "ζ")(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String, `)(`: FiberRef[`)(`], cap: `π-ζ`)(code: => Task[Any])(body: `Π-Function0`)
+                                (using %, /, \)
+                                (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+      super.capability(true)(pace, parallelism, rate)(key, `)(`, cap)(code)(body)
+
+    // ζ ///////////////////////////////////////////////// linear replication //
+
     /**
       * capability prefix
       */
@@ -390,8 +660,8 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -419,8 +689,8 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime
-        _        <- /.offer(^ -> key -> ((promise, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then

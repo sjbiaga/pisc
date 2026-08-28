@@ -206,7 +206,7 @@ package object sΠ:
     /**
       * linear replication guard w/ code
       */
-    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
@@ -214,7 +214,7 @@ package object sΠ:
     /**
       * linear replication guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
@@ -293,7 +293,7 @@ package object sΠ:
     /**
       * linear constant replication output guard w/ code
       */
-    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.output(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
@@ -301,7 +301,7 @@ package object sΠ:
     /**
       * linear constant replication output guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.output(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
@@ -335,7 +335,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
@@ -347,7 +347,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
@@ -383,7 +383,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
@@ -395,7 +395,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: IO[Any])(body: `Π-Function0`)
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
@@ -577,7 +577,7 @@ package object sΠ:
     /**
       * linear capability replication guard w/ code
       */
-    def apply(_z: "ζ")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_z: "ζ")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])(body: `Π-Function0`)
                                 (using %, /, \)
                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.capability(true)(parallelism, rate)(key, `)(`, cap)(code)(body)
@@ -585,7 +585,7 @@ package object sΠ:
     /**
       * linear capability replication guard w/ pace w/ code
       */
-    def apply(_z: "ζ")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_z: "ζ")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])(body: `Π-Function0`)
                                 (using %, /, \)
                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.capability(true)(pace, parallelism, rate)(key, `)(`, cap)(code)(body)
