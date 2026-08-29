@@ -344,29 +344,23 @@ package object `Π-loop`:
         ()
 
     def poll(using % : %[F], / : /[F], \ : \[F]): F[Unit] =
-      for
-        h <- /.take
-        ((_, key), it) = h
-        (((d, _), _), _) = it
-        _ <- d.tryGet.map(_ eq None).flatMap {
-          if _
-          then
-            val ^ = h._1._1
-            \(
-              %.update { m =>
-                         val n = m(key).asInstanceOf[Int] - 1
-                         ( if n == 0
-                           then
-                             m - key
-                           else
-                             m + (key -> n)
-                         ) + (^ + key -> (true, it))
-              }
-            )
-          else
-            val ^ = h._1._1
-            %.update(_ + (^ + key -> (false, it)))
-        }
-        _ <- Temporal[F].cede >> poll
-      yield
-        ()
+      /.take.flatMap {
+        case ((^ @ (_: String), key), it @ (((d, _), _), _)) =>
+          d.tryGet.map(_ eq None).flatMap {
+            if _
+            then
+              \(
+                %.update { m =>
+                           val n = m(key).asInstanceOf[Int] - 1
+                           ( if n == 0
+                             then
+                               m - key
+                             else
+                               m + (key -> n)
+                           ) + (^ + key -> (true, it))
+                }
+              )
+            else
+              %.update(_ + (^ + key -> (false, it)))
+          } >> Temporal[F].cede >> poll
+      }

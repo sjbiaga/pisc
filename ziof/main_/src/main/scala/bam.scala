@@ -33,7 +33,7 @@ package sΠ:
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.generic.*
 
-  import _root_.zio.{ Clock, Duration, Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Clock, Duration, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
 
   import `Π-loop`.{ <>, +, %, /, \ }

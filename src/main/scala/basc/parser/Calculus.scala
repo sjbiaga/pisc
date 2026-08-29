@@ -53,7 +53,12 @@ abstract class Calculus extends BioAmbients:
         given Int = 1
         "="~> choice ^^ {
           case (_sum, _free) =>
-            val sum = _sum.flatten
+            val sum: + =
+              _sum.flatten match {
+                case ∅() if bind match { case `(*)`("Main") => true case _ => false } =>
+                  `+`(-1, ∥(-1, `.`(∅(), τ(Some(-1L), None)(sπ_id))))
+                case it => it
+              }
             val free = _free ++ sum.capitals
             if (free &~ bound).nonEmpty
             then
@@ -756,7 +761,7 @@ object Calculus:
 
       ast match
 
-        case +(_, ∥(_, `.`(!(_, _, Some(_), _), _*))) =>
+        case +(_, ∥(_, `.`(!(_, _, Some(_), _), it*))) if !it.exists { case Act(it) => it } =>
           ast.label("+0/-1")
 
         case _ =>
