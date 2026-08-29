@@ -28,10 +28,10 @@ object CommandSPin {
     val A = Seq("127.0.0.1", "localhost").map("-A" + _)
     val F = Seq("cats.effect.IO", "zio.Task").map("-F" + _)
     val P = "-P" + Int.MaxValue
-    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-Etrue", "-T123456")),
-                   "-cef" -> (A ++ Seq(P, "-H0", "-Etrue", "-T123456")),
-                   "-zio" -> (A ++ Seq(P, "-H0", "-Etrue", "-T123456")),
-                   "-ziof" -> (A ++ Seq(P, "-H0", "-Etrue", "-T123456")),
+    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
+                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
+                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
+                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
                    "-fs2" -> (Seq(P, "-H0", "-T123456") ++ F),
                    "-zs" -> Seq(P, "-H0", "-T123456"),
                    "-kk" -> (Seq(P) ++ (0 to 1).map("-O" + _))

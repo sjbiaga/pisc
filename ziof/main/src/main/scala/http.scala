@@ -26,21 +26,27 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import zio.{ Cause, Exit, ExitCode, Ref, Scope, UIO, URIO, ZLayer }
+import zio.{ Cause, Exit, ExitCode, Fiber, Ref, Scope, UIO, URIO, ZLayer }
 import zio.http.{ Client, Server }
 
 
 package object `Π-http`:
 
-  import `Π-loop`.Feedback
+  import `Π-loop`.{ !, Feedback }
 
 
   def http(_address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default)
 
-  def http(_address: String, _batch: Boolean, _started: Ref[Long], feedback: Feedback)(main: UIO[ExitCode]): URIO[Client & Server & Scope, ExitCode] =
-    main.exit.map {
-      case Exit.Success(code)                  => code
-      case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
-      case _                                   => ExitCode.failure
-    }.uninterruptible.disconnect
+  def http(_address: String, _batch: Boolean, _started: Ref[Long], feedback: Feedback)
+          (using ! : !)
+          (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
+    for
+      _ <- main
+      x <- !.await.exit
+    yield
+      x match {
+        case Exit.Success(code)                  => code
+        case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+        case _                                   => ExitCode.failure
+      }

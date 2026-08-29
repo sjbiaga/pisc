@@ -25,7 +25,7 @@ function spi() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
-            local srcs=\ ../${emit}/http.scala
+            local srcs=\ ../${emit}/spim.scala\ ../${emit}/http.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
@@ -61,7 +61,7 @@ function spi() {
     done
     set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala ../${emit}/traces.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC6 \
+                  -q -O -nowarn -S 3.10.0-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -102,7 +102,7 @@ function spi_() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.4
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
-            local srcs=\ ../${emit}/http_.scala
+            local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http_.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
@@ -138,7 +138,7 @@ function spi_() {
     done
     set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala ../${emit}/traces_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC6 \
+                  -q -O -nowarn -S 3.10.0-RC1 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -147,7 +147,7 @@ function spi_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1 \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.3 \
+                  --dep software.amazon.awssdk:sqs:2.54.6 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \

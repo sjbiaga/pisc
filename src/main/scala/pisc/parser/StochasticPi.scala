@@ -149,7 +149,11 @@ abstract class StochasticPi extends Expression:
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
-    opt( naturalNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt) }
+    opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
+      case Some(_: String)  => Some(BigInt(0))
+      case Some(it: BigInt) => Some(it)
+      case _                => None
+    } ^^ { _.fold(-1)(_.toInt) }
 
   def pace: Parser[(Long, String)] =
     naturalNumber ~ opt( ","~> ident ) ^^ {
@@ -285,8 +289,8 @@ object StochasticPi:
                                           else _ != 1)
     case ce extends Emitter(true)
     case cef extends Emitter(true)
-    case zio extends Emitter()
-    case ziof extends Emitter()
+    case zio extends Emitter(true)
+    case ziof extends Emitter(true)
     case fs2 extends Emitter(true)
     case zs extends Emitter(true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
@@ -428,7 +432,7 @@ object StochasticPi:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(-Long.MaxValue), None)(sπ_id)
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(-1L), None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ

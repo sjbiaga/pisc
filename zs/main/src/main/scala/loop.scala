@@ -55,7 +55,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[(Long, Double)]
+  type &| = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -208,7 +208,7 @@ package object `Π-loop`:
     }
 
   def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
       _ <- batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(parameters.threshold-1).timeout(parameters.timeout.microseconds)
@@ -261,12 +261,12 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- loopʹ(parameters, started, batch).when(l)
+      _ <- ZIO.yieldNow *> loopʹ(parameters, started, batch).when(l)
     yield
       ()
 
   def loop0(parameters: `Π-Parameters`, started: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
       (_, nel) <- **.take.commit
@@ -318,36 +318,28 @@ package object `Π-loop`:
               }
             }
           } *> ZIO.succeed(true)
-      _        <- loop0(parameters, started).when(l)
+      _        <- ZIO.yieldNow *> loop0(parameters, started).when(l)
     yield
       ()
 
   def poll(using % : %, / : /, \ : \): UIO[Unit] =
-    for
-      h <- /.take
-      ((_, key), it) = h
-      ((p, _), _) = it
-      _ <- p.isDone.negate.flatMap {
-        if _
-        then
-         \(
-            %.update { m =>
-                       val ^ = h._1._1
-                       val n = m(key).asInstanceOf[Int] - 1
-                       ( if n == 0
-                         then
-                           m - key
-                         else
-                           m + (key -> n)
-                       ) + (^ + key -> (true, it))
-            }
-          )
-        else
-          %.update { m =>
-                     val ^ = h._1._1
-                     m + (^ + key -> (false, it))
-          }
-      }
-      _ <- poll
-    yield
-      ()
+    /.take.flatMap {
+      case ((^ @ (_: String), key), it @ ((p, _), _)) =>
+        p.isDone.negate.flatMap {
+          if _
+          then
+            \(
+              %.update { m =>
+                         val n = m(key).asInstanceOf[Int] - 1
+                         ( if n == 0
+                           then
+                             m - key
+                           else
+                             m + (key -> n)
+                         ) + (^ + key -> (true, it))
+              }
+            )
+          else
+            %.update(_ + (^ + key -> (false, it)))
+        } *> ZIO.yieldNow *> poll
+    }

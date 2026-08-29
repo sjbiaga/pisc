@@ -30,7 +30,6 @@
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.stream.ZStream
 import _root_.zio.{ Promise, ZIO, UIO }
 
 
@@ -53,15 +52,15 @@ object App extends _root_.zio.ZIOAppDefault:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): UIO[ExitCode] =
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|): UIO[ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
     for
       l <- if parameters.threshold > 0
-           then loopʹ(parameters, started, batch)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else loop0(parameters, started)(using %, !, &, -, *, **)(π.`π-wand`).fork
+           then loopʹ(parameters, started, batch)(using %, !, &|, -, *, **, ^)(π.`π-wand`).fork
+           else loop0(parameters, started)(using %, !, &|, -, *, **)(π.`π-wand`).fork
       _ <- poll(using %, /, \).fork
       d <- dump(using %, !, -).fork
       ^ <- (π.`π-uuid`)
@@ -91,12 +90,12 @@ object App extends _root_.zio.ZIOAppDefault:
       ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
       - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- Promise.make[Nothing, ExitCode]
-      & <- Ref.make(0L -> .0)
+      &| <- Ref.make(0L -> .0)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args.toList, params, n, b)(%, /, *, **, ^, -, !, &)
+      x <- run(args.toList, params, n, b)(%, /, *, **, ^, -, !, &|)
       _ <- exit(x)
     yield
       ()
@@ -108,6 +107,7 @@ object π:
 
   import _root_.zio.{ durationLong, Random, Task, UIO }
   import _root_.zio.concurrent.CyclicBarrier
+  import _root_.zio.stream.ZStream
 
   import _root_.eu.timepit.refined.*
 

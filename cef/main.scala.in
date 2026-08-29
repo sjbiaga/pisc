@@ -46,7 +46,7 @@ object App extends _root_.cats.effect.IOApp:
   import `Π-loop`.*, `Π-loop`.given
 
 
-  private val spicba = "pisc.stochastic.communications.bind.address"
+  private val spicsa = "pisc.stochastic.communications.bind.address"
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
   private val spicsh = "pisc.stochastic.communications.batch.threshold"
   private val spicst = "pisc.stochastic.communications.timeout.microseconds"
@@ -54,20 +54,20 @@ object App extends _root_.cats.effect.IOApp:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &): IO[ExitCode] =
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|): IO[ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
+        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
         _ <- if parameters.threshold > 0
-             then loopʹ(parameters, started, batch, feedback)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
-             else loop0(parameters, started, feedback)(using %, !, &, -, *, **)(π.`π-wand`).background
+             then loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
+             else loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
         ^ <- Resource.eval(π.`π-uuid`)
         _ <- π.Main(args*)(using ^)(using %, /, \).background
-        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
       yield
         ()
     ).use { _ =>
@@ -80,8 +80,8 @@ object App extends _root_.cats.effect.IOApp:
     }
 
   override def run(args: List[String]): IO[ExitCode] =
-    val a = if sys.Prop.StringProp(spicba).isSet
-            then sys.Prop.StringProp(spicba).value
+    val a = if sys.Prop.StringProp(spicsa).isSet
+            then sys.Prop.StringProp(spicsa).value
             else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
@@ -103,7 +103,7 @@ object App extends _root_.cats.effect.IOApp:
       ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
       - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
       ! <- IO.deferred[ExitCode]
-      & <- IO.ref(0L -> .0)
+      &| <- IO.ref(0L -> .0)
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       b <- IO.ref(0L)
@@ -117,7 +117,7 @@ object App extends _root_.cats.effect.IOApp:
       doneR    <- IO.ref(false)
       feedback  = Feedback(paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &)
+      x <- run(args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &|)
     yield
       x
 

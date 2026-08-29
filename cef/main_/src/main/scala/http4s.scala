@@ -29,7 +29,7 @@
 import _root_.cats.syntax.functor.*
 import _root_.cats.effect.{ IO, Ref, Resource }
 import _root_.com.comcast.ip4s.{ host, port, IpAddress, Hostname }
-import _root_.io.circe.generic.auto.*
+import _root_.io.circe.Codec
 import _root_.org.http4s.circe.CirceEntityCodec.*
 import _root_.org.http4s.dsl.Http4sDsl
 import _root_.org.http4s.HttpRoutes
@@ -45,7 +45,7 @@ package object `Π-http4s`:
   import Traces.*
 
 
-  enum Traces:
+  enum Traces derives Codec.AsObject:
     case ConsoleCSV
     case FileCSV(filename: String)
     case AmazonSQS(queue: String)
@@ -66,7 +66,7 @@ package object `Π-http4s`:
   case class Parameters(parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
-                        exit: Option[Boolean]):
+                        exit: Option[Boolean]) derives Codec.AsObject:
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
                      parallelism.getOrElse(default.parallelism),
@@ -88,7 +88,7 @@ package object `Π-http4s`:
                    clock: Option[Double],
                    idle: Option[Long],
                    started: Option[Long],
-                   done: Option[Boolean])
+                   done: Option[Boolean]) derives Codec.AsObject
 
 
   object BooleanVar:
@@ -172,13 +172,14 @@ package object `Π-http4s`:
     def apply(batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback) = HttpRoutes.of[IO] {
       case GET -> Root =>
         for
-          started       <- startedR.get
-          params        <- feedback.paramsR.get
-          (last, clock) <- feedback.lastR.get
-          idle          <- IO.monotonic.map(_.toNanos - last)
-          done          <- feedback.doneR.get
-          state          = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
-          response      <- Ok(state)
+          started  <- startedR.get
+          params   <- feedback.paramsR.get
+          (last,
+           clock)  <- feedback.lastR.get
+          idle     <- IO.monotonic.map(_.toNanos - last)
+          done     <- feedback.doneR.get
+          state     = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
+          response <- Ok(state)
         yield
           response
 
@@ -230,8 +231,8 @@ package object `Π-http4s`:
       .withHttpApp(spiApp)
       .build
 
-  case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck)
+  case class ConsulCheck(HTTP: String, Interval: String, Timeout: String) derives Codec.AsObject
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck) derives Codec.AsObject
 
   val serviceName = "StochasticPiCalculus2Scala"
 
@@ -258,7 +259,7 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
-          Tags = List(tag, "cef_emitter"),
+          Tags = List(tag, name, "cef_emitter"),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",

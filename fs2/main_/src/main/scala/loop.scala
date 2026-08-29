@@ -68,7 +68,7 @@ package object `Π-loop`:
 
   type ![F[_]] = Deferred[F, ExitCode]
 
-  type &[F[_]] = Ref[F, (Long, Double)]
+  type &|[F[_]] = Ref[F, (Long, Double)]
 
   type /[F[_]] = Queue[F, ((String, String), +[F])]
 
@@ -203,7 +203,7 @@ package object `Π-loop`:
       %.modify { m => m -> exit(m) }
 
     def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
         _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(Temporal[F].unit)
@@ -234,8 +234,8 @@ package object `Π-loop`:
                                                     _  <- cb.await
                                                     _  <- enable(k1)
                                                     _  <- enable(k2).unlessA(k1 == k2)
-                                                    nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                           case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                    nc <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                           case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                     ss <- ts1.get product ts2.get
                                                     now <- Temporal[F].monotonic.map(_.toNanos)
                                                     _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
@@ -262,7 +262,7 @@ package object `Π-loop`:
         ()
 
     def loop0(parameters: `Π-Parameters`, started: Ref[F, Long])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
         (_, nel) <- **.take
@@ -295,8 +295,8 @@ package object `Π-loop`:
                                                 _  <- cb.await
                                                 _  <- enable(k1)
                                                 _  <- enable(k2).unlessA(k1 == k2)
-                                                nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                       case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                 ss <- ts1.get product ts2.get
                                                 now <- Temporal[F].monotonic.map(_.toNanos)
                                                 _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
@@ -320,31 +320,23 @@ package object `Π-loop`:
         ()
 
     def poll(using % : %[F], / : /[F], \ : \[F]): F[Unit] =
-      for
-        h <- /.take
-        ((_, key), it) = h
-        (((d, _), _), _) = it
-        _ <- d.tryGet.map(_ eq None).flatMap {
-          if _
-          then
-           \(
-              %.update { m =>
-                         val ^ = h._1._1
-                         val n = m(key).asInstanceOf[Int] - 1
-                         ( if n == 0
-                           then
-                             m - key
-                           else
-                             m + (key -> n)
-                         ) + (^ + key -> (true, it))
-              }
-            )
-          else
-            %.update { m =>
-                       val ^ = h._1._1
-                       m + (^ + key -> (false, it))
-            }
-        }
-        _ <- Temporal[F].cede >> poll
-      yield
-        ()
+      /.take.flatMap {
+        case ((^ @ (_: String), key), it @ (((d, _), _), _)) =>        
+          d.tryGet.map(_ eq None).flatMap {
+            if _
+            then
+              \(
+                %.update { m =>
+                           val n = m(key).asInstanceOf[Int] - 1
+                           ( if n == 0
+                             then
+                               m - key
+                             else
+                               m + (key -> n)
+                           ) + (^ + key -> (true, it))
+                }
+              )
+            else
+              %.update(_ + (^ + key -> (false, it)))
+          } >> Temporal[F].cede >> poll
+      }

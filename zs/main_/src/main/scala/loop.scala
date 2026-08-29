@@ -55,7 +55,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[(Long, Double)]
+  type &| = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -190,7 +190,7 @@ package object `Π-loop`:
     %.modify { m => exit(m) -> m }
 
   def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
       _ <- batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(parameters.threshold-1).timeout(parameters.timeout.microseconds)
@@ -223,8 +223,8 @@ package object `Π-loop`:
                                                 _  <- cb.await.exit
                                                 _  <- enable(k1)
                                                 _  <- enable(k2).unless(k1 == k2)
-                                                nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                       case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                 ss <- ts1.get <*> ts2.get
                                                 now <- Clock.nanoTime
                                                 _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
@@ -253,7 +253,7 @@ package object `Π-loop`:
       ()
 
   def loop0(parameters: `Π-Parameters`, started: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
       (_, nel) <- **.take.commit
@@ -288,8 +288,8 @@ package object `Π-loop`:
                                             _  <- cb.await.exit
                                             _  <- enable(k1)
                                             _  <- enable(k2).unless(k1 == k2)
-                                            nc <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                   case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                            nc <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                   case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                             ss <- ts1.get <*> ts2.get
                                             now <- Clock.nanoTime
                                             _  <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration))))
@@ -315,31 +315,23 @@ package object `Π-loop`:
       ()
 
   def poll(using % : %, / : /, \ : \): UIO[Unit] =
-    for
-      h <- /.take
-      ((_, key), it) = h
-      (((p, _), _), _) = it
-      _ <- p.isDone.negate.flatMap {
-        if _
-        then
-         \(
-            %.update { m =>
-                       val ^ = h._1._1
-                       val n = m(key).asInstanceOf[Int] - 1
-                       ( if n == 0
-                         then
-                           m - key
-                         else
-                           m + (key -> n)
-                       ) + (^ + key -> (true, it))
-            }
-          )
-        else
-          %.update { m =>
-                     val ^ = h._1._1
-                     m + (^ + key -> (false, it))
-          }
-      }
-      _ <- poll
-    yield
-      ()
+    /.take.flatMap {
+      case ((^ @ (_: String), key), it @ (((p, _), _), _)) =>
+        p.isDone.negate.flatMap {
+          if _
+          then
+            \(
+              %.update { m =>
+                         val n = m(key).asInstanceOf[Int] - 1
+                         ( if n == 0
+                           then
+                             m - key
+                           else
+                             m + (key -> n)
+                         ) + (^ + key -> (true, it))
+              }
+            )
+          else
+            %.update(_ + (^ + key -> (false, it)))
+        } *> ZIO.yieldNow *> poll
+    }
