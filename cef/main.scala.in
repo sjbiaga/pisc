@@ -58,7 +58,7 @@ object App extends _root_.cats.effect.IOApp:
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
                  (lo: IOLocal[sΠ.`)(`], `}{`: sΠ.`}{`)
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, & : &)
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|)
                  (using `}{`.`][`, `}{`.stm.TSemaphore): IO[ExitCode] =
     val \ =
       if parameters.threshold > 0
@@ -67,8 +67,8 @@ object App extends _root_.cats.effect.IOApp:
     ( for
         _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
         _ <- if parameters.threshold > 0
-             then loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).background
-             else loop0(parameters, started, feedback, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).background
+             then loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
+             else loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
         ^ <- Resource.eval(π.`π-uuid`)
@@ -111,7 +111,7 @@ object App extends _root_.cats.effect.IOApp:
       ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
       - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
-      & <- IO.ref(0L -> .0)
+      &| <- IO.ref(0L -> .0)
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       b <- IO.ref(0L)
@@ -128,7 +128,7 @@ object App extends _root_.cats.effect.IOApp:
       stm <- STM.runtime[IO]
       wrapper = new sΠ.`}{`(stm)
       (lo, tree, semaphore) <- wrapper.`][`()
-      x <- run(args, params, n, b, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
+      x <- run(args, params, n, b, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
     yield
       x
 

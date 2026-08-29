@@ -29,7 +29,7 @@
 import _root_.cats.syntax.functor.*
 import _root_.cats.effect.{ IO, Ref, Resource }
 import _root_.com.comcast.ip4s.{ host, port, IpAddress, Hostname }
-import _root_.io.circe.generic.auto.*
+import _root_.io.circe.Codec
 import _root_.org.http4s.circe.CirceEntityCodec.*
 import _root_.org.http4s.dsl.Http4sDsl
 import _root_.org.http4s.HttpRoutes
@@ -45,7 +45,7 @@ package object `Π-http4s`:
   import Traces.*
 
 
-  enum Traces:
+  enum Traces derives Codec.AsObject:
     case ConsoleCSV
     case FileCSV(filename: String)
     case AmazonSQS(queue: String)
@@ -67,7 +67,7 @@ package object `Π-http4s`:
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean],
-                        snapshot: Option[Boolean]):
+                        snapshot: Option[Boolean]) derives Codec.AsObject:
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
                      parallelism.getOrElse(default.parallelism),
@@ -91,7 +91,7 @@ package object `Π-http4s`:
                    clock: Option[Double],
                    idle: Option[Long],
                    started: Option[Long],
-                   done: Option[Boolean])
+                   done: Option[Boolean]) derives Codec.AsObject
 
 
   object BooleanVar:
@@ -234,8 +234,8 @@ package object `Π-http4s`:
       .withHttpApp(baApp)
       .build
 
-  case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck)
+  case class ConsulCheck(HTTP: String, Interval: String, Timeout: String) derives Codec.AsObject
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck) derives Codec.AsObject
 
   val serviceName = "BioAmbients2Scala"
 

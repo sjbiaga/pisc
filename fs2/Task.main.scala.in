@@ -40,7 +40,7 @@ implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
   _root_.cats.effect.std.Console.make[zio.Task]
 
 
-object App extends CatsApp:
+object App extends _root_.zio.interop.catz.CatsApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
@@ -63,7 +63,7 @@ object App extends CatsApp:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], & : &[π.F])
+                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
                  (using `}{`.`][`, `}{`.stm.TSemaphore): π.F[ExitCode] =
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
@@ -74,8 +74,8 @@ object App extends CatsApp:
       else { (it: π.F[Unit]) => ^.use(_ => it *> lπ.peek(using %, **)(π.`π-wand`)) }
     for
       l <- if parameters.threshold > 0
-           then lπ.loopʹ(parameters, started, batch, `}{`)(using %, !, &, -, *, **, ^)(π.`π-wand`).fork
-           else lπ.loop0(parameters, started, `}{`)(using %, !, &, -, *, **)(π.`π-wand`).fork
+           then lπ.loopʹ(parameters, started, batch, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).fork
+           else lπ.loop0(parameters, started, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).fork
       _ <- lπ.poll(using %, /, \).fork
       d <- dπ.dump(using %, !, -).fork
       r <- ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid))
@@ -109,7 +109,7 @@ object App extends CatsApp:
       ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
       - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
-      & <- Ref[π.F].of(0L -> .0)
+      &| <- Ref[π.F].of(0L -> .0)
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
@@ -117,7 +117,7 @@ object App extends CatsApp:
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      x <- run(args.toList, params, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &)(using tree, semaphore)
+      x <- run(args.toList, params, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
       _ <- exit(x)
     yield
       ()

@@ -323,7 +323,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body()(using ^^).exit
+                                      _   <- $body()(using ^^)
                                       _   <- loop(false)
                                     yield ()
                                   loop()
@@ -402,7 +402,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body(n)(using ^^).exit
+                                      _   <- $body(n)(using ^^)
                                       _   <- loop(false)
                                     yield ()
                                   loop()
@@ -478,7 +478,7 @@ package sΠ:
                                     _   <- f.join
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body()(using ^^).exit
+                                    _   <- $body()(using ^^)
                                     _   <- loop(false)
                                   yield ()
                                 loop()
@@ -556,7 +556,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body()(using ^^).exit
+                                      _   <- $body()(using ^^)
                                       _   <- loop(false)
                                     yield ()
                                   loop()
@@ -633,7 +633,7 @@ package sΠ:
                                     n   <- result.get
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body(n)(using ^^).exit
+                                    _   <- $body(n)(using ^^)
                                     _   <- loop(false)
                                   yield ()
                                 loop()
@@ -709,7 +709,7 @@ package sΠ:
                                     n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body(n)(using ^^).exit
+                                    _   <- $body(n)(using ^^)
                                     _   <- loop(false)
                                   yield ()
                                 loop()
@@ -784,7 +784,7 @@ package sΠ:
                                     _   <- f.join
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body()(using ^^).exit
+                                    _   <- $body()(using ^^)
                                     _   <- loop(false)
                                   yield ()
                                 loop()

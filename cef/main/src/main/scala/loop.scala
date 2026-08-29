@@ -61,7 +61,7 @@ package object `Π-loop`:
 
   type ! = Deferred[IO, ExitCode]
 
-  type & = Ref[IO, (Long, Double)]
+  type &| = Ref[IO, (Long, Double)]
 
   type / = Queue[IO, ((String, String), +)]
 
@@ -220,7 +220,7 @@ package object `Π-loop`:
     }
 
   def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback, `}{`: sΠ.`}{`)
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (using `}{`.`][`, `}{`.stm.TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
@@ -295,7 +295,7 @@ package object `Π-loop`:
       ()
 
   def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], feedback: Feedback, `}{`: sΠ.`}{`)
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
            (using `}{`.`][`, `}{`.stm.TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for

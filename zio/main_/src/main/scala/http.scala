@@ -34,7 +34,7 @@ import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
 package object `Π-http`:
 
-  import `Π-loop`.{ Feedback, `Π-Parameters` }
+  import `Π-loop`.{ !, Feedback, `Π-Parameters` }
   import `Π-traces`.*
   import Traces.*
 
@@ -227,7 +227,9 @@ package object `Π-http`:
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
 
-  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)(main: UIO[ExitCode]): URIO[Client & Server & Scope, ExitCode] =
+  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)
+          (using ! : !)
+          (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     Option {
       Traces().fold(null) {
         case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
@@ -288,17 +290,25 @@ package object `Π-http`:
                     else
                       ZIO.unit
                   } { _ =>
-                     main.exit.map {
-                       case Exit.Success(code)                  => code
-                       case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
-                       case _                                   => ExitCode.failure
-                     }
+                    for
+                      _ <- main
+                      x <- !.await.exit
+                    yield
+                      x match {
+                        case Exit.Success(code)                  => code
+                        case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+                        case _                                   => ExitCode.failure
+                      }
                   }
         yield
           code
       case _ =>
-        main.exit.map {
-          case Exit.Success(code)                  => code
-          case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
-          case _                                   => ExitCode.failure
-        }
+        for
+          _ <- main
+          x <- !.await.exit
+        yield
+          x match {
+            case Exit.Success(code)                  => code
+            case Exit.Failure(Cause.Interrupt(_, _)) => ExitCode(130)
+            case _                                   => ExitCode.failure
+          }

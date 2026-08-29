@@ -69,7 +69,7 @@ package object `Π-loop`:
 
   type ![F[_]] = Deferred[F, ExitCode]
 
-  type &[F[_]] = Ref[F, (Long, Double)]
+  type &|[F[_]] = Ref[F, (Long, Double)]
 
   type /[F[_]] = Queue[F, ((String, String), +[F])]
 
@@ -223,7 +223,7 @@ package object `Π-loop`:
       }
 
     def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], `}{`: sΠ.`}{`[F])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -284,7 +284,7 @@ package object `Π-loop`:
         ()
 
     def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], `}{`: sΠ.`}{`[F])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F])
              (using `}{`.`][`, `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for

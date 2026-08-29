@@ -68,7 +68,7 @@ package object `Π-loop`:
 
   type ![F[_]] = Deferred[F, ExitCode]
 
-  type &[F[_]] = Ref[F, (Long, Double)]
+  type &|[F[_]] = Ref[F, (Long, Double)]
 
   type /[F[_]] = Queue[F, ((String, String), +[F])]
 
@@ -204,7 +204,7 @@ package object `Π-loop`:
       %.modify { m => m -> exit(m) }
 
     def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], `}{`: sΠ.`}{`[F])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (using `][`: `}{`.`][`, `1`: `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -248,8 +248,8 @@ package object `Π-loop`:
                                                     _            <- cb.await
                                                     _            <- enable(k1)
                                                     _            <- enable(k2).unlessA(k1 == k2)
-                                                    nc           <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                           case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                    nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                                     case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                     ss           <- ts1.get product ts2.get
                                                     now          <- Temporal[F].monotonic.map(_.toNanos)
                                                     _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
@@ -276,7 +276,7 @@ package object `Π-loop`:
         ()
 
     def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], `}{`: sΠ.`}{`[F])
-             (using % : %[F], ! : ![F], & : &[F], - : -[F], * : *[F], ** : **[F])
+             (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F])
              (using `][`: `}{`.`][`, `1`: `}{`.stm.TSemaphore)
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -322,8 +322,8 @@ package object `Π-loop`:
                                                 _            <- cb.await
                                                 _            <- enable(k1)
                                                 _            <- enable(k2).unlessA(k1 == k2)
-                                                nc           <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                                 case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                 ss           <- ts1.get product ts2.get
                                                 now          <- Temporal[F].monotonic.map(_.toNanos)
                                                 _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))

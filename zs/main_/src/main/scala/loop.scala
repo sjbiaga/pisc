@@ -55,7 +55,7 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type & = Ref[(Long, Double)]
+  type &| = Ref[(Long, Double)]
 
   type / = Queue[((String, String), +)]
 
@@ -191,7 +191,7 @@ package object `Π-loop`:
     %.modify { m => exit(m) -> m }
 
   def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **, ^ : ^)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -237,8 +237,8 @@ package object `Π-loop`:
                                                 _            <- cb.await.exit
                                                 _            <- enable(k1)
                                                 _            <- enable(k2).unless(k1 == k2)
-                                                nc           <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                       case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                                 case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                                 ss           <- ts1.get <*> ts2.get
                                                 now          <- Clock.nanoTime
                                                 _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
@@ -267,7 +267,7 @@ package object `Π-loop`:
       ()
 
   def loop0(parameters: `Π-Parameters`, started: Ref[Long])
-           (using % : %, ! : !, & : &, - : -, * : *, ** : **)
+           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
            (using `][`: `}{`.`][`, `1`: TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -315,8 +315,8 @@ package object `Π-loop`:
                                             _            <- cb.await.exit
                                             _            <- enable(k1)
                                             _            <- enable(k2).unless(k1 == k2)
-                                            nc           <- duration match { case 0.0 | NaN => &.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                   case _         => &.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                            nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                             case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
                                             ss           <- ts1.get <*> ts2.get
                                             now          <- Clock.nanoTime
                                             _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
