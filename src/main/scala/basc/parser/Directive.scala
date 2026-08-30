@@ -107,16 +107,16 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             val uri = URI(s(it))
             if cluster
             then
-              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath.stripPrefix("/"))
             else
-              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath.stripPrefix("/"))
           case List(it: String)                                               =>
             val uri = URI(s(it))
             if cluster
             then
-              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+              Parse[F].inner(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath.stripPrefix("/"))
             else
-              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath)
+              Parse[F].outer(defaultPort)(uri.getScheme, uri.getHost, uri.getPort.toString, uri.getPath.stripPrefix("/"))
           case List(host: String, port: String)                               =>
             if cluster
             then
@@ -129,12 +129,24 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               Parse[F].inner(defaultPort)(s(scheme), s(host), s(port))
             else
               Parse[F].outer(defaultPort)(s(scheme), s(host), s(port))
+          case List(null, host: String, port: String)                         =>
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(null, s(host), s(port))
+            else
+              Parse[F].outer(defaultPort)(null, s(host), s(port))
           case List(scheme: String, host: String, port: String, path: String) =>
             if cluster
             then
-              Parse[F].inner(defaultPort)(s(scheme), s(host), s(port), s(path))
+              Parse[F].inner(defaultPort)(s(scheme), s(host), s(port), "/" + s(path).stripPrefix("/"))
             else
-              Parse[F].outer(defaultPort)(s(scheme), s(host), s(port), s(path))
+              Parse[F].outer(defaultPort)(s(scheme), s(host), s(port), "/" + s(path).stripPrefix("/"))
+          case List(null, host: String, port: String, path: String)           =>
+            if cluster
+            then
+              Parse[F].inner(defaultPort)(null, s(host), s(port), "/" + s(path).stripPrefix("/"))
+            else
+              Parse[F].outer(defaultPort)(null, s(host), s(port), "/" + s(path).stripPrefix("/"))
           case _                                                              => throw err("a [scheme://]host[:port[/path]] URI")
 
       def emitters: List[Emitter] =
@@ -255,10 +267,20 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             self match
               case _: String                                 =>
                 settings.traces = Some(file.fold(ConsoleCSV)(FileCSV.apply))
+              case given String :: (topic: String) :: it
+                  if given_String.toLowerCase == "redpanda"  =>
+                it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](19092).node match
+                  case (_, hp, "") =>
+                    settings.traces = Some(Redpanda(List(hp.name), List(hp.number), s(topic)))
+                  case (_, hp, srport) =>
+                    settings.traces = Some(Redpanda(List(hp.name), List(hp.number), s(topic), srport.toInt))
               // case given String :: (topic: String) :: it
-              //     if given_String.toLowerCase == "kafka"     =>
-              //   val hp = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[List](9092, true).cluster._2
-              //   settings.traces = Some(Kafka(hp.name, hp.number, s(topic)))
+              //     if List("kafka", "redpanda").contains(given_String.toLowerCase) =>
+              //   it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[List](9092, true).cluster match
+              //     case (_, hp, "") =>
+              //       settings.traces = Some(Kafka(hp, s(topic), -1))
+              //     case (_, hp, srport) =>
+              //       settings.traces = Some(Kafka(hp, s(topic), srport.toInt))
               case given String :: (queue: String) :: it
                   if given_String.toLowerCase == "rabbitmq"  =>
                 val hp = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](5672).node._2
@@ -382,37 +404,55 @@ object Directive:
                                                                        :: Lit.Boolean(snapshot)
                                                                        :: Nil))
 
-    trait Traces:
+    trait Traces(val backend: Traces.Backend = Traces.Backend.same):
       lazy val reify: Term
 
     object Traces:
 
       import Uri.*
 
-      case object ConsoleCSV extends Traces:
+      enum Backend:
+        case same, redpanda, elasticmq
+
+      case object ConsoleCSV extends Traces():
         lazy val reify = \("Π-ConsoleCSV")
 
-      case class FileCSV(filename: String) extends Traces:
+      case class FileCSV(filename: String) extends Traces():
         lazy val reify = Term.Apply(\("Π-FileCSV"), Term.ArgClause(Lit.String(filename) :: Nil))
 
-      case class Kafka(name: List[String], number: List[Int], topic: String) extends Traces with Hosts[List] with Ports[List]:
-        require(name.size == number.size)
-        lazy val reify = Term.Apply(\("Π-Kafka"), Term.ArgClause(Term.Apply(\("List"),
-                                                                            Term.ArgClause((name zip number).map(_ + ":" + _).map(Lit.String(_))))
-                                                              :: Lit.String(topic) :: Nil))
-
-      case class RabbitMQ(name: String, number: Int, queue: String) extends Traces with Host with Port:
-        lazy val reify = Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name) :: Lit.Int(number) :: Lit.String(queue) :: Nil))
-
-      case class AmazonSQS(endpoint: (String, Host & Port), region: String, accessKey: String, secretKey: String, queue: String) extends Traces:
-        lazy val reify = Term.Apply(\("Π-AmazonSQS"), Term.ArgClause(Lit.String(s"${endpoint._1}://${endpoint._2.name}:${endpoint._2.number}")
+      case class AmazonSQS(endpoint: (String, Host & Port), region: String, accessKey: String, secretKey: String, queue: String) extends Traces():
+        lazy val reify = Term.Apply(\("Π-AmazonSQS"), Term.ArgClause(Term.Select("Π-Backend", backend.toString)
+                                                                  :: Lit.String(s"${endpoint._1}://${endpoint._2.name}:${endpoint._2.number}")
                                                                   :: Lit.String(region)
                                                                   :: Lit.String(accessKey)
                                                                   :: Lit.String(secretKey)
                                                                   :: Lit.String(queue)
                                                                   :: Nil))
 
-      class ElasticMQ(endpoint: (String, Host & Port), queue: String) extends AmazonSQS(endpoint, "elasticmq", "x", "x", queue)
+      class ElasticMQ(endpoint: (String, Host & Port), queue: String) extends AmazonSQS(endpoint, "elasticmq", "x", "x", queue):
+        override val backend: Backend = Backend.elasticmq
+
+      case class Kafka(name: List[String], number: List[Int], topic: String, schemaRegistryPort: Int = 8081) extends Traces() with Hosts[List] with Ports[List]:
+        require(name.size == number.size)
+        lazy val reify = Term.Apply(\("Π-Kafka"), Term.ArgClause(Term.Select("Π-Backend", backend.toString)
+                                                              :: Term.Apply(\("List"),
+                                                                            Term.ArgClause((name zip number).map(_ + ":" + _).map(Lit.String(_))))
+                                                              :: Lit.String(s"http://${name.head}:$schemaRegistryPort")
+                                                              :: Lit.String(topic) :: Nil))
+
+      object Kafka:
+        def apply(hp: Hosts[List] & Ports[List], topic: String, srport: Int)(using backend: String): Kafka =
+          backend.toLowerCase match
+            case "kafka" =>
+              Kafka(hp.name, hp.number, topic, if srport == -1 then 8081 else srport)
+            case "redpanda" =>
+              Redpanda(hp.name, hp.number, topic, if srport == -1 then 18081 else srport)
+
+      class Redpanda(name: List[String], number: List[Int], topic: String, schemaRegistryPort: Int = 18081) extends Kafka(name, number, topic, schemaRegistryPort):
+        override val backend: Backend = Backend.redpanda
+
+      case class RabbitMQ(name: String, number: Int, queue: String) extends Traces() with Host with Port:
+        lazy val reify = Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name) :: Lit.Int(number) :: Lit.String(queue) :: Nil))
 
     object Uri:
 
@@ -425,14 +465,14 @@ object Directive:
         def node = self.asInstanceOf[F[Config[Host, Port]]]
 
       trait Parse[F[_]]:
-        def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): F[(Option[String], Host & Port, String)]
-        def inner(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): (Option[String], Hosts[F] & Ports[F], String)
+        def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): F[Config[Host, Port]]
+        def inner(defaultPort: Int)(scheme: String, host: String, port: String, path: String = null): Config[Hosts[F], Ports[F]]
 
       object Parse:
         inline def apply[F[_]](using Parse[F]): Parse[F] = summon[Parse[F]]
         private def apply(defaultPort: Int)(uri: URI) =
           val portʹ = if uri.getPort == -1 then defaultPort else uri.getPort
-          (Option(uri.getScheme), new Hostʹ(uri.getHost) with Portʹ(portʹ), uri.getPath)
+          (Option(uri.getScheme), new Hostʹ(uri.getHost) with Portʹ(portʹ), uri.getPath.stripPrefix("/"))
         given Parse[Id] with
           def outer(defaultPort: Int)(scheme: String, host: String, port: String, path: String) =
             Parse(defaultPort)(URI(scheme, null, host, port.toInt, path, null, null))
@@ -445,7 +485,7 @@ object Directive:
             val hosts = host.split(",").toList
             val ports = port.split(",").map(_.toInt).map { it => if it == -1 then defaultPort else it }.toList
             val uri = URI(scheme, null, hosts.head, ports.head, path, null, null)
-            (Option(uri.getScheme), new Hostsʹ(hosts) with Portsʹ(ports), uri.getPath)
+            (Option(uri.getScheme), new Hostsʹ(hosts) with Portsʹ(ports), uri.getPath.stripPrefix("/"))
 
       trait Hosts[F[_]]:
         val name: F[String]
@@ -466,8 +506,21 @@ object Directive:
       trait Portʹ(override val number: Int) extends Port
 
     private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
-                                    "parameters"  -> "an <address> ip/hostname or a <parallelism> number or a <threshold> number or a <timeout> number or an <exit> boolean setting or a <snapshot> boolean setting",
-                                    "traces"      -> "a <Kafka> cluster config or a <RabbitMQ> config or an <AmazonSQS> client config or an <ElasticMQ> endpoint setting")
+                                    "parameters"  -> ( "an <address> ip/hostname or "
+                                                     + "a <parallelism> number or "
+                                                     + "a <threshold> number or "
+                                                     + "a <timeout> number or "
+                                                     + "an <exit> boolean or "
+                                                     + "a <snapshot> boolean "
+                                                     + "setting"
+                                                     ),
+                                    "traces"      -> ( "a <Kafka/Redpanda> cluster config or "
+                                                     + "a <RabbitMQ> config or "
+                                                     + "an <AmazonSQS> client config or "
+                                                     + "an <ElasticMQ> endpoint "
+                                                     + "setting"
+                                                     )
+                                )
     def message(implicit key: String) = messages(canonical(key))
 
     def s(it: String): String =

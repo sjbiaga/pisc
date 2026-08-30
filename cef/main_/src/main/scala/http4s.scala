@@ -48,8 +48,8 @@ package object `Π-http4s`:
   enum Traces derives Codec.AsObject:
     case ConsoleCSV
     case FileCSV(filename: String)
-    case AmazonSQS(queue: String)
-    case Kafka(topic: String)
+    case AmazonSQS(backend: String, queue: String)
+    case Kafka(backend: String, topic: String)
     case RabbitMQ(queue: String)
 
   object Traces:
@@ -57,8 +57,8 @@ package object `Π-http4s`:
       Option(`π-traces`).map {
         case `Π-ConsoleCSV` => ConsoleCSV
         case `Π-FileCSV`(filename) => FileCSV(filename)
-        case `Π-AmazonSQS`(_, _, _, _, queue) => AmazonSQS(queue)
-        case `Π-Kafka`(_, topic: String) => Kafka(topic)
+        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
+        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
         case `Π-RabbitMQ`(_, _, queue) => RabbitMQ(queue)
       }
 
@@ -245,13 +245,13 @@ package object `Π-http4s`:
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => ("amazonsqs", "queue", queue)
-        case Kafka(topic) => ("kafka", "topic", topic)
-        case RabbitMQ(queue) => ("rabbitmq", "queue", queue)
+        case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
+        case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
+        case RabbitMQ(queue) => ("rabbitmq", "rabbitmq", "queue", queue)
         case _ => null
       }
     } match
-      case Some((producer, kind, name)) =>
+      case Some((producer, backend, kind, name)) =>
         val host = server.address.getAddress.getHostAddress
         val port = server.address.getPort
         val consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
@@ -266,6 +266,7 @@ package object `Π-http4s`:
           Meta = Map(
             "batch" -> batch.toString,
             "producer" -> producer,
+            "backend" -> backend,
             "kind" -> kind,
             "emitter" -> "cef",
             "pid" -> ProcessHandle.current.pid.toString

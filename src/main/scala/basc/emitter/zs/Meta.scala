@@ -230,7 +230,7 @@ object Meta extends emitter.shared.effects.Meta:
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])
               (using id: => String, ^ : (Enumerator.Generator, Term.Name)): List[Enumerator] =
-    `_ <- +`(parallelism, id, id, id, id, id, id, replication,  if sum.isEmpty then Nil else `given String = ^._2` :: sum)
+    `_ <- +`(parallelism, id, id, id, id, id, id, replication, if sum.isEmpty then Nil else `given String = ^._2` :: sum)
 
 
   private def `* <- +`(parameter: String,

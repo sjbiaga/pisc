@@ -34,7 +34,12 @@ package object `Π-traces`:
   var `π-traces`: `Π-Traces` = null
 
 
+  enum `Π-Backend`:
+    case same, redpanda, elasticmq
+
+
   sealed trait `Π-Traces`:
+    val backend: `Π-Backend` = `Π-Backend`.same
     def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
               key: String, guard: Boolean, label: String,
@@ -89,7 +94,12 @@ package object `Π-traces`:
       PrintStream(FileOutputStream(config.filename + ".csv", true), true)
 
 
-  case class `Π-AmazonSQS`(endpoint: String, region: String, accessKey: String, secretKey: String, queue: String) extends `Π-Traces`:
+  case class `Π-AmazonSQS`(override val backend: `Π-Backend`,
+                           endpoint: String,
+                           region: String,
+                           accessKey: String,
+                           secretKey: String,
+                           queue: String) extends `Π-Traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
@@ -134,7 +144,10 @@ package object `Π-traces`:
       _client -> _client.createQueue(CreateQueueRequest.builder().queueName(config.queue).build).queueUrl
 
 
-  case class `Π-Kafka`(servers: List[String], topic: String) extends `Π-Traces`:
+  case class `Π-Kafka`(override val backend: `Π-Backend`,
+                       servers: List[String],
+                       schemaRegistryUrl: String,
+                       topic: String) extends `Π-Traces`:
     import org.apache.avro.generic.{ GenericData, GenericRecord }
     import org.apache.kafka.clients.producer.ProducerRecord
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
@@ -160,10 +173,20 @@ package object `Π-traces`:
       avroRecord.put("from", from)
       avroRecord.put("to", to)
       avroRecord.put("snapshot", snapshot.getOrElse(""))
-      val record = ProducerRecord[String, GenericRecord](topic, "basc", avroRecord)
-      `Π-Kafka`.producer.send(record).get
+      val record = ProducerRecord[String, GenericRecord](topic, label, avroRecord)
+      `Π-Kafka`.producer.send(record)
     override def close: Unit =
+      `Π-Kafka`.producer.flush
       `Π-Kafka`.producer.close
+      import org.apache.kafka.clients.admin.{ AdminClient, AdminClientConfig }
+      val props = java.util.Properties()
+      props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, servers.mkString(","))
+      var adminClient: AdminClient = null
+      try
+        adminClient = AdminClient.create(props)
+        adminClient.deleteTopics(java.util.Collections.singletonList(topic)).all.get
+      finally
+        if adminClient ne null then adminClient.close
 
   object `Π-Kafka`:
 
@@ -171,15 +194,16 @@ package object `Π-traces`:
     import org.apache.avro.Schema
     import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
     import org.apache.kafka.common.serialization.StringSerializer
-    import io.confluent.kafka.serializers.KafkaAvroSerializer
+    import io.confluent.kafka.serializers.{ KafkaAvroSerializer, AbstractKafkaSchemaSerDeConfig }
+    import io.confluent.kafka.serializers.subject.RecordNameStrategy
 
     private val _schema = """{
-      "namespace": "basc.avro",
+      "namespace": "pisc",
       "type": "record",
-      "name": "basc",
+      "name": "BioAmbients2Scala",
       "fields": [
         { "name" : "number", "type": "long" },
-        { "name" : "clock", "type": "number" },
+        { "name" : "clock", "type": "double" },
         { "name" : "started", "type": "long" },
         { "name" : "ended", "type": "long" },
 
@@ -192,8 +216,8 @@ package object `Π-traces`:
         { "name" : "label", "type": "string" },
 
         { "name" : "rate", "type": "string" },
-        { "name" : "delay", "type": "number" },
-        { "name" : "duration", "type": "number" },
+        { "name" : "delay", "type": "double" },
+        { "name" : "duration", "type": "double" },
 
         { "name" : "dir_cap", "type": "string" },
         { "name" : "from", "type": "string" },
@@ -208,9 +232,10 @@ package object `Π-traces`:
       val config: `Π-Kafka` = `π-traces`.asInstanceOf[`Π-Kafka`]
       val props = java.util.Properties()
       props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
-      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer]) //.getCanonicalName)
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer]) //.getCanonicalName)
-      props.put("schema.registry.url", "http://localhost:8081")
+      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer])
+      props.put("schema.registry.url", config.schemaRegistryUrl)
+      props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
       KafkaProducer[String, GenericRecord](props)
 
 

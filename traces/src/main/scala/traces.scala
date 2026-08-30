@@ -33,14 +33,26 @@ package object `Π-traces`:
 
   var `π-traces`: `Π-Traces` = null
 
-  sealed trait `Π-Traces`
+  enum `Π-Backend`:
+    case same, redpanda, elasticmq
+
+  sealed trait `Π-Traces`:
+    val backend: `Π-Backend` = `Π-Backend`.same
 
   case object `Π-ConsoleCSV` extends `Π-Traces`
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`
 
-  case class `Π-AmazonSQS`(endpoint: String, region: String, accessKey: String, secretKey: String, queue: String) extends `Π-Traces`
+  case class `Π-AmazonSQS`(override val backend: `Π-Backend`,
+                           endpoint: String,
+                           region: String,
+                           accessKey: String,
+                           secretKey: String,
+                           queue: String) extends `Π-Traces`
 
-  case class `Π-Kafka`(servers: List[String], topic: String) extends `Π-Traces`
+  case class `Π-Kafka`(override val backend: `Π-Backend`,
+                       servers: List[String],
+                       schemaRegistryUrl: String,
+                       topic: String) extends `Π-Traces`
 
   case class `Π-RabbitMQ`(host: String, port: Int, queue: String) extends `Π-Traces`
