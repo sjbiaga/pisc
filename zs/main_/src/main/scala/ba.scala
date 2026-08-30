@@ -222,7 +222,7 @@ package object sΠ:
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                  (using %, /, \)
                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-        apply(rate)(key, `)(`)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+        apply(rate)(key, `)(`)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
           * linear replication guard w/ code
@@ -326,7 +326,7 @@ package object sΠ:
     def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])
              (using %, /)
              (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-      apply(rate)(key, `)(`) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+      apply(rate)(key, `)(`) <* ZStream.fromZIO(ZIO.sleep(pace))
 
     /**
       * prefix w/ code
@@ -427,7 +427,7 @@ package object sΠ:
             def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                      (using %, /, \)
                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+              apply(rate)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
             /**
               * linear replication bound output guard w/ code
@@ -498,7 +498,7 @@ package object sΠ:
           def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+            apply(rate, value)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear constant replication output guard w/ code
@@ -627,7 +627,7 @@ package object sΠ:
             def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                                          (using %, /, \)
                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
             /**
               * linear variable replication output guard w/ code
@@ -700,7 +700,7 @@ package object sΠ:
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+            apply(rate)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear replication input guard w/ code
@@ -1055,7 +1055,7 @@ package object sΠ:
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /)
                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-          apply(rate)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+          apply(rate)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
           * bound output prefix w/ code
@@ -1099,7 +1099,7 @@ package object sΠ:
       def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
                (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate, value)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+          apply(rate, value)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * constant output prefix w/ code
@@ -1143,7 +1143,7 @@ package object sΠ:
           then
             self.π(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)
           else
-            apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+            apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)
 
         /**
           * variable output prefix w/ code
@@ -1156,7 +1156,7 @@ package object sΠ:
           then
             self.π(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
           else
-            apply[S](1)(rate, value)(key, `)(`)(dir).tap(_ => exec(code))
+            apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)
 
         /**
           * variable output prefix w/ pace w/ code
@@ -1169,7 +1169,7 @@ package object sΠ:
           then
             self.π(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
           else
-            apply[S](2)(rate, pace, value)(key, `)(`)(dir).tap(_ => exec(code))
+            apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)
 
         /**
           * variable output prefix
@@ -1201,7 +1201,7 @@ package object sΠ:
         def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                      (using %, /)
                                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+          apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
           * variable output prefix w/ code
@@ -1247,7 +1247,7 @@ package object sΠ:
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
                (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-        apply(rate)(key, `)(`)(dir) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        apply(rate)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * input prefix w/ code
@@ -1317,7 +1317,7 @@ package object sΠ:
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
+            apply(rate)(key, `)(`)(cap)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear replication capability guard w/ code
@@ -1423,7 +1423,7 @@ package object sΠ:
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                (using %, /)
                (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-        apply(rate)(key, `)(`)(cap) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        apply(rate)(key, `)(`)(cap) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * capability prefix w/ code

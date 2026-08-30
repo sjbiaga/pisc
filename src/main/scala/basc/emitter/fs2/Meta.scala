@@ -169,7 +169,7 @@ object Meta extends emitter.shared.streams.Meta:
                       :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                    Term.ArgClause(\(deferred) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
+                                                                                    Term.ArgClause(\(deferred) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
                                                "concurrently"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),
@@ -186,7 +186,7 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])
               (using id: => String, ^ : (Enumerator.Generator, Term.Name)): List[Enumerator] =
-    `_ <- +`(parallelism, id, id, id, id, id, id, replication, sum)
+    `_ <- +`(parallelism, id, id, id, id, id, id, replication, if sum.isEmpty then Nil else `given String = ^._2` :: sum)
 
   private def `* <- +`(parameter: String,
                        parallelism: Int,
@@ -216,7 +216,7 @@ object Meta extends emitter.shared.streams.Meta:
                       :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                 Term.ArgClause(\(deferred) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
+                                                                                                 Term.ArgClause(\(deferred) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
                                                "concurrently"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),
@@ -233,4 +233,4 @@ object Meta extends emitter.shared.streams.Meta:
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])
               (using id: => String, ^ : (Enumerator.Generator, Term.Name)): List[Enumerator] =
-    `* <- +`(parameter, parallelism, id, id, id, id, id, id, replication, sum)
+    `* <- +`(parameter, parallelism, id, id, id, id, id, id, replication, if sum.isEmpty then Nil else `given String = ^._2` :: sum)

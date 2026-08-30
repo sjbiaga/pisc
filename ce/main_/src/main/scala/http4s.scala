@@ -235,23 +235,23 @@ package object `Π-http4s`:
       .build
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String) derives Codec.AsObject
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck) derives Codec.AsObject
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Meta: Map[String, String], Check: ConsulCheck) derives Codec.AsObject
 
   val serviceName = "BioAmbients2Scala"
 
-  def http4s(server: Server): Resource[IO, Unit] =
+  def http4s(batch: Boolean, server: Server): Resource[IO, Unit] =
     import _root_.org.http4s.Method.PUT
     import _root_.org.http4s.{ Request, Uri }
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
-        case Kafka(topic) => "kafka" -> s"topic_$topic"
-        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
+        case AmazonSQS(queue) => ("amazonsqs", "queue", queue)
+        case Kafka(topic) => ("kafka", "topic", topic)
+        case RabbitMQ(queue) => ("rabbitmq", "queue", queue)
         case _ => null
       }
     } match
-      case Some((tag, name)) =>
+      case Some((producer, kind, name)) =>
         val host = server.address.getAddress.getHostAddress
         val port = server.address.getPort
         val consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
@@ -262,7 +262,14 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
-          Tags = List(tag, name, "ce_emitter"),
+          Tags = List(producer, name),
+          Meta = Map(
+            "batch" -> batch.toString,
+            "producer" -> producer,
+            "kind" -> kind,
+            "emitter" -> "ce",
+            "pid" -> ProcessHandle.current.pid.toString
+          ),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",

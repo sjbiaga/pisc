@@ -65,7 +65,7 @@ object App extends _root_.cats.effect.IOApp:
       then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s)
+        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s(parameters.threshold > 0, _))
         _ <- if parameters.threshold > 0
              then loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
              else loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background

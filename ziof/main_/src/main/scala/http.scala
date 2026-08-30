@@ -218,7 +218,7 @@ package object `Π-http`:
 
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck)
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Meta: Map[String, String], Check: ConsulCheck)
   object ConsulRegister:
     given Schema[ConsulRegister] = DeriveSchema.gen[ConsulRegister]
 
@@ -232,13 +232,13 @@ package object `Π-http`:
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
-        case Kafka(topic) => "kafka" -> s"topic_$topic"
-        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
+        case AmazonSQS(queue) => ("amazonsqs", "queue", queue)
+        case Kafka(topic) => ("kafka", "topic", topic)
+        case RabbitMQ(queue) => ("rabbitmq", "queue", queue)
         case _ => null
       }
     } match
-      case Some((tag, name)) =>
+      case Some((producer, kind, name)) =>
         for
           port <- Server.install(FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes())
           host  = address
@@ -250,7 +250,14 @@ package object `Π-http`:
             Name = serviceName,
             Address = host,
             Port = port,
-            Tags = List(tag, name, "ziof_emitter"),
+            Tags = List(producer, name),
+            Meta = Map(
+              "batch" -> batch.toString,
+              "producer" -> producer,
+              "kind" -> kind,
+              "emitter" -> "ziof",
+              "pid" -> ProcessHandle.current.pid.toString
+            ),
             Check = ConsulCheck(
               HTTP = s"http://$host:$port/health",
               Interval = "10s",

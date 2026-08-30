@@ -207,7 +207,7 @@ package object sΠ:
         def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using %[F], /[F], \[F])
                  (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate)(key, `)(`)(?, -, *, +).spaced(pace)
+          apply(rate)(key, `)(`)(?, -, *, +) <* Stream.sleep(pace)
 
         /**
           * linear replication guard w/ code
@@ -407,7 +407,7 @@ package object sΠ:
             def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                      (using %[F], /[F], \[F])
                      (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +).spaced(pace)
+              apply(rate)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
             /**
               * linear replication bound output guard w/ code
@@ -472,7 +472,7 @@ package object sΠ:
           def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +).spaced(pace)
+            apply(rate, value)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear constant replication output guard w/ code
@@ -595,7 +595,7 @@ package object sΠ:
             def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                                          (using %[F], /[F], \[F])
                                          (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +).spaced(pace)
+              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
             /**
               * linear variable replication output guard w/ code
@@ -662,7 +662,7 @@ package object sΠ:
           def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +).spaced(pace)
+            apply(rate)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear replication input guard w/ code
@@ -1189,7 +1189,7 @@ package object sΠ:
       def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)
                (using %[F], /[F])
                (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-        apply(rate)(key, `)(`)(dir).spaced(pace)
+        apply(rate)(key, `)(`)(dir) <* Stream.sleep(pace)
 
       /**
         * input prefix w/ code
@@ -1256,7 +1256,7 @@ package object sΠ:
           def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(cap: `π-ζ`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +).spaced(pace)
+            apply(rate)(key, `)(`)(cap)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear replication capability guard w/ code
