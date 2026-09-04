@@ -54,7 +54,8 @@ package object `Π-traces`:
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+      printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+             ProcessHandle.current.pid,
              number, clock, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
@@ -70,7 +71,8 @@ package object `Π-traces`:
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      `Π-FileCSV`.csv.printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+      `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                             ProcessHandle.current.pid,
                              number, clock, started, ended,
                              agent, name, polarity.getOrElse(""),
                              key, guard, label,
@@ -108,11 +110,12 @@ package object `Π-traces`:
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
       val message = s"""
-                    {"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+                    {"pid":${ProcessHandle.current.pid},
+                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":$duration,
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse("")}"
+                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
+                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse(null)}"
                     }"""
       val request = SendMessageRequest
         .builder
@@ -156,6 +159,7 @@ package object `Π-traces`:
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
+      avroRecord.put("pid", ProcessHandle.current.pid)
       avroRecord.put("number", number)
       avroRecord.put("clock", clock)
       avroRecord.put("started", started)
@@ -168,16 +172,26 @@ package object `Π-traces`:
       avroRecord.put("label", label)
       avroRecord.put("rate", rate)
       avroRecord.put("delay", delay)
-      avroRecord.put("duration", duration)
+      avroRecord.put("duration", if duration.isNaN then null else duration)
       avroRecord.put("dir_cap", dir_cap)
       avroRecord.put("from", from)
       avroRecord.put("to", to)
-      avroRecord.put("snapshot", snapshot.getOrElse(""))
-      val record = ProducerRecord[String, GenericRecord](topic, label, avroRecord)
-      `Π-Kafka`.producer.send(record)
+      avroRecord.put("snapshot", snapshot.getOrElse(null))
+      backend match
+        case `Π-Backend`.redpanda =>
+          val record = ProducerRecord[String, String](topic, s"""{"label":"$label"}""", avroRecord.toString)
+          `Π-Kafka`.Redpanda.producer.send(record)
+        case _ =>
+          val record = ProducerRecord[String, GenericRecord](topic, label, avroRecord)
+          `Π-Kafka`.Kafka.producer.send(record)
     override def close: Unit =
-      `Π-Kafka`.producer.flush
-      `Π-Kafka`.producer.close
+      backend match
+        case `Π-Backend`.redpanda =>
+          `Π-Kafka`.Redpanda.producer.flush
+          `Π-Kafka`.Redpanda.producer.close
+        case _ =>
+          `Π-Kafka`.Kafka.producer.flush
+          `Π-Kafka`.Kafka.producer.close
       import org.apache.kafka.clients.admin.{ AdminClient, AdminClientConfig }
       val props = java.util.Properties()
       props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, servers.mkString(","))
@@ -194,7 +208,7 @@ package object `Π-traces`:
     import org.apache.avro.Schema
     import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
     import org.apache.kafka.common.serialization.StringSerializer
-    import io.confluent.kafka.serializers.{ KafkaAvroSerializer, AbstractKafkaSchemaSerDeConfig }
+    import io.confluent.kafka.serializers.{ AbstractKafkaSchemaSerDeConfig, KafkaAvroSerializer }
     import io.confluent.kafka.serializers.subject.RecordNameStrategy
 
     private val _schema = """{
@@ -202,6 +216,8 @@ package object `Π-traces`:
       "type": "record",
       "name": "BioAmbients2Scala",
       "fields": [
+        { "name" : "pid", "type": "long" },
+
         { "name" : "number", "type": "long" },
         { "name" : "clock", "type": "double" },
         { "name" : "started", "type": "long" },
@@ -217,40 +233,55 @@ package object `Π-traces`:
 
         { "name" : "rate", "type": "string" },
         { "name" : "delay", "type": "double" },
-        { "name" : "duration", "type": "double" },
+        { "name" : "duration", "type": ["null", "double"] },
 
         { "name" : "dir_cap", "type": "string" },
         { "name" : "from", "type": "string" },
         { "name" : "to", "type": "string" },
-        { "name" : "snapshot", "type": "string" }
+        { "name" : "snapshot", "type": ["null", "string"] }
       ]
     }"""
 
     val schema = Schema.Parser().parse(_schema)
 
-    lazy val producer: KafkaProducer[String, GenericRecord] =
-      val config: `Π-Kafka` = `π-traces`.asInstanceOf[`Π-Kafka`]
-      val props = java.util.Properties()
-      props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
-      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer])
-      props.put("schema.registry.url", config.schemaRegistryUrl)
-      props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
-      KafkaProducer[String, GenericRecord](props)
+    object Redpanda:
+
+      lazy val producer: KafkaProducer[String, String] =
+        val config: `Π-Kafka` = `π-traces`.asInstanceOf[`Π-Kafka`]
+        val props = java.util.Properties()
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
+        props.put("schema.registry.url", config.schemaRegistryUrl)
+        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
+        KafkaProducer[String, String](props)
+
+    object Kafka:
+
+      lazy val producer: KafkaProducer[String, GenericRecord] =
+        val config: `Π-Kafka` = `π-traces`.asInstanceOf[`Π-Kafka`]
+        val props = java.util.Properties()
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer])
+        props.put("schema.registry.url", config.schemaRegistryUrl)
+        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
+        KafkaProducer[String, GenericRecord](props)
 
 
-  case class `Π-RabbitMQ`(host: String, port: Int, queue: String) extends `Π-Traces`:
+  case class `Π-RabbitMQ`(host: String, port: Int, queue: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       val message = s"""
-                    {"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+                    {"pid":${ProcessHandle.current.pid},
+                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":$duration,
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse("")}"
+                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
+                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse(null)}"
                     }"""
         .getBytes("UTF-8")
       `Π-RabbitMQ`.conn_channel._2.basicPublish("", queue, null, message)
@@ -267,6 +298,8 @@ package object `Π-traces`:
       val config: `Π-RabbitMQ` = `π-traces`.asInstanceOf[`Π-RabbitMQ`]
 
       val factory = ConnectionFactory()
+      factory.setUsername(config.username)
+      factory.setPassword(config.password)
       factory.setHost(config.host)
       factory.setPort(config.port)
 

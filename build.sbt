@@ -12,7 +12,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `zio-main`, `zio-main_`, `ziof-main`, `ziof-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
+  .aggregate(feedback, `ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `zio-main`, `zio-main_`, `ziof-main`, `ziof-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "BioAmbients2Scala",
     organization := "sjb.ia.ga",
@@ -24,6 +24,27 @@ lazy val root = (project in file("."))
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += bain,
     libraryDependencies ++= Seq(scalameta, parsercombinators, ip4s, munit % Test)
+  )
+
+val feedback = (project in file("feedback"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "feedback BioAmbients2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.10.0-RC1",
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
+    scalaJSUseMainModuleInitializer := true,
+    libraryDependencies ++= Seq("com.github.japgolly.scalajs-react" %%% "core-bundle-cats_effect",
+                                "com.github.japgolly.scalajs-react" %%% "extra",
+                                "com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3"
+                            ).map(_ % "4.0.0")
+                        ++  Seq("io.circe" %%% "circe-generic" % "0.14.16",
+                                "io.circe" %%% "circe-parser" % "0.14.16",
+                                "org.http4s" %%% "http4s-dom" % "0.2.12",
+                                "org.http4s" %%% "http4s-circe" % "0.23.36")
   )
 
 lazy val traces = (project in file("traces"))

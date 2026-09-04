@@ -45,7 +45,7 @@ package object sΠ:
 
   import _root_.io.github.timwspence.cats.stm.STM
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -168,8 +168,6 @@ package object sΠ:
     */
   object τ extends τ:
 
-    private val `new {}` = new {}
-
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -178,7 +176,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
@@ -448,8 +446,7 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)
@@ -462,8 +459,7 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)
@@ -475,8 +471,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using %, /)
-                                     (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): IO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
@@ -488,8 +483,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using %, /)
-                                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                              ^ : String): IO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
@@ -507,7 +501,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
@@ -539,7 +533,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
@@ -612,7 +606,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit

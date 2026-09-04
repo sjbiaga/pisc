@@ -32,11 +32,11 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.zio.{ Clock, Duration, Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, FiberRef, Promise, Random, Ref, Task, UIO, ZIO }
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -171,7 +171,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
@@ -496,7 +496,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
@@ -528,7 +528,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
@@ -601,7 +601,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit

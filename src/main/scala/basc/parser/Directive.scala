@@ -283,8 +283,11 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               //       settings.traces = Some(Kafka(hp, s(topic), srport.toInt))
               case given String :: (queue: String) :: it
                   if given_String.toLowerCase == "rabbitmq"  =>
-                val hp = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](5672).node._2
-                settings.traces = Some(RabbitMQ(hp.name, hp.number, s(queue)))
+                it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](5672).node match
+                  case (_, hp, "") =>
+                    settings.traces = Some(RabbitMQ(hp.name, hp.number, s(queue), None, None))
+                  case (_, hp, up) =>
+                    settings.traces = Some(RabbitMQ(hp.name, hp.number, s(queue), Some(up.substring(0, up.indexOf('/'))), Some(up.substring(up.indexOf('/')+1))))
               case given String :: (queue: String) :: it
                   if given_String.toLowerCase == "elasticmq" =>
                 val (scheme, hp, _) = it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](9324).node
@@ -451,8 +454,21 @@ object Directive:
       class Redpanda(name: List[String], number: List[Int], topic: String, schemaRegistryPort: Int = 18081) extends Kafka(name, number, topic, schemaRegistryPort):
         override val backend: Backend = Backend.redpanda
 
-      case class RabbitMQ(name: String, number: Int, queue: String) extends Traces() with Host with Port:
-        lazy val reify = Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name) :: Lit.Int(number) :: Lit.String(queue) :: Nil))
+      case class RabbitMQ(name: String, number: Int, queue: String, username: Option[String], password: Option[String]) extends Traces() with Host with Port:
+        lazy val reify =
+          username zip password match
+            case Some((user, pass)) =>
+              Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name)
+                                                      :: Lit.Int(number)
+                                                      :: Lit.String(queue)
+                                                      :: Lit.String(user)
+                                                      :: Lit.String(pass)
+                                                      :: Nil))
+            case _                  =>
+              Term.Apply(\("Π-RabbitMQ"), Term.ArgClause(Lit.String(name)
+                                                      :: Lit.Int(number)
+                                                      :: Lit.String(queue)
+                                                      :: Nil))
 
     object Uri:
 

@@ -92,6 +92,8 @@ package object `Π-loop`:
 
   given Order[(Int, List[List[((String, String), ++++)]])] = Order.fromLessThan(_._1 < _._1)
 
+  val currentTimeMillis = IO.realTime.map(_.toMillis)
+
 
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): IO[Unit] =
@@ -243,10 +245,11 @@ package object `Π-loop`:
                                                 _            <- cb.await
                                                 _            <- enable(k1)
                                                 _            <- enable(k2).unlessA(k1 == k2)
-                                                nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                                 case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc           <- if duration == 0.0 || duration.isNaN
+                                                                then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                 ss           <- ts1.get product ts2.get
-                                                now          <- IO.monotonic.map(_.toNanos)
+                                                now          <- currentTimeMillis
                                                 _            <- feedback.lastR.set(now -> nc._2)
                                                 _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                                 _            <- sem.release
@@ -340,10 +343,11 @@ package object `Π-loop`:
                                             _            <- cb.await
                                             _            <- enable(k1)
                                             _            <- enable(k2).unlessA(k1 == k2)
-                                            nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                             case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                            nc           <- if duration == 0.0 || duration.isNaN
+                                                            then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                            else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                             ss           <- ts1.get product ts2.get
-                                            now          <- IO.monotonic.map(_.toNanos)
+                                            now          <- currentTimeMillis
                                             _            <- feedback.lastR.set(now -> nc._2)
                                             _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                             _            <- sem.release

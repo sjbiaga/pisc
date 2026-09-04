@@ -40,7 +40,7 @@ package object sΠ:
 
   import _root_.cats.effect.{ IO, IOLocal }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ Supervisor, UUIDGen }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
@@ -175,7 +175,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`), (new {}, None, rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`), (`new {}`, None, rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -222,6 +222,7 @@ package object sΠ:
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
 
   /**
     * names and values

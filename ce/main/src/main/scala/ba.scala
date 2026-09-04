@@ -167,8 +167,6 @@ package object sΠ:
     */
   object τ extends τ:
 
-    private val `new {}` = new {}
-
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],

@@ -79,6 +79,8 @@ package object `Π-loop`:
 
   given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
 
+  val currentTimeMillis = Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
+
 
   def `π-enable`(enabled: `Π-Set`[String])
                 (using % : %): UIO[Unit] =
@@ -237,10 +239,11 @@ package object `Π-loop`:
                                                 _            <- cb.await.exit
                                                 _            <- enable(k1)
                                                 _            <- enable(k2).unless(k1 == k2)
-                                                nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                                 case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                                nc           <- if duration == 0.0 || duration.isNaN
+                                                                then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                 ss           <- ts1.get <*> ts2.get
-                                                now          <- Clock.nanoTime
+                                                now          <- currentTimeMillis
                                                 _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                                 _            <- sem.release
                                                 _            <- started.update(_ - 1)
@@ -315,10 +318,11 @@ package object `Π-loop`:
                                             _            <- cb.await.exit
                                             _            <- enable(k1)
                                             _            <- enable(k2).unless(k1 == k2)
-                                            nc           <- duration match { case 0.0 | NaN => &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                             case _         => &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }  }
+                                            nc           <- if duration == 0.0 || duration.isNaN
+                                                            then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                            else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                             ss           <- ts1.get <*> ts2.get
-                                            now          <- Clock.nanoTime
+                                            now          <- currentTimeMillis
                                             _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2)))))
                                             _            <- sem.release
                                             _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))

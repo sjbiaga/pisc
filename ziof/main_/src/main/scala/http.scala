@@ -28,6 +28,7 @@
 
 import zio.*
 import zio.http.*
+import zio.http.Middleware.CorsConfig
 import zio.schema.*
 import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
@@ -53,7 +54,7 @@ package object `Π-http`:
         case `Π-FileCSV`(filename) => FileCSV(filename)
         case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
         case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
-        case `Π-RabbitMQ`(_, _, queue) => RabbitMQ(queue)
+        case `Π-RabbitMQ`(_, _, queue, _, _) => RabbitMQ(queue)
       }
 
 
@@ -239,8 +240,13 @@ package object `Π-http`:
       }
     } match
       case Some((producer, backend, kind, name)) =>
+        val corsConfig = CorsConfig(
+          allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All),
+          allowedMethods = Header.AccessControlAllowMethods.All,
+          allowedHeaders = Header.AccessControlAllowHeaders.All
+        )
         for
-          port <- Server.install(FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes())
+          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
           host  = address
           consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
           consulBase = URL.decode(s"http://$consulAddr/v1/agent").right.get
@@ -250,8 +256,9 @@ package object `Π-http`:
             Name = serviceName,
             Address = host,
             Port = port,
-            Tags = List(producer, name),
+            Tags = List("BioAmbients2Scala", producer, name),
             Meta = Map(
+              "calculus" -> "BioAmbients",
               "batch" -> batch.toString,
               "producer" -> producer,
               "backend" -> backend,

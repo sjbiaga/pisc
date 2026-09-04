@@ -38,7 +38,7 @@ package sΠ:
   import _root_.cats.effect.{ IO, IOLocal }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
-  import `Π-loop`.{ <>, +, %, /, \ }
+  import `Π-loop`.{ <>, +, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -229,6 +229,8 @@ package sΠ:
 
   trait τ:
 
+    protected val `new {}` = new {}
+
     import Macros.τ.*
 
     /**
@@ -237,7 +239,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * linear replication guard w/ pace
@@ -245,7 +247,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * linear replication guard w/ code
@@ -253,7 +255,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * linear replication guard w/ pace w/ code
@@ -261,7 +263,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
 
   object Macros:
@@ -277,7 +279,8 @@ package sΠ:
       /**
         * linear replication guard
         */
-      def silentCode(parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], `π-τ`: Expr[Ordʹ])(body: Expr[`Π-Function0`])
+      def silentCode(ether: Expr[{}])
+                    (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], `π-τ`: Expr[Ordʹ])(body: Expr[`Π-Function0`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
@@ -303,13 +306,13 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
-                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> ${`π-τ`}, timestamp), (new {}, None, $rate)))
+                                  timestamp <- currentTimeMillis >>= IO.ref
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> ${`π-τ`}, timestamp), ($ether, None, $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -379,13 +382,13 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
-                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                  timestamp <- currentTimeMillis >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -454,13 +457,13 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
                                 `)(`     <- ${`)(`}.get
-                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- currentTimeMillis >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -531,13 +534,13 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
-                                  timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                  timestamp <- currentTimeMillis >>= IO.ref
                                   _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                          (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -607,13 +610,13 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
                                 `)(`     <- ${`)(`}.get
-                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- currentTimeMillis >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -682,13 +685,13 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
                                 `)(`     <- ${`)(`}.get
-                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- currentTimeMillis >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -757,13 +760,13 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(first)
                                 polarity  = $cap == `π-enter` || $cap == `π-exit` || $cap == `π-merge+`
                                 `)(`     <- ${`)(`}.get
-                                timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+                                timestamp <- currentTimeMillis >>= IO.ref
                                 _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $cap, timestamp), ($ether, Some(if polarity then Right(null) else Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: IO[Unit] = IO.monotonic.map(_.toNanos) >>= timestamp.set): IO[Unit] =
+                                        (timeset: IO[Unit] = currentTimeMillis >>= timestamp.set): IO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset

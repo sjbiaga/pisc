@@ -39,13 +39,13 @@ package object sΠ:
   import _root_.cats.syntax.flatMap.*
   import _root_.cats.syntax.traverse.*
 
-  import _root_.cats.effect.{ Clock, IO, IOLocal }
+  import _root_.cats.effect.{ IO, IOLocal }
   import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.{ CyclicBarrier, Supervisor, UUIDGen }
+  import _root_.cats.effect.std.{ Supervisor, UUIDGen }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -176,8 +176,8 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (new {}, None, rate)))
+        timestamp <- currentTimeMillis >>= IO.ref
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -224,6 +224,7 @@ package object sΠ:
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
+
 
   /**
     * names and values
@@ -506,7 +507,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -535,7 +536,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -566,7 +567,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         (name,
@@ -597,7 +598,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
         opt      <- deferred.get
         (name,
@@ -664,7 +665,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
@@ -693,7 +694,7 @@ package object sΠ:
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None

@@ -34,13 +34,13 @@ package object sΠ:
 
   import _root_.cats.effect.std.Semaphore
 
-  import _root_.zio.{ Clock, Duration, Exit, FiberRef, Promise, Random, Ref, Schedule, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, FiberRef, Promise, Random, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stm.{ TRef, TSemaphore }
   import _root_.zio.stm.{ USTM, ZSTM }
   import _root_.zio.stream.ZStream
 
-  import `Π-loop`.{ <>, +, %, /, \ }
+  import `Π-loop`.{ <>, +, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
   import `π-$`.*, `π-ζ`.*
@@ -187,7 +187,7 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
@@ -199,7 +199,7 @@ package object sΠ:
               for
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
-                _        <- Clock.nanoTime.flatMap(timestamp.set)
+                _        <- currentTimeMillis.flatMap(timestamp.set)
                 _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -253,14 +253,14 @@ package object sΠ:
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
-              _        <- Clock.nanoTime.flatMap(timestamp.set)
+              _        <- currentTimeMillis.flatMap(timestamp.set)
               _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -311,7 +311,7 @@ package object sΠ:
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
-        timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+        timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
         _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
@@ -386,7 +386,7 @@ package object sΠ:
                             else ZStream.fromZIO(promise.succeed(None))
                 enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
-                timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+                timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
                 _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
@@ -401,7 +401,7 @@ package object sΠ:
                             for
                               _        <- -.await.exit
                               _        <- *.fold(ZIO.unit)(_.acquire)
-                              _        <- Clock.nanoTime.flatMap(timestamp.set)
+                              _        <- currentTimeMillis.flatMap(timestamp.set)
                               _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                               cb_fb_in <- continue.get.flatMap(_.await)
                               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -463,7 +463,7 @@ package object sΠ:
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
@@ -475,7 +475,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- Clock.nanoTime.flatMap(timestamp.set)
+                  _        <- currentTimeMillis.flatMap(timestamp.set)
                   _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -592,7 +592,7 @@ package object sΠ:
                               else ZStream.fromZIO(promise.succeed(None))
                   enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                   `)(`     <- ZStream.fromZIO(`)(`.get)
-                  timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+                  timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
                   _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
                   cb_fb_in <- ZStream.fromZIO(promise.await)
                   _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
@@ -604,7 +604,7 @@ package object sΠ:
                     for
                       _        <- -.await.exit
                       _        <- *.fold(ZIO.unit)(_.acquire)
-                      _        <- Clock.nanoTime.flatMap(timestamp.set)
+                      _        <- currentTimeMillis.flatMap(timestamp.set)
                       _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                       cb_fb_in <- continue.get.flatMap(_.await)
                       _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -664,7 +664,7 @@ package object sΠ:
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
               result   <- ZStream.fromZIO(Ref.make[`()`](null))
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               _        <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
@@ -676,7 +676,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- Clock.nanoTime.flatMap(timestamp.set)
+                  _        <- currentTimeMillis.flatMap(timestamp.set)
                   _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -733,7 +733,7 @@ package object sΠ:
               continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
               enabled  <- ZStream.fromZIO(Ref.make(true))
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
@@ -743,7 +743,7 @@ package object sΠ:
                         it <- sΠ.ν
                         _  <- ZStream.fromZIO {
                           for
-                            _        <- Clock.nanoTime.flatMap(timestamp.set)
+                            _        <- currentTimeMillis.flatMap(timestamp.set)
                             _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                             cb_fb_in <- continue.get.flatMap(_.await)
                             _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -799,14 +799,14 @@ package object sΠ:
             continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-                _        <- Clock.nanoTime.flatMap(timestamp.set)
+                _        <- currentTimeMillis.flatMap(timestamp.set)
                 _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -917,14 +917,14 @@ package object sΠ:
                 continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
                 enabled  <- ZStream.fromZIO(Ref.make(true))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
-                timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+                timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
                 _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 if cb_fb_in ne None
                 sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
                 _  <- ZStream.fromZIO {
                   for
-                    _        <- Clock.nanoTime.flatMap(timestamp.set)
+                    _        <- currentTimeMillis.flatMap(timestamp.set)
                     _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -978,14 +978,14 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
             result   <- ZStream.fromZIO(Ref.make[`()`](null))
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-                _        <- Clock.nanoTime.flatMap(timestamp.set)
+                _        <- currentTimeMillis.flatMap(timestamp.set)
                 _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -1039,7 +1039,7 @@ package object sΠ:
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
@@ -1084,7 +1084,7 @@ package object sΠ:
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
@@ -1186,7 +1186,7 @@ package object sΠ:
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
@@ -1231,7 +1231,7 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
           result   <- ZStream.fromZIO(Ref.make[`()`](null))
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
@@ -1285,7 +1285,7 @@ package object sΠ:
               enabled  <- ZStream.fromZIO(Ref.make(true))
               polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               `)(`     <- ZStream.fromZIO(`)(`.get)
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
@@ -1294,7 +1294,7 @@ package object sΠ:
                 for
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- Clock.nanoTime.flatMap(timestamp.set)
+                  _        <- currentTimeMillis.flatMap(timestamp.set)
                   _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -1349,14 +1349,14 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(Ref.make(true))
             polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
             `)(`     <- ZStream.fromZIO(`)(`.get)
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
-                _        <- Clock.nanoTime.flatMap(timestamp.set)
+                _        <- currentTimeMillis.flatMap(timestamp.set)
                 _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
@@ -1408,7 +1408,7 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
           `)(`     <- ZStream.fromZIO(`)(`.get)
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None

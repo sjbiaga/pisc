@@ -55,4 +55,4 @@ package object `Π-traces`:
                        schemaRegistryUrl: String,
                        topic: String) extends `Π-Traces`
 
-  case class `Π-RabbitMQ`(host: String, port: Int, queue: String) extends `Π-Traces`
+  case class `Π-RabbitMQ`(host: String, port: Int, queue: String, username: String = "guest", password: String = "guest") extends `Π-Traces`
