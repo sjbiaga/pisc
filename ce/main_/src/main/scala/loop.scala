@@ -30,8 +30,6 @@ import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.concurrent.duration.*
 import _root_.scala.Option.{ unless, when }
 
-import Double.NaN
-
 import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*

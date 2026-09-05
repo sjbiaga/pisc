@@ -10,7 +10,7 @@ import japgolly.scalajs.react.vdom.html_<^.*
 
 
 enum Calculi(val tag: String):
-  case stochasticpicalculus extends Calculi("StochasticPiCalculus2Scala")
+  case stochasticpicalculus extends Calculi("StochasticPiCalculus")
   case bioambients extends Calculi("BioAmbients")
 
 
@@ -30,7 +30,7 @@ object Calculi:
         ^.value          := input.calculi.selectedCalculus,
         ^.onChange      ==> onCalculiChange,
 
-        <.option(^.value := "stochasticpicalculus", "Stochastic Pi Calculus"),
+        <.option(^.value := "stochasticpicalculus", "Stochastic π-Calculus"),
         <.option(^.value := "bioambients"         , "BioAmbients")
       )
     )

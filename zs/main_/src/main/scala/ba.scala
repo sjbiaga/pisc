@@ -173,6 +173,14 @@ package object sΠ:
           * linear replication guard
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                 (using %, /, \)
+                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+          apply(rate, Duration.Zero)(key, `)(`)(?, -, *, +)
+
+        /**
+          * linear replication guard w/ pace
+          */
+        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Nothing, Unit] =
@@ -211,18 +219,11 @@ package object sΠ:
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
+            _  <- ZStream.fromZIO(ZIO.sleep(pace))
             _  <- ZStream.fromZIO(+.release)
             _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             ()
-
-        /**
-          * linear replication guard w/ pace
-          */
-        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                 (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-        apply(rate)(key, `)(`)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
           * linear replication guard w/ code
@@ -372,6 +373,14 @@ package object sΠ:
               * linear replication bound output guard
               */
             def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                     (using %, /, \)
+                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+              apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+
+            /**
+              * linear replication bound output guard w/ pace
+              */
+            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                      (using % : %, / : /, \ : \)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): ZStream[Any, Nothing, `()`] =
@@ -416,18 +425,11 @@ package object sΠ:
                          yield
                            it
                       ).interruptWhen(sp)
+                _  <- ZStream.fromZIO(ZIO.sleep(pace))
                 _  <- ZStream.fromZIO(+.release)
                 _  <- ZStream.unit.whenZIO(sp.isDone.negate)
               yield
                 it
-
-            /**
-              * linear replication bound output guard w/ pace
-              */
-            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                     (using %, /, \)
-                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
             /**
               * linear replication bound output guard w/ code
@@ -449,6 +451,14 @@ package object sΠ:
             * linear constant replication output guard
             */
           def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                   (using %, /, \)
+                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+            apply(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+
+          /**
+            * linear constant replication output guard w/ pace
+            */
+          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, Unit] =
@@ -487,18 +497,11 @@ package object sΠ:
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
+              _  <- ZStream.fromZIO(ZIO.sleep(pace))
               _  <- ZStream.fromZIO(+.release)
               _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               ()
-
-          /**
-            * linear constant replication output guard w/ pace
-            */
-          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                   (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear constant replication output guard w/ code
@@ -574,6 +577,14 @@ package object sΠ:
               * linear variable replication output guard
               */
             def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                                         (using %, /, \)
+                                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+              apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+
+            /**
+              * linear variable replication output guard w/ pace
+              */
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                                          (using % : %, / : /, \ : \)
                                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                    ^ : String): ZStream[Any, Nothing, Unit] =
@@ -616,18 +627,11 @@ package object sΠ:
                     yield
                       ()
                   }.repeat(Schedule.forever).interruptWhen(sp)
+                  _  <- ZStream.fromZIO(ZIO.sleep(pace))
                   _  <- ZStream.fromZIO(+.release)
                   _  <- ZStream.unit.whenZIO(sp.isDone.negate)
                 yield
                   ()
-
-            /**
-              * linear variable replication output guard w/ pace
-              */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                                         (using %, /, \)
-                                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
             /**
               * linear variable replication output guard w/ code
@@ -649,6 +653,14 @@ package object sΠ:
             * linear replication input guard
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                   (using %, /, \)
+                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+            apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+
+          /**
+            * linear replication input guard w/ pace
+            */
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, `()`] =
@@ -688,19 +700,12 @@ package object sΠ:
                 yield
                   ()
               }.repeat(Schedule.forever).interruptWhen(sp)
+              _  <- ZStream.fromZIO(ZIO.sleep(pace))
               _  <- ZStream.fromZIO(+.release)
               it <- ZStream.fromZIO(result.get)
               _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               it
-
-          /**
-            * linear replication input guard w/ pace
-            */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                   (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear replication input guard w/ code
@@ -1275,6 +1280,14 @@ package object sΠ:
             * linear replication capability guard
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                   (using %, /, \)
+                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+            apply(rate, Duration.Zero)(key, `)(`)(cap)(?, -, *, +)
+
+          /**
+            * linear replication capability guard w/ pace
+            */
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, Unit] =
@@ -1306,18 +1319,11 @@ package object sΠ:
                  yield
                    ()
               }.repeat(Schedule.forever).interruptWhen(sp)
+              _  <- ZStream.fromZIO(ZIO.sleep(pace))
               _  <- ZStream.fromZIO(+.release)
               _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               ()
-
-          /**
-            * linear replication capability guard w/ pace
-            */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                   (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +) <* ZStream.fromZIO(ZIO.sleep(pace))
 
           /**
             * linear replication capability guard w/ code

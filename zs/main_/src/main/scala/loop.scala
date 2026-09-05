@@ -29,8 +29,6 @@
 import _root_.scala.collection.immutable.{ List, Map, Set }
 import _root_.scala.Option.{ unless, when }
 
-import Double.NaN
-
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
 import _root_.zio.{ durationInt, Clock, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }

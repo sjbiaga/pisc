@@ -27,10 +27,6 @@ export default defineConfig({
           });
         },
       },
-    },
-  },
-  server: {
-    proxy: {
       '/queue': {
         target: 'http://localhost:9324',
         changeOrigin: true

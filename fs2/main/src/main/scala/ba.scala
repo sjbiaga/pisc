@@ -61,6 +61,9 @@ package object sΠ:
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> Stream[F, Unit]
 
 
+  private val `0.seconds` = FiniteDuration(0, java.util.concurrent.TimeUnit.SECONDS)
+
+
   /**
     * Wraps ambient keys.
     *
@@ -164,6 +167,14 @@ package object sΠ:
           * linear replication guard
           */
         def apply(rate: Rate)(key: String, `)(`: `)(`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+          apply(rate, `0.seconds`)(key, `)(`)(?, -, *, +)
+
+        /**
+          * linear replication guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
@@ -196,18 +207,11 @@ package object sΠ:
               yield
                 ()
             }.interruptWhen(sr)
+            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
             _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
-
-        /**
-          * linear replication guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate)(key, `)(`)(?, -, *, +) <* Stream.sleep(pace)
 
         /**
           * linear replication guard w/ code
@@ -358,6 +362,14 @@ package object sΠ:
               * linear replication bound output guard
               */
             def apply(rate: Rate)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                     (using %[F], /[F], \[F])
+                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+              apply(rate, `0.seconds`)(key, `)(`)(dir)(?, -, *, +)
+
+            /**
+              * linear replication bound output guard w/ pace
+              */
+            def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                      (using % : %[F], / : /[F], \ : \[F])
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): Stream[F, `()`[F]] =
@@ -396,18 +408,11 @@ package object sΠ:
                         yield
                           it
                       ).interruptWhen(sr)
+                _  <- Stream.sleep(pace)
                 _  <- Stream.eval(+.release)
                 _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
               yield
                 it
-
-            /**
-              * linear replication bound output guard w/ pace
-              */
-            def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                     (using %[F], /[F], \[F])
-                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
             /**
               * linear replication bound output guard w/ code
@@ -429,6 +434,14 @@ package object sΠ:
             * linear constant replication output guard
             */
           def apply(rate: Rate, value: `()`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+            apply(rate, value)(key, `)(`)(dir)(?, -, *, +)
+
+          /**
+            * linear constant replication output guard w/ pace
+            */
+          def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using % : %[F], / : /[F], \ : \[F])
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, Unit] =
@@ -461,18 +474,11 @@ package object sΠ:
                 yield
                   ()
               }.interruptWhen(sr)
+              _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
               _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               ()
-
-          /**
-            * linear constant replication output guard w/ pace
-            */
-          def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                   (using %[F], /[F], \[F])
-                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear constant replication output guard w/ code
@@ -548,12 +554,20 @@ package object sΠ:
               * linear variable replication output guard
               */
             def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                                         (using %[F], /[F], \[F])
+                                         (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+              apply[S](2)(rate, `0.seconds`, value)(key, `)(`)(dir)(?, -, *, +)
+
+            /**
+              * linear variable replication output guard w/ pace
+              */
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                                          (using % : %[F], / : /[F], \ : \[F])
                                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                    ^ : String): Stream[F, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.π.`(!)`.`(+)`(rate, _)(key, `)(`)(dir)(?, -, *, +))
+                Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.π.`(!)`.`(+)`(rate, pace, _)(key, `)(`)(dir)(?, -, *, +))
               else
                 for
                   _        <- if None eq * then Stream.eval(exclude(key))
@@ -584,18 +598,11 @@ package object sΠ:
                     yield
                       ()
                   }.interruptWhen(sr)
+                  _  <- Stream.sleep(pace)
                   _  <- Stream.eval(+.release)
                   _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
                 yield
                   ()
-
-            /**
-              * linear variable replication output guard w/ pace
-              */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                                         (using %[F], /[F], \[F])
-                                         (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
             /**
               * linear variable replication output guard w/ code
@@ -617,6 +624,14 @@ package object sΠ:
             * linear replication input guard
             */
           def apply(rate: Rate)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+            apply(rate, `0.seconds`)(key, `)(`)(dir)(?, -, *, +)
+
+          /**
+            * linear replication input guard w/ pace
+            */
+          def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using % : %[F], / : /[F], \ : \[F])
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
@@ -650,19 +665,12 @@ package object sΠ:
                 yield
                   ()
               }.interruptWhen(sr)
+              _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
               it <- Stream.eval(result.get)
               _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               it
-
-          /**
-            * linear replication input guard w/ pace
-            */
-          def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                   (using %[F], /[F], \[F])
-                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear replication input guard w/ code
@@ -1217,6 +1225,14 @@ package object sΠ:
             * linear replication capability guard
             */
           def apply(rate: Rate)(key: String, `)(`: `)(`)(cap: `π-ζ`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+            apply(rate, `0.seconds`)(key, `)(`)(cap)(?, -, *, +)
+
+          /**
+            * linear replication capability guard w/ pace
+            */
+          def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(cap: `π-ζ`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using % : %[F], / : /[F], \ : \[F])
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, Unit] =
@@ -1245,18 +1261,11 @@ package object sΠ:
                  yield
                    ()
               }.interruptWhen(sr)
+              _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
               _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               ()
-
-          /**
-            * linear replication capability guard w/ pace
-            */
-          def apply(rate: Rate, pace: FiniteDuration)(key: String, `)(`: `)(`)(cap: `π-ζ`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                   (using %[F], /[F], \[F])
-                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +) <* Stream.sleep(pace)
 
           /**
             * linear replication capability guard w/ code

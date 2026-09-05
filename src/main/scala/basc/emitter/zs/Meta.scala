@@ -213,7 +213,7 @@ object Meta extends emitter.shared.effects.Meta:
                       :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                    Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
+                                                                                    Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
                                                "drainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),
@@ -261,7 +261,7 @@ object Meta extends emitter.shared.effects.Meta:
                       :: ^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                 Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: `given String = ^._2` :: sum*),
+                                                                                                 Term.ArgClause(\(promise) :: \(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
                                                "drainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
                                                                     Term.Select(\, "empty"),

@@ -13,7 +13,6 @@ import org.http4s.headers.{ Accept, `Content-Type` }
 import org.http4s.client.Client
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.extra.StateSnapshot
 import japgolly.scalajs.react.util.EffectCatsEffect.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
