@@ -32,9 +32,9 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.zio.{ Clock, Duration, Exit, Promise, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, Promise, Ref, Task, UIO, ZIO }
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
 
@@ -107,7 +107,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`new {}`, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
@@ -425,7 +425,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
@@ -456,7 +456,7 @@ package object sΠ:
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
-        timestamp <- Clock.nanoTime.flatMap(Ref.make)
+        timestamp <- currentTimeMillis.flatMap(Ref.make)
         _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit

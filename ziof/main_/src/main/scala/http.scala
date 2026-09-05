@@ -28,6 +28,7 @@
 
 import zio.*
 import zio.http.*
+import zio.http.Middleware.CorsConfig
 import zio.schema.*
 import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
@@ -42,8 +43,8 @@ package object `Π-http`:
   enum Traces:
     case ConsoleCSV
     case FileCSV(filename: String)
-    case AmazonSQS(queue: String)
-    case Kafka(topic: String)
+    case AmazonSQS(backend: String, queue: String)
+    case Kafka(backend: String, topic: String)
     case RabbitMQ(queue: String)
 
   object Traces:
@@ -51,9 +52,9 @@ package object `Π-http`:
       Option(`π-traces`).map {
         case `Π-ConsoleCSV` => ConsoleCSV
         case `Π-FileCSV`(filename) => FileCSV(filename)
-        case `Π-AmazonSQS`(_, _, _, _, queue) => AmazonSQS(queue)
-        case `Π-Kafka`(_, topic: String) => Kafka(topic)
-        case `Π-RabbitMQ`(_, _, queue) => RabbitMQ(queue)
+        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
+        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
+        case `Π-RabbitMQ`(_, _, queue, _, _) => RabbitMQ(queue)
       }
 
 
@@ -216,11 +217,11 @@ package object `Π-http`:
 
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String)
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck)
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Meta: Map[String, String], Check: ConsulCheck)
   object ConsulRegister:
     given Schema[ConsulRegister] = DeriveSchema.gen[ConsulRegister]
 
-  val serviceName = "BioAmbients2Scala"
+  val serviceName = "StochasticPiCalculus2Scala"
 
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
@@ -230,15 +231,20 @@ package object `Π-http`:
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
-        case Kafka(topic) => "kafka" -> s"topic_$topic"
-        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
+        case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
+        case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
+        case RabbitMQ(queue) => ("rabbitmq", "rabbitmq", "queue", queue)
         case _ => null
       }
     } match
-      case Some((tag, name)) =>
+      case Some((producer, backend, kind, name)) =>
+        val corsConfig = CorsConfig(
+          allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All),
+          allowedMethods = Header.AccessControlAllowMethods.All,
+          allowedHeaders = Header.AccessControlAllowHeaders.All
+        )
         for
-          port <- Server.install(FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes())
+          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
           host  = address
           consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
           consulBase = URL.decode(s"http://$consulAddr/v1/agent").right.get
@@ -248,7 +254,16 @@ package object `Π-http`:
             Name = serviceName,
             Address = host,
             Port = port,
-            Tags = List(tag, name, "ziof_emitter"),
+            Tags = List("StochasticPiCalculus2Scala", producer, name),
+            Meta = Map(
+              "calculus" -> "StochasticPiCalculus",
+              "batch" -> batch.toString,
+              "producer" -> producer,
+              "backend" -> backend,
+              "kind" -> kind,
+              "emitter" -> "ziof",
+              "pid" -> ProcessHandle.current.pid.toString
+            ),
             Check = ConsulCheck(
               HTTP = s"http://$host:$port/health",
               Interval = "10s",

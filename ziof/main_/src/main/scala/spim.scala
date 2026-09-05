@@ -33,10 +33,10 @@ package sΠ:
   import _root_.cats.effect.std.Semaphore
   import _root_.zio.interop.catz.generic.*
 
-  import _root_.zio.{ Clock, Duration, Promise, Random, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Promise, Random, Ref, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
 
-  import `Π-loop`.{ <>, +, %, /, \ }
+  import `Π-loop`.{ <>, +, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
 
@@ -267,13 +267,13 @@ package sΠ:
                                   continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
                                   promise  <- Promise.make[Nothing, Option[<>]]
                                   _        <- promise.succeed(None).unless(first)
-                                  timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                  timestamp <- currentTimeMillis.flatMap(Ref.make)
                                   _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, None, $rate)))
                                   opt      <- promise.await
                                   _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                          (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -287,7 +287,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body()(using ^^).exit
+                                      _   <- $body()(using ^^)
                                       _   <- loop(false)()
                                     yield ()
                                   loop()(ZIO.unit)
@@ -346,13 +346,13 @@ package sΠ:
                                   continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
                                   promise  <- Promise.make[Nothing, Option[<>]]
                                   _        <- promise.succeed(None).unless(first)
-                                  timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                  timestamp <- currentTimeMillis.flatMap(Ref.make)
                                   _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- promise.await
                                   _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                          (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -368,7 +368,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body(n)(using ^^).exit
+                                      _   <- $body(n)(using ^^)
                                       _   <- loop(false)()
                                     yield ()
                                   loop()(ZIO.unit)
@@ -425,13 +425,13 @@ package sΠ:
                                 continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
                                 promise  <- Promise.make[Nothing, Option[<>]]
                                 _        <- promise.succeed(None).unless(first)
-                                timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                timestamp <- currentTimeMillis.flatMap(Ref.make)
                                 _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                 opt      <- promise.await
                                 _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                        (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -446,7 +446,7 @@ package sΠ:
                                     _   <- f.join
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body()(using ^^).exit
+                                    _   <- $body()(using ^^)
                                     _   <- loop(false)()
                                   yield ()
                                 loop()(ZIO.unit)
@@ -505,13 +505,13 @@ package sΠ:
                                   continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
                                   promise  <- Promise.make[Nothing, Option[<>]]
                                   _        <- promise.succeed(None).unless(first)
-                                  timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                  timestamp <- currentTimeMillis.flatMap(Ref.make)
                                   _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, Some(Left(())), $rate)))
                                   opt      <- promise.await
                                   _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                                 yield {
                                   def loop(enabled: Boolean = first)
-                                          (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                          (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                     for
                                       _   <- sync
                                       _   <- timeset
@@ -526,7 +526,7 @@ package sΠ:
                                       _   <- f.join
                                       _   <- $sleep
                                       _   <- nextS.release
-                                      _   <- $body()(using ^^).exit
+                                      _   <- $body()(using ^^)
                                       _   <- loop(false)()
                                     yield ()
                                   loop()(ZIO.unit)
@@ -584,13 +584,13 @@ package sΠ:
                                 promise  <- Promise.make[Nothing, Option[<>]]
                                 _        <- promise.succeed(None).unless(first)
                                 result   <- Ref.make(`null`)
-                                timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                timestamp <- currentTimeMillis.flatMap(Ref.make)
                                 _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- promise.await
                                 _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                        (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -605,7 +605,7 @@ package sΠ:
                                     n   <- result.get
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body(n)(using ^^).exit
+                                    _   <- $body(n)(using ^^)
                                     _   <- loop(false)()
                                   yield ()
                                 loop()(ZIO.unit)
@@ -662,13 +662,13 @@ package sΠ:
                                 promise  <- Promise.make[Nothing, Option[<>]]
                                 _        <- promise.succeed(None).unless(first)
                                 result   <- Ref.make(`null`)
-                                timestamp <- Clock.nanoTime.flatMap(Ref.make)
+                                timestamp <- currentTimeMillis.flatMap(Ref.make)
                                 _        <- ${/}.offer(^ -> $key -> ((promise -> continue, timestamp), ($ether, Some(Right(result)), $rate)))
                                 opt      <- promise.await
                                 _        <- (linearP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
                               yield {
                                 def loop(enabled: Boolean = first)
-                                        (timeset: UIO[Unit] = Clock.nanoTime.flatMap(timestamp.set)): UIO[Unit] =
+                                        (timeset: UIO[Unit] = currentTimeMillis.flatMap(timestamp.set)): UIO[Unit] =
                                   for
                                     _   <- sync
                                     _   <- timeset
@@ -683,7 +683,7 @@ package sΠ:
                                     n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
                                     _   <- $sleep
                                     _   <- nextS.release
-                                    _   <- $body(n)(using ^^).exit
+                                    _   <- $body(n)(using ^^)
                                     _   <- loop(false)()
                                   yield ()
                                 loop()(ZIO.unit)

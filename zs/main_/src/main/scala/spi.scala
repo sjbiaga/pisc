@@ -34,11 +34,11 @@ package object sΠ:
 
   import _root_.cats.effect.std.Semaphore
 
-  import _root_.zio.{ Clock, Duration, Exit, Promise, Ref, Schedule, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, Promise, Ref, Schedule, Task, UIO, ZIO }
   import _root_.zio.concurrent.CyclicBarrier
   import _root_.zio.stream.ZStream
 
-  import `Π-loop`.{ <>, +, %, /, \ }
+  import `Π-loop`.{ <>, +, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
 
@@ -110,6 +110,16 @@ package object sΠ:
           * linear replication guard
           */
         def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                 (using %, /, \)
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): ZStream[Any, Nothing, Unit] =
+        apply(rate, Duration.Zero)(key)(?, -, *, +)
+
+        /**
+          * linear replication guard w/ pace
+          */
+        def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -124,14 +134,14 @@ package object sΠ:
             _        <- if None eq * then ZStream.unit
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`new {}`, None, rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
-            timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+            timeset   =  currentTimeMillis.flatMap(timestamp.set)
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
@@ -149,20 +159,11 @@ package object sΠ:
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
+            _  <- ZStream.fromZIO(ZIO.sleep(pace))
             _  <- ZStream.fromZIO(+.release)
             _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             ()
-
-        /**
-          * linear replication guard w/ pace
-          */
-        def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                 (using %, /, \)
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, Unit] =
-        apply(rate)(key)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
 
         /**
           * linear replication guard w/ code
@@ -197,11 +198,11 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`new {}`, None, rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+          timeset   =  currentTimeMillis.flatMap(timestamp.set)
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
@@ -262,7 +263,7 @@ package object sΠ:
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
-        timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+        timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
         _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, timestamp), (`new {}`, None, rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
@@ -279,7 +280,7 @@ package object sΠ:
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): ZStream[Any, Nothing, Unit] =
-      apply(rate)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+      apply(rate)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
     /**
       * prefix w/ code
@@ -322,6 +323,16 @@ package object sΠ:
             * linear replication bound output guard
             */
           def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                   (using %, /, \)
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                             ^ : String): ZStream[Any, Nothing, `()`] =
+            apply(rate, Duration.Zero)(key)(?, -, *, +)
+
+          /**
+            * linear replication bound output guard w/ pace
+            */
+          def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -336,14 +347,14 @@ package object sΠ:
               _        <- if None eq * then ZStream.unit
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
               _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
               if !discard
-              timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+              timeset   =  currentTimeMillis.flatMap(timestamp.set)
               sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
               it <- ( for
                         _  <- ZStream.unit.repeat(Schedule.forever)
@@ -367,20 +378,11 @@ package object sΠ:
                        yield
                          it
                     ).interruptWhen(sp)
+              _  <- ZStream.fromZIO(ZIO.sleep(pace))
               _  <- ZStream.fromZIO(+.release)
               _  <- ZStream.unit.whenZIO(sp.isDone.negate)
             yield
               it
-
-          /**
-            * linear replication bound output guard w/ pace
-            */
-          def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                   (using %, /, \)
-                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
 
           /**
             * linear replication bound output guard w/ code
@@ -406,6 +408,16 @@ package object sΠ:
           * linear constant replication output guard
           */
         def apply(rate: Rate, value: `()`)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                 (using %, /, \)
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): ZStream[Any, Nothing, Unit] =
+          apply(rate, Duration.Zero, value)(key)(?, -, *, +)
+
+        /**
+          * linear constant replication output guard w/ pace
+          */
+        def apply(rate: Rate, pace: Duration, value: `()`)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -420,14 +432,14 @@ package object sΠ:
             _        <- if None eq * then ZStream.unit
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
-            timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+            timeset   =  currentTimeMillis.flatMap(timestamp.set)
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
@@ -445,20 +457,11 @@ package object sΠ:
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
+            _  <- ZStream.fromZIO(ZIO.sleep(pace))
             _  <- ZStream.fromZIO(+.release)
             _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             ()
-
-        /**
-          * linear constant replication output guard w/ pace
-          */
-        def apply(rate: Rate, pace: Duration, value: `()`)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                 (using %, /, \)
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, Unit] =
-          apply(rate, value)(key)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
 
         /**
           * linear constant replication output guard w/ code
@@ -546,13 +549,23 @@ package object sΠ:
             * linear variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                                       (using %, /, \)
+                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                                 ^ : String): ZStream[Any, Nothing, Unit] =
+            apply[S](2)(rate, Duration.Zero, value)(key)(?, -, *, +)
+
+          /**
+            * linear variable replication output guard w/ pace
+            */
+          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                                        (using % : %, / : /, \ : \)
                                        (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                  `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                  ^ : String): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.`(!)`.`(+)`(rate, _)(key)(?, -, *, +))
+              ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.`(!)`.`(+)`(rate, pace, _)(key)(?, -, *, +))
             else
               for
                 discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
@@ -564,14 +577,14 @@ package object sΠ:
                 _        <- if None eq * then ZStream.unit
                             else ZStream.fromZIO(promise.succeed(None))
                 enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
-                timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+                timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
                 _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                             else ZStream.succeed(false)
                 _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
                 if !discard
-                timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+                timeset   =  currentTimeMillis.flatMap(timestamp.set)
                 sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
                 _  <- ZStream.fromZIO {
                   for
@@ -589,20 +602,11 @@ package object sΠ:
                   yield
                     ()
                 }.repeat(Schedule.forever).interruptWhen(sp)
+                _  <- ZStream.fromZIO(ZIO.sleep(pace))
                 _  <- ZStream.fromZIO(+.release)
                 _  <- ZStream.unit.whenZIO(sp.isDone.negate)
               yield
                 ()
-
-          /**
-            * linear variable replication output guard w/ pace
-            */
-          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                                       (using %, /, \)
-                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                                 ^ : String): ZStream[Any, Nothing, Unit] =
-            apply[S](1)(rate, value)(key)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
 
           /**
             * linear variable replication output guard w/ code
@@ -628,6 +632,16 @@ package object sΠ:
           * linear replication input guard
           */
         def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+                 (using %, /, \)
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): ZStream[Any, Nothing, `()`] =
+          apply(rate, Duration.Zero)(key)(?, -, *, +)
+
+        /**
+          * linear replication input guard w/ pace
+          */
+        def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -643,14 +657,14 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             result   <- ZStream.fromZIO(Ref.make[`()`](null))
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
             _        <- if discard then ZStream.fromZIO(-.await.exit) else ZStream.unit
             if !discard
-            timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+            timeset   =  currentTimeMillis.flatMap(timestamp.set)
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             _  <- ZStream.fromZIO {
               for
@@ -668,21 +682,12 @@ package object sΠ:
               yield
                 ()
             }.repeat(Schedule.forever).interruptWhen(sp)
+            _  <- ZStream.fromZIO(ZIO.sleep(pace))
             _  <- ZStream.fromZIO(+.release)
             it <- ZStream.fromZIO(result.get)
             _  <- ZStream.unit.whenZIO(sp.isDone.negate)
           yield
             it
-
-        /**
-          * linear replication input guard w/ pace
-          */
-        def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
-                 (using %, /, \)
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, `()`] =
-          apply(rate)(key)(?, -, *, +) zipLeft ZStream.unit.repeat(Schedule.spaced(pace))
 
         /**
           * linear replication input guard w/ code
@@ -719,11 +724,11 @@ package object sΠ:
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
             enabled  <- ZStream.fromZIO(Ref.make(true))
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
-            timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+            timeset   =  currentTimeMillis.flatMap(timestamp.set)
             sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
             it <- ( for
                       _  <- ZStream.unit.repeat(Schedule.forever)
@@ -792,11 +797,11 @@ package object sΠ:
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+          timeset   =  currentTimeMillis.flatMap(timestamp.set)
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
@@ -925,11 +930,11 @@ package object sΠ:
               promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
               continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
               enabled  <- ZStream.fromZIO(Ref.make(true))
-              timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+              timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
               _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
-              timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+              timeset   =  currentTimeMillis.flatMap(timestamp.set)
               sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
               _  <- ZStream.fromZIO {
                 for
@@ -993,11 +998,11 @@ package object sΠ:
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
           result   <- ZStream.fromZIO(Ref.make[`()`](null))
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          timeset   =  Clock.nanoTime.flatMap(timestamp.set)
+          timeset   =  currentTimeMillis.flatMap(timestamp.set)
           sp <- ZStream.fromZIO(Promise.make[Nothing, Unit])
           _  <- ZStream.fromZIO {
             for
@@ -1061,7 +1066,7 @@ package object sΠ:
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
-          timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+          timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
           _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
@@ -1079,7 +1084,7 @@ package object sΠ:
                (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                          `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                          ^ : String): ZStream[Any, Nothing, `()`] =
-        apply(rate)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        apply(rate)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * bound output prefix w/ code
@@ -1112,7 +1117,7 @@ package object sΠ:
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
-        timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+        timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
         _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
@@ -1129,7 +1134,7 @@ package object sΠ:
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): ZStream[Any, Nothing, Unit] =
-        apply(rate, value)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        apply(rate, value)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
     /**
       * constant output prefix w/ code
@@ -1181,7 +1186,7 @@ package object sΠ:
         then
           self(rate, pace, value.asInstanceOf[`()`])(key)
         else
-          apply[S](1)(rate, value)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+          apply[S](1)(rate, value)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * variable output prefix w/ code
@@ -1228,7 +1233,7 @@ package object sΠ:
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
-            timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+            timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
             _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
@@ -1245,7 +1250,7 @@ package object sΠ:
                                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                              ^ : String): ZStream[Any, Nothing, Unit] =
-        apply[S](1)(rate, value)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+        apply[S](1)(rate, value)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
         * variable output prefix w/ code
@@ -1279,7 +1284,7 @@ package object sΠ:
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         result   <- ZStream.fromZIO(Ref.make[`()`](null))
-        timestamp <- ZStream.fromZIO(Clock.nanoTime.flatMap(Ref.make))
+        timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
         _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
@@ -1297,7 +1302,7 @@ package object sΠ:
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                        `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): ZStream[Any, Nothing, `()`] =
-      apply(rate)(key) <* ZStream.unit.repeat(Schedule.fromDuration(pace))
+      apply(rate)(key) <* ZStream.fromZIO(ZIO.sleep(pace))
 
     /**
       * input prefix w/ code

@@ -85,7 +85,7 @@ package object sΠ:
       for
         _     <- Future { exclude(key) }
         cancel = Promise[Option[(Promise[`()`], Double)]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`new {}`, None, rate))) }
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.currentTimeMillis, (`new {}`, None, rate))) }
         opt   <- cancel.future
         delay <- if (opt eq None)
                  then
@@ -174,7 +174,7 @@ package object sΠ:
       for
         _     <- Future { exclude(key) }
         cancel = Promise[Option[(Promise[`()`], Double)]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Left(())), rate))) }
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.currentTimeMillis, (`()`[{}], Some(Left(())), rate))) }
         opt   <- cancel.future
         delay <- if (opt eq None)
                  then
@@ -196,7 +196,7 @@ package object sΠ:
       for
         _     <- Future { exclude(key) }
         cancel = Promise[Option[(Promise[`()`], Double)]]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Left(())), rate))) }
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.currentTimeMillis, (`()`[{}], Some(Left(())), rate))) }
         opt   <- cancel.future
         delay <- if (opt eq None)
                  then
@@ -219,7 +219,7 @@ package object sΠ:
         _     <- Future { exclude(key) }
         cancel = Promise[Option[(Promise[`()`], Double)]]()
         result = Promise[`()`]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Right(result)), rate))) }
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.currentTimeMillis, (`()`[{}], Some(Right(result)), rate))) }
         opt   <- cancel.future
         n_d   <- if (opt eq None)
                  then
@@ -242,7 +242,7 @@ package object sΠ:
         _     <- Future { exclude(key) }
         cancel = Promise[Option[(Promise[`()`], Double)]]()
         result = Promise[`()`]()
-        _     <- Future { % ! Enqueue(^, key, cancel -> (System.nanoTime, (`()`[{}], Some(Right(result)), rate))) }
+        _     <- Future { % ! Enqueue(^, key, cancel -> (System.currentTimeMillis, (`()`[{}], Some(Right(result)), rate))) }
         opt   <- cancel.future
         n_d   <- if (opt eq None)
                  then

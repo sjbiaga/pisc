@@ -58,6 +58,9 @@ package object sΠ:
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> Stream[F, Unit]
 
 
+  private val `0.seconds` = FiniteDuration(0, java.util.concurrent.TimeUnit.SECONDS)
+
+
   /**
     * Supervised [[code]].
     * @param code
@@ -116,6 +119,16 @@ package object sΠ:
           * linear replication guard
           */
         def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                 (using %[F], /[F], \[F])
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): Stream[F, Unit] =
+          apply(rate, `0.seconds`)(key)(?, -, *, +)
+
+        /**
+          * linear replication guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -128,13 +141,13 @@ package object sΠ:
             _        <- if None eq * then Stream.unit
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-            timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+            timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (τ.`new {}`, None, rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
-            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+            timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
@@ -152,20 +165,11 @@ package object sΠ:
               yield
                 ()
             }.interruptWhen(sr)
+            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
             _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
-
-        /**
-          * linear replication guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): Stream[F, Unit] =
-        apply(rate)(key)(?, -, *, +).spaced(pace)
 
         /**
           * linear replication guard w/ code
@@ -200,11 +204,11 @@ package object sΠ:
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
-          timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+          timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (τ.`new {}`, None, rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
-          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+          timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
@@ -265,7 +269,7 @@ package object sΠ:
       for
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-        timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+        timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
         _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (τ.`new {}`, None, rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
@@ -329,6 +333,16 @@ package object sΠ:
             * linear replication bound output guard
             */
           def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                   (using %[F], /[F], \[F])
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                             ^ : String): Stream[F, `()`[F]] =
+            apply(rate, `0.seconds`)(key)(?, -, *, +)
+
+          /**
+            * linear replication bound output guard w/ pace
+            */
+          def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using % : %[F], / : /[F], \ : \[F])
                    (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                              `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -341,13 +355,13 @@ package object sΠ:
               _        <- if None eq * then Stream.unit
                           else Stream.eval(deferred.complete(None))
               enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-              timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+              timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
               _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
-              timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+              timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
               sr <- Stream.eval(SignallingRef[F].of(false))
               it <- ( for
                         _  <- Stream.unit.repeat
@@ -371,20 +385,11 @@ package object sΠ:
                       yield
                         it
                     ).interruptWhen(sr)
+              _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
               _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               it
-
-          /**
-            * linear replication bound output guard w/ pace
-            */
-          def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                   (using %[F], /[F], \[F])
-                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                             `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): Stream[F, `()`[F]] =
-            apply(rate)(key)(?, -, *, +).spaced(pace)
 
           /**
             * linear replication bound output guard w/ code
@@ -410,6 +415,16 @@ package object sΠ:
           * linear constant replication output guard
           */
         def apply(rate: Rate, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                 (using %[F], /[F], \[F])
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): Stream[F, Unit] =
+          apply(rate, `0.seconds`, value)(key)(?, -, *, +)
+
+        /**
+          * linear constant replication output guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -422,13 +437,13 @@ package object sΠ:
             _        <- if None eq * then Stream.unit
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-            timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+            timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
-            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+            timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
@@ -446,20 +461,11 @@ package object sΠ:
               yield
                 ()
             }.interruptWhen(sr)
+            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
             _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
-
-        /**
-          * linear constant replication output guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): Stream[F, Unit] =
-          apply(rate, value)(key)(?, -, *, +).spaced(pace)
 
         /**
           * linear constant replication output guard w/ code
@@ -547,13 +553,23 @@ package object sΠ:
             * linear variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                                       (using %[F], /[F], \[F])
+                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                                                 ^ : String): Stream[F, Unit] =
+            apply[S](2)(rate, `0.seconds`, value)(key)(?, -, *, +)
+
+          /**
+            * linear variable replication output guard w/ pace
+            */
+          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                                        (using % : %[F], / : /[F], \ : \[F])
                                        (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                                                  `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                  ^ : String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`.`(+)`(rate, _)(key)(?, -, *, +))
+              Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`.`(+)`(rate, pace, _)(key)(?, -, *, +))
             else
               for
                 _        <- if None eq * then Stream.eval(exclude(key))
@@ -563,13 +579,13 @@ package object sΠ:
                 _        <- if None eq * then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-                timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+                timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
                 _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
                 cb_fb_in <- Stream.eval(deferred.get)
                 _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
-                timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+                timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
                 sr <- Stream.eval(SignallingRef[F].of(false))
                 _  <- Stream.repeatEval {
                   for
@@ -587,20 +603,11 @@ package object sΠ:
                   yield
                     ()
                 }.interruptWhen(sr)
+                _  <- Stream.sleep(pace)
                 _  <- Stream.eval(+.release)
                 _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
               yield
                 ()
-
-          /**
-            * linear variable replication output guard w/ pace
-            */
-          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                                       (using %[F], /[F], \[F])
-                                       (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                                                 `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                                 ^ : String): Stream[F, Unit] =
-            apply[S](1)(rate, value)(key)(?, -, *, +).spaced(pace)
 
           /**
             * linear variable replication output guard w/ code
@@ -626,6 +633,16 @@ package object sΠ:
           * linear replication input guard
           */
         def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
+                 (using %[F], /[F], \[F])
+                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
+                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
+                           ^ : String): Stream[F, `()`[F]] =
+          apply(rate, `0.seconds`)(key)(?, -, *, +)
+
+        /**
+          * linear replication input guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
                            `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -639,13 +656,13 @@ package object sΠ:
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-            timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+            timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
-            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+            timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
@@ -663,21 +680,12 @@ package object sΠ:
               yield
                 ()
             }.interruptWhen(sr)
+            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
             it <- Stream.eval(result.get)
             _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             it
-
-        /**
-          * linear replication input guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]]),
-                           `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): Stream[F, `()`[F]] =
-          apply(rate)(key)(?, -, *, +).spaced(pace)
 
         /**
           * linear replication input guard w/ code
@@ -714,11 +722,11 @@ package object sΠ:
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
             enabled  <- Stream.eval(Ref[F].of(true))
-            timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+            timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
-            timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+            timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
             sr <- Stream.eval(SignallingRef[F].of(false))
             it <- ( for
                       _  <- Stream.unit.repeat
@@ -787,11 +795,11 @@ package object sΠ:
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
-          timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+          timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
-          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+          timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
@@ -920,11 +928,11 @@ package object sΠ:
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               enabled  <- Stream.eval(Ref[F].of(true))
-              timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+              timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
               _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               if cb_fb_in ne None
-              timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+              timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
               sr <- Stream.eval(SignallingRef[F].of(false))
               _  <- Stream.repeatEval {
                 for
@@ -988,11 +996,11 @@ package object sΠ:
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
           result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-          timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+          timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, timestamp), (`()`[{}], Some(Right(result)), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
-          timeset   =  Async[F].monotonic.map(_.toNanos) >>= timestamp.set
+          timeset   =  Async[F].realTime.map(_.toMillis) >>= timestamp.set
           sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
@@ -1056,7 +1064,7 @@ package object sΠ:
         for
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-          timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+          timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
@@ -1107,7 +1115,7 @@ package object sΠ:
       for
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-        timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+        timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
         _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
@@ -1223,7 +1231,7 @@ package object sΠ:
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-            timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+            timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
@@ -1274,7 +1282,7 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-        timestamp <- Stream.eval(Async[F].monotonic.map(_.toNanos) >>= Ref[F].of)
+        timestamp <- Stream.eval(Async[F].realTime.map(_.toMillis) >>= Ref[F].of)
         _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None

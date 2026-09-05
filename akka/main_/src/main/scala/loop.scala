@@ -28,8 +28,6 @@
 
 import _root_.scala.collection.immutable.Map
 
-import Double.NaN
-
 import _root_.scala.concurrent.Promise
 
 import _root_.akka.actor.typed.scaladsl.Behaviors
@@ -166,9 +164,8 @@ package object `Π-loop`:
                                   p1.success(Some((in, delay)))
                                   if k1 != k2 then p2.success(Some((in, delay)))
                                   no += 1
-                                  duration match { case 0.0 | NaN =>
-                                                   case _         => clock += delay }
-                                  dump ! ((no, clock), ((ts1, ts2), System.nanoTime), (k1, k2), (delay, duration))
+                                  if duration != 0.0 && !duration.isNaN then clock += delay
+                                  dump ! ((no, clock), ((ts1, ts2), System.currentTimeMillis), (k1, k2), (delay, duration))
                               }
                   }
 

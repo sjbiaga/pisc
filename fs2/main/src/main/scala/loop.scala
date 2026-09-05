@@ -330,7 +330,7 @@ package object `Π-loop`:
 
     def poll(using % : %[F], / : /[F], \ : \[F]): F[Unit] =
       /.take.flatMap {
-        case ((^ @ (_: String), key), it @ ((d, _), _)) =>        
+        case ((^ @ (_: String), key), it @ ((d, _), _)) =>
           d.tryGet.map(_ eq None).flatMap {
             if _
             then

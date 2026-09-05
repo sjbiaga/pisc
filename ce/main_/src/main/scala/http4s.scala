@@ -34,9 +34,9 @@ import _root_.org.http4s.circe.CirceEntityCodec.*
 import _root_.org.http4s.dsl.Http4sDsl
 import _root_.org.http4s.HttpRoutes
 import _root_.org.http4s.server.{ Router, Server }
+import _root_.org.http4s.server.middleware.CORS
 import _root_.org.http4s.ember.client.EmberClientBuilder
 import _root_.org.http4s.ember.server.EmberServerBuilder
-
 
 package object `Π-http4s`:
 
@@ -48,8 +48,8 @@ package object `Π-http4s`:
   enum Traces derives Codec.AsObject:
     case ConsoleCSV
     case FileCSV(filename: String)
-    case AmazonSQS(queue: String)
-    case Kafka(topic: String)
+    case AmazonSQS(backend: String, queue: String)
+    case Kafka(backend: String, topic: String)
     case RabbitMQ(queue: String)
 
   object Traces:
@@ -57,9 +57,9 @@ package object `Π-http4s`:
       Option(`π-traces`).map {
         case `Π-ConsoleCSV` => ConsoleCSV
         case `Π-FileCSV`(filename) => FileCSV(filename)
-        case `Π-AmazonSQS`(_, _, _, _, queue) => AmazonSQS(queue)
-        case `Π-Kafka`(_, topic: String) => Kafka(topic)
-        case `Π-RabbitMQ`(_, _, queue) => RabbitMQ(queue)
+        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
+        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
+        case `Π-RabbitMQ`(_, _, queue, _, _) => RabbitMQ(queue)
       }
 
 
@@ -101,16 +101,16 @@ package object `Π-http4s`:
   object FeedbackEndpoint extends Http4sDsl[IO]:
     def apply(feedback: Feedback) = HttpRoutes.of[IO] {
       case GET -> Root / "pause" =>
-        feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.tryGet).map(_ eq None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.tryGet).map(_ eq None).flatMap(Ok(_))
 
       case GET -> Root / "traces" =>
-        feedback.tracesR.get.map(_.toString).flatMap(Ok(_))
+        feedback.tracesR.get.flatMap(Ok(_))
 
       case GET -> Root / "stop" =>
-        feedback.pauseRD_stopR_exitRD.get.map(_._1._2.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.map(_._1._2).flatMap(Ok(_))
 
       case GET -> Root / "exit" =>
-        feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.tryGet).map(_ ne None).map(_.toString).flatMap(Ok(_))
+        feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.tryGet).map(_ ne None).flatMap(Ok(_))
 
       case PUT -> Root / "pause" / BooleanVar(it) =>
         feedback.pauseRD_stopR_exitRD
@@ -223,32 +223,32 @@ package object `Π-http4s`:
       "feedback" -> FeedbackEndpoint(feedback),
       "state" -> StateEndpoint(batch, startedR, feedback),
       "health" -> HealthCheckEndpoint()
-    ).orNotFound
+    )
     EmberServerBuilder
       .default[IO]
       .withHost(IpAddress.fromString(address).orElse(Hostname.fromString(address)).getOrElse(host"localhost"))
       .withPort(port"0")
-      .withHttpApp(spiApp)
+      .withHttpApp(CORS(spiApp).orNotFound)
       .build
 
   case class ConsulCheck(HTTP: String, Interval: String, Timeout: String) derives Codec.AsObject
-  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Check: ConsulCheck) derives Codec.AsObject
+  case class ConsulRegister(ID: String, Name: String, Address: String, Port: Int, Tags: List[String], Meta: Map[String, String], Check: ConsulCheck) derives Codec.AsObject
 
   val serviceName = "StochasticPiCalculus2Scala"
 
-  def http4s(server: Server): Resource[IO, Unit] =
+  def http4s(batch: Boolean, server: Server): Resource[IO, Unit] =
     import _root_.org.http4s.Method.PUT
     import _root_.org.http4s.{ Request, Uri }
 
     Option {
       Traces().fold(null) {
-        case AmazonSQS(queue) => "amazonsqs" -> s"queue_$queue"
-        case Kafka(topic) => "kafka" -> s"topic_$topic"
-        case RabbitMQ(queue) => "rabbitmq" -> s"queue_$queue"
+        case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
+        case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
+        case RabbitMQ(queue) => ("rabbitmq", "rabbitmq", "queue", queue)
         case _ => null
       }
     } match
-      case Some((tag, name)) =>
+      case Some((producer, backend, kind, name)) =>
         val host = server.address.getAddress.getHostAddress
         val port = server.address.getPort
         val consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
@@ -259,7 +259,16 @@ package object `Π-http4s`:
           Name = serviceName,
           Address = host,
           Port = port,
-          Tags = List(tag, name, "ce_emitter"),
+          Tags = List("StochasticPi2Scala", producer, name),
+          Meta = Map(
+            "calculus" -> "StochasticPiCalculus",
+            "batch" -> batch.toString,
+            "producer" -> producer,
+            "backend" -> backend,
+            "kind" -> kind,
+            "emitter" -> "ce",
+            "pid" -> ProcessHandle.current.pid.toString
+          ),
           Check = ConsulCheck(
             HTTP = s"http://$host:$port/health",
             Interval = "10s",

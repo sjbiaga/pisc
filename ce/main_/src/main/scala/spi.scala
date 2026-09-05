@@ -41,7 +41,7 @@ package object sΠ:
   import _root_.cats.effect.kernel.Outcome.Succeeded
   import _root_.cats.effect.std.Supervisor
 
-  import `Π-loop`.{ <>, %, /, \ }
+  import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
 
 
@@ -110,7 +110,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _        <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`new {}`, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
@@ -428,7 +428,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
@@ -459,7 +459,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
-        timestamp <- IO.monotonic.map(_.toNanos) >>= IO.ref
+        timestamp <- currentTimeMillis >>= IO.ref
         _         <- /.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
