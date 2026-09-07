@@ -28,7 +28,7 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.{ Deferred, IOLocal }
+import _root_.cats.effect.Deferred
 import _root_.cats.effect.std.Semaphore
 
 import _root_.zio.FiberRef
@@ -44,50 +44,75 @@ object App extends _root_.zio.interop.catz.CatsApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
+  import _root_.cats.syntax.applicative.*
+  import _root_.cats.syntax.flatMap.*
+  import _root_.cats.syntax.functor.*
+  import _root_.cats.syntax.semigroupal.*
+
   import _root_.cats.effect.Ref
+  import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
+  import _root_.cats.effect.syntax.monadCancel.*
+  import _root_.cats.effect.syntax.spawn.*
+
   import _root_.zio.{ ExitCode, ZIOAppArgs, ZIO }
-  import _root_.zio.stream.ZStream
 
   import _root_.io.github.timwspence.cats.stm.STM
 
   import `Π-dump`.*
+  import `Π-http4s`.*
   import `Π-loop`.*, `Π-loop`.given
 
 
+  private val bacsa = "pisc.bioambients.communications.bind.address"
   private val bacsp = "pisc.bioambients.communications.parallelism.level"
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
+  private val bacse = "pisc.bioambients.communications.exit.passthrough"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
-                 (using `}{`.`][`, `}{`.stm.TSemaphore): π.F[ExitCode] =
+  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], feedback: Feedback[π.F], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+                    (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
+                    (using `}{`.`][`, `}{`.stm.TSemaphore)
+                    (using ClassTag[T]): π.F[ExitCode] =
+    val F = classTag[T].runtimeClass.getCanonicalName
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
+    val hπ = πhttp4s[π.F]()
     val mπ = π.πmain[π.F]()
     val \ =
       if parameters.threshold > 0
-      then { (it: π.F[Unit]) => ^.use(_ => it *> *.release) }
-      else { (it: π.F[Unit]) => ^.use(_ => it *> lπ.peek(using %, **)(π.`π-wand`)) }
-    for
-      l <- if parameters.threshold > 0
-           then lπ.loopʹ(parameters, started, batch, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).fork
-           else lπ.loop0(parameters, started, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).fork
-      _ <- lπ.poll(using %, /, \).fork
-      d <- dπ.dump(using %, !, -).fork
-      r <- ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid))
-      ^ <- π.`π-uuid`[π.F]
-      _ <- mπ.Main(r, `}{`)(args*)(using ^)(using %, /, \).compile.drain
-      x <- !.get
-      _ <- l.join
-      _ <- d.join
-    yield
-      ExitCode(x.code)
+      then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
+    ( for
+        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, _))
+        _ <- if parameters.threshold > 0
+             then lπ.loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background
+        _ <- lπ.poll(using %, /, \).background
+        _ <- dπ.dump(using %, !, -).background
+        r <- Resource.eval(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
+        ^ <- Resource.eval(π.`π-uuid`[π.F])
+        _ <- mπ.Main(r, `}{`)(args*)(using ^)(using %, /, \).compile.drain.background
+      yield
+        ()
+    ).use { _ =>
+      val stop = feedback
+        .pauseRD_stopR_exitRD
+        .evalModify { case ((pauseD, _), exitD) =>
+          (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
+        }
+      !.get.map(x => ExitCode(x.code)).onCancel(stop.void).guarantee(!.get.void)
+    }
 
   override def run: ZIO[ZIOAppArgs, Throwable, Unit] =
+    val a = if sys.Prop.StringProp(bacsa).isSet
+            then sys.Prop.StringProp(bacsa).value
+            else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(bacsp).isSet
             then sys.Prop.IntProp(bacsp).value
             else π.`π-parameters`.parallelism
@@ -97,10 +122,13 @@ object App extends _root_.zio.interop.catz.CatsApp:
     val t = if sys.Prop.IntProp(bacst).isSet
             then sys.Prop.IntProp(bacst).value
             else π.`π-parameters`.timeout
+    val e = if sys.BooleanProp.keyExists(bacse).value
+            then true
+            else π.`π-parameters`.exit
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(π.`π-parameters`.address, p, h, t, π.`π-parameters`.exit, s)
+    val params = `Π-Parameters`(a, p, h, t, e, s)
     for
       args <- getArgs
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
@@ -113,11 +141,19 @@ object App extends _root_.zio.interop.catz.CatsApp:
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
+      paramsR  <- Ref[π.F].of(params)
+      tracesR  <- Ref[π.F].of(true)
+      lastR    <- Ref[π.F].of(0L -> .0)
+      ps_st_ex <- (Deferred[π.F, Unit].flatTap(_.complete(())) product Deferred[π.F, Unit]).flatMap { (pauseD, exitD) => AtomicCell[π.F].of(pauseD -> false -> exitD) }
+      _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
+      doneR    <- Ref[π.F].of(false)
+      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      x <- run(args.toList, params, n, b, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
+      x <- run[π.F[Unit]](args.toList, params, n, b, feedback, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
       _ <- exit(x)
     yield
       ()

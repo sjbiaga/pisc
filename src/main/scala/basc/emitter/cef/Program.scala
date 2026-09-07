@@ -519,7 +519,7 @@ object Program:
                                Term.ArgClause(expr :: Nil)),
                              Term.ArgClause(\(υidυ) :: Nil)))
             case Some((Right(term), _)) =>
-              val expr = term
+              val expr = `for * yield ()`(`_ <- IO { * }`(term))
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(

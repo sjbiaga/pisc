@@ -40,7 +40,7 @@ import _root_.org.http4s.ember.server.EmberServerBuilder
 
 package object `Π-http4s`:
 
-  import `Π-loop`.{ Feedback, `Π-Parameters` }
+  import `Π-loop`.{ Feedback, `Π-Parameters`, currentTimeMillis }
   import `Π-traces`.*
   import Traces.*
 
@@ -179,7 +179,7 @@ package object `Π-http4s`:
           params   <- feedback.paramsR.get
           (last,
            clock)  <- feedback.lastR.get
-          idle     <- IO.monotonic.map(_.toNanos - last)
+          idle     <- currentTimeMillis.map(_ - last)
           done     <- feedback.doneR.get
           state     = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
           response <- Ok(state)
@@ -265,6 +265,7 @@ package object `Π-http4s`:
           Tags = List("BioAmbients2Scala", producer, name),
           Meta = Map(
             "calculus" -> "BioAmbients",
+            "effect" -> "cats.effect.IO",
             "batch" -> batch.toString,
             "producer" -> producer,
             "backend" -> backend,

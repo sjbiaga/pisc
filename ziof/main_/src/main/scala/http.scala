@@ -35,7 +35,7 @@ import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
 package object `Π-http`:
 
-  import `Π-loop`.{ !, Feedback, `Π-Parameters` }
+  import `Π-loop`.{ !, Feedback, `Π-Parameters`, currentTimeMillis }
   import `Π-traces`.*
   import Traces.*
 
@@ -169,12 +169,13 @@ package object `Π-http`:
     def apply(batch: Boolean, startedR: Ref[Long], feedback: Feedback) = Routes(
       Method.GET / "state" -> handler { (_: Request) =>
         for
-          started       <- startedR.get
-          params        <- feedback.paramsR.get
-          (last, clock) <- feedback.lastR.get
-          idle          <- Clock.nanoTime.map(_ - last)
-          done          <- feedback.doneR.get
-          state          = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
+          started <- startedR.get
+          params  <- feedback.paramsR.get
+          (last,
+           clock) <- feedback.lastR.get
+          idle    <- currentTimeMillis.map(_ - last)
+          done    <- feedback.doneR.get
+          state    = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
         yield
           Response.ok.copy(body = Body.from(state))
       },
@@ -259,6 +260,7 @@ package object `Π-http`:
             Tags = List("BioAmbients2Scala", producer, name),
             Meta = Map(
               "calculus" -> "BioAmbients",
+              "effect" -> "zio.Task",
               "batch" -> batch.toString,
               "producer" -> producer,
               "backend" -> backend,

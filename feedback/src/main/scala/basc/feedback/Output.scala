@@ -68,9 +68,7 @@ object Item:
                        accessKey: String = "x",
                        secretKey: String = "x",
                        sessionToken: String = "feedback",
-                       //endpoint: String = "http://localhost:9324",
                        endpoint: String = "http://localhost:5173",
-                       //endpoint: String = "http://localhost:5173/sqs-proxy",
                        limit: Int = 10,
                        timeout: Int = 3,
                        receive: Boolean = false)
@@ -198,18 +196,27 @@ object Item:
         },
       ),
 
-      <.label(^.htmlFor := "snapshot-checkbox", "Snapshot: "),
+      ( if p.service.isBioAmbients
+        then
+          <.div(
+            ^.display.inlineBlock,
 
-      <.input(
-        ^.marginRight := "15px",
-        ^.id          := "snapshot-checkbox",
-        ^.`type`      := "checkbox",
-        ^.checked     := p.snapshot.value,
-        ^.disabled    := p.pause.value,
-        ^.onChange   ==> { (e: ReactEventFromInput) =>
-          val params = Parameters(snapshot = Some(e.target.checked))
-          p.service.parameters(params).flatMap(p.state.setState(_).to[IO])
-        },
+            <.label(^.htmlFor := "snapshot-checkbox", "Snapshot: "),
+
+            <.input(
+              ^.marginRight := "15px",
+              ^.id          := "snapshot-checkbox",
+              ^.`type`      := "checkbox",
+              ^.checked     := p.snapshot.value,
+              ^.disabled    := p.pause.value,
+              ^.onChange   ==> { (e: ReactEventFromInput) =>
+                val params = Parameters(snapshot = Some(e.target.checked))
+                p.service.parameters(params).flatMap(p.state.setState(_).to[IO])
+              },
+            )
+         )
+        else
+          VdomArray.empty()
       ),
 
       <.button(
@@ -396,7 +403,7 @@ object Item:
             then
               val queueUrl = s"${p.amazonsqs.value.endpoint}/queue/$queue"
               val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, _) = p.amazonsqs.value
-              <.div(amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout).Component())
+              <.div(amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout).Component(p.service.isBioAmbients))
             else
               VdomArray.empty()
 
@@ -459,7 +466,7 @@ object Item:
 
             if p.kafka.value.receive
             then
-              <.div(kafka.redpanda.Component(kafka.redpanda.Props(topic, p.kafka.value.offset, p.kafka.value.maxBytes, p.kafka.value.timeout)))
+              <.div(kafka.redpanda.Component(p.service.isBioAmbients -> kafka.redpanda.Props(topic, p.kafka.value.offset, p.kafka.value.maxBytes, p.kafka.value.timeout)))
             else
               VdomArray.empty()
           )
@@ -520,7 +527,7 @@ object Item:
 
             if p.rabbitmq.value.connect
             then
-              <.div(rabbitmq.Component(rabbitmq.Props(queue, p.rabbitmq.value.signal, p.rabbitmq.value.username, p.rabbitmq.value.password, p.rabbitmq.value.url)))
+              <.div(rabbitmq.Component(p.service.isBioAmbients -> rabbitmq.Props(queue, p.rabbitmq.value.signal, p.rabbitmq.value.username, p.rabbitmq.value.password, p.rabbitmq.value.url)))
             else
               VdomArray.empty()
           )

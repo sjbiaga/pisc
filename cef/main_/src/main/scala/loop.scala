@@ -225,60 +225,55 @@ package object `Π-loop`:
                   _.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
-                                    for
-                                      cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                      fb  = ( for
-                                                (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
-                                                (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                                _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
-                                                _            <- { (ord, ordʹ) match
-                                                                    case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                      `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                    case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                      `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                }.unlessA(k1 == k2)
-                                                elabel       <- `}{`.stm.commit { `}{`.`}{`(key, parameters.snapshot) }
-                                                (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                                _            <- `}{`.stm.commit { `1`.release }
-                                                _            <- cb.await
-                                                _            <- enable(k1)
-                                                _            <- enable(k2).unlessA(k1 == k2)
-                                                nc           <- if duration == 0.0 || duration.isNaN
-                                                                then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                                ss           <- ts1.get product ts2.get
-                                                now          <- currentTimeMillis
-                                                _            <- feedback.lastR.set(now -> nc._2)
-                                                _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
-                                                _            <- sem.release
-                                                _            <- started.update(_ - 1)
-                                              yield
-                                                ()
-                                            ).start
-                                      _  <- ( if stop
-                                              then
-                                                for
-                                                  _ <- **.offer(-1 -> Nil)
-                                                  _ <- d1.complete(None)
-                                                  _ <- d2.complete(None).unlessA(k1 == k2)
-                                                  _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
-                                                  _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                    if stop
+                                    then
+                                      for
+                                        _ <- **.offer(-1 -> Nil)
+                                        _ <- d1.complete(None)
+                                        _ <- d2.complete(None).unlessA(k1 == k2)
+                                        _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                        _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                      yield
+                                        ()
+                                    else
+                                      for
+                                        cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        _  <- sem.acquire
+                                        _  <- started.update(_ + 1)
+                                        fb <- ( for
+                                                  (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
+                                                  (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
+                                                  _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
+                                                  _            <- { (ord, ordʹ) match
+                                                                      case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                        `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                      case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                        `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                                  }.unlessA(k1 == k2)
+                                                  elabel       <- `}{`.stm.commit { `}{`.`}{`(key, parameters.snapshot) }
+                                                  (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
+                                                  _            <- `}{`.stm.commit { `1`.release }
+                                                  _            <- cb.await
+                                                  _            <- enable(k1)
+                                                  _            <- enable(k2).unlessA(k1 == k2)
+                                                  nc           <- if duration == 0.0 || duration.isNaN
+                                                                  then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                                  else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
+                                                  ss           <- ts1.get product ts2.get
+                                                  now          <- currentTimeMillis
+                                                  _            <- feedback.lastR.set(now -> nc._2)
+                                                  _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                                  _            <- sem.release
+                                                  _            <- started.update(_ - 1)
                                                 yield
                                                   ()
-                                              else
-                                                for
-                                                  _  <- sem.acquire
-                                                  _  <- started.update(_ + 1)
-                                                  fb <- fb
-                                                  _  <- d1.complete(Some((delay, cb, fb, in)))
-                                                  _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                                  _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                                  _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
-                                                yield
-                                                  ()
-                                            )
-                                    yield
-                                      ()
+                                              ).start
+                                        _  <- d1.complete(Some((delay, cb, fb, in)))
+                                        _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                      yield
+                                        ()
                                 }
                 }
               } >> IO.pure(true)
@@ -311,7 +306,7 @@ package object `Π-loop`:
               **.take.map(Some(_)).timeoutTo(parameters.timeout.microseconds, IO.none).flatMap {
                 case Some((_, nel)) =>
                   **.offer(-1 -> nel) >> IO.pure(true)
-                case _               =>
+                case _              =>
                   canExit.ifM(feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
               }
             case _  =>
@@ -323,60 +318,55 @@ package object `Π-loop`:
               _.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
-                                for
-                                  cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
-                                  fb  = ( for
-                                            (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
-                                            (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                            _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
-                                            _            <- { (ord, ordʹ) match
-                                                                case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                  `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                  `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                            }.unlessA(k1 == k2)
-                                            elabel       <- `}{`.stm.commit { `}{`.`}{`(key, parameters.snapshot) }
-                                            (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
-                                            _            <- `}{`.stm.commit { `1`.release }
-                                            _            <- cb.await
-                                            _            <- enable(k1)
-                                            _            <- enable(k2).unlessA(k1 == k2)
-                                            nc           <- if duration == 0.0 || duration.isNaN
-                                                            then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                            else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                            ss           <- ts1.get product ts2.get
-                                            now          <- currentTimeMillis
-                                            _            <- feedback.lastR.set(now -> nc._2)
-                                            _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
-                                            _            <- sem.release
-                                            _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
-                                          yield
-                                            ()
-                                        ).start
-                                  _  <- ( if stop
-                                          then
-                                            for
-                                              _ <- **.offer(-1 -> Nil)
-                                              _ <- d1.complete(None)
-                                              _ <- d2.complete(None).unlessA(k1 == k2)
-                                              _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
-                                              _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                if stop
+                                then
+                                  for
+                                    _ <- **.offer(-1 -> Nil)
+                                    _ <- d1.complete(None)
+                                    _ <- d2.complete(None).unlessA(k1 == k2)
+                                    _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                    _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                  yield
+                                    ()
+                                else
+                                  for
+                                    cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                    _  <- sem.acquire
+                                    _  <- started.update(_ + 1)
+                                    fb <- ( for
+                                              (slabel, _)  <- `}{`.stm.commit { `}{`.`}{`(key) }
+                                              (slabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
+                                              _            <- `}{`.stm.commit { `1`.acquire }.whenA(k1 == k2)
+                                              _            <- { (ord, ordʹ) match
+                                                                  case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                                    `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                                  case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                                    `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                              }.unlessA(k1 == k2)
+                                              elabel       <- `}{`.stm.commit { `}{`.`}{`(key, parameters.snapshot) }
+                                              (elabelʹ, _) <- `}{`.stm.commit { `}{`.`}{`(keyʹ) }
+                                              _            <- `}{`.stm.commit { `1`.release }
+                                              _            <- cb.await
+                                              _            <- enable(k1)
+                                              _            <- enable(k2).unlessA(k1 == k2)
+                                              nc           <- if duration == 0.0 || duration.isNaN
+                                                              then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                                              else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
+                                              ss           <- ts1.get product ts2.get
+                                              now          <- currentTimeMillis
+                                              _            <- feedback.lastR.set(now -> nc._2)
+                                              _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                              _            <- sem.release
+                                              _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                             yield
                                               ()
-                                          else
-                                            for
-                                              _  <- sem.acquire
-                                              _  <- started.update(_ + 1)
-                                              fb <- fb
-                                              _  <- d1.complete(Some((delay, cb, fb, in)))
-                                              _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                              _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                              _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
-                                            yield
-                                              ()
-                                        )
-                                yield
-                                  ()
+                                          ).start
+                                    _  <- d1.complete(Some((delay, cb, fb, in)))
+                                    _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
+                                    _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
+                                    _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                  yield
+                                    ()
                             }
             }
           } >> IO.pure(true)

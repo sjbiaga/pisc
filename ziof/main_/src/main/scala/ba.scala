@@ -779,19 +779,19 @@ package object sΠ:
                              def siblings(node: `)*(`, count: Int): StringBuilder =
                                val sid = tree(node)
                                val sb = StringBuilder()
-                               sb.append(s"$indent\t\t<siblings count=$count sibling=$sid>\n")
+                               sb.append(raw"""$indent\t\t<siblings count='$count' sibling='$sid'>\n""")
                                  .append {
                                    ( for
                                        nodeʹ <- m(node).siblings
                                        sidʹ   = tree(nodeʹ)
                                      yield
-                                       StringBuilder(s"""$indent\t\t\t<node id=$sidʹ label="${label(nodeʹ)}" parent=$pid sibling=$sid/>""")
-                                   ).reduce(_.append("\n").append(_)).append("\n")
+                                       StringBuilder(raw"""$indent\t\t\t<node id='$sidʹ' label="${label(nodeʹ)}" parent='$pid' sibling='$sid'/>""")
+                                   ).reduce(_.append("""\n""").append(_)).append("""\n""")
                                  }
-                                 .append(s"$indent\t\t</siblings>\n")
+                                 .append(raw"""$indent\t\t</siblings>\n""")
                              def children: StringBuilder =
                                val sb = StringBuilder()
-                               sb.append(s"$indent<children count=$count parent=$pid>\n")
+                               sb.append(raw"""$indent<children count='$count' parent='$pid'>\n""")
                                  .append {
                                    ( for
                                        node <- m(root).children
@@ -804,15 +804,15 @@ package object sΠ:
                                          val count = m(node).siblings.size
                                          if count == 0
                                          then
-                                           sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid/>""")
+                                           sbʹ.append(raw"""$indent\t<node id='$cid' label="${label(node)}" parent='$pid'/>""")
                                          else
-                                           sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""")
+                                           sbʹ.append(raw"""$indent\t<node id='$cid' label="${label(node)}" parent='$pid'>\n""")
                                               .append(siblings(node, count))
-                                              .append(s"$indent\t</node>")
+                                              .append(raw"""$indent\t</node>""")
                                        else
-                                         sbʹ.append(s"""$indent\t<node id=$cid label="${label(node)}" parent=$pid>\n""")
-                                            .append(xml(node, count, indent + "\t\t"))
-                                            .append("\n")
+                                         sbʹ.append(raw"""$indent\t<node id='$cid' label="${label(node)}" parent='$pid'>\n""")
+                                            .append(xml(node, count, indent + """\t\t"""))
+                                            .append("""\n""")
                                             .append {
                                               val count = m(node).siblings.size
                                               if count == 0
@@ -821,21 +821,21 @@ package object sΠ:
                                               else
                                                 siblings(node, count)
                                             }
-                                            .append(s"$indent\t</node>")
-                                   ).reduce(_.append("\n").append(_)).append("\n")
+                                            .append(raw"""$indent\t</node>""")
+                                   ).reduce(_.append("""\n""").append(_)).append("""\n""")
                                  }
-                                 .append(s"$indent</children>")
+                                 .append(raw"""$indent</children>""")
                              children
                            val count = m(root).children.size
                            val sb = StringBuilder()
                            if count == 0
                            then
-                             sb.append(s"""<root id=${tree(root)} label="${label(root)}"/>\n""")
+                             sb.append(raw"""<root id='${tree(root)}' label="${label(root)}"/>\n""")
                                .toString
                            else
-                             sb.append(s"""<root id=${tree(root)} label="${label(root)}">\n""")
-                               .append(xml(root, count, "\t"))
-                               .append("\n</root>")
+                             sb.append(raw"""<root id='${tree(root)}' label="${label(root)}">\n""")
+                               .append(xml(root, count, """\t"""))
+                               .append("""\n</root>""")
                                .toString
                        )
                      }

@@ -265,7 +265,7 @@ package object `Π-http`:
               "producer" -> producer,
               "backend" -> backend,
               "kind" -> kind,
-              "emitter" -> "zio",
+              "emitter" -> "zs",
               "pid" -> ProcessHandle.current.pid.toString
             ),
             Check = ConsulCheck(

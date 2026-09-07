@@ -32,8 +32,8 @@ object CommandBAin {
                    "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
                    "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
                    "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Sfalse") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456", "-Sfalse")
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")
                )
 
     def suggestions(args: Seq[String]): Seq[String] =

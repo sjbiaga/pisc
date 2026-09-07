@@ -29,6 +29,7 @@
 //package main.scala.in
 
 import _root_.cats.effect.{ IO, IOLocal }
+import _root_.cats.effect.std.Semaphore
 
 
 object App extends _root_.cats.effect.IOApp:
@@ -39,7 +40,7 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.cats.effect.{ ExitCode, Ref }
   import _root_.cats.effect.kernel.Resource
-  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue, Semaphore }
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
   import _root_.io.github.timwspence.cats.stm.STM
 
@@ -115,7 +116,6 @@ object App extends _root_.cats.effect.IOApp:
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       b <- IO.ref(0L)
-      pauseRD  <- IO.deferred[Unit].flatTap(_.complete(())).flatMap(IO.ref)
       paramsRD <- IO.deferred[`Π-Parameters`].flatMap(IO.ref)
       paramsR  <- IO.ref(params)
       tracesR  <- IO.ref(true)
@@ -141,7 +141,7 @@ object π:
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
 
-  import _root_.cats.effect.std.{ Semaphore, UUIDGen }
+  import _root_.cats.effect.std.UUIDGen
   import _root_.cats.effect.syntax.all.*
 
   import _root_.eu.timepit.refined.*

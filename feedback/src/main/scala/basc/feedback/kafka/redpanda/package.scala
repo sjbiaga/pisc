@@ -28,7 +28,7 @@ package object redpanda:
                    agent: String, name: String, polarity: Option[Boolean],
                    key: String, guard: Boolean, label: String,
                    rate: String, delay: Double, duration: Option[Double],
-                   dir_cap: String, from: String, to: String,
+                   dir_cap: Option[String], from: Option[String], to: Option[String],
                    snapshot: Option[String]) derives Codec.AsObject
 
   case class JsonKafkaRecord(topic: String, key: Key, value: Value, partition: Int, offset: Long) extends AbstractKafkaRecord[Key, Value] derives Codec.AsObject
@@ -41,10 +41,12 @@ package object redpanda:
                    groupId: String = "feedback-json-group",
                    instanceName: String = s"feedback-json-instance-${System.nanoTime}")
 
-  def Component(using httpClient: Client[IO]) = ScalaFnComponent.withHooks[Props]
+  def Component(using httpClient: Client[IO]) = ScalaFnComponent.withHooks[(Boolean, Props)]
     .useState(List.empty[JsonKafkaRecord])
 
-    .useEffectOnMountBy { (p, records) =>
+    .useEffectOnMountBy { (_p, records) =>
+      val (_, p) = _p
+
       val createUrl = Uri.unsafeFromString(s"${p.proxyUrl}/consumers/${p.groupId}")
       val createBody = CreateConsumerConfig(p.instanceName, "json", "earliest")
 
@@ -70,7 +72,9 @@ package object redpanda:
         ()
     }
 
-    .render { (p, records) =>
+    .render { (_p, records) =>
+      val (isBioAmbients, p) = _p
+
       <.div(
         <.p(s"""Redpanda REST Proxy ['${p.topic}' topic] #${records.value.size} records (${(if records.value.isEmpty then "current" else "last") + " offset = " + records.value.lastOption.fold(p.offset)(_.offset)})"""),
 
@@ -97,11 +101,11 @@ package object redpanda:
                   <.th("Rate"),
                   <.th("Delay"),
                   <.th("Duration"),
-                  <.th("Direction"),
-                  <.th("Capability"),
-                  <.th("From"),
-                  <.th("To"),
-                  <.th("Snapshot")
+                  <.th("Direction").when(isBioAmbients),
+                  <.th("Capability").when(isBioAmbients),
+                  <.th("From").when(isBioAmbients),
+                  <.th("To").when(isBioAmbients),
+                  <.th("Snapshot").when(isBioAmbients)
                 )
               ),
               <.tbody(
@@ -121,11 +125,11 @@ package object redpanda:
                        <.td(rec.rate),
                        <.td(rec.delay),
                        <.td(rec.duration.getOrElse(Double.NaN)),
-                       <.td(rec.dir_cap match { case it @ ("local" | "s2s" | "p2c" | "c2p") => it case _ => "" }),
-                       <.td(rec.dir_cap match { case it @ ("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => "" }),
+                       <.td(rec.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
+                       <.td(rec.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
                        <.td(rec.from),
                        <.td(rec.to),
-                       <.td("")
+                       <.td(rec.snapshot.map(Download("" + rec.pid + "-" + rec.number + rec.polarity.fold("")("-" + _) + ".xml", _, "text/xml")))
                   )
                 }.toTagMod
               )

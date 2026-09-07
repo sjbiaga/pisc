@@ -82,7 +82,7 @@ package object `Π-traces`:
       then
         var ps: PrintStream = null
         try
-          ps = PrintStream(FileOutputStream("" + number + "-" + polarity.getOrElse("") + ".xml", false), true)
+          ps = PrintStream(FileOutputStream("" + ProcessHandle.current.pid + "-" + number + "-" + polarity.getOrElse("") + ".xml", false), true)
           ps.println(snapshot.get)
         finally
           if ps ne null then try ps.close catch _ => {}
@@ -107,15 +107,16 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
-                       dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
+                       dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
+      val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message = s"""
                     {"pid":${ProcessHandle.current.pid},
                      "number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
                      "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse(null)}"
+                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
                     }"""
       val request = SendMessageRequest
         .builder
@@ -176,7 +177,7 @@ package object `Π-traces`:
       avroRecord.put("dir_cap", dir_cap)
       avroRecord.put("from", from)
       avroRecord.put("to", to)
-      avroRecord.put("snapshot", snapshot.getOrElse(null))
+      avroRecord.put("snapshot", snapshot.map(_.replaceAll("""\\n""", "\n").replaceAll("""\\t""", "\t")).getOrElse(null))
       backend match
         case `Π-Backend`.redpanda =>
           val record = ProducerRecord[String, String](topic, s"""{"label":"$label"}""", avroRecord.toString)
@@ -274,14 +275,15 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String,
                        rate: String, delay: Double, duration: Double,
-                       dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
+                       dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
+      val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message = s"""
                     {"pid":${ProcessHandle.current.pid},
                      "number":$number,"clock":$clock,"started":$started,"ended":$ended,
                      "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
                      "key":"$key","guard":$guard,"label":"$label",
                      "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":"${snapshot.getOrElse(null)}"
+                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
                     }"""
         .getBytes("UTF-8")
       `Π-RabbitMQ`.conn_channel._2.basicPublish("", queue, null, message)

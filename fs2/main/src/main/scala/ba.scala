@@ -42,7 +42,6 @@ package object sΠ:
   import _root_.cats.effect.{ Async, Deferred, Ref }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, UUIDGen }
 
-  import _root_.fs2.concurrent.SignallingRef
   import _root_.fs2.Stream
 
   import _root_.io.github.timwspence.cats.stm.STM
@@ -61,7 +60,7 @@ package object sΠ:
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> Stream[F, Unit]
 
 
-  private val `0.seconds` = FiniteDuration(0, java.util.concurrent.TimeUnit.SECONDS)
+  private val `Duration.Zero` = FiniteDuration(0, java.util.concurrent.TimeUnit.DAYS)
 
 
   /**
@@ -140,18 +139,18 @@ package object sΠ:
     */
   final class ν[F[_]: Async]:
 
+    def apply(): `()`[F] =
+      Map(
+        `π-local`.ord  -> new {},
+        `π-s2s`.ord    -> new {},
+        `π-p2c`.ord    -> new {},
+        `π-accept`.ord -> new {},
+        `π-expel`.ord  -> new {},
+        `π-merge+`.ord -> new {}
+      )
+
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
-    def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] =
-      f {
-        Map(
-          `π-local`.ord  -> new {},
-          `π-s2s`.ord    -> new {},
-          `π-p2c`.ord    -> new {},
-          `π-accept`.ord -> new {},
-          `π-expel`.ord  -> new {},
-          `π-merge+`.ord -> new {}
-        )
-      }
+    def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] = f(this())
 
 
   /**
@@ -169,7 +168,7 @@ package object sΠ:
         def apply(rate: Rate)(key: String, `)(`: `)(`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                  (using %[F], /[F], \[F])
                  (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate, `0.seconds`)(key, `)(`)(?, -, *, +)
+          apply(rate, `Duration.Zero`)(key, `)(`)(?, -, *, +)
 
         /**
           * linear replication guard w/ pace
@@ -191,7 +190,6 @@ package object sΠ:
             _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                 .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
-            sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- -.await
@@ -200,16 +198,15 @@ package object sΠ:
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
-                _        <- if cb_fb_in eq None then sr.set(true)
+                it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await >> fiber.join.void
+                              (cbarrier.await >> fiber.join.void).as(Some(()))
               yield
-                ()
-            }.interruptWhen(sr)
+                it
+            }.takeWhile(_.isDefined)
             _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
-            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             ()
 
@@ -244,21 +241,19 @@ package object sΠ:
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> `π-τ`), (τ.`new {}`, None, rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
-          sr <- Stream.eval(SignallingRef[F].of(false))
           _  <- Stream.repeatEval {
             for
               _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
               cb_fb_in <- continue.get.flatMap(_.get)
               _        <- Deferred[F, Option[<>[F]]] >>= continue.set
               _        <- enabled.set(false)
-              _        <- if cb_fb_in eq None then sr.set(true)
+              it       <- if cb_fb_in eq None then Async[F].pure(None)
                           else
                             val (cbarrier, fiber, _) = cb_fb_in.get
-                            cbarrier.await >> fiber.join.void
+                            (cbarrier.await >> fiber.join.void).as(Some(()))
             yield
-              ()
-          }.interruptWhen(sr)
-          _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
+              it
+          }.takeWhile(_.isDefined)
         yield
           ()
 
@@ -364,7 +359,7 @@ package object sΠ:
             def apply(rate: Rate)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                      (using %[F], /[F], \[F])
                      (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-              apply(rate, `0.seconds`)(key, `)(`)(dir)(?, -, *, +)
+              apply(rate, `Duration.Zero`)(key, `)(`)(dir)(?, -, *, +)
 
             /**
               * linear replication bound output guard w/ pace
@@ -386,31 +381,24 @@ package object sΠ:
                 _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
-                sr <- Stream.eval(SignallingRef[F].of(false))
-                it <- ( for
-                          _  <- Stream.unit.repeat
-                          it <- sΠ.ν[F]
-                          _ <- Stream.eval {
-                            for
-                              _        <- -.await
-                              _        <- *.fold(Async[F].unit)(_.acquire)
-                              _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
-                              cb_fb_in <- continue.get.flatMap(_.get)
-                              _        <- Deferred[F, Option[<>[F]]] >>= continue.set
-                              _        <- enabled.set(false)
-                              _        <- if cb_fb_in eq None then sr.set(true)
-                                          else
-                                            val (cbarrier, fiber, input) = cb_fb_in.get
-                                            input.set(it) >> cbarrier.await >> fiber.join.void
-                            yield
-                              ()
-                          }
-                        yield
-                          it
-                      ).interruptWhen(sr)
+                it <- Stream.repeatEval {
+                  for
+                    _        <- -.await
+                    _        <- *.fold(Async[F].unit)(_.acquire)
+                    _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
+                    cb_fb_in <- continue.get.flatMap(_.get)
+                    _        <- Deferred[F, Option[<>[F]]] >>= continue.set
+                    _        <- enabled.set(false)
+                    it        = sΠ.ν[F]()()
+                    it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
+                                else
+                                  val (cbarrier, fiber, input) = cb_fb_in.get
+                                  (input.set(it) >> cbarrier.await >> fiber.join.void).as(Some(it))
+                  yield
+                    it
+                }.takeWhile(_.isDefined).map(_.get)
                 _  <- Stream.sleep(pace)
                 _  <- Stream.eval(+.release)
-                _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
               yield
                 it
 
@@ -436,7 +424,7 @@ package object sΠ:
           def apply(rate: Rate, value: `()`[F])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +)
+            apply(rate,`Duration.Zero` , value)(key, `)(`)(dir)(?, -, *, +)
 
           /**
             * linear constant replication output guard w/ pace
@@ -458,7 +446,6 @@ package object sΠ:
               _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
-              sr <- Stream.eval(SignallingRef[F].of(false))
               _  <- Stream.repeatEval {
                 for
                   _        <- -.await
@@ -467,16 +454,15 @@ package object sΠ:
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- enabled.set(false)
-                  _        <- if cb_fb_in eq None then sr.set(true)
+                  it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                               else
                                 val (cbarrier, fiber, input) = cb_fb_in.get
-                                input.set(value) >> cbarrier.await >> fiber.join.void
+                                (input.set(value) >> cbarrier.await >> fiber.join.void).as(Some(()))
                 yield
-                  ()
-              }.interruptWhen(sr)
+                  it
+              }.takeWhile(_.isDefined)
               _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
-              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               ()
 
@@ -556,7 +542,7 @@ package object sΠ:
             def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                                          (using %[F], /[F], \[F])
                                          (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-              apply[S](2)(rate, `0.seconds`, value)(key, `)(`)(dir)(?, -, *, +)
+              apply[S](2)(rate, `Duration.Zero`, value)(key, `)(`)(dir)(?, -, *, +)
 
             /**
               * linear variable replication output guard w/ pace
@@ -582,7 +568,6 @@ package object sΠ:
                   _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                       .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                               else Stream.unit
-                  sr <- Stream.eval(SignallingRef[F].of(false))
                   _  <- Stream.repeatEval {
                     for
                       _        <- -.await
@@ -591,16 +576,15 @@ package object sΠ:
                       cb_fb_in <- continue.get.flatMap(_.get)
                       _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                       _        <- enabled.set(false)
-                      _        <- if cb_fb_in eq None then sr.set(true)
+                      it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                                   else
                                     val (cbarrier, fiber, input) = cb_fb_in.get
-                                    value.map(new `()`[F](_)).flatMap(input.set(_) >> cbarrier.await >> fiber.join.void)
+                                    value.map(new `()`[F](_)).flatMap(input.set(_) >> cbarrier.await >> fiber.join.void).as(Some(()))
                     yield
-                      ()
-                  }.interruptWhen(sr)
+                      it
+                  }.takeWhile(_.isDefined)
                   _  <- Stream.sleep(pace)
                   _  <- Stream.eval(+.release)
-                  _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
                 yield
                   ()
 
@@ -626,7 +610,7 @@ package object sΠ:
           def apply(rate: Rate)(key: String, `)(`: `)(`)(dir: `π-$`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate, `0.seconds`)(key, `)(`)(dir)(?, -, *, +)
+            apply(rate, `Duration.Zero`)(key, `)(`)(dir)(?, -, *, +)
 
           /**
             * linear replication input guard w/ pace
@@ -649,7 +633,6 @@ package object sΠ:
               _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
                                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
-              sr <- Stream.eval(SignallingRef[F].of(false))
               _  <- Stream.repeatEval {
                 for
                   _        <- -.await
@@ -658,17 +641,16 @@ package object sΠ:
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- enabled.set(false)
-                  _        <- if cb_fb_in eq None then sr.set(true)
+                  it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                               else
                                 val (cbarrier, fiber, _) = cb_fb_in.get
-                                cbarrier.await >> fiber.join.void
+                                (cbarrier.await >> fiber.join.void).as(Some(()))
                 yield
-                  ()
-              }.interruptWhen(sr)
+                  it
+              }.takeWhile(_.isDefined)
               _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
               it <- Stream.eval(result.get)
-              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               it
 
@@ -705,27 +687,20 @@ package object sΠ:
               _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               if cb_fb_in ne None
-              sr <- Stream.eval(SignallingRef[F].of(false))
-              it <- ( for
-                        _  <- Stream.unit.repeat
-                        it <- sΠ.ν[F]
-                        _  <- Stream.eval {
-                          for
-                            _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
-                            cb_fb_in <- continue.get.flatMap(_.get)
-                            _        <- Deferred[F, Option[<>[F]]] >>= continue.set
-                            _        <- enabled.set(false)
-                            _        <- if cb_fb_in eq None then sr.set(true)
-                                        else
-                                          val (cbarrier, fiber, input) = cb_fb_in.get
-                                          input.set(it) >> cbarrier.await >> fiber.join.void
-                          yield
-                            ()
-                        }
-                      yield
-                        it
-                    ).interruptWhen(sr)
-              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
+              it <- Stream.repeatEval {
+                for
+                  _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
+                  cb_fb_in <- continue.get.flatMap(_.get)
+                  _        <- Deferred[F, Option[<>[F]]] >>= continue.set
+                  _        <- enabled.set(false)
+                  it        = sΠ.ν[F]()()
+                  it       <- if cb_fb_in eq None then Async[F].pure(None)
+                              else
+                                val (cbarrier, fiber, input) = cb_fb_in.get
+                                (input.set(it) >> cbarrier.await >> fiber.join.void).as(Some(it))
+                yield
+                  it
+              }.takeWhile(_.isDefined).map(_.get)
             yield
               it
 
@@ -768,21 +743,19 @@ package object sΠ:
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
-            sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
-                _        <- if cb_fb_in eq None then sr.set(true)
+                it       <- if cb_fb_in eq None then Async[F].pure(None)
                             else
                               val (cbarrier, fiber, input) = cb_fb_in.get
-                              input.set(value) >> cbarrier.await >> fiber.join.void
+                              (input.set(value) >> cbarrier.await >> fiber.join.void).as(Some(()))
               yield
-                ()
-            }.interruptWhen(sr)
-            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
+                it
+            }.takeWhile(_.isDefined)
           yield
             ()
 
@@ -883,21 +856,19 @@ package object sΠ:
                 _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> dir), (map(dir.ord), Some(Left(())), rate))))
                 cb_fb_in <- Stream.eval(deferred.get)
                 if cb_fb_in ne None
-                sr <- Stream.eval(SignallingRef[F].of(false))
                 _  <- Stream.repeatEval {
                   for
                     _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                     cb_fb_in <- continue.get.flatMap(_.get)
                     _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                     _        <- enabled.set(false)
-                    _        <- if cb_fb_in eq None then sr.set(true)
+                    it       <- if cb_fb_in eq None then Async[F].pure(None)
                                 else
                                   val (cbarrier, fiber, input) = cb_fb_in.get
-                                  value.map(new `()`[F](_)).flatMap(input.set(_) >> cbarrier.await >> fiber.join.void)
+                                  value.map(new `()`[F](_)).flatMap(input.set(_) >> cbarrier.await >> fiber.join.void).as(Some(()))
                   yield
-                    ()
-                }.interruptWhen(sr)
-                _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
+                    it
+                }.takeWhile(_.isDefined)
               yield
                 ()
 
@@ -941,22 +912,20 @@ package object sΠ:
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
-            sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
-                _        <- if cb_fb_in eq None then sr.set(true)
+                it       <- if cb_fb_in eq None then Async[F].pure(None)
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await >> fiber.join.void
+                              (cbarrier.await >> fiber.join.void).as(Some(()))
               yield
-                ()
-            }.interruptWhen(sr)
+                it
+            }.takeWhile(_.isDefined)
             it <- Stream.eval(result.get)
-            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
           yield
             it
 
@@ -1185,7 +1154,7 @@ package object sΠ:
           _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> null, `)(` -> dir), (map(dir.ord), Some(Right(result)), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
-          (cbarrier, fiber, input) = cb_fb_in.get
+          (cbarrier, fiber, _) = cb_fb_in.get
           _  <- Stream.eval(cbarrier.await >> fiber.join)
           it <- Stream.eval(result.get)
         yield
@@ -1227,7 +1196,7 @@ package object sΠ:
           def apply(rate: Rate)(key: String, `)(`: `)(`)(cap: `π-ζ`)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], + : Semaphore[F])
                    (using %[F], /[F], \[F])
                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply(rate, `0.seconds`)(key, `)(`)(cap)(?, -, *, +)
+            apply(rate, `Duration.Zero`)(key, `)(`)(cap)(?, -, *, +)
 
           /**
             * linear replication capability guard w/ pace
@@ -1237,15 +1206,19 @@ package object sΠ:
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, Unit] =
             for
-              _        <- Stream.eval(exclude(key))
+              _        <- if None eq * then Stream.eval(exclude(key))
+                          else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-              enabled  <- Stream.eval(Ref[F].of(true))
+              _        <- if None eq * then Stream.unit
+                          else Stream.eval(deferred.complete(None))
+              enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
               polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
-              if cb_fb_in ne None
-              sr <- Stream.eval(SignallingRef[F].of(false))
+              _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                                  .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+                          else Stream.unit
               _  <- Stream.repeatEval {
                 for
                   _        <- -.await
@@ -1254,16 +1227,15 @@ package object sΠ:
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- enabled.set(false)
-                  _        <- if cb_fb_in eq None then sr.set(true)
+                  it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                               else
                                 val (cbarrier, fiber, _) = cb_fb_in.get
-                                cbarrier.await >> fiber.join.void
+                                (cbarrier.await >> fiber.join.void).as(Some(()))
                  yield
-                   ()
-              }.interruptWhen(sr)
+                   it
+              }.takeWhile(_.isDefined)
               _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
-              _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
             yield
               ()
 
@@ -1299,21 +1271,19 @@ package object sΠ:
             _        <- Stream.eval(/.offer(^ -> key -> ((deferred -> continue, `)(` -> cap), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
-            sr <- Stream.eval(SignallingRef[F].of(false))
             _  <- Stream.repeatEval {
               for
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
-                _        <- if cb_fb_in eq None then sr.set(true)
+                it       <- if cb_fb_in eq None then Async[F].pure(None)
                             else
                               val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await >> fiber.join.void
+                              (cbarrier.await >> fiber.join.void).as(Some(()))
                yield
-                 ()
-            }.interruptWhen(sr)
-            _  <- Stream.eval(sr.get) >>= Stream.empty.whenA
+                 it
+            }.takeWhile(_.isDefined)
           yield
             ()
 

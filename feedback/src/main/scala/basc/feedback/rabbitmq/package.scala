@@ -28,7 +28,7 @@ package object rabbitmq:
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String,
                      rate: String, delay: Double, duration: Option[Double],
-                     dir_cap: String, from: String, to: String,
+                     dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
   object RabbitMQStomp:
@@ -83,10 +83,11 @@ package object rabbitmq:
                    url: String,
                    subscriberId: String = "feedback-subscriber")
 
-  val Component = ScalaFnComponent.withHooks[Props]
+  val Component = ScalaFnComponent.withHooks[(Boolean, Props)]
     .useState(Vector.empty[Message])
 
-    .useEffectBy { (p, messages) =>
+    .useEffectBy { (_p, messages) =>
+      val (_, p) = _p
       RabbitMQStomp(Uri.unsafeFromString(p.url), p.queue, p.username, p.password, p.subscriberId)
         .evalMap { msg => messages.modState(_ :+ msg).to[IO] }
         .interruptWhen(p.signal)
@@ -94,7 +95,9 @@ package object rabbitmq:
         .drain
     }
 
-    .render { (p, messages) =>
+    .render { (_p, messages) =>
+      val (isBioAmbients, p) = _p
+
       <.div(
         <.p(s"""RabbitMQ Web-STOMP ['${p.queue}' queue] #${messages.value.size} messages"""),
 
@@ -121,11 +124,11 @@ package object rabbitmq:
                   <.th("Rate"),
                   <.th("Delay"),
                   <.th("Duration"),
-                  <.th("Direction"),
-                  <.th("Capability"),
-                  <.th("From"),
-                  <.th("To"),
-                  <.th("Snapshot")
+                  <.th("Direction").when(isBioAmbients),
+                  <.th("Capability").when(isBioAmbients),
+                  <.th("From").when(isBioAmbients),
+                  <.th("To").when(isBioAmbients),
+                  <.th("Snapshot").when(isBioAmbients)
                 )
               ),
               <.tbody(
@@ -145,11 +148,11 @@ package object rabbitmq:
                        <.td(msg.rate),
                        <.td(msg.delay),
                        <.td(msg.duration.getOrElse(Double.NaN)),
-                       <.td(msg.dir_cap match { case it @ ("local" | "s2s" | "p2c" | "c2p") => it case _ => "" }),
-                       <.td(msg.dir_cap match { case it @ ("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => "" }),
+                       <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
+                       <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
                        <.td(msg.from),
                        <.td(msg.to),
-                       <.td("")
+                       <.td(msg.snapshot.map(Download("" + msg.pid + "-" + msg.number + msg.polarity.fold("")("-" + _) + ".xml", _, "text/xml")))
                   )
                 }.toTagMod
               )

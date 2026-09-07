@@ -47,7 +47,7 @@ package object `Π-dump`:
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
         ZIO.attemptBlocking {
-          val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>""" + "\n" + ambient._2._2
+          val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>\n""" + ambient._2._2
           `π-traces`(number, clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
                      key.stripPrefix("!"), key.startsWith("!"), label,

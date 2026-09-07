@@ -31,7 +31,7 @@ import _root_.scala.Option.{ unless, when }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ durationInt, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
+import _root_.zio.{ durationInt, Cause, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 import _root_.zio.stm.{ TPriorityQueue, TSemaphore }
 
@@ -75,6 +75,13 @@ package object `Π-loop`:
                                   timeout: Int,
                                   exit: Boolean,
                                   snapshot: Boolean)
+
+  final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
+                            paramsR: Ref[`Π-Parameters`],
+                            tracesR: Ref[Boolean],
+                            lastR: Ref[(Long, Double)],
+                            pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
+                            doneR: Ref[Boolean])
 
 
   given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
@@ -208,12 +215,12 @@ package object `Π-loop`:
       !.succeed(ec).unit
     }
 
-  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long])
-           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
+  def loopʹ(parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], restore: ZIO.InterruptibilityRestorer, feedback: Feedback)
+           (using % : %, / : /, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (using `}{`.`][`, TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
-      _ <- batch.set(0L) *> *.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(parameters.threshold-1).timeout(parameters.timeout.microseconds)
+      _ <- batch.set(0L) *> restore(*.acquire.onExit { case Exit.Success(_) => batch.update(_ + 1) case _ => ZIO.unit }.repeatN(parameters.threshold-1)).timeout(parameters.timeout.microseconds).exit
       m  =
         for
           (_, nel) <- **.take.commit
@@ -222,19 +229,29 @@ package object `Π-loop`:
             then
               (started.get <*> batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.flatMap(if _ then doExit *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then doExit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case _  =>
                   ZIO.succeed(true)
               }
             else
-              Semaphore[UIO](parameters.parallelism).flatMap { sem =>
+              (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
                 ZIO.collectAll {
                   nel.map { nel =>
                     ZIO.collectAllParDiscard {
                       nel.map { case ((key1, key2), (_delay, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
-                                  ZIO.uninterruptible {
+                                  if stop
+                                  then
+                                    for
+                                      _ <- **.offer(-1 -> Nil).commit
+                                      _ <- p1.succeed(None)
+                                      _ <- p2.succeed(None).unless(k1 == k2)
+                                      _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                                      _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                                    yield
+                                      ()
+                                  else
                                     for
                                       cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
                                       _  <- sem.acquire
@@ -260,7 +277,6 @@ package object `Π-loop`:
                                       _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
                                     yield
                                       ()
-                                  }
                               }
                     }
                   }
@@ -269,12 +285,12 @@ package object `Π-loop`:
         yield
           l
       l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
-      _ <- ZIO.yieldNow *> loopʹ(parameters, started, batch).when(l)
+      _ <- ZIO.yieldNow *> loopʹ(parameters, started, batch, restore, feedback).when(l)
     yield
       ()
 
-  def loop0(parameters: `Π-Parameters`, started: Ref[Long])
-           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
+  def loop0(parameters: `Π-Parameters`, started: Ref[Long], restore: ZIO.InterruptibilityRestorer, feedback: Feedback)
+           (using % : %, / : /, ! : !, &| : &|, - : -, * : *, ** : **)
            (using `}{`.`][`, TSemaphore)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     for
@@ -284,24 +300,37 @@ package object `Π-loop`:
         then
           (started.get <*> **.size.commit.map(_.toLong)).map(_ + _).flatMap {
             case 0L =>
-              ZIO.sleep(parameters.timeout.microseconds).raceEither(**.take.commit).flatMap {
-                case Right((_, nel)) =>
+              restore(**.take.commit).timeout(parameters.timeout.microseconds).exit.flatMap {
+                case Exit.Success(Some((_, nel)))        =>
                   **.offer(-1 -> nel).commit *> ZIO.succeed(true)
-                case _               =>
-                  canExit.flatMap(if _ then doExit *> ZIO.succeed(false) else ZIO.succeed(true))
+                case Exit.Success(_)
+                   | Exit.Failure(Cause.Interrupt(_, _)) =>
+                  canExit.flatMap(if _ then doExit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
+                case Exit.Failure(cause)                 =>
+                  ZIO.failCause(cause)
               }
             case _  =>
               ZIO.succeed(true)
           }
         else
-          Semaphore[UIO](parameters.parallelism).flatMap { sem =>
+          (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
             ZIO.collectAll {
               nel.map { nel =>
                 ZIO.collectAllParDiscard {
                   nel.map { case ((key1, key2), (_delay, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                               val k1 = key1.substring(36)
                               val k2 = key2.substring(36)
-                              ZIO.uninterruptible {
+                              if stop
+                              then
+                                for
+                                  _ <- **.offer(-1 -> Nil).commit
+                                  _ <- p1.succeed(None)
+                                  _ <- p2.succeed(None).unless(k1 == k2)
+                                  _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                                  _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                                yield
+                                  ()
+                              else
                                 for
                                   cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
                                   _  <- sem.acquire
@@ -327,18 +356,18 @@ package object `Π-loop`:
                                   _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
                                 yield
                                   ()
-                              }
                           }
                 }
               }
             }
           } *> ZIO.succeed(true)
-      _        <- ZIO.yieldNow *> loop0(parameters, started).when(l)
+      _        <- ZIO.yieldNow *> loop0(parameters, started, restore, feedback).when(l)
     yield
       ()
 
   def poll(using % : %, / : /, \ : \): UIO[Unit] =
     /.take.flatMap {
+      case null => ZIO.unit
       case ((^ @ (_: String), key), it @ (((p, _), _), _)) =>
         p.isDone.negate.flatMap {
           if _

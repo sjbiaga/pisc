@@ -290,9 +290,9 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // (UNIT) REPLICATION //////////////////////////////////////////////////
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -314,7 +314,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
 
           code match
@@ -337,7 +337,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg @ λ(_: Term), None, r, code)), sum) =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -365,7 +365,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg, None, r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), arg, None, r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -387,7 +387,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ τ(r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -405,7 +405,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(it @ ζ(cap, name, _, r, code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(it @ ζ(cap, name, _, r, code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -426,6 +426,8 @@ object Program:
                                       Term.ArgClause(\(s"π-$cap") :: Nil)))
 
           * = * ::: sum.emit()
+
+        // (LINEAR) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(dir, λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) if parallelism < -1 =>
 
@@ -582,6 +584,8 @@ object Program:
                                                  Term.ArgClause(Lit.String(it.υidυ) :: \(")(") :: Nil)),
                                       Term.ArgClause(\(s"π-$cap") :: Nil)),
                            sum.emit())
+
+        // REPLICATION /////////////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, _, λ @ λ(Symbol(arg)), Some(_), _, _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg

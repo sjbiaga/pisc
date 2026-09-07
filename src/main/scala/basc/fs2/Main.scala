@@ -38,6 +38,8 @@ import scala.io.Source
 import scala.meta.*
 import dialects.Scala3
 
+import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
+
 import parser.BioAmbients
 import parser.Calculus.{ `(*)`, λ }
 import emitter.fs2.Program
@@ -54,10 +56,12 @@ object Main extends helper.Main:
   )
 
   def main(args: Array[String]): Unit =
+    var A: Host = host"localhost"
     var F = "cats.effect.IO"
     var P = Int.MaxValue
     var H = 0
     var T = 123456
+    var E = true
     var S = false
 
     def bain(arg: String) =
@@ -67,7 +71,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, "localhost", P, H, T, true, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, A.toString, P, H, T, E, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"
@@ -160,15 +164,21 @@ object Main extends helper.Main:
         if source ne null then source.close()
 
     args.foreach {
+      case "-A" => A = host"localhost"
       case "-F" => F = "cats.effect.IO"
       case "-P" => P = Int.MaxValue
       case "-H" => H = 0
       case "-T" => T = 123456
+      case "-E" => E = true
       case "-S" => S = false
+      case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
+                                                     .orElse(Hostname.fromString(it.substring(2)))
+                                                     .getOrElse(host"localhost")
       case it if it.startsWith("-F") => F = it.substring(2)
       case it if it.startsWith("-P") => P = it.substring(2).toInt
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
+      case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

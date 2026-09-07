@@ -40,9 +40,8 @@ import dialects.Scala3
 
 import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 
-import parser.{ BioAmbients, Calculus }
-import BioAmbients.Actions
-import Calculus.`(*)`
+import parser.BioAmbients
+import parser.Calculus.`(*)`
 import emitter.ce.Program
 
 
