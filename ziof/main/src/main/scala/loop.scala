@@ -81,6 +81,7 @@ package object `Π-loop`:
                             tracesR: Ref[Boolean],
                             lastR: Ref[(Long, Double)],
                             pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
+                            initR: Ref[Boolean],
                             doneR: Ref[Boolean])
 
 
@@ -361,8 +362,7 @@ package object `Π-loop`:
     yield
       ()
 
-  def poll(using % : %, / : /, \ : \)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+  def poll(using % : %, / : /, \ : \): UIO[Unit] =
     /.take.flatMap {
       case null => ZIO.unit
       case ((^ @ (_: String), key), it @ ((p, _), _)) =>

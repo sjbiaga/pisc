@@ -43,6 +43,7 @@ package object `Π-http`:
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     for
       _ <- main
+      _ <- feedback.initR.set(true)
       x <- !.await.exit
     yield
       x match {

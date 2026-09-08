@@ -81,6 +81,7 @@ package object `Π-loop`:
                             tracesR: Ref[Boolean],
                             lastR: Ref[(Long, Double)],
                             pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
+                            initR: Ref[Boolean],
                             doneR: Ref[Boolean])
 
 

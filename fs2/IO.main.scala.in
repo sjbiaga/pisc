@@ -86,7 +86,7 @@ object App extends _root_.cats.effect.IOApp:
         .evalModify { case ((pauseD, _), exitD) =>
           (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
         }
-      !.get.onCancel(stop.void).guarantee(!.get.void)
+      (feedback.initR.set(true) >> !.get).onCancel(stop.void).guarantee(!.get.void)
     }
 
   override def run(args: List[String]) =
@@ -123,8 +123,9 @@ object App extends _root_.cats.effect.IOApp:
       lastR    <- Ref[π.F].of(0L -> .0)
       ps_st_ex <- (Deferred[π.F, Unit].flatTap(_.complete(())) product Deferred[π.F, Unit]).flatMap { (pauseD, exitD) => AtomicCell[π.F].of(pauseD -> false -> exitD) }
       _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
+      initR    <- Ref[π.F].of(false)
       doneR    <- Ref[π.F].of(false)
-      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
+      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
       x <- run[π.F[Unit]](args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &|)
     yield
