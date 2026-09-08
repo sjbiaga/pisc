@@ -81,6 +81,7 @@ package object `Π-loop`:
                             tracesR: Ref[Boolean],
                             lastR: Ref[(Long, Double)],
                             pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
+                            initR: Ref[Boolean],
                             doneR: Ref[Boolean])
 
 
@@ -141,9 +142,9 @@ package object `Π-loop`:
         val nelʹ = nel.map {
           _.map {
             case (key1, key2, in, (delay, _)) =>
-              val (dcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
-              val (dcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-              (key1, key2) -> (delay, in, (dcko1, dcko2))
+              val (pcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+              val (pcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+              (key1, key2) -> (delay, in, (pcko1, pcko2))
           }
         }
         ZIO.collectAll {

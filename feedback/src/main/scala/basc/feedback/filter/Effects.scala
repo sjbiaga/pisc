@@ -25,8 +25,8 @@ object Effects:
         ^.value          := input.effects.selectedEffect,
         ^.onChange      ==> onEffectsChange,
 
-        <.option(^.value := "cats.effect.IO", "Cats Effect IO").when(List("ce", "cef", "fs2").contains(input.emitters.selectedEmitter)),
-        <.option(^.value := "zio.Task"      , "ZIO Task"      ).when(List("zio", "ziof", "fs2", "zs").contains(input.emitters.selectedEmitter))
+        <.option(^.value := "cats.effect.IO", "Cats Effect IO"),
+        <.option(^.value := "zio.Task"      , "ZIO Task"      )
       )
     )
 

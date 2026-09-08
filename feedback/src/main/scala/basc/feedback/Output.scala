@@ -35,6 +35,7 @@ case class State(parameters: Parameters,
                  clock: Option[Double] = None,
                  idle: Option[Long] = None,
                  started: Option[Long] = None,
+                 init: Option[Boolean] = None,
                  done: Option[Boolean] = None
 ) derives Codec.AsObject
 
@@ -89,11 +90,12 @@ object Item:
                    restore: StateSnapshot[Parameters],
                    state: StateSnapshot[State],
                    clock: StateSnapshot[Double],
+                   init: StateSnapshot[Boolean],
                    done: StateSnapshot[Boolean],
                    parallelism: StateSnapshot[Int],
                    threshold: StateSnapshot[Int],
                    timeout: StateSnapshot[Int],
-                   snapshot: StateSnapshot[Boolean],
+                   snapshot: StateSnapshot[Option[Boolean]],
                    exit: StateSnapshot[Boolean],
                    pause: StateSnapshot[Boolean],
                    stop: StateSnapshot[Boolean],
@@ -207,7 +209,7 @@ object Item:
               ^.marginRight := "15px",
               ^.id          := "snapshot-checkbox",
               ^.`type`      := "checkbox",
-              ^.checked     := p.snapshot.value,
+              ^.checked     := p.snapshot.value.get,
               ^.disabled    := p.pause.value,
               ^.onChange   ==> { (e: ReactEventFromInput) =>
                 val params = Parameters(snapshot = Some(e.target.checked))
@@ -315,6 +317,18 @@ object Item:
       <.span(
         ^.marginLeft := "8px",
         "Exit"
+      ),
+
+      ( if !p.init.value
+        then
+          <.div(
+            ^.marginLeft := "15px",
+            ^.className := "spinner",
+            ^.display.inlineBlock,
+            "Initializing..."
+          )
+        else
+          VdomArray.empty()
       ),
 
       p.state.value.traces.get match {
@@ -570,6 +584,9 @@ object Output:
             c => s => s.copy(clock = Some(c))
           }
 
+          val init = state.zoomState(_.init.get) {
+            i => s => s.copy(init = Some(i))
+          }
           val done = state.zoomState(_.done.get) {
             d => s => s.copy(done = Some(d))
           }
@@ -583,8 +600,8 @@ object Output:
           val timeout = state.zoomState(_.parameters.timeout.get) {
             t => s => s.copy(parameters = s.parameters.copy(timeout = Some(t)))
           }
-          val snapshot = state.zoomState(_.parameters.snapshot.get) {
-            o => s => s.copy(parameters = s.parameters.copy(snapshot = Some(o)))
+          val snapshot = state.zoomState(_.parameters.snapshot) {
+            o => s => s.copy(parameters = s.parameters.copy(snapshot = o))
           }
 
           Item.Component.withKey(item.key)(
@@ -593,6 +610,7 @@ object Output:
                        lensʹ.zoomStateL(Focus[(Parameters, Int)](_._1)),
                        state,
                        clock,
+                       init,
                        done,
                        parallelism,
                        threshold,

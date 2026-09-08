@@ -86,6 +86,7 @@ package object `Π-http`:
                    clock: Option[Double],
                    idle: Option[Long],
                    started: Option[Long],
+                   init: Option[Boolean],
                    done: Option[Boolean])
 
   object State:
@@ -174,8 +175,9 @@ package object `Π-http`:
           (last,
            clock) <- feedback.lastR.get
           idle    <- currentTimeMillis.map(_ - last)
+          init    <- feedback.initR.get
           done    <- feedback.doneR.get
-          state    = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
+          state    = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(init), Some(done))
         yield
           Response.ok.copy(body = Body.from(state))
       },
@@ -185,21 +187,23 @@ package object `Π-http`:
             ZIO.succeed(Response.badRequest)
           case Right(state) =>
             state match
-              case State(_, Some(_), _, _, _, _, _)    =>
+              case State(_, Some(_), _, _, _, _, _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `traces' read-only value"))
-              case State(_, _, Some(_), _, _, _, _)    =>
+              case State(_, _, Some(_), _, _, _, _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `last' read-only value"))
-              case State(_, _, _, Some(_), _, _, _)    =>
+              case State(_, _, _, Some(_), _, _, _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `clock' read-only value"))
-              case State(_, _, _, _, Some(_), _, _)    =>
+              case State(_, _, _, _, Some(_), _, _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `idle' read-only value"))
-              case State(_, _, _, _, _, Some(_), _)    =>
+              case State(_, _, _, _, _, Some(_), _, _)    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `started' read-only counter"))
-              case State(_, _, _, _, _, _, Some(_))    =>
+              case State(_, _, _, _, _, _, Some(_), _)    =>
+                ZIO.succeed(Response.badRequest("attempt to alter the `init' read-only flag"))
+              case State(_, _, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
-              case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+              case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
                 ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
-              case State(parameters, _, _, _, _, _, _) =>
+              case State(parameters, _, _, _, _, _, _, _) =>
                 feedback.paramsR.get.flatMap { default =>
                   var params = parameters(default)
                   params = params.copy(parallelism = 1 max params.parallelism,
@@ -309,6 +313,7 @@ package object `Π-http`:
                   } { _ =>
                     for
                       _ <- main
+                      _ <- feedback.initR.set(true)
                       x <- !.await.exit
                     yield
                       x match {
@@ -322,6 +327,7 @@ package object `Π-http`:
       case _ =>
         for
           _ <- main
+          _ <- feedback.initR.set(true)
           x <- !.await.exit
         yield
           x match {

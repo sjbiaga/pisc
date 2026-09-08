@@ -238,11 +238,11 @@ package object amazonsqs:
                          <.td(msg.rate),
                          <.td(msg.delay),
                          <.td(msg.duration.getOrElse(Double.NaN)),
-                         <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
-                         <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
-                         <.td(msg.from),
-                         <.td(msg.to),
-                         <.td(msg.snapshot.map(Download("" + msg.pid + "-" + msg.number + msg.polarity.fold("")("-" + _) + ".xml", _, "text/xml"))),
+                         <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]).when(isBioAmbients),
+                         <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]).when(isBioAmbients),
+                         <.td(msg.from).when(isBioAmbients),
+                         <.td(msg.to).when(isBioAmbients),
+                         <.td(msg.snapshot.map(Download("" + msg.pid + "-" + msg.number + msg.polarity.fold("")("-" + _) + ".xml", _, "text/xml"))).when(isBioAmbients),
                          <.td(
                            <.input(
                              ^.id        := s"delete-${item.id}-checkbox",

@@ -87,6 +87,7 @@ package object `Π-loop`:
                             tracesR: Ref[IO, Boolean],
                             lastR: Ref[IO, (Long, Double)],
                             pauseRD_stopR_exitRD: AtomicCell[IO, ((Deferred[IO, Unit], Boolean), Deferred[IO, Unit])],
+                            initR: Ref[IO, Boolean],
                             doneR: Ref[IO, Boolean])
 
 

@@ -26,7 +26,7 @@ case class Input(consulUrl: String = Consul.defaultUrl,
                  calculi: filter.Calculi.State = filter.Calculi.State(selectedCalculus = "bioambients"),
                  effects: filter.Effects.State = filter.Effects.State(selectedEffect = "cats.effect.IO"),
                  emitters: filter.Emitters.State = filter.Emitters.State(selectedEmitter = "ce"),
-                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "amazonsqs"))
+                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "elasticmq"))
 
 
 @JSExportTopLevel("main")
