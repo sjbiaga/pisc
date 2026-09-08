@@ -1,4 +1,4 @@
-package basc
+package pisc
 package feedback
 
 import cats.effect.IO
@@ -25,7 +25,8 @@ enum Traces derives Codec.AsObject:
 case class Parameters(parallelism: Option[Int] = None,
                       threshold: Option[Int] = None,
                       timeout: Option[Int] = None,
-                      exit: Option[Boolean] = None
+                      exit: Option[Boolean] = None,
+                      snapshot: Option[Boolean] = None
 ) derives Codec.AsObject
 
 case class State(parameters: Parameters,
@@ -67,9 +68,7 @@ object Item:
                        accessKey: String = "x",
                        secretKey: String = "x",
                        sessionToken: String = "feedback",
-                       //endpoint: String = "http://localhost:9324",
                        endpoint: String = "http://localhost:5173",
-                       //endpoint: String = "http://localhost:5173/sqs-proxy",
                        limit: Int = 10,
                        timeout: Int = 3,
                        receive: Boolean = false)
@@ -94,6 +93,7 @@ object Item:
                    parallelism: StateSnapshot[Int],
                    threshold: StateSnapshot[Int],
                    timeout: StateSnapshot[Int],
+                   snapshot: StateSnapshot[Option[Boolean]],
                    exit: StateSnapshot[Boolean],
                    pause: StateSnapshot[Boolean],
                    stop: StateSnapshot[Boolean],
@@ -194,6 +194,29 @@ object Item:
           val params = Parameters(timeout = Some(e.target.valueAsNumber.toInt))
           p.service.parameters(params).flatMap(p.state.setState(_).to[IO])
         },
+      ),
+
+      ( if p.service.isBioAmbients
+        then
+          <.div(
+            ^.display.inlineBlock,
+
+            <.label(^.htmlFor := "snapshot-checkbox", "Snapshot: "),
+
+            <.input(
+              ^.marginRight := "15px",
+              ^.id          := "snapshot-checkbox",
+              ^.`type`      := "checkbox",
+              ^.checked     := p.snapshot.value.get,
+              ^.disabled    := p.pause.value,
+              ^.onChange   ==> { (e: ReactEventFromInput) =>
+                val params = Parameters(snapshot = Some(e.target.checked))
+                p.service.parameters(params).flatMap(p.state.setState(_).to[IO])
+              },
+            )
+         )
+        else
+          VdomArray.empty()
       ),
 
       <.button(
@@ -380,7 +403,7 @@ object Item:
             then
               val queueUrl = s"${p.amazonsqs.value.endpoint}/queue/$queue"
               val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, _) = p.amazonsqs.value
-              <.div(amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout).Component())
+              <.div(amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout).Component(p.service.isBioAmbients))
             else
               VdomArray.empty()
 
@@ -443,7 +466,7 @@ object Item:
 
             if p.kafka.value.receive
             then
-              <.div(kafka.redpanda.Component(kafka.redpanda.Props(topic, p.kafka.value.offset, p.kafka.value.maxBytes, p.kafka.value.timeout)))
+              <.div(kafka.redpanda.Component(p.service.isBioAmbients -> kafka.redpanda.Props(topic, p.kafka.value.offset, p.kafka.value.maxBytes, p.kafka.value.timeout)))
             else
               VdomArray.empty()
           )
@@ -504,7 +527,7 @@ object Item:
 
             if p.rabbitmq.value.connect
             then
-              <.div(rabbitmq.Component(rabbitmq.Props(queue, p.rabbitmq.value.signal, p.rabbitmq.value.username, p.rabbitmq.value.password, p.rabbitmq.value.url)))
+              <.div(rabbitmq.Component(p.service.isBioAmbients -> rabbitmq.Props(queue, p.rabbitmq.value.signal, p.rabbitmq.value.username, p.rabbitmq.value.password, p.rabbitmq.value.url)))
             else
               VdomArray.empty()
           )
@@ -560,6 +583,9 @@ object Output:
           val timeout = state.zoomState(_.parameters.timeout.get) {
             t => s => s.copy(parameters = s.parameters.copy(timeout = Some(t)))
           }
+          val snapshot = state.zoomState(_.parameters.snapshot) {
+            o => s => s.copy(parameters = s.parameters.copy(snapshot = o))
+          }
 
           Item.Component.withKey(item.key)(
             Item.Props(item.key,
@@ -571,6 +597,7 @@ object Output:
                        parallelism,
                        threshold,
                        timeout,
+                       snapshot,
                        lens.zoomStateL(Focus[Item](_.exit)),
                        lens.zoomStateL(Focus[Item](_.pause)),
                        lens.zoomStateL(Focus[Item](_.stop)),

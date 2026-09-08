@@ -706,7 +706,7 @@ object Calculus:
       ast match
 
         case +(_, ∥(_, `.`(!(_, _, Some(_), _), it*))) if !it.exists { case Act(it) => it } =>
-          ast.label("+0/-1")
+          ast.label("+0/0")
 
         case _ =>
           ast.label("")
@@ -762,7 +762,7 @@ object Calculus:
 
         case ?:(cond, t, Some(f)) =>
           import Sum.*
-          given Int = 0
+          given Int = 1
           ?:(cond, t.label(0), Some(f.label(1)))
 
         case ?:(cond, t, _) =>

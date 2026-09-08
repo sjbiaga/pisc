@@ -48,7 +48,7 @@ package object `Π-dump`:
       case Array(key, name, polarity, label, rate, agent) =>
         ZIO.attemptBlocking {
           `π-traces`(number, clock, started, ended,
-                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration)
         }.either.unit

@@ -36,47 +36,63 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.scala.collection.immutable.{ List, Map }
 
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
+  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
   import `Π-dump`.*
+  import `Π-http4s`.*
   import `Π-loop`.*, `Π-loop`.given
 
 
+  private val spicsa = "pisc.stochastic.communications.bind.address"
   private val spicsp = "pisc.stochastic.communications.parallelism.level"
   private val spicsh = "pisc.stochastic.communications.batch.threshold"
   private val spicst = "pisc.stochastic.communications.timeout.microseconds"
+  private val spicse = "pisc.stochastic.communications.exit.passthrough"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long])
-                 (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F]) =
+  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], feedback: Feedback[π.F])
+                    (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
+                    (using ClassTag[T]): π.F[ExitCode] =
+    val F = classTag[T].runtimeClass.getCanonicalName
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
+    val hπ = πhttp4s[π.F]()
     val mπ = π.πmain[π.F]()
     val \ =
       if parameters.threshold > 0
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
     ( for
+        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, _))
         _ <- if parameters.threshold > 0
-             then lπ.loopʹ(parameters, started, batch)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
-             else lπ.loop0(parameters, started)(using %, !, &|, -, *, **)(π.`π-wand`).background
+             then lπ.loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
         _ <- dπ.dump(using %, !, -).background
+        ^ <- Resource.eval(π.`π-uuid`[π.F])
+        _ <- mπ.Main(args*)(using ^)(using %, /, \).compile.drain.background
       yield
         ()
     ).use { _ =>
-      for
-        ^ <- π.`π-uuid`[π.F]
-        _ <- mπ.Main(args*)(using ^)(using %, /, \).compile.drain
-        x <- !.get
-      yield
-        x
+      val stop = feedback
+        .pauseRD_stopR_exitRD
+        .evalModify { case ((pauseD, _), exitD) =>
+          (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
+        }
+      !.get.onCancel(stop.void).guarantee(!.get.void)
     }
 
   override def run(args: List[String]) =
+    val a = if sys.Prop.StringProp(spicsa).isSet
+            then sys.Prop.StringProp(spicsa).value
+            else π.`π-parameters`.address
     val p = if sys.Prop.IntProp(spicsp).isSet
             then sys.Prop.IntProp(spicsp).value
             else π.`π-parameters`.parallelism
@@ -86,7 +102,10 @@ object App extends _root_.cats.effect.IOApp:
     val t = if sys.Prop.IntProp(spicst).isSet
             then sys.Prop.IntProp(spicst).value
             else π.`π-parameters`.timeout
-    val params = `Π-Parameters`(π.`π-parameters`.address, p, h, t, π.`π-parameters`.exit)
+    val e = if sys.BooleanProp.keyExists(spicse).value
+            then true
+            else π.`π-parameters`.exit
+    val params = `Π-Parameters`(a, p, h, t, e)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
@@ -98,8 +117,16 @@ object App extends _root_.cats.effect.IOApp:
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
+      paramsR  <- Ref[π.F].of(params)
+      tracesR  <- Ref[π.F].of(true)
+      lastR    <- Ref[π.F].of(0L -> .0)
+      ps_st_ex <- (Deferred[π.F, Unit].flatTap(_.complete(())) product Deferred[π.F, Unit]).flatMap { (pauseD, exitD) => AtomicCell[π.F].of(pauseD -> false -> exitD) }
+      _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
+      doneR    <- Ref[π.F].of(false)
+      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, lastR, ps_st_ex, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run(args, params, n, b)(%, /, *, **, ^.permit, -, !, &|)
+      x <- run[π.F[Unit]](args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &|)
     yield
       x
 

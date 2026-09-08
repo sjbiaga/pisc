@@ -7,7 +7,7 @@ object Dependencies {
   lazy val catseffect = "org.typelevel" %% "cats-effect" % "3.7.1"
   lazy val akka = "com.typesafe.akka" %% "akka-actor-typed" % "2.10.21"
   lazy val pekko = "org.apache.pekko" %% "pekko-actor-typed" % "1.7.0"
-  lazy val fs2 = "co.fs2" %% "fs2-core" % "3.13.0"
+  lazy val fs2 = "co.fs2" %% "fs2-core" % "3.14.0"
   lazy val zc = "dev.zio" %% "zio-concurrent" % "2.1.26"
   lazy val zh = "dev.zio" %% "zio-http" % "3.11.4"
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.26"
@@ -18,12 +18,12 @@ object Dependencies {
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.3.1" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.35.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.12"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.13"
   lazy val circe = "io.circe" %% "circe-generic" % "0.14.16"
   lazy val http4s = Seq("org.http4s" %% "http4s-circe",
                         "org.http4s" %% "http4s-dsl",
                         "org.http4s" %% "http4s-ember-client",
                         "org.http4s" %% "http4s-ember-server"
                     ).map(_ % "0.23.36")
-  lazy val munit = "org.scalameta" %% "munit" % "1.3.5"
+  lazy val munit = "org.scalameta" %% "munit" % "1.3.6"
 }

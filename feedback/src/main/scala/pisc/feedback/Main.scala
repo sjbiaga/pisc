@@ -1,4 +1,4 @@
-package basc
+package pisc
 package feedback
 
 import cats.instances.list.*
@@ -24,8 +24,9 @@ import japgolly.scalajs.react.vdom.html_<^.*
 
 case class Input(consulUrl: String = Consul.defaultUrl,
                  calculi: filter.Calculi.State = filter.Calculi.State(selectedCalculus = "stochasticpicalculus"),
+                 effects: filter.Effects.State = filter.Effects.State(selectedEffect = "cats.effect.IO"),
                  emitters: filter.Emitters.State = filter.Emitters.State(selectedEmitter = "ce"),
-                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "amazonsqs"))
+                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "elasticmq"))
 
 
 @JSExportTopLevel("main")
@@ -37,7 +38,13 @@ object Main extends IOApp:
       output  <- useStateSnapshot(Output())
       restore <- useStateSnapshot(Restore())
       callback = IO.defer {
-        Consul(input.value.consulUrl, filter.Calculi.valueOf(input.value.calculi.selectedCalculus), input.value.emitters.selectedEmitter, filter.Traces.valueOf(input.value.traces.selectedTraces)) match
+        Consul(
+          input.value.consulUrl,
+          filter.Calculi.valueOf(input.value.calculi.selectedCalculus),
+          input.value.effects.selectedEffect,
+          input.value.emitters.selectedEmitter,
+          filter.Traces.valueOf(input.value.traces.selectedTraces)
+        ) match
           case Some(url) =>
             for
               m <- summon[Client[IO]].expect[Map[String, Consul.AgentService]](url)
@@ -69,6 +76,7 @@ object Main extends IOApp:
         ),
         <.div(Consul.Component(input.value -> { consulURL => input.modState(_.copy(consulUrl = consulURL)).to[IO] })),
         <.div(filter.Calculi.Component(input.value -> { calculus => input.modState(_.copy(calculi = input.value.calculi.copy(selectedCalculus = calculus))).to[IO] })),
+        <.div(filter.Effects.Component(input.value -> { effect => input.modState(_.copy(effects = input.value.effects.copy(selectedEffect = effect))).to[IO] })),
         <.div(filter.Emitters.Component(input.value -> { emitter => input.modState(_.copy(emitters = input.value.emitters.copy(selectedEmitter = emitter))).to[IO] })),
         <.div(filter.Traces.Component(input.value -> { traces => input.modState(_.copy(traces = input.value.traces.copy(selectedTraces = traces))).to[IO] })),
 

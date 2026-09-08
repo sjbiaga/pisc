@@ -32,8 +32,8 @@ object CommandSPin {
                    "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
                    "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
                    "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456"),
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue"),
                    "-kk" -> (Seq(P) ++ (0 to 1).map("-O" + _))
                )
 

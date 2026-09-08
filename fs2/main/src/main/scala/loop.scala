@@ -54,7 +54,7 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
+  private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
   import sΠ.{ `Π-Map`, `Π-Set`, `()` }
@@ -88,6 +88,13 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean)
+
+  final case class Feedback[F[_]](paramsRD: Ref[F, Deferred[F, `Π-Parameters`]],
+                                  paramsR: Ref[F, `Π-Parameters`],
+                                  tracesR: Ref[F, Boolean],
+                                  lastR: Ref[F, (Long, Double)],
+                                  pauseRD_stopR_exitRD: AtomicCell[F, ((Deferred[F, Unit], Boolean), Deferred[F, Unit])],
+                                  doneR: Ref[F, Boolean])
 
 
   given [F[_]]: Order[(Int, List[List[((String, String), ++++[F])]])] = Order.fromLessThan(_._1 < _._1)
@@ -211,7 +218,7 @@ package object `Π-loop`:
           then
             ExitCode.Success
           else
-            if !sys.BooleanProp.keyExists(spirsx).value
+            if !sys.BooleanProp.keyExists(barsx).value
             && ks.forall(_.charAt(36) == '!')
             then ExitCode.Success
             else ExitCode.Error
@@ -221,11 +228,11 @@ package object `Π-loop`:
         !.complete(ec).void
       }
 
-    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long])
+    def loopʹ(parameters: `Π-Parameters`, started: Ref[F, Long], batch: Ref[F, Long], feedback: Feedback[F])
              (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F], ^ : ^[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
-        _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(parameters.threshold).timeout(parameters.timeout.microseconds).orElse(Temporal[F].unit)
+        _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => Temporal[F].unit }.replicateA_(parameters.threshold).timeoutTo(parameters.timeout.microseconds, Temporal[F].unit)
         m  =
           for
             (_, nel) <- **.take
@@ -239,12 +246,22 @@ package object `Π-loop`:
                     Temporal[F].pure(true)
                 }
               else
-                Semaphore[F](parameters.parallelism).flatMap { sem =>
+                (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
                   nel.traverse {
                     _.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                       val k1 = key1.substring(36)
                                       val k2 = key2.substring(36)
-                                      Temporal[F].uncancelable { _ =>
+                                      if stop
+                                      then
+                                        for
+                                          _ <- **.offer(-1 -> Nil)
+                                          _  <- d1.complete(None)
+                                          _  <- d2.complete(None).unlessA(k1 == k2)
+                                          _  <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                          _  <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                        yield
+                                          ()
+                                      else
                                         for
                                           cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                           _  <- sem.acquire
@@ -264,18 +281,17 @@ package object `Π-loop`:
                                           _  <- c2.get.flatMap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                         yield
                                           ()
-                                      }
                                   }
                   }
                 } >> Temporal[F].pure(true)
           yield
             l
         l <- ^.use(_ => (*.available >>= *.acquireN) >> peek >> m)
-        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch).whenA(l)
+        _ <- Temporal[F].cede >> loopʹ(parameters, started, batch, feedback).whenA(l)
       yield
         ()
 
-    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long])
+    def loop0(parameters: `Π-Parameters`, started: Ref[F, Long], feedback: Feedback[F])
              (using % : %[F], ! : ![F], &| : &|[F], - : -[F], * : *[F], ** : **[F])
              (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): F[Unit] =
       for
@@ -285,22 +301,32 @@ package object `Π-loop`:
           then
             (started.get product **.size.map(_.toLong)).map(_ + _).flatMap {
               case 0L =>
-                Temporal[F].sleep(parameters.timeout.microseconds).race(**.take).flatMap {
-                  case Right((_, nel)) =>
+                **.take.map(Some(_)).timeoutTo(parameters.timeout.microseconds, Temporal[F].pure(None)).flatMap {
+                  case Some((_, nel)) =>
                     **.offer(-1 -> nel) >> Temporal[F].pure(true)
-                  case _               =>
+                  case _              =>
                     canExit.ifM(doExit >> Temporal[F].pure(false), Temporal[F].pure(true))
                 }
               case _  =>
                 Temporal[F].pure(true)
             }
           else
-            Semaphore[F](parameters.parallelism).flatMap { sem =>
+            (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
               nel.traverse {
                 _.parTraverse { case ((key1, key2), (_delay, in, ((d1, c1), (d2, c2)))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
-                                  Temporal[F].uncancelable { _ =>
+                                  if stop
+                                  then
+                                    for
+                                      _ <- **.offer(-1 -> Nil)
+                                      _  <- d1.complete(None)
+                                      _  <- d2.complete(None).unlessA(k1 == k2)
+                                      _  <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                                      _  <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                                    yield
+                                      ()
+                                  else
                                     for
                                       cb <- CyclicBarrier[F](if k1 == k2 then 2 else 3)
                                       _  <- sem.acquire
@@ -320,11 +346,10 @@ package object `Π-loop`:
                                       _  <- c2.get.flatMap(_.complete(Some((cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                     yield
                                       ()
-                                  }
                               }
               }
             } >> Temporal[F].pure(true)
-        _        <- Temporal[F].cede >> loop0(parameters, started).whenA(l)
+        _        <- Temporal[F].cede >> loop0(parameters, started, feedback).whenA(l)
       yield
         ()
 

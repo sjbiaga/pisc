@@ -54,7 +54,7 @@ package object `Π-dump`:
       case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
           `π-traces`(number, clock, started, ended,
-                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration)
         }

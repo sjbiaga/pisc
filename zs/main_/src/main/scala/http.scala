@@ -221,7 +221,7 @@ package object `Π-http`:
   object ConsulRegister:
     given Schema[ConsulRegister] = DeriveSchema.gen[ConsulRegister]
 
-  val serviceName = "StochasticPiCalculus2Scala"
+  val serviceName = "StochasticPiCalculusScala"
 
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
@@ -262,7 +262,7 @@ package object `Π-http`:
               "producer" -> producer,
               "backend" -> backend,
               "kind" -> kind,
-              "emitter" -> "ziof",
+              "emitter" -> "zs",
               "pid" -> ProcessHandle.current.pid.toString
             ),
             Check = ConsulCheck(

@@ -221,10 +221,22 @@ package object `Π-loop`:
                       nel.map { case ((key1, key2), ((delay, duration), in, (((p1, c1), ts1), ((p2, c2), ts2)))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
-                                  ZIO.uninterruptible {
+                                  if stop
+                                  then
+                                    for
+                                      _ <- **.offer(-1 -> Nil).commit
+                                      _ <- p1.succeed(None)
+                                      _ <- p2.succeed(None).unless(k1 == k2)
+                                      _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                                      _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                                    yield
+                                      ()
+                                  else
                                     for
                                       cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                      fb  = ( for
+                                      _  <- sem.acquire
+                                      _  <- started.update(_ + 1)
+                                      fb <- ( for
                                                 _  <- cb.await.exit
                                                 _  <- enable(k1)
                                                 _  <- enable(k2).unless(k1 == k2)
@@ -240,31 +252,12 @@ package object `Π-loop`:
                                               yield
                                                 ()
                                             ).fork
-                                      _  <- ( if stop
-                                              then
-                                                for
-                                                  _ <- **.offer(-1 -> Nil).commit
-                                                  _ <- p1.succeed(None)
-                                                  _ <- p2.succeed(None).unless(k1 == k2)
-                                                  _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                                  _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                                yield
-                                                  ()
-                                              else
-                                                for
-                                                  _  <- sem.acquire
-                                                  _  <- started.update(_ + 1)
-                                                  fb <- fb
-                                                  _  <- p1.succeed(Some((delay, cb, fb, in)))
-                                                  _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
-                                                  _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((delay, cb, fb, in)))))
-                                                  _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((delay, cb, fb, in))))).unless(k1 == k2)
-                                                yield
-                                                  ()
-                                            )
+                                      _  <- p1.succeed(Some((delay, cb, fb, in)))
+                                      _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                      _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((delay, cb, fb, in)))))
+                                      _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((delay, cb, fb, in))))).unless(k1 == k2)
                                     yield
                                       ()
-                                  }
                               }
                     }
                   }
@@ -320,10 +313,22 @@ package object `Π-loop`:
                   nel.map { case ((key1, key2), ((delay, duration), in, (((p1, c1), ts1), ((p2, c2), ts2)))) =>
                               val k1 = key1.substring(36)
                               val k2 = key2.substring(36)
-                              ZIO.uninterruptible {
+                              if stop
+                              then
+                                for
+                                  _ <- **.offer(-1 -> Nil).commit
+                                  _ <- p1.succeed(None)
+                                  _ <- p2.succeed(None).unless(k1 == k2)
+                                  _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                                  _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                                yield
+                                  ()
+                              else
                                 for
                                   cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  fb  = ( for
+                                  _  <- sem.acquire
+                                  _  <- started.update(_ + 1)
+                                  fb <- ( for
                                             _  <- cb.await.exit
                                             _  <- enable(k1)
                                             _  <- enable(k2).unless(k1 == k2)
@@ -339,31 +344,12 @@ package object `Π-loop`:
                                           yield
                                             ()
                                         ).fork
-                                  _  <- ( if stop
-                                          then
-                                            for
-                                              _ <- **.offer(-1 -> Nil).commit
-                                              _ <- p1.succeed(None)
-                                              _ <- p2.succeed(None).unless(k1 == k2)
-                                              _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                              _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                            yield
-                                              ()
-                                          else
-                                            for
-                                              _  <- sem.acquire
-                                              _  <- started.update(_ + 1)
-                                              fb <- fb
-                                              _  <- p1.succeed(Some((delay, cb, fb, in)))
-                                              _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
-                                              _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((delay, cb, fb, in)))))
-                                              _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((delay, cb, fb, in))))).unless(k1 == k2)
-                                            yield
-                                              ()
-                                        )
+                                  _  <- p1.succeed(Some((delay, cb, fb, in)))
+                                  _  <- p2.succeed(Some((delay, cb, fb, in))).unless(k1 == k2)
+                                  _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((delay, cb, fb, in)))))
+                                  _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((delay, cb, fb, in))))).unless(k1 == k2)
                                 yield
                                   ()
-                              }
                           }
                 }
               }
@@ -386,8 +372,7 @@ package object `Π-loop`:
     yield
       ()
 
-  def poll(using % : %, / : /, \ : \)
-          (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
+  def poll(using % : %, / : /, \ : \): UIO[Unit] =
     /.take.flatMap {
       case null => ZIO.unit
       case ((^ @ (_: String), key), it @ (((p, _), _), _)) =>

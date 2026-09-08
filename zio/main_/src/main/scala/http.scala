@@ -35,7 +35,7 @@ import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
 package object `Π-http`:
 
-  import `Π-loop`.{ !, Feedback, `Π-Parameters` }
+  import `Π-loop`.{ !, Feedback, `Π-Parameters`, currentTimeMillis }
   import `Π-traces`.*
   import Traces.*
 
@@ -170,7 +170,7 @@ package object `Π-http`:
           params  <- feedback.paramsR.get
           (last,
            clock) <- feedback.lastR.get
-          idle    <- Clock.nanoTime.map(_ - last)
+          idle    <- currentTimeMillis.map(_ - last)
           done    <- feedback.doneR.get
           state    = State(Parameters(params), Traces(), Some(last), Some(clock), Some(idle), Some(started), Some(done))
         yield
@@ -257,6 +257,7 @@ package object `Π-http`:
             Tags = List("StochasticPiCalculus2Scala", producer, name),
             Meta = Map(
               "calculus" -> "StochasticPiCalculus",
+              "effect" -> "zio.Task",
               "batch" -> batch.toString,
               "producer" -> producer,
               "backend" -> backend,

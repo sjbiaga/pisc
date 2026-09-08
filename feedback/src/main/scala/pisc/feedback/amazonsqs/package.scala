@@ -1,4 +1,4 @@
-package basc
+package pisc
 package feedback
 
 import scala.scalajs.js
@@ -53,7 +53,9 @@ package object amazonsqs:
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String,
-                     rate: String, delay: Double, duration: Option[Double]) derives Codec.AsObject
+                     rate: String, delay: Double, duration: Option[Double],
+                     dir_cap: Option[String], from: Option[String], to: Option[String],
+                     snapshot: Option[String]) derives Codec.AsObject
 
 
   case class Item(message: Message,
@@ -75,7 +77,7 @@ package object amazonsqs:
         js.Dynamic.literal(
           //disableHostPrefix = true,
           region = region,
-          //endpoint = queueUrl.substring(0, queueUrl.indexOf("queue")),
+          endpoint = queueUrl.substring(0, queueUrl.indexOf("queue")),
           useQueueUrlAsEndpoint = true,
           credentials = js.Dynamic.literal(
             accessKeyId = accessKey,
@@ -107,7 +109,7 @@ package object amazonsqs:
         }
       }.as(id).handleError(_ => -1)
 
-    val Component = ScalaFnComponent.withHooks[Unit]
+    val Component = ScalaFnComponent.withHooks[Boolean]
       .useStateSnapshot(List.empty[Item])
 
       .useEffectOnMountBy { (_, items) =>
@@ -129,7 +131,7 @@ package object amazonsqs:
         }
       }
 
-      .render { (_, items) =>
+      .render { (isBioAmbients, items) =>
         <.div(
           <.p(s"""AmazonSQS AWS-SDK ['$queueUrl' queue URL] #${items.value.size} items""",
 
@@ -177,6 +179,11 @@ package object amazonsqs:
                     <.th("Rate"),
                     <.th("Delay"),
                     <.th("Duration"),
+                    <.th("Direction").when(isBioAmbients),
+                    <.th("Capability").when(isBioAmbients),
+                    <.th("From").when(isBioAmbients),
+                    <.th("To").when(isBioAmbients),
+                    <.th("Snapshot").when(isBioAmbients),
                     <.th(
                       <.input(
                         ^.id        := "delete-all-checkbox",
@@ -231,6 +238,11 @@ package object amazonsqs:
                          <.td(msg.rate),
                          <.td(msg.delay),
                          <.td(msg.duration.getOrElse(Double.NaN)),
+                         <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]).when(isBioAmbients),
+                         <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]).when(isBioAmbients),
+                         <.td(msg.from).when(isBioAmbients),
+                         <.td(msg.to).when(isBioAmbients),
+                         <.td(msg.snapshot.map(Download("" + msg.pid + "-" + msg.number + msg.polarity.fold("")("-" + _) + ".xml", _, "text/xml"))).when(isBioAmbients),
                          <.td(
                            <.input(
                              ^.id        := s"delete-${item.id}-checkbox",

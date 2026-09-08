@@ -1,4 +1,4 @@
-package basc
+package pisc
 package feedback
 
 import cats.effect.IO
@@ -31,6 +31,7 @@ object Consul:
     EnableTagOverride: Boolean,
     Datacenter: Option[String]
   ) derives Codec.AsObject:
+      val isBioAmbients = Meta.get("calculus") == "BioAmbients"
       private def feedbackUrl(path: String): Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/feedback/" + path)
       lazy val stateUrl: Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/state")
       def state(using httpClient: Client[IO]): IO[State] =
@@ -59,9 +60,9 @@ object Consul:
 
   val defaultUrl = "http://localhost:8500"
 
-  def apply(url: String, calculus: filter.Calculi, emitter: String, traces: filter.Traces): Option[String] =
+  def apply(url: String, calculus: filter.Calculi, effect: String, emitter: String, traces: filter.Traces): Option[String] =
     val service = if traces.service == filter.Traces.same then traces.toString else traces.service.toString
-    val meta = List("calculus", "emitter", "backend", "producer").map("Meta." + _) zip List(calculus.tag.toString, emitter, traces.toString, service)
+    val meta = List("calculus", "effect", "emitter", "backend", "producer").map("Meta." + _) zip List(calculus.tag.toString, effect, emitter, traces.toString, service)
     val query = Query.empty.++?("filter", meta.map(_ + "==" + _))
     Uri.fromString(url.stripSuffix("/") + "/v1/agent/services").toOption.map(_.copy(query = query).toString)
 

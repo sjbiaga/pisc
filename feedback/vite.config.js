@@ -28,7 +28,7 @@ export default defineConfig({
         },
       },
       '/queue': {
-        target: 'http://localhost:9324',
+        target: 'http://localhost:9324/queue',
         changeOrigin: true
       },
       '/': {
