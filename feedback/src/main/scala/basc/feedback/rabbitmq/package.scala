@@ -31,6 +31,12 @@ package object rabbitmq:
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
+  object Message:
+
+    given Reusability[Message] = Reusability.by_==
+    given Reusability[Vector[Message]] = Reusability.by_==
+
+
   object RabbitMQStomp:
 
     private def stompFrame(command: String, headers: List[(String, String)]): String =
@@ -76,30 +82,41 @@ package object rabbitmq:
         processFrames.concurrently(sendConnect)
       }
 
-  case class Props(queue: String,
-                   signal: SignallingRef[IO, Boolean],
-                   username: String,
-                   password: String,
-                   url: String,
-                   subscriberId: String = "feedback-subscriber")
+  case class RabbitMQSubscriber(queue: String,
+                                username: String,
+                                password: String,
+                                url: String,
+                                subscriberId: String = "feedback-subscriber")
 
-  val Component = ScalaFnComponent.withHooks[(Boolean, Props)]
+  case class Props(item_id: String,
+                   isBioAmbients: Boolean,
+                   chunkSize: Int,
+                   pid: Long,
+                   subscriber: RabbitMQSubscriber)
+                  (val signal: SignallingRef[IO, Boolean])
+
+  object Props:
+
+    given Reusability[Props] = Reusability.by(_.item_id)
+
+
+  private val Componentʹ = ScalaFnComponent.withHooks[Props]
     .useState(Vector.empty[Message])
 
-    .useEffectBy { (_p, messages) =>
-      val (_, p) = _p
-      RabbitMQStomp(Uri.unsafeFromString(p.url), p.queue, p.username, p.password, p.subscriberId)
-        .evalMap { msg => messages.modState(_ :+ msg).to[IO] }
+    .useEffectWithDepsBy { (p, _) => p.item_id }
+                         { (p, messages) => _ =>
+      RabbitMQStomp(Uri.unsafeFromString(p.subscriber.url), p.subscriber.queue, p.subscriber.username, p.subscriber.password, p.subscriber.subscriberId)
+        .chunkN(p.chunkSize)
+        .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.pid == -1 then true else msg.pid == p.pid }.toVector).to[IO] }
         .interruptWhen(p.signal)
         .compile
         .drain
     }
 
-    .render { (_p, messages) =>
-      val (isBioAmbients, p) = _p
+    .renderWithReuse { (p, messages) =>
 
       <.div(
-        <.p(s"""RabbitMQ Web-STOMP ['${p.queue}' queue] #${messages.value.size} messages"""),
+        <.p(s"""RabbitMQ Web-STOMP ['${p.subscriber.queue}' queue] #${messages.value.size} messages"""),
 
         if messages.value.nonEmpty
         then
@@ -124,16 +141,17 @@ package object rabbitmq:
                   <.th("Rate"),
                   <.th("Delay"),
                   <.th("Duration"),
-                  <.th("Direction").when(isBioAmbients),
-                  <.th("Capability").when(isBioAmbients),
-                  <.th("From").when(isBioAmbients),
-                  <.th("To").when(isBioAmbients),
-                  <.th("Snapshot").when(isBioAmbients)
+                  <.th("Direction").when(p.isBioAmbients),
+                  <.th("Capability").when(p.isBioAmbients),
+                  <.th("From").when(p.isBioAmbients),
+                  <.th("To").when(p.isBioAmbients),
+                  <.th("Snapshot").when(p.isBioAmbients)
                 )
               ),
               <.tbody(
                 messages.value.map { msg =>
-                  <.tr(^.key := s"""${msg.number.toString}-${msg.polarity.fold("")(_.toString)}""",
+                  val key = s"""${msg.pid}-${msg.number}${msg.polarity.fold("")("-" + _.toString)}"""
+                  <.tr(^.key := key,
                        <.td(msg.pid),
                        <.td(msg.number),
                        <.td(msg.clock),
@@ -147,18 +165,22 @@ package object rabbitmq:
                        <.td(msg.label),
                        <.td(msg.rate),
                        <.td(msg.delay),
-                       <.td(msg.duration.getOrElse(Double.NaN)),
+                       <.td(msg.duration.getOrElse(Double.NaN).toString),
                        <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
                        <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
                        <.td(msg.from),
                        <.td(msg.to),
-                       <.td(msg.snapshot.map(Download("" + msg.pid + "-" + msg.number + msg.polarity.fold("")("-" + _) + ".xml", _, "text/xml")))
+                       <.td(msg.snapshot.map(Download(key + ".xml", _, "text/xml")))
                   )
                 }.toTagMod
               )
             )
-        )
+          )
         else
-          VdomArray.empty()
+          <.div
+
       )
+
     }
+
+  val Component = React.memo(Componentʹ)

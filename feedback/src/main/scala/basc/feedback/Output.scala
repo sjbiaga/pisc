@@ -9,12 +9,11 @@ import io.circe.Codec
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
 
-import monocle.Focus
+import monocle.{ Focus, Lens }
 
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.extra.StateSnapshot
 import japgolly.scalajs.react.ReactMonocle.*
-import japgolly.scalajs.react.util.EffectCatsEffect.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
 enum Traces derives Codec.AsObject:
@@ -22,12 +21,19 @@ enum Traces derives Codec.AsObject:
   case Kafka(backend: String, topic: String)
   case RabbitMQ(queue: String)
 
+
 case class Parameters(parallelism: Option[Int] = None,
                       threshold: Option[Int] = None,
                       timeout: Option[Int] = None,
                       exit: Option[Boolean] = None,
                       snapshot: Option[Boolean] = None
 ) derives Codec.AsObject
+
+object Parameters:
+
+  given Reusability[Parameters] = Reusability.by_==
+  given Reusability[(Parameters, Int)] = Reusability.by_==
+
 
 case class State(parameters: Parameters,
                  traces: Option[Traces] = None,
@@ -38,6 +44,11 @@ case class State(parameters: Parameters,
                  init: Option[Boolean] = None,
                  done: Option[Boolean] = None
 ) derives Codec.AsObject
+
+object State:
+
+  given Reusability[State] = Reusability.by_==
+
 
 case class Item(key: String,
                 service: Consul.AgentService,
@@ -54,6 +65,9 @@ case class Item(key: String,
 
 object Item:
 
+  given Reusability[Item] = Reusability.by(_.key)
+
+
   def apply(key: String,
             service: Consul.AgentService,
             id: Int,
@@ -63,31 +77,70 @@ object Item:
             pause: Boolean,
             stop: Boolean,
             traces: Boolean): Item =
-    Item(key, service, id, state, exit, pause, stop, traces, AmazonSQS(), Kafka(), RabbitMQ(signal), false)
+    Item(key,
+         service,
+         id,
+         state,
+         exit,
+         pause,
+         stop,
+         traces,
+         AmazonSQS.ElasticMQ(),
+         Kafka.Redpanda(),
+         RabbitMQ(signal),
+         false)
 
-  case class AmazonSQS(region: String = "elasticmq",
-                       accessKey: String = "x",
-                       secretKey: String = "x",
+
+  case class AmazonSQS(region: String,
+                       accessKey: String,
+                       secretKey: String,
+                       endpoint: String,
                        sessionToken: String = "feedback",
-                       endpoint: String = "http://localhost:5173",
                        limit: Int = 10,
                        timeout: Int = 3,
+                       own: Boolean = false,
                        receive: Boolean = false)
 
-  case class Kafka(offset: Long = 0L,
+  object AmazonSQS:
+
+    given Reusability[AmazonSQS] = Reusability.by_==
+
+    class ElasticMQ(endpoint: String = "http://localhost:5173") extends AmazonSQS("elasticmq", "x", "x", endpoint)
+
+
+  case class Kafka(proxyUrl: String,
+                   offset: Long = 0L,
                    maxBytes: Int = 32768,
                    timeout: Int = 3000,
+                   own: Boolean = false,
                    receive: Boolean = false)
+
+  object Kafka:
+
+    class Redpanda(proxyUrl: String = "http://localhost:5173/redpanda-proxy") extends Kafka(proxyUrl)
+
+    given Reusability[Kafka] = Reusability.by_==
+
 
   case class RabbitMQ(signal: SignallingRef[IO, Boolean],
                       username: String = "guest",
                       password: String = "guest",
                       url: String = "ws://localhost:15674/ws",
+                      chunkSize: Int = 10,
+                      own: Boolean = false,
                       connect: Boolean = false)
+
+  object RabbitMQ:
+
+    given Reusability[RabbitMQ] = Reusability.by { it =>
+      (it.username, it.password, it.url, it.connect)
+    }
+
 
   case class Props(key: String,
                    service: Consul.AgentService,
                    restore: StateSnapshot[Parameters],
+                   _item: StateSnapshot[Item],
                    state: StateSnapshot[State],
                    clock: StateSnapshot[Double],
                    init: StateSnapshot[Boolean],
@@ -104,8 +157,16 @@ object Item:
                    kafka: StateSnapshot[Kafka],
                    rabbitmq: StateSnapshot[RabbitMQ],
                    tooltip: StateSnapshot[Boolean])
+                  (using val httpClient: Client[IO])
 
-  def Component(using Client[IO]) = ScalaFnComponent[Props] { p =>
+  object Props:
+
+    given Reusability[Props] = Reusability.by(_._item)
+
+
+  val Component = ScalaFnComponent.withReuse[Props] { p =>
+
+    given Client[IO] = p.httpClient
 
     <.li(
       ^.listStyleType.none,
@@ -218,11 +279,12 @@ object Item:
             )
          )
         else
-          VdomArray.empty()
+          <.div(^.display.inlineBlock)
       ),
 
       <.button(
         ^.marginRight := "15px",
+        ^.disabled    := p.pause.value,
         ^.onClick    --> p.service.state.flatMap(p.state.setState(_).to[IO]),
         "🔄"
       ),
@@ -251,7 +313,7 @@ object Item:
             p.key
           )
         else
-          VdomArray.empty()
+          <.div(^.display.inlineBlock, ^.position.absolute)
       ),
 
       <.input(
@@ -328,7 +390,7 @@ object Item:
             "Initializing..."
           )
         else
-          VdomArray.empty()
+          <.div(^.display.inlineBlock)
       ),
 
       p.state.value.traces.get match {
@@ -339,6 +401,7 @@ object Item:
             <.input(
               ^.id        := "region-text",
               ^.`type`    := "text",
+              ^.disabled  := p.amazonsqs.value.receive,
               ^.value     := p.amazonsqs.value.region,
               ^.onChange ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(region = e.target.value)) },
             ),
@@ -352,6 +415,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "accessKey-text",
               ^.`type`     := "text",
+              ^.disabled   := p.amazonsqs.value.receive,
               ^.value      := p.amazonsqs.value.accessKey,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(accessKey = e.target.value)) },
             ),
@@ -365,6 +429,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "secretKey-text",
               ^.`type`     := "text",
+              ^.disabled   := p.amazonsqs.value.receive,
               ^.value      := p.amazonsqs.value.secretKey,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(secretKey = e.target.value)) },
             ),
@@ -378,8 +443,9 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "limit-number",
               ^.`type`     := "number",
+              ^.disabled   := p.amazonsqs.value.receive,
               ^.value      := p.amazonsqs.value.limit,
-              ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(limit = 10 min (1 max e.target.valueAsNumber.toInt.abs))) },
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(limit = 1 max e.target.valueAsNumber.toInt.abs)) },
             ),
 
             <.span(
@@ -391,6 +457,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "timeout-number",
               ^.`type`     := "number",
+              ^.disabled   := p.amazonsqs.value.receive,
               ^.value      := p.amazonsqs.value.timeout,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(timeout = 3 max e.target.valueAsNumber.toInt.abs)) },
             ),
@@ -398,6 +465,20 @@ object Item:
             <.span(
               ^.marginLeft := "8px",
               "Timeout"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "own-checkbox",
+              ^.`type`     := "checkbox",
+              ^.disabled   := p.amazonsqs.value.receive,
+              ^.checked    := p.amazonsqs.value.own,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.amazonsqs.modState(_.copy(own = e.target.checked)) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Own"
             ),
 
             <.input(
@@ -416,10 +497,12 @@ object Item:
             if p.amazonsqs.value.receive
             then
               val queueUrl = s"${p.amazonsqs.value.endpoint}/queue/$queue"
-              val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, _) = p.amazonsqs.value
-              <.div(amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout).Component(p.service.isBioAmbients))
+              val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, own, _) = p.amazonsqs.value
+              val receiver = amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout)
+              val pid = if own then p.service.Meta.get("pid").toLong else -1
+              <.div(amazonsqs.Component(amazonsqs.Props(p.key, p.service.isBioAmbients, pid, receiver)))
             else
-              VdomArray.empty()
+              <.div
 
           )
 
@@ -430,6 +513,7 @@ object Item:
             <.input(
               ^.id        := "offset-number",
               ^.`type`    := "number",
+              ^.disabled  := p.kafka.value.receive,
               ^.value     := p.kafka.value.offset,
               ^.onChange ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(offset = e.target.valueAsNumber.toLong)) },
             ),
@@ -443,6 +527,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "maxBytes-number",
               ^.`type`     := "number",
+              ^.disabled   := p.kafka.value.receive,
               ^.value      := p.kafka.value.maxBytes,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(maxBytes = 1024 max e.target.valueAsNumber.toInt.abs)) },
             ),
@@ -456,6 +541,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "timeout-number",
               ^.`type`     := "number",
+              ^.disabled   := p.kafka.value.receive,
               ^.value      := p.kafka.value.timeout,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(timeout = 300 max e.target.valueAsNumber.toInt.abs)) },
             ),
@@ -463,6 +549,20 @@ object Item:
             <.span(
               ^.marginLeft := "8px",
               "Timeout"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "own-checkbox",
+              ^.`type`     := "checkbox",
+              ^.disabled   := p.kafka.value.receive,
+              ^.checked    := p.kafka.value.own,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(own = e.target.checked)) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Own"
             ),
 
             <.input(
@@ -480,9 +580,13 @@ object Item:
 
             if p.kafka.value.receive
             then
-              <.div(kafka.redpanda.Component(p.service.isBioAmbients -> kafka.redpanda.Props(topic, p.kafka.value.offset, p.kafka.value.maxBytes, p.kafka.value.timeout)))
+              val Kafka(proxyUrl, offset, maxBytes, timeout, own, _) = p.kafka.value
+              val redpanda = kafka.redpanda.Redpanda(proxyUrl, topic, offset, maxBytes, timeout)
+              val pid = if own then p.service.Meta.get("pid").toLong else -1
+              <.div(kafka.redpanda.Component(kafka.redpanda.Props(p.key, p.service.isBioAmbients, pid, redpanda)))
             else
-              VdomArray.empty()
+              <.div
+
           )
 
         case Traces.RabbitMQ(queue) if !p.stop.value =>
@@ -492,6 +596,7 @@ object Item:
             <.input(
               ^.id        := "username-text",
               ^.`type`    := "text",
+              ^.disabled  := p.rabbitmq.value.connect,
               ^.value     := p.rabbitmq.value.username,
               ^.onChange ==> { (e: ReactEventFromInput) => p.rabbitmq.modState(_.copy(username = e.target.value)) },
             ),
@@ -505,6 +610,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "password-text",
               ^.`type`     := "text",
+              ^.disabled   := p.rabbitmq.value.connect,
               ^.value      := p.rabbitmq.value.password,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.rabbitmq.modState(_.copy(password = e.target.value)) },
             ),
@@ -516,14 +622,30 @@ object Item:
 
             <.input(
               ^.marginLeft := "15px",
-              ^.id         := "interrupt-checkbox",
-              ^.`type`     := "checkbox",
-              ^.onChange  ==> { (e: ReactEventFromInput) => p.rabbitmq.value.signal.set(e.target.checked) }
+              ^.id         := "chunkSize-number",
+              ^.`type`     := "number",
+              ^.disabled   := p.rabbitmq.value.connect,
+              ^.value      := p.rabbitmq.value.chunkSize,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.rabbitmq.modState(_.copy(chunkSize = 1 max e.target.valueAsNumber.toInt.abs)) },
             ),
 
             <.span(
               ^.marginLeft := "8px",
-              "Interrupt"
+              "Chunk size"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "own-checkbox",
+              ^.`type`     := "checkbox",
+              ^.disabled   := p.rabbitmq.value.connect,
+              ^.checked    := p.rabbitmq.value.own,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.rabbitmq.modState(_.copy(own = e.target.checked)) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Own"
             ),
 
             <.input(
@@ -539,15 +661,31 @@ object Item:
               "Connect"
             ),
 
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "interrupt-checkbox",
+              ^.`type`     := "checkbox",
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.rabbitmq.value.signal.set(e.target.checked) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Interrupt"
+            ),
+
             if p.rabbitmq.value.connect
             then
-              <.div(rabbitmq.Component(p.service.isBioAmbients -> rabbitmq.Props(queue, p.rabbitmq.value.signal, p.rabbitmq.value.username, p.rabbitmq.value.password, p.rabbitmq.value.url)))
+              val RabbitMQ(signal, username, password, url, chunkSize, own, _) = p.rabbitmq.value
+              val subscriber = rabbitmq.RabbitMQSubscriber(queue, username, password, url)
+              val pid = if own then p.service.Meta.get("pid").toLong else -1
+              <.div(rabbitmq.Component(rabbitmq.Props(p.key, p.service.isBioAmbients, chunkSize, pid, subscriber)(signal)))
             else
-              VdomArray.empty()
+              <.div
+
           )
 
         case _ =>
-          VdomArray.empty()
+          <.div
 
       }
 
@@ -556,58 +694,165 @@ object Item:
   }
 
 
-case class Output(items: List[Item] = Nil)
-
 case class Restore(params: List[(Parameters, Int)] = Nil)
+
+object Restore:
+
+  given Reusability[Restore] = Reusability.by_==
+
+
+case class Output(items: List[Item] = Nil)
 
 
 object Output:
 
-  val defaultUrl = "http://localhost:8500"
+  given Reusability[Double] = Reusability.by_==
+  given Reusability[Output] = Reusability.by_==
 
-  def Component(using Client[IO]) = ScalaFnComponent[(StateSnapshot[Output], StateSnapshot[Restore])] { (output, restore) =>
+
+  case class Props(output: StateSnapshot[Output],
+                   restore: StateSnapshot[Restore])
+                  (using val httpClient: Client[IO])
+
+  object Props:
+
+    given Reusability[Props] = Reusability.by { p => (p.output, p.restore) }
+
+
+  val Component = ScalaFnComponent.withReuse[Props] { p =>
+
+    given Client[IO] = p.httpClient
 
     <.div(
       <.ul(
-        (output.value.items zip restore.value.params).map { (item, params) =>
-          val lens: StateSnapshot[Item] = output.zoomState(_.items(item.id)) { i => o =>
+        (p.output.value.items zip p.restore.value.params).map { (it, ps) =>
+          val lens = Lens[Output, Item](_.items(it.id)) { i => o =>
             o.copy(items = o.items.take(i.id) ::: i :: o.items.drop(i.id + 1))
           }
 
-          val lensʹ: StateSnapshot[(Parameters, Int)] = restore.zoomState(_.params(params._2)) { p => r =>
+          val item = StateSnapshot
+            .withReuse
+            .zoomL(lens)
+            .prepare(p.output.toModStateFn)
+            .apply(p.output.value)
+
+          val lensʹ = Lens[Restore, (Parameters, Int)](_.params(ps._2)) { p => r =>
             r.copy(params = r.params.take(p._2) ::: p :: r.params.drop(p._2 + 1))
           }
 
-          val state = lens.zoomStateL(Focus[Item](_.state))
+          val paramsʹ = StateSnapshot
+            .withReuse
+            .zoomL(lensʹ)
+            .prepare(p.restore.toModStateFn)
+            .apply(p.restore.value)
 
-          val clock = state.zoomState(_.clock.get) {
-            c => s => s.copy(clock = Some(c))
-          }
+          val params = StateSnapshot
+            .withReuse
+            .zoomL(Focus[(Parameters, Int)](_._1))
+            .prepare(paramsʹ.toModStateFn)
+            .apply(paramsʹ.value)
 
-          val init = state.zoomState(_.init.get) {
-            i => s => s.copy(init = Some(i))
-          }
-          val done = state.zoomState(_.done.get) {
-            d => s => s.copy(done = Some(d))
-          }
+          val state = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.state))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
 
-          val parallelism = state.zoomState(_.parameters.parallelism.get) {
-            p => s => s.copy(parameters = s.parameters.copy(parallelism = Some(p)))
-          }
-          val threshold = state.zoomState(_.parameters.threshold.get) {
-            h => s => s.copy(parameters = s.parameters.copy(threshold = Some(h)))
-          }
-          val timeout = state.zoomState(_.parameters.timeout.get) {
-            t => s => s.copy(parameters = s.parameters.copy(timeout = Some(t)))
-          }
-          val snapshot = state.zoomState(_.parameters.snapshot) {
-            o => s => s.copy(parameters = s.parameters.copy(snapshot = o))
-          }
+          val clock = StateSnapshot
+            .withReuse
+            .zoom[State, Double](_.clock.get) { c => _.copy(clock = Some(c)) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
 
-          Item.Component.withKey(item.key)(
-            Item.Props(item.key,
-                       item.service,
-                       lensʹ.zoomStateL(Focus[(Parameters, Int)](_._1)),
+          val init = StateSnapshot
+            .withReuse
+            .zoom[State, Boolean](_.init.get) { i => _.copy(init = Some(i)) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val done = StateSnapshot
+            .withReuse
+            .zoom[State, Boolean](_.done.get) { d => _.copy(done = Some(d)) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val parallelism = StateSnapshot
+            .withReuse
+            .zoom[State, Int](_.parameters.parallelism.get) { p => s => s.copy(parameters = s.parameters.copy(parallelism = Some(p))) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val threshold = StateSnapshot
+            .withReuse
+            .zoom[State, Int](_.parameters.threshold.get) { h => s => s.copy(parameters = s.parameters.copy(threshold = Some(h))) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val timeout = StateSnapshot
+            .withReuse
+            .zoom[State, Int](_.parameters.timeout.get) { t => s => s.copy(parameters = s.parameters.copy(timeout = Some(t))) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val snapshot = StateSnapshot
+            .withReuse
+            .zoom[State, Option[Boolean]](_.parameters.snapshot) { o => s => s.copy(parameters = s.parameters.copy(snapshot = o)) }
+            .prepare(state.toModStateFn)
+            .apply(state.value)
+
+          val exit = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.exit))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val pause = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.pause))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val stop = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.stop))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val traces = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.traces))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val amazonsqs = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.amazonsqs))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val kafka = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.kafka))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val rabbitmq = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.rabbitmq))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          val tooltip = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.tooltip))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
+          Item.Component.withKey(it.key)(
+            Item.Props(it.key,
+                       it.service,
+                       params,
+                       item,
                        state,
                        clock,
                        init,
@@ -616,14 +861,15 @@ object Output:
                        threshold,
                        timeout,
                        snapshot,
-                       lens.zoomStateL(Focus[Item](_.exit)),
-                       lens.zoomStateL(Focus[Item](_.pause)),
-                       lens.zoomStateL(Focus[Item](_.stop)),
-                       lens.zoomStateL(Focus[Item](_.traces)),
-                       lens.zoomStateL(Focus[Item](_.amazonsqs)),
-                       lens.zoomStateL(Focus[Item](_.kafka)),
-                       lens.zoomStateL(Focus[Item](_.rabbitmq)),
-                       lens.zoomStateL(Focus[Item](_.tooltip)))
+                       exit,
+                       pause,
+                       stop,
+                       traces,
+                       amazonsqs,
+                       kafka,
+                       rabbitmq,
+                       tooltip
+            )
           )
         }.toTagMod
       )

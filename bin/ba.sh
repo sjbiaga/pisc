@@ -18,7 +18,7 @@ function ba() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/bam.scala\ ../${emit}/http4s.scala
             ;;
@@ -32,7 +32,7 @@ function ba() {
             local deps='--dep co.fs2::fs2-core:3.14.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s.scala
             ;;
@@ -60,7 +60,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/traces.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC1 \
+                  -q -O -nowarn -S 3.10.0-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -92,10 +92,10 @@ function ba_() {
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.36
-                        --dep org.http4s::http4s-dsl:0.23.36
-                        --dep org.http4s::http4s-ember-client:0.23.36
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-circe:0.23.37
+                        --dep org.http4s::http4s-dsl:0.23.37
+                        --dep org.http4s::http4s-ember-client:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/bam_.scala\ ../${emit}/http4s_.scala
             ;;
@@ -110,10 +110,10 @@ function ba_() {
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.36
-                        --dep org.http4s::http4s-dsl:0.23.36
-                        --dep org.http4s::http4s-ember-client:0.23.36
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-circe:0.23.37
+                        --dep org.http4s::http4s-dsl:0.23.37
+                        --dep org.http4s::http4s-ember-client:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s_.scala
             ;;
@@ -141,7 +141,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/traces_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC1 \
+                  -q -O -nowarn -S 3.10.0-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -150,7 +150,7 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.13 \
+                  --dep software.amazon.awssdk:sqs:2.54.14 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \

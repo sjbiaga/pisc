@@ -17,12 +17,12 @@ object Dependencies {
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.3.1" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.35.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.13"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.14"
   lazy val circe = "io.circe" %% "circe-generic" % "0.14.16"
   lazy val http4s = Seq("org.http4s" %% "http4s-circe",
                         "org.http4s" %% "http4s-dsl",
                         "org.http4s" %% "http4s-ember-client",
                         "org.http4s" %% "http4s-ember-server"
-                    ).map(_ % "0.23.36")
-  lazy val munit = "org.scalameta" %% "munit" % "1.3.5"
+                    ).map(_ % "0.23.37")
+  lazy val munit = "org.scalameta" %% "munit" % "1.3.6"
 }

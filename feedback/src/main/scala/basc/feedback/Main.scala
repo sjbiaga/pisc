@@ -17,8 +17,7 @@ import org.http4s.dom.FetchClientBuilder
 import org.scalajs.dom.document
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.extra.useStateSnapshot
-import japgolly.scalajs.react.util.EffectCatsEffect.*
+import japgolly.scalajs.react.extra.useStateSnapshotWithReuse
 import japgolly.scalajs.react.vdom.html_<^.*
 
 
@@ -32,11 +31,12 @@ case class Input(consulUrl: String = Consul.defaultUrl,
 @JSExportTopLevel("main")
 object Main extends IOApp:
 
-  def Component(using Client[IO]) = ScalaFnComponent[Unit] { _ =>
+  val Component = ScalaFnComponent[Client[IO]] { implicit httpClient =>
+
     for
       input   <- useState(Input())
-      output  <- useStateSnapshot(Output())
-      restore <- useStateSnapshot(Restore())
+      output  <- useStateSnapshotWithReuse(Output())
+      restore <- useStateSnapshotWithReuse(Restore())
       callback = IO.defer {
         Consul(
           input.value.consulUrl,
@@ -47,7 +47,7 @@ object Main extends IOApp:
         ) match
           case Some(url) =>
             for
-              m <- summon[Client[IO]].expect[Map[String, Consul.AgentService]](url)
+              m <- httpClient.expect[Map[String, Consul.AgentService]](url)
               r <- SignallingRef[IO, Boolean](false)
               l <- m.toList.zipWithIndex.filter(_._1._2.Weights.get.Passing > 0).traverse { case ((key, service), i) =>
                      for
@@ -70,10 +70,7 @@ object Main extends IOApp:
       <.div(
         <.h2("Input"),
 
-        <.button(
-          ^.onClick --> callback,
-          "Query"
-        ),
+        <.button(^.onClick --> callback, "Query"),
         <.div(Consul.Component(input.value -> { consulURL => input.modState(_.copy(consulUrl = consulURL)).to[IO] })),
         <.div(filter.Calculi.Component(input.value -> { calculus => input.modState(_.copy(calculi = input.value.calculi.copy(selectedCalculus = calculus))).to[IO] })),
         <.div(filter.Effects.Component(input.value -> { effect => input.modState(_.copy(effects = input.value.effects.copy(selectedEffect = effect))).to[IO] })),
@@ -82,7 +79,7 @@ object Main extends IOApp:
 
         <.h2("Output"),
 
-        <.div(Output.Component(output, restore)),
+        <.div(Output.Component(Output.Props(output, restore))),
 
         <.footer(<.p("© 2026 Sebastian I. Gliţa-Catina"))
       )
@@ -95,6 +92,6 @@ object Main extends IOApp:
         httpClient
     ).use { httpClient =>
       val container = document.getElementById("root")
-      val component = Component(using httpClient)()
+      val component = Component(httpClient)
       IO(ReactDOMClient.createRoot(container).render(component)).as(ExitCode.Success) <* IO.never
     }
