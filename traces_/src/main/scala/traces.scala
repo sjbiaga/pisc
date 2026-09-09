@@ -110,8 +110,11 @@ package object `Π-traces`:
       client.sendMessage(request)
     override def close: Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
-      client.deleteQueue(DeleteQueueRequest.builder.queueUrl(queueUrl).build)
-      client.close
+      try
+        client.deleteQueue(DeleteQueueRequest.builder.queueUrl(queueUrl).build)
+      catch _ => {}
+      finally
+        client.close
 
   object `Π-AmazonSQS`:
 
@@ -179,6 +182,7 @@ package object `Π-traces`:
       try
         adminClient = AdminClient.create(props)
         adminClient.deleteTopics(java.util.Collections.singletonList(topic)).all.get
+      catch _ => {}
       finally
         if adminClient ne null then adminClient.close
 
@@ -263,9 +267,12 @@ package object `Π-traces`:
         .getBytes("UTF-8")
       `Π-RabbitMQ`.conn_channel._2.basicPublish("", queue, null, message)
     override def close: Unit =
-      `Π-RabbitMQ`.conn_channel._2.queueDelete(queue)
-      `Π-RabbitMQ`.conn_channel._2.close
-      `Π-RabbitMQ`.conn_channel._1.close
+      try
+        `Π-RabbitMQ`.conn_channel._2.queueDelete(queue)
+      catch _ => {}
+      finally
+        `Π-RabbitMQ`.conn_channel._2.close
+        `Π-RabbitMQ`.conn_channel._1.close
 
   object `Π-RabbitMQ`:
 
