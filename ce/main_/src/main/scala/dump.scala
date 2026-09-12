@@ -54,7 +54,7 @@ package object `Π-dump`:
         IO.blocking {
           val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>\n""" + ambient._2._2
           `π-traces`(number, clock, started, ended,
-                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
@@ -81,19 +81,16 @@ package object `Π-dump`:
     }
 
   def dump(using % : %, ! : !, - : -): IO[Unit] =
-    for
-      h <- -.take
-      _ <- h match
-             case Some(_) if `π-traces` eq null =>
-               dump
-             case Some(((no, cl), ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
-               for
-                 _ <- record(no, cl, ts1, ts, delay, duration, l1)(k1)
-                 _ <- record(no, cl, ts2, ts, delay, duration, l2)(k2).unlessA(k1 == k2)
-                 _ <- IO.cede >> dump
-               yield
-                 ()
-             case _ =>
-               IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
-    yield
-      ()
+    -.take.flatMap {
+      case Some(_) if `π-traces` eq null =>
+        dump
+      case Some(((no, cl), ((ts1, ts2), ts), (k1, k2), (delay, duration), (l1, l2))) =>
+        for
+          _ <- record(no, cl, ts1, ts, delay, duration, l1)(k1)
+          _ <- record(no, cl, ts2, ts, delay, duration, l2)(k2).unlessA(k1 == k2)
+          _ <- IO.cede >> dump
+        yield
+          ()
+      case _ =>
+        IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
+    }

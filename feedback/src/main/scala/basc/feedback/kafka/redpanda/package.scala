@@ -82,7 +82,7 @@ package object redpanda:
         offUrl    = Uri.unsafeFromString(s"$base_uri/offsets")
         offReq    = Request[IO](Method.POST, offUrl).withHeaders(headers)
         _        <- p.httpClient.successful(offReq)
-        _        <- records.modState(_ ::: newRec.filter { it => if p.pid == -1 then true else it.value.pid == p.pid }).to[IO]
+        _        <- records.modState(_ ::: newRec.filter { it => if p.pid == 0 then true else it.value.pid == p.pid }).to[IO]
       yield
         ()
     }

@@ -15,8 +15,6 @@ import org.http4s.Uri
 import org.http4s.dom.WebSocketClient
 import org.http4s.client.websocket.{ WSFrame, WSRequest }
 
-import org.scalajs.dom.WebSocket
-
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
@@ -107,7 +105,7 @@ package object rabbitmq:
                          { (p, messages) => _ =>
       RabbitMQStomp(Uri.unsafeFromString(p.subscriber.url), p.subscriber.queue, p.subscriber.username, p.subscriber.password, p.subscriber.subscriberId)
         .chunkN(p.chunkSize)
-        .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.pid == -1 then true else msg.pid == p.pid }.toVector).to[IO] }
+        .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.pid == 0 then true else msg.pid == p.pid }.toVector).to[IO] }
         .interruptWhen(p.signal)
         .compile
         .drain

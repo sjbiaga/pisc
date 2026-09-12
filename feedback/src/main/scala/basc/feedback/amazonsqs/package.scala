@@ -140,7 +140,7 @@ package object amazonsqs:
                      .flatMap { m => m.Body.toOption zip m.ReceiptHandle.toOption }
                      .flatMap { (b, h) => parse(b).toOption.map(_ -> h) }
                      .flatMap { (j, h) => j.as[Message].toOption.map(_ -> h) }
-                     .filter { (m, h) => if p.pid == -1 then true else m.pid == p.pid }
+                     .filter { (m, h) => if p.pid == 0 then true else m.pid == p.pid }
                      .zipWithIndex
                      .map { case ((m, h), i) => Item(m, h, v.length + i) }
               )

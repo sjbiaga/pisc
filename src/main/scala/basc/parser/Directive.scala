@@ -274,6 +274,13 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                     settings.traces = Some(Redpanda(List(hp.name), List(hp.number), s(topic)))
                   case (_, hp, srport) =>
                     settings.traces = Some(Redpanda(List(hp.name), List(hp.number), s(topic), srport.toInt))
+              case given String :: (topic: String) :: it
+                  if given_String.toLowerCase == "kafka"  =>
+                it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[Id](9092).node match
+                  case (_, hp, "") =>
+                    settings.traces = Some(Kafka(List(hp.name), List(hp.number), s(topic)))
+                  case (_, hp, srport) =>
+                    settings.traces = Some(Kafka(List(hp.name), List(hp.number), s(topic), srport.toInt))
               // case given String :: (topic: String) :: it
               //     if List("kafka", "redpanda").contains(given_String.toLowerCase) =>
               //   it.uri(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })[List](9092, true).cluster match

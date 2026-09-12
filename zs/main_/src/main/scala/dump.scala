@@ -49,7 +49,7 @@ package object `Π-dump`:
         ZIO.attemptBlocking {
           val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>\n""" + ambient._2._2
           `π-traces`(number, clock, started, ended,
-                     agent, name, unless(polarity.isEmpty)(java.lang.Boolean.parseBoolean(polarity)),
+                     agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label,
                      rate, delay, duration,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
@@ -76,19 +76,16 @@ package object `Π-dump`:
     }
 
   def dump(using % : %, ! : !, - : -): UIO[Unit] =
-    for
-      h <- -.take
-      _ <- h match
-             case Some(_) if `π-traces` eq null =>
-               dump
-             case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
-               for
-                 _ <- record(no, cl, s1, e, delay, duration, l1)(k1)
-                 _ <- record(no, cl, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
-                 _ <- dump
-               yield
-                 ()
-             case _ =>
-               ZIO.attemptBlocking(`π-traces`.close).when(`π-traces` ne null).either *> doExit
-    yield
-      ()
+    -.take.flatMap {
+      case Some(_) if `π-traces` eq null =>
+        dump
+      case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration), (l1, l2))) =>
+        for
+          _ <- record(no, cl, s1, e, delay, duration, l1)(k1)
+          _ <- record(no, cl, s2, e, delay, duration, l2)(k2).unless(k1 == k2)
+          _ <- dump
+        yield
+          ()
+      case _ =>
+        ZIO.attemptBlocking(`π-traces`.close).when(`π-traces` ne null).either *> doExit
+    }

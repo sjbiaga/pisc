@@ -214,10 +214,10 @@ package object `Π-traces`:
     import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
     import org.apache.kafka.common.serialization.StringSerializer
     import io.confluent.kafka.serializers.{ AbstractKafkaSchemaSerDeConfig, KafkaAvroSerializer }
-    import io.confluent.kafka.serializers.subject.RecordNameStrategy
+    import io.confluent.kafka.serializers.subject.{ RecordNameStrategy, TopicNameStrategy }
 
     private val _schema = """{
-      "namespace": "pisc",
+      "namespace": "pisc.avro",
       "type": "record",
       "name": "BioAmbients2Scala",
       "fields": [
@@ -269,8 +269,9 @@ package object `Π-traces`:
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer])
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true)
         props.put("schema.registry.url", config.schemaRegistryUrl)
-        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
+        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[TopicNameStrategy])
         KafkaProducer[String, GenericRecord](props)
 
 

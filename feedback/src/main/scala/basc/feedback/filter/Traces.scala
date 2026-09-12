@@ -36,7 +36,7 @@ object Traces:
 
         <.option(^.value := "amazonsqs", ^.disabled := true, "AmazonSQS"),
         <.option(^.value := "elasticmq"                    , "ElasticMQ"),
-        <.option(^.value := "kafka"    , ^.disabled := true, "Kafka"    ),
+        <.option(^.value := "kafka"                        , "Kafka"    ),
         <.option(^.value := "redpanda"                     , "Redpanda" ),
         <.option(^.value := "rabbitmq"                     , "RabbitMQ" )
       )

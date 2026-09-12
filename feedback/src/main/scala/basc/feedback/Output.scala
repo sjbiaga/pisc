@@ -76,19 +76,62 @@ object Item:
             exit: Boolean,
             pause: Boolean,
             stop: Boolean,
-            traces: Boolean): Item =
-    Item(key,
-         service,
-         id,
-         state,
-         exit,
-         pause,
-         stop,
-         traces,
-         AmazonSQS.ElasticMQ(),
-         Kafka.Redpanda(),
-         RabbitMQ(signal),
-         false)
+            traces: Boolean,
+            _traces: filter.Traces): Item =
+    _traces match
+      case filter.Traces.elasticmq =>
+        Item(key,
+             service,
+             id,
+             state,
+             exit,
+             pause,
+             stop,
+             traces,
+             AmazonSQS.ElasticMQ(),
+             Kafka.default,
+             RabbitMQ.default,
+             false)
+      case filter.Traces.kafka =>
+        Item(key,
+             service,
+             id,
+             state,
+             exit,
+             pause,
+             stop,
+             traces,
+             AmazonSQS.default,
+             Kafka(analytics = Kafka.Analytics(signal)),
+             RabbitMQ.default,
+             false)
+      case filter.Traces.redpanda =>
+        Item(key,
+             service,
+             id,
+             state,
+             exit,
+             pause,
+             stop,
+             traces,
+             AmazonSQS.default,
+             Kafka.Redpanda(),
+             RabbitMQ.default,
+             false)
+      case filter.Traces.rabbitmq =>
+        Item(key,
+             service,
+             id,
+             state,
+             exit,
+             pause,
+             stop,
+             traces,
+             AmazonSQS.default,
+             Kafka.default,
+             RabbitMQ(signal),
+             false)
+      case _ => ???
 
 
   case class AmazonSQS(region: String,
@@ -105,19 +148,27 @@ object Item:
 
     given Reusability[AmazonSQS] = Reusability.by_==
 
+    val default: AmazonSQS = AmazonSQS(null, null, null, null)
+
     class ElasticMQ(endpoint: String = "http://localhost:5173") extends AmazonSQS("elasticmq", "x", "x", endpoint)
 
 
-  case class Kafka(proxyUrl: String,
-                   offset: Long = 0L,
+  case class Kafka(offset: Long = 0L,
                    maxBytes: Int = 32768,
                    timeout: Int = 3000,
                    own: Boolean = false,
-                   receive: Boolean = false)
+                   receive: Boolean = false,
+                   analytics: Kafka.Analytics = null)
 
   object Kafka:
 
-    class Redpanda(proxyUrl: String = "http://localhost:5173/redpanda-proxy") extends Kafka(proxyUrl)
+    val default: Kafka = Kafka()
+
+    class Redpanda(val proxyUrl: String = "http://localhost:5173/redpanda-proxy") extends Kafka()
+
+    case class Analytics(signal: SignallingRef[IO, Boolean],
+                         url: String = "ws://localhost:7124",
+                         loadAvg: Boolean = false)
 
     given Reusability[Kafka] = Reusability.by_==
 
@@ -131,6 +182,8 @@ object Item:
                       connect: Boolean = false)
 
   object RabbitMQ:
+
+    val default: RabbitMQ = RabbitMQ(null)
 
     given Reusability[RabbitMQ] = Reusability.by { it =>
       (it.username, it.password, it.url, it.connect)
@@ -292,8 +345,8 @@ object Item:
       <.div(
         ^.position.relative,
         ^.display.inlineBlock,
-        ^.onMouseOver --> p.tooltip.setState(true).to[IO],
-        ^.onMouseLeave --> p.tooltip.setState(false).to[IO],
+        ^.onMouseOver --> p.tooltip.setState(true),
+        ^.onMouseLeave --> p.tooltip.setState(false),
 
         <.span(p.service.Address + ":" + p.service.Port),
 
@@ -499,10 +552,78 @@ object Item:
               val queueUrl = s"${p.amazonsqs.value.endpoint}/queue/$queue"
               val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, own, _) = p.amazonsqs.value
               val receiver = amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout)
-              val pid = if own then p.service.Meta.get("pid").toLong else -1
+              val pid = if own then p.service.Meta.get("pid").toLong else 0
               <.div(amazonsqs.Component(amazonsqs.Props(p.key, p.service.isBioAmbients, pid, receiver)))
             else
               <.div
+
+          )
+
+        case Traces.Kafka("same", topic) if !p.stop.value =>
+
+          <.div(
+
+            <.input(
+              ^.id        := "analyticsUrl-text",
+              ^.`type`    := "text",
+              ^.disabled  := p.kafka.value.analytics.loadAvg,
+              ^.value     := p.kafka.value.analytics.url,
+              ^.onChange ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(url = e.target.value)) } }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Analytics URL"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "own-checkbox",
+              ^.`type`     := "checkbox",
+              ^.disabled   := p.kafka.value.analytics.loadAvg,
+              ^.checked    := p.kafka.value.own,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(own = e.target.checked)) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Own"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "interrupt-checkbox",
+              ^.`type`     := "checkbox",
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.value.analytics.signal.set(e.target.checked) }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Interrupt"
+            ),
+
+            <.input(
+              ^.marginLeft := "15px",
+              ^.id         := "loadAvg-checkbox",
+              ^.`type`     := "checkbox",
+              ^.checked    := p.kafka.value.analytics.loadAvg,
+              ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState{ k => k.copy(analytics = k.analytics.copy(loadAvg = e.target.checked)) } }
+            ),
+
+            <.span(
+              ^.marginLeft := "8px",
+              "Load Average"
+            ),
+
+            ( if p.kafka.value.analytics.loadAvg
+              then
+                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, url, _)) = p.kafka.value
+                val pid = if own then p.service.Meta.get("pid").toLong else 0
+                val props = analytics.loadavg.Props(p.key, s"$url/traces-loadavg-$topic?pid=$pid")(signal)
+                <.div(^.display.inlineBlock, analytics.loadavg.Component(props))
+              else
+                <.div
+            )
 
           )
 
@@ -578,14 +699,16 @@ object Item:
               "Receive"
             ),
 
-            if p.kafka.value.receive
-            then
-              val Kafka(proxyUrl, offset, maxBytes, timeout, own, _) = p.kafka.value
-              val redpanda = kafka.redpanda.Redpanda(proxyUrl, topic, offset, maxBytes, timeout)
-              val pid = if own then p.service.Meta.get("pid").toLong else -1
-              <.div(kafka.redpanda.Component(kafka.redpanda.Props(p.key, p.service.isBioAmbients, pid, redpanda)))
-            else
-              <.div
+            ( if p.kafka.value.receive
+              then
+                val Kafka(offset, maxBytes, timeout, own, _, _) = p.kafka.value
+                val proxyUrl = p.kafka.value.asInstanceOf[Kafka.Redpanda].proxyUrl
+                val redpanda = kafka.redpanda.Redpanda(proxyUrl, topic, offset, maxBytes, timeout)
+                val pid = if own then p.service.Meta.get("pid").toLong else 0
+                <.div(kafka.redpanda.Component(kafka.redpanda.Props(p.key, p.service.isBioAmbients, pid, redpanda)))
+              else
+                <.div
+            )
 
           )
 
@@ -677,7 +800,7 @@ object Item:
             then
               val RabbitMQ(signal, username, password, url, chunkSize, own, _) = p.rabbitmq.value
               val subscriber = rabbitmq.RabbitMQSubscriber(queue, username, password, url)
-              val pid = if own then p.service.Meta.get("pid").toLong else -1
+              val pid = if own then p.service.Meta.get("pid").toLong else 0
               <.div(rabbitmq.Component(rabbitmq.Props(p.key, p.service.isBioAmbients, chunkSize, pid, subscriber)(signal)))
             else
               <.div

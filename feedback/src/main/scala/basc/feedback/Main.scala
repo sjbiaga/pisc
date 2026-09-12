@@ -38,12 +38,13 @@ object Main extends IOApp:
       output  <- useStateSnapshotWithReuse(Output())
       restore <- useStateSnapshotWithReuse(Restore())
       callback = IO.defer {
+        val traces = filter.Traces.valueOf(input.value.traces.selectedTraces)
         Consul(
           input.value.consulUrl,
           filter.Calculi.valueOf(input.value.calculi.selectedCalculus),
           input.value.effects.selectedEffect,
           input.value.emitters.selectedEmitter,
-          filter.Traces.valueOf(input.value.traces.selectedTraces)
+          traces
         ) match
           case Some(url) =>
             for
@@ -57,7 +58,7 @@ object Main extends IOApp:
                        s <- service.stop
                        t <- service.traces
                      yield
-                       Item(key, service, i, r, a, x, z, s, t)
+                       Item(key, service, i, r, a, x, z, s, t, traces)
                    }
               _ <- output.setState(Output(l)).to[IO]
               _ <- restore.setState(Restore(l.zipWithIndex.map(_.state.parameters -> _))).to[IO]
