@@ -62,8 +62,27 @@ object Consul:
 
   def apply(url: String, calculus: filter.Calculi, effect: String, emitter: String, traces: filter.Traces): Option[String] =
     val service = if traces.service == filter.Traces.same then traces.toString else traces.service.toString
-    val meta = List("calculus", "effect", "emitter", "backend", "producer").map("Meta." + _) zip List(calculus.tag.toString, effect, emitter, traces.toString, service)
-    val query = Query.empty.++?("filter", meta.map(_ + "==" + _))
+    val effectFilter =
+      if effect == "*"
+      then
+        List("cats.effect.IO", "zio.Task").map("Meta.effect == " + _).mkString(" or ")
+      else
+        s"Meta.effect == $effect"
+    val emitterFilter =
+      if emitter == "*"
+      then
+        if effect == "cats.effect.IO"
+        then
+          List("ce", "cef", "fs2").map("Meta.emitter == " + _).mkString(" or ")
+        else if effect == "zio.Task"
+        then
+          List("zio", "ziof", "fs2", "zs").map("Meta.emitter == " + _).mkString(" or ")
+        else
+          List("ce", "cef", "fs2", "zio", "ziof", "zs").map("Meta.emitter == " + _).mkString(" or ")
+      else
+        s"Meta.emitter == $emitter"
+    val meta = List("calculus", "backend", "producer").map("Meta." + _) zip List(calculus.tag.toString, traces.toString, service)
+    val query = Query.empty.++?("filter", effectFilter :: emitterFilter :: meta.map(_ + " == " + _))
     Uri.fromString(url.stripSuffix("/") + "/v1/agent/services").toOption.map(_.copy(query = query).toString)
 
   val Component = ScalaFnComponent[(Input, String => IO[Unit])] { (input, cb) =>

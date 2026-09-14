@@ -5,7 +5,6 @@ package filter
 import cats.effect.IO
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.util.EffectCatsEffect.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
 

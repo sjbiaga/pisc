@@ -24,6 +24,7 @@ object Effects:
         ^.value          := input.effects.selectedEffect,
         ^.onChange      ==> onEffectsChange,
 
+        <.option(^.value := "*"             , "*"             ),
         <.option(^.value := "cats.effect.IO", "Cats Effect IO"),
         <.option(^.value := "zio.Task"      , "ZIO Task"      )
       )

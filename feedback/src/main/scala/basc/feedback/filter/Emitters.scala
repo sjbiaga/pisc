@@ -5,7 +5,6 @@ package filter
 import cats.effect.IO
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.util.EffectCatsEffect.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
 
@@ -17,6 +16,9 @@ object Emitters:
 
     def onEmittersChange(e: ReactEventFromInput): IO[Unit] = cb(e.target.value)
 
+    val isIO = input.effects.selectedEffect == "cats.effect.IO" || input.effects.selectedEffect == "*"
+    val isTask = input.effects.selectedEffect == "zio.Task" || input.effects.selectedEffect == "*"
+
     <.div(
       <.label(^.htmlFor  := "emitter-select", "Emitter: "),
 
@@ -25,12 +27,13 @@ object Emitters:
         ^.value          := input.emitters.selectedEmitter,
         ^.onChange      ==> onEmittersChange,
 
-        <.option(^.value := "ce"  , "Cats Effect"          ).when(input.effects.selectedEffect == "cats.effect.IO"),
-        <.option(^.value := "cef" , "Cats Effect (flatMap)").when(input.effects.selectedEffect == "cats.effect.IO"),
-        <.option(^.value := "zio" , "ZIO"                  ).when(input.effects.selectedEffect == "zio.Task"),
-        <.option(^.value := "ziof", "ZIO (flatMap)"        ).when(input.effects.selectedEffect == "zio.Task"),
+        <.option(^.value := "*"   , "*"                    ),
+        <.option(^.value := "ce"  , "Cats Effect"          ).when(isIO),
+        <.option(^.value := "cef" , "Cats Effect (flatMap)").when(isIO),
+        <.option(^.value := "zio" , "ZIO"                  ).when(isTask),
+        <.option(^.value := "ziof", "ZIO (flatMap)"        ).when(isTask),
         <.option(^.value := "fs2" , "Functional Streams 2" ),
-        <.option(^.value := "zs"  , "ZIO Streams"          ).when(input.effects.selectedEffect == "zio.Task")
+        <.option(^.value := "zs"  , "ZIO Streams"          ).when(isTask)
       )
     )
 
