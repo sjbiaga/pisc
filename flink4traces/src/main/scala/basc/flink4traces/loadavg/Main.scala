@@ -1,5 +1,6 @@
 package basc
 package flink4traces
+package loadavg
 
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
@@ -10,7 +11,6 @@ import org.apache.flink.util.ParameterTool
 import org.apache.avro.generic.GenericRecord
 import org.apache.flink.formats.avro.registry.confluent.ConfluentRegistryAvroDeserializationSchema
 
-import org.apache.flink.*
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.datastream.DataStream
 

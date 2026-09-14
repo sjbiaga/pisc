@@ -1,31 +1,24 @@
 package basc
 package flink4traces
-package websocket
+package sweepline
 
 import java.io.IOException
 
 import org.apache.flink.api.connector.sink2.{ Sink, SinkWriter, WriterInitContext }
 
+import websocket.EmbeddedWebSocketServer
 
-class WebSocketSink(port: Int, path: String) extends Sink[LoadAvg]:
+
+class WebSocketSink(port: Int, path: String) extends Sink[SweepLine1msBurst]:
 
   @throws[IOException]
-  override def createWriter(context: WriterInitContext): SinkWriter[LoadAvg] =
+  override def createWriter(context: WriterInitContext): SinkWriter[SweepLine1msBurst] =
     WebSocketSink.Writer(port, path)
 
 
 object WebSocketSink:
 
-  def toJson(element: LoadAvg): String =
-    s"""{
-        |"timestamp":${element.timestamp},
-        |"clock":${element.clock},
-        |"oneMinuteLoad":${element.oneMinuteLoad},
-        |"tenMinutesLoad":${element.tenMinutesLoad},
-        |"fifteenMinutesLoad":${element.fifteenMinutesLoad}
-        |}""".stripMargin.replaceAll("\n", "").trim
-
-  class Writer(port: Int, path: String) extends SinkWriter[LoadAvg]:
+  class Writer(port: Int, path: String) extends SinkWriter[SweepLine1msBurst]:
 
     @transient private var server: EmbeddedWebSocketServer = null
 
@@ -40,15 +33,15 @@ object WebSocketSink:
           throw IOException(e)
 
     @throws[IOException]
-    override def write(element: LoadAvg, context: SinkWriter.Context): Unit =
+    override def write(element: SweepLine1msBurst, context: SinkWriter.Context): Unit =
       initServer
       val perPIDJson: Long => Option[String] = {
-        case pid if element.perPIDLoadAvg.containsKey(pid) =>
-          Some(toJson(element.perPIDLoadAvg.get(pid)))
+        case pid if element.perPIDSweepLine1msBurst.containsKey(pid) =>
+          Some(element.perPIDSweepLine1msBurst.get(pid).toJson)
         case _ =>
           None
       }
-      server.broadcastMessage({ case 0L => Some(toJson(element)) case pid => perPIDJson(pid) })
+      server.broadcastMessage({ case 0L => Some(element.toJson) case pid => perPIDJson(pid) })
 
     @throws[IOException]
     override def flush(endOfInput: Boolean): Unit = {}

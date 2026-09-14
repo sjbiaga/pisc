@@ -150,7 +150,7 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.16 \
+                  --dep software.amazon.awssdk:sqs:2.54.17 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
@@ -187,7 +187,8 @@ function baio() {
     esac
     while [ $# -gt 0 ]
     do
-        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
+        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } |
+        awk -v RS='\\\\u[0-9a-fA-F]{4}' '{ORS=""; print $0; if (RT) printf "%c",strtonum("0x"substr(RT,3)) } END {print ""}' >| out/"$1".scala.out
         cat out/"$1".scala.out |
         scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift

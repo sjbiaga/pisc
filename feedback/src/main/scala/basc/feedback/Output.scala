@@ -168,7 +168,7 @@ object Item:
 
     case class Analytics(signal: SignallingRef[IO, Boolean],
                          url: String = "ws://localhost:7124",
-                         loadAvg: Boolean = false)
+                         `type`: String = "-")
 
     given Reusability[Kafka] = Reusability.by_==
 
@@ -566,7 +566,7 @@ object Item:
             <.input(
               ^.id        := "analyticsUrl-text",
               ^.`type`    := "text",
-              ^.disabled  := p.kafka.value.analytics.loadAvg,
+              ^.disabled  := p.kafka.value.analytics.`type` != "-",
               ^.value     := p.kafka.value.analytics.url,
               ^.onChange ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(url = e.target.value)) } }
             ),
@@ -580,7 +580,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "own-checkbox",
               ^.`type`     := "checkbox",
-              ^.disabled   := p.kafka.value.analytics.loadAvg,
+              ^.disabled   := p.kafka.value.analytics.`type` != "-",
               ^.checked    := p.kafka.value.own,
               ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState(_.copy(own = e.target.checked)) }
             ),
@@ -602,27 +602,41 @@ object Item:
               "Interrupt"
             ),
 
-            <.input(
+            <.label(
               ^.marginLeft := "15px",
-              ^.id         := "loadAvg-checkbox",
-              ^.`type`     := "checkbox",
-              ^.checked    := p.kafka.value.analytics.loadAvg,
-              ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.modState{ k => k.copy(analytics = k.analytics.copy(loadAvg = e.target.checked)) } }
+              ^.htmlFor    := "analytics-select",
+              "Analytics: "
             ),
 
-            <.span(
-              ^.marginLeft := "8px",
-              "Load Average"
+            <.select(
+              ^.id             := "analytics-select",
+              ^.onChange      ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(`type` = e.target.value)) } },
+
+              <.option(^.value := "-"        , "-"           ),
+              <.option(^.value := "loadavg"  , "Load Average"),
+              <.option(^.value := "sweepline", "Sweep Line"  )
             ),
 
-            ( if p.kafka.value.analytics.loadAvg
+            ( if p.kafka.value.analytics.`type` == "loadavg"
               then
-                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, url, _)) = p.kafka.value
+                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
                 val pid = if own then p.service.Meta.get("pid").toLong else 0
-                val props = analytics.loadavg.Props(p.key, s"$url/traces-loadavg-$topic?pid=$pid")(signal)
+                val url = s"$_url/traces-loadavg-$topic?pid=$pid"
+                val props = analytics.loadavg.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.loadavg.Component(props))
               else
-                <.div
+                <.div(^.display.inlineBlock)
+            ),
+
+            ( if p.kafka.value.analytics.`type` == "sweepline"
+              then
+                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
+                val pid = if own then p.service.Meta.get("pid").toLong else 0
+                val url = s"$_url/traces-sweepline-$topic?pid=$pid"
+                val props = analytics.sweepline.Props(p.key, url)(signal)
+                <.div(^.display.inlineBlock, analytics.sweepline.Component(props))
+              else
+                <.div(^.display.inlineBlock)
             )
 
           )

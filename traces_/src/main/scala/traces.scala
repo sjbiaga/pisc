@@ -183,10 +183,10 @@ package object `Π-traces`:
       avroRecord.put("snapshot", snapshot.map(_.replaceAll("""\\n""", "\n").replaceAll("""\\t""", "\t")).getOrElse(null))
       backend match
         case `Π-Backend`.redpanda =>
-          val record = ProducerRecord[String, String](topic, s"""{"label":"$label"}""", avroRecord.toString)
+          val record = ProducerRecord[String, String](topic, s"""{"label":"$agent-$label"}""", avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val record = ProducerRecord[String, GenericRecord](topic, label, avroRecord)
+          val record = ProducerRecord[String, GenericRecord](topic, agent + "-" + label, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
     override def close: Unit =
       backend match

@@ -1,7 +1,5 @@
 package basc
 
-import java.util.{ HashMap => Map }
-
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 
@@ -53,13 +51,6 @@ package object flink4traces:
           }
         catch _.printStackTrace()
 
-
-  case class LoadAvg(timestamp: Long,
-                     perPIDLoadAvg: Map[Long, LoadAvg],
-                     clock: Double,
-                     oneMinuteLoad: Double,
-                     tenMinutesLoad: Double,
-                     fifteenMinutesLoad: Double)
 
   private val _schema = """{
     "namespace": "pisc.avro",

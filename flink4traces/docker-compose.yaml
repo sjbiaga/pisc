@@ -30,12 +30,13 @@ services:
       - flink-jobmanager
     command: taskmanager
     ports:
-      - "7124:7124" # Embedded Java-WebSocket broadcast port for Scala.js React
+      - "7124:7124" # Embedded Java-WebSocket broadcast port for Scala.js React / loadAvg
+      - "7224:7224" # Embedded Java-WebSocket broadcast port for Scala.js React / sweepLine
     environment:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
-        taskmanager.numberOfTaskSlots: 2
+        taskmanager.numberOfTaskSlots: 4
     volumes:
       - ./target/scala-3.10.0-RC2:/opt/flink/usrlib
     networks:

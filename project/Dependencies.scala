@@ -12,12 +12,12 @@ object Dependencies {
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.26"
   lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.13"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
-  lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.3"
+  lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.4"
   lazy val kafka = "org.apache.kafka" % "kafka-clients" % "4.3.1"
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.3.1" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.35.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.16"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.17"
   lazy val circe = "io.circe" %% "circe-generic" % "0.14.16"
   lazy val http4s = Seq("org.http4s" %% "http4s-circe",
                         "org.http4s" %% "http4s-dsl",
