@@ -118,7 +118,7 @@ package object sweepline:
                                          case _ =>
                                            j += 1
                                            j -> Data(label, false, counts, percents)
-                                   }.toMap
+                                   }
                                    hs.foreach(_._2.disabled = true)
                                    State(burstʹ.timestamp, 0L, burstʹ.clock, hs ++ hsʹ, i)
                                  case it: State =>
@@ -173,6 +173,7 @@ package object sweepline:
             activeChart.data.labels = hs(i).counts
             activeChart.data.datasets.asInstanceOf[js.Array[js.Dynamic]](0).data = hs(i).percentages
             activeChart.data.datasets.asInstanceOf[js.Array[js.Dynamic]](0).label = hs(i).label
+            activeChart.data.datasets.asInstanceOf[js.Array[js.Dynamic]](0).backgroundColor = if hs(i).disabled then "#808080" else "#4caf50"
             activeChart.update()
       }
     }

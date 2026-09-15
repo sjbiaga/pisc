@@ -85,6 +85,7 @@ package object `Π-loop`:
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],
                             tracesR: Ref[IO, Boolean],
+                            keyByR: Ref[IO, Boolean],
                             lastR: Ref[IO, (Long, Double)],
                             pauseRD_stopR_exitRD: AtomicCell[IO, ((Deferred[IO, Unit], Boolean), Deferred[IO, Unit])],
                             initR: Ref[IO, Boolean],

@@ -42,7 +42,7 @@ package object `Π-traces`:
     val backend: `Π-Backend` = `Π-Backend`.same
     def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
-              key: String, guard: Boolean, label: String,
+              key: String, guard: Boolean, label: String, keyBy: Boolean,
               rate: String, delay: Double, duration: Double,
               dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit
     def close: Unit
@@ -51,7 +51,7 @@ package object `Π-traces`:
   case object `Π-ConsoleCSV` extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, keyBy: Boolean,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
@@ -68,7 +68,7 @@ package object `Π-traces`:
     import _root_.java.io.{ PrintStream, FileOutputStream }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, keyBy: Boolean,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
@@ -105,22 +105,25 @@ package object `Π-traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
+      val keyBy = if _keyBy then agent + "-" + label.replaceAll("∥", "|") else "ANY"
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
-      val message = s"""
-                    {"pid":${ProcessHandle.current.pid},
-                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
-                     "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
-                     "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
-                    }"""
+      val message =
+        s"""{
+            |"pid":${ProcessHandle.current.pid},
+            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
+            |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
+            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
+            |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
+            |}""".stripMargin.replaceAll("\n", "").trim
       val request = SendMessageRequest
         .builder
         .queueUrl(queueUrl)
+        .messageGroupId(keyBy)
         .messageBody(message)
         .build
       client.sendMessage(request)
@@ -159,7 +162,7 @@ package object `Π-traces`:
     import org.apache.kafka.clients.producer.ProducerRecord
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
@@ -183,10 +186,14 @@ package object `Π-traces`:
       avroRecord.put("snapshot", snapshot.map(_.replaceAll("""\\n""", "\n").replaceAll("""\\t""", "\t")).getOrElse(null))
       backend match
         case `Π-Backend`.redpanda =>
-          val record = ProducerRecord[String, String](topic, s"""{"label":"$agent-$label"}""", avroRecord.toString)
+          val keyBy = if _keyBy then s"""{"label":"$agent-$label"}""" else s"""{"label":"ANY"}"""
+          avroRecord.put("keyBy", keyBy)
+          val record = ProducerRecord[String, String](topic, keyBy, avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val record = ProducerRecord[String, GenericRecord](topic, agent + "-" + label, avroRecord)
+          val keyBy = if _keyBy then agent + "-" + label else "ANY"
+          avroRecord.put("keyBy", keyBy)
+          val record = ProducerRecord[String, GenericRecord](topic, keyBy, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
     override def close: Unit =
       backend match
@@ -235,6 +242,7 @@ package object `Π-traces`:
         { "name" : "key", "type": "string" },
         { "name" : "guard", "type": "boolean" },
         { "name" : "label", "type": "string" },
+        { "name" : "keyBy", "type": "string" },
 
         { "name" : "rate", "type": "string" },
         { "name" : "delay", "type": "double" },
@@ -275,26 +283,28 @@ package object `Π-traces`:
         KafkaProducer[String, GenericRecord](props)
 
 
-  case class `Π-RabbitMQ`(host: String, port: Int, queue: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
+  case class `Π-RabbitMQ`(host: String, port: Int, exchange: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
+      val keyBy = if _keyBy then agent + "-" + label else "ANY"
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
-      val message = s"""
-                    {"pid":${ProcessHandle.current.pid},
-                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
-                     "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
-                     "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
-                     "dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
-                    }"""
+      val message =
+        s"""{
+            |"pid":${ProcessHandle.current.pid},
+            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
+            |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
+            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration},
+            |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
+            |}""".stripMargin.replaceAll("\n", "").trim
         .getBytes("UTF-8")
-      `Π-RabbitMQ`.conn_channel._2.basicPublish("", queue, null, message)
+      `Π-RabbitMQ`.conn_channel._2.basicPublish(exchange, keyBy, null, message)
     override def close: Unit =
       try
-        `Π-RabbitMQ`.conn_channel._2.queueDelete(queue)
+        `Π-RabbitMQ`.conn_channel._2.exchangeDelete(exchange)
       catch _ => {}
       finally
         `Π-RabbitMQ`.conn_channel._2.close
@@ -316,6 +326,6 @@ package object `Π-traces`:
       val connection = factory.newConnection
       val channel: Channel = connection.createChannel
 
-      channel.queueDeclare(config.queue, true, false, false, null)
+      channel.exchangeDeclare(config.exchange, "topic", true, false, false, null)
 
       connection -> channel

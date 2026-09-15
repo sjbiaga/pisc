@@ -22,7 +22,7 @@ object SweepLinePipeline:
       .assignTimestampsAndWatermarks(watermarkStrategy)
 
     val sweepLineStream: DataStream[SweepLine1msBurst] = timestampedStream
-      .keyBy { traces => traces.agent + "-" + traces.label }
+      .keyBy(_.keyBy)
       .process(StatefulSweepLineFunction(window * 1000))
       .windowAll(ExactTimestampWindowAssigner)
       .process(SweepLine1msBurstFunction)

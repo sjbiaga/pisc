@@ -83,6 +83,7 @@ package object `Π-loop`:
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],
                             tracesR: Ref[IO, Boolean],
+                            keyByR: Ref[IO, Boolean],
                             lastR: Ref[IO, (Long, Double)],
                             pauseRD_stopR_exitRD: AtomicCell[IO, ((Deferred[IO, Unit], Boolean), Deferred[IO, Unit])],
                             initR: Ref[IO, Boolean],
@@ -261,9 +262,10 @@ package object `Π-loop`:
                                                                   then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                                   else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                   ss           <- ts1.get product ts2.get
+                                                  kb           <- feedback.keyByR.get
                                                   now          <- currentTimeMillis
                                                   _            <- feedback.lastR.set(now -> nc._2)
-                                                  _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                                  _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                                   _            <- sem.release
                                                   _            <- started.update(_ - 1)
                                                 yield
@@ -354,9 +356,10 @@ package object `Π-loop`:
                                                               then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                               else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                               ss           <- ts1.get product ts2.get
+                                              kb           <- feedback.keyByR.get
                                               now          <- currentTimeMillis
                                               _            <- feedback.lastR.set(now -> nc._2)
-                                              _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                              _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                               _            <- sem.release
                                               _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                             yield

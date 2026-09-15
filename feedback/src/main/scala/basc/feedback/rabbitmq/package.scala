@@ -24,7 +24,7 @@ package object rabbitmq:
   case class Message(pid: Long,
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
-                     key: String, guard: Boolean, label: String,
+                     key: String, guard: Boolean, label: String, keyBy: String,
                      rate: String, delay: Double, duration: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
@@ -41,7 +41,7 @@ package object rabbitmq:
       val headerStr = headers.map { case (k, v) => s"$k:$v" }.mkString("\n")
       s"$command\n$headerStr\n\n\u0000"
 
-    def apply(uri: Uri, queue: String, username: String, password: String, subscriberId: String): Stream[IO, Message] =
+    def apply(uri: Uri, exchange: String, username: String, password: String, subscriberId: String): Stream[IO, Message] =
       Stream.resource(WebSocketClient[IO].connectHighLevel(WSRequest(uri))).flatMap { connection =>
         val connectPayload = stompFrame("CONNECT", List(
           "accept-version" -> "1.1,1.2",
@@ -51,7 +51,7 @@ package object rabbitmq:
 
         val subscribePayload = stompFrame("SUBSCRIBE", List(
           "id"          -> subscriberId,
-          "destination" -> s"/queue/$queue",
+          "destination" -> s"/exchange/$exchange/*",
           "ack"         -> "auto"
         ))
 
@@ -80,7 +80,7 @@ package object rabbitmq:
         processFrames.concurrently(sendConnect)
       }
 
-  case class RabbitMQSubscriber(queue: String,
+  case class RabbitMQSubscriber(exchange: String,
                                 username: String,
                                 password: String,
                                 url: String,
@@ -103,7 +103,7 @@ package object rabbitmq:
 
     .useEffectWithDepsBy { (p, _) => p.item_id }
                          { (p, messages) => _ =>
-      RabbitMQStomp(Uri.unsafeFromString(p.subscriber.url), p.subscriber.queue, p.subscriber.username, p.subscriber.password, p.subscriber.subscriberId)
+      RabbitMQStomp(Uri.unsafeFromString(p.subscriber.url), p.subscriber.exchange, p.subscriber.username, p.subscriber.password, p.subscriber.subscriberId)
         .chunkN(p.chunkSize)
         .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.pid == 0 then true else msg.pid == p.pid }.toVector).to[IO] }
         .interruptWhen(p.signal)
@@ -114,7 +114,7 @@ package object rabbitmq:
     .renderWithReuse { (p, messages) =>
 
       <.div(
-        <.p(s"""RabbitMQ Web-STOMP ['${p.subscriber.queue}' queue] #${messages.value.size} messages"""),
+        <.p(s"""RabbitMQ Web-STOMP ['${p.subscriber.exchange}' exchange] #${messages.value.size} messages"""),
 
         if messages.value.nonEmpty
         then

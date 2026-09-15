@@ -104,13 +104,14 @@ object App extends _root_.zio.ZIOApp:
         paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
         paramsR  <- Ref.make(params)
         tracesR  <- Ref.make(true)
+        keyByR   <- Ref.make(true)
         lastR    <- Ref.make(0L -> .0)
         initR    <- Ref.make(false)
         doneR    <- Ref.make(false)
         ps_st_ex <- (Promise.make[Nothing, Unit].tap(_.succeed(())) <*> Promise.make[Nothing, Unit]).flatMap { (pauseP, exitP) => Ref.Synchronized.make(pauseP -> false -> exitP) }
         _        <- ps_st_ex.get.flatMap(_._2.succeed(())).when(e)
       yield
-        Feedback(paramsRP, paramsR, tracesR, lastR, ps_st_ex, initR, doneR)
+        Feedback(paramsRP, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
     }.flatMap { feedbackEnv =>
       ZLayer.scoped {
         Scope.make.flatMap { scope =>
@@ -135,7 +136,7 @@ object App extends _root_.zio.ZIOApp:
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
-      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
       &| <- Ref.make(0L -> .0)
       n <- Ref.make(0L)
@@ -160,7 +161,7 @@ object π:
 
   import _root_.scala.collection.immutable.{ List => πLs }
 
-  import _root_.zio.{ durationLong, Random, Task }
+  import _root_.zio.{ durationInt, durationLong, Random, Task }
   import _root_.zio.concurrent.CyclicBarrier
 
   import _root_.eu.timepit.refined.*

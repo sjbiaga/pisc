@@ -57,8 +57,9 @@ object Main extends IOApp:
                        z <- service.pause
                        s <- service.stop
                        t <- service.traces
+                       k <- service.keyBy
                      yield
-                       Item(key, service, i, r, a, x, z, s, t, traces)
+                       Item(key, service, i, r, a, x, z, s, t, k, traces)
                    }
               _ <- output.setState(Output(l)).to[IO]
               _ <- restore.setState(Restore(l.zipWithIndex.map(_.state.parameters -> _))).to[IO]

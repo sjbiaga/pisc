@@ -57,6 +57,10 @@ object Consul:
         httpClient.expect[String](feedbackUrl("traces")).map(_.toBoolean)
       def traces(flag: Boolean)(using httpClient: Client[IO]): IO[Boolean] =
         httpClient.successful(Request[IO](Method.PUT, feedbackUrl("traces" + "/" + flag))) >> traces
+      def keyBy(using httpClient: Client[IO]): IO[Boolean] =
+        httpClient.expect[String](feedbackUrl("keyBy")).map(_.toBoolean)
+      def keyBy(flag: Boolean)(using httpClient: Client[IO]): IO[Boolean] =
+        httpClient.successful(Request[IO](Method.PUT, feedbackUrl("keyBy" + "/" + flag))) >> keyBy
 
   val defaultUrl = "http://localhost:8500"
 

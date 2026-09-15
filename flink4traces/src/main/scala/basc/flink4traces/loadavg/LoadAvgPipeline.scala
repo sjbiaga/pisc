@@ -22,7 +22,7 @@ object LoadAvgPipeline:
       .assignTimestampsAndWatermarks(watermarkStrategy)
 
     val loadAvgStream: DataStream[LoadAvg1msBurst] = timestampedStream
-      .keyBy { traces => traces.agent + "-" + traces.label }
+      .keyBy(_.keyBy)
       .process(new StatefulLoadAvgFunction())
       .windowAll(ExactTimestampWindowAssigner)
       .process(LoadAvg1msBurstFunction)

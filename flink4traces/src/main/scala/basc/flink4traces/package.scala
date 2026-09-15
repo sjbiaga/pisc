@@ -12,7 +12,7 @@ package object flink4traces:
   case class Traces(pid: Long,
                     number: Long, clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
-                    key: String, guard: Boolean, label: String,
+                    key: String, guard: Boolean, label: String, keyBy: String,
                     rate: String, delay: Double, duration: Option[Double],
                     dir_cap: String, from: String, to: String,
                     snapshot: Option[String])
@@ -33,6 +33,7 @@ package object flink4traces:
           val key = record.get("key").toString
           val guard = record.get("guard").asInstanceOf[Boolean]
           val label = record.get("label").toString
+          val keyBy = record.get("keyBy").toString
           val rate = record.get("rate").toString
           val delay = record.get("delay").asInstanceOf[Double]
           val duration = Option(record.get("duration")).map(_.asInstanceOf[Double])
@@ -44,7 +45,7 @@ package object flink4traces:
             Traces(pid,
                    number, clock, started, ended,
                    agent, name, polarity,
-                   key, guard, label,
+                   key, guard, label, keyBy,
                    rate, delay, duration,
                    dir_cap, from, to,
                    snapshot)
@@ -71,6 +72,7 @@ package object flink4traces:
       { "name" : "key", "type": "string" },
       { "name" : "guard", "type": "boolean" },
       { "name" : "label", "type": "string" },
+      { "name" : "keyBy", "type": "string" },
 
       { "name" : "rate", "type": "string" },
       { "name" : "delay", "type": "double" },

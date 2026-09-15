@@ -110,7 +110,7 @@ object App extends _root_.cats.effect.IOApp:
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
       ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
-      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L -> .0)
       n <- IO.ref(0L)
@@ -119,12 +119,13 @@ object App extends _root_.cats.effect.IOApp:
       paramsRD <- IO.deferred[`Π-Parameters`].flatMap(IO.ref)
       paramsR  <- IO.ref(params)
       tracesR  <- IO.ref(true)
+      keyByR   <- IO.ref(true)
       lastR    <- IO.ref(0L -> .0)
       ps_st_ex <- (IO.deferred[Unit].flatTap(_.complete(())) product IO.deferred[Unit]).flatMap { (pauseD, exitD) => AtomicCell[IO].of(pauseD -> false -> exitD) }
       _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
       initR    <- IO.ref(false)
       doneR    <- IO.ref(false)
-      feedback  = Feedback(paramsRD, paramsR, tracesR, lastR, ps_st_ex, initR, doneR)
+      feedback  = Feedback(paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`(π.`π-main`)(using %)
       stm <- STM.runtime[IO]
       wrapper = new sΠ.`}{`(stm)

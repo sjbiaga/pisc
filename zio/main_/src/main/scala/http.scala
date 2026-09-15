@@ -45,7 +45,7 @@ package object `Π-http`:
     case FileCSV(filename: String)
     case AmazonSQS(backend: String, queue: String)
     case Kafka(backend: String, topic: String)
-    case RabbitMQ(queue: String)
+    case RabbitMQ(exchange: String)
 
   object Traces:
     def apply(): Option[Traces] =
@@ -54,7 +54,7 @@ package object `Π-http`:
         case `Π-FileCSV`(filename) => FileCSV(filename)
         case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
         case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
-        case `Π-RabbitMQ`(_, _, queue, _, _) => RabbitMQ(queue)
+        case `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(exchange)
       }
 
 
@@ -103,6 +103,9 @@ package object `Π-http`:
       Method.GET / "feedback" / "traces" -> handler(
         feedback.tracesR.get.map(_.toString).map(Response.text)
       ),
+      Method.GET / "feedback" / "keyBy" -> handler(
+        feedback.keyByR.get.map(_.toString).map(Response.text)
+      ),
       Method.GET / "feedback" / "stop" -> handler(
         feedback.pauseRP_stopR_exitRP.get.map(_._1._2.toString).map(Response.text)
       ),
@@ -129,8 +132,8 @@ package object `Π-http`:
               pauseP.succeed(()).as(Response.ok -> (pauseP -> stop -> exitP))
           }
       },
-      Method.PUT / "feedback" / "traces" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
-        feedback.tracesR.set(it).as(Response.ok)
+      Method.PUT / "feedback" / "keyBy" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
+        feedback.keyByR.set(it).as(Response.ok)
       },
       Method.PUT / "feedback" / "stop" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
         feedback.pauseRP_stopR_exitRP
@@ -240,7 +243,7 @@ package object `Π-http`:
       Traces().fold(null) {
         case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
         case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
-        case RabbitMQ(queue) => ("rabbitmq", "rabbitmq", "queue", queue)
+        case RabbitMQ(exchange) => ("rabbitmq", "rabbitmq", "exchange", exchange)
         case _ => null
       }
     } match

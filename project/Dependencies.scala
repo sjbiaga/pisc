@@ -8,7 +8,7 @@ object Dependencies {
   lazy val catsstm = "io.github.timwspence" %% "cats-stm" % "0.13.5"
   lazy val fs2 = "co.fs2" %% "fs2-core" % "3.14.0"
   lazy val zc = "dev.zio" %% "zio-concurrent" % "2.1.26"
-  lazy val zh = "dev.zio" %% "zio-http" % "3.11.4"
+  lazy val zh = "dev.zio" %% "zio-http" % "3.11.6"
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.26"
   lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.13"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
@@ -17,7 +17,7 @@ object Dependencies {
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.3.1" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.35.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.17"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.54.18"
   lazy val circe = "io.circe" %% "circe-generic" % "0.14.16"
   lazy val http4s = Seq("org.http4s" %% "http4s-circe",
                         "org.http4s" %% "http4s-dsl",

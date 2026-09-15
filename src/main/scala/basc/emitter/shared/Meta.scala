@@ -187,12 +187,10 @@ object Meta extends Meta:
 
   import parser.BioAmbients.TracesRateException
 
-  val rateʹ: Any => Term = {
-    case w: Long if w < 0 => Term.Apply(\("∞"), Term.ArgClause(Lit.Long(-w) :: Nil))
-    case r: BigDecimal => Term.Apply(\("ℝ⁺"),
-                                     Term.ArgClause(Term.Apply(\("BigDecimal"),
-                                                               Term.ArgClause(Lit.String(r.toString) :: Nil)) :: Nil))
-    case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
+  val rateʹ: Any => String = {
+    case w: Long if w < 0 => "∞(" + -w + ")"
+    case r: BigDecimal => "ℝ⁺(" + r + ")"
+    case w: Long => "⊤(" + w + ")"
     case _: Term | Symbol(_) => throw TracesRateException
     case _ => rateʹ(1L)
   }

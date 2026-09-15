@@ -4,6 +4,9 @@ Compile / run / fork := true
 
 Global / cancelable := true
 
+Compile / scalacOptions ++= Seq("-release", "17")
+Compile / javacOptions ++= Seq("--release", "17")
+
 libraryDependencies ++= Seq("org.apache.flink" % "flink-streaming-java",
                             "org.apache.flink" % "flink-clients",
                             "org.apache.flink" % "flink-avro",

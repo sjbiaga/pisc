@@ -19,7 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^.*
 enum Traces derives Codec.AsObject:
   case AmazonSQS(backend: String, queue: String)
   case Kafka(backend: String, topic: String)
-  case RabbitMQ(queue: String)
+  case RabbitMQ(exchange: String)
 
 
 case class Parameters(parallelism: Option[Int] = None,
@@ -58,6 +58,7 @@ case class Item(key: String,
                 pause: Boolean,
                 stop: Boolean,
                 traces: Boolean,
+                keyBy: Boolean,
                 amazonsqs: Item.AmazonSQS,
                 kafka: Item.Kafka,
                 rabbitmq: Item.RabbitMQ,
@@ -77,6 +78,7 @@ object Item:
             pause: Boolean,
             stop: Boolean,
             traces: Boolean,
+            keyBy: Boolean,
             _traces: filter.Traces): Item =
     _traces match
       case filter.Traces.elasticmq =>
@@ -88,6 +90,7 @@ object Item:
              pause,
              stop,
              traces,
+             keyBy,
              AmazonSQS.ElasticMQ(),
              Kafka.default,
              RabbitMQ.default,
@@ -101,6 +104,7 @@ object Item:
              pause,
              stop,
              traces,
+             keyBy,
              AmazonSQS.default,
              Kafka(analytics = Kafka.Analytics(signal)),
              RabbitMQ.default,
@@ -114,6 +118,7 @@ object Item:
              pause,
              stop,
              traces,
+             keyBy,
              AmazonSQS.default,
              Kafka.Redpanda(),
              RabbitMQ.default,
@@ -127,6 +132,7 @@ object Item:
              pause,
              stop,
              traces,
+             keyBy,
              AmazonSQS.default,
              Kafka.default,
              RabbitMQ(signal),
@@ -148,7 +154,9 @@ object Item:
 
     given Reusability[AmazonSQS] = Reusability.by_==
 
+
     val default: AmazonSQS = AmazonSQS(null, null, null, null)
+
 
     class ElasticMQ(endpoint: String = "http://localhost:5173") extends AmazonSQS("elasticmq", "x", "x", endpoint)
 
@@ -162,15 +170,34 @@ object Item:
 
   object Kafka:
 
+    given Reusability[Kafka] = Reusability.by_==
+
+
     val default: Kafka = Kafka()
 
-    class Redpanda(val proxyUrl: String = "http://localhost:5173/redpanda-proxy") extends Kafka()
+
+    class Redpanda private (val proxyUrl: String,
+                            offset: Long,
+                            maxBytes: Int,
+                            timeout: Int,
+                            own: Boolean,
+                            receive: Boolean,
+                            analytics: Kafka.Analytics
+    ) extends Kafka(offset, maxBytes, timeout, own, receive, analytics):
+      def this(proxyUrl: String = "http://localhost:5173/redpanda-proxy") =
+        // defaults from Kafka
+        this(proxyUrl, 0L, 32768, 3000, false, false, null)
+      override def copy(offset: Long = offset,
+                        maxBytes: Int = maxBytes,
+                        timeout: Int = timeout,
+                        own: Boolean = own,
+                        receive: Boolean = receive,
+                        analytics: Kafka.Analytics = analytics): Redpanda =
+        Redpanda(proxyUrl, offset, maxBytes, timeout, own, receive, analytics)
 
     case class Analytics(signal: SignallingRef[IO, Boolean],
                          url: String = "ws://localhost:7124",
                          `type`: String = "-")
-
-    given Reusability[Kafka] = Reusability.by_==
 
 
   case class RabbitMQ(signal: SignallingRef[IO, Boolean],
@@ -183,11 +210,12 @@ object Item:
 
   object RabbitMQ:
 
-    val default: RabbitMQ = RabbitMQ(null)
-
     given Reusability[RabbitMQ] = Reusability.by { it =>
       (it.username, it.password, it.url, it.connect)
     }
+
+
+    val default: RabbitMQ = RabbitMQ(null)
 
 
   case class Props(key: String,
@@ -206,6 +234,7 @@ object Item:
                    pause: StateSnapshot[Boolean],
                    stop: StateSnapshot[Boolean],
                    traces: StateSnapshot[Boolean],
+                   keyBy: StateSnapshot[Boolean],
                    amazonsqs: StateSnapshot[AmazonSQS],
                    kafka: StateSnapshot[Kafka],
                    rabbitmq: StateSnapshot[RabbitMQ],
@@ -226,7 +255,7 @@ object Item:
       ^.padding := "8px",
       ^.cursor := "pointer",
 
-      <.label(^.htmlFor := "clock-number", "Clock: "),
+      <.label(^.htmlFor := "clock-number", "⏰ "),
 
       <.input(
         ^.marginRight := "15px",
@@ -254,14 +283,14 @@ object Item:
         "Restore"
       ),
 
-      <.label(^.htmlFor := "parallelism-number", "Parallelism: "),
+      <.label(^.htmlFor := "parallelism-number", "∥ "),
 
       <.input(
         ^.marginRight := "15px",
         ^.id          := "parallelism-number",
         ^.`type`      := "number",
         ^.value       := p.parallelism.value,
-        ^.size        := Int.MaxValue.toString.length,
+        ^.size        := p.parallelism.value.toString.length,
         ^.disabled    := p.pause.value,
         ^.onChange   ==> { (e: ReactEventFromInput) => p.parallelism.setState(e.target.valueAsNumber.toInt) },
         ^.onBlur     ==> { (e: ReactEventFromInput) =>
@@ -287,7 +316,7 @@ object Item:
         ^.id          := "threshold-number",
         ^.`type`      := "number",
         ^.value       := p.threshold.value,
-        ^.size        := Int.MaxValue.toString.length,
+        ^.size        := p.threshold.value.toString.length,
         ^.disabled    := p.pause.value,
         ^.onChange   ==> { (e: ReactEventFromInput) => p.threshold.setState(e.target.valueAsNumber.toInt) },
         ^.onBlur     ==> { (e: ReactEventFromInput) =>
@@ -296,14 +325,14 @@ object Item:
         },
       ),
 
-      <.label(^.htmlFor := "timeout-number", "Timeout: "),
+      <.label(^.htmlFor := "timeout-number", "⏲ "),
 
       <.input(
         ^.marginRight := "15px",
         ^.id          := "timeout-number",
         ^.`type`      := "number",
         ^.value       := p.timeout.value,
-        ^.size        := Int.MaxValue.toString.length,
+        ^.size        := p.timeout.value.toString.length,
         ^.disabled    := p.pause.value,
         ^.onChange   ==> { (e: ReactEventFromInput) => p.timeout.setState(e.target.valueAsNumber.toInt) },
         ^.onBlur     ==> { (e: ReactEventFromInput) =>
@@ -381,7 +410,7 @@ object Item:
 
       <.span(
         ^.marginLeft := "8px",
-        "Pause"
+        "⏯"
       ),
 
       <.input(
@@ -402,6 +431,21 @@ object Item:
       <.input(
         ^.marginLeft := "15px",
         ^.`type`     := "checkbox",
+        ^.checked    := (if p.stop.value then false else p.keyBy.value),
+        ^.disabled   := p.stop.value,
+        ^.onChange  ==> { (e: ReactEventFromInput) =>
+          p.service.keyBy(e.target.checked).flatMap(p.keyBy.setState(_).to[IO])
+        },
+      ),
+
+      <.span(
+        ^.marginLeft := "8px",
+        "keyBy"
+      ),
+
+      <.input(
+        ^.marginLeft := "15px",
+        ^.`type`     := "checkbox",
         ^.checked    := p.stop.value,
         ^.disabled   := p.stop.value,
         ^.onChange  --> {
@@ -416,7 +460,7 @@ object Item:
 
       <.span(
         ^.marginLeft := "8px",
-        "Stop"
+        "⏹"
       ),
 
       <.input(
@@ -446,7 +490,7 @@ object Item:
           <.div(^.display.inlineBlock)
       ),
 
-      p.state.value.traces.get match {
+      p.state.value.traces.get match
 
         case Traces.AmazonSQS("elasticmq", queue) if !p.stop.value =>
           <.div(
@@ -726,7 +770,7 @@ object Item:
 
           )
 
-        case Traces.RabbitMQ(queue) if !p.stop.value =>
+        case Traces.RabbitMQ(exchange) if !p.stop.value =>
 
           <.div(
 
@@ -813,7 +857,7 @@ object Item:
             if p.rabbitmq.value.connect
             then
               val RabbitMQ(signal, username, password, url, chunkSize, own, _) = p.rabbitmq.value
-              val subscriber = rabbitmq.RabbitMQSubscriber(queue, username, password, url)
+              val subscriber = rabbitmq.RabbitMQSubscriber(exchange, username, password, url)
               val pid = if own then p.service.Meta.get("pid").toLong else 0
               <.div(rabbitmq.Component(rabbitmq.Props(p.key, p.service.isBioAmbients, chunkSize, pid, subscriber)(signal)))
             else
@@ -823,8 +867,6 @@ object Item:
 
         case _ =>
           <.div
-
-      }
 
     )
 
@@ -961,6 +1003,12 @@ object Output:
             .prepare(item.toModStateFn)
             .apply(item.value)
 
+          val keyBy = StateSnapshot
+            .withReuse
+            .zoomL(Focus[Item](_.keyBy))
+            .prepare(item.toModStateFn)
+            .apply(item.value)
+
           val amazonsqs = StateSnapshot
             .withReuse
             .zoomL(Focus[Item](_.amazonsqs))
@@ -1002,6 +1050,7 @@ object Output:
                        pause,
                        stop,
                        traces,
+                       keyBy,
                        amazonsqs,
                        kafka,
                        rabbitmq,

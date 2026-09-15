@@ -80,6 +80,7 @@ package object `Π-loop`:
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
                             paramsR: Ref[`Π-Parameters`],
                             tracesR: Ref[Boolean],
+                            keyByR: Ref[Boolean],
                             lastR: Ref[(Long, Double)],
                             pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
                             initR: Ref[Boolean],

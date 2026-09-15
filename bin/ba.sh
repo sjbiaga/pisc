@@ -24,7 +24,7 @@ function ba() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/bam.scala\ ../${emit}/http.scala
             ;;
@@ -38,7 +38,7 @@ function ba() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/http.scala
@@ -101,7 +101,7 @@ function ba_() {
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/bam_.scala\ ../${emit}/http_.scala
             ;;
@@ -119,7 +119,7 @@ function ba_() {
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/http_.scala
@@ -150,7 +150,7 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.17 \
+                  --dep software.amazon.awssdk:sqs:2.54.18 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \

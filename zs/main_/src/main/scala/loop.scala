@@ -77,6 +77,7 @@ package object `Π-loop`:
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
                             paramsR: Ref[`Π-Parameters`],
                             tracesR: Ref[Boolean],
+                            keyByR: Ref[Boolean],
                             lastR: Ref[(Long, Double)],
                             pauseRP_stopR_exitRP: Ref.Synchronized[((Promise[Nothing, Unit], Boolean), Promise[Nothing, Unit])],
                             initR: Ref[Boolean],
@@ -259,9 +260,10 @@ package object `Π-loop`:
                                                                 then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                                 else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                 ss           <- ts1.get <*> ts2.get
+                                                kb           <- feedback.keyByR.get
                                                 now          <- currentTimeMillis
                                                 _            <- feedback.lastR.set(now -> nc._2)
-                                                _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
+                                                _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
                                                 _            <- sem.release
                                                 _            <- started.update(_ - 1)
                                               yield
@@ -364,9 +366,10 @@ package object `Π-loop`:
                                                             then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                             else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                             ss           <- ts1.get <*> ts2.get
+                                            kb           <- feedback.keyByR.get
                                             now          <- currentTimeMillis
                                             _            <- feedback.lastR.set(now -> nc._2)
-                                            _            <- -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
+                                            _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
                                             _            <- sem.release
                                             _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield
