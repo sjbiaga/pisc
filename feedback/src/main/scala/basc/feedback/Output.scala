@@ -78,9 +78,17 @@ object Item:
             pause: Boolean,
             stop: Boolean,
             traces: Boolean,
-            keyBy: Boolean,
-            _traces: filter.Traces): Item =
-    _traces match
+            keyBy: Boolean): Item =
+    { (service.Meta.get("backend"), service.Meta.get("producer")) match
+        case ("same", "amazonsqs") =>
+          filter.Traces.amazonsqs
+        case ("same", "kafka") =>
+          filter.Traces.kafka
+        case (_, "rabbitmq") =>
+          filter.Traces.rabbitmq
+        case (backend, _) =>
+          filter.Traces.valueOf(backend)
+    } match
       case filter.Traces.elasticmq =>
         Item(key,
              service,
@@ -431,16 +439,16 @@ object Item:
       <.input(
         ^.marginLeft := "15px",
         ^.`type`     := "checkbox",
-        ^.checked    := (if p.stop.value then false else p.keyBy.value),
+        ^.checked    := (if p.stop.value then false else !p.keyBy.value),
         ^.disabled   := p.stop.value,
         ^.onChange  ==> { (e: ReactEventFromInput) =>
-          p.service.keyBy(e.target.checked).flatMap(p.keyBy.setState(_).to[IO])
+          p.service.keyBy(!e.target.checked).flatMap(p.keyBy.setState(_).to[IO])
         },
       ),
 
       <.span(
         ^.marginLeft := "8px",
-        "keyBy"
+        "✱"
       ),
 
       <.input(

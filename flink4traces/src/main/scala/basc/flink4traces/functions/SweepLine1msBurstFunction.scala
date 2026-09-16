@@ -4,8 +4,6 @@ package functions
 
 import java.util.{ HashMap => Map }
 
-import java.time.Duration
-
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction
 import org.apache.flink.util.Collector
@@ -13,7 +11,7 @@ import org.apache.flink.util.Collector
 import sweepline.{ SweepLine, SweepLine1msBurst }
 
 
-object SweepLine1msBurstFunction extends ProcessAllWindowFunction[SweepLine, SweepLine1msBurst, TimeWindow]:
+class SweepLine1msBurstFunction extends ProcessAllWindowFunction[SweepLine, SweepLine1msBurst, TimeWindow]:
   override def process(context: ProcessAllWindowFunction[SweepLine, SweepLine1msBurst, TimeWindow]#Context,
                        elements: java.lang.Iterable[SweepLine],
                        out: Collector[SweepLine1msBurst]): Unit =

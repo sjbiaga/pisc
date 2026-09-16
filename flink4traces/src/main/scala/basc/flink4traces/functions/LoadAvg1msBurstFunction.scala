@@ -4,8 +4,6 @@ package functions
 
 import java.util.{ HashMap => Map }
 
-import java.time.Duration
-
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction
 import org.apache.flink.util.Collector
@@ -13,7 +11,7 @@ import org.apache.flink.util.Collector
 import loadavg.{ LoadAvg, LoadAvg1msBurst }
 
 
-object LoadAvg1msBurstFunction extends ProcessAllWindowFunction[LoadAvg, LoadAvg1msBurst, TimeWindow]:
+class LoadAvg1msBurstFunction extends ProcessAllWindowFunction[LoadAvg, LoadAvg1msBurst, TimeWindow]:
   override def process(context: ProcessAllWindowFunction[LoadAvg, LoadAvg1msBurst, TimeWindow]#Context,
                        elements: java.lang.Iterable[LoadAvg],
                        out: Collector[LoadAvg1msBurst]): Unit =

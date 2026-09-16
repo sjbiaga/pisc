@@ -105,7 +105,8 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
       perPIDLoadAvgFromState.put(pid, loadAvgFromState.copy(load1m = load1m, load10m = load10m, load15m = load15m))
     }
 
-    {
+    if tracesListState.get.iterator.hasNext
+    then
       val load1m = StatefulLoadAvgFunction(loadAvgState.value.load1m, count, decayFactor1m)
       val load10m = StatefulLoadAvgFunction(loadAvgState.value.load10m, count, decayFactor10m)
       val load15m = StatefulLoadAvgFunction(loadAvgState.value.load15m, count, decayFactor15m)
@@ -113,7 +114,6 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
       out.collect(LoadAvg(currentSliceEnd, ctx.getCurrentKey, .0, load1m, load10m, load15m, perPIDLoadAvg))
 
       loadAvgState.update(loadAvgState.value.copy(load1m = load1m, load10m = load10m, load15m = load15m))
-    }
 
     // --- State Rollover Maintenance ---
     tracesListState.clear()

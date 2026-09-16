@@ -25,7 +25,7 @@ object LoadAvgPipeline:
       .keyBy(_.keyBy)
       .process(new StatefulLoadAvgFunction())
       .windowAll(ExactTimestampWindowAssigner)
-      .process(LoadAvg1msBurstFunction)
+      .process(new LoadAvg1msBurstFunction())
 
     val wsBroadcastSink: WebSocketSink = WebSocketSink(port, s"traces-loadavg-$topic")
 

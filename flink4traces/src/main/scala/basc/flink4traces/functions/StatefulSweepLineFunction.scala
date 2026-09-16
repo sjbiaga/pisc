@@ -116,10 +116,10 @@ class StatefulSweepLineFunction(windowDurationMs: Long)
       perPIDSweepLine.put(pid, SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, Map()))
     }
 
-    {
+    if tracesListState.get.iterator.hasNext
+    then
       val (clock, hist) = histogram(events)
       out.collect(SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, perPIDSweepLine))
-    }
 
     // --- State Rollover Maintenance ---
     tracesListState.clear()

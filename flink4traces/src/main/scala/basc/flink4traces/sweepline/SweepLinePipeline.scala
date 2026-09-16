@@ -23,9 +23,9 @@ object SweepLinePipeline:
 
     val sweepLineStream: DataStream[SweepLine1msBurst] = timestampedStream
       .keyBy(_.keyBy)
-      .process(StatefulSweepLineFunction(window * 1000))
+      .process(new StatefulSweepLineFunction(window * 1000))
       .windowAll(ExactTimestampWindowAssigner)
-      .process(SweepLine1msBurstFunction)
+      .process(new SweepLine1msBurstFunction())
 
     val wsBroadcastSink: WebSocketSink = WebSocketSink(port, s"traces-sweepline-$topic")
 
