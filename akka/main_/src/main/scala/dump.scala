@@ -38,14 +38,14 @@ import `Π-traces`.*
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))
+  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))
 
-  private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => Unit =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: Boolean, delay: Double, duration: Double): String => Unit =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         `π-traces`(number, clock, started, ended,
                    agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
-                   key.stripPrefix("!"), key.startsWith("!"), label,
+                   key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
                    rate, delay, duration)
       case _ =>
 
@@ -55,11 +55,11 @@ package object `Π-dump`:
 
       Behaviors.receive[-] {
 
-        case (_, ((no, cl), ((ts1, ts2), ts), (k1, k2), (delay, duration))) =>
+        case (_, ((no, cl), ((ts1, ts2), ts), (k1, k2, kb), (delay, duration))) =>
           if `π-traces` ne null
           then
-            record(no, cl, ts1, ts, delay, duration)(k1)
-            if k1 != k2 then record(no, cl, ts2, ts, delay, duration)(k2)
+            record(no, cl, ts1, ts, kb, delay, duration)(k1)
+            if k1 != k2 then record(no, cl, ts2, ts, kb, delay, duration)(k2)
           Behaviors.same
 
         case (context, it: Map[String, Int | +]) =>

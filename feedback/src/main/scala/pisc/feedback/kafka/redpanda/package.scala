@@ -25,7 +25,7 @@ package object redpanda:
   case class Value(pid: Long,
                    number: Long, clock: Double, started: Long, ended: Long,
                    agent: String, name: String, polarity: Option[Boolean],
-                   key: String, guard: Boolean, label: String,
+                   key: String, guard: Boolean, label: String, keyBy: String,
                    rate: String, delay: Double, duration: Option[Double],
                    dir_cap: Option[String], from: Option[String], to: Option[String],
                    snapshot: Option[String]) derives Codec.AsObject
@@ -82,7 +82,7 @@ package object redpanda:
         offUrl    = Uri.unsafeFromString(s"$base_uri/offsets")
         offReq    = Request[IO](Method.POST, offUrl).withHeaders(headers)
         _        <- p.httpClient.successful(offReq)
-        _        <- records.modState(_ ::: newRec.filter { it => if p.pid == -1 then true else it.value.pid == p.pid }).to[IO]
+        _        <- records.modState(_ ::: newRec.filter { it => if p.pid == 0 then true else it.value.pid == p.pid }).to[IO]
       yield
         ()
     }

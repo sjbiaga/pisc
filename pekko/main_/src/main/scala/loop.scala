@@ -165,7 +165,7 @@ package object `Π-loop`:
                                   if k1 != k2 then p2.success(Some((in, delay)))
                                   no += 1
                                   if duration != 0.0 && !duration.isNaN then clock += delay
-                                  dump ! ((no, clock), ((ts1, ts2), System.currentTimeMillis), (k1, k2), (delay, duration))
+                                  dump ! ((no, clock), ((ts1, ts2), System.currentTimeMillis), (k1, k2, true), (delay, duration))
                               }
                   }
 

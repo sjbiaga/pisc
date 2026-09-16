@@ -57,13 +57,48 @@ object Consul:
         httpClient.expect[String](feedbackUrl("traces")).map(_.toBoolean)
       def traces(flag: Boolean)(using httpClient: Client[IO]): IO[Boolean] =
         httpClient.successful(Request[IO](Method.PUT, feedbackUrl("traces" + "/" + flag))) >> traces
+      def keyBy(using httpClient: Client[IO]): IO[Boolean] =
+        httpClient.expect[String](feedbackUrl("keyBy")).map(_.toBoolean)
+      def keyBy(flag: Boolean)(using httpClient: Client[IO]): IO[Boolean] =
+        httpClient.successful(Request[IO](Method.PUT, feedbackUrl("keyBy" + "/" + flag))) >> keyBy
 
   val defaultUrl = "http://localhost:8500"
 
   def apply(url: String, calculus: filter.Calculi, effect: String, emitter: String, traces: filter.Traces): Option[String] =
-    val service = if traces.service == filter.Traces.same then traces.toString else traces.service.toString
-    val meta = List("calculus", "effect", "emitter", "backend", "producer").map("Meta." + _) zip List(calculus.tag.toString, effect, emitter, traces.toString, service)
-    val query = Query.empty.++?("filter", meta.map(_ + "==" + _))
+    val calculusFilter = s"Meta.calculus == ${calculus.tag.toString}"
+    val effectFilter =
+      if effect == "*"
+      then
+        List("cats.effect.IO", "zio.Task").map("Meta.effect == " + _).mkString(" or ")
+      else
+        s"Meta.effect == $effect"
+    val emitterFilter =
+      if emitter == "*"
+      then
+        if effect == "cats.effect.IO"
+        then
+          List("ce", "cef", "fs2").map("Meta.emitter == " + _).mkString(" or ")
+        else if effect == "zio.Task"
+        then
+          List("zio", "ziof", "fs2", "zs").map("Meta.emitter == " + _).mkString(" or ")
+        else
+          List("ce", "cef", "fs2", "zio", "ziof", "zs").map("Meta.emitter == " + _).mkString(" or ")
+      else
+        s"Meta.emitter == $emitter"
+    val tracesFilter =
+      if traces == filter.Traces.wildcard
+      then
+        List(List("same", "elasticmq", "redpanda").map("Meta.backend == " + _).mkString(" or "),
+             List("amazonsqs", "kafka", "rabbitmq").map("Meta.producer == " + _).mkString(" or "))
+      else
+        val backend = if traces.service == filter.Traces.same
+                      then traces.service.toString
+                      else traces.toString
+        val service = if traces.service == filter.Traces.same
+                      then traces.toString
+                      else traces.service.toString
+        (List("backend", "producer").map("Meta." + _) zip List(backend, service)).map(_ + " == " + _)
+    val query = Query.empty.++?("filter", calculusFilter :: effectFilter :: emitterFilter :: tracesFilter)
     Uri.fromString(url.stripSuffix("/") + "/v1/agent/services").toOption.map(_.copy(query = query).toString)
 
   val Component = ScalaFnComponent[(Input, String => IO[Unit])] { (input, cb) =>

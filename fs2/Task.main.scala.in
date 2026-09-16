@@ -125,7 +125,7 @@ object App extends _root_.zio.interop.catz.CatsApp:
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
       ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
-      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
+      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       &| <- Ref[π.F].of(0L -> .0)
       n <- Ref[π.F].of(0L)
@@ -134,12 +134,13 @@ object App extends _root_.zio.interop.catz.CatsApp:
       paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
       paramsR  <- Ref[π.F].of(params)
       tracesR  <- Ref[π.F].of(true)
+      keyByR   <- Ref[π.F].of(true)
       lastR    <- Ref[π.F].of(0L -> .0)
       ps_st_ex <- (Deferred[π.F, Unit].flatTap(_.complete(())) product Deferred[π.F, Unit]).flatMap { (pauseD, exitD) => AtomicCell[π.F].of(pauseD -> false -> exitD) }
       _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
       initR    <- Ref[π.F].of(false)
       doneR    <- Ref[π.F].of(false)
-      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, lastR, ps_st_ex, initR, doneR)
+      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
       x <- run[π.F[Unit]](args.toList, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &|)
       _ <- exit(x)

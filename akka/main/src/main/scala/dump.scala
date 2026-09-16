@@ -36,7 +36,7 @@ import `Π-loop`.*
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))
+  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))
 
   object Dump:
 

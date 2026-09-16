@@ -23,9 +23,9 @@ import japgolly.scalajs.react.vdom.html_<^.*
 
 case class Input(consulUrl: String = Consul.defaultUrl,
                  calculi: filter.Calculi.State = filter.Calculi.State(selectedCalculus = "stochasticpicalculus"),
-                 effects: filter.Effects.State = filter.Effects.State(selectedEffect = "cats.effect.IO"),
-                 emitters: filter.Emitters.State = filter.Emitters.State(selectedEmitter = "ce"),
-                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "elasticmq"))
+                 effects: filter.Effects.State = filter.Effects.State(selectedEffect = "*"),
+                 emitters: filter.Emitters.State = filter.Emitters.State(selectedEmitter = "*"),
+                 traces: filter.Traces.State = filter.Traces.State(selectedTraces = "wildcard"))
 
 
 @JSExportTopLevel("main")
@@ -38,26 +38,28 @@ object Main extends IOApp:
       output  <- useStateSnapshotWithReuse(Output())
       restore <- useStateSnapshotWithReuse(Restore())
       callback = IO.defer {
+        val traces = filter.Traces.valueOf(input.value.traces.selectedTraces)
         Consul(
           input.value.consulUrl,
           filter.Calculi.valueOf(input.value.calculi.selectedCalculus),
           input.value.effects.selectedEffect,
           input.value.emitters.selectedEmitter,
-          filter.Traces.valueOf(input.value.traces.selectedTraces)
+          traces
         ) match
           case Some(url) =>
             for
               m <- httpClient.expect[Map[String, Consul.AgentService]](url)
-              r <- SignallingRef[IO, Boolean](false)
               l <- m.toList.zipWithIndex.filter(_._1._2.Weights.get.Passing > 0).traverse { case ((key, service), i) =>
                      for
+                       r <- SignallingRef[IO, Boolean](false)
                        a <- service.state
                        x <- service.exit
                        z <- service.pause
                        s <- service.stop
                        t <- service.traces
+                       k <- service.keyBy
                      yield
-                       Item(key, service, i, r, a, x, z, s, t)
+                       Item(key, service, i, r, a, x, z, s, t, k)
                    }
               _ <- output.setState(Output(l)).to[IO]
               _ <- restore.setState(Restore(l.zipWithIndex.map(_.state.parameters -> _))).to[IO]

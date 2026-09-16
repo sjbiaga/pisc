@@ -5,7 +5,6 @@ package filter
 import cats.effect.IO
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.util.EffectCatsEffect.*
 import japgolly.scalajs.react.vdom.html_<^.*
 
 
@@ -25,6 +24,7 @@ object Effects:
         ^.value          := input.effects.selectedEffect,
         ^.onChange      ==> onEffectsChange,
 
+        <.option(^.value := "*"             , "*"             ),
         <.option(^.value := "cats.effect.IO", "Cats Effect IO"),
         <.option(^.value := "zio.Task"      , "ZIO Task"      )
       )

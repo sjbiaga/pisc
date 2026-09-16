@@ -42,7 +42,7 @@ package object `Π-traces`:
     val backend: `Π-Backend` = `Π-Backend`.same
     def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
-              key: String, guard: Boolean, label: String,
+              key: String, guard: Boolean, label: String, keyBy: Boolean,
               rate: String, delay: Double, duration: Double): Unit
     def close: Unit
 
@@ -50,7 +50,7 @@ package object `Π-traces`:
   case object `Π-ConsoleCSV` extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, keyBy: Boolean,
                        rate: String, delay: Double, duration: Double): Unit =
       printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              ProcessHandle.current.pid,
@@ -62,10 +62,9 @@ package object `Π-traces`:
 
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`:
-    import _root_.java.io.{ PrintStream, FileOutputStream }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, keyBy: Boolean,
                        rate: String, delay: Double, duration: Double): Unit =
       `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                              ProcessHandle.current.pid,
@@ -92,19 +91,22 @@ package object `Π-traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
-      val message = s"""
-                    {"pid":${ProcessHandle.current.pid},
-                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
-                     "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
-                     "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
-                    }"""
+      val keyBy = if _keyBy then agent + "-" + label.replaceAll("∥", "|") else "ANY"
+      val message =
+        s"""{
+            |"pid":${ProcessHandle.current.pid},
+            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
+            |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
+            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
+            |}""".stripMargin.replaceAll("\n", "").trim
       val request = SendMessageRequest
         .builder
         .queueUrl(queueUrl)
+        .messageGroupId(keyBy)
         .messageBody(message)
         .build
       client.sendMessage(request)
@@ -143,7 +145,7 @@ package object `Π-traces`:
     import org.apache.kafka.clients.producer.ProducerRecord
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double): Unit =
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
       avroRecord.put("pid", ProcessHandle.current.pid)
@@ -162,10 +164,14 @@ package object `Π-traces`:
       avroRecord.put("duration", if duration.isNaN then null else duration)
       backend match
         case `Π-Backend`.redpanda =>
-          val record = ProducerRecord[String, String](topic, s"""{"label":"$label"}""", avroRecord.toString)
+          val keyBy = if _keyBy then s"""{"label":"$agent-$label"}""" else s"""{"label":"ANY"}"""
+          avroRecord.put("keyBy", keyBy)
+          val record = ProducerRecord[String, String](topic, keyBy, avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val record = ProducerRecord[String, GenericRecord](topic, label, avroRecord)
+          val keyBy = if _keyBy then agent + "-" + label else "ANY"
+          avroRecord.put("keyBy", keyBy)
+          val record = ProducerRecord[String, GenericRecord](topic, keyBy, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
     override def close: Unit =
       backend match
@@ -193,10 +199,10 @@ package object `Π-traces`:
     import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
     import org.apache.kafka.common.serialization.StringSerializer
     import io.confluent.kafka.serializers.{ AbstractKafkaSchemaSerDeConfig, KafkaAvroSerializer }
-    import io.confluent.kafka.serializers.subject.RecordNameStrategy
+    import io.confluent.kafka.serializers.subject.{ RecordNameStrategy, TopicNameStrategy }
 
     private val _schema = """{
-      "namespace": "pisc",
+      "namespace": "pisc.avro",
       "type": "record",
       "name": "StochasticPiCalculus2Scala",
       "fields": [
@@ -214,6 +220,7 @@ package object `Π-traces`:
         { "name" : "key", "type": "string" },
         { "name" : "guard", "type": "boolean" },
         { "name" : "label", "type": "string" },
+        { "name" : "keyBy", "type": "string" },
 
         { "name" : "rate", "type": "string" },
         { "name" : "delay", "type": "double" },
@@ -243,32 +250,31 @@ package object `Π-traces`:
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.servers.mkString(","))
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer])
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[KafkaAvroSerializer])
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true)
         props.put("schema.registry.url", config.schemaRegistryUrl)
-        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[RecordNameStrategy])
+        props.put(AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY, classOf[TopicNameStrategy])
         KafkaProducer[String, GenericRecord](props)
 
 
-  case class `Π-RabbitMQ`(host: String,
-                          port: Int,
-                          queue: String,
-                          username: String = "guest",
-                          password: String = "guest") extends `Π-Traces`:
+  case class `Π-RabbitMQ`(host: String, port: Int, exchange: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String,
+                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, delay: Double, duration: Double): Unit =
-      val message = s"""
-                    {"pid":${ProcessHandle.current.pid},
-                     "number":$number,"clock":$clock,"started":$started,"ended":$ended,
-                     "agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
-                     "key":"$key","guard":$guard,"label":"$label",
-                     "rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
-                    }"""
+      val keyBy = if _keyBy then agent + "-" + label else "ANY"
+      val message =
+        s"""{
+            |"pid":${ProcessHandle.current.pid},
+            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
+            |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
+            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
+            |}""".stripMargin.replaceAll("\n", "").trim
         .getBytes("UTF-8")
-      `Π-RabbitMQ`.conn_channel._2.basicPublish("", queue, null, message)
+      `Π-RabbitMQ`.conn_channel._2.basicPublish(exchange, keyBy, null, message)
     override def close: Unit =
       try
-        `Π-RabbitMQ`.conn_channel._2.queueDelete(queue)
+        `Π-RabbitMQ`.conn_channel._2.exchangeDelete(exchange)
       catch _ => {}
       finally
         `Π-RabbitMQ`.conn_channel._2.close
@@ -290,6 +296,6 @@ package object `Π-traces`:
       val connection = factory.newConnection
       val channel: Channel = connection.createChannel
 
-      channel.queueDeclare(config.queue, true, false, false, null)
+      channel.exchangeDeclare(config.exchange, "topic", true, false, false, null)
 
       connection -> channel

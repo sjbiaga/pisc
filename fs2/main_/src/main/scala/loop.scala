@@ -89,6 +89,7 @@ package object `Π-loop`:
   final case class Feedback[F[_]](paramsRD: Ref[F, Deferred[F, `Π-Parameters`]],
                                   paramsR: Ref[F, `Π-Parameters`],
                                   tracesR: Ref[F, Boolean],
+                                  keyByR: Ref[F, Boolean],
                                   lastR: Ref[F, (Long, Double)],
                                   pauseRD_stopR_exitRD: AtomicCell[F, ((Deferred[F, Unit], Boolean), Deferred[F, Unit])],
                                   initR: Ref[F, Boolean],
@@ -254,9 +255,10 @@ package object `Π-loop`:
                                                           then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                           else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                     ss <- ts1.get product ts2.get
+                                                    kb <- feedback.keyByR.get
                                                     now <- Temporal[F].realTime.map(_.toMillis)
                                                     _  <- feedback.lastR.set(now -> nc._2)
-                                                    _  <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration)))).whenA
+                                                    _  <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration)))).whenA
                                                     _  <- sem.release
                                                     _  <- started.update(_ - 1)
                                                   yield
@@ -334,9 +336,10 @@ package object `Π-loop`:
                                                       then &|.updateAndGet { (no, cl) => (no + 1, cl) }
                                                       else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                 ss <- ts1.get product ts2.get
+                                                kb <- feedback.keyByR.get
                                                 now <- Temporal[F].realTime.map(_.toMillis)
                                                 _  <- feedback.lastR.set(now -> nc._2)
-                                                _  <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2), (delay, duration)))).whenA
+                                                _  <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration)))).whenA
                                                 _  <- sem.release
                                                 _  <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                               yield

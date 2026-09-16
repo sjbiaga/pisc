@@ -16,6 +16,7 @@ enum Traces(val service: Traces = Traces.same):
   case kafka
   case redpanda extends Traces(Traces.kafka)
   case rabbitmq
+  case wildcard
 
 
 object Traces:
@@ -34,11 +35,12 @@ object Traces:
         ^.value          := input.traces.selectedTraces,
         ^.onChange       ==> onTracesChange,
 
+        <.option(^.value := "wildcard" ,                     "*"        ),
         <.option(^.value := "amazonsqs", ^.disabled := true, "AmazonSQS"),
-        <.option(^.value := "elasticmq"                    , "ElasticMQ"),
-        <.option(^.value := "kafka"    , ^.disabled := true, "Kafka"    ),
-        <.option(^.value := "redpanda"                     , "Redpanda" ),
-        <.option(^.value := "rabbitmq"                     , "RabbitMQ" )
+        <.option(^.value := "elasticmq",                     "ElasticMQ"),
+        <.option(^.value := "kafka"    ,                     "Kafka"    ),
+        <.option(^.value := "redpanda" ,                     "Redpanda" ),
+        <.option(^.value := "rabbitmq" ,                     "RabbitMQ" )
       )
     )
 

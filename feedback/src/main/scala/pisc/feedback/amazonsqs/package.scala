@@ -51,7 +51,7 @@ package object amazonsqs:
   case class Message(pid: Long,
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
-                     key: String, guard: Boolean, label: String,
+                     key: String, guard: Boolean, label: String, keyBy: String,
                      rate: String, delay: Double, duration: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
@@ -140,7 +140,7 @@ package object amazonsqs:
                      .flatMap { m => m.Body.toOption zip m.ReceiptHandle.toOption }
                      .flatMap { (b, h) => parse(b).toOption.map(_ -> h) }
                      .flatMap { (j, h) => j.as[Message].toOption.map(_ -> h) }
-                     .filter { (m, h) => if p.pid == -1 then true else m.pid == p.pid }
+                     .filter { (m, h) => if p.pid == 0 then true else m.pid == p.pid }
                      .zipWithIndex
                      .map { case ((m, h), i) => Item(m, h, v.length + i) }
               )

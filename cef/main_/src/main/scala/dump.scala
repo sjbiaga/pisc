@@ -46,16 +46,16 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
+  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
 
 
-  private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => IO[Unit] =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: Boolean, delay: Double, duration: Double): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
           `π-traces`(number, clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
-                     key.stripPrefix("!"), key.startsWith("!"), label,
+                     key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
                      rate, delay, duration)
         }
       case _ =>
@@ -80,19 +80,16 @@ package object `Π-dump`:
     }
 
   def dump(using % : %, ! : !, - : -): IO[Unit] =
-    for
-      h <- -.take
-      _ <- h match
-             case Some(_) if `π-traces` eq null =>
-               dump
-             case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration))) =>
-               for
-                 _ <- record(no, cl, s1, e, delay, duration)(k1)
-                 _ <- record(no, cl, s2, e, delay, duration)(k2).unlessA(k1 == k2)
-                 _ <- IO.cede >> dump
-               yield
-                 ()
-             case _ =>
-               IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
-    yield
-      ()
+    -.take.flatMap {
+      case Some(_) if `π-traces` eq null =>
+        dump
+      case Some(((no, cl), ((s1, s2), e), (k1, k2, kb), (delay, duration))) =>
+        for
+          _ <- record(no, cl, s1, e, kb, delay, duration)(k1)
+          _ <- record(no, cl, s2, e, kb, delay, duration)(k2).unlessA(k1 == k2)
+          _ <- IO.cede >> dump
+        yield
+          ()
+      case _ =>
+        IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
+    }

@@ -47,18 +47,18 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type -[F[_]] = Queue[F, Option[((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))]]
+  type -[F[_]] = Queue[F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
 
 
   final class πdump[F[_]: Async]:
 
-    private def record(number: Long, clock: Double, started: Long, ended: Long, delay: Double, duration: Double): String => F[Unit] =
+    private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: Boolean, delay: Double, duration: Double): String => F[Unit] =
       _.split(",") match
         case Array(key, name, polarity, label, rate, agent) =>
           Async[F].blocking {
             `π-traces`(number, clock, started, ended,
                        agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
-                       key.stripPrefix("!"), key.startsWith("!"), label,
+                       key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
                        rate, delay, duration)
           }
         case _ =>
@@ -83,19 +83,16 @@ package object `Π-dump`:
       }
 
     def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
-      for
-        h <- -.take
-        _ <- h match
-               case Some(_) if `π-traces` eq null =>
-                 dump
-               case Some(((no, cl), ((s1, s2), e), (k1, k2), (delay, duration))) =>
-                 for
-                   _ <- record(no, cl, s1, e, delay, duration)(k1)
-                   _ <- record(no, cl, s2, e, delay, duration)(k2).unlessA(k1 == k2)
-                   _ <- Async[F].cede >> dump
-                 yield
-                   ()
-               case _ =>
-                 Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
-      yield
-        ()
+      -.take.flatMap {
+        case Some(_) if `π-traces` eq null =>
+          dump
+        case Some(((no, cl), ((s1, s2), e), (k1, k2, kb), (delay, duration))) =>
+          for
+            _ <- record(no, cl, s1, e, kb, delay, duration)(k1)
+            _ <- record(no, cl, s2, e, kb, delay, duration)(k2).unlessA(k1 == k2)
+            _ <- Async[F].cede >> dump
+          yield
+            ()
+        case _ =>
+          Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
+      }

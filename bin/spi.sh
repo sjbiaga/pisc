@@ -17,13 +17,13 @@ function spi() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http.scala
             ;;
@@ -37,13 +37,13 @@ function spi() {
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s.scala
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/http.scala
@@ -65,7 +65,7 @@ function spi() {
     done
     set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala ../${emit}/traces.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC1 \
+                  -q -O -nowarn -S 3.10.0-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -95,16 +95,16 @@ function spi_() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.36
-                        --dep org.http4s::http4s-dsl:0.23.36
-                        --dep org.http4s::http4s-ember-client:0.23.36
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-circe:0.23.37
+                        --dep org.http4s::http4s-dsl:0.23.37
+                        --dep org.http4s::http4s-ember-client:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http4s_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http_.scala
             ;;
@@ -119,16 +119,16 @@ function spi_() {
             local deps='--dep co.fs2::fs2-core:3.14.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.36
-                        --dep org.http4s::http4s-dsl:0.23.36
-                        --dep org.http4s::http4s-ember-client:0.23.36
-                        --dep org.http4s::http4s-ember-server:0.23.36
+                        --dep org.http4s::http4s-circe:0.23.37
+                        --dep org.http4s::http4s-dsl:0.23.37
+                        --dep org.http4s::http4s-ember-client:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.37
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s_.scala
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-http:3.11.4
+                        --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/http_.scala
@@ -150,7 +150,7 @@ function spi_() {
     done
     set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala ../${emit}/traces_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC1 \
+                  -q -O -nowarn -S 3.10.0-RC2 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -158,8 +158,8 @@ function spi_() {
                   --dep org.apache.kafka:kafka-clients:4.3.1 \
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.1,exclude=org.apache.kafka%kafka-clients \
-                  --dep com.rabbitmq:amqp-client:5.35.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.14 \
+                  --dep com.rabbitmq:amqp-client:5.36.0 \
+                  --dep software.amazon.awssdk:sqs:2.54.19 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \
@@ -195,7 +195,8 @@ function spio() {
     esac
     while [ $# -gt 0 ]
     do
-        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
+        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } |
+        awk -v RS='\\\\u[0-9a-fA-F]{4}' '{ORS=""; print $0; if (RT) printf "%c",strtonum("0x"substr(RT,3)) } END {print ""}' >| out/"$1".scala.out
         cat out/"$1".scala.out |
         scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift

@@ -51,7 +51,7 @@ package object `Π-http4s`:
     case FileCSV(filename: String)
     case AmazonSQS(backend: String, queue: String)
     case Kafka(backend: String, topic: String)
-    case RabbitMQ(queue: String)
+    case RabbitMQ(exchange: String)
 
   object Traces:
     def apply(): Option[Traces] =
@@ -60,7 +60,7 @@ package object `Π-http4s`:
         case `Π-FileCSV`(filename) => FileCSV(filename)
         case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
         case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
-        case `Π-RabbitMQ`(_, _, queue, _, _) => RabbitMQ(queue)
+        case `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(exchange)
       }
 
 
@@ -108,6 +108,9 @@ package object `Π-http4s`:
       case GET -> Root / "traces" =>
         feedback.tracesR.get.flatMap(Ok(_))
 
+      case GET -> Root / "keyBy" =>
+        feedback.keyByR.get.flatMap(Ok(_))
+
       case GET -> Root / "stop" =>
         feedback.pauseRD_stopR_exitRD.get.map(_._1._2).flatMap(Ok(_))
 
@@ -136,6 +139,9 @@ package object `Π-http4s`:
 
       case PUT -> Root / "traces" / BooleanVar(it) =>
         feedback.tracesR.set(it) >> Ok()
+
+      case PUT -> Root / "keyBy" / BooleanVar(it) =>
+        feedback.keyByR.set(it) >> Ok()
 
       case PUT -> Root / "stop" / BooleanVar(it) =>
         feedback.pauseRD_stopR_exitRD
@@ -249,7 +255,7 @@ package object `Π-http4s`:
       Traces().fold(null) {
         case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
         case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
-        case RabbitMQ(queue) => ("rabbitmq", "rabbitmq", "queue", queue)
+        case RabbitMQ(exchange) => ("rabbitmq", "rabbitmq", "exchange", exchange)
         case _ => null
       }
     } match
