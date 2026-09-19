@@ -25,7 +25,8 @@ package object rabbitmq:
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String, keyBy: String,
-                     rate: String, delay: Double, duration: Option[Double],
+                     rate: String, probability: String,
+                     delay: Option[Double], duration: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
@@ -137,6 +138,7 @@ package object rabbitmq:
                   <.th("Guard"),
                   <.th("Label"),
                   <.th("Rate"),
+                  <.th("Probability"),
                   <.th("Delay"),
                   <.th("Duration"),
                   <.th("Direction").when(p.isBioAmbients),
@@ -162,7 +164,8 @@ package object rabbitmq:
                        <.td(msg.guard.toString),
                        <.td(msg.label),
                        <.td(msg.rate),
-                       <.td(msg.delay),
+                       <.td(msg.probability),
+                       <.td(msg.delay.getOrElse(Double.PositiveInfinity).toString),
                        <.td(msg.duration.getOrElse(Double.NaN).toString),
                        <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
                        <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),

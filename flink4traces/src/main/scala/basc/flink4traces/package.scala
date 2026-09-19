@@ -1,7 +1,7 @@
 package basc
 
 import org.apache.avro.Schema
-import org.apache.avro.generic.GenericRecord
+import org.apache.avro.generic.{ GenericData, GenericRecord }
 
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.util.Collector
@@ -10,10 +10,12 @@ import org.apache.flink.util.Collector
 package object flink4traces:
 
   case class Traces(pid: Long,
-                    number: Long, clock: Double, started: Long, ended: Long,
+                    number: Long, causes: List[Long],
+                    clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
                     key: String, guard: Boolean, label: String, keyBy: String,
-                    rate: String, delay: Double, duration: Option[Double],
+                    rate: String, probability: String,
+                    delay: Option[Double], duration: Option[Double],
                     dir_cap: String, from: String, to: String,
                     snapshot: Option[String])
 
@@ -24,6 +26,8 @@ package object flink4traces:
         try
           val pid = record.get("pid").asInstanceOf[Long]
           val number = record.get("number").asInstanceOf[Long]
+          var causes = List.empty[Long]
+          record.get("causes").asInstanceOf[GenericData.Array[Long]].forEach(causes ::= _)
           val clock = record.get("clock").asInstanceOf[Double]
           val started = record.get("started").asInstanceOf[Long]
           val ended = record.get("ended").asInstanceOf[Long]
@@ -35,21 +39,22 @@ package object flink4traces:
           val label = record.get("label").toString
           val keyBy = record.get("keyBy").toString
           val rate = record.get("rate").toString
-          val delay = record.get("delay").asInstanceOf[Double]
+          val probability = record.get("probability").toString
+          val delay = Option(record.get("delay")).map(_.asInstanceOf[Double])
           val duration = Option(record.get("duration")).map(_.asInstanceOf[Double])
           val dir_cap = record.get("dir_cap").toString
           val from = record.get("from").toString
           val to = record.get("to").toString
           val snapshot = Option(record.get("snapshot")).map(_.toString)
-          out.collect {
+          out.collect:
             Traces(pid,
-                   number, clock, started, ended,
+                   number, causes,
+                   clock, started, ended,
                    agent, name, polarity,
                    key, guard, label, keyBy,
-                   rate, delay, duration,
-                   dir_cap, from, to,
-                   snapshot)
-          }
+                   rate, probability,
+                   delay, duration,
+                   dir_cap, from, to, snapshot)
         catch _.printStackTrace()
 
 
@@ -61,6 +66,8 @@ package object flink4traces:
       { "name" : "pid", "type": "long" },
 
       { "name" : "number", "type": "long" },
+      { "name" : "causes", "type": { "type": "array", "items": "long", "default": [] } },
+
       { "name" : "clock", "type": "double" },
       { "name" : "started", "type": "long" },
       { "name" : "ended", "type": "long" },
@@ -75,7 +82,9 @@ package object flink4traces:
       { "name" : "keyBy", "type": "string" },
 
       { "name" : "rate", "type": "string" },
-      { "name" : "delay", "type": "double" },
+      { "name" : "probability", "type": "string" },
+
+      { "name" : "delay", "type": ["null", "double"] },
       { "name" : "duration", "type": ["null", "double"] },
 
       { "name" : "dir_cap", "type": "string" },

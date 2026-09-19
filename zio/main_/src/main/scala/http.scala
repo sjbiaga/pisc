@@ -62,13 +62,15 @@ package object `Π-http`:
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean],
+                        causal: Option[Boolean],
                         snapshot: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
-                     parallelism.getOrElse(default.parallelism),
-                     threshold.getOrElse(default.threshold),
-                     timeout.getOrElse(default.timeout),
+                     parallelism.map(1 max _).getOrElse(default.parallelism),
+                     threshold.map(_.max(1) * math.signum(default.threshold)).getOrElse(default.threshold),
+                     timeout.map(0 max _).getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
+                     default.causal,
                      snapshot.getOrElse(default.snapshot))
 
   object Parameters:
@@ -77,6 +79,7 @@ package object `Π-http`:
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit),
+                 Some(parameters.causal),
                  Some(parameters.snapshot))
 
 
@@ -131,6 +134,9 @@ package object `Π-http`:
             else
               pauseP.succeed(()).as(Response.ok -> (pauseP -> stop -> exitP))
           }
+      },
+      Method.PUT / "feedback" / "traces" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
+        feedback.tracesR.set(it).as(Response.ok)
       },
       Method.PUT / "feedback" / "keyBy" / boolean("flag") -> handler { (it: Boolean, _: Request) =>
         feedback.keyByR.set(it).as(Response.ok)
@@ -204,16 +210,10 @@ package object `Π-http`:
                 ZIO.succeed(Response.badRequest("attempt to alter the `init' read-only flag"))
               case State(_, _, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
-              case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+              case State(Parameters(_, Some(threshold), _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
                 ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(parameters, _, _, _, _, _, _, _) =>
-                feedback.paramsR.get.flatMap { default =>
-                  var params = parameters(default)
-                  params = params.copy(parallelism = 1 max params.parallelism,
-                                       threshold = 0 max params.threshold,
-                                       timeout = 0 max params.timeout)
-                  feedback.paramsRP.get.flatMap(_.succeed(params))
-                }.as(Response.ok)
+                feedback.paramsR.get.flatMap { default => feedback.paramsRP.get.flatMap(_.succeed(parameters(default))) }.as(Response.ok)
         }
       }
     )

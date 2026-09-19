@@ -88,6 +88,11 @@ package object sΠ:
     */
   type `)*(` = Set[`)(`]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   sealed abstract trait Ordʹ { val ord: Int }
   sealed trait Ord(val ord: Int) extends Ordʹ
@@ -172,15 +177,15 @@ package object sΠ:
         /**
           * linear replication guard
           */
-        def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using %, /, \)
                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate, Duration.Zero)(key, `)(`)(?, -, *, +)
+          apply(rate, Duration.Zero)(key, `)(`)(?, -, *, <, >, +)
 
         /**
           * linear replication guard w/ pace
           */
-        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): ZStream[Any, Nothing, Unit] =
@@ -224,18 +229,18 @@ package object sΠ:
         /**
           * linear replication guard w/ code
           */
-        def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate)(key, `)(`)(?, -, *, +).tap(_ => exec(code))
+          apply(rate)(key, `)(`)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
           * linear replication guard w/ pace w/ code
           */
-        def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate, pace)(key, `)(`)(?, -, *, +).tap(_ => exec(code))
+          apply(rate, pace)(key, `)(`)(?, -, *, <, >, +).tap(_ => exec(code))
 
       /**
         * replication guard
@@ -365,15 +370,15 @@ package object sΠ:
             /**
               * linear replication bound output guard
               */
-            def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                      (using %, /, \)
                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+              apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear replication bound output guard w/ pace
               */
-            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                      (using % : %, / : /, \ : \)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                ^ : String): ZStream[Any, Nothing, `()`] =
@@ -418,31 +423,31 @@ package object sΠ:
             /**
               * linear replication bound output guard w/ code
               */
-            def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                         (using %, /, \)
                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+              apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
             /**
               * linear replication bound output guard w/ pace w/ code
               */
-            def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                         (using %, /, \)
                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate, pace)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+              apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear constant replication output guard
             */
-          def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+            apply(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, <, >, +)
 
           /**
             * linear constant replication output guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, Unit] =
@@ -486,91 +491,91 @@ package object sΠ:
           /**
             * linear constant replication output guard w/ code
             */
-          def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+            apply(rate, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear constant replication output guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, pace, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+            apply(rate, pace, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           object `(*)`:
 
             /**
               * linear variable replication output guard
               */
-            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using DummyImplicit)
                                          (using %, /, \)
                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, <, >, +)
               else
-                apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+                apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace
               */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using DummyImplicit)
                                          (using %, /, \)
                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, <, >, +)
               else
-                apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+                apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ code
               */
-            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using DummyImplicit)
                                             (using %, /, \)
                                             (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, <, >, +)
               else
-                apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+                apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace w/ code
               */
-            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using DummyImplicit)
                                             (using %, /, \)
                                             (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, <, >, +)
               else
-                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard
               */
-            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using %, /, \)
                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+              apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace
               */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using % : %, / : /, \ : \)
                                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                    ^ : String): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π.`(!)`.`(+)`(rate, pace, _)(key, `)(`)(dir)(?, -, *, +))
+                ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π.`(!)`.`(+)`(rate, pace, _)(key, `)(`)(dir)(?, -, *, <, >, +))
               else
                 for
                   discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
@@ -612,31 +617,31 @@ package object sΠ:
             /**
               * linear variable replication output guard w/ code
               */
-            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using %, /, \)
                                             (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
             /**
               * linear variable replication output guard w/ pace w/ code
               */
-            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using %, /, \)
                                             (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](2)(rate, pace, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+              apply[S](2)(rate, pace, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear replication input guard
             */
-          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+            apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, <, >, +)
 
           /**
             * linear replication input guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, `()`] =
@@ -682,18 +687,18 @@ package object sΠ:
           /**
             * linear replication input guard w/ code
             */
-          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+            apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
           /**
             * linear replication input guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate, pace)(key, `)(`)(dir)(?, -, *, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+            apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
         object `(ν)`:
 
@@ -1230,15 +1235,15 @@ package object sΠ:
           /**
             * linear replication capability guard
             */
-          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, Duration.Zero)(key, `)(`)(cap)(?, -, *, +)
+            apply(rate, Duration.Zero)(key, `)(`)(cap)(?, -, *, <, >, +)
 
           /**
             * linear replication capability guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): ZStream[Any, Nothing, Unit] =
@@ -1283,18 +1288,18 @@ package object sΠ:
           /**
             * linear replication capability guard w/ code
             */
-          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +).tap(_ => exec(code))
+            apply(rate)(key, `)(`)(cap)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear replication capability guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, pace)(key, `)(`)(cap)(?, -, *, +).tap(_ => exec(code))
+            apply(rate, pace)(key, `)(`)(cap)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
           * replication capability guard

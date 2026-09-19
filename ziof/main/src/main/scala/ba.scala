@@ -88,6 +88,11 @@ package object sΠ:
     */
   type `)*(` = Set[`)(`]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   sealed abstract trait Ordʹ { val ord: Int }
   sealed abstract trait Ord(val ord: Int) extends Ordʹ

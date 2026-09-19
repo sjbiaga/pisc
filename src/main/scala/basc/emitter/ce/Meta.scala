@@ -69,7 +69,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                  Type.ParamClause(Nil),
                  Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
                                   Term.Param(Nil, \("}{"), Some(\\("}{")), None) :: Nil, None) ::
-                 `String*`("args") :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
+                 `String*`("args") :: `(using String, IOLocal[[]])(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -82,7 +82,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                  Type.ParamClause(Nil),
                  Term.ParamClause(Term.Param(Nil, \(")("), `:`("IOLocal", ")("), None) ::
                                   Term.Param(Nil, \("}{"), Some(\\("}{")), None) :: Nil, None) ::
-                 `(…)`(params*) :: `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
+                 `(…)`(params*) :: `(using String, IOLocal[[]])(using %, /, \\)(using }{.][, }{.stm.TSemaphore)`,
                ) :: Nil,
                `: IO[Any]`,
                body
@@ -98,8 +98,9 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                     ,None)
 
 
-  val `(using String)(using %, /, \\)(using }{.][, }{.stm.TSemaphore)` =
-    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) :: Nil
+  val `(using String, IOLocal[[]])(using %, /, \\)(using }{.][, }{.stm.TSemaphore)` =
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) ::
+                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), `:`("IOLocal", "[]"), None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,

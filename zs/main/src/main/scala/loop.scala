@@ -44,7 +44,8 @@ package object `Π-loop`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `}{`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()`, `}{` }
+
 
   type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
 
@@ -74,6 +75,7 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
+                                  causal: Boolean,
                                   snapshot: Boolean)
 
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
@@ -142,7 +144,7 @@ package object `Π-loop`:
         val nel = ∥(it)(`π-wand`._1)()
         val nelʹ = nel.map {
           _.map {
-            case (key1, key2, in, (delay, _)) =>
+            case (key1, key2, in, ((delay, _), _)) =>
               val (pcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
               val (pcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
               (key1, key2) -> (delay, in, (pcko1, pcko2))
@@ -240,7 +242,7 @@ package object `Π-loop`:
                 ZIO.collectAll {
                   nel.map { nel =>
                     ZIO.collectAllParDiscard {
-                      nel.map { case ((key1, key2), (_delay, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
+                      nel.map { case ((key1, key2), (_, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
                                   if stop
@@ -259,12 +261,13 @@ package object `Π-loop`:
                                       _  <- sem.acquire
                                       _  <- started.update(_ + 1)
                                       fb <- ( for
-                                                _ <- ZIO.unless(k1 == k2) { (ord, ordʹ) match
-                                                                              case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                                `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                              case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                                `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                          }
+                                                _ <- ZIO.unless(k1 == k2) {
+                                                       (ord, ordʹ) match
+                                                         case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                           `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                         case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                           `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                     }
                                                 _ <- cb.await.exit
                                                 _ <- enable(k1)
                                                 _ <- enable(k2).unless(k1 == k2)
@@ -279,7 +282,7 @@ package object `Π-loop`:
                                       _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
                                     yield
                                       ()
-                              }
+                                }
                     }
                   }
                 }
@@ -319,7 +322,7 @@ package object `Π-loop`:
             ZIO.collectAll {
               nel.map { nel =>
                 ZIO.collectAllParDiscard {
-                  nel.map { case ((key1, key2), (_delay, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
+                  nel.map { case ((key1, key2), (_, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                               val k1 = key1.substring(36)
                               val k2 = key2.substring(36)
                               if stop
@@ -334,16 +337,17 @@ package object `Π-loop`:
                                   ()
                               else
                                 for
-                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
                                   _  <- sem.acquire
                                   _  <- started.update(_ + 1)
+                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
                                   fb <- ( for
-                                            _ <- ZIO.unless(k1 == k2) { (ord, ordʹ) match
-                                                                          case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                            `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                          case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                            `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                      }
+                                            _ <- ZIO.unless(k1 == k2) {
+                                                   (ord, ordʹ) match
+                                                     case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                       `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                     case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                       `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                 }
                                             _ <- cb.await.exit
                                             _ <- enable(k1)
                                             _ <- enable(k2).unless(k1 == k2)
@@ -358,7 +362,7 @@ package object `Π-loop`:
                                   _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
                                 yield
                                   ()
-                          }
+                            }
                 }
               }
             }

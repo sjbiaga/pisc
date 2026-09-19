@@ -28,12 +28,12 @@ object CommandBAin {
     val A = Seq("127.0.0.1", "localhost").map("-A" + _)
     val F = Seq("cats.effect.IO", "zio.Task").map("-F" + _)
     val P = "-P" + Int.MaxValue
-    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
-                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
-                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
-                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Sfalse")
+    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse")),
+                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse")),
+                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse")),
+                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse")),
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Cfalse", "-Sfalse")
                )
 
     def suggestions(args: Seq[String]): Seq[String] =

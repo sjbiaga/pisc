@@ -433,7 +433,7 @@ object Item:
 
       <.span(
         ^.marginLeft := "8px",
-        "Traces"
+        "⏻"
       ),
 
       <.input(
@@ -483,7 +483,7 @@ object Item:
 
       <.span(
         ^.marginLeft := "8px",
-        "Exit"
+        "⏏"
       ),
 
       ( if !p.init.value

@@ -79,6 +79,11 @@ package object sΠ:
     */
   type `)*(` = Set[`)(`]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   sealed abstract trait Ordʹ { val ord: Int }
   sealed abstract trait Ord(val ord: Int) extends Ordʹ
@@ -171,22 +176,24 @@ package object sΠ:
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[java.lang.Double] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate, `][`)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
                         IO.pure(null: java.lang.Double)
                       else
-                        val (delay, b, f, _)  = opt.get
+                        val (delay, b, f, _, s)  = opt.get
                         for
-                          _       <- b.await
-                          _       <- f.join
+                          _ <- `[]`.set(s)
+                          _ <- b.await
+                          _ <- f.join
                         yield
                           java.lang.Double(delay)
                     )
@@ -198,7 +205,7 @@ package object sΠ:
       */
     def apply(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.silent(false)(parallelism, rate)(key, `)(`, `π-τ`)(body)
 
     /**
@@ -206,7 +213,7 @@ package object sΠ:
       */
     def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.silent(false)(pace, parallelism, rate)(key, `)(`, `π-τ`)(body)
 
     /**
@@ -214,7 +221,7 @@ package object sΠ:
       */
     def apply(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.silent(true)(parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
 
     /**
@@ -222,7 +229,7 @@ package object sΠ:
       */
     def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`])(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key, `)(`, `π-τ`)(code)(body)
 
 
@@ -251,7 +258,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output("ν")(false)(parallelism, rate)(key, `)(`, dir)(body)
 
     /**
@@ -259,7 +266,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output("ν")(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
 
     /**
@@ -267,7 +274,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function1`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output("ν")(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
 
     /**
@@ -275,7 +282,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function1`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output("ν")(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
 
     //////////////////////////////////////////////////////////////// CONSTANT //
@@ -285,7 +292,7 @@ package object sΠ:
       */
     def apply(_f: false)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output(false)(parallelism, rate, value)(key, `)(`, dir)(body)
 
     /**
@@ -293,7 +300,7 @@ package object sΠ:
       */
     def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output(false)(pace, parallelism, rate, value)(key, `)(`, dir)(body)
 
     /**
@@ -301,7 +308,7 @@ package object sΠ:
       */
     def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output(true)(parallelism, rate, value)(key, `)(`, dir)(code)(body)
 
     /**
@@ -309,7 +316,7 @@ package object sΠ:
       */
     def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.output(true)(pace, parallelism, rate, value)(key, `)(`, dir)(code)(body)
 
     //////////////////////////////////////////////////////////////// VARIABLE //
@@ -319,7 +326,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
@@ -331,7 +338,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(body)
@@ -343,7 +350,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
@@ -355,7 +362,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)(body)
@@ -367,7 +374,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(parallelism, rate, _)(key, `)(`, dir)(body)))
@@ -379,7 +386,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function0`)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(false)(pace, parallelism, rate, _)(key, `)(`, dir)(body)))
@@ -391,7 +398,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(parallelism, rate, _)(key, `)(`, dir)(code)(body)))
@@ -403,7 +410,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(true)(pace, parallelism, rate, _)(key, `)(`, dir)(code)(body)))
@@ -417,7 +424,7 @@ package object sΠ:
       */
     def apply(_n: Null)(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.input(false)(parallelism, rate)(key, `)(`, dir)(body)
 
     /**
@@ -425,7 +432,7 @@ package object sΠ:
       */
     def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.input(false)(pace, parallelism, rate)(key, `)(`, dir)(body)
 
     /**
@@ -433,7 +440,7 @@ package object sΠ:
       */
     def apply[T](_n: Null)(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])(body: `Π-Function1`)
                                     (using %, /, \)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.input(true)(parallelism, rate)(key, `)(`, dir)(code)(body)
 
     /**
@@ -441,7 +448,7 @@ package object sΠ:
       */
     def apply[T](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])(body: `Π-Function1`)
                                     (using %, /, \)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.input(true)(pace, parallelism, rate)(key, `)(`, dir)(code)(body)
 
     // π ///////////////////////////////////////////////// linear replication //
@@ -452,7 +459,7 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)
@@ -465,7 +472,7 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key, `)(`, dir)(code)
@@ -477,7 +484,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): IO[java.lang.Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)))
@@ -489,7 +496,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => IO[S])(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
                                     (using %, /)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): IO[java.lang.Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
         IO.defer(value.asInstanceOf[IO[`()`]].flatMap(apply(rate, _)(key, `)(`, dir)(code)))
@@ -502,20 +509,22 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[java.lang.Double] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
                         IO.pure(null: java.lang.Double)
                       else
-                        val (delay, b, f, i) = opt.get
+                        val (delay, b, f, i, s) = opt.get
                         for
+                          _ <- `[]`.set(s)
                           _ <- i.set(value)
                           _ <- b.await
                           _ <- f.join
@@ -531,20 +540,22 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: => IO[Any])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[java.lang.Double] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
                         IO.pure(null: java.lang.Double)
                       else
-                        val (delay, b, f, i) = opt.get
+                        val (delay, b, f, i, s) = opt.get
                         for
+                          _ <- `[]`.set(s)
                           _ <- i.set(value)
                           _ <- b.await
                           _ <- f.join
@@ -561,22 +572,24 @@ package object sΠ:
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[(`()`, java.lang.Double)] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[(`()`, java.lang.Double)] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate, `][`)))
         opt      <- deferred.get
         (name,
          delay)  <- ( if opt eq None
                       then
                         IO.pure(sΠ.`()`.`null` -> (null: java.lang.Double))
                       else
-                        val (delay, b, f, _) = opt.get
+                        val (delay, b, f, _, s) = opt.get
                         for
+                          _    <- `[]`.set(s)
                           _    <- b.await
                           _    <- f.join
                           name <- result.get
@@ -592,22 +605,24 @@ package object sΠ:
     def apply[T](rate: Rate)(key: String, `)(`: IOLocal[`)(`], dir: `π-$`)(code: T => IO[T])
                 (using % : %, / : /)
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                          ^ : String): IO[(`()`, java.lang.Double)] =
+                          ^ : String, `[]`: IOLocal[`[]`]): IO[(`()`, java.lang.Double)] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate, `][`)))
         opt      <- deferred.get
         (name,
          delay)  <- ( if opt eq None
                       then
                         IO.pure((null: Any) -> (null: java.lang.Double))
                       else
-                        val (delay, b, f, _) = opt.get
+                        val (delay, b, f, _, s) = opt.get
                         for
+                          _    <- `[]`.set(s)
                           _    <- b.await
                           _    <- f.join
                           name <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
@@ -624,7 +639,7 @@ package object sΠ:
       */
     def apply(_z: "ζ")(_f: false)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.capability(false)(parallelism, rate)(key, `)(`, cap)(body)
 
     /**
@@ -632,7 +647,7 @@ package object sΠ:
       */
     def apply(_z: "ζ")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(body: `Π-Function0`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.capability(false)(pace, parallelism, rate)(key, `)(`, cap)(body)
 
     /**
@@ -640,7 +655,7 @@ package object sΠ:
       */
     def apply(_z: "ζ")(_t: true)(parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])(body: `Π-Function0`)
                                 (using %, /, \)
-                                (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.capability(true)(parallelism, rate)(key, `)(`, cap)(code)(body)
 
     /**
@@ -648,7 +663,7 @@ package object sΠ:
       */
     def apply(_z: "ζ")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])(body: `Π-Function0`)
                                 (using %, /, \)
-                                (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
+                                (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.capability(true)(pace, parallelism, rate)(key, `)(`, cap)(code)(body)
 
     // ζ ///////////////////////////////////////////////// linear replication //
@@ -659,21 +674,23 @@ package object sΠ:
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[java.lang.Double] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate, `][`)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
                         IO.pure(null: java.lang.Double)
                       else
-                        val (delay, b, f, _) = opt.get
+                        val (delay, b, f, _, s) = opt.get
                         for
+                          _ <- `[]`.set(s)
                           _ <- b.await
                           _ <- f.join
                         yield
@@ -688,21 +705,23 @@ package object sΠ:
     def apply(rate: Rate)(key: String, `)(`: IOLocal[`)(`], cap: `π-ζ`)(code: => IO[Any])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): IO[java.lang.Double] =
+                       ^ : String, `[]`: IOLocal[`[]`]): IO[java.lang.Double] =
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
         `)(`     <- `)(`.get
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis >>= IO.ref
-        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate, `][`)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
                         IO.pure(null: java.lang.Double)
                       else
-                        val (delay, b, f, _) = opt.get
+                        val (delay, b, f, _, s) = opt.get
                         for
+                          _ <- `[]`.set(s)
                           _ <- b.await
                           _ <- f.join
                           _ <- exec(code)

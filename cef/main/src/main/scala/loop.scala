@@ -80,6 +80,7 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
+                                  causal: Boolean,
                                   snapshot: Boolean)
 
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
@@ -148,7 +149,7 @@ package object `Π-loop`:
         val nel = ∥(it)(`π-wand`._1)()
         val nelʹ = nel.map {
           _.map {
-            case (key1, key2, in, (delay, _)) =>
+            case (key1, key2, in, ((delay, _), _)) =>
               val (dcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
               val (dcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
               (key1, key2) -> (delay, in, (dcko1, dcko2))

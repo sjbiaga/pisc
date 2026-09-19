@@ -73,13 +73,15 @@ package object `Π-http4s`:
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean],
+                        causal: Option[Boolean],
                         snapshot: Option[Boolean]) derives Codec.AsObject:
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
-                     parallelism.getOrElse(default.parallelism),
-                     threshold.getOrElse(default.threshold),
-                     timeout.getOrElse(default.timeout),
+                     parallelism.map(1 max _).getOrElse(default.parallelism),
+                     threshold.map(_.max(1) * math.signum(default.threshold)).getOrElse(default.threshold),
+                     timeout.map(0 max _).getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
+                     default.causal,
                      snapshot.getOrElse(default.snapshot))
 
   object Parameters:
@@ -88,6 +90,7 @@ package object `Π-http4s`:
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit),
+                 Some(parameters.causal),
                  Some(parameters.snapshot))
 
 
@@ -219,16 +222,10 @@ package object `Π-http4s`:
               BadRequest("attempt to alter the `init' read-only flag")
             case State(_, _, _, _, _, _, _, Some(_))    =>
               BadRequest("attempt to alter the `done' read-only flag")
-            case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+            case State(Parameters(_, Some(threshold), _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
               BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
             case State(parameters, _, _, _, _, _, _, _) =>
-              feedback.paramsR.get.flatMap { default =>
-                var params = parameters(default)
-                params = params.copy(parallelism = 1 max params.parallelism,
-                                     threshold = 0 max params.threshold,
-                                     timeout = 0 max params.timeout)
-                feedback.paramsRD.get.flatMap(_.complete(params)) >> Ok()
-              }
+              feedback.paramsR.get.flatMap { default => feedback.paramsRD.get.flatMap(_.complete(parameters(default))) >> Ok() }
           }
       }
 

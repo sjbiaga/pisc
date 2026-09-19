@@ -88,6 +88,11 @@ package object sΠ:
     */
   type `)*(` = Set[`)(`]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   sealed abstract trait Ordʹ { val ord: Int }
   sealed trait Ord(val ord: Int) extends Ordʹ
@@ -172,18 +177,18 @@ package object sΠ:
         /**
           * linear replication guard
           */
-        def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate, Duration.Zero)(key, `)(`)(?, -, *, +)
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+          apply(rate, Duration.Zero)(key, `)(`)(?, -, *, <, >, +)
 
         /**
           * linear replication guard w/ pace
           */
-        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, Unit] =
+                           ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           for
             discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                         else ZStream.fromZIO(?.await)
@@ -195,8 +200,9 @@ package object sΠ:
                         else ZStream.fromZIO(promise.succeed(None))
             enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            `][`     <- ZStream.fromZIO(`[]`.get)
             timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate, `][`))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                         else ZStream.succeed(false)
@@ -209,14 +215,25 @@ package object sΠ:
                 _        <- -.await.exit
                 _        <- *.fold(ZIO.unit)(_.acquire)
                 _        <- timeset.unlessZIO(enabled.get)
-                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                _        <- \{
+                  <.get.flatMap { s =>
+                    %.update { m =>
+                      val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                      if s eq null
+                      then
+                        m + (^ + key -> (true, it))
+                      else
+                        m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                    }
+                  }
+                }.unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
                 _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                             else
-                              val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await.exit *> fiber.join
+                              val (cbarrier, fiber, _, s) = cb_fb_in.get
+                              cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s)
               yield
                 ()
             }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -227,25 +244,25 @@ package object sΠ:
         /**
           * linear replication guard w/ code
           */
-        def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate)(key, `)(`)(?, -, *, +).tap(_ => exec(code))
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+          apply(rate)(key, `)(`)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
           * linear replication guard w/ pace w/ code
           */
-        def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+        def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-          apply(rate, pace)(key, `)(`)(?, -, *, +).tap(_ => exec(code))
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+          apply(rate, pace)(key, `)(`)(?, -, *, <, >, +).tap(_ => exec(code))
 
       /**
         * replication guard
         */
       def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])
                (using %, /, \)
-               (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+               (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate, Duration.Zero)(key, `)(`)
 
       /**
@@ -254,30 +271,43 @@ package object sΠ:
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])
                (using % : %, / : /, \ : \)
                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                         ^ : String): ZStream[Any, Nothing, Unit] =
+                         ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
           enabled  <- ZStream.fromZIO(Ref.make(true))
           `)(`     <- ZStream.fromZIO(`)(`.get)
+          `][`     <- ZStream.fromZIO(`[]`.get)
           timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate, `][`))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
           timeset   = currentTimeMillis.flatMap(timestamp.set)
+          <> <- ZStream.fromZIO(Ref.make(null: `[]`))
           sr <- ZStream.fromZIO(Ref.make(false))
           _  <- ZStream.fromZIOOption {
             for
               _        <- timeset.unlessZIO(enabled.get)
-              _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+              _        <- \{
+                <>.get.flatMap { s =>
+                  %.update { m =>
+                    val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                    if s eq null
+                    then
+                      m + (^ + key -> (true, it))
+                    else
+                      m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                  }
+                }
+              }.unlessZIO(enabled.get)
               cb_fb_in <- continue.get.flatMap(_.await)
               _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
               _        <- enabled.set(false)
               _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                           else
-                            val (cbarrier, fiber, _) = cb_fb_in.get
-                            cbarrier.await.exit *> fiber.join
+                            val (cbarrier, fiber, _, s) = cb_fb_in.get
+                            cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s)
             yield
               ()
           }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -289,7 +319,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])
                   (using %, /, \)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate)(key, `)(`).tap(_ => exec(code))
 
       /**
@@ -297,7 +327,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])
                   (using %, /, \)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate, pace)(key, `)(`).tap(_ => exec(code))
 
     /**
@@ -306,17 +336,18 @@ package object sΠ:
     def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): ZStream[Any, Nothing, Unit] =
+                       ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
       for
         _        <- ZStream.fromZIO(exclude(key))
         promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
         `)(`     <- ZStream.fromZIO(`)(`.get)
+        `][`     <- ZStream.fromZIO(`[]`.get)
         timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate))))
+        _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> `π-τ`, timestamp), (`new {}`, None, rate, `][`))))
         cb_fb_in <- ZStream.fromZIO(promise.await)
         if cb_fb_in ne None
-        (cbarrier, fiber, _) = cb_fb_in.get
-        _        <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join)
+        (cbarrier, fiber, _, s) = cb_fb_in.get
+        _        <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join *> `[]`.set(s))
       yield
         ()
 
@@ -325,7 +356,7 @@ package object sΠ:
       */
     def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])
              (using %, /)
-             (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
       apply(rate)(key, `)(`) <* ZStream.fromZIO(ZIO.sleep(pace))
 
     /**
@@ -333,7 +364,7 @@ package object sΠ:
       */
     def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])
                 (using %, /)
-                (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
       apply(rate)(key, `)(`).tap(_ => exec(code))
 
     /**
@@ -341,7 +372,7 @@ package object sΠ:
       */
     def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(code: => Task[T])
                 (using %, /)
-                (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
       apply(rate, pace)(key, `)(`).tap(_ => exec(code))
 
 
@@ -372,18 +403,18 @@ package object sΠ:
             /**
               * linear replication bound output guard
               */
-            def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                      (using %, /, \)
-                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+              apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear replication bound output guard w/ pace
               */
-            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                      (using % : %, / : /, \ : \)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                               ^ : String): ZStream[Any, Nothing, `()`] =
+                               ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
               for
                 discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                             else ZStream.fromZIO(?.await)
@@ -395,8 +426,9 @@ package object sΠ:
                             else ZStream.fromZIO(promise.succeed(None))
                 enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
+                `][`     <- ZStream.fromZIO(`[]`.get)
                 timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                             else ZStream.succeed(false)
@@ -409,15 +441,26 @@ package object sΠ:
                     _        <- -.await.exit
                     _        <- *.fold(ZIO.unit)(_.acquire)
                     _        <- timeset.unlessZIO(enabled.get)
-                    _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                    _        <- \{
+                      <.get.flatMap { s =>
+                        %.update { m =>
+                          val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                          if s eq null
+                          then
+                            m + (^ + key -> (true, it))
+                          else
+                            m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                        }
+                      }
+                    }.unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                     _        <- enabled.set(false)
                     it        = sΠ.ν()
                     _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                                 else
-                                  val (cbarrier, fiber, input) = cb_fb_in.get
-                                  input.set(it) *> cbarrier.await.exit *> fiber.join
+                                  val (cbarrier, fiber, input, s) = cb_fb_in.get
+                                  input.set(it) *> cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s)
                   yield
                     it
                 }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -428,34 +471,34 @@ package object sΠ:
             /**
               * linear replication bound output guard w/ code
               */
-            def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+              apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
             /**
               * linear replication bound output guard w/ pace w/ code
               */
-            def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-              apply(rate, pace)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+              apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear constant replication output guard
             */
-          def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+                   (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, <, >, +)
 
           /**
             * linear constant replication output guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): ZStream[Any, Nothing, Unit] =
+                             ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             for
               discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
@@ -467,8 +510,9 @@ package object sΠ:
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              `][`     <- ZStream.fromZIO(`[]`.get)
               timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
@@ -481,14 +525,25 @@ package object sΠ:
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   _        <- timeset.unlessZIO(enabled.get)
-                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                  _        <- \{
+                    <.get.flatMap { s =>
+                      %.update { m =>
+                        val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                        if s eq null
+                        then
+                          m + (^ + key -> (true, it))
+                        else
+                          m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                      }
+                    }
+                  }.unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
                   _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                               else
-                                val (cbarrier, fiber, input) = cb_fb_in.get
-                                input.set(value) *> cbarrier.await.exit *> fiber.join
+                                val (cbarrier, fiber, input, s) = cb_fb_in.get
+                                input.set(value) *> cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s)
                 yield
                   ()
               }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -499,91 +554,91 @@ package object sΠ:
           /**
             * linear constant replication output guard w/ code
             */
-          def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear constant replication output guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, pace, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate, pace, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           object `(*)`:
 
             /**
               * linear variable replication output guard
               */
-            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using DummyImplicit)
                                          (using %, /, \)
-                                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                         (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, <, >, +)
               else
-                apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+                apply[S](1)(rate, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace
               */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using DummyImplicit)
                                          (using %, /, \)
-                                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                         (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(?, -, *, <, >, +)
               else
-                apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, +)
+                apply[S](2)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ code
               */
-            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using DummyImplicit)
                                             (using %, /, \)
-                                            (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                            (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, <, >, +)
               else
-                apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+                apply[S, T](3)(rate, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace w/ code
               */
-            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using DummyImplicit)
                                             (using %, /, \)
-                                            (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                            (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, +)
+                self.π.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)(?, -, *, <, >, +)
               else
-                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, +)
+                apply[S, T](4)(rate, pace, ZIO.attempt(value))(key, `)(`)(dir)(code)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard
               */
-            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using %, /, \)
-                                         (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, +)
+                                         (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+              apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)(?, -, *, <, >, +)
 
             /**
               * linear variable replication output guard w/ pace
               */
-            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                          (using % : %, / : /, \ : \)
                                          (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                                   ^ : String): ZStream[Any, Nothing, Unit] =
+                                                   ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
               if classTag[S].runtimeClass eq self.getClass
               then
-                ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π.`(!)`.`(+)`(rate, pace, _)(key, `)(`)(dir)(?, -, *, +))
+                ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π.`(!)`.`(+)`(rate, pace, _)(key, `)(`)(dir)(?, -, *, <, >, +))
               else
                 for
                   discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
@@ -596,8 +651,9 @@ package object sΠ:
                               else ZStream.fromZIO(promise.succeed(None))
                   enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
                   `)(`     <- ZStream.fromZIO(`)(`.get)
+                  `][`     <- ZStream.fromZIO(`[]`.get)
                   timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-                  _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+                  _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
                   cb_fb_in <- ZStream.fromZIO(promise.await)
                   discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                               else ZStream.succeed(false)
@@ -610,14 +666,25 @@ package object sΠ:
                       _        <- -.await.exit
                       _        <- *.fold(ZIO.unit)(_.acquire)
                       _        <- timeset.unlessZIO(enabled.get)
-                      _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                      _        <- \{
+                        <.get.flatMap { s =>
+                          %.update { m =>
+                            val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                            if s eq null
+                            then
+                              m + (^ + key -> (true, it))
+                            else
+                              m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                          }
+                        }
+                      }.unlessZIO(enabled.get)
                       cb_fb_in <- continue.get.flatMap(_.await)
                       _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                       _        <- enabled.set(false)
                       _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                                   else
-                                    val (cbarrier, fiber, input) = cb_fb_in.get
-                                    (value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join)
+                                    val (cbarrier, fiber, input, s) = cb_fb_in.get
+                                    (value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s))
                     yield
                       ()
                   }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -628,34 +695,34 @@ package object sΠ:
             /**
               * linear variable replication output guard w/ code
               */
-            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using %, /, \)
-                                            (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                                            (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+              apply[S](1)(rate, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
             /**
               * linear variable replication output guard w/ pace w/ code
               */
-            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+            def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                             (using %, /, \)
-                                            (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-              apply[S](2)(rate, pace, value)(key, `)(`)(dir)(?, -, *, +).tap(_ => exec(code))
+                                            (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+              apply[S](2)(rate, pace, value)(key, `)(`)(dir)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear replication input guard
             */
-          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, +)
+                   (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+            apply(rate, Duration.Zero)(key, `)(`)(dir)(?, -, *, <, >, +)
 
           /**
             * linear replication input guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): ZStream[Any, Nothing, `()`] =
+                             ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
             for
               discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
@@ -667,9 +734,10 @@ package object sΠ:
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              `][`     <- ZStream.fromZIO(`[]`.get)
               result   <- ZStream.fromZIO(Ref.make[`()`](null))
               timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate, `][`))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
@@ -682,14 +750,25 @@ package object sΠ:
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
                   _        <- timeset.unlessZIO(enabled.get)
-                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                  _        <- \{
+                    <.get.flatMap { s =>
+                      %.update { m =>
+                        val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                        if s eq null
+                        then
+                          m + (^ + key -> (true, it))
+                        else
+                          m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                      }
+                    }
+                  }.unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
                   _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                               else
-                                val (cbarrier, fiber, _) = cb_fb_in.get
-                                cbarrier.await.exit *> fiber.join
+                                val (cbarrier, fiber, _, s) = cb_fb_in.get
+                                cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s)
                 yield
                   ()
               }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -701,18 +780,18 @@ package object sΠ:
           /**
             * linear replication input guard w/ code
             */
-          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+            apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
           /**
             * linear replication input guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate, pace)(key, `)(`)(dir)(?, -, *, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
+            apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
         object `(ν)`:
 
@@ -721,7 +800,7 @@ package object sΠ:
             */
           def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                    (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                   (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
             apply(rate, Duration.Zero)(key, `)(`)(dir)
 
           /**
@@ -730,31 +809,44 @@ package object sΠ:
           def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): ZStream[Any, Nothing, `()`] =
+                             ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
             for
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
               continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
               enabled  <- ZStream.fromZIO(Ref.make(true))
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              `][`     <- ZStream.fromZIO(`[]`.get)
               timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
               timeset   = currentTimeMillis.flatMap(timestamp.set)
+              <> <- ZStream.fromZIO(Ref.make(null: `[]`))
               sr <- ZStream.fromZIO(Ref.make(false))
               it <- ZStream.fromZIOOption {
                 for
                   _        <- timeset.unlessZIO(enabled.get)
-                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                  _        <- \{
+                    <>.get.flatMap { s =>
+                      %.update { m =>
+                        val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                        if s eq null
+                        then
+                          m + (^ + key -> (true, it))
+                        else
+                          m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                      }
+                    }
+                  }.unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
                   it        = sΠ.ν()
                   _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                               else
-                                val (cbarrier, fiber, input) = cb_fb_in.get
-                                input.set(it) *> cbarrier.await.exit *> fiber.join
+                                val (cbarrier, fiber, input, s) = cb_fb_in.get
+                                input.set(it) *> cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s)
                 yield
                   it
               }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -766,7 +858,7 @@ package object sΠ:
             */
           def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
             apply(rate)(key, `)(`)(dir).tap(_ => exec(code))
 
           /**
@@ -774,7 +866,7 @@ package object sΠ:
             */
           def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
             apply(rate, pace)(key, `)(`)(dir).tap(_ => exec(code))
 
         /**
@@ -782,7 +874,7 @@ package object sΠ:
           */
         def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, Duration.Zero, value)(key, `)(`)(dir)
 
         /**
@@ -791,30 +883,43 @@ package object sΠ:
         def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, Unit] =
+                           ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            `][`     <- ZStream.fromZIO(`[]`.get)
             timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             timeset   = currentTimeMillis.flatMap(timestamp.set)
+            <> <- ZStream.fromZIO(Ref.make(null: `[]`))
             sr <- ZStream.fromZIO(Ref.make(false))
             _  <- ZStream.fromZIOOption {
               for
                 _        <- timeset.unlessZIO(enabled.get)
-                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                _        <- \{
+                  <>.get.flatMap { s =>
+                    %.update { m =>
+                      val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                      if s eq null
+                      then
+                        m + (^ + key -> (true, it))
+                      else
+                        m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                    }
+                  }
+                }.unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
                 _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                             else
-                              val (cbarrier, fiber, input) = cb_fb_in.get
-                              input.set(value) *> cbarrier.await.exit *> fiber.join
+                              val (cbarrier, fiber, input, s) = cb_fb_in.get
+                              input.set(value) *> cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s)
               yield
                 ()
             }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -826,7 +931,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, value)(key, `)(`)(dir).tap(_ => exec(code))
 
         /**
@@ -834,7 +939,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, pace, value)(key, `)(`)(dir).tap(_ => exec(code))
 
         object `(*)`:
@@ -845,7 +950,7 @@ package object sΠ:
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                        (using DummyImplicit)
                                        (using %, /, \)
-                                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
               self.π.`(!)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)
@@ -858,7 +963,7 @@ package object sΠ:
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                        (using DummyImplicit)
                                        (using %, /, \)
-                                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
               self.π.`(!)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)
@@ -871,7 +976,7 @@ package object sΠ:
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                           (using DummyImplicit)
                                           (using %, /, \)
-                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                          (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
               self.π.`(!)`(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
@@ -884,7 +989,7 @@ package object sΠ:
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                           (using DummyImplicit)
                                           (using %, /, \)
-                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                          (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
               self.π.`(!)`(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
@@ -896,7 +1001,7 @@ package object sΠ:
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                        (using %, /, \)
-                                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             apply[S](2)(rate, Duration.Zero, value)(key, `)(`)(dir)
 
           /**
@@ -905,7 +1010,7 @@ package object sΠ:
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                        (using % : %, / : /, \ : \)
                                        (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                                 ^ : String): ZStream[Any, Nothing, Unit] =
+                                                 ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
               ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π.`(!)`(rate, pace, _)(key, `)(`)(dir))
@@ -916,23 +1021,36 @@ package object sΠ:
                 continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
                 enabled  <- ZStream.fromZIO(Ref.make(true))
                 `)(`     <- ZStream.fromZIO(`)(`.get)
+                `][`     <- ZStream.fromZIO(`[]`.get)
                 timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+                _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
                 cb_fb_in <- ZStream.fromZIO(promise.await)
                 if cb_fb_in ne None
                 timeset   = currentTimeMillis.flatMap(timestamp.set)
+                <> <- ZStream.fromZIO(Ref.make(null: `[]`))
                 sr <- ZStream.fromZIO(Ref.make(false))
                 _  <- ZStream.fromZIOOption {
                   for
                     _        <- timeset.unlessZIO(enabled.get)
-                    _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                    _        <- \{
+                      <>.get.flatMap { s =>
+                        %.update { m =>
+                          val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                          if s eq null
+                          then
+                            m + (^ + key -> (true, it))
+                          else
+                            m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                        }
+                      }
+                    }.unlessZIO(enabled.get)
                     cb_fb_in <- continue.get.flatMap(_.await)
                     _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                     _        <- enabled.set(false)
                     _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                                 else
-                                  val (cbarrier, fiber, input) = cb_fb_in.get
-                                  (value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join)
+                                  val (cbarrier, fiber, input, s) = cb_fb_in.get
+                                  (value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s))
                   yield
                     ()
                 }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -944,7 +1062,7 @@ package object sΠ:
             */
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                           (using %, /, \)
-                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                          (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             apply[S](1)(rate, value)(key, `)(`)(dir).tap(_ => exec(code))
 
           /**
@@ -952,7 +1070,7 @@ package object sΠ:
             */
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                           (using %, /, \)
-                                          (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                          (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             apply[S](2)(rate, pace, value)(key, `)(`)(dir).tap(_ => exec(code))
 
         /**
@@ -960,7 +1078,7 @@ package object sΠ:
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate, Duration.Zero)(key, `)(`)(dir)
 
         /**
@@ -969,31 +1087,44 @@ package object sΠ:
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, `()`] =
+                           ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             continue <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]].flatMap(Ref.make))
             enabled  <- ZStream.fromZIO(Ref.make(true))
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            `][`     <- ZStream.fromZIO(`[]`.get)
             result   <- ZStream.fromZIO(Ref.make[`()`](null))
             timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate, `][`))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             timeset   = currentTimeMillis.flatMap(timestamp.set)
+            <> <- ZStream.fromZIO(Ref.make(null: `[]`))
             sr <- ZStream.fromZIO(Ref.make(false))
             _  <- ZStream.fromZIOOption {
               for
                 _        <- timeset.unlessZIO(enabled.get)
-                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                _        <- \{
+                  <>.get.flatMap { s =>
+                    %.update { m =>
+                      val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                      if s eq null
+                      then
+                        m + (^ + key -> (true, it))
+                      else
+                        m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                    }
+                  }
+                }.unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
                 _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                             else
-                              val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await.exit *> fiber.join
+                              val (cbarrier, fiber, _, s) = cb_fb_in.get
+                              cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s)
               yield
                 ()
             }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -1006,7 +1137,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
         /**
@@ -1014,7 +1145,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate, pace)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
       object `(ν)`:
@@ -1025,18 +1156,19 @@ package object sΠ:
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using % : %, / : /)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, `()`] =
+                           ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            `][`     <- ZStream.fromZIO(`[]`.get)
             timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
-            (cbarrier, fiber, input) = cb_fb_in.get
+            (cbarrier, fiber, input, s) = cb_fb_in.get
             it <- sΠ.ν
-            _  <- ZStream.fromZIO(input.set(it) *> cbarrier.await.exit *> fiber.join)
+            _  <- ZStream.fromZIO(input.set(it) *> cbarrier.await.exit *> fiber.join *> `[]`.set(s))
           yield
             it
 
@@ -1045,7 +1177,7 @@ package object sΠ:
           */
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                  (using %, /)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
@@ -1053,7 +1185,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                     (using %, /)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate)(key, `)(`)(dir).tap(_ => exec(code))
 
         /**
@@ -1061,7 +1193,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                     (using %, /)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
           apply(rate, pace)(key, `)(`)(dir).tap(_ => exec(code))
 
       /**
@@ -1070,17 +1202,18 @@ package object sΠ:
       def apply(rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using % : %, / : /)
                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                         ^ : String): ZStream[Any, Nothing, Unit] =
+                         ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
+          `][`     <- ZStream.fromZIO(`[]`.get)
           timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          (cbarrier, fiber, input) = cb_fb_in.get
-          _  <- ZStream.fromZIO(input.set(value) *> cbarrier.await.exit *> fiber.join)
+          (cbarrier, fiber, input, s) = cb_fb_in.get
+          _  <- ZStream.fromZIO(input.set(value) *> cbarrier.await.exit *> fiber.join *> `[]`.set(s))
         yield
           ()
 
@@ -1089,7 +1222,7 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
-               (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+               (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, value)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
@@ -1097,7 +1230,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate, value)(key, `)(`)(dir).tap(_ => exec(code))
 
       /**
@@ -1105,7 +1238,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate, pace, value)(key, `)(`)(dir).tap(_ => exec(code))
 
       object `(*)`:
@@ -1116,7 +1249,7 @@ package object sΠ:
         def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
             self.π(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)
@@ -1129,7 +1262,7 @@ package object sΠ:
         def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
             self.π(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)
@@ -1142,7 +1275,7 @@ package object sΠ:
         def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                         (using DummyImplicit)
                                         (using %, /)
-                                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
             self.π(rate, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
@@ -1155,7 +1288,7 @@ package object sΠ:
         def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                         (using DummyImplicit)
                                         (using %, /)
-                                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
             self.π(rate, pace, value.asInstanceOf[`()`])(key, `)(`)(dir)(code)
@@ -1168,7 +1301,7 @@ package object sΠ:
         def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                      (using % : %, / : /)
                                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                                               ^ : String): ZStream[Any, Nothing, Unit] =
+                                               ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
             ZStream.fromZIO(ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]]: UIO[`()`])).flatMap(self.π(rate, _)(key, `)(`)(dir))
@@ -1177,12 +1310,13 @@ package object sΠ:
               _        <- ZStream.fromZIO(exclude(key))
               promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              `][`     <- ZStream.fromZIO(`[]`.get)
               timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Left(())), rate, `][`))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               if cb_fb_in ne None
-              (cbarrier, fiber, input) = cb_fb_in.get
-              _  <- ZStream.fromZIO((value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join))
+              (cbarrier, fiber, input, s) = cb_fb_in.get
+              _  <- ZStream.fromZIO((value: UIO[S]).map(new `()`(_)).flatMap(input.set(_) *> cbarrier.await.exit *> fiber.join *> `[]`.set(s)))
             yield
               ()
 
@@ -1191,7 +1325,7 @@ package object sΠ:
           */
         def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply[S](1)(rate, value)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
         /**
@@ -1199,7 +1333,7 @@ package object sΠ:
           */
         def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                         (using %, /)
-                                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply[S](1)(rate, value)(key, `)(`)(dir).tap(_ => exec(code))
 
         /**
@@ -1207,7 +1341,7 @@ package object sΠ:
           */
         def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: => Task[T])
                                         (using %, /)
-                                        (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply[S](2)(rate, pace, value)(key, `)(`)(dir).tap(_ => exec(code))
 
       /**
@@ -1216,18 +1350,19 @@ package object sΠ:
       def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using % : %, / : /)
                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                         ^ : String): ZStream[Any, Nothing, `()`] =
+                         ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           `)(`     <- ZStream.fromZIO(`)(`.get)
+          `][`     <- ZStream.fromZIO(`[]`.get)
           result   <- ZStream.fromZIO(Ref.make[`()`](null))
           timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> dir, timestamp), (map(dir.ord), Some(Right(result)), rate, `][`))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          (cbarrier, fiber, _) = cb_fb_in.get
-          _  <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join)
+          (cbarrier, fiber, _, s) = cb_fb_in.get
+          _  <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join *> `[]`.set(s))
           it <- ZStream.fromZIO(result.get)
         yield
           it
@@ -1237,7 +1372,7 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)
                (using %, /)
-               (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+               (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
         apply(rate)(key, `)(`)(dir) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
@@ -1245,7 +1380,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
         apply(rate)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
       /**
@@ -1253,7 +1388,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, `()`] =
         apply(rate, pace)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
 
     object ζ:
@@ -1265,18 +1400,18 @@ package object sΠ:
           /**
             * linear replication capability guard
             */
-          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
-                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, Duration.Zero)(key, `)(`)(cap)(?, -, *, +)
+                   (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate, Duration.Zero)(key, `)(`)(cap)(?, -, *, <, >, +)
 
           /**
             * linear replication capability guard w/ pace
             */
-          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                             ^ : String): ZStream[Any, Nothing, Unit] =
+                             ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
             for
               discard  <- if None eq * then ZStream.fromZIO(exclude(key)) *> ZStream.succeed(false)
                           else ZStream.fromZIO(?.await)
@@ -1287,10 +1422,11 @@ package object sΠ:
               _        <- if None eq * then ZStream.unit
                           else ZStream.fromZIO(promise.succeed(None))
               enabled  <- ZStream.fromZIO(promise.isDone.negate.flatMap(Ref.make))
-              polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               `)(`     <- ZStream.fromZIO(`)(`.get)
+              `][`     <- ZStream.fromZIO(`[]`.get)
+              polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
               timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
+              _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate, `][`))))
               cb_fb_in <- ZStream.fromZIO(promise.await)
               discard  <- if None eq * then ZStream.fromZIO(?.succeed(cb_fb_in eq None) *> ?.await)
                           else ZStream.succeed(false)
@@ -1303,14 +1439,25 @@ package object sΠ:
                   _        <- timeset.unlessZIO(enabled.get)
                   _        <- -.await.exit
                   _        <- *.fold(ZIO.unit)(_.acquire)
-                  _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                  _        <- \{
+                    <.get.flatMap { s =>
+                      %.update { m =>
+                        val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                        if s eq null
+                        then
+                          m + (^ + key -> (true, it))
+                        else
+                          m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                      }
+                    }
+                  }.unlessZIO(enabled.get)
                   cb_fb_in <- continue.get.flatMap(_.await)
                   _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                   _        <- enabled.set(false)
                   _        <- if cb_fb_in eq None then sr.set(true) *> +.release *> -.await.exit *> ZIO.fail(None)
                               else
-                                val (cbarrier, fiber, _) = cb_fb_in.get
-                                cbarrier.await.exit *> fiber.join
+                                val (cbarrier, fiber, _, s) = cb_fb_in.get
+                                cbarrier.await.exit *> fiber.join *> >.set(s).unless(s.isEmpty) *> `[]`.set(s)
                  yield
                    ()
               }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -1321,25 +1468,25 @@ package object sΠ:
           /**
             * linear replication capability guard w/ code
             */
-          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate)(key, `)(`)(cap)(?, -, *, +).tap(_ => exec(code))
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate)(key, `)(`)(cap)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
             * linear replication capability guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], + : Semaphore[UIO])
+          def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
-                      (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
-            apply(rate, pace)(key, `)(`)(cap)(?, -, *, +).tap(_ => exec(code))
+                      (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
+            apply(rate, pace)(key, `)(`)(cap)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
           * replication capability guard
           */
         def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                  (using %, /, \)
-                 (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, Duration.Zero)(key, `)(`)(cap)
 
         /**
@@ -1348,7 +1495,7 @@ package object sΠ:
         def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                  (using % : %, / : /, \ : \)
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                           ^ : String): ZStream[Any, Nothing, Unit] =
+                           ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           for
             _        <- ZStream.fromZIO(exclude(key))
             promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
@@ -1356,23 +1503,36 @@ package object sΠ:
             enabled  <- ZStream.fromZIO(Ref.make(true))
             polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
             `)(`     <- ZStream.fromZIO(`)(`.get)
+            `][`     <- ZStream.fromZIO(`[]`.get)
             timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
+            _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> continue, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate, `][`))))
             cb_fb_in <- ZStream.fromZIO(promise.await)
             if cb_fb_in ne None
             timeset   = currentTimeMillis.flatMap(timestamp.set)
+            <> <- ZStream.fromZIO(Ref.make(null: `[]`))
             sr <- ZStream.fromZIO(Ref.make(false))
             _  <- ZStream.fromZIOOption {
               for
                 _        <- timeset.unlessZIO(enabled.get)
-                _        <- \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +)]._2)) }).unlessZIO(enabled.get)
+                _        <- \{
+                  <>.get.flatMap { s =>
+                    %.update { m =>
+                      val it = m(^ + key).asInstanceOf[(Boolean, +)]._2
+                      if s eq null
+                      then
+                        m + (^ + key -> (true, it))
+                      else
+                        m + (^ + key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                    }
+                  }
+                }.unlessZIO(enabled.get)
                 cb_fb_in <- continue.get.flatMap(_.await)
                 _        <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                 _        <- enabled.set(false)
                 _        <- if cb_fb_in eq None then sr.set(true) *> ZIO.fail(None)
                             else
-                              val (cbarrier, fiber, _) = cb_fb_in.get
-                              cbarrier.await.exit *> fiber.join
+                              val (cbarrier, fiber, _, s) = cb_fb_in.get
+                              cbarrier.await.exit *> fiber.join *> <>.set(s).unless(s.isEmpty) *> `[]`.set(s)
                yield
                  ()
             }.repeat(Schedule.recurUntilZIO(_ => sr.get) >>> Schedule.spaced(pace))
@@ -1384,7 +1544,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate)(key, `)(`)(cap).tap(_ => exec(code))
 
         /**
@@ -1392,7 +1552,7 @@ package object sΠ:
           */
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                     (using %, /, \)
-                    (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
           apply(rate, pace)(key, `)(`)(cap).tap(_ => exec(code))
 
       /**
@@ -1401,18 +1561,19 @@ package object sΠ:
       def apply(rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                (using % : %, / : /)
                (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                         ^ : String): ZStream[Any, Nothing, Unit] =
+                         ^ : String, `[]`: FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         for
           _        <- ZStream.fromZIO(exclude(key))
           promise  <- ZStream.fromZIO(Promise.make[Nothing, Option[<>]])
           polarity  = cap == `π-enter` || cap == `π-exit` || cap == `π-merge+`
           `)(`     <- ZStream.fromZIO(`)(`.get)
+          `][`     <- ZStream.fromZIO(`[]`.get)
           timestamp <- ZStream.fromZIO(currentTimeMillis.flatMap(Ref.make))
-          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate))))
+          _        <- ZStream.fromZIO(/.offer(^ -> key -> ((promise -> null, `)(` -> cap, timestamp), (map(cap.ord), Some(if polarity then Right(null) else Left(())), rate, `][`))))
           cb_fb_in <- ZStream.fromZIO(promise.await)
           if cb_fb_in ne None
-          (cbarrier, fiber, _) = cb_fb_in.get
-          _  <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join)
+          (cbarrier, fiber, _, s) = cb_fb_in.get
+          _  <- ZStream.fromZIO(cbarrier.await.exit *> fiber.join *> `[]`.set(s))
         yield
           ()
 
@@ -1421,7 +1582,7 @@ package object sΠ:
         */
       def apply(rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)
                (using %, /)
-               (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+               (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate)(key, `)(`)(cap) <* ZStream.fromZIO(ZIO.sleep(pace))
 
       /**
@@ -1429,7 +1590,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate)(key, `)(`)(cap).tap(_ => exec(code))
 
       /**
@@ -1437,7 +1598,7 @@ package object sΠ:
         */
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(cap: `π-ζ`)(code: => Task[T])
                   (using %, /)
-                  (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, Unit] =
+                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): ZStream[Any, Nothing, Unit] =
         apply(rate, pace)(key, `)(`)(cap).tap(_ => exec(code))
 
     override def toString: String = if name == null then "null" else name.toString

@@ -55,6 +55,7 @@ object Main extends helper.Main:
     var H = 0
     var T = 123456
     var E = true
+    var C = false
     var S = false
 
     def bain(arg: String) =
@@ -64,7 +65,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.zio, in, A.toString, P, H, T, E, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.zio, in, A.toString, P, H, T, E, C, S)
 
       try
         source = Source.fromFile(s"$examples/basc/$in")
@@ -122,6 +123,7 @@ object Main extends helper.Main:
       case "-H" => H = 0
       case "-T" => T = 123456
       case "-E" => E = true
+      case "-C" => C = false
       case "-S" => S = false
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
@@ -130,6 +132,7 @@ object Main extends helper.Main:
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
+      case it if it.startsWith("-C") => C = it.substring(2).toBoolean
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

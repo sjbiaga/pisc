@@ -36,7 +36,7 @@ import _root_.zio.stm.TSemaphore
 
 object App extends _root_.zio.ZIOApp:
 
-  import _root_.scala.collection.immutable.{ List, Map }
+  import _root_.scala.collection.immutable.{ List, Map, Set }
 
   import _root_.zio.{ ExitCode, Queue, Ref, Semaphore => SemaphoreZIO }
   import _root_.zio.stm.TPriorityQueue
@@ -55,6 +55,7 @@ object App extends _root_.zio.ZIOApp:
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
   private val bacse = "pisc.bioambients.communications.exit.passthrough"
+  private val bacsc = "pisc.bioambients.communications.causal.sets"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
@@ -73,8 +74,9 @@ object App extends _root_.zio.ZIOApp:
       _ <- poll(using %, /, \).uninterruptible.disconnect.fork
       _ <- dump(using %, !, -).uninterruptible.disconnect.fork
       ^ <- π.`π-uuid`
+      ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
       x <- http(parameters.address, parameters.threshold > 0, started, feedback)(using !) {
-             π.`π-supervised`(π.Main(ref)(args*)(using ^)(using %, /, \)).uninterruptible.disconnect.fork
+             π.`π-supervised`(π.Main(ref)(args*)(using ^, ?)(using %, /, \)).uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
@@ -95,10 +97,13 @@ object App extends _root_.zio.ZIOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
+    val c = if sys.BooleanProp.keyExists(bacsc).value
+            then true
+            else π.`π-parameters`.causal
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, s)
+    val params = `Π-Parameters`(a, p, h, t, e, c, s)
     ZLayer.fromZIO {
       for
         paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
@@ -136,7 +141,7 @@ object App extends _root_.zio.ZIOApp:
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
-      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- Promise.make[Nothing, ExitCode]
       &| <- Ref.make(0L -> .0)
       n <- Ref.make(0L)

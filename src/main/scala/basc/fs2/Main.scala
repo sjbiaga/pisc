@@ -50,11 +50,6 @@ object Main extends helper.Main:
 
   val examples = "examples"
 
-  val threadlocal = Map(
-    "cats.effect.IO" -> "IOLocal",
-    "zio.Task" -> "FiberRef",
-  )
-
   def main(args: Array[String]): Unit =
     var A: Host = host"localhost"
     var F = "cats.effect.IO"
@@ -62,6 +57,7 @@ object Main extends helper.Main:
     var H = 0
     var T = 123456
     var E = true
+    var C = false
     var S = false
 
     def bain(arg: String) =
@@ -71,7 +67,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, A.toString, P, H, T, E, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, A.toString, P, H, T, E, C, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"
@@ -102,7 +98,7 @@ object Main extends helper.Main:
               case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
                 Term.Assign(\("π-traces"), traces)
           ) ::
-          Program.Main(threadlocal(F))(prog.drop(1+2))
+          Program.Main()(prog.drop(1+2))
 
         val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
@@ -170,6 +166,7 @@ object Main extends helper.Main:
       case "-H" => H = 0
       case "-T" => T = 123456
       case "-E" => E = true
+      case "-C" => C = false
       case "-S" => S = false
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
@@ -179,6 +176,7 @@ object Main extends helper.Main:
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
+      case it if it.startsWith("-C") => C = it.substring(2).toBoolean
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

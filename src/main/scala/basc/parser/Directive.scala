@@ -249,6 +249,9 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                 if given_String == "exit"        =>
               settings.parameters.copy(exit = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case List(given String, it: String)
+                if given_String == "causal"      =>
+              settings.parameters.copy(causal = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case List(given String, it: String)
                 if given_String == "snapshot"    =>
               settings.parameters.copy(snapshot = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, message)
@@ -405,12 +408,14 @@ object Directive:
                           threshold: Int = 0,
                           timeout: Int = 123456,
                           exit: Boolean = true,
+                          causal: Boolean = false,
                           snapshot: Boolean = false):
       lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
                                                                        :: Lit.Int(parallelism)
                                                                        :: Lit.Int(threshold)
                                                                        :: Lit.Int(timeout)
                                                                        :: Lit.Boolean(exit)
+                                                                       :: Lit.Boolean(causal)
                                                                        :: Lit.Boolean(snapshot)
                                                                        :: Nil))
 

@@ -22,6 +22,7 @@ object Main:
     val params = ParameterTool.fromArgs(args)
 
     val kafkaTopic = params.getRequired("topic")
+    val port = params.getInt("port", 7224)
     val kafkaBrokers = params.get("bootstrap-servers", "kafka:29092")
     val schemaRegistryUrl = params.get("schema-registry", "http://schema-registry:8081")
     val windowDuration = params.getLong("window-duration", 5L)
@@ -49,6 +50,6 @@ object Main:
     val tracesStream: DataStream[Traces] =
       avroRecordStream.flatMap(Traces.GenericRecord2Traces)
 
-    SweepLinePipeline(tracesStream, windowDuration, kafkaTopic, 7224)
+    SweepLinePipeline(tracesStream, windowDuration, kafkaTopic, port)
 
     env.execute(s"flink-functions4traces-analytics-sweepline")

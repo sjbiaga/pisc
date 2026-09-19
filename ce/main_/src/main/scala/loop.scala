@@ -47,13 +47,13 @@ import `Π-stats`.*
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, Ordʹ, `π-$`, `π-ζ`, `)(`, `()`, `[]` }
 
 
-  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`])
+  type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`], `[]`)
 
   type ++ = ((Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]]), (`)(`, Ordʹ), Ref[IO, Long])
-  type + = (++, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate))
+  type + = (++, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate, `[]`))
 
   type % = AtomicCell[IO, Map[String, Int | (Boolean, +)]]
 
@@ -65,7 +65,7 @@ package object `Π-loop`:
 
   type \ = IO[Unit] => IO[Unit]
 
-  type ++++ = ((Double, Double), Ref[IO, `()`], (++, ++))
+  type ++++ = (((Double, Double), BigDecimal), Ref[IO, `()`], () => `[]`, (++, ++))
   type ** = PQueue[IO, (Int, List[List[((String, String), ++++)]])]
 
   type * = Semaphore[IO]
@@ -78,6 +78,7 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
+                                  causal: Boolean,
                                   snapshot: Boolean)
 
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
@@ -148,14 +149,14 @@ package object `Π-loop`:
         val nel = ∥(it)(`π-wand`._1)()
         val nelʹ = nel.map {
           _.map {
-            case (key1, key2, in, dd) =>
+            case (key1, key2, in, ddp, cs) =>
               val (dckots1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
               val (dckots2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-              (key1, key2) -> (dd, in, (dckots1, dckots2))
+              (key1, key2) -> (ddp, in, cs, (dckots1, dckots2))
           }
         }
         nel.flatten.traverse {
-          case (key1, key2, _, _) =>
+          case (key1, key2, _, _, _) =>
             val k1 = key1.substring(36)
             val k2 = key2.substring(36)
             val  ^ = key1.substring(0, 36)
@@ -185,11 +186,11 @@ package object `Π-loop`:
       val (trick, _) = `π-wand`
       !m.exists(_._2.isInstanceOf[Int])
       && m.forall {
-           case (_, (true, (_, (_, None, _)))) => false
-           case (key1, (true, (_, (e1, Some(p1), _)))) =>
+           case (_, (true, (_, (_, None, _, _)))) => false
+           case (key1, (true, (_, (e1, Some(p1), _, _)))) =>
              val ^ = key1.substring(0, 36)
              !m.exists {
-               case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+               case (key2, (true, (_, (e2, Some(p2), _, _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                  val ^^ = key2.substring(0, 36)
                  ^ != ^^
                  || {
@@ -223,8 +224,8 @@ package object `Π-loop`:
               }
             else
               (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
-                nel.traverse {
-                  _.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+                nel.traverse:
+                  _.parTraverse { case ((key1, key2), (ddp @ ((delay, _), _), in, cs, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                                     val k1 = key1.substring(36)
                                     val k2 = key2.substring(36)
                                     if stop
@@ -240,6 +241,10 @@ package object `Π-loop`:
                                     else
                                       for
                                         cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                        nc <- if delay.isPosInfinity
+                                              then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                              else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
+                                        csʹ = if parameters.causal then cs() else Set.empty
                                         _  <- sem.acquire
                                         _  <- started.update(_ + 1)
                                         fb <- ( for
@@ -258,27 +263,24 @@ package object `Π-loop`:
                                                   _            <- cb.await
                                                   _            <- enable(k1)
                                                   _            <- enable(k2).unlessA(k1 == k2)
-                                                  nc           <- if duration == 0.0 || duration.isNaN
-                                                                  then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                                  else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                                   ss           <- ts1.get product ts2.get
                                                   kb           <- feedback.keyByR.get
                                                   now          <- currentTimeMillis
                                                   _            <- feedback.lastR.set(now -> nc._2)
-                                                  _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                                  _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), ddp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                                   _            <- sem.release
                                                   _            <- started.update(_ - 1)
                                                 yield
                                                   ()
                                               ).start
-                                        _  <- d1.complete(Some((delay, cb, fb, in)))
-                                        _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                        cs  = if parameters.causal then csʹ + nc._1 else Set.empty
+                                        _  <- d1.complete(Some((delay, cb, fb, in, cs)))
+                                        _  <- d2.complete(Some((delay, cb, fb, in, cs))).unlessA(k1 == k2)
+                                        _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c1 eq null)
+                                        _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                       yield
                                         ()
                                 }
-                }
               } >> IO.pure(true)
         yield
           l
@@ -317,8 +319,8 @@ package object `Π-loop`:
           }
         else
           (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
-            nel.traverse {
-              _.parTraverse { case ((key1, key2), ((delay, duration), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+            nel.traverse:
+              _.parTraverse { case ((key1, key2), (ddp @ ((delay, _), _), in, cs, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                                 val k1 = key1.substring(36)
                                 val k2 = key2.substring(36)
                                 if stop
@@ -334,6 +336,10 @@ package object `Π-loop`:
                                 else
                                   for
                                     cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
+                                    nc <- if delay.isPosInfinity
+                                          then &|.updateAndGet { (no, cl) => (no + 1, cl) }
+                                          else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
+                                    csʹ = if parameters.causal then cs() else Set.empty
                                     _  <- sem.acquire
                                     _  <- started.update(_ + 1)
                                     fb <- ( for
@@ -352,27 +358,24 @@ package object `Π-loop`:
                                               _            <- cb.await
                                               _            <- enable(k1)
                                               _            <- enable(k2).unlessA(k1 == k2)
-                                              nc           <- if duration == 0.0 || duration.isNaN
-                                                              then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                              else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
                                               ss           <- ts1.get product ts2.get
                                               kb           <- feedback.keyByR.get
                                               now          <- currentTimeMillis
                                               _            <- feedback.lastR.set(now -> nc._2)
-                                              _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                              _            <- feedback.tracesR.get >>= -.offer(Some((nc, (ss, now), (k1, k2, kb), ddp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                               _            <- sem.release
                                               _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek.whenA
                                             yield
                                               ()
                                           ).start
-                                    _  <- d1.complete(Some((delay, cb, fb, in)))
-                                    _  <- d2.complete(Some((delay, cb, fb, in))).unlessA(k1 == k2)
-                                    _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c1 eq null)
-                                    _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in)))).unlessA(c2 eq null).unlessA(k1 == k2)
+                                    cs  = if parameters.causal then csʹ + nc._1 else Set.empty
+                                    _  <- d1.complete(Some((delay, cb, fb, in, cs)))
+                                    _  <- d2.complete(Some((delay, cb, fb, in, cs))).unlessA(k1 == k2)
+                                    _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c1 eq null)
+                                    _  <- c2.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c2 eq null).unlessA(k1 == k2)
                                   yield
                                     ()
                             }
-            }
           } >> IO.pure(true)
       _        <- feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
       _        <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {

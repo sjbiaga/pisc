@@ -28,20 +28,20 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.{ Deferred, IOLocal }
+import _root_.cats.effect.{ Deferred, IOLocal, Ref }
 import _root_.cats.effect.std.Semaphore
 
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.{ List, Map }
+  import _root_.scala.collection.immutable.{ List, Map, Set }
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.ExitCode
   import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
@@ -57,6 +57,7 @@ object App extends _root_.cats.effect.IOApp:
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
   private val bacse = "pisc.bioambients.communications.exit.passthrough"
+  private val bacsc = "pisc.bioambients.communications.causal.sets"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
@@ -82,7 +83,8 @@ object App extends _root_.cats.effect.IOApp:
         _ <- dπ.dump(using %, !, -).background
         l <- Resource.eval(IOLocal[sΠ.`)(`](uuid))
         ^ <- Resource.eval(π.`π-uuid`[π.F])
-        _ <- mπ.Main(l, `}{`)(args*)(using ^)(using %, /, \).compile.drain.background
+        ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
+        _ <- mπ.Main(π.`Π-IOLocal`(l), `}{`)(args*)(using ^, π.`Π-IOLocal`(?))(using %, /, \).compile.drain.background
       yield
         ()
     ).use { _ =>
@@ -110,16 +112,19 @@ object App extends _root_.cats.effect.IOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
+    val c = if sys.BooleanProp.keyExists(bacsc).value
+            then true
+            else π.`π-parameters`.causal
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, s)
+    val params = `Π-Parameters`(a, p, h, t, e, c, s)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
       ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
-      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, ExitCode]
       &| <- Ref[π.F].of(0L -> .0)
       n <- Ref[π.F].of(0L)
@@ -173,5 +178,7 @@ object π:
 
   def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
     UUIDGen.randomString[F]
+
+  final class `Π-IOLocal`[A](self: IOLocal[A]) extends `Π-FiberLocal`[F, A](self.get, self.set)
 
 

@@ -28,7 +28,7 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.Deferred
+import _root_.cats.effect.{ Deferred, Ref }
 import _root_.cats.effect.std.Semaphore
 
 import _root_.zio.FiberRef
@@ -42,7 +42,7 @@ implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
 
 object App extends _root_.zio.interop.catz.CatsApp:
 
-  import _root_.scala.collection.immutable.{ List, Map }
+  import _root_.scala.collection.immutable.{ List, Map, Set }
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
@@ -51,7 +51,6 @@ object App extends _root_.zio.interop.catz.CatsApp:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.semigroupal.*
 
-  import _root_.cats.effect.Ref
   import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
@@ -72,6 +71,7 @@ object App extends _root_.zio.interop.catz.CatsApp:
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
   private val bacse = "pisc.bioambients.communications.exit.passthrough"
+  private val bacsc = "pisc.bioambients.communications.causal.sets"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
@@ -97,7 +97,8 @@ object App extends _root_.zio.interop.catz.CatsApp:
         _ <- dπ.dump(using %, !, -).background
         r <- Resource.eval(ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid)))
         ^ <- Resource.eval(π.`π-uuid`[π.F])
-        _ <- mπ.Main(r, `}{`)(args*)(using ^)(using %, /, \).compile.drain.background
+        ? <- Resource.eval(ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty)))
+        _ <- mπ.Main(π.`Π-FiberRef`(r), `}{`)(args*)(using ^, π.`Π-FiberRef`(?))(using %, /, \).compile.drain.background
       yield
         ()
     ).use { _ =>
@@ -125,17 +126,20 @@ object App extends _root_.zio.interop.catz.CatsApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
+    val c = if sys.BooleanProp.keyExists(bacsc).value
+            then true
+            else π.`π-parameters`.causal
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, s)
+    val params = `Π-Parameters`(a, p, h, t, e, c, s)
     for
       args <- getArgs
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
       ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
-      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       &| <- Ref[π.F].of(0L -> .0)
       n <- Ref[π.F].of(0L)
@@ -190,5 +194,7 @@ object π:
 
   def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
     UUIDGen.randomString[F]
+
+  final class `Π-FiberRef`[A](self: FiberRef[A]) extends `Π-FiberLocal`[F, A](self.get, self.set)
 
 

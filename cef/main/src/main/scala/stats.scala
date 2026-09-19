@@ -72,9 +72,9 @@ package object `Π-stats`:
 
   def ∥(% : Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (check: Boolean = false): List[List[(String, String, Ref[IO, `()`], (Double, Double))]] =
-                                         // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^   ^^^^^^  ^^^^^^
-                                         // key1    key1|2  input           delay   duration
+       (check: Boolean = false): List[List[(String, String, Ref[IO, `()`], ((Double, Double), BigDecimal))]] =
+                                         // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^    ^^^^^^  ^^^^^^   ^^^^^^^^^^
+                                         // key1    key1|2  input            delay   duration probability
 
     val mls = HashMap[({}, Option[Either[Unit, Ref[IO, `()`]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -151,9 +151,9 @@ package object `Π-stats`:
         case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, Ref[IO, `()`], (Double, Double)), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^   ^^^^^^  ^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2  input           delay   duration   pri  delay
+    var r = List[((String, String, Ref[IO, `()`], ((Double, Double), BigDecimal)), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^    ^^^^^^  ^^^^^^   ^^^^^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2  input            delay   duration probability    pri  delay
 
     for
       i <- 0 until χ.size
@@ -161,23 +161,26 @@ package object `Π-stats`:
     do
       if polarity1 eq None
       then
-        val (rate, (priority, duration)) =
+        val ((probability, rate), (priority, duration)) =
           if msrt.contains(ether1 -> polarity1)
           then
             val apr1 = msrt(ether1 -> polarity1)
-            rate1 / apr1 -> (2 -> Double.PositiveInfinity)
+            val prb = rate1 / apr1
+            prb -> rate1 -> (2 -> Double.PositiveInfinity)
           else if mswi.contains(ether1 -> polarity1)
           then
             val apr1 = mswi(ether1 -> polarity1)
-            weight1 / apr1 -> (1 -> 0.0)
+            val prb = weight1 / apr1
+            prb -> Double.PositiveInfinity -> (1 -> .0)
           else if mswp.contains(ether1 -> polarity1)
           then
             val apr1 = mswp(ether1 -> polarity1)
-            weight1 / apr1 -> (3 -> Double.NaN)
+            val prb = weight1 / apr1
+            prb -> .0 -> (3 -> Double.NaN)
           else
             ???
-        val delay = delta(rate)
-        r ::= (key1, key1, null, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+        val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
+        r ::= (key1, key1, null, (delay, if priority == 2 then delay else duration) -> probability) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -195,30 +198,33 @@ package object `Π-stats`:
             !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
           }
           then
-            val (rate, (priority, duration)) =
+            val ((probability, rate), (priority, duration)) =
               if msrt.contains(ether1 -> polarity1)
               && msrt.contains(ether2 -> polarity2)
               then
                 val apr1 = msrt(ether1 -> polarity1)
                 val apr2 = msrt(ether2 -> polarity2)
-                ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
+                val prb = (rate1 / apr1) * (rate2 / apr2)
+                prb -> prb * (apr1 min apr2) -> (2 -> Double.PositiveInfinity)
               else if mswi.contains(ether1 -> polarity1)
                    && mswi.contains(ether2 -> polarity2)
               then
                 val apr1 = mswi(ether1 -> polarity1)
                 val apr2 = mswi(ether2 -> polarity2)
-                (weight1 / apr1) * (weight2 / apr2) * (apr1 min apr2) -> (1 -> 0.0)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb -> prb * (apr1 min apr2) -> (1 -> .0)
               else if mswp.contains(ether1 -> polarity1)
                    && mswp.contains(ether2 -> polarity2)
               then
                 val apr1 = mswp(ether1 -> polarity1)
                 val apr2 = mswp(ether2 -> polarity2)
-                (weight1 / apr1) * (weight2 / apr2) * (apr1 min apr2) -> (3 -> Double.NaN)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb -> prb * (apr1 min apr2) -> (3 -> Double.NaN)
               else
                 ???
             val delay = delta(rate)
             val ref = polarity1.get.orElse(polarity2.get).right.get
-            r ::= (key1, key2, ref, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+            r ::= (key1, key2, ref, (delay, if priority == 2 then delay else duration) -> probability) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 

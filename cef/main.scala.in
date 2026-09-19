@@ -34,7 +34,7 @@ import _root_.cats.effect.std.Semaphore
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.{ List, Map }
+  import _root_.scala.collection.immutable.{ List, Map, Set }
 
   import _root_.cats.syntax.applicative.*
 
@@ -54,6 +54,7 @@ object App extends _root_.cats.effect.IOApp:
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
   private val bacse = "pisc.bioambients.communications.exit.passthrough"
+  private val bacsc = "pisc.bioambients.communications.causal.sets"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
@@ -73,7 +74,8 @@ object App extends _root_.cats.effect.IOApp:
         _ <- poll(using %, /, \).background
         _ <- dump(using %, !, -).background
         ^ <- Resource.eval(π.`π-uuid`)
-        _ <- π.Main(lo, `}{`)(args*)(using ^)(using %, /, \).background
+        ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
+        _ <- π.Main(lo, `}{`)(args*)(using ^, ?)(using %, /, \).background
       yield
         ()
     ).use { _ =>
@@ -101,16 +103,19 @@ object App extends _root_.cats.effect.IOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
+    val c = if sys.BooleanProp.keyExists(bacsc).value
+            then true
+            else π.`π-parameters`.causal
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, s)
+    val params = `Π-Parameters`(a, p, h, t, e, c, s)
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
       ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
-      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double), ((String, (String, String)), (String, (String, String))))]]
+      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L -> .0)
       n <- IO.ref(0L)

@@ -52,7 +52,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
                  Term.ParamClause(Term.Param(Nil, \(")("), `:`("FiberRef", ")("), None) :: Nil, None) ::
-                 `String*`("args") :: `(using String)(using %, /, \\)(using }{.][, TSemaphore)`,
+                 `String*`("args") :: `(using String, FiberRef[[]])(using %, /, \\)(using }{.][, TSemaphore)`,
                ) :: Nil,
                `: UIO[Any]`,
                body
@@ -64,7 +64,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
                  Term.ParamClause(Term.Param(Nil, \(")("), `:`("FiberRef", ")("), None) :: Nil, None) ::
-                 `(…)`(params*) :: `(using String)(using %, /, \\)(using }{.][, TSemaphore)`,
+                 `(…)`(params*) :: `(using String, FiberRef[[]])(using %, /, \\)(using }{.][, TSemaphore)`,
                ) :: Nil,
                `: UIO[Any]`,
                body
@@ -80,8 +80,9 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                     ,None)
 
 
-  val `(using String)(using %, /, \\)(using }{.][, TSemaphore)` =
-    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) :: Nil
+  val `(using String, FiberRef[[]])(using %, /, \\)(using }{.][, TSemaphore)` =
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) ::
+                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), `:`("FiberRef", "[]"), None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,

@@ -22,6 +22,7 @@ object Main:
     val params = ParameterTool.fromArgs(args)
 
     val kafkaTopic = params.getRequired("topic")
+    val port = params.getInt("port", 7124)
     val kafkaBrokers = params.get("bootstrap-servers", "kafka:29092")
     val schemaRegistryUrl = params.get("schema-registry", "http://schema-registry:8081")
 
@@ -48,6 +49,6 @@ object Main:
     val tracesStream: DataStream[Traces] =
       avroRecordStream.flatMap(Traces.GenericRecord2Traces)
 
-    LoadAvgPipeline(tracesStream, kafkaTopic, 7124)
+    LoadAvgPipeline(tracesStream, kafkaTopic, port)
 
     env.execute(s"flink-functions4traces-analytics-loadavg")

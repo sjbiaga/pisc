@@ -35,7 +35,7 @@ package sΠ:
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ IO, IOLocal }
+  import _root_.cats.effect.{ IO, IOLocal, Ref }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor, UUIDGen }
 
   import `Π-loop`.{ <>, +, %, /, \, currentTimeMillis }
@@ -57,32 +57,32 @@ package sΠ:
       */
     protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
-                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication bound output guard w/ pace
       */
     protected inline def output(_nu: "ν")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
-                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication bound output guard w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
-                                                   (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                   (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication bound output guard w/ pace w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
-                                                   (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                   (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(ν)`.outputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
@@ -91,32 +91,32 @@ package sΠ:
       */
     protected inline def output(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear constant replication output guard w/ pace
       */
     protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear constant replication output guard w/ code
       */
     protected inline def output(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
-                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear constant replication output guard w/ pace w/ code
       */
     protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
-                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ outputCode('{ map(dir.ord) })('parallelism, 'rate, 'value)('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     //////////////////////////////////////////////////////////////// VARIABLE //
 
@@ -125,32 +125,32 @@ package sΠ:
       */
     protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
-                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear variable replication output guard w/ pace
       */
     protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
-                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear variable replication output guard w/ code
       */
     protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
-                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear variable replication output guard w/ pace w/ code
       */
     protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
-                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ `(*)`.outputCode('{ map(dir.ord) })('parallelism, 'rate, '{ () => value })('key, '{`)(`}, 'dir)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /////////////////////////////////////////////////////////////////// INPUT //
 
@@ -159,32 +159,32 @@ package sΠ:
       */
     protected inline def input(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication input guard w/ pace
       */
     protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication input guard w/ code
       */
     protected inline def input[T](_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(code: T => IO[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
-                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('{ code andThen exec })('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('{ code andThen exec })('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication input guard w/ pace w/ code
       */
     protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline dir: `π-$`)(code: T => IO[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
-                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('{ code andThen exec })('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ inputCode('{ map(dir.ord) })('parallelism, 'rate)('key, '{`)(`}, 'dir)('{ code andThen exec })('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     // π ///////////////////////////////////////////////// linear replication //
 
@@ -195,32 +195,32 @@ package sΠ:
       */
     protected inline def capability(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline cap: `π-ζ`)(inline body: `Π-Function0`)
                                                (using inline % : %, inline / : /, inline \ : \)
-                                               (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                               (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear capability replication guard w/ pace
       */
     protected inline def capability(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline cap: `π-ζ`)(inline body: `Π-Function0`)
                                                (using inline % : %, inline / : /, inline \ : \)
-                                               (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                               (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear capability replication guard w/ code
       */
     protected inline def capability(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline cap: `π-ζ`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                              (using inline % : %, inline / : /, inline \ : \)
-                                             (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                             (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear capability replication guard w/ pace w/ code
       */
     protected inline def capability(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline cap: `π-ζ`)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                              (using inline % : %, inline / : /, inline \ : \)
-                                             (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                             (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ capabilityCode('{ map(cap.ord) })('parallelism, 'rate)('key, '{`)(`}, 'cap)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     // ζ ///////////////////////////////////////////////// linear replication //
 
@@ -238,32 +238,32 @@ package sΠ:
       */
     protected inline def silent(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication guard w/ pace
       */
     protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
-                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication guard w/ code
       */
     protected inline def silent(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
-                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
     /**
       * linear replication guard w/ pace w/ code
       */
     protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String, inline `)(`: IOLocal[`)(`], inline `π-τ`: Ordʹ)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
-                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+                                         (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String, inline `[]`: IOLocal[`[]`]): IO[Unit] =
+      ${ silentCode('{`new {}`})('parallelism, 'rate)('key, '{`)(`}, '{`π-τ`})('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}, '{`[]`}) }
 
 
   object Macros:
@@ -283,19 +283,21 @@ package sΠ:
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], `π-τ`: Expr[Ordʹ])(body: Expr[`Π-Function0`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
-                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             firstS   <- Semaphore[IO](1)
+            firstR   <- IO.ref(null: `[]`)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
                 val sync = linearCB.await >> prevS.acquire
                 for
                   nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                  nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                   main   =
                     for
                       stop <- if first then IO.pure(false) else linearD.get
@@ -306,8 +308,9 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
+                                  `][`     <- ${`[]`}.get
                                   timestamp <- currentTimeMillis >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> ${`π-τ`}, timestamp), ($ether, None, $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> ${`π-τ`}, timestamp), ($ether, None, $rate, `][`)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -316,16 +319,30 @@ package sΠ:
                                     for
                                       _   <- sync
                                       _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      _   <- ${\} {
+                                        prevR.get.flatMap { s =>
+                                          ${%}.update { m =>
+                                            val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                            if s eq null
+                                            then
+                                              m + (^ + $key -> (true, it))
+                                            else
+                                              m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                          }
+                                        }
+                                      }.unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
-                                       f, _) = opt.get
+                                       f, _,
+                                       s)  = opt.get
                                       _   <- b.await
                                       _   <- f.join
                                       _   <- $sleep
+                                      _   <- nextR.set(s).unlessA(s.isEmpty)
                                       _   <- nextS.release
+                                      _   <- ${`[]`}.set(s)
                                       _   <- supervise($body()(using ^^))
                                       _   <- loop(false)()
                                     yield ()
@@ -337,14 +354,14 @@ package sΠ:
                       ()
                   _     <- if last
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
                 yield
                   ()
               unfold
             }
             _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                        then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
           yield
             ()
         }
@@ -359,19 +376,21 @@ package sΠ:
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], dir: Expr[`π-$`])(body: Expr[`Π-Function1`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
-                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             firstS   <- Semaphore[IO](1)
+            firstR   <- IO.ref(null: `[]`)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
                 val sync = linearCB.await >> prevS.acquire
                 for
                   nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                  nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                   main   =
                     for
                       stop <- if first then IO.pure(false) else linearD.get
@@ -382,8 +401,9 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
+                                  `][`     <- ${`[]`}.get
                                   timestamp <- currentTimeMillis >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate, `][`)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -392,18 +412,32 @@ package sΠ:
                                     for
                                       _   <- sync
                                       _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      _   <- ${\} {
+                                        prevR.get.flatMap { s =>
+                                          ${%}.update { m =>
+                                            val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                            if s eq null
+                                            then
+                                              m + (^ + $key -> (true, it))
+                                            else
+                                              m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                          }
+                                        }
+                                      }.unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
-                                       f, i) = opt.get
+                                       f, i,
+                                       s)  = opt.get
                                       n   <- ν
                                       _   <- i.set(n)
                                       _   <- b.await
                                       _   <- f.join
                                       _   <- $sleep
+                                      _   <- nextR.set(s).unlessA(s.isEmpty)
                                       _   <- nextS.release
+                                      _   <- ${`[]`}.set(s)
                                       _   <- supervise($body(n)(using ^^))
                                       _   <- loop(false)()
                                     yield ()
@@ -415,14 +449,14 @@ package sΠ:
                       ()
                   _     <- if last
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
                 yield
                   ()
               unfold
             }
             _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                        then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
           yield
             ()
         }
@@ -434,19 +468,21 @@ package sΠ:
                   (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], dir: Expr[`π-$`])(body: Expr[`Π-Function0`])
                   (sleep: Expr[IO[Unit]])
                   (% : Expr[%], / : Expr[/], \ : Expr[\])
-                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                   (using Quotes): Expr[IO[Unit]] =
      '{ for
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           firstS   <- Semaphore[IO](1)
+          firstR   <- IO.ref(null: `[]`)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
               val sync = linearCB.await >> prevS.acquire
               for
                 nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                 main   =
                   for
                     stop <- if first then IO.pure(false) else linearD.get
@@ -457,8 +493,9 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
                                 `)(`     <- ${`)(`}.get
+                                `][`     <- ${`[]`}.get
                                 timestamp <- currentTimeMillis >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate, `][`)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -467,17 +504,31 @@ package sΠ:
                                   for
                                     _   <- sync
                                     _   <- timeset
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    _   <- ${\} {
+                                      prevR.get.flatMap { s =>
+                                        ${%}.update { m =>
+                                          val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                          if s eq null
+                                          then
+                                            m + (^ + $key -> (true, it))
+                                          else
+                                            m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                        }
+                                      }
+                                    }.unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
                                     _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
-                                     f, i) = opt.get
+                                     f, i,
+                                     s)  = opt.get
                                     _   <- i.set($value)
                                     _   <- b.await
                                     _   <- f.join
                                     _   <- $sleep
+                                    _   <- nextR.set(s).unlessA(s.isEmpty)
                                     _   <- nextS.release
+                                    _   <- ${`[]`}.set(s)
                                     _   <- supervise($body()(using ^^))
                                     _   <- loop(false)()
                                   yield ()
@@ -489,14 +540,14 @@ package sΠ:
                     ()
                 _     <- if last
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
               yield
                 ()
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
         yield
           ()
       }
@@ -511,19 +562,21 @@ package sΠ:
                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[() => IO[S]])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], dir: Expr[`π-$`])(body: Expr[`Π-Function0`])
                        (sleep: Expr[IO[Unit]])
                        (% : Expr[%], / : Expr[/], \ : Expr[\])
-                       (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                       (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                        (using Type[S], Quotes): Expr[IO[Unit]] =
        '{ for
             linearD  <- IO.deferred[Boolean]
             linearCB <- CyclicBarrier[IO]($parallelism)
             firstS   <- Semaphore[IO](1)
+            firstR   <- IO.ref(null: `[]`)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
                 val sync = linearCB.await >> prevS.acquire
                 for
                   nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                  nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                   main   =
                     for
                       stop <- if first then IO.pure(false) else linearD.get
@@ -534,8 +587,9 @@ package sΠ:
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
                                   `)(`     <- ${`)(`}.get
+                                  `][`     <- ${`[]`}.get
                                   timestamp <- currentTimeMillis >>= IO.ref
-                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Left(())), $rate, `][`)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -544,17 +598,31 @@ package sΠ:
                                     for
                                       _   <- sync
                                       _   <- timeset
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                      _   <- ${\} {
+                                        prevR.get.flatMap { s =>
+                                          ${%}.update { m =>
+                                            val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                            if s eq null
+                                            then
+                                              m + (^ + $key -> (true, it))
+                                            else
+                                              m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                          }
+                                        }
+                                      }.unlessA(enabled)
                                       opt <- continue.get.flatMap(_.get)
                                       _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                       _   <- IO.deferred[Option[<>]] >>= continue.set
                                       (_, b,
-                                       f, i) = opt.get
+                                       f, i,
+                                       s)  = opt.get
                                       _   <- $value().map(new `()`(_)) >>= i.set
                                       _   <- b.await
                                       _   <- f.join
                                       _   <- $sleep
+                                      _   <- nextR.set(s).unlessA(s.isEmpty)
                                       _   <- nextS.release
+                                      _   <- ${`[]`}.set(s)
                                       _   <- supervise($body()(using ^^))
                                       _   <- loop(false)()
                                     yield ()
@@ -566,14 +634,14 @@ package sΠ:
                       ()
                   _     <- if last
                            then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
                 yield
                   ()
               unfold
             }
             _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                        then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
           yield
             ()
         }
@@ -586,19 +654,21 @@ package sΠ:
                  (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], dir: Expr[`π-$`])(body: Expr[`Π-Function1`])
                  (sleep: Expr[IO[Unit]])
                  (% : Expr[%], / : Expr[/], \ : Expr[\])
-                 (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                 (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                  (using Quotes): Expr[IO[Unit]] =
      '{ for
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           firstS   <- Semaphore[IO](1)
+          firstR   <- IO.ref(null: `[]`)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
               val sync = linearCB.await >> prevS.acquire
               for
                 nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                 main   =
                   for
                     stop <- if first then IO.pure(false) else linearD.get
@@ -610,8 +680,9 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
                                 `)(`     <- ${`)(`}.get
+                                `][`     <- ${`[]`}.get
                                 timestamp <- currentTimeMillis >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate, `][`)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -620,17 +691,31 @@ package sΠ:
                                   for
                                     _   <- sync
                                     _   <- timeset
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    _   <- ${\} {
+                                      prevR.get.flatMap { s =>
+                                        ${%}.update { m =>
+                                          val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                          if s eq null
+                                          then
+                                            m + (^ + $key -> (true, it))
+                                          else
+                                            m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                        }
+                                      }
+                                    }.unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
                                     _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
-                                     f, _) = opt.get
+                                     f, _,
+                                     s)  = opt.get
                                     _   <- b.await
                                     _   <- f.join
                                     n   <- result.get
                                     _   <- $sleep
+                                    _   <- nextR.set(s).unlessA(s.isEmpty)
                                     _   <- nextS.release
+                                    _   <- ${`[]`}.set(s)
                                     _   <- supervise($body(n)(using ^^))
                                     _   <- loop(false)()
                                   yield ()
@@ -642,14 +727,14 @@ package sΠ:
                     ()
                 _     <- if last
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
               yield
                 ()
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
         yield
           ()
       }
@@ -661,19 +746,21 @@ package sΠ:
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], dir: Expr[`π-$`])(code: Expr[T => IO[T]])(body: Expr[`Π-Function1`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
-                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                    (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                     (using Type[T], Quotes): Expr[IO[Unit]] =
      '{ for
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           firstS   <- Semaphore[IO](1)
+          firstR   <- IO.ref(null: `[]`)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
               val sync = linearCB.await >> prevS.acquire
               for
                 nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                 main   =
                   for
                     stop <- if first then IO.pure(false) else linearD.get
@@ -685,8 +772,9 @@ package sΠ:
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
                                 `)(`     <- ${`)(`}.get
+                                `][`     <- ${`[]`}.get
                                 timestamp <- currentTimeMillis >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $dir, timestamp), ($ether, Some(Right(result)), $rate, `][`)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -695,17 +783,31 @@ package sΠ:
                                   for
                                     _   <- sync
                                     _   <- timeset
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    _   <- ${\} {
+                                      prevR.get.flatMap { s =>
+                                        ${%}.update { m =>
+                                          val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                          if s eq null
+                                          then
+                                            m + (^ + $key -> (true, it))
+                                          else
+                                            m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                        }
+                                      }
+                                    }.unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
                                     _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
-                                     f, _) = opt.get
+                                     f, _,
+                                     s)  = opt.get
                                     _   <- b.await
                                     _   <- f.join
                                     n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
                                     _   <- $sleep
+                                    _   <- nextR.set(s).unlessA(s.isEmpty)
                                     _   <- nextS.release
+                                    _   <- ${`[]`}.set(s)
                                     _   <- supervise($body(n)(using ^^))
                                     _   <- loop(false)()
                                   yield ()
@@ -717,14 +819,14 @@ package sΠ:
                     ()
                 _     <- if last
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
               yield
                 ()
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
         yield
           ()
       }
@@ -736,19 +838,21 @@ package sΠ:
                       (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String], `)(`: Expr[IOLocal[`)(`]], cap: Expr[`π-ζ`])(body: Expr[`Π-Function0`])
                       (sleep: Expr[IO[Unit]])
                       (% : Expr[%], / : Expr[/], \ : Expr[\])
-                      (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                      (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]],  ^ : Expr[String], `[]`: Expr[IOLocal[`[]`]])
                       (using Quotes): Expr[IO[Unit]] =
      '{ for
           linearD  <- IO.deferred[Boolean]
           linearCB <- CyclicBarrier[IO]($parallelism)
           firstS   <- Semaphore[IO](1)
+          firstR   <- IO.ref(null: `[]`)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int, prevS: Semaphore[IO], prevR: Ref[IO, `[]`])(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
               val sync = linearCB.await >> prevS.acquire
               for
                 nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
+                nextR <- if last then IO.pure(firstR) else IO.ref(null: `[]`)
                 main   =
                   for
                     stop <- if first then IO.pure(false) else linearD.get
@@ -758,10 +862,11 @@ package sΠ:
                                 continue <- IO.deferred[Option[<>]] >>= IO.ref
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
-                                polarity  = $cap == `π-enter` || $cap == `π-exit` || $cap == `π-merge+`
                                 `)(`     <- ${`)(`}.get
+                                `][`     <- ${`[]`}.get
+                                polarity  = $cap == `π-enter` || $cap == `π-exit` || $cap == `π-merge+`
                                 timestamp <- currentTimeMillis >>= IO.ref
-                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $cap, timestamp), ($ether, Some(if polarity then Right(null) else Left(())), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> ((deferred -> continue, `)(` -> $cap, timestamp), ($ether, Some(if polarity then Right(null) else Left(())), $rate, `][`)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -770,16 +875,30 @@ package sΠ:
                                   for
                                     _   <- sync
                                     _   <- timeset
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    _   <- ${\} {
+                                      prevR.get.flatMap { s =>
+                                        ${%}.update { m =>
+                                          val it = m(^ + $key).asInstanceOf[(Boolean, +)]._2
+                                          if s eq null
+                                          then
+                                            m + (^ + $key -> (true, it))
+                                          else
+                                            m + (^ + $key -> (true, it.copy(_2 = it._2.copy(_4 = s))))
+                                        }
+                                      }
+                                    }.unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
                                     _   <- ((linearCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
-                                     f, _) = opt.get
+                                     f, _,
+                                     s)  = opt.get
                                     _   <- b.await
                                     _   <- f.join
                                     _   <- $sleep
+                                    _   <- nextR.set(s).unlessA(s.isEmpty)
                                     _   <- nextS.release
+                                    _   <- ${`[]`}.set(s)
                                     _   <- supervise($body()(using ^^))
                                     _   <- loop(false)()
                                   yield ()
@@ -791,14 +910,14 @@ package sΠ:
                     ()
                 _     <- if last
                          then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
+                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS, nextR)(^^) }
               yield
                 ()
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism, firstS, firstR)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS, firstR)(${^}))
         yield
           ()
       }

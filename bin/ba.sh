@@ -148,9 +148,9 @@ function ba_() {
                   --repo https://packages.confluent.io/maven \
                   --dep org.apache.kafka:kafka-clients:4.3.1 \
                   --dep org.apache.avro:avro:1.12.2 \
-                  --dep io.confluent:kafka-avro-serializer:8.3.1,exclude=org.apache.kafka%kafka-clients \
+                  --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.36.0 \
-                  --dep software.amazon.awssdk:sqs:2.54.19 \
+                  --dep software.amazon.awssdk:sqs:2.55.0 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \
@@ -159,6 +159,7 @@ function ba_() {
 #                  -Dpisc.bioambients.communications.batch.threshold=0 \
 #                  -Dpisc.bioambients.communications.timeout.microseconds=123456 \
 #                  -Dpisc.bioambients.communications.exit.passthrough=true \
+#                  -Dpisc.bioambients.communications.causal.sets=true \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 
