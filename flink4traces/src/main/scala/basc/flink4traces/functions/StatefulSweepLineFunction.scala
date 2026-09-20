@@ -2,8 +2,6 @@ package basc
 package flink4traces
 package functions
 
-import java.time.Duration
-
 import java.util.{ Collections, HashMap => Map, LinkedList => List }
 
 import org.apache.flink.api.common.state.{ ListState, ListStateDescriptor, ValueState, ValueStateDescriptor }

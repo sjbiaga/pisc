@@ -26,7 +26,7 @@ package object rabbitmq:
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String, keyBy: String,
                      rate: String, probability: String,
-                     delay: Option[Double], duration: Option[Double],
+                     delay: Option[Double], syncRate: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
@@ -140,7 +140,7 @@ package object rabbitmq:
                   <.th("Rate"),
                   <.th("Probability"),
                   <.th("Delay"),
-                  <.th("Duration"),
+                  <.th("SyncRate"),
                   <.th("Direction").when(p.isBioAmbients),
                   <.th("Capability").when(p.isBioAmbients),
                   <.th("From").when(p.isBioAmbients),
@@ -166,7 +166,7 @@ package object rabbitmq:
                        <.td(msg.rate),
                        <.td(msg.probability),
                        <.td(msg.delay.getOrElse(Double.PositiveInfinity).toString),
-                       <.td(msg.duration.getOrElse(Double.NaN).toString),
+                       <.td(msg.syncRate.getOrElse(Double.PositiveInfinity).toString),
                        <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
                        <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
                        <.td(msg.from),

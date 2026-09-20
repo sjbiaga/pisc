@@ -143,10 +143,10 @@ package object `Π-loop`:
         val nel = ∥(it)(`π-wand`._1)()
         val nelʹ = nel.map {
           _.map {
-            case (key1, key2, in, ddp, cs) =>
+            case (key1, key2, in, drp, cs) =>
               val (pckots1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
               val (pckots2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-              (key1, key2) -> (ddp, in, cs, (pckots1, pckots2))
+              (key1, key2) -> (drp, in, cs, (pckots1, pckots2))
           }
         }
         ZIO.collectAll {
@@ -223,7 +223,7 @@ package object `Π-loop`:
                 ZIO.collectAll {
                   nel.map { nel =>
                     ZIO.collectAllParDiscard {
-                      nel.map { case ((key1, key2), (ddp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+                      nel.map { case ((key1, key2), (drp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
                                   if stop
@@ -266,7 +266,7 @@ package object `Π-loop`:
                                                 kb           <- feedback.keyByR.get
                                                 now          <- currentTimeMillis
                                                 _            <- feedback.lastR.set(now -> nc._2)
-                                                _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), ddp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
+                                                _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), drp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
                                                 _            <- sem.release
                                                 _            <- started.update(_ - 1)
                                               yield
@@ -332,7 +332,7 @@ package object `Π-loop`:
             ZIO.collectAll {
               nel.map { nel =>
                 ZIO.collectAllParDiscard {
-                  nel.map { case ((key1, key2), (ddp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+                  nel.map { case ((key1, key2), (drp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
                               val k1 = key1.substring(36)
                               val k2 = key2.substring(36)
                               if stop
@@ -375,7 +375,7 @@ package object `Π-loop`:
                                             kb           <- feedback.keyByR.get
                                             now          <- currentTimeMillis
                                             _            <- feedback.lastR.set(now -> nc._2)
-                                            _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), ddp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
+                                            _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), drp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
                                             _            <- sem.release
                                             _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
                                           yield

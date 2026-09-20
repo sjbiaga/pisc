@@ -1,3 +1,9 @@
+import org.scalajs.jsenv.nodejs.NodeJSEnv
+
+Test / jsEnv := new NodeJSEnv(
+  NodeJSEnv.Config().withArgs(List("--import", "./feedback/node-css-loader.js"))
+)
+
 libraryDependencies ++= Seq("com.github.japgolly.scalajs-react" %%% "core-bundle-cats_effect",
                             "com.github.japgolly.scalajs-react" %%% "extra",
                             "com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3"

@@ -32,6 +32,7 @@ services:
     ports:
       - "7124:7124" # Embedded Java-WebSocket broadcast port for Scala.js React / loadAvg
       - "7224:7224" # Embedded Java-WebSocket broadcast port for Scala.js React / sweepLine
+      - "7324:7324" # Embedded Java-WebSocket broadcast port for Scala.js React / velocityReport
     environment:
       - |
         FLINK_PROPERTIES=

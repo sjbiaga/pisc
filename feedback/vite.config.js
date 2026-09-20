@@ -1,9 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import scalajs from '@scala-js/vite-plugin-scalajs';
+import path from "path";
 
 export default defineConfig({
   plugins: [react(), scalajs({ cwd: ".." })],
+  resolve: {
+    alias: {
+      // Directs any import starting with "#/" back to your actual src folder
+      "#": path.resolve(import.meta.dirname, "./src/main/scala"),
+    },
+  },
   server: {
     proxy: {
       '/redpanda-proxy': {

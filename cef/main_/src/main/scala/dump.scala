@@ -51,7 +51,7 @@ package object `Π-dump`:
   private def record(number: Long,
                      clock: Double, started: Long, ended: Long,
                      keyBy: Boolean,
-                     delay: Double, duration: Double, probability: BigDecimal,
+                     delay: Double, syncRate: Double, probability: BigDecimal,
                      causes: List[Long],
                      ambient: (String, (String, String))): String => IO[Unit] =
     _.split(",") match
@@ -62,7 +62,7 @@ package object `Π-dump`:
                      clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                     rate, probability, delay, duration,
+                     rate, probability, delay, syncRate,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
         }
       case _ =>
@@ -90,10 +90,10 @@ package object `Π-dump`:
     -.take.flatMap {
       case Some(_) if `π-traces` eq null =>
         dump
-      case Some(((no, cl), ((ts1, ts2), ts), (k1, k2, kb), ((delay, duration), probability), causes, (l1, l2))) =>
+      case Some(((no, cl), ((ts1, ts2), ts), (k1, k2, kb), ((delay, syncRate), probability), causes, (l1, l2))) =>
         for
-          _ <- record(no, cl, ts1, ts, kb, delay, duration, probability, causes, l1)(k1)
-          _ <- record(no, cl, ts2, ts, kb, delay, duration, probability, causes, l2)(k2).unlessA(k1 == k2)
+          _ <- record(no, cl, ts1, ts, kb, delay, syncRate, probability, causes, l1)(k1)
+          _ <- record(no, cl, ts2, ts, kb, delay, syncRate, probability, causes, l2)(k2).unlessA(k1 == k2)
           _ <- IO.cede >> dump
         yield
           ()

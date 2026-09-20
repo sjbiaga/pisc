@@ -664,9 +664,10 @@ object Item:
               ^.id             := "analytics-select",
               ^.onChange      ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(`type` = e.target.value)) } },
 
-              <.option(^.value := "-"        , "-"           ),
-              <.option(^.value := "loadavg"  , "Load Average"),
-              <.option(^.value := "sweepline", "Sweep Line"  )
+              <.option(^.value := "-"             , "-"                ),
+              <.option(^.value := "loadavg"       , "Load Average"     ),
+              <.option(^.value := "sweepline"     , "Sweep Line"       ),
+              <.option(^.value := "velocityreport", "Velocity Report"  )
             ),
 
             ( if p.kafka.value.analytics.`type` == "loadavg"
@@ -687,6 +688,17 @@ object Item:
                 val url = s"$_url/traces-sweepline-$topic?pid=$pid"
                 val props = analytics.sweepline.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.sweepline.Component(props))
+              else
+                <.div(^.display.inlineBlock)
+            )
+
+            ( if p.kafka.value.analytics.`type` == "velocityreport"
+              then
+                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
+                val pid = if own then p.service.Meta.get("pid").toLong else 0
+                val url = s"$_url/traces-velocityreport-$topic?pid=$pid"
+                val props = analytics.velocityreport.Props(p.key, url)(signal)
+                <.div(^.display.inlineBlock, analytics.velocityreport.Component(props))
               else
                 <.div(^.display.inlineBlock)
             )

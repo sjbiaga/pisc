@@ -47,7 +47,7 @@ package object `Π-traces`:
               agent: String, name: String, polarity: Option[Boolean],
               key: String, guard: Boolean, label: String, keyBy: Boolean,
               rate: String, probability: BigDecimal,
-              delay: Double, duration: Double,
+              delay: Double, syncRate: Double,
               dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit
     def close: Unit
 
@@ -58,14 +58,14 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, probability: BigDecimal,
-                       delay: Double, duration: Double,
+                       delay: Double, syncRate: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              ProcessHandle.current.pid,
              number, clock, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
-             rate, probability, delay, duration,
+             rate, probability, delay, syncRate,
              dir_cap, from, to)
     override def close: Unit = {}
 
@@ -77,20 +77,20 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, probability: BigDecimal,
-                       delay: Double, duration: Double,
+                       delay: Double, syncRate: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                              ProcessHandle.current.pid,
                              number, clock, started, ended,
                              agent, name, polarity.getOrElse(""),
                              key, guard, label,
-                             rate, probability, delay, duration,
+                             rate, probability, delay, syncRate,
                              dir_cap, from, to)
       if snapshot.isDefined
       then
         var ps: PrintStream = null
         try
-          ps = PrintStream(FileOutputStream("" + ProcessHandle.current.pid + "-" + number + "-" + polarity.getOrElse("") + ".xml", false), true)
+          ps = PrintStream(FileOutputStream("" + ProcessHandle.current.pid + '-' + number + '-' + polarity.getOrElse("") + ".xml", false), true)
           ps.println(snapshot.get)
         finally
           if ps ne null then try ps.close catch _ => {}
@@ -116,10 +116,10 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, probability: BigDecimal,
-                       delay: Double, duration: Double,
+                       delay: Double, syncRate: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
-      val keyBy = if _keyBy then agent + "-" + label.replaceAll("∥", "|") else "ANY"
+      val keyBy = if _keyBy then agent + '-' + label.replaceAll("∥", "|") else "ANY"
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message =
         s"""{
@@ -130,7 +130,7 @@ package object `Π-traces`:
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
             |"rate":"$rate","probability":"$probability",
             |"delay":${if delay.isPosInfinity then null else delay},
-            |"duration":${if duration.isNaN then null else duration},
+            |"syncRate":${if syncRate.isPosInfinity then null else syncRate},
             |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
             |}""".stripMargin.replaceAll("\n", "").trim
       val request = SendMessageRequest
@@ -178,7 +178,7 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, probability: BigDecimal,
-                       delay: Double, duration: Double,
+                       delay: Double, syncRate: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
       avroRecord.put("pid", ProcessHandle.current.pid)
@@ -196,7 +196,7 @@ package object `Π-traces`:
       avroRecord.put("rate", rate)
       avroRecord.put("probability", probability.toString)
       avroRecord.put("delay", if delay.isPosInfinity then null else delay)
-      avroRecord.put("duration", if duration.isNaN then null else duration)
+      avroRecord.put("syncRate", if syncRate.isPosInfinity then null else syncRate)
       avroRecord.put("dir_cap", dir_cap)
       avroRecord.put("from", from)
       avroRecord.put("to", to)
@@ -208,7 +208,7 @@ package object `Π-traces`:
           val record = ProducerRecord[String, String](topic, keyBy, avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val keyBy = if _keyBy then agent + "-" + label else "ANY"
+          val keyBy = if _keyBy then agent + '-' + label else "ANY"
           avroRecord.put("keyBy", keyBy)
           val record = ProducerRecord[String, GenericRecord](topic, keyBy, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
@@ -267,7 +267,7 @@ package object `Π-traces`:
         { "name" : "probability", "type": "string" },
 
         { "name" : "delay", "type": ["null", "double"] },
-        { "name" : "duration", "type": ["null", "double"] },
+        { "name" : "syncRate", "type": ["null", "double"] },
 
         { "name" : "dir_cap", "type": "string" },
         { "name" : "from", "type": "string" },
@@ -310,9 +310,9 @@ package object `Π-traces`:
                        agent: String, name: String, polarity: Option[Boolean],
                        key: String, guard: Boolean, label: String, _keyBy: Boolean,
                        rate: String, probability: BigDecimal,
-                       delay: Double, duration: Double,
+                       delay: Double, syncRate: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
-      val keyBy = if _keyBy then agent + "-" + label else "ANY"
+      val keyBy = if _keyBy then agent + '-' + label else "ANY"
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message =
         s"""{
@@ -323,7 +323,7 @@ package object `Π-traces`:
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
             |"rate":"$rate","probability":"$probability",
             |"delay":${if delay.isPosInfinity then null else delay},
-            |"duration":${if duration.isNaN then null else duration},
+            |"syncRate":${if syncRate.isPosInfinity then null else syncRate},
             |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
             |}""".stripMargin.replaceAll("\n", "").trim
         .getBytes("UTF-8")

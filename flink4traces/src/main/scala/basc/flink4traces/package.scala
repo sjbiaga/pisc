@@ -9,13 +9,24 @@ import org.apache.flink.util.Collector
 
 package object flink4traces:
 
+  object Rate:
+    def parse(rate: String): Rate =
+      rate.charAt(0) match
+        case '∞' => ∞(rate.substring(2, rate.length - 1).toLong)
+        case '⊤' => ⊤(rate.substring(2, rate.length - 1).toLong)
+        case _   => `ℝ⁺`(java.math.BigDecimal(rate.substring(3, rate.length - 1)))
+  sealed trait Rate extends Any
+  case class ∞(weight: Long) extends AnyVal with Rate
+  case class `ℝ⁺`(rate: java.math.BigDecimal) extends AnyVal with Rate
+  case class ⊤(weight: Long) extends AnyVal with Rate
+
   case class Traces(pid: Long,
                     number: Long, causes: List[Long],
                     clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
                     key: String, guard: Boolean, label: String, keyBy: String,
-                    rate: String, probability: String,
-                    delay: Option[Double], duration: Option[Double],
+                    rate: Rate, probability: java.math.BigDecimal,
+                    delay: Double, syncRate: Double,
                     dir_cap: String, from: String, to: String,
                     snapshot: Option[String])
 
@@ -38,10 +49,10 @@ package object flink4traces:
           val guard = record.get("guard").asInstanceOf[Boolean]
           val label = record.get("label").toString
           val keyBy = record.get("keyBy").toString
-          val rate = record.get("rate").toString
-          val probability = record.get("probability").toString
-          val delay = Option(record.get("delay")).map(_.asInstanceOf[Double])
-          val duration = Option(record.get("duration")).map(_.asInstanceOf[Double])
+          val rate = Rate.parse(record.get("rate").toString)
+          val probability = java.math.BigDecimal(record.get("probability").toString)
+          val delay = Option(record.get("delay")).map(_.asInstanceOf[Double]).getOrElse(Double.PositiveInfinity)
+          val syncRate = Option(record.get("syncRate")).map(_.asInstanceOf[Double]).getOrElse(Double.PositiveInfinity)
           val dir_cap = record.get("dir_cap").toString
           val from = record.get("from").toString
           val to = record.get("to").toString
@@ -53,7 +64,7 @@ package object flink4traces:
                    agent, name, polarity,
                    key, guard, label, keyBy,
                    rate, probability,
-                   delay, duration,
+                   delay, syncRate,
                    dir_cap, from, to, snapshot)
         catch _.printStackTrace()
 
@@ -85,7 +96,7 @@ package object flink4traces:
       { "name" : "probability", "type": "string" },
 
       { "name" : "delay", "type": ["null", "double"] },
-      { "name" : "duration", "type": ["null", "double"] },
+      { "name" : "syncRate", "type": ["null", "double"] },
 
       { "name" : "dir_cap", "type": "string" },
       { "name" : "from", "type": "string" },

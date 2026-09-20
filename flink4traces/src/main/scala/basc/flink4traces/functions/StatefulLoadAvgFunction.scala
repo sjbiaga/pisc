@@ -75,7 +75,7 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
         count += 1
 
         {
-          val (count, clock) = perPIDData.getOrDefault(traces.pid, (0, .0))
+          val (count, _) = perPIDData.getOrDefault(traces.pid, (0, .0))
           perPIDData.put(traces.pid, (count + 1, traces.clock))
         }
 
