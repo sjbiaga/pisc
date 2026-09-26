@@ -24,7 +24,7 @@ package object sweepline:
                        label: String,
                        clock: Double,
                        histogram: Map[Int, Double],
-                       perPIDSweepLine: Map[Long, SweepLine]):
+                       perUUIDSweepLine: Map[String, SweepLine]):
     def toJson: String =
       s"""{
           |"timestamp":$timestamp,
@@ -36,7 +36,7 @@ package object sweepline:
   case class SweepLine1msBurst(timestamp: Long,
                                clock: Double,
                                histograms: Map[String, SweepLine],
-                               perPIDSweepLine1msBurst: Map[Long, SweepLine1msBurst]):
+                               perUUIDSweepLine1msBurst: Map[String, SweepLine1msBurst]):
     def toJson: String =
       s"""{
           |"timestamp":$timestamp,

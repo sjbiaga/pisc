@@ -5,8 +5,8 @@ package velocityreport
 import java.time.Duration
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
+
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner
 
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows
@@ -27,8 +27,10 @@ object VelocityReportPipeline:
                          out: Collector[WindowVelocityReport]): Unit =
       val i = key.indexOf(' ')
       val j = i + 1 + key.substring(i + 1).indexOf(' ')
+      val k = j + 1 + key.substring(j + 1).indexOf(' ')
 
-      val (pid, name, label) = (key.substring(0, i).toLong, key.substring(i + 1, j), key.substring(j + 1))
+      val (hid, name, label, dir_cap) = (key.substring(0, i), key.substring(i + 1, j), key.substring(j + 1, k), key.substring(k + 1))
+      val uuid = hid.substring(0, hid.indexOf('-'))
 
       val acc = elements.iterator.next
 
@@ -36,12 +38,13 @@ object VelocityReportPipeline:
       val deltaClock = if acc.maxClock >= acc.minClock && acc.totalEvents > 0 then acc.maxClock - acc.minClock else .0
 
       // Structural Velocity: How many execution layers are added per unit of stochastic time
-      val velocity = try deltaDepth.toDouble / deltaClock catch _ => Double.PositiveInfinity
+      val velocity = try java.lang.Double(deltaDepth.toDouble / deltaClock) catch _ => null
 
       out.collect:
         WindowVelocityReport(name,
-                             pid,
+                             uuid,
                              label,
+                             dir_cap,
                              context.window.getEnd.toDouble / 1000,
                              deltaDepth,
                              deltaClock,
@@ -67,11 +70,11 @@ object VelocityReportPipeline:
       .assignTimestampsAndWatermarks(watermarkStrategy)
 
     val depthTraceStream: DataStream[DepthTrace] = timestampedStream
-      .keyBy(_.pid)
+      .keyBy(_.keyBy)
       .process(new CausalDepthTrackerFunction(keepPast, purgeThreshold))
 
     val velocityReportStream: DataStream[WindowVelocityReport] = depthTraceStream
-      .keyBy { it => s"${it.pid} ${it.name} ${it.label}" }
+      .keyBy { it => s"${it.hid} ${it.name} ${it.label} ${it.dir_cap}" }
       .window(SlidingEventTimeWindows.of(Duration.ofMillis(windowDuration), Duration.ofMillis(windowInterval)))
       .aggregate(new VelocityAggregator(), new VelocityWindowProcessor())
 

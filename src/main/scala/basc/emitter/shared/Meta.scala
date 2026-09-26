@@ -54,6 +54,7 @@ abstract trait Meta:
     case r: Term => Term.Apply(\("ℝ⁺"), Term.ArgClause(r :: Nil))
     case Symbol(r) => Term.Apply(\("ℝ⁺"), Term.ArgClause(\(r) :: Nil))
     case w: Long => Term.Apply(\("⊤"), Term.ArgClause(Lit.Long(w) :: Nil))
+    case (it, whatIf) => Term.Apply(rate(it), Term.ArgClause(rate(whatIf) :: Nil))
     case _ => rate(1L)
   }
 
@@ -191,6 +192,7 @@ object Meta extends Meta:
     case w: Long if w < 0 => "∞(" + -w + ")"
     case r: BigDecimal => "ℝ⁺(" + r + ")"
     case w: Long => "⊤(" + w + ")"
+    case (r, _) => rateʹ(r)
     case _: Term | Symbol(_) => throw TracesRateException
     case _ => rateʹ(1L)
   }

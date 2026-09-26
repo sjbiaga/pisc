@@ -28,10 +28,25 @@
 
 import _root_.scala.jdk.CollectionConverters.*
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.{ List, Map, Set }
+
+import _root_.io.circe.{ Codec, Encoder }
+import _root_.io.circe.syntax.*
 
 
 package object `Π-traces`:
+
+  enum KeyBy:
+    case HID, ANY, AGENT_LABEL
+
+  enum Plugin derives Codec.AsObject:
+    case syncRate(rate: Option[BigDecimal])
+    case probability(probability: BigDecimal)
+    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
+
+  object Plugin:
+    given Encoder[BigDecimal] = Encoder.encodeString.contramap(_.toString)
+
 
   var `π-traces`: `Π-Traces` = null
 
@@ -41,56 +56,58 @@ package object `Π-traces`:
 
 
   sealed trait `Π-Traces`:
+    lazy val uuid = java.util.UUID.randomUUID.toString.replaceAll("-", "")
+    protected var rootLabels = Map[Long, String]()
     val backend: `Π-Backend` = `Π-Backend`.same
-    def apply(number: Long, causes: List[Long],
+    def apply(number: Long, causes: Set[Long],
               clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
-              key: String, guard: Boolean, label: String, keyBy: Boolean,
-              rate: String, probability: BigDecimal,
-              delay: Double, syncRate: Double,
-              dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit
+              key: String, guard: Boolean, label: String, keyBy: KeyBy,
+              rate: String, plugins: Seq[Plugin], delay: Double,
+              dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
+      keyBy match
+        case KeyBy.HID if causes.isEmpty && !rootLabels.contains(number) =>
+          rootLabels += number -> (agent + '-' + label)
+        case _ =>
     def close: Unit
 
 
   case object `Π-ConsoleCSV` extends `Π-Traces`:
-    override def apply(number: Long, _causes: List[Long],
+    override def apply(number: Long, _causes: Set[Long],
                        clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, probability: BigDecimal,
-                       delay: Double, syncRate: Double,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, _plugins: Seq[Plugin], delay: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-             ProcessHandle.current.pid,
+      printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              number, clock, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
-             rate, probability, delay, syncRate,
+             rate, delay,
              dir_cap, from, to)
     override def close: Unit = {}
 
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`:
     import _root_.java.io.{ PrintStream, FileOutputStream }
-    override def apply(number: Long, _causes: List[Long],
+    override def apply(number: Long, _causes: Set[Long],
                        clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, probability: BigDecimal,
-                       delay: Double, syncRate: Double,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, _plugins: Seq[Plugin], delay: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
-      `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                             ProcessHandle.current.pid,
+      `Π-FileCSV`.csv.printf("%s,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                             uuid,
                              number, clock, started, ended,
                              agent, name, polarity.getOrElse(""),
                              key, guard, label,
-                             rate, probability, delay, syncRate,
+                             rate, delay,
                              dir_cap, from, to)
       if snapshot.isDefined
       then
         var ps: PrintStream = null
         try
-          ps = PrintStream(FileOutputStream("" + ProcessHandle.current.pid + '-' + number + '-' + polarity.getOrElse("") + ".xml", false), true)
+          ps = PrintStream(FileOutputStream(uuid + '-' + number + '-' + polarity.getOrElse("") + ".xml", false), true)
           ps.println(snapshot.get)
         finally
           if ps ne null then try ps.close catch _ => {}
@@ -111,26 +128,34 @@ package object `Π-traces`:
                            secretKey: String,
                            queue: String) extends `Π-Traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
-    override def apply(number: Long, causes: List[Long],
+    override def apply(number: Long, causes: Set[Long],
                        clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, probability: BigDecimal,
-                       delay: Double, syncRate: Double,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
+      super.apply(number, causes,
+                  clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay,
+                  dir_cap, from, to, _snapshot)
+      val keyBy =
+        _keyBy match
+          case KeyBy.HID => uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number)).replaceAll("∥", "|")
+          case KeyBy.ANY => "ANY"
+          case _         => agent + '-' + label.replaceAll("∥", "|")
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
-      val keyBy = if _keyBy then agent + '-' + label.replaceAll("∥", "|") else "ANY"
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message =
         s"""{
-            |"pid":${ProcessHandle.current.pid},
+            |"uuid":"$uuid",
             |"number":$number,"causes":${causes.mkString("[", ",", "]")},
             |"clock":$clock,"started":$started,"ended":$ended,
             |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
-            |"rate":"$rate","probability":"$probability",
+            |"rate":"$rate","plugins":${plugins.asJson.noSpaces},
             |"delay":${if delay.isPosInfinity then null else delay},
-            |"syncRate":${if syncRate.isPosInfinity then null else syncRate},
             |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
             |}""".stripMargin.replaceAll("\n", "").trim
       val request = SendMessageRequest
@@ -173,15 +198,20 @@ package object `Π-traces`:
                        topic: String) extends `Π-Traces`:
     import org.apache.avro.generic.{ GenericData, GenericRecord }
     import org.apache.kafka.clients.producer.ProducerRecord
-    override def apply(number: Long, causes: List[Long],
+    override def apply(number: Long, causes: Set[Long],
                        clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, probability: BigDecimal,
-                       delay: Double, syncRate: Double,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double,
                        dir_cap: String, from: String, to: String, snapshot: Option[String]): Unit =
+      super.apply(number, causes,
+                  clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay,
+                  dir_cap, from, to, snapshot)
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
-      avroRecord.put("pid", ProcessHandle.current.pid)
+      avroRecord.put("uuid", uuid)
       avroRecord.put("number", number)
       avroRecord.put("causes", causes.asJava)
       avroRecord.put("clock", clock)
@@ -194,21 +224,42 @@ package object `Π-traces`:
       avroRecord.put("guard", guard)
       avroRecord.put("label", label)
       avroRecord.put("rate", rate)
-      avroRecord.put("probability", probability.toString)
+      avroRecord.put("plugins", plugins.map {
+        case Plugin.syncRate(rate) =>
+          val syncRateRecord = GenericData.Record(`Π-Kafka`.syncRatePluginSchema)
+          syncRateRecord.put("rate", rate.map(_.toString).getOrElse(null))
+          syncRateRecord
+        case Plugin.probability(probability) =>
+          val probRecord = GenericData.Record(`Π-Kafka`.probabilityPluginSchema)
+          probRecord.put("probability", probability.toString)
+          probRecord
+        case Plugin.whatIf(factor, term) =>
+          val whatIfRecord = GenericData.Record(`Π-Kafka`.whatIfPluginSchema)
+          whatIfRecord.put("factor", factor.toString)
+          whatIfRecord.put("term", term.map(_.toString).getOrElse(null))
+          whatIfRecord
+      }.asJava)
       avroRecord.put("delay", if delay.isPosInfinity then null else delay)
-      avroRecord.put("syncRate", if syncRate.isPosInfinity then null else syncRate)
       avroRecord.put("dir_cap", dir_cap)
       avroRecord.put("from", from)
       avroRecord.put("to", to)
       avroRecord.put("snapshot", snapshot.map(_.replaceAll("""\\n""", "\n").replaceAll("""\\t""", "\t")).getOrElse(null))
       backend match
         case `Π-Backend`.redpanda =>
-          val keyBy = if _keyBy then s"""{"label":"$agent-$label"}""" else s"""{"label":"ANY"}"""
+          val keyBy =
+            _keyBy match
+              case KeyBy.HID => s"""{"hid":"${uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))}"}"""
+              case KeyBy.ANY => s"""{"label":"$agent-$label"}"""
+              case _         => s"""{"label":"ANY"}"""
           avroRecord.put("keyBy", keyBy)
           val record = ProducerRecord[String, String](topic, keyBy, avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val keyBy = if _keyBy then agent + '-' + label else "ANY"
+          val keyBy =
+            _keyBy match
+              case KeyBy.HID => uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+              case KeyBy.ANY => "ANY"
+              case _         => agent + '-' + label
           avroRecord.put("keyBy", keyBy)
           val record = ProducerRecord[String, GenericRecord](topic, keyBy, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
@@ -245,7 +296,7 @@ package object `Π-traces`:
       "type": "record",
       "name": "BioAmbients2Scala",
       "fields": [
-        { "name" : "pid", "type": "long" },
+        { "name" : "uuid", "type": "string" },
 
         { "name" : "number", "type": "long" },
         { "name" : "causes", "type": { "type": "array", "items": "long", "default": [] } },
@@ -264,10 +315,35 @@ package object `Π-traces`:
         { "name" : "keyBy", "type": "string" },
 
         { "name" : "rate", "type": "string" },
-        { "name" : "probability", "type": "string" },
+        { "name" : "plugins",
+          "type": {
+            "type": "array",
+            "items": [
+              { "name": "syncRate",
+                "type": "record",
+                "fields": [
+                  { "name": "rate", "type": ["null", "string"] }
+                ]
+              },
+              { "name": "probability",
+                "type": "record",
+                "fields": [
+                  { "name": "probability", "type": "string" }
+                ]
+              },
+              { "name": "whatIf",
+                "type": "record",
+                "fields": [
+                  { "name": "factor", "type": "string" },
+                  { "name": "term", "type": ["null", "string"] }
+                ]
+              }
+            ],
+            "default": []
+          }
+        },
 
         { "name" : "delay", "type": ["null", "double"] },
-        { "name" : "syncRate", "type": ["null", "double"] },
 
         { "name" : "dir_cap", "type": "string" },
         { "name" : "from", "type": "string" },
@@ -277,6 +353,10 @@ package object `Π-traces`:
     }"""
 
     val schema = Schema.Parser().parse(_schema)
+    val pluginsSchema = schema.getField("plugins").schema.getElementType.getTypes
+    val syncRatePluginSchema = pluginsSchema.stream.filter(_.getName == "syncRate").findFirst.get
+    val probabilityPluginSchema = pluginsSchema.stream.filter(_.getName == "probability").findFirst.get
+    val whatIfPluginSchema = pluginsSchema.stream.filter(_.getName == "whatIf").findFirst.get
 
     object Redpanda:
 
@@ -305,25 +385,33 @@ package object `Π-traces`:
 
 
   case class `Π-RabbitMQ`(host: String, port: Int, exchange: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
-    override def apply(number: Long, causes: List[Long],
+    override def apply(number: Long, causes: Set[Long],
                        clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, probability: BigDecimal,
-                       delay: Double, syncRate: Double,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double,
                        dir_cap: String, from: String, to: String, _snapshot: Option[String]): Unit =
-      val keyBy = if _keyBy then agent + '-' + label else "ANY"
+      super.apply(number, causes,
+                  clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay,
+                  dir_cap, from, to, _snapshot)
+      val keyBy =
+        _keyBy match
+          case KeyBy.HID => uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+          case KeyBy.ANY => "ANY"
+          case _         => agent + '-' + label
       val snapshot = _snapshot.fold(null)("\"" + _.replaceAll("\"", "\\\\\\\"").replaceAll("""([\n\t])""", """\\\\$1""") + "\"")
       val message =
         s"""{
-            |"pid":${ProcessHandle.current.pid},
+            |"uuid":"$uuid",
             |"number":$number,"causes":${causes.mkString("[", ",", "]")},
             |"clock":$clock,"started":$started,"ended":$ended,
             |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
-            |"rate":"$rate","probability":"$probability",
+            |"rate":"$rate","plugins":${plugins.asJson.noSpaces},
             |"delay":${if delay.isPosInfinity then null else delay},
-            |"syncRate":${if syncRate.isPosInfinity then null else syncRate},
             |"dir_cap":"$dir_cap","from":"$from","to":"$to","snapshot":$snapshot
             |}""".stripMargin.replaceAll("\n", "").trim
         .getBytes("UTF-8")

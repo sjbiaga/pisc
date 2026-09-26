@@ -5,15 +5,18 @@ package flink4traces
 package object velocityreport:
 
   case class DepthTrace(name: String,
-                        pid: Long,
+                        hid: String,
+                        uuid: String,
                         label: String,
+                        dir_cap: String,
                         clock: Double,
                         depth: Long,
                         parentClock: Double)
 
   case class AttributionReport(name: String,
-                               pid: Long,
+                               uuid: String,
                                label: String,
+                               dir_cap: String,
                                clockStep: Double,
                                microscopicThreshold: Double,
                                isMicroscopicStep: Boolean):
@@ -21,6 +24,7 @@ package object velocityreport:
       s"""{
           |"name":"$name",
           |"label":"$label",
+          |"dir_cap":"$dir_cap",
           |"clockStep":$clockStep,
           |"microscopicThreshold":$microscopicThreshold,
           |"isMicroscopicStep":$isMicroscopicStep
@@ -28,17 +32,19 @@ package object velocityreport:
 
 
   case class WindowVelocityReport(name: String,
-                                  pid: Long,
+                                  uuid: String,
                                   label: String,
+                                  dir_cap: String,
                                   clock: Double,
                                   deltaDepth: Long,
                                   deltaClock: Double,
-                                  structuralVelocity: Double, // ΔDepth / ΔClock
+                                  structuralVelocity: java.lang.Double, // ΔDepth / ΔClock
                                   eventDensity: Long):
     def toJson: String =
       s"""{
           |"name":"$name",
           |"label":"$label",
+          |"dir_cap":"$dir_cap",
           |"clock":$clock,
           |"deltaDepth":$deltaDepth,
           |"deltaClock":$deltaClock,
@@ -47,7 +53,7 @@ package object velocityreport:
           |}""".stripMargin.replaceAll("\n", "").trim
 
   case class StructuralVelocityAlert(name: String,
-                                     pid: Long,
+                                     uuid: String,
                                      clock: Double,
                                      observedVelocity: Double,
                                      runningMean: Double,
@@ -66,9 +72,9 @@ package object velocityreport:
   case class MixedVelocityReport(attributionReport: Option[AttributionReport],
                                  windowVelocityReport: Option[WindowVelocityReport],
                                  structuralVelocityAlert: Option[StructuralVelocityAlert]):
-    def pid = attributionReport.map(_.pid)
-      .orElse(windowVelocityReport.map(_.pid))
-      .orElse(structuralVelocityAlert.map(_.pid))
+    def uuid = attributionReport.map(_.uuid)
+      .orElse(windowVelocityReport.map(_.uuid))
+      .orElse(structuralVelocityAlert.map(_.uuid))
       .get
     def toJson: String =
       attributionReport.map { it =>

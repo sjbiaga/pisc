@@ -31,10 +31,21 @@ import _root_.scala.collection.immutable.List
 
 package object `Π-traces`:
 
+  enum KeyBy:
+    case HID, ANY, AGENT_LABEL
+
+  enum Plugin:
+    case syncRate(rate: Option[BigDecimal])
+    case probability(probability: BigDecimal)
+    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
+
+
   var `π-traces`: `Π-Traces` = null
+
 
   enum `Π-Backend`:
     case same, redpanda, elasticmq
+
 
   sealed trait `Π-Traces`:
     val backend: `Π-Backend` = `Π-Backend`.same

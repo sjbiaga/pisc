@@ -135,7 +135,7 @@ abstract class BioAmbients extends Expression:
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
-  def rate: Parser[Any] = "("~>rate<~")" |
+  def rate: Parser[Any] = "("~> floatingPointNumber ~ floatingPointNumber <~")" ^^ { case rate ~ whatIf => (BigDecimal(rate), BigDecimal(whatIf)) } |
                           "∞" ^^ { _ => -1L } |
                           naturalNumber<~"∞" ^^ { -_.toLong } |
                           "⊤" ^^ { _ => 1L } |
@@ -424,6 +424,7 @@ object BioAmbients:
              timeout: Int = 123456,
              exit: Boolean = true,
              causal: Boolean = false,
+             plugins: List[Settings.Plugin] = Nil,
              snapshot: Boolean = false
   ) extends Expansion:
 
@@ -468,7 +469,7 @@ object BioAmbients:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(-1L), None)(sπ_id)
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(0L), None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ
@@ -748,28 +749,44 @@ object BioAmbients:
 
       val enabled = Map[String, Actions]()
 
-      given_List_Bind
-        .tapEach {
-          case (_, sum) =>
-            sum.split(using discarded -> excluded)
-
-            sum.graph.foreach { (s, t) =>
-              if !enabled.contains(s.υidυ)
-              then
-                enabled(s.υidυ) = nil
-              t match
-                case it: Act =>
-                  enabled(s.υidυ) += it.υidυ
-                case it: Sum =>
-                  enabled(s.υidυ) ++= it.enabled
+      if _settings.traces.isDefined
+      then
+        val traces = _settings.traces
+        _settings.traces = None
+        given Boolean = true
+        val prog =
+          given_List_Bind
+            .map {
+              case it @ (_, ∅()) => it
+              case (bind @ `(*)`(given String, _*), sum) =>
+                bind -> sum.labelʹ
             }
-        }
-        .tapEach {
-          case (`(*)`(identifier, params*), sum) =>
-            if sum.mixed
-            then
-              warn(throw MixedChoiceException(identifier, params.size))
-        } -> (discarded, excluded, enabled)
+        val r = apply(prog)
+        _settings.traces = traces
+        r
+      else
+        given_List_Bind
+          .tapEach {
+            case (_, sum) =>
+              sum.split(using discarded -> excluded)
+
+              sum.graph.foreach { (s, t) =>
+                if !enabled.contains(s.υidυ)
+                then
+                  enabled(s.υidυ) = nil
+                t match
+                  case it: Act =>
+                    enabled(s.υidυ) += it.υidυ
+                  case it: Sum =>
+                    enabled(s.υidυ) ++= it.enabled
+              }
+          }
+          .tapEach {
+            case (`(*)`(identifier, params*), sum) =>
+              if sum.mixed
+              then
+                warn(throw MixedChoiceException(identifier, params.size))
+          } -> (discarded, excluded, enabled)
 
 
     private var i: Int = -1
@@ -777,7 +794,7 @@ object BioAmbients:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, causal, snapshot))
+      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, causal, plugins, snapshot))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

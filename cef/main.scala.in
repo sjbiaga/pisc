@@ -44,9 +44,10 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.io.github.timwspence.cats.stm.STM
 
-  import `Π-dump`.*
+  import `Π-dump`.*, `Π-dump`.given
   import `Π-http4s`.http4s
   import `Π-loop`.*, `Π-loop`.given
+  import `Π-traces`.{ KeyBy, Plugin }
 
 
   private val bacsa = "pisc.bioambients.communications.bind.address"
@@ -58,21 +59,21 @@ object App extends _root_.cats.effect.IOApp:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], clock: Ref[IO, Double], feedback: Feedback)
                  (lo: IOLocal[sΠ.`)(`], `}{`: sΠ.`}{`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|)
                  (using `}{`.`][`, `}{`.stm.TSemaphore): IO[ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: IO[Unit]) => ^.use(_ => it >> *.release) }
-      else { (it: IO[Unit]) => ^.use(_ => it >> peek(using %, **)(π.`π-wand`)) }
+      else { (it: IO[Unit]) => ^.use(_ => it >> peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s(parameters.threshold > 0, _))
+        _ <- http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(http4s(parameters.threshold > 0, parameters.plugins, _))
         _ <- if parameters.threshold > 0
              then loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
              else loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
-        _ <- dump(using %, !, -).background
+        _ <- dump(clock, feedback)(using %, !, -).background
         ^ <- Resource.eval(π.`π-uuid`)
         ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
         _ <- π.Main(lo, `}{`)(args*)(using ^, ?)(using %, /, \).background
@@ -109,18 +110,19 @@ object App extends _root_.cats.effect.IOApp:
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, c, s)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, c, π.`π-parameters`.plugins, s)
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      ** <- PQueue.unbounded[IO, (Int, List[List[((String, String), ++++)]])]
-      - <- Queue.unbounded[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+      ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
+      - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
-      &| <- IO.ref(0L -> .0)
+      &| <- IO.ref(0L)
       n <- IO.ref(0L)
       ^ <- Semaphore[IO](1)
       b <- IO.ref(0L)
+      c <- IO.ref(.0)
       paramsRD <- IO.deferred[`Π-Parameters`].flatMap(IO.ref)
       paramsR  <- IO.ref(params)
       tracesR  <- IO.ref(true)
@@ -135,7 +137,7 @@ object App extends _root_.cats.effect.IOApp:
       stm <- STM.runtime[IO]
       wrapper = new sΠ.`}{`(stm)
       (lo, tree, semaphore) <- wrapper.`][`()
-      x <- run(args, params, n, b, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
+      x <- run(args, params, n, b, c, feedback)(lo, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
     yield
       x
 

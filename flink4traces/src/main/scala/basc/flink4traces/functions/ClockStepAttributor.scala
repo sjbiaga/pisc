@@ -22,8 +22,9 @@ class ClockStepAttributor(microscopicThreshold: Double)
       then
         out.collect:
           AttributionReport(value.name,
-                            value.pid,
+                            value.uuid,
                             value.label,
+                            value.dir_cap,
                             clockStep,
                             microscopicThreshold,
                             clockStep < microscopicThreshold)

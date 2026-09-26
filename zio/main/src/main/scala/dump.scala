@@ -26,17 +26,23 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.Set
 
-import _root_.zio.{ Queue, UIO, ZIO }
+import _root_.zio.{ Queue, Ref, UIO, ZIO }
+import _root_.zio.stm.TPriorityQueue
 
 import `Π-loop`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-dump`:
 
-  type - = Queue[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+
+  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+    Ordering.fromLessThan { (_, _) => true }
 
 
-  def dump(using % : %, ! : !, - : -): UIO[Unit] =
+  def dump(_clock: Ref[Double], _feedback: Feedback)
+          (using % : %, ! : !, - : -): UIO[Unit] =
     ZIO.unit

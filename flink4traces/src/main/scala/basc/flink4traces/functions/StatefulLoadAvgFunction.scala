@@ -62,7 +62,7 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
     val currentSliceEnd = timestamp // The timer triggers exactly at the window edge
     val totalSliceDuration = (currentSliceEnd - currentSliceStart).toDouble
 
-    val perPIDData = Map[Long, (Int, Double)]()
+    val perUUIDData = Map[String, (Int, Double)]()
     val crossOverTraces = List[Traces]()
 
     var count = 0
@@ -75,8 +75,8 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
         count += 1
 
         {
-          val (count, _) = perPIDData.getOrDefault(traces.pid, (0, .0))
-          perPIDData.put(traces.pid, (count + 1, traces.clock))
+          val (count, _) = perUUIDData.getOrDefault(traces.uuid, (0, .0))
+          perUUIDData.put(traces.uuid, (count + 1, traces.clock))
         }
 
         // If the traces extends past the current window boundary, save it for the next slice
@@ -85,24 +85,24 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
           crossOverTraces.add(traces)
     }
 
-    val perPIDLoadAvg = Map[Long, LoadAvg]()
+    val perUUIDLoadAvg = Map[String, LoadAvg]()
 
-    perPIDData.forEach { case (pid, (countʹ, clock)) =>
-      val perPIDLoadAvgFromState = loadAvgState.value.perPidState
+    perUUIDData.forEach { case (uuid, (countʹ, clock)) =>
+      val perUUIDLoadAvgFromState = loadAvgState.value.perUUIDState
 
-      if !perPIDLoadAvgFromState.containsKey(pid)
+      if !perUUIDLoadAvgFromState.containsKey(uuid)
       then
-        perPIDLoadAvgFromState.put(pid, LoadAvgState(.0, .0, .0, Map()))
+        perUUIDLoadAvgFromState.put(uuid, LoadAvgState(.0, .0, .0, Map()))
 
-      val loadAvgFromState = perPIDLoadAvgFromState.get(pid)
+      val loadAvgFromState = perUUIDLoadAvgFromState.get(uuid)
 
       val load1m = StatefulLoadAvgFunction(loadAvgFromState.load1m, countʹ, decayFactor1m)
       val load10m = StatefulLoadAvgFunction(loadAvgFromState.load10m, countʹ, decayFactor10m)
       val load15m = StatefulLoadAvgFunction(loadAvgFromState.load15m, countʹ, decayFactor15m)
 
-      perPIDLoadAvg.put(pid, LoadAvg(currentSliceEnd, ctx.getCurrentKey, clock, load1m, load10m, load15m, null))
+      perUUIDLoadAvg.put(uuid, LoadAvg(currentSliceEnd, ctx.getCurrentKey, clock, load1m, load10m, load15m, null))
 
-      perPIDLoadAvgFromState.put(pid, loadAvgFromState.copy(load1m = load1m, load10m = load10m, load15m = load15m))
+      perUUIDLoadAvgFromState.put(uuid, loadAvgFromState.copy(load1m = load1m, load10m = load10m, load15m = load15m))
     }
 
     if tracesListState.get.iterator.hasNext
@@ -111,7 +111,7 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
       val load10m = StatefulLoadAvgFunction(loadAvgState.value.load10m, count, decayFactor10m)
       val load15m = StatefulLoadAvgFunction(loadAvgState.value.load15m, count, decayFactor15m)
 
-      out.collect(LoadAvg(currentSliceEnd, ctx.getCurrentKey, .0, load1m, load10m, load15m, perPIDLoadAvg))
+      out.collect(LoadAvg(currentSliceEnd, ctx.getCurrentKey, .0, load1m, load10m, load15m, perUUIDLoadAvg))
 
       loadAvgState.update(loadAvgState.value.copy(load1m = load1m, load10m = load10m, load15m = load15m))
 
@@ -136,4 +136,4 @@ object StatefulLoadAvgFunction:
   case class LoadAvgState(load1m: Double,
                           load10m: Double,
                           load15m: Double,
-                          perPidState: Map[Long, LoadAvgState])
+                          perUUIDState: Map[String, LoadAvgState])

@@ -35,13 +35,13 @@ object WebSocketSink:
     @throws[IOException]
     override def write(element: LoadAvg1msBurst, context: SinkWriter.Context): Unit =
       initServer
-      val perPIDJson: Long => Option[String] = {
-        case pid if element.perPIDLoadAvg1msBurst.containsKey(pid) =>
-          Some(element.perPIDLoadAvg1msBurst.get(pid).toJson)
+      val perUUIDJson: String => Option[String] = {
+        case uuid if element.perUUIDLoadAvg1msBurst.containsKey(uuid) =>
+          Some(element.perUUIDLoadAvg1msBurst.get(uuid).toJson)
         case _ =>
           None
       }
-      server.broadcastMessage({ case 0L => Some(element.toJson) case pid => perPIDJson(pid) })
+      server.broadcastMessage({ case null => Some(element.toJson) case uuid => perUUIDJson(uuid) })
 
     @throws[IOException]
     override def flush(endOfInput: Boolean): Unit = {}

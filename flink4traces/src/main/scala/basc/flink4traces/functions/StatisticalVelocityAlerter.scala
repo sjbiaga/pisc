@@ -45,7 +45,7 @@ class StatisticalVelocityAlerter(zScoreThreshold: Double)
         then
           out.collect:
             StructuralVelocityAlert(value.name,
-                                    value.pid,
+                                    value.uuid,
                                     value.clock,
                                     velocity,
                                     stats.mean,

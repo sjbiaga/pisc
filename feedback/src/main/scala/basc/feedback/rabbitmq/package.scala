@@ -21,12 +21,11 @@ import japgolly.scalajs.react.vdom.html_<^.*
 
 package object rabbitmq:
 
-  case class Message(pid: Long,
+  case class Message(uuid: String,
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String, keyBy: String,
-                     rate: String, probability: String,
-                     delay: Option[Double], syncRate: Option[Double],
+                     rate: String, plugins: Seq[analytics.Plugin], delay: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
@@ -90,7 +89,7 @@ package object rabbitmq:
   case class Props(item_id: String,
                    isBioAmbients: Boolean,
                    chunkSize: Int,
-                   pid: Long,
+                   uuid: String,
                    subscriber: RabbitMQSubscriber)
                   (val signal: SignallingRef[IO, Boolean])
 
@@ -106,7 +105,7 @@ package object rabbitmq:
                          { (p, messages) => _ =>
       RabbitMQStomp(Uri.unsafeFromString(p.subscriber.url), p.subscriber.exchange, p.subscriber.username, p.subscriber.password, p.subscriber.subscriberId)
         .chunkN(p.chunkSize)
-        .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.pid == 0 then true else msg.pid == p.pid }.toVector).to[IO] }
+        .evalMap { ms => messages.modState(_ ++ ms.filter { msg => if p.uuid eq null then true else msg.uuid == p.uuid }.toVector).to[IO] }
         .interruptWhen(p.signal)
         .compile
         .drain
@@ -126,7 +125,7 @@ package object rabbitmq:
               ^.className := "table-auto", // Optional CSS classes
               <.thead(
                 <.tr(
-                  <.th("PID"),
+                  <.th("UUID"),
                   <.th("Number"),
                   <.th("Clock"),
                   <.th("Started"),
@@ -138,9 +137,7 @@ package object rabbitmq:
                   <.th("Guard"),
                   <.th("Label"),
                   <.th("Rate"),
-                  <.th("Probability"),
                   <.th("Delay"),
-                  <.th("SyncRate"),
                   <.th("Direction").when(p.isBioAmbients),
                   <.th("Capability").when(p.isBioAmbients),
                   <.th("From").when(p.isBioAmbients),
@@ -150,9 +147,9 @@ package object rabbitmq:
               ),
               <.tbody(
                 messages.value.map { msg =>
-                  val key = s"""${msg.pid}-${msg.number}${msg.polarity.fold("")("-" + _.toString)}"""
+                  val key = s"""${msg.uuid}-${msg.number}${msg.polarity.fold("")("-" + _.toString)}"""
                   <.tr(^.key := key,
-                       <.td(msg.pid),
+                       <.td(msg.uuid),
                        <.td(msg.number),
                        <.td(msg.clock),
                        <.td(new js.Date(msg.started.toDouble).toISOString()),
@@ -164,9 +161,7 @@ package object rabbitmq:
                        <.td(msg.guard.toString),
                        <.td(msg.label),
                        <.td(msg.rate),
-                       <.td(msg.probability),
                        <.td(msg.delay.getOrElse(Double.PositiveInfinity).toString),
-                       <.td(msg.syncRate.getOrElse(Double.PositiveInfinity).toString),
                        <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]),
                        <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]),
                        <.td(msg.from),

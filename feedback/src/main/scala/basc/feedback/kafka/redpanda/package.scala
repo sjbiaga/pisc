@@ -22,12 +22,11 @@ package object redpanda:
   private val headers = Headers(Accept(mediaType), `Content-Type`(mediaType))
 
   case class Key(label: String) derives Codec.AsObject
-  case class Value(pid: Long,
+  case class Value(uuid: String,
                    number: Long, clock: Double, started: Long, ended: Long,
                    agent: String, name: String, polarity: Option[Boolean],
                    key: String, guard: Boolean, label: String, keyBy: String,
-                   rate: String, probability: String,
-                   delay: Option[Double], syncRate: Option[Double],
+                   rate: String, plugins: Seq[analytics.Plugin], delay: Option[Double],
                    dir_cap: Option[String], from: Option[String], to: Option[String],
                    snapshot: Option[String]) derives Codec.AsObject
 
@@ -48,7 +47,7 @@ package object redpanda:
 
   case class Props(item_id: String,
                    isBioAmbients: Boolean,
-                   pid: Long,
+                   uuid: String,
                    redpanda: Redpanda)
                   (using val httpClient: Client[IO])
 
@@ -83,7 +82,7 @@ package object redpanda:
         offUrl    = Uri.unsafeFromString(s"$base_uri/offsets")
         offReq    = Request[IO](Method.POST, offUrl).withHeaders(headers)
         _        <- p.httpClient.successful(offReq)
-        _        <- records.modState(_ ::: newRec.filter { it => if p.pid == 0 then true else it.value.pid == p.pid }).to[IO]
+        _        <- records.modState(_ ::: newRec.filter { it => if p.uuid eq null then true else it.value.uuid == p.uuid }).to[IO]
       yield
         ()
     }
@@ -102,7 +101,7 @@ package object redpanda:
               ^.className := "table-auto", // Optional CSS classes
               <.thead(
                 <.tr(
-                  <.th("PID"),
+                  <.th("UUID"),
                   <.th("Number"),
                   <.th("Clock"),
                   <.th("Started"),
@@ -114,9 +113,7 @@ package object redpanda:
                   <.th("Guard"),
                   <.th("Label"),
                   <.th("Rate"),
-                  <.th("Probability"),
                   <.th("Delay"),
-                  <.th("SyncRate"),
                   <.th("Direction").when(p.isBioAmbients),
                   <.th("Capability").when(p.isBioAmbients),
                   <.th("From").when(p.isBioAmbients),
@@ -126,9 +123,9 @@ package object redpanda:
               ),
               <.tbody(
                 records.value.map { case JsonKafkaRecord(_, _, rec, _, _) =>
-                  val key = s"""${rec.pid}-${rec.number}${rec.polarity.fold("")("-" + _.toString)}"""
+                  val key = s"""${rec.uuid}-${rec.number}${rec.polarity.fold("")("-" + _.toString)}"""
                   <.tr(^.key := key,
-                       <.td(rec.pid),
+                       <.td(rec.uuid),
                        <.td(rec.number),
                        <.td(rec.clock),
                        <.td(new js.Date(rec.started.toDouble).toISOString()),
@@ -140,9 +137,7 @@ package object redpanda:
                        <.td(rec.guard.toString),
                        <.td(rec.label),
                        <.td(rec.rate),
-                       <.td(rec.probability),
                        <.td(rec.delay.getOrElse(Double.PositiveInfinity).toString),
-                       <.td(rec.syncRate.getOrElse(Double.PositiveInfinity).toString),
                        <.td(rec.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]).when(p.isBioAmbients),
                        <.td(rec.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]).when(p.isBioAmbients),
                        <.td(rec.from).when(p.isBioAmbients),

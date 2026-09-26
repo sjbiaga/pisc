@@ -1,14 +1,14 @@
 package basc
 package feedback
 
+import scala.scalajs.js.annotation.JSExportTopLevel
+
 import cats.instances.list.*
 import cats.syntax.traverse.*
 
 import cats.effect.{ ExitCode, IO, IOApp }
 
 import fs2.concurrent.SignallingRef
-
-import scala.scalajs.js.annotation.JSExportTopLevel
 
 import org.http4s.client.Client
 import org.http4s.circe.CirceEntityDecoder.*

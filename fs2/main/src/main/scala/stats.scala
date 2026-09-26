@@ -44,7 +44,8 @@ package object `Π-stats`:
 
   sealed trait Rate extends Any
   case class ∞(weight: Long) extends AnyVal with Rate
-  case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate
+  case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate:
+    def apply(whatIf: `ℝ⁺`): this.type = this
   case class ⊤(weight: Long) extends AnyVal with Rate
 
   private val distributionCache: Cache[Double, Exponential] =
@@ -72,9 +73,9 @@ package object `Π-stats`:
 
   def ∥[F[_]](% : Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)])
              (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-             (check: Boolean = false): List[List[(String, String, Ref[F, `()`[F]], ((Double, Double), BigDecimal))]] =
-                                               // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^    ^^^^^^  ^^^^^^   ^^^^^^^^^^
-                                               // key1    key1|2  input              delay   syncRAte probability
+             (check: Boolean = false): List[(String, String, Ref[F, `()`[F]], Double)] =
+                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^
+                                          // key1    key1|2  input            delay
 
     val mls = HashMap[({}, Option[Either[Unit, Ref[F, `()`[F]]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -134,13 +135,13 @@ package object `Π-stats`:
 
     if check
     then
-      val ert = msrt.keySet.map(_._1)
-      val ewi = mswi.keySet.map(_._1)
-      val ewp = mswp.keySet.map(_._1)
+      val ert = msrt.keySet.filter(_._2.isDefined).map(_._1)
+      val ewi = mswi.keySet.filter(_._2.isDefined).map(_._1)
+      val ewp = mswp.keySet.filter(_._2.isDefined).map(_._1)
 
       if (ert & ewi).nonEmpty
-      || (ert & ewp).nonEmpty
       || (ewi & ewp).nonEmpty
+      || (ewp & ert).nonEmpty
       then
         throw CombinedActivitiesException("mixed")
 
@@ -151,9 +152,9 @@ package object `Π-stats`:
         case (k, (e, p, r: ⊤)) => k -> (e, p, BigDecimal(0) -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, Ref[F, `()`[F]], ((Double, Double), BigDecimal)), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^    ^^^^^^  ^^^^^^   ^^^^^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2  input              delay   syncRate probability    pri  delay
+    var r = List[((String, String, Ref[F, `()`[F]], Double), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^    ^^^  ^^^^^^
+    //             key1    key1|2  input            delay     pri  delay
 
     for
       i <- 0 until χ.size
@@ -161,26 +162,26 @@ package object `Π-stats`:
     do
       if polarity1 eq None
       then
-        val ((probability, rate), priority) =
+        val (rate, priority) =
           if msrt.contains(ether1 -> polarity1)
           then
             val apr1 = msrt(ether1 -> polarity1)
             val prb = rate1 / apr1
-            prb -> rate1.toDouble -> 2
+            rate1.toDouble -> 2
           else if mswi.contains(ether1 -> polarity1)
           then
             val apr1 = mswi(ether1 -> polarity1)
             val prb = weight1 / apr1
-            prb -> Double.PositiveInfinity -> 1
+            Double.PositiveInfinity -> 1
           else if mswp.contains(ether1 -> polarity1)
           then
             val apr1 = mswp(ether1 -> polarity1)
             val prb = weight1 / apr1
-            prb -> .0 -> 3
+            .0 -> 3
           else
             ???
         val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
-        r ::= (key1, key1, null, (delay, rate) -> probability) -> (priority -> delay)
+        r ::= (key1, key1, null, delay) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -198,45 +199,45 @@ package object `Π-stats`:
             !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
           }
           then
-            val ((probability, _rate), priority) =
+            val (_rate, priority) =
               if msrt.contains(ether1 -> polarity1)
               && msrt.contains(ether2 -> polarity2)
               then
                 val apr1 = msrt(ether1 -> polarity1)
                 val apr2 = msrt(ether2 -> polarity2)
                 val prb = (rate1 / apr1) * (rate2 / apr2)
-                prb -> prb * (apr1 min apr2) -> 2
+                prb * (apr1 min apr2) -> 2
               else if mswi.contains(ether1 -> polarity1)
                    && mswi.contains(ether2 -> polarity2)
               then
                 val apr1 = mswi(ether1 -> polarity1)
                 val apr2 = mswi(ether2 -> polarity2)
                 val prb = (weight1 / apr1) * (weight2 / apr2)
-                prb -> prb * (apr1 min apr2) -> 1
+                prb * (apr1 min apr2) -> 1
               else if mswp.contains(ether1 -> polarity1)
                    && mswp.contains(ether2 -> polarity2)
               then
                 val apr1 = mswp(ether1 -> polarity1)
                 val apr2 = mswp(ether2 -> polarity2)
                 val prb = (weight1 / apr1) * (weight2 / apr2)
-                prb -> prb * (apr1 min apr2) -> 3
+                prb * (apr1 min apr2) -> 3
               else
                 ???
             val rate = _rate.toDouble
             val delay = delta(rate)
             val ref = polarity1.get.orElse(polarity2.get).right.get
-            r ::= (key1, key2, ref, (delay, rate) -> probability) -> (priority -> delay)
+            r ::= (key1, key2, ref, delay) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 
     ( for
-        ((it @ (key1, key2, _, _), (pri, _)), i) <- r.zipWithIndex
+        ((it @ (key1, key2, _, _), _), i) <- r.zipWithIndex
       yield
         val k1 = key1.substring(36)
         val k2 = key2.substring(36)
         val  ^ = key1.substring(0, 36)
         val ^^ = key2.substring(0, 36)
-        pri -> it -> {
+        it -> {
           0 > r.indexWhere(
             {
               case ((`key1` | `key2`, _, _, _), _)
@@ -266,7 +267,3 @@ package object `Π-stats`:
     .filter(_._2)
     .map(_._1)
     .reverse
-    .groupBy(_._1)
-    .toList
-    .sortBy(_._1)
-    .map(_._2.map(_._2))

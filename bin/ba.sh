@@ -60,7 +60,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/traces.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC2 \
+                  -q -O -nowarn -S 3.10.0-RC3 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -102,6 +102,7 @@ function ba_() {
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
+                        --dep io.circe::circe-generic:0.14.16
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/bam_.scala\ ../${emit}/http_.scala
             ;;
@@ -121,6 +122,7 @@ function ba_() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
+                        --dep io.circe::circe-generic:0.14.16
                         --dep dev.zio::zio-interop-cats:23.1.0.13'
             local srcs=\ ../${emit}/http_.scala
             ;;
@@ -141,7 +143,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/traces_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC2 \
+                  -q -O -nowarn -S 3.10.0-RC3 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -150,7 +152,7 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.36.0 \
-                  --dep software.amazon.awssdk:sqs:2.55.1 \
+                  --dep software.amazon.awssdk:sqs:2.55.6 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \

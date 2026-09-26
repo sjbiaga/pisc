@@ -37,6 +37,7 @@ import _root_.zio.stm.{ TPriorityQueue, TSemaphore }
 
 import `Π-dump`.*
 import `Π-stats`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-loop`:
@@ -53,14 +54,14 @@ package object `Π-loop`:
 
   type ! = Promise[Nothing, ExitCode]
 
-  type &| = Ref[(Long, Double)]
+  type &| = Ref[Long]
 
   type / = Queue[((String, String), +)]
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ++++ = (((Double, Double), BigDecimal), Ref[`()`], () => `[]`, (++, ++))
-  type ** = TPriorityQueue[(Int, List[List[((String, String), ++++)]])]
+  type ++++ = ((Double, Seq[Plugin]), Ref[`()`], () => `[]`, (++, ++))
+  type ** = TPriorityQueue[(Int, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
 
@@ -73,6 +74,7 @@ package object `Π-loop`:
                                   timeout: Int,
                                   exit: Boolean,
                                   causal: Boolean,
+                                  plugins: Set[String],
                                   snapshot: Boolean)
 
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
@@ -85,7 +87,7 @@ package object `Π-loop`:
                             doneR: Ref[Boolean])
 
 
-  given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
+  given Ordering[(Int, List[((String, String), ++++)])] = Ordering.fromLessThan(_._1 < _._1)
 
   val currentTimeMillis = Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
 
@@ -126,7 +128,8 @@ package object `Π-loop`:
       ZIO.succeed(Set.empty)
 
 
-  def peek(using % : %, ** : **)
+  def peek(plugins: Set[String])
+          (using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modifyZIO { m =>
       val it =
@@ -140,17 +143,15 @@ package object `Π-loop`:
       then
         (**.size.flatMap(size => **.offer(size -> Nil))).commit.map(_ -> m)
       else
-        val nel = ∥(it)(`π-wand`._1)()
+        val nel = ∥(it, plugins)(`π-wand`._1)()
         val nelʹ = nel.map {
-          _.map {
-            case (key1, key2, in, drp, cs) =>
-              val (pckots1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
-              val (pckots2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-              (key1, key2) -> (drp, in, cs, (pckots1, pckots2))
-          }
+          case (key1, key2, in, dp, cs) =>
+            val (pckots1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (pckots2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (dp, in, cs, (pckots1, pckots2))
         }
         ZIO.collectAll {
-          nel.flatten.map {
+          nel.map {
             case (key1, key2, _, _, _) =>
               val k1 = key1.substring(36)
               val k2 = key2.substring(36)
@@ -214,79 +215,81 @@ package object `Π-loop`:
             then
               (started.get <*> batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None) *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None).commit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case _  =>
                   ZIO.succeed(true)
               }
             else
               (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-                ZIO.collectAll {
-                  nel.map { nel =>
-                    ZIO.collectAllParDiscard {
-                      nel.map { case ((key1, key2), (drp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
-                                  val k1 = key1.substring(36)
-                                  val k2 = key2.substring(36)
-                                  if stop
-                                  then
-                                    for
-                                      _ <- **.offer(-1 -> Nil).commit
-                                      _ <- p1.succeed(None)
-                                      _ <- p2.succeed(None).unless(k1 == k2)
-                                      _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                      _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                    yield
-                                      ()
-                                  else
-                                    for
-                                      cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                      nc <- if delay.isPosInfinity
-                                            then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                            else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                      csʹ = if parameters.causal then cs() else Set.empty
-                                      _  <- sem.acquire
-                                      _  <- started.update(_ + 1)
-                                      fb <- ( for
-                                                (slabel, _)  <- `}{`.`}{`(key).commit
-                                                (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                _            <- `1`.acquire.commit.when(k1 == k2)
-                                                _            <- ZIO.unless(k1 == k2) {
-                                                                  (ord, ordʹ) match
-                                                                     case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                       `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                     case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                       `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                                }
-                                                elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
-                                                (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                                _            <- `1`.release.commit
-                                                _            <- cb.await.exit
-                                                _            <- enable(k1)
-                                                _            <- enable(k2).unless(k1 == k2)
-                                                ss           <- ts1.get <*> ts2.get
-                                                kb           <- feedback.keyByR.get
-                                                now          <- currentTimeMillis
-                                                _            <- feedback.lastR.set(now -> nc._2)
-                                                _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), drp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
-                                                _            <- sem.release
-                                                _            <- started.update(_ - 1)
-                                              yield
-                                                ()
-                                            ).fork
-                                      cs  = if parameters.causal then csʹ + nc._1 else Set.empty
-                                      _  <- p1.succeed(Some((cb, fb, in, cs)))
-                                      _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
-                                      _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
-                                      _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
-                                    yield
-                                      ()
-                              }
-                    }
-                  }
+                &|.get.flatMap { id =>
+                  val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
+                  fun { case ((key1, key2), (dp, in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+                          val k1 = key1.substring(36)
+                          val k2 = key2.substring(36)
+                          if stop
+                          then
+                            for
+                              _ <- **.offer(-1 -> Nil).commit
+                              _ <- p1.succeed(None)
+                              _ <- p2.succeed(None).unless(k1 == k2)
+                              _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                              _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                            yield
+                              ()
+                          else
+                            for
+                              cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                              no <- &|.updateAndGet(_ + 1)
+                              csʹ = if parameters.causal then cs() else Set.empty
+                              _  <- sem.acquire
+                              _  <- started.update(_ + 1)
+                              fb <- ( for
+                                        (slabel, _)  <- `}{`.`}{`(key).commit
+                                        (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                        _            <- `1`.acquire.commit.when(k1 == k2)
+                                        _            <- ZIO.unless(k1 == k2) {
+                                                          (ord, ordʹ) match
+                                                             case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                               `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                             case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                               `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                        }
+                                        elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
+                                        (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                        _            <- `1`.release.commit
+                                        _            <- cb.await.exit
+                                        _            <- enable(k1)
+                                        _            <- enable(k2).unless(k1 == k2)
+                                        ss           <- ts1.get <*> ts2.get
+                                        kb           <- feedback.keyByR.get.map { al => if parameters.causal then KeyBy.HID else if al then KeyBy.AGENT_LABEL else KeyBy.ANY }
+                                        now          <- currentTimeMillis
+                                        _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), csʹ, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
+                                        _            <- sem.release
+                                        _            <- started.update(_ - 1)
+                                      yield
+                                        ()
+                                    ).fork
+                              cs  = if (parameters.causal)
+                                    then
+                                      if k1.indexOf(',') < 0
+                                      then
+                                        csʹ
+                                      else
+                                        csʹ + no
+                                    else
+                                      Set.empty
+                              _  <- p1.succeed(Some((cb, fb, in, cs)))
+                              _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
+                              _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
+                              _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
+                            yield
+                              ()
+                      }
                 }
               } *> ZIO.succeed(true)
         yield
           l
-      l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
+      l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek(parameters.plugins) *> m)
       _ <- feedback.pauseRP_stopR_exitRP.get.flatMap(_._1._1.await)
       _ <- feedback.paramsRP.get.flatMap(_.isDone).flatMap {
              if _
@@ -320,7 +323,7 @@ package object `Π-loop`:
                   **.offer(-1 -> nel).commit *> ZIO.succeed(true)
                 case Exit.Success(_)
                    | Exit.Failure(Cause.Interrupt(_, _)) =>
-                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None) *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None).commit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case Exit.Failure(cause)                 =>
                   ZIO.failCause(cause)
               }
@@ -329,68 +332,70 @@ package object `Π-loop`:
           }
         else
           (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-            ZIO.collectAll {
-              nel.map { nel =>
-                ZIO.collectAllParDiscard {
-                  nel.map { case ((key1, key2), (drp @ ((delay, _), _), in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
-                              val k1 = key1.substring(36)
-                              val k2 = key2.substring(36)
-                              if stop
-                              then
-                                for
-                                  _ <- **.offer(-1 -> Nil).commit
-                                  _ <- p1.succeed(None)
-                                  _ <- p2.succeed(None).unless(k1 == k2)
-                                  _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                  _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                yield
-                                  ()
-                              else
-                                for
-                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  nc <- if delay.isPosInfinity
-                                        then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                        else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                  csʹ = if parameters.causal then cs() else Set.empty
-                                  _  <- sem.acquire
-                                  _  <- started.update(_ + 1)
-                                  fb <- ( for
-                                            (slabel, _)  <- `}{`.`}{`(key).commit
-                                            (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                            _            <- `1`.acquire.commit.when(k1 == k2)
-                                            _            <- ZIO.unless(k1 == k2) {
-                                                              (ord, ordʹ) match
-                                                                 case (dir: `π-$`, dirʹ: `π-$`) =>
-                                                                   `}{`.><.π(key, dir, keyʹ, dirʹ)
-                                                                 case (cap: `π-ζ`, capʹ: `π-ζ`) =>
-                                                                   `}{`.><.ζ(key, cap, keyʹ, capʹ)
-                                                            }
-                                            elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
-                                            (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
-                                            _            <- `1`.release.commit
-                                            _            <- cb.await.exit
-                                            _            <- enable(k1)
-                                            _            <- enable(k2).unless(k1 == k2)
-                                            ss           <- ts1.get <*> ts2.get
-                                            kb           <- feedback.keyByR.get
-                                            now          <- currentTimeMillis
-                                            _            <- feedback.lastR.set(now -> nc._2)
-                                            _            <- -.offer(Some((nc, (ss, now), (k1, k2, kb), drp, csʹ.toList, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenZIO(feedback.tracesR.get)
-                                            _            <- sem.release
-                                            _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
-                                          yield
-                                            ()
-                                        ).fork
-                                  cs  = if parameters.causal then csʹ + nc._1 else Set.empty
-                                  _  <- p1.succeed(Some((cb, fb, in, cs)))
-                                  _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
-                                  _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
-                                  _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
-                                yield
-                                  ()
-                          }
-                }
-              }
+            &|.get.flatMap { id =>
+              val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
+              fun { case ((key1, key2), (dp, in, cs, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+                      val k1 = key1.substring(36)
+                      val k2 = key2.substring(36)
+                      if stop
+                      then
+                        for
+                          _ <- **.offer(-1 -> Nil).commit
+                          _ <- p1.succeed(None)
+                          _ <- p2.succeed(None).unless(k1 == k2)
+                          _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                          _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                        yield
+                          ()
+                      else
+                        for
+                          cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                          no <- &|.updateAndGet(_ + 1)
+                          csʹ = if parameters.causal then cs() else Set.empty
+                          _  <- sem.acquire
+                          _  <- started.update(_ + 1)
+                          fb <- ( for
+                                    (slabel, _)  <- `}{`.`}{`(key).commit
+                                    (slabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                    _            <- `1`.acquire.commit.when(k1 == k2)
+                                    _            <- ZIO.unless(k1 == k2) {
+                                                      (ord, ordʹ) match
+                                                         case (dir: `π-$`, dirʹ: `π-$`) =>
+                                                           `}{`.><.π(key, dir, keyʹ, dirʹ)
+                                                         case (cap: `π-ζ`, capʹ: `π-ζ`) =>
+                                                           `}{`.><.ζ(key, cap, keyʹ, capʹ)
+                                                    }
+                                    elabel       <- `}{`.`}{`(key, parameters.snapshot).commit
+                                    (elabelʹ, _) <- `}{`.`}{`(keyʹ).commit
+                                    _            <- `1`.release.commit
+                                    _            <- cb.await.exit
+                                    _            <- enable(k1)
+                                    _            <- enable(k2).unless(k1 == k2)
+                                    ss           <- ts1.get <*> ts2.get
+                                    kb           <- feedback.keyByR.get.map { al => if parameters.causal then KeyBy.HID else if al then KeyBy.AGENT_LABEL else KeyBy.ANY }
+                                    now          <- currentTimeMillis
+                                    _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), csʹ, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
+                                    _            <- sem.release
+                                    _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek(parameters.plugins).when(_))
+                                  yield
+                                    ()
+                                ).fork
+                          cs  = if (parameters.causal)
+                                then
+                                  if k1.indexOf(',') < 0
+                                  then
+                                    csʹ
+                                  else
+                                    csʹ + no
+                                else
+                                  Set.empty
+                          _  <- p1.succeed(Some((cb, fb, in, cs)))
+                          _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
+                          _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
+                          _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
+                        yield
+                          ()
+                  }
             }
           } *> ZIO.succeed(true)
       _        <- feedback.pauseRP_stopR_exitRP.get.flatMap(_._1._1.await)

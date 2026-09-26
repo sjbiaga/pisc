@@ -26,20 +26,26 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.Set
 
-import _root_.cats.effect.Concurrent
-import _root_.cats.effect.std.Queue
+import _root_.cats.Order
+import _root_.cats.effect.{ Concurrent, Ref }
+import _root_.cats.effect.std.PQueue
 
 import `Π-loop`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-dump`:
 
-  type -[F[_]] = Queue[F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+    Order.fromLessThan { (_, _) => true }
 
 
   final class πdump[F[_]: Concurrent]:
 
-    def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+    def dump(_clock: Ref[F, Double], _feedback: Feedback[F])
+            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
       Concurrent[F].unit

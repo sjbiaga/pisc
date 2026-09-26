@@ -757,7 +757,7 @@ object Calculus:
 
         case _ => ast
 
-    def labelʹ(using String): T =
+    def labelʹ(using String)(using patch: Boolean = false): T =
 
       ast match
 
@@ -767,7 +767,7 @@ object Calculus:
         case _ =>
           ast.label("")
 
-    def label(l: String)(using String): T =
+    def label(l: String)(using agent: String, patch: Boolean): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -778,12 +778,15 @@ object Calculus:
         inline implicit def lʹ(i: Int)(using n: Int): String = l + "∥" + i + "/" + n
 
       inline def idʹ(id: => String, ch: String, p: String, r: Any, dc: String): String =
-        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + summon[String] + "," + dc
+        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + agent + "," + dc
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {
+          case it @ τ(Some(0L), _) =>
+            it.copy(rate = Some(-1L))(idʹ(it.id, "τ", "", -1L, "local"))
+          case it if patch => it
           case it: τ =>
-            it.copy()(idʹ(it.id, "τ", "", it.rate.get, ""))
+            it.copy()(idʹ(it.id, "τ", "", it.rate.get, "local"))
           case it @ π(dir, λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>
             val polarity = it.polarity match { case Some("") => true case _ => false }
             it.copy()(idʹ(it.id, name, polarity.toString, rate.get, dir.toString))

@@ -47,9 +47,10 @@ object App extends _root_.cats.effect.IOApp:
 
   import _root_.io.github.timwspence.cats.stm.STM
 
-  import `Π-dump`.*
+  import `Π-dump`.*, `Π-dump`.given
   import `Π-http4s`.*
   import `Π-loop`.*, `Π-loop`.given
+  import `Π-traces`.{ KeyBy, Plugin }
 
 
   private val bacsa = "pisc.bioambients.communications.bind.address"
@@ -61,7 +62,7 @@ object App extends _root_.cats.effect.IOApp:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], feedback: Feedback[π.F], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
+  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], clock: Ref[π.F, Double], feedback: Feedback[π.F], uuid: sΠ.`)(`, `}{`: sΠ.`}{`[π.F])
                     (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
                     (using `}{`.`][`, `}{`.stm.TSemaphore)
                     (using ClassTag[T]): π.F[ExitCode] =
@@ -73,14 +74,14 @@ object App extends _root_.cats.effect.IOApp:
     val \ =
       if parameters.threshold > 0
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
-      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, _))
+        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, parameters.plugins, _))
         _ <- if parameters.threshold > 0
              then lπ.loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
              else lπ.loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
-        _ <- dπ.dump(using %, !, -).background
+        _ <- dπ.dump(clock, feedback)(using %, !, -).background
         l <- Resource.eval(IOLocal[sΠ.`)(`](uuid))
         ^ <- Resource.eval(π.`π-uuid`[π.F])
         ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
@@ -118,18 +119,19 @@ object App extends _root_.cats.effect.IOApp:
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, c, s)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, c, π.`π-parameters`.plugins, s)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
-      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
+      - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, ExitCode]
-      &| <- Ref[π.F].of(0L -> .0)
+      &| <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      c <- Ref[π.F].of(.0)
       paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
       paramsR  <- Ref[π.F].of(params)
       tracesR  <- Ref[π.F].of(true)
@@ -144,7 +146,7 @@ object App extends _root_.cats.effect.IOApp:
       stm <- STM.runtime[π.F]
       wrapper = new sΠ.`}{`(stm)
       (uuid, tree, semaphore) <- wrapper.`][`()
-      x <- run[π.F[Unit]](args, params, n, b, feedback, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
+      x <- run[π.F[Unit]](args, params, n, b, c, feedback, uuid, wrapper)(%, /, *, **, ^.permit, -, !, &|)(using tree, semaphore)
     yield
       x
 

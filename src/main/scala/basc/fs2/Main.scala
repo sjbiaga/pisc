@@ -42,6 +42,7 @@ import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 
 import parser.BioAmbients
 import parser.Calculus.{ `(*)`, λ }
+import parser.Directive.Settings.Plugin
 import emitter.fs2.Program
 import emitter.fs2.Meta.\
 
@@ -58,6 +59,7 @@ object Main extends helper.Main:
     var T = 123456
     var E = true
     var C = false
+    var I = List.empty[Plugin]
     var S = false
 
     def bain(arg: String) =
@@ -67,7 +69,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, A.toString, P, H, T, E, C, S)
+      val ba = BioAmbients.Main(BioAmbients.Emitter.fs2, in, A.toString, P, H, T, E, C, I, S)
 
       try
         val root = if arg.startsWith("test") then "test" else "basc"
@@ -167,6 +169,7 @@ object Main extends helper.Main:
       case "-T" => T = 123456
       case "-E" => E = true
       case "-C" => C = false
+      case "-I" => I = Nil
       case "-S" => S = false
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
@@ -177,6 +180,7 @@ object Main extends helper.Main:
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-C") => C = it.substring(2).toBoolean
+      case it if it.startsWith("-I") => I :::= it.substring(2).split(",").toList.map(Plugin.valueOf)
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

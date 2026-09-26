@@ -154,6 +154,11 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
           case it: String => List(Emitter.valueOf(it.toLowerCase))
           case it: List[String] => it.map(_.toLowerCase).map(Emitter.valueOf(_))
 
+      def plugins: List[Plugin] =
+        self match
+          case it: String => List(Plugin.valueOf(it.toLowerCase))
+          case it: List[String] => it.map(_.toLowerCase).map(Plugin.valueOf(_))
+
       def keys: Set[String] =
         self match
           case it: String if Directive.key(it.toLowerCase)                     => Set(canonical(it.toLowerCase))
@@ -167,6 +172,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
   private def host(`type`: String = "an ip/hostname"): String = self.host(`type`)
   //private def uri[F[_]: Parse](defaultPort: Int, cluster: Boolean = false): F[Config[Host, Port]] | Config[Hosts[F], Ports[F]] = self.uri[F](defaultPort, cluster)
   private def emitters: List[Emitter] = self.emitters
+  private def plugins: List[Plugin] = self.plugins
   private def keys: Set[String] = self.keys
 
   def apply(): Unit =
@@ -214,10 +220,10 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "replication"  =>
         settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "parallelism" =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "linear"      =>
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, message)
@@ -233,25 +239,28 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
       case "parameters"        =>
         settings.parameters = self match
           case it: List[String] => it.map(_.toLowerCase) match
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "address" =>
               settings.parameters.copy(address = it.host(using { msg => DirectiveSettingParsingException(directive._1, _, msg) })())
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "parallelism" =>
               settings.parameters.copy(parallelism = 1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "threshold"   =>
               settings.parameters.copy(threshold = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "timeout"     =>
               settings.parameters.copy(timeout = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "exit"        =>
               settings.parameters.copy(exit = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it: String)
+            case List(given String, it)
                 if given_String == "causal"      =>
               settings.parameters.copy(causal = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it: String)
+            case List(given String, it*)
+                if given_String == "plugins"     =>
+              settings.parameters.copy(plugins = it.toList.plugins(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+            case List(given String, it)
                 if given_String == "snapshot"    =>
               settings.parameters.copy(snapshot = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, message)
@@ -403,12 +412,16 @@ object Directive:
 
   object Settings:
 
+    enum Plugin:
+      case syncRate, probability, whatIf
+
     case class Parameters(address: String = "localhost",
                           parallelism: Int = Int.MaxValue,
                           threshold: Int = 0,
                           timeout: Int = 123456,
                           exit: Boolean = true,
                           causal: Boolean = false,
+                          plugins: List[Plugin] = Nil,
                           snapshot: Boolean = false):
       lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
                                                                        :: Lit.Int(parallelism)
@@ -416,6 +429,7 @@ object Directive:
                                                                        :: Lit.Int(timeout)
                                                                        :: Lit.Boolean(exit)
                                                                        :: Lit.Boolean(causal)
+                                                                       :: Term.Apply(\("Set"), Term.ArgClause(plugins.map(_.toString).map(Lit.String(_))))
                                                                        :: Lit.Boolean(snapshot)
                                                                        :: Nil))
 

@@ -1,8 +1,15 @@
 package basc
 package feedback
 
+import _root_.io.circe.Codec
+
 
 package object analytics:
+
+  enum Plugin derives Codec.AsObject:
+    case syncRate(rate: Option[BigDecimal])
+    case probability(probability: BigDecimal)
+    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
 
   def time(milliseconds: Long): Option[String] =
     val seconds = milliseconds / 1000

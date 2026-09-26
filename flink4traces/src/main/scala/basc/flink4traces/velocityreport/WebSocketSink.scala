@@ -38,8 +38,8 @@ object WebSocketSink:
     override def write(element: MixedVelocityReport, context: SinkWriter.Context): Unit =
       initServer
       server.broadcastMessage {
-        case 0L => Some(element.toJson)
-        case pid if element.pid == pid => Some(element.toJson)
+        case null => Some(element.toJson)
+        case uuid if element.uuid == uuid => Some(element.toJson)
         case _ => None
       }
 

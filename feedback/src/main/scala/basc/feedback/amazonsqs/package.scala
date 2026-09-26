@@ -48,12 +48,11 @@ package object amazonsqs:
   }
 
 
-  case class Message(pid: Long,
+  case class Message(uuid: String,
                      number: Long, clock: Double, started: Long, ended: Long,
                      agent: String, name: String, polarity: Option[Boolean],
                      key: String, guard: Boolean, label: String, keyBy: String,
-                     rate: String, probability: String,
-                     delay: Option[Double], syncRate: Option[Double],
+                     rate: String, plugins: Seq[analytics.Plugin], delay: Option[Double],
                      dir_cap: Option[String], from: Option[String], to: Option[String],
                      snapshot: Option[String]) derives Codec.AsObject
 
@@ -117,7 +116,7 @@ package object amazonsqs:
 
   case class Props(item_id: String,
                    isBioAmbients: Boolean,
-                   pid: Long,
+                   uuid: String,
                    receiver: AmazonSQSReceiver)
 
   object Props:
@@ -141,7 +140,7 @@ package object amazonsqs:
                      .flatMap { m => m.Body.toOption zip m.ReceiptHandle.toOption }
                      .flatMap { (b, h) => parse(b).toOption.map(_ -> h) }
                      .flatMap { (j, h) => j.as[Message].toOption.map(_ -> h) }
-                     .filter { (m, h) => if p.pid == 0 then true else m.pid == p.pid }
+                     .filter { (m, h) => if p.uuid eq null then true else m.uuid == p.uuid }
                      .zipWithIndex
                      .map { case ((m, h), i) => Item(m, h, v.length + i) }
               )
@@ -188,7 +187,7 @@ package object amazonsqs:
               ^.className := "table-auto", // Optional CSS classes
               <.thead(
                 <.tr(
-                  <.th("PID"),
+                  <.th("UUID"),
                   <.th("Number"),
                   <.th("Clock"),
                   <.th("Started"),
@@ -200,9 +199,7 @@ package object amazonsqs:
                   <.th("Guard"),
                   <.th("Label"),
                   <.th("Rate"),
-                  <.th("Probability"),
                   <.th("Delay"),
-                  <.th("SyncRate"),
                   <.th("Direction").when(p.isBioAmbients),
                   <.th("Capability").when(p.isBioAmbients),
                   <.th("From").when(p.isBioAmbients),
@@ -254,7 +251,7 @@ package object amazonsqs:
                     .apply(item.value)
 
                   val msg = it.message
-                  val key = s"""${msg.pid}-${msg.number}${msg.polarity.fold("")("-" + _.toString)}"""
+                  val key = s"""${msg.uuid}-${msg.number}${msg.polarity.fold("")("-" + _.toString)}"""
 
                   <.tr(^.key := key,
                        ^.style := {
@@ -264,7 +261,7 @@ package object amazonsqs:
                          else
                            js.Dictionary.empty
                        },
-                       <.td(msg.pid),
+                       <.td(msg.uuid),
                        <.td(msg.number),
                        <.td(msg.clock),
                        <.td(new js.Date(msg.started.toDouble).toISOString()),
@@ -276,9 +273,7 @@ package object amazonsqs:
                        <.td(msg.guard.toString),
                        <.td(msg.label),
                        <.td(msg.rate),
-                       <.td(msg.probability),
                        <.td(msg.delay.getOrElse(Double.PositiveInfinity).toString),
-                       <.td(msg.syncRate.getOrElse(Double.PositiveInfinity).toString),
                        <.td(msg.dir_cap match { case it @ Some("local" | "s2s" | "p2c" | "c2p") => it case _ => None }: Option[String]).when(p.isBioAmbients),
                        <.td(msg.dir_cap match { case it @ Some("enter" | "accept" | "exit" | "expel" | "merge+" | "merge-") => it case _ => None }: Option[String]).when(p.isBioAmbients),
                        <.td(msg.from).when(p.isBioAmbients),

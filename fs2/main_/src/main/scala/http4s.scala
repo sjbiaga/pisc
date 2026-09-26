@@ -52,20 +52,20 @@ package object `Π-http4s`:
 
 
   enum Traces derives Codec.AsObject:
-    case ConsoleCSV
-    case FileCSV(filename: String)
-    case AmazonSQS(backend: String, queue: String)
-    case Kafka(backend: String, topic: String)
-    case RabbitMQ(exchange: String)
+    case ConsoleCSV(uuid: String)
+    case FileCSV(uuid: String, filename: String)
+    case AmazonSQS(uuid: String, backend: String, queue: String)
+    case Kafka(uuid: String, backend: String, topic: String)
+    case RabbitMQ(uuid: String, exchange: String)
 
   object Traces:
     def apply(): Option[Traces] =
       Option(`π-traces`).map {
-        case `Π-ConsoleCSV` => ConsoleCSV
-        case `Π-FileCSV`(filename) => FileCSV(filename)
-        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
-        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
-        case `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(exchange)
+        case it @ `Π-ConsoleCSV` => ConsoleCSV(it.uuid)
+        case it @ `Π-FileCSV`(filename) => FileCSV(it.uuid, filename)
+        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.uuid, it.backend.toString, queue)
+        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.uuid, it.backend.toString, topic)
+        case it @ `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(it.uuid, exchange)
       }
 
 
@@ -74,6 +74,7 @@ package object `Π-http4s`:
                         timeout: Option[Int],
                         exit: Option[Boolean],
                         causal: Option[Boolean],
+                        plugins: Set[String],
                         snapshot: Option[Boolean]) derives Codec.AsObject:
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
@@ -82,6 +83,7 @@ package object `Π-http4s`:
                      timeout.map(0 max _).getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
                      default.causal,
+                     default.plugins,
                      snapshot.getOrElse(default.snapshot))
 
   object Parameters:
@@ -91,6 +93,7 @@ package object `Π-http4s`:
                  Some(parameters.timeout),
                  Some(parameters.exit),
                  Some(parameters.causal),
+                 parameters.plugins,
                  Some(parameters.snapshot))
 
 
@@ -222,7 +225,7 @@ package object `Π-http4s`:
               BadRequest("attempt to alter the `init' read-only flag")
             case State(_, _, _, _, _, _, _, Some(_))    =>
               BadRequest("attempt to alter the `done' read-only flag")
-            case State(Parameters(_, Some(threshold), _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+            case State(Parameters(_, Some(threshold), _, _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
               BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
             case State(parameters, _, _, _, _, _, _, _) =>
               feedback.paramsR.get.flatMap { default => feedback.paramsRD.get.flatMap(_.complete(parameters(default))) >> Ok() }
@@ -255,19 +258,19 @@ package object `Π-http4s`:
 
     val serviceName = "BioAmbients2Scala"
 
-    def http4s(F: String, batch: Boolean, server: Server): Resource[F, Unit] =
+    def http4s(F: String, batch: Boolean, plugins: Set[String], server: Server): Resource[F, Unit] =
       import _root_.org.http4s.Method.PUT
       import _root_.org.http4s.{ Request, Uri }
 
       Option {
         Traces().fold(null) {
-          case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
-          case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
-          case RabbitMQ(exchange) => ("rabbitmq", "rabbitmq", "exchange", exchange)
+          case AmazonSQS(uuid, backend, queue) => ("amazonsqs", uuid, backend, "queue", queue)
+          case Kafka(uuid, backend, topic) => ("kafka", uuid, backend, "topic", topic)
+          case RabbitMQ(uuid, exchange) => ("rabbitmq", uuid, "rabbitmq", "exchange", exchange)
           case _ => null
         }
       } match
-        case Some((producer, backend, kind, name)) =>
+        case Some((producer, uuid, backend, kind, name)) =>
           val host = server.address.getAddress.getHostAddress
           val port = server.address.getPort
           val consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
@@ -287,7 +290,8 @@ package object `Π-http4s`:
               "backend" -> backend,
               "kind" -> kind,
               "emitter" -> "fs2",
-              "pid" -> ProcessHandle.current.pid.toString
+              "plugins" -> plugins.mkString(" "),
+              "uuid" -> uuid
             ),
             Check = ConsulCheck(
               HTTP = s"http://$host:$port/health",

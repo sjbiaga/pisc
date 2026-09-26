@@ -13,7 +13,7 @@ import velocityreport.DepthTrace
 
 
 class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
-    extends KeyedProcessFunction[Long, Traces, DepthTrace]:
+    extends KeyedProcessFunction[String, Traces, DepthTrace]:
 
   private var depthState: MapState[Long, (Long, Double)] = null
 
@@ -23,7 +23,7 @@ class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
     )
 
   override def processElement(value: Traces,
-                              ctx: KeyedProcessFunction[Long, Traces, DepthTrace]#Context,
+                              ctx: KeyedProcessFunction[String, Traces, DepthTrace]#Context,
                               out: Collector[DepthTrace]): Unit =
     if !depthState.contains(value.number)
     then
@@ -69,7 +69,9 @@ class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
       out.collect:
         DepthTrace(value.name,
                    ctx.getCurrentKey,
+                   value.uuid,
                    value.agent + '-' + value.label,
+                   value.dir_cap,
                    value.clock,
                    currentDepth,
                    parentClock)

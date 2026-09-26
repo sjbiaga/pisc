@@ -26,15 +26,16 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.{ List, Set }
 import _root_.scala.Option.unless
 
+import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, ExitCode }
-import _root_.cats.effect.std.Queue
+import _root_.cats.effect.{ IO, ExitCode, Ref }
+import _root_.cats.effect.std.PQueue
 
 import `Π-loop`.*
 import `Π-traces`.*
@@ -45,14 +46,31 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+  type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+    Order
+      .fromLessThan { (o1, o2) =>
+        (o1 zip o2).map {
+          case ((_, _, _, (id1, (delay1, _)), _, _), (_, _, _, (id2, (delay2, _)), _, _)) =>
+            if id1 == id2
+            then
+              if delay1.isPosInfinity || delay2.isPosInfinity
+              then
+                !delay1.isPosInfinity
+              else
+                delay1 < delay2
+            else
+              id1 < id2
+        }.getOrElse(true)
+    }
 
 
   private def record(number: Long,
                      clock: Double, started: Long, ended: Long,
-                     keyBy: Boolean,
-                     delay: Double, syncRate: Double, probability: BigDecimal,
-                     causes: List[Long],
+                     keyBy: KeyBy,
+                     delay: Double, plugins: Seq[Plugin],
+                     causes: Set[Long],
                      ambient: (String, (String, String))): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
@@ -62,7 +80,7 @@ package object `Π-dump`:
                      clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                     rate, probability, delay, syncRate,
+                     rate, plugins, delay,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
         }
       case _ =>
@@ -86,15 +104,20 @@ package object `Π-dump`:
       !.complete(ec).void
     }
 
-  def dump(using % : %, ! : !, - : -): IO[Unit] =
+  def dump(clock: Ref[IO, Double], feedback: Feedback)
+          (using % : %, ! : !, - : -): IO[Unit] =
     -.take.flatMap {
       case Some(_) if `π-traces` eq null =>
-        dump
-      case Some(((no, cl), ((ts1, ts2), ts), (k1, k2, kb), ((delay, syncRate), probability), causes, (l1, l2))) =>
+        dump(clock, feedback)
+      case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)), causes, (l1, l2))) =>
         for
-          _ <- record(no, cl, ts1, ts, kb, delay, syncRate, probability, causes, l1)(k1)
-          _ <- record(no, cl, ts2, ts, kb, delay, syncRate, probability, causes, l2)(k2).unlessA(k1 == k2)
-          _ <- IO.cede >> dump
+          cl <- if delay.isPosInfinity
+                then clock.get
+                else clock.updateAndGet(_ + delay)
+          _  <- feedback.lastR.set(ts -> cl)
+          _  <- record(no, cl, ts1, ts, kb, delay, plugins, causes, l1)(k1)
+          _  <- record(no, cl, ts2, ts, kb, delay, plugins, causes, l2)(k2).unlessA(k1 == k2)
+          _  <- IO.cede >> dump(clock, feedback)
         yield
           ()
       case _ =>

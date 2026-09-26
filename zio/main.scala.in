@@ -45,9 +45,10 @@ object App extends _root_.zio.ZIOApp:
 
   import _root_.zio.{ EnvironmentTag, Exit, Scope, URIO, ZIOAppArgs, ZLayer }
 
-  import `Π-dump`.*
+  import `Π-dump`.*, `Π-dump`.given
   import `Π-http`.http
   import `Π-loop`.*, `Π-loop`.given
+  import `Π-traces`.{ KeyBy, Plugin }
 
 
   private val bacsa = "pisc.bioambients.communications.bind.address"
@@ -59,23 +60,23 @@ object App extends _root_.zio.ZIOApp:
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
-  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], feedback: Feedback)
+  private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback)
                  (ref: FiberRef[sΠ.`)(`])
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|)
                  (using sΠ.`}{`.`][`, TSemaphore): URIO[Scope, ExitCode] =
     val \ =
       if parameters.threshold > 0
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
-      else { (it: UIO[Unit]) => ^.withPermit(it *> peek(using %, **)(π.`π-wand`)) }
+      else { (it: UIO[Unit]) => ^.withPermit(it *> peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     for
       _ <- if parameters.threshold > 0
            then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, /, !, &|, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
            else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, /, !, &|, -, *, **)(π.`π-wand`) }.disconnect.fork
       _ <- poll(using %, /, \).uninterruptible.disconnect.fork
-      _ <- dump(using %, !, -).uninterruptible.disconnect.fork
+      _ <- dump(clock, feedback)(using %, !, -).uninterruptible.disconnect.fork
       ^ <- π.`π-uuid`
       ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
-      x <- http(parameters.address, parameters.threshold > 0, started, feedback)(using !) {
+      x <- http(parameters.address, parameters.threshold > 0, parameters.plugins, started, feedback)(using !) {
              π.`π-supervised`(π.Main(ref)(args*)(using ^, ?)(using %, /, \)).uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
@@ -103,7 +104,7 @@ object App extends _root_.zio.ZIOApp:
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, p, h, t, e, c, s)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, c, π.`π-parameters`.plugins, s)
     ZLayer.fromZIO {
       for
         paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
@@ -140,13 +141,14 @@ object App extends _root_.zio.ZIOApp:
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- TPriorityQueue.empty[(Int, List[List[((String, String), ++++)]])].commit
-      - <- Queue.unbounded[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
+      - <- TPriorityQueue.empty[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]].commit
       ! <- Promise.make[Nothing, ExitCode]
-      &| <- Ref.make(0L -> .0)
+      &| <- Ref.make(0L)
       n <- Ref.make(0L)
       ^ <- SemaphoreZIO.make(1)
       b <- Ref.make(0L)
+      c <- Ref.make(.0)
       f <- ZIO.service[Feedback]
       p <- f.paramsR.get
       _ <- `π-enable`(π.`π-main`)(using %)
@@ -156,7 +158,7 @@ object App extends _root_.zio.ZIOApp:
           (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
         }
       (ref, tree, semaphore) <- sΠ.`}{`.`][`()
-      x <- run(args.toList, p, n, b, f)(ref)(%, /, *, **, ^, -, !, &|)(using tree, semaphore).onInterrupt(st)
+      x <- run(args.toList, p, n, b, c, f)(ref)(%, /, *, **, ^, -, !, &|)(using tree, semaphore).onInterrupt(st)
       _ <- exit(x)
     yield
       ()

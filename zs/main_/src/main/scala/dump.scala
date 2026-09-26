@@ -26,10 +26,11 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.{ List, Set }
 import _root_.scala.Option.unless
 
-import _root_.zio.{ ExitCode, Queue, UIO, ZIO }
+import _root_.zio.{ ExitCode, Queue, Ref, UIO, ZIO }
+import _root_.zio.stm.TPriorityQueue
 
 import `Π-loop`.*
 import `Π-traces`.*
@@ -40,14 +41,31 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = Queue[Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+
+  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+    Ordering
+      .fromLessThan { (o1, o2) =>
+        (o1 zip o2).map {
+          case ((_, _, _, (id1, (delay1, _)), _, _), (_, _, _, (id2, (delay2, _)), _, _)) =>
+            if id1 == id2
+            then
+              if delay1.isPosInfinity || delay2.isPosInfinity
+              then
+                !delay1.isPosInfinity
+              else
+                delay1 < delay2
+            else
+              id1 < id2
+        }.getOrElse(true)
+    }
 
 
   private def record(number: Long,
                      clock: Double, started: Long, ended: Long,
-                     keyBy: Boolean,
-                     delay: Double, syncRate: Double, probability: BigDecimal,
-                     causes: List[Long],
+                     keyBy: KeyBy,
+                     delay: Double, plugins: Seq[Plugin],
+                     causes: Set[Long],
                      ambient: (String, (String, String))): String => UIO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent, dir_cap) =>
@@ -57,7 +75,7 @@ package object `Π-dump`:
                      clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                     rate, probability, delay, syncRate,
+                     rate, plugins, delay,
                      dir_cap, ambient._1, ambient._2._1, Option(snapshot))
         }.either.unit
       case _ =>
@@ -81,15 +99,20 @@ package object `Π-dump`:
       !.succeed(ec).unit
     }
 
-  def dump(using % : %, ! : !, - : -): UIO[Unit] =
-    -.take.flatMap {
+  def dump(clock: Ref[Double], feedback: Feedback)
+          (using % : %, ! : !, - : -): UIO[Unit] =
+    -.take.commit.flatMap {
       case Some(_) if `π-traces` eq null =>
-        dump
-      case Some(((no, cl), ((ts1, ts2), ts), (k1, k2, kb), ((delay, syncRate), probability), causes, (l1, l2))) =>
+        dump(clock, feedback)
+      case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)), causes, (l1, l2))) =>
         for
-          _ <- record(no, cl, ts1, ts, kb, delay, syncRate, probability, causes, l1)(k1)
-          _ <- record(no, cl, ts2, ts, kb, delay, syncRate, probability, causes, l2)(k2).unless(k1 == k2)
-          _ <- ZIO.yieldNow *> dump
+          cl <- if delay.isPosInfinity
+                then clock.get
+                else clock.updateAndGet(_ + delay)
+          _  <- feedback.lastR.set(ts -> cl)
+          _  <- record(no, cl, ts1, ts, kb, delay, plugins, causes, l1)(k1)
+          _  <- record(no, cl, ts2, ts, kb, delay, plugins, causes, l2)(k2).unless(k1 == k2)
+          _  <- ZIO.yieldNow *> dump(clock, feedback)
         yield
           ()
       case _ =>

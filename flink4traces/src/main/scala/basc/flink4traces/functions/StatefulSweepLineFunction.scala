@@ -49,7 +49,7 @@ class StatefulSweepLineFunction(windowDurationMs: Long)
     val totalSliceDuration = (currentSliceEnd - currentSliceStart).toDouble
 
     val events = java.util.ArrayList[TimeEvent]()
-    val perPIDEvents = Map[Long, java.util.ArrayList[TimeEvent]]()
+    val perUUIDEvents = Map[String, java.util.ArrayList[TimeEvent]]()
     val crossOverTraces = List[Traces]()
 
     // Filter and clip traces to the current slice boundaries
@@ -63,10 +63,10 @@ class StatefulSweepLineFunction(windowDurationMs: Long)
 
         add(events, .0)
 
-        if !perPIDEvents.containsKey(traces.pid)
+        if !perUUIDEvents.containsKey(traces.uuid)
         then
-          perPIDEvents.put(traces.pid, java.util.ArrayList[TimeEvent]())
-        add(perPIDEvents.get(traces.pid), traces.clock)
+          perUUIDEvents.put(traces.uuid, java.util.ArrayList[TimeEvent]())
+        add(perUUIDEvents.get(traces.uuid), traces.clock)
 
         // If the traces extends past the current window boundary, save it for the next slice
         if traces.ended > currentSliceEnd
@@ -107,17 +107,17 @@ class StatefulSweepLineFunction(windowDurationMs: Long)
 
       clock -> percentageHistogram
 
-    val perPIDSweepLine = Map[Long, SweepLine]()
+    val perUUIDSweepLine = Map[String, SweepLine]()
 
-    perPIDEvents.forEach { (pid, eventsʹ) =>
+    perUUIDEvents.forEach { (uuid, eventsʹ) =>
       val (clock, hist) = histogram(eventsʹ)
-      perPIDSweepLine.put(pid, SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, Map()))
+      perUUIDSweepLine.put(uuid, SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, Map()))
     }
 
     if tracesListState.get.iterator.hasNext
     then
       val (clock, hist) = histogram(events)
-      out.collect(SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, perPIDSweepLine))
+      out.collect(SweepLine(currentSliceEnd, ctx.getCurrentKey, clock, hist, perUUIDSweepLine))
 
     // --- State Rollover Maintenance ---
     tracesListState.clear()

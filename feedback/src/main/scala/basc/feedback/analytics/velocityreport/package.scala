@@ -33,14 +33,16 @@ package object velocityreport:
 
   case class WindowVelocity(name: String,
                             label: String,
+                            dir_cap: String,
                             clock: Double,
                             deltaDepth: Long,
                             deltaClock: Double,
-                            structuralVelocity: Double, // ΔDepth / ΔClock
+                            structuralVelocity: Option[Double], // ΔDepth / ΔClock
                             eventDensity: Long
   ) extends Payload derives Codec.AsObject
 
   case class ClockAttribution(name: String,
+                              dir_cap: String,
                               label: String,
                               clockStep: Double,
                               microscopicThreshold: Double,
@@ -133,8 +135,8 @@ package object velocityreport:
           attrs.map { attr =>
             val barWidth = math.min(100.0, math.max(5.0, 1.0 / (attr.clockStep + attr.microscopicThreshold))) // Visual weight for tiny steps
             val colorClass = if attr.isMicroscopicStep then "bar-orange" else "bar-blue"
-            <.div(^.key := attr.name + attr.label, ^.className := "matrix-row",
-              <.span(^.className := "label-text", s"${attr.name} (${attr.label}):"),
+            <.div(^.key := attr.name + attr.label + attr.dir_cap, ^.className := "matrix-row",
+              <.span(^.className := "label-text", s"${attr.name} (${attr.label}) [${attr.dir_cap}]:"),
               <.div(^.className := "bar-container",
                 <.div(^.className := s"bar $colorClass", ^.style := js.Dynamic.literal(width = s"${barWidth}%")),
                 <.span(^.className := "value-text", s"Δt: ${String.format("%.6f", attr.clockStep)}")
@@ -152,16 +154,17 @@ package object velocityreport:
       <.h3("📈 Structural Velocity Trend Over Time (ΔDepth / ΔClock)"),
       <.table(^.className := "velocity-table",
         <.thead(
-          <.tr(<.th("Channel"), <.th("Label"), <.th("ΔDepth"), <.th("ΔClock"), <.th("Velocity"))
+          <.tr(<.th("Channel"), <.th("Label"), <.th("Dir./Cap."), <.th("ΔDepth"), <.th("ΔClock"), <.th("Velocity"))
         ),
         <.tbody(
           velocities.take(10).map { vel =>
-            <.tr(^.key := vel.name + vel.label + vel.clock,
+            <.tr(^.key := vel.name + vel.label + vel.dir_cap + vel.clock,
               <.td(vel.name),
               <.td(vel.label),
+              <.td(vel.dir_cap),
               <.td(vel.deltaDepth.toString),
               <.td(String.format("%.4f", vel.deltaClock)),
-              <.td(^.className := "bold-velocity", String.format("%.2f", vel.structuralVelocity))
+              <.td(^.className := "bold-velocity", vel.structuralVelocity.map(String.format("%.2f", _)).getOrElse("∞"))
             )
           }.toTagMod
         )

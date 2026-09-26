@@ -26,17 +26,18 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.{ List, Set }
 import _root_.scala.Option.unless
 
+import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
 import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ Async, ExitCode }
-import _root_.cats.effect.std.Queue
+import _root_.cats.effect.{ Async, ExitCode, Ref }
+import _root_.cats.effect.std.PQueue
 
 import `Π-loop`.*
 import `Π-traces`.*
@@ -47,16 +48,33 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type -[F[_]] = Queue[F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), ((Double, Double), BigDecimal), List[Long], ((String, (String, String)), (String, (String, String))))]]
+  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+    Order
+      .fromLessThan { (o1, o2) =>
+        (o1 zip o2).map {
+          case ((_, _, _, (id1, (delay1, _)), _, _), (_, _, _, (id2, (delay2, _)), _, _)) =>
+            if id1 == id2
+            then
+              if delay1.isPosInfinity || delay2.isPosInfinity
+              then
+                !delay1.isPosInfinity
+              else
+                delay1 < delay2
+            else
+              id1 < id2
+        }.getOrElse(true)
+    }
 
 
   final class πdump[F[_]: Async]:
 
     private def record(number: Long,
                        clock: Double, started: Long, ended: Long,
-                       keyBy: Boolean,
-                       delay: Double, syncRate: Double, probability: BigDecimal,
-                       causes: List[Long],
+                       keyBy: KeyBy,
+                       delay: Double, plugins: Seq[Plugin],
+                       causes: Set[Long],
                        ambient: (String, (String, String))): String => F[Unit] =
       _.split(",") match
         case Array(key, name, polarity, label, rate, agent, dir_cap) =>
@@ -66,7 +84,7 @@ package object `Π-dump`:
                        clock, started, ended,
                        agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                        key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                       rate, probability, delay, syncRate,
+                       rate, Seq.empty, delay,
                        dir_cap, ambient._1, ambient._2._1, Option(snapshot))
           }
         case _ =>
@@ -90,15 +108,20 @@ package object `Π-dump`:
         !.complete(ec).void
       }
 
-    def dump(using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+    def dump(clock: Ref[F, Double], feedback: Feedback[F])
+            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
       -.take.flatMap {
         case Some(_) if `π-traces` eq null =>
-          dump
-        case Some(((no, cl), ((s1, s2), e), (k1, k2, kb), ((delay, syncRate), probability), causes, (l1, l2))) =>
+          dump(clock, feedback)
+        case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)), causes, (l1, l2))) =>
           for
-            _ <- record(no, cl, s1, e, kb, delay, syncRate, probability, causes, l1)(k1)
-            _ <- record(no, cl, s2, e, kb, delay, syncRate, probability, causes, l2)(k2).unlessA(k1 == k2)
-            _ <- Async[F].cede >> dump
+            cl <- if delay.isPosInfinity
+                  then clock.get
+                  else clock.updateAndGet(_ + delay)
+            _  <- feedback.lastR.set(ts -> cl)
+            _  <- record(no, cl, ts1, ts, kb, delay, plugins, causes, l1)(k1)
+            _  <- record(no, cl, ts2, ts, kb, delay, plugins, causes, l2)(k2).unlessA(k1 == k2)
+            _  <- Async[F].cede >> dump(clock, feedback)
           yield
             ()
         case _ =>
