@@ -79,12 +79,14 @@ package object `Π-stats`:
 
   def ∥[F[_]](% : Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate, `[]`)], plugins: Set[String])
              (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-             (check: Boolean = false): List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]), () => `[]`)] =
-                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^   ^^^^^^^^^^
-                                          // key1    key1|2  input             delay   plugins       causal set
+             (check: Boolean = false): List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] =
+                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^
+                                          // key1    key1|2  input             delay   plugins
 
-    val syncRatePlugin = plugins.contains(classOf[Plugin.syncRate].getSimpleName)
+    val causesPlugin = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val parentsPlugin = plugins.contains(classOf[Plugin.parents].getSimpleName)
     val probabilityPlugin = plugins.contains(classOf[Plugin.probability].getSimpleName)
+    val syncRatePlugin = plugins.contains(classOf[Plugin.syncRate].getSimpleName)
     val whatIfPlugin = plugins.contains(classOf[Plugin.whatIf].getSimpleName)
 
     val mls = HashMap[({}, Option[Either[Unit, Ref[F, `()`[F]]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
@@ -247,9 +249,9 @@ package object `Π-stats`:
         }.toSeq
       else null
 
-    var r = List[((String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]), () => `[]`), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^   ^^^^^^^^^^    ^^^  ^^^^^^
-    //             key1    key1|2  input             delay   plugins       causal set    pri  delay
+    var r = List[((String, String, Ref[F, `()`[F]], (Double, Seq[Plugin])), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2  input             delay   plugins         pri  delay
 
     for
       i <- 0 until χ.size
@@ -278,12 +280,19 @@ package object `Π-stats`:
         val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
 
         var ps = Seq.empty[Plugin]
-        if syncRatePlugin
+        if causesPlugin
         then
-          ps :+= Plugin.syncRate(unless(rate.isPosInfinity)(BigDecimal(rate)))
+          ps :+= Plugin.causes(set1)
+        if parentsPlugin
+        then
+          val max1 = unless(set1.isEmpty)(set1.max)
+          ps :+= Plugin.parents(max1.toSet)
         if probabilityPlugin
         then
           ps :+= Plugin.probability(probability)
+        if syncRatePlugin
+        then
+          ps :+= Plugin.syncRate(unless(rate.isPosInfinity)(BigDecimal(rate)))
         if whatIfPlugin
         then
           χʹ(i)._2._3._1 match
@@ -292,7 +301,7 @@ package object `Π-stats`:
             case _            =>
               ps :+= Plugin.whatIf(BigDecimal(1), unless(delay.isPosInfinity)((Λʹ - Λ) * delay))
 
-        r ::= (key1, key1, null, delay -> ps, () => set1) -> (priority -> delay)
+        r ::= (key1, key1, null, delay -> ps) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -337,12 +346,20 @@ package object `Π-stats`:
             val delay = delta(rate.toDouble)
 
             var ps = Seq.empty[Plugin]
-            if syncRatePlugin
+            if causesPlugin
             then
-              ps :+= Plugin.syncRate(Some(rate))
+              ps :+= Plugin.causes(set1 ++ set2)
+            if parentsPlugin
+            then
+              val max1 = unless(set1.isEmpty)(set1.max)
+              val max2 = unless(set2.isEmpty)(set2.max)
+              ps :+= Plugin.parents(max1.toSet ++ max2.toSet)
             if probabilityPlugin
             then
               ps :+= Plugin.probability(probability)
+            if syncRatePlugin
+            then
+              ps :+= Plugin.syncRate(Some(rate))
             if whatIfPlugin
             then
               val rateʹ =
@@ -357,12 +374,12 @@ package object `Π-stats`:
               ps :+= Plugin.whatIf(rateʹ / rate, unless(delay.isPosInfinity)((Λʹ - Λ) * delay))
 
             val ref = polarity1.get.orElse(polarity2.get).right.get
-            r ::= (key1, key2, ref, delay -> ps, () => set1 ++ set2) -> (priority -> delay)
+            r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
 
     r = r.sortBy(_._2).reverse
 
     ( for
-        ((it @ (key1, key2, _, _, _), _), i) <- r.zipWithIndex
+        ((it @ (key1, key2, _, _), _), i) <- r.zipWithIndex
       yield
         val k1 = key1.substring(36)
         val k2 = key2.substring(36)
@@ -371,9 +388,9 @@ package object `Π-stats`:
         it -> {
           0 > r.indexWhere(
             {
-              case ((`key1` | `key2`, _, _, _, _), _)
-                 | ((_, `key1` | `key2`, _, _, _), _) => true
-              case ((key, _, _, _, _), _)
+              case ((`key1` | `key2`, _, _, _), _)
+                 | ((_, `key1` | `key2`, _, _), _) => true
+              case ((key, _, _, _), _)
                   if {
                     val k = key.substring(36)
                     `π-trick`.contains(k) && {
@@ -381,7 +398,7 @@ package object `Π-stats`:
                       `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
                     }
                   }                                   => true
-              case ((_, key, _, _, _), _)
+              case ((_, key, _, _), _)
                   if {
                     val k = key.substring(36)
                     `π-trick`.contains(k) && {

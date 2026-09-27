@@ -37,24 +37,27 @@ class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Dou
 
     val currentCausalState = state.value
 
-    if !currentCausalState.observed.contains(value.number)
+    if currentCausalState.observed.contains(value.number)
     then
-      currentCausalState.observed.add(value.number)
+      currentCausalState.observed = None
+    else
+      currentCausalState.observed = Some(value.number)
       currentCausalState.lastEventTimestamp = ctx.timerService.currentProcessingTime
 
-      if value.causes.isEmpty
-      then
-        currentCausalState.root = value.number
-        currentCausalState.rootStartTime = value.clock
+      value.plugins.find(_.isInstanceOf[Plugin.causes]) match
+        case Some(Plugin.causes(causes)) if causes.isEmpty =>
+          currentCausalState.root = value.number
+          currentCausalState.rootStartTime = value.clock
+        case _ =>
 
       currentCausalState.maxLeafTime = math.max(currentCausalState.maxLeafTime, value.clock)
 
       state.update(currentCausalState)
 
       value.plugins.find(_.isInstanceOf[Plugin.probability]) match
-        case Some(probPlugin: Plugin.probability) =>
+        case Some(Plugin.probability(probability)) =>
           val currentMinProb = Option(pathProbState.value).getOrElse(java.lang.Double(1.0))
-          pathProbState.update(math.min(currentMinProb, probPlugin.probability.doubleValue))
+          pathProbState.update(math.min(currentMinProb, probability.doubleValue))
         case _ =>
           pathProbState.update(1)
 
@@ -78,7 +81,6 @@ class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Dou
           val pathTrace = PathTrace(ctx.getCurrentKey,
                                     currentCausalState.root,
                                     totalDelay,
-                                    currentCausalState.observed.size,
                                     finalProbability)
 
           if finalProbability > probabilityThreshold
@@ -88,7 +90,6 @@ class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Dou
             ctx.output(StreamTags.lowProbabilityTag, pathTrace)
 
         currentCausalState.maxLeafTime = Double.MinValue
-        currentCausalState.observed = Set()
         currentCausalState.lastEventTimestamp = 0L
         pathProbState.clear
 
@@ -98,5 +99,5 @@ object CausalPathTrackerFunction:
   case class CausalState(var rootStartTime: Double = Double.MaxValue,
                          var root: Long = 0L,
                          var maxLeafTime: Double = Double.MinValue,
-                         var observed: Set[Long] = Set(),
+                         var observed: Option[Long] = None,
                          var lastEventTimestamp: Long = 0L)

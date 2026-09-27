@@ -254,9 +254,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case List(given String, it)
                 if given_String == "exit"        =>
               settings.parameters.copy(exit = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
-            case List(given String, it)
-                if given_String == "causal"      =>
-              settings.parameters.copy(causal = it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case List(given String, it*)
                 if given_String == "plugins"     =>
               settings.parameters.copy(plugins = it.toList.plugins(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
@@ -413,14 +410,13 @@ object Directive:
   object Settings:
 
     enum Plugin:
-      case syncRate, probability, whatIf
+      case causes, parents, probability, syncRate, whatIf
 
     case class Parameters(address: String = "localhost",
                           parallelism: Int = Int.MaxValue,
                           threshold: Int = 0,
                           timeout: Int = 123456,
                           exit: Boolean = true,
-                          causal: Boolean = false,
                           plugins: List[Plugin] = Nil,
                           snapshot: Boolean = false):
       lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
@@ -428,7 +424,6 @@ object Directive:
                                                                        :: Lit.Int(threshold)
                                                                        :: Lit.Int(timeout)
                                                                        :: Lit.Boolean(exit)
-                                                                       :: Lit.Boolean(causal)
                                                                        :: Term.Apply(\("Set"), Term.ArgClause(plugins.map(_.toString).map(Lit.String(_))))
                                                                        :: Lit.Boolean(snapshot)
                                                                        :: Nil))

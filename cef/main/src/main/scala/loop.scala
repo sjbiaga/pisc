@@ -80,9 +80,9 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
-                                  causal: Boolean,
                                   plugins: Set[String],
-                                  snapshot: Boolean)
+                                  snapshot: Boolean,
+                                  causal: Boolean = false)
 
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],

@@ -21,7 +21,7 @@ services:
         metrics.reporter.prom.port: 9249
         metrics.reporter.prom.filterLabelValueCharacters: false
     volumes:
-      - ./target/scala-3.10.0-RC2:/opt/flink/usrlib
+      - ./target/scala-3.10.0-RC3:/opt/flink/usrlib
     networks:
       - flink-network
 
@@ -45,7 +45,7 @@ services:
         metrics.reporter.prom.filterLabelValueCharacters: false
         taskmanager.numberOfTaskSlots: 4
     volumes:
-      - ./target/scala-3.10.0-RC2:/opt/flink/usrlib
+      - ./target/scala-3.10.0-RC3:/opt/flink/usrlib
     networks:
       - flink-network
 

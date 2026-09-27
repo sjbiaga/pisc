@@ -66,7 +66,7 @@ package object `Π-loop`:
 
   type \ = IO[Unit] => IO[Unit]
 
-  type ++++ = ((Double, Seq[Plugin]), Ref[IO, `()`], () => `[]`, (++, ++))
+  type ++++ = ((Double, Seq[Plugin]), Ref[IO, `()`], (++, ++))
   type ** = PQueue[IO, (Int, List[((String, String), ++++)])]
 
   type * = Semaphore[IO]
@@ -79,9 +79,9 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
-                                  causal: Boolean,
                                   plugins: Set[String],
-                                  snapshot: Boolean)
+                                  snapshot: Boolean,
+                                  causal: Boolean = false)
 
   final case class Feedback(paramsRD: Ref[IO, Deferred[IO, `Π-Parameters`]],
                             paramsR: Ref[IO, `Π-Parameters`],
@@ -152,13 +152,13 @@ package object `Π-loop`:
       else
         val nel = ∥(it, plugins)(`π-wand`._1)()
         val nelʹ = nel.map {
-          case (key1, key2, in, dp, cs) =>
+          case (key1, key2, in, dp) =>
             val (dckots1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
             val (dckots2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (dp, in, cs, (dckots1, dckots2))
+            (key1, key2) -> (dp, in, (dckots1, dckots2))
         }
         nel.traverse {
-          case (key1, key2, _, _, _) =>
+          case (key1, key2, _, _) =>
             val k1 = key1.substring(36)
             val k2 = key2.substring(36)
             val  ^ = key1.substring(0, 36)
@@ -228,7 +228,7 @@ package object `Π-loop`:
               (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
                 &|.get.flatMap { id =>
                   val fun = { (f: (((String, String), ++++)) => IO[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-                  fun { case ((key1, key2), (dp @ (delay, _), in, cs, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+                  fun { case ((key1, key2), (dp @ (delay, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                           val k1 = key1.substring(36)
                           val k2 = key2.substring(36)
                           if stop
@@ -245,7 +245,6 @@ package object `Π-loop`:
                             for
                               cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                               no <- &|.updateAndGet(_ + 1)
-                              csʹ = if parameters.causal then cs() else Set.empty
                               _  <- sem.acquire
                               _  <- started.update(_ + 1)
                               fb <- ( for
@@ -265,23 +264,24 @@ package object `Π-loop`:
                                         _            <- enable(k1)
                                         _            <- enable(k2).unlessA(k1 == k2)
                                         ss           <- ts1.get product ts2.get
-                                        kb           <- feedback.keyByR.get.map { al => if parameters.causal then KeyBy.HID else if al then KeyBy.AGENT_LABEL else KeyBy.ANY }
+                                        kb           <- if parameters.causal then IO.pure(KeyBy.HID)
+                                                        else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                         now          <- currentTimeMillis
-                                        _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), csʹ, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                        _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                         _            <- sem.release
                                         _            <- started.update(_ - 1)
                                       yield
                                         ()
                                     ).start
-                              cs  = if (parameters.causal)
-                                    then
-                                      if k1.indexOf(',') < 0
-                                      then
-                                        csʹ
-                                      else
-                                        csʹ + no
-                                    else
-                                      Set.empty
+                              cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
+                                      case Some(Plugin.causes(cs)) =>
+                                        if k1.indexOf(',') < 0
+                                        then
+                                          cs
+                                        else
+                                          cs + no
+                                      case _ =>
+                                        Set.empty
                               _  <- d1.complete(Some((delay, cb, fb, in, cs)))
                               _  <- d2.complete(Some((delay, cb, fb, in, cs))).unlessA(k1 == k2)
                               _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c1 eq null)
@@ -330,7 +330,7 @@ package object `Π-loop`:
           (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
             &|.get.flatMap { id =>
               val fun = { (f: (((String, String), ++++)) => IO[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-              fun { case ((key1, key2), (dp @ (delay, _), in, cs, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+              fun { case ((key1, key2), (dp @ (delay, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
                       val k1 = key1.substring(36)
                       val k2 = key2.substring(36)
                       if stop
@@ -347,7 +347,6 @@ package object `Π-loop`:
                         for
                           cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                           no <- &|.updateAndGet(_ + 1)
-                          csʹ = if parameters.causal then cs() else Set.empty
                           _  <- sem.acquire
                           _  <- started.update(_ + 1)
                           fb <- ( for
@@ -367,23 +366,24 @@ package object `Π-loop`:
                                     _            <- enable(k1)
                                     _            <- enable(k2).unlessA(k1 == k2)
                                     ss           <- ts1.get product ts2.get
-                                    kb           <- feedback.keyByR.get.map { al => if parameters.causal then KeyBy.HID else if al then KeyBy.AGENT_LABEL else KeyBy.ANY }
+                                    kb           <- if parameters.causal then IO.pure(KeyBy.HID)
+                                                    else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                     now          <- currentTimeMillis
-                                    _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), csʹ, (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                    _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                     _            <- sem.release
                                     _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek(parameters.plugins).whenA
                                   yield
                                     ()
                                 ).start
-                          cs  = if (parameters.causal)
-                                then
-                                  if k1.indexOf(',') < 0
-                                  then
-                                    csʹ
-                                  else
-                                    csʹ + no
-                                else
-                                  Set.empty
+                          cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
+                                  case Some(Plugin.causes(cs)) =>
+                                    if k1.indexOf(',') < 0
+                                    then
+                                      cs
+                                    else
+                                      cs + no
+                                  case _ =>
+                                    Set.empty
                           _  <- d1.complete(Some((delay, cb, fb, in, cs)))
                           _  <- d2.complete(Some((delay, cb, fb, in, cs))).unlessA(k1 == k2)
                           _  <- c1.get.flatMap(_.complete(Some((delay, cb, fb, in, cs)))).unlessA(c1 eq null)

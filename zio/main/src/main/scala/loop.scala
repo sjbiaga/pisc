@@ -75,9 +75,9 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
-                                  causal: Boolean,
                                   plugins: Set[String],
-                                  snapshot: Boolean)
+                                  snapshot: Boolean,
+                                  causal: Boolean = false)
 
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
                             paramsR: Ref[`Π-Parameters`],

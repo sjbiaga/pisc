@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.Set
+import _root_.scala.collection.immutable.Seq
 
 import _root_.cats.Order
 import _root_.cats.effect.{ Concurrent, Ref }
@@ -38,9 +38,9 @@ import `Π-traces`.{ KeyBy, Plugin }
 
 package object `Π-dump`:
 
-  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
     Order.fromLessThan { (_, _) => true }
 
 

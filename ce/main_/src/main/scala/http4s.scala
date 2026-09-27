@@ -68,7 +68,6 @@ package object `Π-http4s`:
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean],
-                        causal: Option[Boolean],
                         plugins: Set[String],
                         snapshot: Option[Boolean]) derives Codec.AsObject:
     def apply(default: `Π-Parameters`): `Π-Parameters` =
@@ -77,9 +76,9 @@ package object `Π-http4s`:
                      threshold.map(_.max(1) * math.signum(default.threshold)).getOrElse(default.threshold),
                      timeout.map(0 max _).getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
-                     default.causal,
                      default.plugins,
-                     snapshot.getOrElse(default.snapshot))
+                     snapshot.getOrElse(default.snapshot),
+                     default.causal)
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
@@ -87,7 +86,6 @@ package object `Π-http4s`:
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit),
-                 Some(parameters.causal),
                  parameters.plugins,
                  Some(parameters.snapshot))
 
@@ -217,7 +215,7 @@ package object `Π-http4s`:
             BadRequest("attempt to alter the `init' read-only flag")
           case State(_, _, _, _, _, _, _, Some(_))    =>
             BadRequest("attempt to alter the `done' read-only flag")
-          case State(Parameters(_, Some(threshold), _, _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+          case State(Parameters(_, Some(threshold), _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
             BadRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' parameter")
           case State(parameters, _, _, _, _, _, _, _) =>
             feedback.paramsR.get.flatMap { default => feedback.paramsRD.get.flatMap(_.complete(parameters(default))) >> Ok() }

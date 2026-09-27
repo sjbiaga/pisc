@@ -32,6 +32,7 @@ object Consul:
     Datacenter: Option[String]
   ) derives Codec.AsObject:
       val isBioAmbients = Meta.get("calculus") == "BioAmbients"
+      lazy val plugins = Meta.get("plugins").split(" ").toSet
       private def feedbackUrl(path: String): Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/feedback/" + path)
       lazy val stateUrl: Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/state")
       def state(using httpClient: Client[IO]): IO[State] =

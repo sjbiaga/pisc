@@ -34,7 +34,7 @@ import _root_.cats.effect.std.Semaphore
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.{ List, Map, Set }
+  import _root_.scala.collection.immutable.{ List, Map, Seq, Set }
 
   import _root_.cats.syntax.applicative.*
 
@@ -55,7 +55,6 @@ object App extends _root_.cats.effect.IOApp:
   private val bacsh = "pisc.bioambients.communications.batch.threshold"
   private val bacst = "pisc.bioambients.communications.timeout.microseconds"
   private val bacse = "pisc.bioambients.communications.exit.passthrough"
-  private val bacsc = "pisc.bioambients.communications.causal.sets"
   private val baass = "pisc.bioambients.ambients.hierarchy.snapshot"
 
 
@@ -104,19 +103,17 @@ object App extends _root_.cats.effect.IOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
-    val c = if sys.BooleanProp.keyExists(bacsc).value
-            then true
-            else π.`π-parameters`.causal
+    val c = π.`π-parameters`.plugins.contains(classOf[Plugin.causes].getSimpleName)
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, c, π.`π-parameters`.plugins, s)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, π.`π-parameters`.plugins, s, c)
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
       ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
-      - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+      - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L)
       n <- IO.ref(0L)

@@ -23,12 +23,13 @@ package object flink4traces:
   case class ⊤(weight: Long) extends AnyVal with Rate
 
   enum Plugin:
-    case syncRate(rate: Option[BigDecimal])
+    case causes(causes: Set[Long])
+    case parents(numbers: Set[Long])
     case probability(probability: BigDecimal)
+    case syncRate(rate: Option[BigDecimal])
     case whatIf(factor: BigDecimal, term: Option[BigDecimal])
 
-  case class Traces(uuid: String,
-                    number: Long, causes: List[Long],
+  case class Traces(uuid: String, number: Long,
                     clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
                     key: String, guard: Boolean, label: String, keyBy: String,
@@ -43,8 +44,6 @@ package object flink4traces:
         try
           val uuid = record.get("uuid").toString
           val number = record.get("number").asInstanceOf[Long]
-          var causes = List.empty[Long]
-          record.get("causes").asInstanceOf[GenericData.Array[Long]].forEach(causes ::= _)
           val clock = record.get("clock").asInstanceOf[Double]
           val started = record.get("started").asInstanceOf[Long]
           val ended = record.get("ended").asInstanceOf[Long]
@@ -60,12 +59,20 @@ package object flink4traces:
           record.get("plugins").asInstanceOf[GenericData.Array[GenericRecord]].forEach { pluginRecord =>
             plugins ::= {
               pluginRecord.getSchema.getName match
-                case "syncRate"    =>
-                  val syncRate = Option(pluginRecord.get("syncRate")).map(_.asInstanceOf[String]).map(BigDecimal(_))
-                  Plugin.syncRate(syncRate)
+                case "causes" =>
+                  var causes = List.empty[Long]
+                  pluginRecord.get("causes").asInstanceOf[GenericData.Array[Long]].forEach(causes ::= _)
+                  Plugin.causes(causes.toSet)
+                case "parents" =>
+                  var numbers = List.empty[Long]
+                  pluginRecord.get("numbers").asInstanceOf[GenericData.Array[Long]].forEach(numbers ::= _)
+                  Plugin.parents(numbers.toSet)
                 case "probability" =>
                   val probability = BigDecimal(pluginRecord.get("probability").toString)
                   Plugin.probability(probability)
+                case "syncRate"    =>
+                  val syncRate = Option(pluginRecord.get("syncRate")).map(_.asInstanceOf[String]).map(BigDecimal(_))
+                  Plugin.syncRate(syncRate)
                 case "whatIf"      =>
                   val factor = BigDecimal(pluginRecord.get("factor").toString)
                   val term = Option(pluginRecord.get("term")).map(_.toString).map(BigDecimal(_))
@@ -78,8 +85,7 @@ package object flink4traces:
           val to = record.get("to").toString
           val snapshot = Option(record.get("snapshot")).map(_.toString)
           out.collect:
-            Traces(uuid,
-                   number, causes,
+            Traces(uuid, number,
                    clock, started, ended,
                    agent, name, polarity,
                    key, guard, label, keyBy,
@@ -89,64 +95,74 @@ package object flink4traces:
 
 
   private val _schema = """{
-      "namespace": "pisc.avro",
-      "type": "record",
-      "name": "BioAmbients2Scala",
-      "fields": [
-        { "name" : "uuid", "type": "string" },
+    "namespace": "pisc.avro",
+    "type": "record",
+    "name": "BioAmbients2Scala",
+    "fields": [
+      { "name" : "uuid", "type": "string" },
+      { "name" : "number", "type": "long" },
 
-        { "name" : "number", "type": "long" },
-        { "name" : "causes", "type": { "type": "array", "items": "long", "default": [] } },
+      { "name" : "clock", "type": "double" },
+      { "name" : "started", "type": "long" },
+      { "name" : "ended", "type": "long" },
 
-        { "name" : "clock", "type": "double" },
-        { "name" : "started", "type": "long" },
-        { "name" : "ended", "type": "long" },
+      { "name" : "agent", "type": "string" },
+      { "name" : "name", "type": "string" },
+      { "name" : "polarity", "type": ["null", "boolean"] },
 
-        { "name" : "agent", "type": "string" },
-        { "name" : "name", "type": "string" },
-        { "name" : "polarity", "type": ["null", "boolean"] },
+      { "name" : "key", "type": "string" },
+      { "name" : "guard", "type": "boolean" },
+      { "name" : "label", "type": "string" },
+      { "name" : "keyBy", "type": "string" },
 
-        { "name" : "key", "type": "string" },
-        { "name" : "guard", "type": "boolean" },
-        { "name" : "label", "type": "string" },
-        { "name" : "keyBy", "type": "string" },
+      { "name" : "rate", "type": "string" },
+      { "name" : "plugins",
+        "type": {
+          "type": "array",
+          "items": [
+            { "name": "causes",
+              "type": "record",
+              "fields": [
+                { "name": "causes", "type": { "type": "array", "items": "long" } }
+              ]
+            },
+            { "name": "parents",
+              "type": "record",
+              "fields": [
+                { "name": "numbers", "type": { "type": "array", "items": "long" } }
+              ]
+            },
+            { "name": "probability",
+              "type": "record",
+              "fields": [
+                { "name": "probability", "type": "string" }
+              ]
+            },
+            { "name": "syncRate",
+              "type": "record",
+              "fields": [
+                { "name": "rate", "type": ["null", "string"] }
+              ]
+            },
+            { "name": "whatIf",
+              "type": "record",
+              "fields": [
+                { "name": "factor", "type": "string" },
+                { "name": "term", "type": ["null", "string"] }
+              ]
+            }
+          ],
+          "default": []
+        }
+      },
 
-        { "name" : "rate", "type": "string" },
-        { "name" : "plugins",
-          "type": {
-            "type": "array",
-            "items": [
-              { "name": "syncRate",
-                "type": "record",
-                "fields": [
-                  { "name": "rate", "type": ["null", "string"] }
-                ]
-              },
-              { "name": "probability",
-                "type": "record",
-                "fields": [
-                  { "name": "probability", "type": "string" }
-                ]
-              },
-              { "name": "whatIf",
-                "type": "record",
-                "fields": [
-                  { "name": "factor", "type": "string" },
-                  { "name": "term", "type": ["null", "string"] }
-                ]
-              }
-            ],
-            "default": []
-          }
-        },
+      { "name" : "delay", "type": ["null", "double"] },
 
-        { "name" : "delay", "type": ["null", "double"] },
-
-        { "name" : "dir_cap", "type": "string" },
-        { "name" : "from", "type": "string" },
-        { "name" : "to", "type": "string" },
-        { "name" : "snapshot", "type": ["null", "string"] }
-      ]
+      { "name" : "dir_cap", "type": "string" },
+      { "name" : "from", "type": "string" },
+      { "name" : "to", "type": "string" },
+      { "name" : "snapshot", "type": ["null", "string"] }
+    ]
   }"""
 
   val schema = Schema.Parser().parse(_schema)

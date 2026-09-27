@@ -88,9 +88,9 @@ package object `Π-loop`:
                                   threshold: Int,
                                   timeout: Int,
                                   exit: Boolean,
-                                  causal: Boolean,
                                   plugins: Set[String],
-                                  snapshot: Boolean)
+                                  snapshot: Boolean,
+                                  causal: Boolean = false)
 
   final case class Feedback[F[_]](paramsRD: Ref[F, Deferred[F, `Π-Parameters`]],
                                   paramsR: Ref[F, `Π-Parameters`],
@@ -160,10 +160,10 @@ package object `Π-loop`:
         else
           val nel = ∥(it)(`π-wand`._1)()
           val nelʹ = nel.map {
-            case (key1, key2, in, delay) =>
+            case (key1, key2, in, _delay) =>
               val (dcko1, _) = m(key1).asInstanceOf[(Boolean, +[F])]._2
               val (dcko2, _) = m(key2).asInstanceOf[(Boolean, +[F])]._2
-              (key1, key2) -> (delay, in, (dcko1, dcko2))
+              (key1, key2) -> (_delay, in, (dcko1, dcko2))
           }
           nel.traverse {
             case (key1, key2, _, _) =>
@@ -253,7 +253,7 @@ package object `Π-loop`:
               else
                 (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
                   val fun = { (f: (((String, String), ++++[F])) => F[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-                  fun { case ((key1, key2), (_delay, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
+                  fun { case ((key1, key2), (_, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
                           val k1 = key1.substring(36)
                           val k2 = key2.substring(36)
                           if stop
@@ -324,7 +324,7 @@ package object `Π-loop`:
           else
             (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
               val fun = { (f: (((String, String), ++++[F])) => F[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-              fun { case ((key1, key2), (_delay, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
+              fun { case ((key1, key2), (_, in, (((d1, c1), (key, ord)), ((d2, c2), (keyʹ, ordʹ))))) =>
                       val k1 = key1.substring(36)
                       val k2 = key2.substring(36)
                       if stop

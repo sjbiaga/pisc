@@ -35,8 +35,10 @@ package object `Π-traces`:
     case HID, ANY, AGENT_LABEL
 
   enum Plugin:
-    case syncRate(rate: Option[BigDecimal])
+    case causes(causes: Set[Long])
+    case parents(numbers: Set[Long])
     case probability(probability: BigDecimal)
+    case syncRate(rate: Option[BigDecimal])
     case whatIf(factor: BigDecimal, term: Option[BigDecimal])
 
 

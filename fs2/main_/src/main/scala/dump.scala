@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.{ List, Set }
+import _root_.scala.collection.immutable.Seq
 import _root_.scala.Option.unless
 
 import _root_.cats.Order
@@ -48,13 +48,13 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]]
+  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), Set[Long], ((String, (String, String)), (String, (String, String))))]] =
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
     Order
       .fromLessThan { (o1, o2) =>
         (o1 zip o2).map {
-          case ((_, _, _, (id1, (delay1, _)), _, _), (_, _, _, (id2, (delay2, _)), _, _)) =>
+          case ((_, _, _, (id1, (delay1, _)), _), (_, _, _, (id2, (delay2, _)), _)) =>
             if id1 == id2
             then
               if delay1.isPosInfinity || delay2.isPosInfinity
@@ -74,17 +74,15 @@ package object `Π-dump`:
                        clock: Double, started: Long, ended: Long,
                        keyBy: KeyBy,
                        delay: Double, plugins: Seq[Plugin],
-                       causes: Set[Long],
                        ambient: (String, (String, String))): String => F[Unit] =
       _.split(",") match
         case Array(key, name, polarity, label, rate, agent, dir_cap) =>
           Async[F].blocking {
             val snapshot = if ambient._2._2.isEmpty then null else """<?xml version="1.0" ?>\n""" + ambient._2._2
-            `π-traces`(number, causes,
-                       clock, started, ended,
+            `π-traces`(number, clock, started, ended,
                        agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                        key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                       rate, Seq.empty, delay,
+                       rate, plugins, delay,
                        dir_cap, ambient._1, ambient._2._1, Option(snapshot))
           }
         case _ =>
@@ -113,14 +111,14 @@ package object `Π-dump`:
       -.take.flatMap {
         case Some(_) if `π-traces` eq null =>
           dump(clock, feedback)
-        case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)), causes, (l1, l2))) =>
+        case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)), (l1, l2))) =>
           for
             cl <- if delay.isPosInfinity
                   then clock.get
                   else clock.updateAndGet(_ + delay)
             _  <- feedback.lastR.set(ts -> cl)
-            _  <- record(no, cl, ts1, ts, kb, delay, plugins, causes, l1)(k1)
-            _  <- record(no, cl, ts2, ts, kb, delay, plugins, causes, l2)(k2).unlessA(k1 == k2)
+            _  <- record(no, cl, ts1, ts, kb, delay, plugins, l1)(k1)
+            _  <- record(no, cl, ts2, ts, kb, delay, plugins, l2)(k2).unlessA(k1 == k2)
             _  <- Async[F].cede >> dump(clock, feedback)
           yield
             ()

@@ -34,18 +34,21 @@ class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
       var maxParentDepth = 0L
       var latestParentClock = .0
 
-      value.causes.foreach {
-        case depId if depthState.contains(depId) =>
-          val (parentDepth, parentClock) = depthState.get(depId)
-          if parentDepth > maxParentDepth
-          then
-            maxParentDepth = parentDepth
-          if parentClock > latestParentClock
-          then
-            latestParentClock = parentClock
+      value.plugins.find(_.isInstanceOf[Plugin.causes]) match
+        case Some(Plugin.causes(causes)) =>
+          causes.foreach {
+            case depId if depthState.contains(depId) =>
+              val (parentDepth, parentClock) = depthState.get(depId)
+              if parentDepth > maxParentDepth
+              then
+                maxParentDepth = parentDepth
+              if parentClock > latestParentClock
+              then
+                latestParentClock = parentClock
+            case _ =>
+              // Parent was either pruned by TTL or bypassed. Fallback to 0.
+          }
         case _ =>
-          // Parent was either pruned by TTL or bypassed. Fallback to 0.
-      }
 
       val currentDepth = maxParentDepth + 1
       val parentClock = if latestParentClock == .0 then value.clock else latestParentClock

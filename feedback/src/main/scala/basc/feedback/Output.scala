@@ -668,8 +668,9 @@ object Item:
               <.option(^.value := "-"             , "-"                               ),
               <.option(^.value := "loadavg"       , "Load Average"                    ),
               <.option(^.value := "sweepline"     , "Sweep Line"                      ),
-              <.option(^.value := "velocityreport", "Velocity Report"                 ),
-              <.option(^.disabled := !p.kafka.value.own,
+              <.option(^.disabled := !p.service.plugins.contains("causes"),
+                       ^.value := "velocityreport", "Velocity Report"                 ),
+              <.option(^.disabled := !p.service.plugins.contains("causes") || !p.service.plugins.contains("probability") || !p.kafka.value.own,
                        ^.value := "cdf"           , "Cumulative Distribution Function")
             ),
 

@@ -62,7 +62,6 @@ package object `Π-http`:
                         threshold: Option[Int],
                         timeout: Option[Int],
                         exit: Option[Boolean],
-                        causal: Option[Boolean],
                         plugins: Set[String],
                         snapshot: Option[Boolean]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
@@ -71,9 +70,9 @@ package object `Π-http`:
                      threshold.map(_.max(1) * math.signum(default.threshold)).getOrElse(default.threshold),
                      timeout.map(0 max _).getOrElse(default.timeout),
                      exit.getOrElse(default.exit),
-                     default.causal,
                      default.plugins,
-                     snapshot.getOrElse(default.snapshot))
+                     snapshot.getOrElse(default.snapshot),
+                     default.causal)
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
@@ -81,7 +80,6 @@ package object `Π-http`:
                  Some(parameters.threshold),
                  Some(parameters.timeout),
                  Some(parameters.exit),
-                 Some(parameters.causal),
                  parameters.plugins,
                  Some(parameters.snapshot))
 
@@ -213,7 +211,7 @@ package object `Π-http`:
                 ZIO.succeed(Response.badRequest("attempt to alter the `init' read-only flag"))
               case State(_, _, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
-              case State(Parameters(_, Some(threshold), _, _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+              case State(Parameters(_, Some(threshold), _, _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
                 ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(parameters, _, _, _, _, _, _, _) =>
                 feedback.paramsR.get.flatMap { default => feedback.paramsRP.get.flatMap(_.succeed(parameters(default))) }.as(Response.ok)
@@ -275,7 +273,7 @@ package object `Π-http`:
               "producer" -> producer,
               "backend" -> backend,
               "kind" -> kind,
-              "emitter" -> "zio",
+              "emitter" -> "zs",
               "plugins" -> plugins.mkString(" "),
               "uuid" -> uuid
             ),

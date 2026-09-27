@@ -161,7 +161,6 @@ function ba_() {
 #                  -Dpisc.bioambients.communications.batch.threshold=0 \
 #                  -Dpisc.bioambients.communications.timeout.microseconds=123456 \
 #                  -Dpisc.bioambients.communications.exit.passthrough=true \
-#                  -Dpisc.bioambients.communications.causal.sets=true \
 #                  -Dpisc.bioambients.ambients.hierarchy.snapshot=false \
 }
 

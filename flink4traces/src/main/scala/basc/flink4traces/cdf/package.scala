@@ -10,7 +10,6 @@ package object cdf:
   case class PathTrace(hid: String,
                        root: Long,
                        totalEndToEndDelay: Double,
-                       count: Int,
                        pathProbability: Double)
 
   case class CDFPercentiles(hid: String,

@@ -8,8 +8,8 @@ import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 
-import org.apache.flink.api.common.functions.OpenContext
 import org.apache.flink.metrics.{ Gauge, MetricGroup }
+
 import org.apache.flink.util.Collector
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
@@ -28,7 +28,7 @@ class RollingQuantileAccumulator(topic: String, profile: String)
   private val p95GaugeCache = Map[(String, String), UpdatableGauge]()
   private val p99GaugeCache = Map[(String, String), UpdatableGauge]()
 
-  override def open(openContext: OpenContext): Unit =
+  override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     baseMetricGroup = getRuntimeContext
       .getMetricGroup
       .addGroup("bioambients_flink4traces_cdf")
