@@ -15,10 +15,10 @@ import CausalPathTrackerFunction.*
 class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Double)
     extends KeyedProcessFunction[String, Traces, PathTrace]:
 
-  private var state: ValueState[CausalState] = null
+  @transient private var state: ValueState[CausalState] = null
 
   // Tracks minimum event probability observed along the nested trace tree path
-  private var pathProbState: ValueState[java.lang.Double] = null
+  @transient private var pathProbState: ValueState[java.lang.Double] = null
 
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     state = getRuntimeContext.getState(

@@ -36,8 +36,9 @@ package object sweepline:
   case class SweepLine1msBurst(timestamp: Long,
                                clock: Double,
                                histograms: Map[String, SweepLine],
-                               perUUIDSweepLine1msBurst: Map[String, SweepLine1msBurst]):
-    def toJson: String =
+                               perUUIDSweepLine1msBurst: Map[String, SweepLine1msBurst])
+      extends websocket.WebSocketSink.SinkableElement:
+    override def toJson: String =
       s"""{
           |"timestamp":$timestamp,
           |"clock":$clock,

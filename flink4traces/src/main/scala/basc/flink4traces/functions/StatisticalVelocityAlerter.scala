@@ -13,7 +13,7 @@ import StatisticalVelocityAlerter.*
 class StatisticalVelocityAlerter(zScoreThreshold: Double)
     extends KeyedProcessFunction[String, WindowVelocityReport, StructuralVelocityAlert]:
 
-  private var statsState: ValueState[WelfordState] = null
+  @transient private var statsState: ValueState[WelfordState] = null
 
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     statsState = getRuntimeContext.getState(

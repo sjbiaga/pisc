@@ -27,13 +27,13 @@ package object flink4traces:
     case parents(numbers: Set[Long])
     case probability(probability: BigDecimal)
     case syncRate(rate: Option[BigDecimal])
-    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
 
   case class Traces(uuid: String, number: Long,
                     clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
                     key: String, guard: Boolean, label: String, keyBy: String,
-                    rate: Rate, plugins: Seq[Plugin], delay: Double,
+                    rate: Rate, plugins: Seq[Plugin], delay: Option[Double],
                     dir_cap: String, from: String, to: String,
                     snapshot: Option[String])
 
@@ -59,11 +59,11 @@ package object flink4traces:
           record.get("plugins").asInstanceOf[GenericData.Array[GenericRecord]].forEach { pluginRecord =>
             plugins ::= {
               pluginRecord.getSchema.getName match
-                case "causes" =>
+                case "causes"      =>
                   var causes = List.empty[Long]
                   pluginRecord.get("causes").asInstanceOf[GenericData.Array[Long]].forEach(causes ::= _)
                   Plugin.causes(causes.toSet)
-                case "parents" =>
+                case "parents"     =>
                   var numbers = List.empty[Long]
                   pluginRecord.get("numbers").asInstanceOf[GenericData.Array[Long]].forEach(numbers ::= _)
                   Plugin.parents(numbers.toSet)
@@ -74,12 +74,14 @@ package object flink4traces:
                   val syncRate = Option(pluginRecord.get("syncRate")).map(_.asInstanceOf[String]).map(BigDecimal(_))
                   Plugin.syncRate(syncRate)
                 case "whatIf"      =>
-                  val factor = BigDecimal(pluginRecord.get("factor").toString)
-                  val term = Option(pluginRecord.get("term")).map(_.toString).map(BigDecimal(_))
-                  Plugin.whatIf(factor, term)
+                  val fraction = pluginRecord.get("fraction").asInstanceOf[GenericRecord]
+                  val numerator = BigDecimal(fraction.get("numerator").toString)
+                  val denominator = BigDecimal(fraction.get("denominator").toString)
+                  val difference = BigDecimal(pluginRecord.get("difference").toString)
+                  Plugin.whatIf(numerator -> denominator, difference)
             }
           }
-          val delay = Option(record.get("delay")).map(_.asInstanceOf[Double]).getOrElse(Double.PositiveInfinity)
+          val delay = Option(record.get("delay")).map(_.asInstanceOf[Double])
           val dir_cap = record.get("dir_cap").toString
           val from = record.get("from").toString
           val to = record.get("to").toString
@@ -147,8 +149,17 @@ package object flink4traces:
             { "name": "whatIf",
               "type": "record",
               "fields": [
-                { "name": "factor", "type": "string" },
-                { "name": "term", "type": ["null", "string"] }
+                { "name": "fraction",
+                  "type": {
+                    "name": "fraction",
+                    "type": "record",
+                    "fields": [
+                      { "name": "numerator", "type": "string" },
+                      { "name": "denominator", "type": "string" }
+                    ]
+                  }
+                },
+                { "name": "difference", "type": "string" }
               ]
             }
           ],

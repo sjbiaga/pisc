@@ -15,7 +15,7 @@ import velocityreport.DepthTrace
 class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
     extends KeyedProcessFunction[String, Traces, DepthTrace]:
 
-  private var depthState: MapState[Long, (Long, Double)] = null
+  @transient private var depthState: MapState[Long, (Long, Double)] = null
 
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     depthState = getRuntimeContext.getMapState(
@@ -48,33 +48,34 @@ class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
             case _ =>
               // Parent was either pruned by TTL or bypassed. Fallback to 0.
           }
-        case _ =>
 
-      val currentDepth = maxParentDepth + 1
-      val parentClock = if latestParentClock == .0 then value.clock else latestParentClock
+          val currentDepth = maxParentDepth + 1
+          val parentClock = if latestParentClock == .0 then value.clock else latestParentClock
 
-      depthState.put(value.number, currentDepth -> value.clock)
-      depthState.put(0L, depthState.get(0L)._1 + 1 -> Double.NaN)
+          depthState.put(value.number, currentDepth -> value.clock)
+          depthState.put(0L, depthState.get(0L)._1 + 1 -> Double.NaN)
 
-      if depthState.get(0L)._1 > purgeThreshold
-      then
-        val keysToRemove = List[Long]()
-        val cutoff = value.clock - keepPast
-        depthState.entries.forEach { entry =>
-          val number = entry.getKey
-          val (_, clock) = entry.getValue
-          if clock < cutoff
+          if depthState.get(0L)._1 > purgeThreshold
           then
-            keysToRemove.add(number)
-        }
-        keysToRemove.forEach(depthState.remove)
+            val keysToRemove = List[Long]()
+            val cutoff = value.clock - keepPast
+            depthState.entries.forEach { entry =>
+              val number = entry.getKey
+              val (_, clock) = entry.getValue
+              if clock < cutoff
+              then
+                keysToRemove.add(number)
+            }
+            keysToRemove.forEach(depthState.remove)
 
-      out.collect:
-        DepthTrace(value.name,
-                   ctx.getCurrentKey,
-                   value.uuid,
-                   value.agent + '-' + value.label,
-                   value.dir_cap,
-                   value.clock,
-                   currentDepth,
-                   parentClock)
+          out.collect:
+            DepthTrace(value.name,
+                       ctx.getCurrentKey,
+                       value.uuid,
+                       value.agent + '-' + value.label,
+                       value.dir_cap,
+                       value.clock,
+                       currentDepth,
+                       parentClock)
+
+        case _ =>

@@ -8,6 +8,7 @@ import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner
 
 import functions.{ StatefulLoadAvgFunction, LoadAvg1msBurstFunction }
 import util.ExactTimestampWindowAssigner
+import websocket.WebSocketSink
 
 
 object LoadAvgPipeline:
@@ -27,6 +28,15 @@ object LoadAvgPipeline:
       .windowAll(ExactTimestampWindowAssigner)
       .process(new LoadAvg1msBurstFunction())
 
-    val wsBroadcastSink: WebSocketSink = WebSocketSink(port, s"traces-loadavg-$topic")
+    val wsBroadcastSink: WebSocketSink[LoadAvg1msBurst] =
+      WebSocketSink(port,
+                    s"traces-loadavg-$topic",
+                    { element => {
+                        case uuid if element.perUUIDLoadAvg1msBurst.containsKey(uuid) =>
+                          Some(element.perUUIDLoadAvg1msBurst.get(uuid).toJson)
+                        case _ =>
+                          None
+                      }
+                    })
 
     loadAvgStream.sinkTo(wsBroadcastSink)

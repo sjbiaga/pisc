@@ -44,7 +44,7 @@ package object `Π-traces`:
     case parents(numbers: Set[Long])
     case probability(probability: BigDecimal)
     case syncRate(rate: Option[BigDecimal])
-    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
 
   object Plugin:
     given Encoder[BigDecimal] = Encoder.encodeString.contramap(_.toString)
@@ -234,7 +234,7 @@ package object `Π-traces`:
           causesRecord
         case Plugin.parents(parents) =>
           val parentsRecord = GenericData.Record(`Π-Kafka`.parentsPluginSchema)
-          parentsRecord.put("parents", parents.asJava)
+          parentsRecord.put("numbers", parents.asJava)
           parentsRecord
         case Plugin.probability(probability) =>
           val probRecord = GenericData.Record(`Π-Kafka`.probabilityPluginSchema)
@@ -244,10 +244,13 @@ package object `Π-traces`:
           val syncRateRecord = GenericData.Record(`Π-Kafka`.syncRatePluginSchema)
           syncRateRecord.put("rate", rate.map(_.toString).getOrElse(null))
           syncRateRecord
-        case Plugin.whatIf(factor, term) =>
+        case Plugin.whatIf((numerator, denominator), difference) =>
           val whatIfRecord = GenericData.Record(`Π-Kafka`.whatIfPluginSchema)
-          whatIfRecord.put("factor", factor.toString)
-          whatIfRecord.put("term", term.map(_.toString).getOrElse(null))
+          val fractionRecord = GenericData.Record(`Π-Kafka`.whatIfPluginFractionSchema)
+          fractionRecord.put("numerator", numerator.toString)
+          fractionRecord.put("denominator", denominator.toString)
+          whatIfRecord.put("fraction", fractionRecord)
+          whatIfRecord.put("difference", difference.toString)
           whatIfRecord
       }.asJava)
       avroRecord.put("delay", if delay.isPosInfinity then null else delay)
@@ -365,8 +368,17 @@ package object `Π-traces`:
               { "name": "whatIf",
                 "type": "record",
                 "fields": [
-                  { "name": "factor", "type": "string" },
-                  { "name": "term", "type": ["null", "string"] }
+                  { "name": "fraction",
+                    "type": {
+                      "name": "fraction",
+                      "type": "record",
+                      "fields": [
+                        { "name": "numerator", "type": "string" },
+                        { "name": "denominator", "type": "string" }
+                      ]
+                    }
+                  },
+                  { "name": "difference", "type": "string" }
                 ]
               }
             ],
@@ -390,6 +402,7 @@ package object `Π-traces`:
     val probabilityPluginSchema = pluginsSchema.stream.filter(_.getName == "probability").findFirst.get
     val syncRatePluginSchema = pluginsSchema.stream.filter(_.getName == "syncRate").findFirst.get
     val whatIfPluginSchema = pluginsSchema.stream.filter(_.getName == "whatIf").findFirst.get
+    val whatIfPluginFractionSchema = whatIfPluginSchema.getField("fraction").schema
 
     object Redpanda:
 

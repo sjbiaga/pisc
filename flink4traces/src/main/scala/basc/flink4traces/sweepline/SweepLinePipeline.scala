@@ -8,6 +8,7 @@ import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner
 
 import functions.{ StatefulSweepLineFunction, SweepLine1msBurstFunction }
 import util.ExactTimestampWindowAssigner
+import websocket.WebSocketSink
 
 
 object SweepLinePipeline:
@@ -27,6 +28,15 @@ object SweepLinePipeline:
       .windowAll(ExactTimestampWindowAssigner)
       .process(new SweepLine1msBurstFunction())
 
-    val wsBroadcastSink: WebSocketSink = WebSocketSink(port, s"traces-sweepline-$topic")
+    val wsBroadcastSink: WebSocketSink[SweepLine1msBurst] =
+      WebSocketSink(port,
+                    s"traces-sweepline-$topic",
+                    { element => {
+                        case uuid if element.perUUIDSweepLine1msBurst.containsKey(uuid) =>
+                          Some(element.perUUIDSweepLine1msBurst.get(uuid).toJson)
+                        case _ =>
+                          None
+                      }
+                    })
 
     sweepLineStream.sinkTo(wsBroadcastSink)

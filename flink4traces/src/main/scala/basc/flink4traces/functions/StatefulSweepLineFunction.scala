@@ -15,8 +15,8 @@ import StatefulSweepLineFunction.*
 class StatefulSweepLineFunction(windowDurationMs: Long)
   extends KeyedProcessFunction[String, Traces, SweepLine]:
 
-  private var tracesListState: ListState[Traces] = null
-  private var sliceStartState: ValueState[java.lang.Long] = null
+  @transient private var tracesListState: ListState[Traces] = null
+  @transient private var sliceStartState: ValueState[java.lang.Long] = null
 
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     tracesListState = getRuntimeContext.getListState(

@@ -76,7 +76,7 @@ object App extends _root_.zio.ZIOApp:
       ^ <- π.`π-uuid`
       ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
       x <- http(parameters.address, parameters.threshold > 0, parameters.plugins, started, feedback)(using !) {
-             π.Main(ref)(args*)(using ^, ?)(using %, /, \).uninterruptible.disconnect.fork
+             π.`π-supervised`(π.Main(ref)(args*)(using ^, ?)(using %, /, \)).uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
@@ -97,11 +97,15 @@ object App extends _root_.zio.ZIOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
-    val c = π.`π-parameters`.plugins.contains(classOf[Plugin.causes].getSimpleName)
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, π.`π-parameters`.plugins, s, c)
+    var plugins = π.`π-parameters`.plugins
+    if plugins.contains(classOf[Plugin.parents].getSimpleName)
+    then
+      plugins += classOf[Plugin.causes].getSimpleName
+    val c = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, plugins, s, c)
     ZLayer.fromZIO {
       for
         paramsRP <- Promise.make[Nothing, `Π-Parameters`].flatMap(Ref.make)
@@ -184,5 +188,8 @@ object π:
 
   val `π-uuid`: UIO[String] =
     Random.nextUUID.map(_.toString)
+
+  def `π-supervised`(uio: => UIO[Any]): UIO[Unit] =
+    uio.exit.unit
 
 

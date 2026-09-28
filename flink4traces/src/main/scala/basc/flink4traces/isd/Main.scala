@@ -1,6 +1,6 @@
 package basc
 package flink4traces
-package velocityreport
+package isd
 
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
@@ -24,13 +24,14 @@ object Main:
     val kafkaTopic = params.getRequired("topic")
     val kafkaBrokers = params.get("bootstrap-servers", "kafka:29092")
     val schemaRegistryUrl = params.get("schema-registry", "http://schema-registry:8081")
-    val port = params.getInt("port", 7324)
-    val windowDuration = params.getLong("window-duration", 10000)
-    val windowInterval = params.getLong("window-interval", 2000)
-    val keepPast = params.getDouble("keep-past", 10.0)
-    val purgeThreshold = params.getInt("purge-threshold", 10000)
-    val microscopicThreshold = params.getDouble("microscopic-threshold", 0.0001)
-    val zScoreThreshold = params.getDouble("zScore-threshold", 3.0)
+    val port = params.getInt("port", 7424)
+    val windowDuration = params.getLong("window-duration", 60000)
+    val windowInterval = params.getLong("window-interval", 10000)
+    val allowedLateness = params.getLong("allowed-lateness", 5000)
+    //val weightBlowoutThreshold = params.getDouble("weight-blowout-threshold", 1.1) // 1.1 -> 1.6 : aggressive ≈ 3x -> 5x
+    //val weightBlowoutThreshold = params.getDouble("weight-blowout-threshold", 2.3) // 2.3 -> 3.0 : standard ≈ 10x -> 20x
+    //val weightBlowoutThreshold = params.getDouble("weight-blowout-threshold", 4.6) // catastrophic ≈ 100x
+    val weightBlowoutThreshold = params.getDouble("weight-blowout-threshold", 2.0) // 9x
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
@@ -41,7 +42,7 @@ object Main:
     val kafkaSource = KafkaSource.builder[GenericRecord]()
       .setBootstrapServers(kafkaBrokers)
       .setTopics(kafkaTopic)
-      .setGroupId("flink-functions4traces-velocityreport-group")
+      .setGroupId("flink-functions4traces-isd-group")
       .setStartingOffsets(OffsetsInitializer.latest())
       .setValueOnlyDeserializer(avroDeserializer)
       .build()
@@ -55,11 +56,12 @@ object Main:
     val tracesStream: DataStream[Traces] =
       avroRecordStream.flatMap(Traces.GenericRecord2Traces)
 
-    VelocityReportPipeline(tracesStream,
-                           windowDuration, windowInterval,
-                           keepPast, purgeThreshold,
-                           microscopicThreshold, zScoreThreshold,
-                           kafkaTopic,
-                           port)
+    ISDPipeline(tracesStream,
+                windowDuration,
+                windowInterval,
+                allowedLateness,
+                weightBlowoutThreshold,
+                port,
+                kafkaTopic)
 
-    env.execute(s"flink-functions4traces-analytics-velocityreport")
+    env.execute(s"flink-functions4traces-analytics-isd")

@@ -48,7 +48,7 @@ package object `Π-stats`:
   sealed trait Rate extends Any:
     var whatIf: Option[`ℝ⁺`] = None
   case class ∞(weight: Long) extends AnyVal with Rate
-  case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate:
+  case class `ℝ⁺`(rate: BigDecimal) extends Rate:
     def apply(whatIf: `ℝ⁺`): this.type =
       this.whatIf = Some(whatIf)
       this
@@ -156,9 +156,9 @@ package object `Π-stats`:
           case (_, (e, p, r, _)) =>
             if !mlsʹ.contains(e -> p) then mlsʹ(e -> p) = Nil
             r.whatIf match
-              case Some(r: `ℝ⁺`) => // timed
+              case Some(r) => // timed
                 mlsʹ(e -> p) ::= Right(Left(r.rate))
-              case _             =>
+              case _       =>
                 r match
                   case r: ∞    => // immediate
                     mlsʹ(e -> p) ::= Left(r.weight)
@@ -215,8 +215,8 @@ package object `Π-stats`:
               mswpʹ(ep) = ws.sum
         }
 
-    val Λ = if whatIfPlugin then msrt.values.sum + mswi.values.sum + mswp.values.sum else null
-    val Λʹ = if whatIfPlugin then msrtʹ.values.sum + mswiʹ.values.sum + mswpʹ.values.sum else null
+    var Λ = BigDecimal(0)
+    var Λʹ = BigDecimal(0)
 
     ////////////////////////////////////////////////////////////////// whatIf //
 
@@ -297,9 +297,11 @@ package object `Π-stats`:
         then
           χʹ(i)._2._3._1 match
             case Some(rate1ʹ) =>
-              ps :+= Plugin.whatIf(rate1ʹ / rate1, unless(delay.isPosInfinity)((Λʹ - Λ) * delay))
+              Λ += rate1; Λʹ += rate1ʹ
+              ps :+= Plugin.whatIf(rate1ʹ -> rate1, null)
             case _            =>
-              ps :+= Plugin.whatIf(BigDecimal(1), unless(delay.isPosInfinity)((Λʹ - Λ) * delay))
+              // rates are zero if passive | delay is zero if immediate
+              ps :+= Plugin.whatIf(BigDecimal(1) -> BigDecimal(1), null)
 
         r ::= (key1, key1, null, delay -> ps) -> (priority -> delay)
       else
@@ -371,10 +373,22 @@ package object `Π-stats`:
                     prb * (apr1 min apr2)
                   case _                      =>
                     rate
-              ps :+= Plugin.whatIf(rateʹ / rate, unless(delay.isPosInfinity)((Λʹ - Λ) * delay))
+              Λ += rate; Λʹ += rateʹ
+              ps :+= Plugin.whatIf(rateʹ -> rate, null)
 
             val ref = polarity1.get.orElse(polarity2.get).right.get
             r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
+
+    if whatIfPlugin
+    then
+      val diff = Λʹ - Λ
+      r = r.map { case ((key1, key2, input, (delay, plugins)), _2) =>
+        val pluginsʹ = plugins.map {
+          case it: Plugin.whatIf => it.copy(difference = diff)
+          case it => it
+        }
+        ((key1, key2, input, (delay, pluginsʹ)), _2)
+      }
 
     r = r.sortBy(_._2).reverse
 

@@ -25,9 +25,9 @@ class StatefulLoadAvgFunction extends KeyedProcessFunction[String, Traces, LoadA
   private val decayFactor10m = decay(10)
   private val decayFactor15m = decay(15)
 
-  private var tracesListState: ListState[Traces] = null
-  private var sliceStartState: ValueState[java.lang.Long] = null
-  private var loadAvgState: ValueState[LoadAvgState] = null
+  @transient private var tracesListState: ListState[Traces] = null
+  @transient private var sliceStartState: ValueState[java.lang.Long] = null
+  @transient private var loadAvgState: ValueState[LoadAvgState] = null
 
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     tracesListState = getRuntimeContext.getListState(

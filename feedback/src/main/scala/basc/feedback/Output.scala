@@ -671,7 +671,9 @@ object Item:
               <.option(^.disabled := !p.service.plugins.contains("causes"),
                        ^.value := "velocityreport", "Velocity Report"                 ),
               <.option(^.disabled := !p.service.plugins.contains("causes") || !p.service.plugins.contains("probability") || !p.kafka.value.own,
-                       ^.value := "cdf"           , "Cumulative Distribution Function")
+                       ^.value := "cdf"           , "Cumulative Distribution Function"),
+              <.option(^.disabled := !p.service.plugins.contains("parents") || !p.service.plugins.contains("whatIf") || !p.kafka.value.own,
+                       ^.value := "isd"           , "Importance Sampling Diagnostics" )
             ),
 
             ( if p.kafka.value.analytics.`type` == "loadavg"
@@ -697,10 +699,17 @@ object Item:
                 <.div(^.display.inlineBlock, analytics.velocityreport.Component(props))
               else if p.kafka.value.analytics.`type` == "cdf"
               then
-                val Kafka(_, _, _, own, _, Kafka.Analytics(_, url, _)) = p.kafka.value
+                val Kafka(_, _, _, _, _, Kafka.Analytics(_, url, _)) = p.kafka.value
                 val uuid = p.service.Meta.get("uuid")
                 val props = analytics.cdf.Props(p.key, url, topic, uuid)
                 <.div(^.display.inlineBlock, analytics.cdf.Component(props))
+              else if p.kafka.value.analytics.`type` == "isd"
+              then
+                val Kafka(_, _, _, _, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
+                val uuid = p.service.Meta.get("uuid")
+                val url = s"$_url/traces-isd-$topic?uuid=$uuid"
+                val props = analytics.isd.Props(p.key, url)(signal)
+                <.div(^.display.inlineBlock, analytics.isd.Component(props))
               else
                 <.div(^.display.inlineBlock)
             )

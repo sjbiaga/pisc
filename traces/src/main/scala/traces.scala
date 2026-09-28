@@ -39,7 +39,7 @@ package object `Π-traces`:
     case parents(numbers: Set[Long])
     case probability(probability: BigDecimal)
     case syncRate(rate: Option[BigDecimal])
-    case whatIf(factor: BigDecimal, term: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
 
 
   var `π-traces`: `Π-Traces` = null

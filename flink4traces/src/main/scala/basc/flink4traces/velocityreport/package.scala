@@ -71,12 +71,14 @@ package object velocityreport:
 
   case class MixedVelocityReport(attributionReport: Option[AttributionReport],
                                  windowVelocityReport: Option[WindowVelocityReport],
-                                 structuralVelocityAlert: Option[StructuralVelocityAlert]):
-    def uuid = attributionReport.map(_.uuid)
-      .orElse(windowVelocityReport.map(_.uuid))
-      .orElse(structuralVelocityAlert.map(_.uuid))
-      .get
-    def toJson: String =
+                                 structuralVelocityAlert: Option[StructuralVelocityAlert])
+      extends websocket.WebSocketSink.SinkableElement:
+    override def uuid: String =
+      attributionReport.map(_.uuid)
+        .orElse(windowVelocityReport.map(_.uuid))
+        .orElse(structuralVelocityAlert.map(_.uuid))
+        .get
+    override def toJson: String =
       attributionReport.map { it =>
         s"""{
             |"type":"CLOCK_ATTRIBUTION",

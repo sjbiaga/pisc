@@ -15,6 +15,7 @@ import org.apache.flink.util.Collector
 
 import functions.{ CausalDepthTrackerFunction, ClockStepAttributor, StatisticalVelocityAlerter, VelocityAggregator }
 import functions.VelocityAggregator.WindowDepthAccumulator
+import websocket.WebSocketSink
 
 
 object VelocityReportPipeline:
@@ -94,6 +95,7 @@ object VelocityReportPipeline:
       .union(attributionReportStreamʹ)
       .union(velocityReportStreamʹ)
 
-    val wsBroadcastSink: WebSocketSink = WebSocketSink(port, s"traces-velocityreport-$topic")
+    val wsBroadcastSink: WebSocketSink[MixedVelocityReport] =
+      WebSocketSink(port, s"traces-velocityreport-$topic")
 
     mixedVelocityReportStream.sinkTo(wsBroadcastSink)

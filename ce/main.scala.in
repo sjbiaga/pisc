@@ -103,11 +103,15 @@ object App extends _root_.cats.effect.IOApp:
     val e = if sys.BooleanProp.keyExists(bacse).value
             then true
             else π.`π-parameters`.exit
-    val c = π.`π-parameters`.plugins.contains(classOf[Plugin.causes].getSimpleName)
     val s = if sys.BooleanProp.keyExists(baass).value
             then true
             else π.`π-parameters`.snapshot
-    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, π.`π-parameters`.plugins, s, c)
+    var plugins = π.`π-parameters`.plugins
+    if plugins.contains(classOf[Plugin.parents].getSimpleName)
+    then
+      plugins += classOf[Plugin.causes].getSimpleName
+    val c = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, plugins, s, c)
     for
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
