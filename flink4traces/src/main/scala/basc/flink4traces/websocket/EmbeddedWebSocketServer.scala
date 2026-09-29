@@ -14,25 +14,23 @@ import org.java_websocket.WebSocket
 class EmbeddedWebSocketServer(port: Int, path: String)
     extends WebSocketServer(InetSocketAddress(port)):
 
-  private val connections = ConcurrentHashMap[WebSocket, String]
+  private val connections = ConcurrentHashMap[WebSocket, Option[String]]
 
   override def onOpen(conn: WebSocket, handshake: ClientHandshake): Unit =
     val uri = URI(handshake.getResourceDescriptor)
     val path = uri.getPath.stripPrefix("/")
     if path.toLowerCase == this.path.toLowerCase
     then
-      val query = uri.getQuery
       val uuid =
-        val i = query.indexOf('=')
-        if i < 0 || query.substring(0, i).toLowerCase != "uuid"
-        then
-          None
-        else
-          try
-            Some(query.substring(i+1))
-          catch _ =>
+        Option(uri.getQuery).flatMap { query =>
+          val i = query.indexOf('=')
+          if i < 0 || query.substring(0, i).toLowerCase != "uuid" || i+1 == query.length
+          then
             None
-      connections.put(conn, uuid.getOrElse(null))
+          else
+            Some(query.substring(i+1))
+        }
+      connections.put(conn, uuid)
       println(s"[WS Server] Browser connected: ${conn.getRemoteSocketAddress}")
     else
       conn.close(400, "Bad Request: Incorrect path inside the URL.")
@@ -51,7 +49,7 @@ class EmbeddedWebSocketServer(port: Int, path: String)
   override def onStart(): Unit =
     println(s"[WS Server] Embedded server successfully started on port $port")
 
-  def broadcastMessage(text: String => Option[String]): Unit =
+  def broadcastMessage(text: Option[String] => Option[String]): Unit =
     connections.forEach {
       case (conn, uuid) if conn.isOpen =>
         conn.synchronized:

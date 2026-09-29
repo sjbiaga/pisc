@@ -12,11 +12,16 @@ import WebSocketSink.SinkableElement
 
 class WebSocketSink[E <: SinkableElement](port: Int,
                                           path: String,
-                                          perUUIDJson: E => String => Option[String] =
+                                          perUUIDJson: E => Option[String] => Option[String] =
                                             { (element: E) => {
-                                                case null                         => Some(element.toJson)
-                                                case uuid if element.uuid == uuid => Some(element.toJson)
-                                                case _                            => None
+                                                case Some(uuid) =>
+                                                  if element.uuid == uuid
+                                                  then
+                                                    Some(element.toJson)
+                                                  else
+                                                    None
+                                                case _          =>
+                                                  Some(element.toJson)
                                               }
                                             }
                                          )
@@ -33,7 +38,7 @@ object WebSocketSink:
     def uuid: String = ???
     def toJson: String
 
-  class Writer[E <: SinkableElement](port: Int, path: String, perUUIDJson: E => String => Option[String])
+  class Writer[E <: SinkableElement](port: Int, path: String, perUUIDJson: E => Option[String] => Option[String])
       extends SinkWriter[E]:
 
     @transient private var server: EmbeddedWebSocketServer = null
@@ -51,7 +56,7 @@ object WebSocketSink:
     @throws[IOException]
     override def write(element: E, context: SinkWriter.Context): Unit =
       initServer
-      server.broadcastMessage { case null => Some(element.toJson) case uuid => perUUIDJson(element)(uuid) }
+      server.broadcastMessage(perUUIDJson(element))
 
     @throws[IOException]
     override def flush(endOfInput: Boolean): Unit = {}

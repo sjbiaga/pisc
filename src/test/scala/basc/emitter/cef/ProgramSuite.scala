@@ -94,9 +94,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some("ν"), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -215,9 +215,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some("ν"), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -338,9 +338,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some("ν"), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -467,9 +467,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some("ν"), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -589,9 +589,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -684,9 +684,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -787,9 +787,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -891,9 +891,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name")), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -1002,9 +1002,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name"))(using Some(\\("Int")->None)), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -1100,9 +1100,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name"))(using Some(\\("Int")->None)), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -1205,9 +1205,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name"))(using Some(\\("Int")->None)), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -1312,9 +1312,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("name"))(using Some(\\("Int")->None)), Some(""), Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -1423,9 +1423,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("guard")), None, Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -1518,9 +1518,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, None, Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("guard")), None, Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),
@@ -1619,9 +1619,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("guard")), None, Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)),
                                      Term.Apply(Term.Select(Term.Name(`\\`), Term.Name("pure")),
                                                 Term.Block(
@@ -1724,9 +1724,9 @@ class ProgramSuite extends FunSuite:
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(`$`.local, λ(Symbol("guard")), λ(Symbol("guard")), None, Some(-1), None)(id)), ∅())
 
-    //println(`13`.emit().map(_.structure))
+    //println(`13`.emit.map(_.structure))
 
-    assertMatches(`13`.emit()) {
+    assertMatches(`13`.emit) {
       case List(Enumerator.Generator(Pat.Var(Term.Name(_)), Term.Apply(Term.ApplyType(Term.Name("Semaphore"),
                                                                                       Type.Name(`\\`) :: Nil),
                                                                        Lit.Int(13) :: Nil)),

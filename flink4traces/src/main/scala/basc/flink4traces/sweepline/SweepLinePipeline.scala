@@ -32,10 +32,14 @@ object SweepLinePipeline:
       WebSocketSink(port,
                     s"traces-sweepline-$topic",
                     { element => {
-                        case uuid if element.perUUIDSweepLine1msBurst.containsKey(uuid) =>
-                          Some(element.perUUIDSweepLine1msBurst.get(uuid).toJson)
+                        case Some(uuid) =>
+                          if element.perUUIDSweepLine1msBurst.containsKey(uuid)
+                          then
+                            Some(element.perUUIDSweepLine1msBurst.get(uuid).toJson)
+                          else
+                            None
                         case _ =>
-                          None
+                          Some(element.toJson)
                       }
                     })
 
