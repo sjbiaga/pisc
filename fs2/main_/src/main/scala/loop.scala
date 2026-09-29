@@ -232,9 +232,9 @@ package object `Π-loop`:
                 }
               else
                 (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
-                  &|.get.flatMap { id =>
-                    val fun = { (f: (((String, String), ++++[F])) => F[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-                    fun { case ((key1, key2), (dp @ (_, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+                  &|.get.flatMap { i =>
+                    val fun = { (f: ((((String, String), ++++[F]), Int)) => F[Unit]) => if parameters.parallelism == 1 then nel.zipWithIndex.traverse(f) else nel.zipWithIndex.parTraverse(f) }
+                    fun { case (((key1, key2), (dp @ (_, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))), j) =>
                             val k1 = key1.substring(36)
                             val k2 = key2.substring(36)
                             if stop
@@ -273,7 +273,7 @@ package object `Π-loop`:
                                           kb           <- if parameters.causal then Temporal[F].pure(KeyBy.HID)
                                                           else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                           now          <- Temporal[F].realTime.map(_.toMillis)
-                                          _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                          _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                           _            <- sem.release
                                           _            <- started.update(_ - 1)
                                         yield
@@ -334,9 +334,9 @@ package object `Π-loop`:
             }
           else
             (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[F](parameters.parallelism)).flatMap { (stop, sem) =>
-              &|.get.flatMap { id =>
-                val fun = { (f: (((String, String), ++++[F])) => F[Unit]) => if parameters.parallelism == 1 then nel.traverse(f) else nel.parTraverse(f) }
-                fun { case ((key1, key2), (dp @ (_, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))) =>
+              &|.get.flatMap { i =>
+                val fun = { (f: ((((String, String), ++++[F]), Int)) => F[Unit]) => if parameters.parallelism == 1 then nel.zipWithIndex.traverse(f) else nel.zipWithIndex.parTraverse(f) }
+                fun { case (((key1, key2), (dp @ (_, plugins), in, (((d1, c1), (key, ord), ts1), ((d2, c2), (keyʹ, ordʹ), ts2)))), j) =>
                         val k1 = key1.substring(36)
                         val k2 = key2.substring(36)
                         if stop
@@ -375,7 +375,7 @@ package object `Π-loop`:
                                       kb           <- if parameters.causal then Temporal[F].pure(KeyBy.HID)
                                                       else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                       now          <- Temporal[F].realTime.map(_.toMillis)
-                                      _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
+                                      _            <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).whenA
                                       _            <- sem.release
                                       _            <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek(parameters.plugins).whenA
                                     yield

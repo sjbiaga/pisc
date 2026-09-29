@@ -141,7 +141,7 @@ object App extends _root_.zio.interop.catz.CatsApp:
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
       ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
-      - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+      - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       &| <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)

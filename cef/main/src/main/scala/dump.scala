@@ -38,10 +38,10 @@ import `Π-traces`.{ KeyBy, Plugin }
 
 package object `Π-dump`:
 
-  type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+  type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
-    Order.fromLessThan { (_, _) => true }
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
+    Order.fromLessThan { (_, _) => false }
 
 
   def dump(_clock: Ref[IO, Double], _feedback: Feedback)

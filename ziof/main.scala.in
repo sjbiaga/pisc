@@ -76,7 +76,7 @@ object App extends _root_.zio.ZIOApp:
       ^ <- π.`π-uuid`
       ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
       x <- http(parameters.address, parameters.threshold > 0, parameters.plugins, started, feedback)(using !) {
-             π.`π-supervised`(π.Main(ref)(args*)(using ^, ?)(using %, /, \)).uninterruptible.disconnect.fork
+             π.Main(ref)(args*)(using ^, ?)(using %, /, \).uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
@@ -143,7 +143,7 @@ object App extends _root_.zio.ZIOApp:
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
       ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
-      - <- TPriorityQueue.empty[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]].commit
+      - <- TPriorityQueue.empty[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]].commit
       ! <- Promise.make[Nothing, ExitCode]
       &| <- Ref.make(0L)
       n <- Ref.make(0L)
@@ -188,8 +188,5 @@ object π:
 
   val `π-uuid`: UIO[String] =
     Random.nextUUID.map(_.toString)
-
-  def `π-supervised`(uio: => UIO[Any]): UIO[Unit] =
-    uio.exit.unit
 
 

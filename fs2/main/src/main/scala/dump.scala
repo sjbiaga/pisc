@@ -38,9 +38,9 @@ import `Π-traces`.{ KeyBy, Plugin }
 
 package object `Π-dump`:
 
-  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+  type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
     Order.fromLessThan { (_, _) => true }
 
 

@@ -53,6 +53,11 @@ package object sΠ:
   type `Π-Function0` = () => String ?=> ZStream[Any, Nothing, Unit]
   type `Π-Function1` = `()` => String ?=> ZStream[Any, Nothing, Unit]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {
@@ -87,11 +92,6 @@ package object sΠ:
     * Type of keys in [[`][`]].
     */
   type `)*(` = Set[`)(`]
-
-  /**
-    * Type of causal sets.
-    */
-  type `[]` = Set[Long]
 
 
   sealed abstract trait Ordʹ { val ord: Int }
@@ -690,7 +690,7 @@ package object sΠ:
           def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+            apply(rate)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
           /**
             * linear replication input guard w/ pace w/ code
@@ -698,7 +698,7 @@ package object sΠ:
           def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
                       (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-            apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+            apply(rate, pace)(key, `)(`)(dir)(?, -, *, <, >, +).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
         object `(ν)`:
 
@@ -981,7 +981,7 @@ package object sΠ:
         def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-          apply(rate)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+          apply(rate)(key, `)(`)(dir).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
         /**
           * replication input guard w/ pace w/ code
@@ -989,7 +989,7 @@ package object sΠ:
         def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                     (using %, /, \)
                     (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-          apply(rate, pace)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+          apply(rate, pace)(key, `)(`)(dir).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
       object `(ν)`:
 
@@ -1216,7 +1216,7 @@ package object sΠ:
       def apply[T](rate: Rate)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-        apply(rate)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+        apply(rate)(key, `)(`)(dir).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
       /**
         * input prefix w/ pace w/ code
@@ -1224,7 +1224,7 @@ package object sΠ:
       def apply[T](rate: Rate, pace: Duration)(key: String, `)(`: FiberRef[`)(`])(dir: `π-$`)(code: T => Task[T])
                   (using %, /)
                   (using `Π-Map`[String, `Π-Set`[String]], String): ZStream[Any, Nothing, `()`] =
-        apply(rate, pace)(key, `)(`)(dir).mapZIO { it => code(it.`()`[T]).map(new `()`(_)) }
+        apply(rate, pace)(key, `)(`)(dir).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
     object ζ:
 

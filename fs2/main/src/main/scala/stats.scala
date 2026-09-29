@@ -71,23 +71,24 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
+  @annotation.tailrec
   def ∥[F[_]](% : Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate)])
              (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-             (check: Boolean = false): List[(String, String, Ref[F, `()`[F]], Double)] =
-                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^
-                                          // key1    key1|2  input            delay
+             (check: Boolean = false, acc: List[(String, String, Ref[F, `()`[F]], Double)] = Nil): List[(String, String, Ref[F, `()`[F]], Double)] =
+                                                                                                      // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^
+                                                                                                      // key1    key1|2  input            delay
 
     val mls = HashMap[({}, Option[Either[Unit, Ref[F, `()`[F]]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
-        case (_, (e, p, r: ∞)) => // immediate
+        case (_, (e, p, r: ∞))    => // immediate
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Left(r.weight)
         case (_, (e, p, r: `ℝ⁺`)) => // timed
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Right(Left(r.rate))
-        case (_, (e, p, r: ⊤)) => // passive
+        case (_, (e, p, r: ⊤))    => // passive
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Right(Right(r.weight))
       }
@@ -228,42 +229,10 @@ package object `Π-stats`:
             val ref = polarity1.get.orElse(polarity2.get).right.get
             r ::= (key1, key2, ref, delay) -> (priority -> delay)
 
-    r = r.sortBy(_._2).reverse
-
-    ( for
-        ((it @ (key1, key2, _, _), _), i) <- r.zipWithIndex
-      yield
-        val k1 = key1.substring(36)
-        val k2 = key2.substring(36)
-        val  ^ = key1.substring(0, 36)
-        val ^^ = key2.substring(0, 36)
-        it -> {
-          0 > r.indexWhere(
-            {
-              case ((`key1` | `key2`, _, _, _), _)
-                 | ((_, `key1` | `key2`, _, _), _) => true
-              case ((key, _, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                => true
-              case ((_, key, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                => true
-              case _                               => false
-            }
-            , i + 1
-          )
-        }
-    )
-    .filter(_._2)
-    .map(_._1)
-    .reverse
+    r
+      .sortBy(_._2)
+      .map(_._1)
+      .headOption match
+        case None => acc.reverse
+        case Some(it @ (key1, key2, _, _)) =>
+          ∥(% - key1 - key2)(`π-trick`)(check, it :: acc)

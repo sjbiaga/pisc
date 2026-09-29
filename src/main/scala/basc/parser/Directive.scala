@@ -548,6 +548,7 @@ object Directive:
                                                      + "a <threshold> number or "
                                                      + "a <timeout> number or "
                                                      + "an <exit> boolean or "
+                                                     + "a <plugins> list or "
                                                      + "a <snapshot> boolean "
                                                      + "setting"
                                                      ),

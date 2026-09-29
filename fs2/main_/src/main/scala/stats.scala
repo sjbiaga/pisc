@@ -77,11 +77,12 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
+  @annotation.tailrec
   def ∥[F[_]](% : Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate, `[]`)], plugins: Set[String])
              (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-             (check: Boolean = false): List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] =
-                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^
-                                          // key1    key1|2  input             delay   plugins
+             (check: Boolean = false, acc: List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] = Nil): List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] =
+                                                                                                                     // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^
+                                                                                                                     // key1    key1|2  input             delay   plugins
 
     val causesPlugin = plugins.contains(classOf[Plugin.causes].getSimpleName)
     val parentsPlugin = plugins.contains(classOf[Plugin.parents].getSimpleName)
@@ -300,7 +301,7 @@ package object `Π-stats`:
               Λ += rate1; Λʹ += rate1ʹ
               ps :+= Plugin.whatIf(rate1ʹ -> rate1, null)
             case _            =>
-              // rates are zero if passive | delay is zero if immediate
+              // (Λʹ-Λ)*Δt: rates are zero if passive | delay is zero if immediate
               ps :+= Plugin.whatIf(BigDecimal(1) -> BigDecimal(1), null)
 
         r ::= (key1, key1, null, delay -> ps) -> (priority -> delay)
@@ -379,53 +380,19 @@ package object `Π-stats`:
             val ref = polarity1.get.orElse(polarity2.get).right.get
             r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
 
-    if whatIfPlugin
-    then
-      val diff = Λʹ - Λ
-      r = r.map { case ((key1, key2, input, (delay, plugins)), _2) =>
-        val pluginsʹ = plugins.map {
-          case it: Plugin.whatIf => it.copy(difference = diff)
-          case it => it
-        }
-        ((key1, key2, input, (delay, pluginsʹ)), _2)
-      }
-
-    r = r.sortBy(_._2).reverse
-
-    ( for
-        ((it @ (key1, key2, _, _), _), i) <- r.zipWithIndex
-      yield
-        val k1 = key1.substring(36)
-        val k2 = key2.substring(36)
-        val  ^ = key1.substring(0, 36)
-        val ^^ = key2.substring(0, 36)
-        it -> {
-          0 > r.indexWhere(
-            {
-              case ((`key1` | `key2`, _, _, _), _)
-                 | ((_, `key1` | `key2`, _, _), _) => true
-              case ((key, _, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                   => true
-              case ((_, key, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                   => true
-              case _                                  => false
+    r
+      .sortBy(_._2)
+      .map(_._1)
+      .headOption match
+         case None => acc.reverse
+         case Some(it @ (key1, key2, _, (delay, pins))) =>
+          if whatIfPlugin
+          then
+            val diff = Λʹ - Λ
+            val pinsʹ = pins.map {
+              case whatIf: Plugin.whatIf => whatIf.copy(difference = diff)
+              case plugin => plugin
             }
-            , i + 1
-          )
-        }
-    )
-    .filter(_._2)
-    .map(_._1)
-    .reverse
+            ∥(% - key1 - key2, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
+          else
+            ∥(% - key1 - key2, plugins)(`π-trick`)(check, it :: acc)

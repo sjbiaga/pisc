@@ -41,24 +41,10 @@ package object `Π-dump`:
   private val barsx = "pisc.bioambients.replications.exitcode.ignore"
 
 
-  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
-    Ordering
-      .fromLessThan { (o1, o2) =>
-        (o1 zip o2).map {
-          case ((_, _, _, (id1, (delay1, _)), _), (_, _, _, (id2, (delay2, _)), _)) =>
-            if id1 == id2
-            then
-              if delay1.isPosInfinity || delay2.isPosInfinity
-              then
-                !delay1.isPosInfinity
-              else
-                delay1 < delay2
-            else
-              id1 < id2
-        }.getOrElse(true)
-    }
+  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
+    Ordering.fromLessThan { (o1, o2) => (o1 zip o2).map(_._4._1 -> _._4._1).map { case ((i1, j1), (i2, j2)) => i1 < i2 || i1 == i2 && j1 < j2 }.getOrElse(o1.isDefined) }
 
 
   private def record(number: Long,

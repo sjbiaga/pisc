@@ -37,9 +37,9 @@ import `Π-traces`.{ KeyBy, Plugin }
 
 package object `Π-dump`:
 
-  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+  type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
 
-  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
+  given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]] =
     Ordering.fromLessThan { (_, _) => true }
 
 

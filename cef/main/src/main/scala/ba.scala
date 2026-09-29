@@ -510,7 +510,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> ((deferred -> null ,`)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -538,7 +538,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         `)(`     <- `)(`.get
-        _        <- /.offer(^ -> key -> ((deferred -> null ,`)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((deferred -> null, `)(` -> dir), (map(dir.ord), Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then

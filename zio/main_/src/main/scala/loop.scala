@@ -31,7 +31,7 @@ import _root_.scala.Option.{ unless, when }
 
 import _root_.cats.effect.std.Semaphore
 import _root_.zio.interop.catz.generic.*
-import _root_.zio.{ durationInt, Cause, Clock, Exit, ExitCode, Fiber, Promise, Random, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
+import _root_.zio.{ durationInt, Cause, Clock, Exit, ExitCode, Fiber, Promise, Queue, Ref, Semaphore => SemaphoreZIO, UIO, ZIO }
 import _root_.zio.concurrent.CyclicBarrier
 import _root_.zio.stm.{ TPriorityQueue, TSemaphore }
 
@@ -221,9 +221,9 @@ package object `Π-loop`:
               }
             else
               (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-                &|.get.flatMap { id =>
-                  val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
-                  fun { case ((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+                &|.get.flatMap { i =>
+                  val fun = { (f: ((((String, String), ++++), Int)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.zipWithIndex.map(f)) else ZIO.collectAllParDiscard(nel.zipWithIndex.map(f)) }
+                  fun { case (((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))), j) =>
                           val k1 = key1.substring(36)
                           val k2 = key2.substring(36)
                           if stop
@@ -263,7 +263,7 @@ package object `Π-loop`:
                                         kb           <- if parameters.causal then ZIO.succeed(KeyBy.HID)
                                                         else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                         now          <- currentTimeMillis
-                                        _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
+                                        _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
                                         _            <- sem.release
                                         _            <- started.update(_ - 1)
                                       yield
@@ -332,9 +332,9 @@ package object `Π-loop`:
           }
         else
           (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-            &|.get.flatMap { id =>
-              val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
-              fun { case ((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))) =>
+            &|.get.flatMap { i =>
+              val fun = { (f: ((((String, String), ++++), Int)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.zipWithIndex.map(f)) else ZIO.collectAllParDiscard(nel.zipWithIndex.map(f)) }
+              fun { case (((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), (key, ord), ts1), ((p2, c2), (keyʹ, ordʹ), ts2)))), j) =>
                       val k1 = key1.substring(36)
                       val k2 = key2.substring(36)
                       if stop
@@ -374,7 +374,7 @@ package object `Π-loop`:
                                     kb           <- if parameters.causal then ZIO.succeed(KeyBy.HID)
                                                     else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                     now          <- currentTimeMillis
-                                    _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (id, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
+                                    _            <- -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp), (slabel -> elabel, slabelʹ -> (elabelʹ -> elabel._2))))).commit.whenZIO(feedback.tracesR.get)
                                     _            <- sem.release
                                     _            <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek(parameters.plugins).when(_))
                                   yield

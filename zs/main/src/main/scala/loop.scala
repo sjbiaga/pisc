@@ -62,7 +62,7 @@ package object `Π-loop`:
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ++++ = (Double, Ref[`()`], (++, ++))
+  type ++++ = (Ref[`()`], (++, ++))
   type ** = TPriorityQueue[(Int, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
@@ -148,7 +148,7 @@ package object `Π-loop`:
           case (key1, key2, in, _delay) =>
             val (pcko1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
             val (pcko2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (_delay, in, (pcko1, pcko2))
+            (key1, key2) -> (in, (pcko1, pcko2))
         }
         ZIO.collectAll {
           nel.map {
@@ -240,7 +240,7 @@ package object `Π-loop`:
             else
               (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
                 val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
-                fun { case ((key1, key2), (_, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
+                fun { case ((key1, key2), (in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                         val k1 = key1.substring(36)
                         val k2 = key2.substring(36)
                         if stop
@@ -315,7 +315,7 @@ package object `Π-loop`:
         else
           (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
             val fun = { (f: (((String, String), ++++)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.map(f)) else ZIO.collectAllParDiscard(nel.map(f)) }
-            fun { case ((key1, key2), (_, in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
+            fun { case ((key1, key2), (in, (((p1, c1), (key, ord)), ((p2, c2), (keyʹ, ordʹ))))) =>
                     val k1 = key1.substring(36)
                     val k2 = key2.substring(36)
                     if stop

@@ -117,7 +117,7 @@ object App extends _root_.cats.effect.IOApp:
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
       ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
-      - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), (Long, (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
+      - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])), ((String, (String, String)), (String, (String, String))))]]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L)
       n <- IO.ref(0L)
