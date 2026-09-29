@@ -32,10 +32,14 @@ object LoadAvgPipeline:
       WebSocketSink(port,
                     s"traces-loadavg-$topic",
                     { element => {
-                        case uuid if element.perUUIDLoadAvg1msBurst.containsKey(uuid) =>
-                          Some(element.perUUIDLoadAvg1msBurst.get(uuid).toJson)
+                        case Some(uuid) =>
+                          if element.perUUIDLoadAvg1msBurst.containsKey(uuid)
+                          then
+                            Some(element.perUUIDLoadAvg1msBurst.get(uuid).toJson)
+                          else
+                            None
                         case _ =>
-                          None
+                          Some(element.toJson)
                       }
                     })
 

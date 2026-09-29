@@ -680,21 +680,21 @@ object Item:
               then
                 val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
                 val uuid = if own then p.service.Meta.get("uuid") else null
-                val url = s"$_url/traces-loadavg-$topic?uuid=$uuid"
+                val url = s"""$_url/traces-loadavg-$topic?uuid=${if uuid eq null then "" else uuid}"""
                 val props = analytics.loadavg.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.loadavg.Component(props))
               else if p.kafka.value.analytics.`type` == "sweepline"
               then
                 val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
                 val uuid = if own then p.service.Meta.get("uuid") else null
-                val url = s"$_url/traces-sweepline-$topic?uuid=$uuid"
+                val url = s"""$_url/traces-sweepline-$topic?uuid=${if uuid eq null then "" else uuid}"""
                 val props = analytics.sweepline.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.sweepline.Component(props))
               else if p.kafka.value.analytics.`type` == "velocityreport"
               then
                 val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
                 val uuid = if own then p.service.Meta.get("uuid") else null
-                val url = s"$_url/traces-velocityreport-$topic?uuid=$uuid"
+                val url = s"""$_url/traces-velocityreport-$topic?uuid=${if uuid eq null then "" else uuid}"""
                 val props = analytics.velocityreport.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.velocityreport.Component(props))
               else if p.kafka.value.analytics.`type` == "cdf"
@@ -707,7 +707,7 @@ object Item:
               then
                 val Kafka(_, _, _, _, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
                 val uuid = p.service.Meta.get("uuid")
-                val url = s"$_url/traces-isd-$topic?uuid=$uuid"
+                val url = s"""$_url/traces-isd-$topic?uuid=${if uuid eq null then "" else uuid}"""
                 val props = analytics.isd.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.isd.Component(props))
               else
