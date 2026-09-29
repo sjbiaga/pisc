@@ -38,7 +38,7 @@ package object `Π-http`:
   def http(_address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default)
 
-  def http(_address: String, _batch: Boolean, _started: Ref[Long], feedback: Feedback)
+  def http(_address: String, _batch: Boolean, _plugins: Set[String], _started: Ref[Long], feedback: Feedback)
           (using ! : !)
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     for

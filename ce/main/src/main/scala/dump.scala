@@ -26,17 +26,24 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.Seq
 
-import _root_.cats.effect.IO
-import _root_.cats.effect.std.Queue
+import _root_.cats.Order
+import _root_.cats.effect.{ IO, Ref }
+import _root_.cats.effect.std.PQueue
 
 import `Π-loop`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-dump`:
 
-  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
+  type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
 
-  def dump(using % : %, ! : !, - : -): IO[Unit] =
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]] =
+    Order.fromLessThan { (_, _) => false }
+
+
+  def dump(_clock: Ref[IO, Double], _feedback: Feedback)
+          (using % : %, ! : !, - : -): IO[Unit] =
     IO.unit

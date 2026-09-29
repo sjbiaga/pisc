@@ -18,19 +18,19 @@ class LoadAvg1msBurstFunction extends ProcessAllWindowFunction[LoadAvg, LoadAvg1
     // Everything inside 'elements' shares the exact same timestamp
     val windowTimestamp = context.window.getStart
 
-    val perPIDLoadAvg1msBurst = Map[Long, LoadAvg1msBurst]()
-    val perPIDAverages = Map[Long, Map[String, LoadAvg]]()
+    val perUUIDLoadAvg1msBurst = Map[String, LoadAvg1msBurst]()
+    val perUUIDAverages = Map[String, Map[String, LoadAvg]]()
 
     elements.forEach {
-      _.perPIDLoadAvg.forEach { (pid, element) =>
-        if !perPIDAverages.containsKey(pid)
+      _.perUUIDLoadAvg.forEach { (uuid, element) =>
+        if !perUUIDAverages.containsKey(uuid)
         then
-          perPIDAverages.put(pid, Map())
-        perPIDAverages.get(pid).put(element.label, element)
+          perUUIDAverages.put(uuid, Map())
+        perUUIDAverages.get(uuid).put(element.label, element)
       }
     }
 
-    perPIDAverages.forEach { (pid, averages) =>
+    perUUIDAverages.forEach { (uuid, averages) =>
       val elements = averages.values
       var clock = .0
 
@@ -38,7 +38,7 @@ class LoadAvg1msBurstFunction extends ProcessAllWindowFunction[LoadAvg, LoadAvg1
         clock = math.max(clock, element.clock)
       }
 
-      perPIDLoadAvg1msBurst.put(pid, LoadAvg1msBurst(windowTimestamp, clock, averages, null))
+      perUUIDLoadAvg1msBurst.put(uuid, LoadAvg1msBurst(windowTimestamp, clock, averages, null))
     }
 
     val averages = Map[String, LoadAvg]()
@@ -47,4 +47,4 @@ class LoadAvg1msBurstFunction extends ProcessAllWindowFunction[LoadAvg, LoadAvg1
       averages.put(element.label, element)
     }
 
-    out.collect(LoadAvg1msBurst(windowTimestamp, .0, averages, perPIDLoadAvg1msBurst))
+    out.collect(LoadAvg1msBurst(windowTimestamp, .0, averages, perUUIDLoadAvg1msBurst))

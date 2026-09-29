@@ -1,8 +1,17 @@
 package pisc
 package feedback
 
+import _root_.io.circe.Codec
+
 
 package object analytics:
+
+  enum Plugin derives Codec.AsObject:
+    case causes(causes: Set[Long])
+    case parents(numbers: Set[Long])
+    case probability(probability: BigDecimal)
+    case syncRate(rate: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
 
   def time(milliseconds: Long): Option[String] =
     val seconds = milliseconds / 1000

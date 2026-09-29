@@ -117,7 +117,8 @@ abstract class StochasticPi extends Expression:
                                    case ((Left(enums), _), _) => throw TermParsingException(enums)
                                  }
 
-  def rate: Parser[Any] = "∞" ^^ { _ => -1L } |
+  def rate: Parser[Any] = "("~> floatingPointNumber ~ floatingPointNumber <~")" ^^ { case rate ~ whatIf => (BigDecimal(rate), BigDecimal(whatIf)) } |
+                          "∞" ^^ { _ => -1L } |
                           naturalNumber<~"∞" ^^ { -_.toLong } |
                           "⊤" ^^ { _ => 1L } |
                           naturalNumber<~"⊤" ^^ { _.toLong } |
@@ -388,7 +389,8 @@ object StochasticPi:
              parallelism: Int = Int.MaxValue,
              threshold: Int = 0,
              timeout: Int = 123456,
-             exit: Boolean = true
+             exit: Boolean = true,
+             plugins: List[Settings.Plugin] = Nil
   ) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
@@ -432,7 +434,7 @@ object StochasticPi:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(-1L), None)(sπ_id)
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(0L), None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ
@@ -679,22 +681,38 @@ object StochasticPi:
 
       val enabled = Map[String, Actions]()
 
-      given_List_Bind
-        .tapEach {
-          case (_, sum) =>
-            sum.split(using discarded -> excluded)
-
-            sum.graph.foreach { (s, t) =>
-              if !enabled.contains(s.υidυ)
-              then
-                enabled(s.υidυ) = nil
-              t match
-                case it: Act =>
-                  enabled(s.υidυ) += it.υidυ
-                case it: Sum =>
-                  enabled(s.υidυ) ++= it.enabled
+      if _settings.traces.isDefined
+      then
+        val traces = _settings.traces
+        _settings.traces = None
+        given Boolean = true
+        val prog =
+          given_List_Bind
+            .map {
+              case it @ (_, ∅()) => it
+              case (bind @ `(*)`(given String, _*), sum) =>
+                bind -> sum.labelʹ
             }
-        } -> (discarded, excluded, enabled)
+        val r = apply(prog)
+        _settings.traces = traces
+        r
+      else
+        given_List_Bind
+          .tapEach {
+            case (_, sum) =>
+              sum.split(using discarded -> excluded)
+
+              sum.graph.foreach { (s, t) =>
+                if !enabled.contains(s.υidυ)
+                then
+                  enabled(s.υidυ) = nil
+                t match
+                  case it: Act =>
+                    enabled(s.υidυ) += it.υidυ
+                  case it: Sum =>
+                    enabled(s.υidυ) ++= it.enabled
+              }
+          } -> (discarded, excluded, enabled)
 
 
     private var i: Int = -1
@@ -702,7 +720,7 @@ object StochasticPi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit))
+      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

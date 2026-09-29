@@ -41,40 +41,44 @@ package object `Π-http`:
 
 
   enum Traces:
-    case ConsoleCSV
-    case FileCSV(filename: String)
-    case AmazonSQS(backend: String, queue: String)
-    case Kafka(backend: String, topic: String)
-    case RabbitMQ(exchange: String)
+    case ConsoleCSV(uuid: String)
+    case FileCSV(uuid: String, filename: String)
+    case AmazonSQS(uuid: String, backend: String, queue: String)
+    case Kafka(uuid: String, backend: String, topic: String)
+    case RabbitMQ(uuid: String, exchange: String)
 
   object Traces:
     def apply(): Option[Traces] =
       Option(`π-traces`).map {
-        case `Π-ConsoleCSV` => ConsoleCSV
-        case `Π-FileCSV`(filename) => FileCSV(filename)
-        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.backend.toString, queue)
-        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.backend.toString, topic)
-        case `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(exchange)
+        case it @ `Π-ConsoleCSV` => ConsoleCSV(it.uuid)
+        case it @ `Π-FileCSV`(filename) => FileCSV(it.uuid, filename)
+        case it @ `Π-AmazonSQS`(_, _, _, _, _, queue) => AmazonSQS(it.uuid, it.backend.toString, queue)
+        case it @ `Π-Kafka`(_, _, _, topic: String) => Kafka(it.uuid, it.backend.toString, topic)
+        case it @ `Π-RabbitMQ`(_, _, exchange, _, _) => RabbitMQ(it.uuid, exchange)
       }
 
 
   case class Parameters(parallelism: Option[Int],
                         threshold: Option[Int],
                         timeout: Option[Int],
-                        exit: Option[Boolean]):
+                        exit: Option[Boolean],
+                        plugins: Set[String]):
     def apply(default: `Π-Parameters`): `Π-Parameters` =
       `Π-Parameters`(default.address,
-                     parallelism.getOrElse(default.parallelism),
-                     threshold.getOrElse(default.threshold),
-                     timeout.getOrElse(default.timeout),
-                     exit.getOrElse(default.exit))
+                     parallelism.map(1 max _).getOrElse(default.parallelism),
+                     threshold.map(_.max(1) * math.signum(default.threshold)).getOrElse(default.threshold),
+                     timeout.map(0 max _).getOrElse(default.timeout),
+                     exit.getOrElse(default.exit),
+                     default.plugins,
+                     default.causal)
 
   object Parameters:
     def apply(parameters: `Π-Parameters`): Parameters =
       Parameters(Some(parameters.parallelism),
                  Some(parameters.threshold),
                  Some(parameters.timeout),
-                 Some(parameters.exit))
+                 Some(parameters.exit),
+                 parameters.plugins)
 
 
   case class State(parameters: Parameters,
@@ -204,16 +208,10 @@ package object `Π-http`:
                 ZIO.succeed(Response.badRequest("attempt to alter the `init' read-only flag"))
               case State(_, _, _, _, _, _, _, Some(_))    =>
                 ZIO.succeed(Response.badRequest("attempt to alter the `done' read-only flag"))
-              case State(Parameters(_, Some(threshold), _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
+              case State(Parameters(_, Some(threshold), _, _, _), _, _, _, _, _, _, _) if ((0 max threshold) > 0) != batch =>
                 ZIO.succeed(Response.badRequest(s"attempt to change the ${if batch then "" else "non-"}batch mode through the `threshold' value"))
               case State(parameters, _, _, _, _, _, _, _) =>
-                feedback.paramsR.get.flatMap { default =>
-                  var params = parameters(default)
-                  params = params.copy(parallelism = 1 max params.parallelism,
-                                       threshold = 0 max params.threshold,
-                                       timeout = 0 max params.timeout)
-                  feedback.paramsRP.get.flatMap(_.succeed(params))
-                }.as(Response.ok)
+                feedback.paramsR.get.flatMap { default => feedback.paramsRP.get.flatMap(_.succeed(parameters(default))) }.as(Response.ok)
         }
       }
     )
@@ -231,23 +229,23 @@ package object `Π-http`:
   object ConsulRegister:
     given Schema[ConsulRegister] = DeriveSchema.gen[ConsulRegister]
 
-  val serviceName = "StochasticPiCalculusScala"
+  val serviceName = "StochasticPiCalculus2Scala"
 
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
 
-  def http(address: String, batch: Boolean, started: Ref[Long], feedback: Feedback)
+  def http(address: String, batch: Boolean, plugins: Set[String], started: Ref[Long], feedback: Feedback)
           (using ! : !)
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     Option {
       Traces().fold(null) {
-        case AmazonSQS(backend, queue) => ("amazonsqs", backend, "queue", queue)
-        case Kafka(backend, topic) => ("kafka", backend, "topic", topic)
-        case RabbitMQ(exchange) => ("rabbitmq", "rabbitmq", "exchange", exchange)
+        case AmazonSQS(uuid, backend, queue) => ("amazonsqs", uuid, backend, "queue", queue)
+        case Kafka(uuid, backend, topic) => ("kafka", uuid, backend, "topic", topic)
+        case RabbitMQ(uuid, exchange) => ("rabbitmq", uuid, "rabbitmq", "exchange", exchange)
         case _ => null
       }
     } match
-      case Some((producer, backend, kind, name)) =>
+      case Some((producer, uuid, backend, kind, name)) =>
         val corsConfig = CorsConfig(
           allowedOrigin = _ => Some(Header.AccessControlAllowOrigin.All),
           allowedMethods = Header.AccessControlAllowMethods.All,
@@ -273,7 +271,8 @@ package object `Π-http`:
               "backend" -> backend,
               "kind" -> kind,
               "emitter" -> "zs",
-              "pid" -> ProcessHandle.current.pid.toString
+              "plugins" -> plugins.mkString(" "),
+              "uuid" -> uuid
             ),
             Check = ConsulCheck(
               HTTP = s"http://$host:$port/health",

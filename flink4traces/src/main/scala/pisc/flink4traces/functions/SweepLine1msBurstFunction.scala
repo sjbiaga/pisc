@@ -18,19 +18,19 @@ class SweepLine1msBurstFunction extends ProcessAllWindowFunction[SweepLine, Swee
     // Everything inside 'elements' shares the exact same timestamp
     val windowTimestamp = context.window.getStart
 
-    val perPIDSweepLine1msBurst = Map[Long, SweepLine1msBurst]()
-    val perPIDHistograms = Map[Long, Map[String, SweepLine]]()
+    val perUUIDSweepLine1msBurst = Map[String, SweepLine1msBurst]()
+    val perUUIDHistograms = Map[String, Map[String, SweepLine]]()
 
     elements.forEach {
-      _.perPIDSweepLine.forEach { (pid, element) =>
-        if !perPIDHistograms.containsKey(pid)
+      _.perUUIDSweepLine.forEach { (uuid, element) =>
+        if !perUUIDHistograms.containsKey(uuid)
         then
-          perPIDHistograms.put(pid, Map())
-        perPIDHistograms.get(pid).put(element.label, element)
+          perUUIDHistograms.put(uuid, Map())
+        perUUIDHistograms.get(uuid).put(element.label, element)
       }
     }
 
-    perPIDHistograms.forEach { (pid, histograms) =>
+    perUUIDHistograms.forEach { (uuid, histograms) =>
       val elements = histograms.values
       var clock = .0
 
@@ -38,7 +38,7 @@ class SweepLine1msBurstFunction extends ProcessAllWindowFunction[SweepLine, Swee
         clock = math.max(clock, element.clock)
       }
 
-      perPIDSweepLine1msBurst.put(pid, SweepLine1msBurst(windowTimestamp, clock, histograms, null))
+      perUUIDSweepLine1msBurst.put(uuid, SweepLine1msBurst(windowTimestamp, clock, histograms, null))
     }
 
     val histograms = Map[String, SweepLine]()
@@ -47,4 +47,4 @@ class SweepLine1msBurstFunction extends ProcessAllWindowFunction[SweepLine, Swee
       histograms.put(element.label, element)
     }
 
-    out.collect(SweepLine1msBurst(windowTimestamp, .0, histograms, perPIDSweepLine1msBurst))
+    out.collect(SweepLine1msBurst(windowTimestamp, .0, histograms, perUUIDSweepLine1msBurst))

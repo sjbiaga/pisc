@@ -40,5 +40,5 @@ package object `Π-http4s`:
     def http4s(_address: String, _batch: Boolean, _started: Ref[F, Long], _feedback: Feedback[F]): Resource[F, Server] =
       Resource.pure[F, Server](null)
 
-    def http4s(_F: String, _batch: Boolean, _server: Server): Resource[F, Unit] =
+    def http4s(_F: String, _batch: Boolean, _plugins: Set[String], _server: Server): Resource[F, Unit] =
       Resource.unit

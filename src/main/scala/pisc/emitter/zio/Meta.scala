@@ -51,7 +51,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                "Main",
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `String*`("args") :: `(using String)(using %, /, \\)`,
+                 `String*`("args") :: `(using String, FiberRef[[]])(using %, /, \\)`,
                ) :: Nil,
                `: UIO[Any]`,
                body
@@ -62,7 +62,7 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                identifier,
                Member.ParamClauseGroup(
                  Type.ParamClause(Nil),
-                 `(…)`(params*) :: `(using String)(using %, /, \\)`,
+                 `(…)`(params*) :: `(using String, FiberRef[[]])(using %, /, \\)`,
                ) :: Nil,
                `: UIO[Any]`,
                body
@@ -77,10 +77,9 @@ abstract trait Meta extends emitter.shared.effects.Meta:
     Term.ParamClause(*.map(\(_)).map(Term.Param(Nil, _, Some(\\("()")), None)).toList
                     ,None)
 
-  val `(using String)(using %, /, \\)` =
-    Term.ParamClause(Term.Param(Mod.Using() :: Nil,
-                                Name.Anonymous(), Some(\\("String")),
-                                None) :: Nil
+  val `(using String, FiberRef[[]])(using %, /, \\)` =
+    Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(\\("String")), None) ::
+                     Term.Param(Mod.Using() :: Nil, Name.Anonymous(), `:`("FiberRef", "[]"), None) :: Nil
                     ,Some(Mod.Using())) ::
     Term.ParamClause(List("%", "/", "\\")
                        .map { it => Term.Param(Mod.Using() :: Nil,

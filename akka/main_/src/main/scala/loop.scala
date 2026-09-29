@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.Map
+import _root_.scala.collection.immutable.{ Map, Seq }
 
 import _root_.scala.concurrent.Promise
 
@@ -35,6 +35,7 @@ import _root_.akka.actor.typed.{ ActorRef, Behavior }
 
 import `Π-dump`.*
 import `Π-stats`.*
+import `Π-traces`.KeyBy
 
 
 package object `Π-loop`:
@@ -50,7 +51,9 @@ package object `Π-loop`:
                                   parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
-                                  exit: Boolean)
+                                  exit: Boolean,
+                                  plugins: Set[String],
+                                  causal: Boolean = false)
 
 
   enum Loop:
@@ -61,8 +64,7 @@ package object `Π-loop`:
 
   object Loop:
 
-    var no = 0
-    var clock = 0.0
+    var no = 0L
 
     def apply(parallelism: Int)
              (dump: ActorRef[-])
@@ -144,29 +146,28 @@ package object `Π-loop`:
                     `π-discard`(trick(key))
 
                 nel
-                  .flatten
                   .sliding(parallelism, parallelism)
-                  .toList
-                  .foreach {
-                    _.foreach { case (key1, key2, in, (delay, duration)) =>
-                                  val k1 = key1.substring(36)
-                                  val k2 = key2.substring(36)
-                                  val  ^ = key1.substring(0, 36)
-                                  val ^^ = key2.substring(0, 36)
-                                  val (p1, (ts1, _)) = m(key1).asInstanceOf[+]
-                                  val (p2, (ts2, _)) = m(key2).asInstanceOf[+]
-                                  discard(k1)(using ^)
-                                  if k1 != k2 then discard(k2)(using ^^)
-                                  m -= key1
-                                  m -= key2
-                                  enable(k1)
-                                  if k1 != k2 then enable(k2)
-                                  p1.success(Some((in, delay)))
-                                  if k1 != k2 then p2.success(Some((in, delay)))
-                                  no += 1
-                                  if duration != 0.0 && !duration.isNaN then clock += delay
-                                  dump ! ((no, clock), ((ts1, ts2), System.currentTimeMillis), (k1, k2, true), (delay, duration))
-                              }
+                  .foreach { nel =>
+                    val i = no
+                    nel.zipWithIndex
+                      .foreach { case ((key1, key2, in, delay), j) =>
+                                   val k1 = key1.substring(36)
+                                   val k2 = key2.substring(36)
+                                   val  ^ = key1.substring(0, 36)
+                                   val ^^ = key2.substring(0, 36)
+                                   val (p1, (ts1, _)) = m(key1).asInstanceOf[+]
+                                   val (p2, (ts2, _)) = m(key2).asInstanceOf[+]
+                                   discard(k1)(using ^)
+                                   if k1 != k2 then discard(k2)(using ^^)
+                                   m -= key1
+                                   m -= key2
+                                   enable(k1)
+                                   if k1 != k2 then enable(k2)
+                                   p1.success(Some((in, delay)))
+                                   if k1 != k2 then p2.success(Some((in, delay)))
+                                   no += 1
+                                   dump ! (no, ((ts1, ts2), System.currentTimeMillis), (k1, k2, KeyBy.AGENT_LABEL), (i -> j, (delay, Seq.empty)))
+                               }
                   }
 
                 context.self ! Trigger

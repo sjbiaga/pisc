@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.Map
+import _root_.scala.collection.immutable.{ Map, Seq }
 import _root_.scala.Option.unless
 
 import _root_.akka.actor.typed.scaladsl.Behaviors
@@ -38,29 +38,30 @@ import `Π-traces`.*
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))
+  type - = Map[String, Int | +] | (Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))
 
-  private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: Boolean, delay: Double, duration: Double): String => Unit =
+  private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: KeyBy, delay: Double, plugins: Seq[Plugin]): String => Unit =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         `π-traces`(number, clock, started, ended,
                    agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                    key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                   rate, delay, duration)
+                   rate, plugins, delay)
       case _ =>
 
   object Dump:
 
-    def apply(): Behavior[-] =
+    def apply(clock: Double): Behavior[-] =
 
       Behaviors.receive[-] {
 
-        case (_, ((no, cl), ((ts1, ts2), ts), (k1, k2, kb), (delay, duration))) =>
+        case (_, (no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)))) =>
+          val clockʹ = if delay.isPosInfinity then clock else clock + delay
           if `π-traces` ne null
           then
-            record(no, cl, ts1, ts, kb, delay, duration)(k1)
-            if k1 != k2 then record(no, cl, ts2, ts, kb, delay, duration)(k2)
-          Behaviors.same
+            record(no, clockʹ, ts1, ts, kb, delay, plugins)(k1)
+            if k1 != k2 then record(no, clockʹ, ts2, ts, kb, delay, plugins)(k2)
+          apply(clockʹ)
 
         case (context, it: Map[String, Int | +]) =>
           if `π-traces` ne null

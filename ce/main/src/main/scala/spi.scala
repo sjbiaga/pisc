@@ -51,6 +51,11 @@ package object sΠ:
   type `Π-Function0` = () => String ?=> IO[Any]
   type `Π-Function1` = `()` => String ?=> IO[Any]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[String]
+
 
   /**
     * Supervised [[code]].
@@ -109,7 +114,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`new {}`, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -377,7 +382,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)
       else
-        apply[S](false)(rate, IO.delay(value))(key)
+        apply(false)(rate, IO.delay(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
@@ -390,7 +395,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
       else
-        apply[S](true)(rate, IO.delay(value))(key)(code)
+        apply(true)(rate, IO.delay(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
@@ -426,7 +431,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -456,7 +461,7 @@ package object sΠ:
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
         result   <- IO.ref[`()`](sΠ.`()`.`null`)
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Right(result)), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,

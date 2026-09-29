@@ -1,0 +1,13 @@
+docker exec -it flink-jobmanager flink run \
+  -c pisc.flink4traces.velocityreport.Main \
+  /opt/flink/usrlib/flink-functions4traces-StochasticPiCalculus2Scala-assembly-1.0.jar \
+  --bootstrap-servers kafka:29092 \
+  --schema-registry http://schema-registry:8081 \
+  --window-duration 10000 \
+  --window-interval 2000 \
+  --keep-past 10.0 \
+  --purge-threshold 10000 \
+  --microscopic-threshold 0.0001 \
+  --zScore-threshold 3.0 \
+  --port 7324 \
+  --topic <TOPIC>

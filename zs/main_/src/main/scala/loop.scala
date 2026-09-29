@@ -37,30 +37,31 @@ import _root_.zio.stm.TPriorityQueue
 
 import `Π-dump`.*
 import `Π-stats`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `()`, `[]` }
 
 
-  type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`])
+  type <> = (CyclicBarrier, Fiber[Nothing, Unit], Ref[`()`], `[]`)
 
   type ++ = ((Promise[Nothing, Option[<>]], Ref[Promise[Nothing, Option[<>]]]), Ref[Long])
-  type + = (++, ({}, Option[Either[Unit, Ref[`()`]]], Rate))
+  type + = (++, ({}, Option[Either[Unit, Ref[`()`]]], Rate, `[]`))
 
   type % = Ref.Synchronized[Map[String, Int | (Boolean, +)]]
 
   type ! = Promise[Nothing, ExitCode]
 
-  type &| = Ref[(Long, Double)]
+  type &| = Ref[Long]
 
   type / = Queue[((String, String), +)]
 
   type \ = UIO[Unit] => UIO[Unit]
 
-  type ++++ = ((Double, Double), Ref[`()`], (++, ++))
-  type ** = TPriorityQueue[(Int, List[List[((String, String), ++++)]])]
+  type ++++ = ((Double, Seq[Plugin]), Ref[`()`], (++, ++))
+  type ** = TPriorityQueue[(Int, List[((String, String), ++++)])]
 
   type * = Semaphore[UIO]
 
@@ -71,7 +72,9 @@ package object `Π-loop`:
                                   parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
-                                  exit: Boolean)
+                                  exit: Boolean,
+                                  plugins: Set[String],
+                                  causal: Boolean = false)
 
   final case class Feedback(paramsRP: Ref[Promise[Nothing, `Π-Parameters`]],
                             paramsR: Ref[`Π-Parameters`],
@@ -83,7 +86,7 @@ package object `Π-loop`:
                             doneR: Ref[Boolean])
 
 
-  given Ordering[(Int, List[List[((String, String), ++++)]])] = Ordering.fromLessThan(_._1 < _._1)
+  given Ordering[(Int, List[((String, String), ++++)])] = Ordering.fromLessThan(_._1 < _._1)
 
   val currentTimeMillis = Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
 
@@ -124,7 +127,8 @@ package object `Π-loop`:
       ZIO.succeed(Set.empty)
 
 
-  def peek(using % : %, ** : **)
+  def peek(plugins: Set[String])
+          (using % : %, ** : **)
           (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): UIO[Unit] =
     %.modifyZIO { m =>
       val it =
@@ -138,17 +142,15 @@ package object `Π-loop`:
       then
         (**.size.flatMap(size => **.offer(size -> Nil))).commit.map(_ -> m)
       else
-        val nel = ∥(it)(`π-wand`._1)()
+        val nel = ∥(it, plugins)(`π-wand`._1)()
         val nelʹ = nel.map {
-          _.map {
-            case (key1, key2, in, dd) =>
-              val (pcts1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
-              val (pcts2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-              (key1, key2) -> (dd, in, (pcts1, pcts2))
-          }
+          case (key1, key2, in, dp) =>
+            val (pcts1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
+            val (pcts2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
+            (key1, key2) -> (dp, in, (pcts1, pcts2))
         }
         ZIO.collectAll {
-          nel.flatten.map {
+          nel.map {
             case (key1, key2, _, _) =>
               val k1 = key1.substring(36)
               val k2 = key2.substring(36)
@@ -180,11 +182,11 @@ package object `Π-loop`:
       val (trick, _) = `π-wand`
       !m.exists(_._2.isInstanceOf[Int])
       && m.forall {
-           case (_, (true, (_, (_, None, _)))) => false
-           case (key1, (true, (_, (e1, Some(p1), _)))) =>
+           case (_, (true, (_, (_, None, _, _)))) => false
+           case (key1, (true, (_, (e1, Some(p1), _, _)))) =>
              val ^ = key1.substring(0, 36)
              !m.exists {
-               case (key2, (true, (_, (e2, Some(p2), _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
+               case (key2, (true, (_, (e2, Some(p2), _, _)))) if (e1 eq e2) && p1.isLeft == p2.isRight =>
                  val ^^ = key2.substring(0, 36)
                  ^ != ^^
                  || {
@@ -211,64 +213,68 @@ package object `Π-loop`:
             then
               (started.get <*> batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None) *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None).commit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case _  =>
                   ZIO.succeed(true)
               }
             else
               (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-                ZIO.collectAll {
-                  nel.map { nel =>
-                    ZIO.collectAllParDiscard {
-                      nel.map { case ((key1, key2), ((delay, duration), in, (((p1, c1), ts1), ((p2, c2), ts2)))) =>
-                                  val k1 = key1.substring(36)
-                                  val k2 = key2.substring(36)
-                                  if stop
-                                  then
-                                    for
-                                      _ <- **.offer(-1 -> Nil).commit
-                                      _ <- p1.succeed(None)
-                                      _ <- p2.succeed(None).unless(k1 == k2)
-                                      _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                      _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                    yield
-                                      ()
-                                  else
-                                    for
-                                      cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                      _  <- sem.acquire
-                                      _  <- started.update(_ + 1)
-                                      fb <- ( for
-                                                _  <- cb.await.exit
-                                                _  <- enable(k1)
-                                                _  <- enable(k2).unless(k1 == k2)
-                                                nc <- if duration == 0.0 || duration.isNaN
-                                                      then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                      else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                                ss <- ts1.get <*> ts2.get
-                                                kb <- feedback.keyByR.get
-                                                now <- currentTimeMillis
-                                                _  <- feedback.lastR.set(now -> nc._2)
-                                                _  <- -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration)))).whenZIO(feedback.tracesR.get)
-                                                _  <- sem.release
-                                                _  <- started.update(_ - 1)
-                                              yield
-                                                ()
-                                            ).fork
-                                      _  <- p1.succeed(Some((cb, fb, in)))
-                                      _  <- p2.succeed(Some((cb, fb, in))).unless(k1 == k2)
-                                      _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in)))))
-                                      _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
-                                    yield
-                                      ()
-                              }
-                    }
-                  }
+                &|.get.flatMap { i =>
+                  val fun = { (f: ((((String, String), ++++), Int)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.zipWithIndex.map(f)) else ZIO.collectAllParDiscard(nel.zipWithIndex.map(f)) }
+                  fun { case (((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), ts1), ((p2, c2), ts2)))), j) =>
+                          val k1 = key1.substring(36)
+                          val k2 = key2.substring(36)
+                          if stop
+                          then
+                            for
+                              _ <- **.offer(-1 -> Nil).commit
+                              _ <- p1.succeed(None)
+                              _ <- p2.succeed(None).unless(k1 == k2)
+                              _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                              _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                            yield
+                              ()
+                          else
+                            for
+                              cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                              no <- &|.updateAndGet(_ + 1)
+                              _  <- sem.acquire
+                              _  <- started.update(_ + 1)
+                              fb <- ( for
+                                        _  <- cb.await.exit
+                                        _  <- enable(k1)
+                                        _  <- enable(k2).unless(k1 == k2)
+                                        ss <- ts1.get <*> ts2.get
+                                        kb <- if parameters.causal then ZIO.succeed(KeyBy.HID)
+                                                        else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
+                                        now <- currentTimeMillis
+                                        _  <- -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp)))).commit.whenZIO(feedback.tracesR.get)
+                                        _  <- sem.release
+                                        _  <- started.update(_ - 1)
+                                      yield
+                                        ()
+                                    ).fork
+                              cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
+                                      case Some(Plugin.causes(cs)) =>
+                                        if k1.indexOf(',') < 0
+                                        then
+                                          cs
+                                        else
+                                          cs + no
+                                      case _ =>
+                                        Set.empty
+                              _  <- p1.succeed(Some((cb, fb, in, cs)))
+                              _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
+                              _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
+                              _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
+                            yield
+                              ()
+                      }
                 }
               } *> ZIO.succeed(true)
         yield
           l
-      l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek *> m)
+      l <- ^.withPermit(*.available.flatMap(*.acquireN) *> peek(parameters.plugins) *> m)
       _ <- feedback.pauseRP_stopR_exitRP.get.flatMap(_._1._1.await)
       _ <- feedback.paramsRP.get.flatMap(_.isDone).flatMap {
              if _
@@ -301,7 +307,7 @@ package object `Π-loop`:
                   **.offer(-1 -> nel).commit *> ZIO.succeed(true)
                 case Exit.Success(_)
                    | Exit.Failure(Cause.Interrupt(_, _)) =>
-                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None) *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
+                  canExit.flatMap(if _ then feedback.doneR.set(true) *> feedback.pauseRP_stopR_exitRP.get.flatMap(_._2.await) *> -.offer(None).commit *> /.offer(null) *> ZIO.succeed(false) else ZIO.succeed(true))
                 case Exit.Failure(cause)                 =>
                   ZIO.failCause(cause)
               }
@@ -310,53 +316,57 @@ package object `Π-loop`:
           }
         else
           (feedback.pauseRP_stopR_exitRP.get.map(_._1._2) <*> Semaphore[UIO](parameters.parallelism)).flatMap { (stop, sem) =>
-            ZIO.collectAll {
-              nel.map { nel =>
-                ZIO.collectAllParDiscard {
-                  nel.map { case ((key1, key2), ((delay, duration), in, (((p1, c1), ts1), ((p2, c2), ts2)))) =>
-                              val k1 = key1.substring(36)
-                              val k2 = key2.substring(36)
-                              if stop
-                              then
-                                for
-                                  _ <- **.offer(-1 -> Nil).commit
-                                  _ <- p1.succeed(None)
-                                  _ <- p2.succeed(None).unless(k1 == k2)
-                                  _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
-                                  _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
-                                yield
-                                  ()
-                              else
-                                for
-                                  cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
-                                  _  <- sem.acquire
-                                  _  <- started.update(_ + 1)
-                                  fb <- ( for
-                                            _  <- cb.await.exit
-                                            _  <- enable(k1)
-                                            _  <- enable(k2).unless(k1 == k2)
-                                            nc <- if duration == 0.0 || duration.isNaN
-                                                  then &|.updateAndGet { (no, cl) => (no + 1, cl) }
-                                                  else &|.updateAndGet { (no, cl) => (no + 1, cl + delay) }
-                                            ss <- ts1.get <*> ts2.get
-                                            kb <- feedback.keyByR.get
-                                            now <- currentTimeMillis
-                                            _  <- feedback.lastR.set(now -> nc._2)
-                                            _  <- -.offer(Some((nc, (ss, now), (k1, k2, kb), (delay, duration)))).whenZIO(feedback.tracesR.get)
-                                            _  <- sem.release
-                                            _  <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek.when(_))
-                                          yield
-                                            ()
-                                        ).fork
-                                  _  <- p1.succeed(Some((cb, fb, in)))
-                                  _  <- p2.succeed(Some((cb, fb, in))).unless(k1 == k2)
-                                  _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in)))))
-                                  _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in))))).unless(k1 == k2)
-                                yield
-                                  ()
-                          }
-                }
-              }
+            &|.get.flatMap { i =>
+              val fun = { (f: ((((String, String), ++++), Int)) => UIO[Unit]) => if parameters.parallelism == 1 then ZIO.collectAllDiscard(nel.zipWithIndex.map(f)) else ZIO.collectAllParDiscard(nel.zipWithIndex.map(f)) }
+              fun { case (((key1, key2), (dp @ (delay, plugins), in, (((p1, c1), ts1), ((p2, c2), ts2)))), j) =>
+                      val k1 = key1.substring(36)
+                      val k2 = key2.substring(36)
+                      if stop
+                      then
+                        for
+                          _ <- **.offer(-1 -> Nil).commit
+                          _ <- p1.succeed(None)
+                          _ <- p2.succeed(None).unless(k1 == k2)
+                          _ <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(None)))
+                          _ <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(None))).unless(k1 == k2)
+                        yield
+                          ()
+                      else
+                        for
+                          cb <- CyclicBarrier.make(if k1 == k2 then 2 else 3)
+                          no <- &|.updateAndGet(_ + 1)
+                          _  <- sem.acquire
+                          _  <- started.update(_ + 1)
+                          fb <- ( for
+                                    _  <- cb.await.exit
+                                    _  <- enable(k1)
+                                    _  <- enable(k2).unless(k1 == k2)
+                                    ss <- ts1.get <*> ts2.get
+                                    kb <- if parameters.causal then ZIO.succeed(KeyBy.HID)
+                                                    else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
+                                    now <- currentTimeMillis
+                                    _  <- -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp)))).commit.whenZIO(feedback.tracesR.get)
+                                    _  <- sem.release
+                                    _  <- started.updateAndGet(_ - 1).map(_ == 0).flatMap(peek(parameters.plugins).when(_))
+                                  yield
+                                    ()
+                                ).fork
+                          cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
+                                  case Some(Plugin.causes(cs)) =>
+                                    if k1.indexOf(',') < 0
+                                    then
+                                      cs
+                                    else
+                                      cs + no
+                                  case _ =>
+                                    Set.empty
+                          _  <- p1.succeed(Some((cb, fb, in, cs)))
+                          _  <- p2.succeed(Some((cb, fb, in, cs))).unless(k1 == k2)
+                          _  <- ZIO.unless(c1 eq null)(c1.get.flatMap(_.succeed(Some((cb, fb, in, cs)))))
+                          _  <- ZIO.unless(c2 eq null)(c2.get.flatMap(_.succeed(Some((cb, fb, in, cs))))).unless(k1 == k2)
+                        yield
+                          ()
+                  }
             }
           } *> ZIO.succeed(true)
       _        <- feedback.pauseRP_stopR_exitRP.get.flatMap(_._1._1.await)

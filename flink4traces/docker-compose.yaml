@@ -16,8 +16,12 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
+        metrics.reporters: prom
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
+        metrics.reporter.prom.filterLabelValueCharacters: false
     volumes:
-      - ./target/scala-3.10.0-RC2:/opt/flink/usrlib
+      - ./target/scala-3.10.0-RC3:/opt/flink/usrlib
     networks:
       - flink-network
 
@@ -30,13 +34,19 @@ services:
     ports:
       - "7124:7124" # Embedded Java-WebSocket broadcast port for Scala.js React / loadAvg
       - "7224:7224" # Embedded Java-WebSocket broadcast port for Scala.js React / sweepLine
+      - "7324:7324" # Embedded Java-WebSocket broadcast port for Scala.js React / velocityReport
+      - "7424:7424" # Embedded Java-WebSocket broadcast port for Scala.js React / isd
     environment:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
+        metrics.reporters: prom
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
+        metrics.reporter.prom.filterLabelValueCharacters: false
         taskmanager.numberOfTaskSlots: 4
     volumes:
-      - ./target/scala-3.10.0-RC2:/opt/flink/usrlib
+      - ./target/scala-3.10.0-RC3:/opt/flink/usrlib
     networks:
       - flink-network
 
@@ -85,5 +95,17 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://kafka:29092'
       SCHEMA_REGISTRY_LISTENERS: 'http://0.0.0.0:8081'
+    networks:
+      - flink-network
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - flink-jobmanager
     networks:
       - flink-network

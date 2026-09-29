@@ -26,10 +26,29 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.jdk.CollectionConverters.*
+
+import _root_.scala.collection.immutable.{ List, Map, Set }
+
+import _root_.io.circe.{ Codec, Encoder }
+import _root_.io.circe.syntax.*
 
 
 package object `Π-traces`:
+
+  enum KeyBy:
+    case HID, ANY, AGENT_LABEL
+
+  enum Plugin derives Codec.AsObject:
+    case causes(causes: Set[Long])
+    case parents(numbers: Set[Long])
+    case probability(probability: BigDecimal)
+    case syncRate(rate: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
+
+  object Plugin:
+    given Encoder[BigDecimal] = Encoder.encodeString.contramap(_.toString)
+
 
   var `π-traces`: `Π-Traces` = null
 
@@ -39,39 +58,50 @@ package object `Π-traces`:
 
 
   sealed trait `Π-Traces`:
+    lazy val uuid = java.util.UUID.randomUUID.toString.replaceAll("-", "")
+    protected var rootLabels = Map[Long, String]()
     val backend: `Π-Backend` = `Π-Backend`.same
     def apply(number: Long, clock: Double, started: Long, ended: Long,
               agent: String, name: String, polarity: Option[Boolean],
-              key: String, guard: Boolean, label: String, keyBy: Boolean,
-              rate: String, delay: Double, duration: Double): Unit
+              key: String, guard: Boolean, label: String, keyBy: KeyBy,
+              rate: String, plugins: Seq[Plugin], delay: Double): Unit =
+      plugins.find(_.isInstanceOf[Plugin.causes]) match
+        case Some(Plugin.causes(causes)) =>
+          keyBy match
+            case KeyBy.HID if causes.isEmpty && !rootLabels.contains(number) =>
+              rootLabels += number -> (agent + '-' + label)
+            case KeyBy.HID if causes.isEmpty =>
+              rootLabels += number -> (rootLabels(number) + ':' + (agent + '-' + label))
+            case _ =>
+        case _ =>
     def close: Unit
 
 
   case object `Π-ConsoleCSV` extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, keyBy: Boolean,
-                       rate: String, delay: Double, duration: Double): Unit =
-      printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-             ProcessHandle.current.pid,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, _plugins: Seq[Plugin], delay: Double): Unit =
+      printf("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s\n",
              number, clock, started, ended,
              agent, name, polarity.getOrElse(""),
              key, guard, label,
-             rate, delay, duration)
+             rate, delay)
     override def close: Unit = {}
 
 
   case class `Π-FileCSV`(filename: String) extends `Π-Traces`:
+    import _root_.java.io.{ PrintStream, FileOutputStream }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, keyBy: Boolean,
-                       rate: String, delay: Double, duration: Double): Unit =
-      `Π-FileCSV`.csv.printf("%d,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                             ProcessHandle.current.pid,
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, _plugins: Seq[Plugin], delay: Double): Unit =
+      `Π-FileCSV`.csv.printf("%s,%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                             uuid,
                              number, clock, started, ended,
                              agent, name, polarity.getOrElse(""),
                              key, guard, label,
-                             rate, delay, duration)
+                             rate, delay)
     override def close: Unit =
       `Π-FileCSV`.csv.close
 
@@ -91,17 +121,31 @@ package object `Π-traces`:
     import software.amazon.awssdk.services.sqs.model.{ DeleteQueueRequest, SendMessageRequest }
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, delay: Double, duration: Double): Unit =
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double): Unit =
+      super.apply(number, clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay)
+      val keyBy =
+        _keyBy match
+          case KeyBy.HID =>
+            plugins.find(_.isInstanceOf[Plugin.causes]).get match
+              case Plugin.causes(causes) =>
+                uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number)).replaceAll("∥", "|")
+          case KeyBy.ANY =>
+            "ANY"
+          case _         =>
+            agent + '-' + label.replaceAll("∥", "|")
       val (client, queueUrl) = `Π-AmazonSQS`.client_queueUrl
-      val keyBy = if _keyBy then agent + "-" + label.replaceAll("∥", "|") else "ANY"
       val message =
         s"""{
-            |"pid":${ProcessHandle.current.pid},
-            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"uuid":"$uuid","number":$number,
+            |"clock":$clock,"started":$started,"ended":$ended,
             |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
-            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
+            |"rate":"$rate","plugins":${plugins.asJson.noSpaces},
+            |"delay":${if delay.isPosInfinity then null else delay}
             |}""".stripMargin.replaceAll("\n", "").trim
       val request = SendMessageRequest
         .builder
@@ -145,10 +189,14 @@ package object `Π-traces`:
     import org.apache.kafka.clients.producer.ProducerRecord
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, delay: Double, duration: Double): Unit =
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double): Unit =
+      super.apply(number, clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay)
       val avroRecord = GenericData.Record(`Π-Kafka`.schema)
-      avroRecord.put("pid", ProcessHandle.current.pid)
+      avroRecord.put("uuid", uuid)
       avroRecord.put("number", number)
       avroRecord.put("clock", clock)
       avroRecord.put("started", started)
@@ -160,16 +208,59 @@ package object `Π-traces`:
       avroRecord.put("guard", guard)
       avroRecord.put("label", label)
       avroRecord.put("rate", rate)
-      avroRecord.put("delay", delay)
-      avroRecord.put("duration", if duration.isNaN then null else duration)
+      avroRecord.put("plugins", plugins.map {
+        case Plugin.causes(causes) =>
+          val causesRecord = GenericData.Record(`Π-Kafka`.causesPluginSchema)
+          causesRecord.put("causes", causes.asJava)
+          causesRecord
+        case Plugin.parents(parents) =>
+          val parentsRecord = GenericData.Record(`Π-Kafka`.parentsPluginSchema)
+          parentsRecord.put("numbers", parents.asJava)
+          parentsRecord
+        case Plugin.probability(probability) =>
+          val probRecord = GenericData.Record(`Π-Kafka`.probabilityPluginSchema)
+          probRecord.put("probability", probability.toString)
+          probRecord
+        case Plugin.syncRate(rate) =>
+          val syncRateRecord = GenericData.Record(`Π-Kafka`.syncRatePluginSchema)
+          syncRateRecord.put("rate", rate.map(_.toString).getOrElse(null))
+          syncRateRecord
+        case Plugin.whatIf((numerator, denominator), difference) =>
+          val whatIfRecord = GenericData.Record(`Π-Kafka`.whatIfPluginSchema)
+          val fractionRecord = GenericData.Record(`Π-Kafka`.whatIfPluginFractionSchema)
+          fractionRecord.put("numerator", numerator.toString)
+          fractionRecord.put("denominator", denominator.toString)
+          whatIfRecord.put("fraction", fractionRecord)
+          whatIfRecord.put("difference", difference.toString)
+          whatIfRecord
+      }.asJava)
+      avroRecord.put("delay", if delay.isPosInfinity then null else delay)
       backend match
         case `Π-Backend`.redpanda =>
-          val keyBy = if _keyBy then s"""{"label":"$agent-$label"}""" else s"""{"label":"ANY"}"""
+          val keyBy =
+            _keyBy match
+              case KeyBy.HID =>
+                plugins.find(_.isInstanceOf[Plugin.causes]).get match
+                  case Plugin.causes(causes) =>
+                    s"""{"hid":"${uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))}"}"""
+              case KeyBy.ANY =>
+                s"""{"label":"$agent-$label"}"""
+              case _         =>
+                s"""{"label":"ANY"}"""
           avroRecord.put("keyBy", keyBy)
           val record = ProducerRecord[String, String](topic, keyBy, avroRecord.toString)
           `Π-Kafka`.Redpanda.producer.send(record)
         case _ =>
-          val keyBy = if _keyBy then agent + "-" + label else "ANY"
+          val keyBy =
+            _keyBy match
+              case KeyBy.HID =>
+                plugins.find(_.isInstanceOf[Plugin.causes]).get match
+                  case Plugin.causes(causes) =>
+                    uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+              case KeyBy.ANY =>
+                "ANY"
+              case _         =>
+                agent + '-' + label
           avroRecord.put("keyBy", keyBy)
           val record = ProducerRecord[String, GenericRecord](topic, keyBy, avroRecord)
           `Π-Kafka`.Kafka.producer.send(record)
@@ -204,11 +295,11 @@ package object `Π-traces`:
     private val _schema = """{
       "namespace": "pisc.avro",
       "type": "record",
-      "name": "StochasticPiCalculus2Scala",
+      "name": "BioAmbients2Scala",
       "fields": [
-        { "name" : "pid", "type": "long" },
-
+        { "name" : "uuid", "type": "string" },
         { "name" : "number", "type": "long" },
+
         { "name" : "clock", "type": "double" },
         { "name" : "started", "type": "long" },
         { "name" : "ended", "type": "long" },
@@ -223,12 +314,67 @@ package object `Π-traces`:
         { "name" : "keyBy", "type": "string" },
 
         { "name" : "rate", "type": "string" },
-        { "name" : "delay", "type": "double" },
-        { "name" : "duration", "type": ["null", "double"] }
+        { "name" : "plugins",
+          "type": {
+            "type": "array",
+            "items": [
+              { "name": "causes",
+                "type": "record",
+                "fields": [
+                  { "name": "causes", "type": { "type": "array", "items": "long" } }
+                ]
+              },
+              { "name": "parents",
+                "type": "record",
+                "fields": [
+                  { "name": "numbers", "type": { "type": "array", "items": "long" } }
+                ]
+              },
+              { "name": "probability",
+                "type": "record",
+                "fields": [
+                  { "name": "probability", "type": "string" }
+                ]
+              },
+              { "name": "syncRate",
+                "type": "record",
+                "fields": [
+                  { "name": "rate", "type": ["null", "string"] }
+                ]
+              },
+              { "name": "whatIf",
+                "type": "record",
+                "fields": [
+                  { "name": "fraction",
+                    "type": {
+                      "name": "fraction",
+                      "type": "record",
+                      "fields": [
+                        { "name": "numerator", "type": "string" },
+                        { "name": "denominator", "type": "string" }
+                      ]
+                    }
+                  },
+                  { "name": "difference", "type": "string" }
+                ]
+              }
+            ],
+            "default": []
+          }
+        },
+
+        { "name" : "delay", "type": ["null", "double"] }
       ]
     }"""
 
     val schema = Schema.Parser().parse(_schema)
+    val pluginsSchema = schema.getField("plugins").schema.getElementType.getTypes
+    val causesPluginSchema = pluginsSchema.stream.filter(_.getName == "causes").findFirst.get
+    val parentsPluginSchema = pluginsSchema.stream.filter(_.getName == "parents").findFirst.get
+    val probabilityPluginSchema = pluginsSchema.stream.filter(_.getName == "probability").findFirst.get
+    val syncRatePluginSchema = pluginsSchema.stream.filter(_.getName == "syncRate").findFirst.get
+    val whatIfPluginSchema = pluginsSchema.stream.filter(_.getName == "whatIf").findFirst.get
+    val whatIfPluginFractionSchema = whatIfPluginSchema.getField("fraction").schema
 
     object Redpanda:
 
@@ -259,16 +405,30 @@ package object `Π-traces`:
   case class `Π-RabbitMQ`(host: String, port: Int, exchange: String, username: String = "guest", password: String = "guest") extends `Π-Traces`:
     override def apply(number: Long, clock: Double, started: Long, ended: Long,
                        agent: String, name: String, polarity: Option[Boolean],
-                       key: String, guard: Boolean, label: String, _keyBy: Boolean,
-                       rate: String, delay: Double, duration: Double): Unit =
-      val keyBy = if _keyBy then agent + "-" + label else "ANY"
+                       key: String, guard: Boolean, label: String, _keyBy: KeyBy,
+                       rate: String, plugins: Seq[Plugin], delay: Double): Unit =
+      super.apply(number, clock, started, ended,
+                  agent, name, polarity,
+                  key, guard, label, _keyBy,
+                  rate, plugins, delay)
+      val keyBy =
+        _keyBy match
+          case KeyBy.HID =>
+            plugins.find(_.isInstanceOf[Plugin.causes]).get match
+              case Plugin.causes(causes) =>
+                uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+          case KeyBy.ANY =>
+            "ANY"
+          case _         =>
+            agent + '-' + label
       val message =
         s"""{
-            |"pid":${ProcessHandle.current.pid},
-            |"number":$number,"clock":$clock,"started":$started,"ended":$ended,
+            |"uuid":"$uuid","number":$number,
+            |"clock":$clock,"started":$started,"ended":$ended,
             |"agent":"$agent","name":"$name","polarity":${polarity.getOrElse(null)},
             |"key":"$key","guard":$guard,"label":"$label","keyBy":"$keyBy",
-            |"rate":"$rate","delay":$delay,"duration":${if duration.isNaN then null else duration}
+            |"rate":"$rate","plugins":${plugins.asJson.noSpaces},
+            |"delay":${if delay.isPosInfinity then null else delay}
             |}""".stripMargin.replaceAll("\n", "").trim
         .getBytes("UTF-8")
       `Π-RabbitMQ`.conn_channel._2.basicPublish(exchange, keyBy, null, message)

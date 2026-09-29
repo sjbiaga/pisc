@@ -42,6 +42,7 @@ import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 
 import parser.StochasticPi
 import parser.Calculus.`(*)`
+import parser.Directive.Settings.Plugin
 import emitter.zio.Program
 
 
@@ -54,6 +55,7 @@ object Main extends helper.Main:
     var P = Int.MaxValue
     var H = 0
     var T = 123456
+    var I = List.empty[Plugin]
     var E = true
 
     def spin(arg: String) =
@@ -63,7 +65,7 @@ object Main extends helper.Main:
       var fwr: FileWriter = null
       var bwr: BufferedWriter = null
 
-      val spi = StochasticPi.Main(StochasticPi.Emitter.zio, in, A.toString, P, H, T, E)
+      val spi = StochasticPi.Main(StochasticPi.Emitter.zio, in, A.toString, P, H, T, E, I)
 
       try
         val root = if arg.startsWith("test") then "test" else "pisc"
@@ -122,6 +124,7 @@ object Main extends helper.Main:
       case "-H" => H = 0
       case "-T" => T = 123456
       case "-E" => E = true
+      case "-I" => I = Nil
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
                                                      .getOrElse(host"localhost")
@@ -129,5 +132,6 @@ object Main extends helper.Main:
       case it if it.startsWith("-H") => H = it.substring(2).toInt
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
+      case it if it.startsWith("-I") => I :::= it.substring(2).split(",").toList.map(Plugin.valueOf)
       case it => spin(it)
     }

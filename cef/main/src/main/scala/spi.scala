@@ -51,6 +51,11 @@ package object sΠ:
   type `Π-Function0` = () => String ?=> IO[Any]
   type `Π-Function1` = `()` => String ?=> IO[Any]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[String]
+
 
   /**
     * Supervised [[code]].
@@ -102,8 +107,6 @@ package object sΠ:
     */
   object τ extends τ:
 
-    private val `new {}` = new {}
-
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
@@ -111,7 +114,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`new {}`, None, rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -146,7 +149,7 @@ package object sΠ:
     /**
       * linear replication guard w/ code
       */
-    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(parallelism, rate)(key)(code)(body)
@@ -154,14 +157,14 @@ package object sΠ:
     /**
       * linear replication guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key)(code)(body)
 
 
   /**
-    * prefix
+    * names and values
     */
   final implicit class `()`(private[sΠ] val name: Any) extends AnyVal with Macros:
 
@@ -227,7 +230,7 @@ package object sΠ:
     /**
       * linear constant replication output guard w/ code
       */
-    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.output(true)(parallelism, rate, value)(key)(code)(body)
@@ -235,7 +238,7 @@ package object sΠ:
     /**
       * linear constant replication output guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
                        (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       super.output(true)(pace, parallelism, rate, value)(key)(code)(body)
@@ -269,7 +272,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
@@ -281,7 +284,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(code: IO[Any])(body: `Π-Function0`)(using DummyImplicit)
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
      if classTag[S].runtimeClass eq getClass
@@ -317,7 +320,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
@@ -329,7 +332,7 @@ package object sΠ:
     /**
       * linear variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: IO[Any])(body: `Π-Function0`)
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String): IO[Unit] =
       if classTag[S].runtimeClass eq getClass
@@ -385,7 +388,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)
       else
-        apply[S](false)(rate, IO.delay(value))(key)
+        apply(false)(rate, IO.delay(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
@@ -398,7 +401,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
       else
-        apply[S](true)(rate, IO.delay(value))(key)(code)
+        apply(true)(rate, IO.delay(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
@@ -434,7 +437,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -461,7 +464,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate)))
         opt      <- deferred.get
         delay    <- ( if opt eq None
                       then
@@ -487,23 +490,24 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): IO[(`()`, java.lang.Double)] =
       for
-        _             <- exclude(key)
-        deferred      <- IO.deferred[Option[<>]]
-        result        <- IO.ref[`()`](sΠ.`()`.`null`)
-        _             <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Right(result)), rate)))
-        opt           <- deferred.get
-        (name, delay) <- ( if opt eq None
-                           then
-                             IO.pure(sΠ.`()`.`null` -> (null: java.lang.Double))
-                           else
-                             val (delay, b, f, _) = opt.get
-                             for
-                               _    <- b.await
-                               _    <- f.join
-                               name <- result.get
-                             yield
-                               name -> java.lang.Double(delay)
-                         )
+        _        <- exclude(key)
+        deferred <- IO.deferred[Option[<>]]
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate)))
+        opt      <- deferred.get
+        (name,
+         delay)  <- ( if opt eq None
+                      then
+                        IO.pure((sΠ.`()`.`null`) -> (null: java.lang.Double))
+                      else
+                        val (delay, b, f, _) = opt.get
+                        for
+                          _    <- b.await
+                          _    <- f.join
+                          name <- result.get
+                        yield
+                          name -> java.lang.Double(delay)
+                    )
       yield
         name -> delay
 
@@ -515,28 +519,26 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): IO[(`()`, java.lang.Double)] =
       for
-        _             <- exclude(key)
-        deferred      <- IO.deferred[Option[<>]]
-        result        <- IO.ref[`()`](sΠ.`()`.`null`)
-        _             <- /.offer(^ -> key -> (deferred -> null -> (`()`[{}], Some(Right(result)), rate)))
-        opt           <- deferred.get
-        (name, delay) <- ( if opt eq None
-                           then
-                             IO.pure(sΠ.`()`.`null` -> (null: java.lang.Double))
-                           else
-                             val (delay, b, f, _) = opt.get
-                             for
-                               _    <- b.await
-                               _    <- f.join
-                               name <- result.get.map(_.name).flatMap { case null  => IO.pure(sΠ.`()`.`null`)
-                                                                        case it: T => (code andThen exec)(it).map(new `()`(_))
-                                                                      }
-                             yield
-                               name -> java.lang.Double(delay)
-                         )
+        _        <- exclude(key)
+        deferred <- IO.deferred[Option[<>]]
+        result   <- IO.ref[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate)))
+        opt      <- deferred.get
+        (name,
+         delay)  <- ( if opt eq None
+                      then
+                        IO.pure((null: Any) -> (null: java.lang.Double))
+                      else
+                        val (delay, b, f, _) = opt.get
+                        for
+                          _    <- b.await
+                          _    <- f.join
+                          name <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
+                        yield
+                          name -> java.lang.Double(delay)
+                    )
       yield
-        name -> delay
-      apply(rate)(key)
+        new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 

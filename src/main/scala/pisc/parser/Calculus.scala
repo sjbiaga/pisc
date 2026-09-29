@@ -701,7 +701,7 @@ object Calculus:
 
         case _ => ast
 
-    def labelʹ(using String): T =
+    def labelʹ(using String)(using patch: Boolean = false): T =
 
       ast match
 
@@ -711,7 +711,7 @@ object Calculus:
         case _ =>
           ast.label("")
 
-    def label(l: String)(using String): T =
+    def label(l: String)(using agent: String, patch: Boolean): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -722,10 +722,13 @@ object Calculus:
         inline implicit def lʹ(i: Int)(using n: Int): String = l + "∥" + i + "/" + n
 
       inline def idʹ(id: => String, ch: String, p: String, r: Any): String =
-        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + summon[String]
+        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + agent
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {
+          case it @ τ(Some(0L), _) =>
+            it.copy(rate = Some(-1L))(idʹ(it.id, "τ", "", -1L))
+          case it if patch => it
           case it: τ =>
             it.copy()(idʹ(it.id, "τ", "", it.rate.get))
           case it @ π(λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>

@@ -604,8 +604,8 @@ object Item:
               val queueUrl = s"${p.amazonsqs.value.endpoint}/queue/$queue"
               val AmazonSQS(region, accessKey, secretKey, token, _, limit, timeout, own, _) = p.amazonsqs.value
               val receiver = amazonsqs.AmazonSQSReceiver(queueUrl, region, accessKey, secretKey, token, limit, timeout)
-              val pid = if own then p.service.Meta.get("pid").toLong else 0
-              <.div(amazonsqs.Component(amazonsqs.Props(p.key, p.service.isBioAmbients, pid, receiver)))
+              val uuid = if own then p.service.Meta.get("uuid") else null
+              <.div(amazonsqs.Component(amazonsqs.Props(p.key, p.service.isBioAmbients, uuid, receiver)))
             else
               <.div
 
@@ -646,6 +646,7 @@ object Item:
               ^.marginLeft := "15px",
               ^.id         := "interrupt-checkbox",
               ^.`type`     := "checkbox",
+              ^.disabled   := List("cdf").contains(p.kafka.value.analytics.`type`),
               ^.onChange  ==> { (e: ReactEventFromInput) => p.kafka.value.analytics.signal.set(e.target.checked) }
             ),
 
@@ -664,29 +665,51 @@ object Item:
               ^.id             := "analytics-select",
               ^.onChange      ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(`type` = e.target.value)) } },
 
-              <.option(^.value := "-"        , "-"           ),
-              <.option(^.value := "loadavg"  , "Load Average"),
-              <.option(^.value := "sweepline", "Sweep Line"  )
+              <.option(^.value := "-"             , "-"                               ),
+              <.option(^.value := "loadavg"       , "Load Average"                    ),
+              <.option(^.value := "sweepline"     , "Sweep Line"                      ),
+              <.option(^.disabled := !p.service.plugins.contains("causes"),
+                       ^.value := "velocityreport", "Velocity Report"                 ),
+              <.option(^.disabled := !p.service.plugins.contains("causes") || !p.service.plugins.contains("probability") || !p.kafka.value.own,
+                       ^.value := "cdf"           , "Cumulative Distribution Function"),
+              <.option(^.disabled := !p.service.plugins.contains("parents") || !p.service.plugins.contains("whatIf") || !p.kafka.value.own,
+                       ^.value := "isd"           , "Importance Sampling Diagnostics" )
             ),
 
             ( if p.kafka.value.analytics.`type` == "loadavg"
               then
                 val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
-                val pid = if own then p.service.Meta.get("pid").toLong else 0
-                val url = s"$_url/traces-loadavg-$topic?pid=$pid"
+                val uuid = if own then p.service.Meta.get("uuid") else null
+                val url = s"$_url/traces-loadavg-$topic?uuid=$uuid"
                 val props = analytics.loadavg.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.loadavg.Component(props))
-              else
-                <.div(^.display.inlineBlock)
-            ),
-
-            ( if p.kafka.value.analytics.`type` == "sweepline"
+              else if p.kafka.value.analytics.`type` == "sweepline"
               then
                 val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
-                val pid = if own then p.service.Meta.get("pid").toLong else 0
-                val url = s"$_url/traces-sweepline-$topic?pid=$pid"
+                val uuid = if own then p.service.Meta.get("uuid") else null
+                val url = s"$_url/traces-sweepline-$topic?uuid=$uuid"
                 val props = analytics.sweepline.Props(p.key, url)(signal)
                 <.div(^.display.inlineBlock, analytics.sweepline.Component(props))
+              else if p.kafka.value.analytics.`type` == "velocityreport"
+              then
+                val Kafka(_, _, _, own, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
+                val uuid = if own then p.service.Meta.get("uuid") else null
+                val url = s"$_url/traces-velocityreport-$topic?uuid=$uuid"
+                val props = analytics.velocityreport.Props(p.key, url)(signal)
+                <.div(^.display.inlineBlock, analytics.velocityreport.Component(props))
+              else if p.kafka.value.analytics.`type` == "cdf"
+              then
+                val Kafka(_, _, _, _, _, Kafka.Analytics(_, url, _)) = p.kafka.value
+                val uuid = p.service.Meta.get("uuid")
+                val props = analytics.cdf.Props(p.key, url, topic, uuid)
+                <.div(^.display.inlineBlock, analytics.cdf.Component(props))
+              else if p.kafka.value.analytics.`type` == "isd"
+              then
+                val Kafka(_, _, _, _, _, Kafka.Analytics(signal, _url, _)) = p.kafka.value
+                val uuid = p.service.Meta.get("uuid")
+                val url = s"$_url/traces-isd-$topic?uuid=$uuid"
+                val props = analytics.isd.Props(p.key, url)(signal)
+                <.div(^.display.inlineBlock, analytics.isd.Component(props))
               else
                 <.div(^.display.inlineBlock)
             )
@@ -770,8 +793,8 @@ object Item:
                 val Kafka(offset, maxBytes, timeout, own, _, _) = p.kafka.value
                 val proxyUrl = p.kafka.value.asInstanceOf[Kafka.Redpanda].proxyUrl
                 val redpanda = kafka.redpanda.Redpanda(proxyUrl, topic, offset, maxBytes, timeout)
-                val pid = if own then p.service.Meta.get("pid").toLong else 0
-                <.div(kafka.redpanda.Component(kafka.redpanda.Props(p.key, p.service.isBioAmbients, pid, redpanda)))
+                val uuid = if own then p.service.Meta.get("uuid") else null
+                <.div(kafka.redpanda.Component(kafka.redpanda.Props(p.key, p.service.isBioAmbients, uuid, redpanda)))
               else
                 <.div
             )
@@ -866,8 +889,8 @@ object Item:
             then
               val RabbitMQ(signal, username, password, url, chunkSize, own, _) = p.rabbitmq.value
               val subscriber = rabbitmq.RabbitMQSubscriber(exchange, username, password, url)
-              val pid = if own then p.service.Meta.get("pid").toLong else 0
-              <.div(rabbitmq.Component(rabbitmq.Props(p.key, p.service.isBioAmbients, chunkSize, pid, subscriber)(signal)))
+              val uuid = if own then p.service.Meta.get("uuid") else null
+              <.div(rabbitmq.Component(rabbitmq.Props(p.key, p.service.isBioAmbients, chunkSize, uuid, subscriber)(signal)))
             else
               <.div
 

@@ -26,15 +26,28 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.{ List, Set }
 
 
 package object `Π-traces`:
 
+  enum KeyBy:
+    case HID, ANY, AGENT_LABEL
+
+  enum Plugin:
+    case causes(causes: Set[Long])
+    case parents(numbers: Set[Long])
+    case probability(probability: BigDecimal)
+    case syncRate(rate: Option[BigDecimal])
+    case whatIf(fraction: (BigDecimal, BigDecimal), difference: BigDecimal)
+
+
   var `π-traces`: `Π-Traces` = null
+
 
   enum `Π-Backend`:
     case same, redpanda, elasticmq
+
 
   sealed trait `Π-Traces`:
     val backend: `Π-Backend` = `Π-Backend`.same
@@ -55,8 +68,4 @@ package object `Π-traces`:
                        schemaRegistryUrl: String,
                        topic: String) extends `Π-Traces`
 
-  case class `Π-RabbitMQ`(host: String,
-                          port: Int,
-                          queue: String,
-                          username: String = "guest",
-                          password: String = "guest") extends `Π-Traces`
+  case class `Π-RabbitMQ`(host: String, port: Int, exchange: String, username: String = "guest", password: String = "guest") extends `Π-Traces`

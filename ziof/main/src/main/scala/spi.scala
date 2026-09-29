@@ -45,6 +45,11 @@ package object sΠ:
   type `Π-Function0` = () => String ?=> UIO[Any]
   type `Π-Function1` = `()` => String ?=> UIO[Any]
 
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
+
 
   given [A]: Conversion[Task[A], UIO[A]] =
     _.either.map {
@@ -81,7 +86,7 @@ package object sΠ:
     )
 
   private def exclude(key: String)
-                     (using % : %)
+                     (using %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
     ZIO.when(`π-elvis`.contains(key))(`π-exclude`(`π-elvis`(key))).unit
 
@@ -92,7 +97,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
-    def flatMap[B](f: `()` => Task[B]): UIO[B] = f(new {})
+    def flatMap[B](f: `()` => UIO[B]): UIO[B] = f(new {})
 
 
   /**
@@ -157,7 +162,7 @@ package object sΠ:
 
 
   /**
-    * prefix
+    * names and values
     */
   final implicit class `()`(private[sΠ] val name: Any) extends AnyVal with Macros:
 
@@ -166,7 +171,7 @@ package object sΠ:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
 
-    // LINEAR REPLICATION //////////////////////////////////////////////////////
+    // LINEAR REPLICATION ///////////////////////////////////////////////// π //
 
     /////////////////////////////////////////////////////////////////// BOUND //
 
@@ -368,7 +373,7 @@ package object sΠ:
                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
       super.input(true)(pace, parallelism, rate)(key)(code)(body)
 
-    ////////////////////////////////////////////////////// linear replication //
+    // π ///////////////////////////////////////////////// linear replication //
 
     /**
       * variable negative prefix i.e. variable output
@@ -381,7 +386,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)
       else
-        apply[S](false)(rate, ZIO.attempt(value))(key)
+        apply(false)(rate, ZIO.attempt(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
@@ -394,7 +399,7 @@ package object sΠ:
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
       else
-        apply[S](true)(rate, ZIO.attempt(value))(key)(code)
+        apply(true)(rate, ZIO.attempt(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
@@ -404,9 +409,9 @@ package object sΠ:
                                      (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
+        ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key)))
       else
-        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)))
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(rate, _)(key)))
 
     /**
       * variable negative prefix i.e. variable output
@@ -416,9 +421,9 @@ package object sΠ:
                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[java.lang.Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
+        ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key)(code)))
       else
-        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)(code)))
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code)))
 
     /**
       * negative prefix i.e. output
@@ -483,23 +488,24 @@ package object sΠ:
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                        ^ : String): UIO[(`()`, java.lang.Double)] =
       for
-        _             <- exclude(key)
-        promise       <- Promise.make[Nothing, Option[<>]]
-        result        <- Ref.make[`()`](sΠ.`()`.`null`)
-        _             <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Right(result)), rate)))
-        opt           <- promise.await
-        (name, delay) <- ( if opt eq None
-                           then
-                             ZIO.succeed(sΠ.`()`.`null` -> (null: java.lang.Double))
-                           else
-                             val (delay, b, f, _) = opt.get
-                             for
-                               _    <- b.await.exit
-                               _    <- f.join
-                               name <- result.get
-                             yield
-                               name -> java.lang.Double(delay)
-                         )
+        _        <- exclude(key)
+        promise  <- Promise.make[Nothing, Option[<>]]
+        result   <- Ref.make[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Right(result)), rate)))
+        opt      <- promise.await
+        (name,
+         delay)  <- ( if opt eq None
+                      then
+                        ZIO.succeed((sΠ.`()`.`null`) -> (null: java.lang.Double))
+                      else
+                        val (delay, b, f, _) = opt.get
+                        for
+                          _    <- b.await.exit
+                          _    <- f.join
+                          name <- result.get
+                        yield
+                          name -> java.lang.Double(delay)
+                    )
       yield
         name -> delay
 
@@ -511,27 +517,26 @@ package object sΠ:
                 (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                           ^ : String): UIO[(`()`, java.lang.Double)] =
       for
-        _             <- exclude(key)
-        promise       <- Promise.make[Nothing, Option[<>]]
-        result        <- Ref.make[`()`](sΠ.`()`.`null`)
-        _             <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Right(result)), rate)))
-        opt           <- promise.await
-        (name, delay) <- ( if opt eq None
-                           then
-                             ZIO.succeed(sΠ.`()`.`null` -> (null: java.lang.Double))
-                           else
-                             val (delay, b, f, _) = opt.get
-                             for
-                               _    <- b.await.exit
-                               _    <- f.join
-                               name <- result.get.map(_.name).flatMap { case null  => ZIO.succeed(sΠ.`()`.`null`)
-                                                                        case it: T => (code andThen exec)(it).map(new `()`(_))
-                                                                      }
-                             yield
-                               name -> java.lang.Double(delay)
-                         )
+        _        <- exclude(key)
+        promise  <- Promise.make[Nothing, Option[<>]]
+        result   <- Ref.make[`()`](sΠ.`()`.`null`)
+        _        <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Right(result)), rate)))
+        opt      <- promise.await
+        (name,
+         delay)  <- ( if opt eq None
+                      then
+                        ZIO.succeed((null: Any) -> (null: java.lang.Double))
+                      else
+                        val (delay, b, f, _) = opt.get
+                        for
+                          _    <- b.await.exit
+                          _    <- f.join
+                          name <- result.get.map(_.name).flatMap { case it: T => (code andThen exec)(it) }
+                        yield
+                          name -> java.lang.Double(delay)
+                    )
       yield
-        name -> delay
+        new `()`(name) -> delay
 
     override def toString: String = if name == null then "null" else name.toString
 

@@ -51,7 +51,7 @@ object App:
             else π.`π-parameters`.parallelism
     Behaviors.setup[Either[Unit, Unit]] { context =>
       val % : Map[String, Int | +] = `π-main`.foldLeft(Map.empty)(_.updated(_, 1))
-      val dump = context.spawnAnonymous(Dump())
+      val dump = context.spawnAnonymous(Dump(.0))
       val loop = context.spawnAnonymous(Loop(1 max p)(dump)(%))
       val main = context.spawnAnonymous(Main(args.toList)(using `π-uuid`)(using loop))
       Behaviors.receiveMessage {

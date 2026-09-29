@@ -26,7 +26,7 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.{ List, Map, Set }
+import _root_.scala.collection.immutable.{ List, Map }
 import _root_.scala.collection.mutable.HashMap
 import _root_.scala.concurrent.duration.*
 
@@ -44,7 +44,8 @@ package object `Π-stats`:
 
   sealed trait Rate extends Any
   case class ∞(weight: Long) extends AnyVal with Rate
-  case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate
+  case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate:
+    def apply(whatIf: `ℝ⁺`): this.type = this
   case class ⊤(weight: Long) extends AnyVal with Rate
 
   private val distributionCache: Cache[Double, Exponential] =
@@ -61,8 +62,8 @@ package object `Π-stats`:
       it
     }
 
-  private inline def delta(rate: BigDecimal): Double =
-    distribution(rate.toDouble).draw()
+  private inline def delta(rate: Double): Double =
+    distribution(rate).draw()
 
   class StatisticsException(msg: String, cause: Throwable = null)
       extends RuntimeException(msg, cause)
@@ -70,23 +71,24 @@ package object `Π-stats`:
   case class CombinedActivitiesException(how: String)
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
+  @annotation.tailrec
   def ∥(% : Map[String, ({}, Option[Either[Unit, Ref[`()`]]], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (check: Boolean = false): List[List[(String, String, Ref[`()`], (Double, Double))]] =
-                                         // ^^^^^^  ^^^^^^  ^^^^^^^^^   ^^^^^^  ^^^^^^
-                                         // key1    key1|2  input       delay   duration
+       (check: Boolean = false, acc: List[(String, String, Ref[`()`], Double)] = Nil): List[(String, String, Ref[`()`], Double)] =
+                                                                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^
+                                                                                          // key1    key1|2  input      delay
 
     val mls = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
-        case (_, (e, p, r: ∞)) => // immediate
+        case (_, (e, p, r: ∞))    => // immediate
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Left(r.weight)
         case (_, (e, p, r: `ℝ⁺`)) => // timed
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Right(Left(r.rate))
-        case (_, (e, p, r: ⊤)) => // passive
+        case (_, (e, p, r: ⊤))    => // passive
           if !mls.contains(e -> p) then mls(e -> p) = Nil
           mls(e -> p) ::= Right(Right(r.weight))
       }
@@ -134,26 +136,26 @@ package object `Π-stats`:
 
     if check
     then
-      val ert = msrt.keySet.map(_._1)
-      val ewi = mswi.keySet.map(_._1)
-      val ewp = mswp.keySet.map(_._1)
+      val ert = msrt.keySet.filter(_._2.isDefined).map(_._1)
+      val ewi = mswi.keySet.filter(_._2.isDefined).map(_._1)
+      val ewp = mswp.keySet.filter(_._2.isDefined).map(_._1)
 
       if (ert & ewi).nonEmpty
-      || (ert & ewp).nonEmpty
       || (ewi & ewp).nonEmpty
+      || (ewp & ert).nonEmpty
       then
         throw CombinedActivitiesException("mixed")
 
     val χ = %
       .map {
-        case (k, (e, p, r: ∞)) => k -> (e, p, Double.NaN -> r.weight) // immediate
-        case (k, (e, p, r: `ℝ⁺`)) => k -> (e, p, r.rate.toDouble -> 0L) // timed
-        case (k, (e, p, r: ⊤)) => k -> (e, p, Double.NaN -> r.weight) // passive
+        case (k, (e, p, r: ∞)) => k -> (e, p, BigDecimal(0) -> r.weight) // immediate
+        case (k, (e, p, r: `ℝ⁺`)) => k -> (e, p, r.rate -> 0L)           // timed
+        case (k, (e, p, r: ⊤)) => k -> (e, p, BigDecimal(0) -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, Ref[`()`], (Double, Double)), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^   ^^^^^^  ^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2  input       delay   duration   pri  delay
+    var r = List[((String, String, Ref[`()`], Double), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^    ^^^  ^^^^^^
+    //             key1    key1|2  input      delay     pri  delay
 
     for
       i <- 0 until χ.size
@@ -161,23 +163,26 @@ package object `Π-stats`:
     do
       if polarity1 eq None
       then
-        val (rate, (priority, duration)) =
+        val (rate, priority) =
           if msrt.contains(ether1 -> polarity1)
           then
             val apr1 = msrt(ether1 -> polarity1)
-            rate1 / apr1 -> (2 -> Double.PositiveInfinity)
+            val prb = rate1 / apr1
+            rate1.toDouble -> 2
           else if mswi.contains(ether1 -> polarity1)
           then
             val apr1 = mswi(ether1 -> polarity1)
-            weight1 / apr1 -> (1 -> 0.0)
+            val prb = weight1 / apr1
+            Double.PositiveInfinity -> 1
           else if mswp.contains(ether1 -> polarity1)
           then
             val apr1 = mswp(ether1 -> polarity1)
-            weight1 / apr1 -> (3 -> Double.NaN)
+            val prb = weight1 / apr1
+            .0 -> 3
           else
             ???
-        val delay = delta(rate)
-        r ::= (key1, key1, null, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+        val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
+        r ::= (key1, key1, null, delay) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -195,71 +200,39 @@ package object `Π-stats`:
             !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
           }
           then
-            val (rate, (priority, duration)) =
+            val (_rate, priority) =
               if msrt.contains(ether1 -> polarity1)
               && msrt.contains(ether2 -> polarity2)
               then
                 val apr1 = msrt(ether1 -> polarity1)
                 val apr2 = msrt(ether2 -> polarity2)
-                ((rate1 / apr1) * (rate2 / apr2) * (apr1 min apr2)) -> (2 -> Double.PositiveInfinity)
+                val prb = (rate1 / apr1) * (rate2 / apr2)
+                prb * (apr1 min apr2) -> 2
               else if mswi.contains(ether1 -> polarity1)
                    && mswi.contains(ether2 -> polarity2)
               then
                 val apr1 = mswi(ether1 -> polarity1)
                 val apr2 = mswi(ether2 -> polarity2)
-                (weight1 / apr1) * (weight2 / apr2) * (apr1 min apr2) -> (1 -> 0.0)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb * (apr1 min apr2) -> 1
               else if mswp.contains(ether1 -> polarity1)
                    && mswp.contains(ether2 -> polarity2)
               then
                 val apr1 = mswp(ether1 -> polarity1)
                 val apr2 = mswp(ether2 -> polarity2)
-                (weight1 / apr1) * (weight2 / apr2) * (apr1 min apr2) -> (3 -> Double.NaN)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb * (apr1 min apr2) -> 3
               else
                 ???
+            val rate = _rate.toDouble
             val delay = delta(rate)
             val ref = polarity1.get.orElse(polarity2.get).right.get
-            r ::= (key1, key2, ref, (delay, if priority == 2 then delay else duration)) -> (priority -> delay)
+            r ::= (key1, key2, ref, delay) -> (priority -> delay)
 
-    r = r.sortBy(_._2).reverse
-
-    ( for
-        ((it @ (key1, key2, _, _), (pri, _)), i) <- r.zipWithIndex
-      yield
-        val k1 = key1.substring(36)
-        val k2 = key2.substring(36)
-        val  ^ = key1.substring(0, 36)
-        val ^^ = key2.substring(0, 36)
-        pri -> it -> {
-          0 > r.indexWhere(
-            {
-              case ((`key1` | `key2`, _, _, _), _)
-                 | ((_, `key1` | `key2`, _, _), _) => true
-              case ((key, _, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                => true
-              case ((_, key, _, _), _)
-                  if {
-                    val k = key.substring(36)
-                    `π-trick`.contains(k) && {
-                      val ^^^ = key.substring(0, 36)
-                      `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
-                    }
-                  }                                => true
-              case _                               => false
-            }
-            , i + 1
-          )
-        }
-    )
-    .filter(_._2)
-    .map(_._1)
-    .reverse
-    .groupBy(_._1)
-    .toList
-    .sortBy(_._1)
-    .map(_._2.map(_._2))
+    r
+      .sortBy(_._2)
+      .map(_._1)
+      .headOption match
+        case None => acc.reverse
+        case Some(it @ (key1, key2, _, _)) =>
+          ∥(% - key1 - key2)(`π-trick`)(check, it :: acc)

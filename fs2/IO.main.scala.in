@@ -28,26 +28,27 @@
 
 //package main.scala.in
 
-import _root_.cats.effect.Deferred
+import _root_.cats.effect.{ Deferred, IOLocal, Ref }
 import _root_.cats.effect.std.Semaphore
 
 
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.scala.collection.immutable.{ List, Map }
+  import _root_.scala.collection.immutable.{ List, Map, Seq, Set }
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.effect.{ ExitCode, Ref }
+  import _root_.cats.effect.ExitCode
   import _root_.cats.effect.kernel.Resource
   import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
 
-  import `Π-dump`.*
+  import `Π-dump`.*, `Π-dump`.given
   import `Π-http4s`.*
   import `Π-loop`.*, `Π-loop`.given
+  import `Π-traces`.{ KeyBy, Plugin }
 
 
   private val spicsa = "pisc.stochastic.communications.bind.address"
@@ -57,7 +58,7 @@ object App extends _root_.cats.effect.IOApp:
   private val spicse = "pisc.stochastic.communications.exit.passthrough"
 
 
-  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], feedback: Feedback[π.F])
+  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], clock: Ref[π.F, Double], feedback: Feedback[π.F])
                     (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
                     (using ClassTag[T]): π.F[ExitCode] =
     val F = classTag[T].runtimeClass.getCanonicalName
@@ -68,16 +69,17 @@ object App extends _root_.cats.effect.IOApp:
     val \ =
       if parameters.threshold > 0
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
-      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(using %, **)(π.`π-wand`)) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, _))
+        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, parameters.plugins, _))
         _ <- if parameters.threshold > 0
              then lπ.loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
              else lπ.loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
-        _ <- dπ.dump(using %, !, -).background
+        _ <- dπ.dump(clock, feedback)(using %, !, -).background
         ^ <- Resource.eval(π.`π-uuid`[π.F])
-        _ <- mπ.Main(args*)(using ^)(using %, /, \).compile.drain.background
+        ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
+        _ <- mπ.Main(args*)(using ^, π.`Π-IOLocal`(?))(using %, /, \).compile.drain.background
       yield
         ()
     ).use { _ =>
@@ -105,18 +107,24 @@ object App extends _root_.cats.effect.IOApp:
     val e = if sys.BooleanProp.keyExists(spicse).value
             then true
             else π.`π-parameters`.exit
-    val params = `Π-Parameters`(a, p, h, t, e)
+    var plugins = π.`π-parameters`.plugins
+    if plugins.contains(classOf[Plugin.parents].getSimpleName)
+    then
+      plugins += classOf[Plugin.causes].getSimpleName
+    val c = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, plugins, c)
     for
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- PQueue.unbounded[π.F, (Int, List[List[((String, String), ++++[π.F])]])]
-      - <- Queue.unbounded[π.F, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
+      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
+      - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
       ! <- Deferred[π.F, ExitCode]
-      &| <- Ref[π.F].of(0L -> .0)
+      &| <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
       ^ <- Semaphore[π.F](1)
       b <- Ref[π.F].of(0L)
+      c <- Ref[π.F].of(.0)
       paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
       paramsR  <- Ref[π.F].of(params)
       tracesR  <- Ref[π.F].of(true)
@@ -128,7 +136,7 @@ object App extends _root_.cats.effect.IOApp:
       doneR    <- Ref[π.F].of(false)
       feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run[π.F[Unit]](args, params, n, b, feedback)(%, /, *, **, ^.permit, -, !, &|)
+      x <- run[π.F[Unit]](args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !, &|)
     yield
       x
 
@@ -161,5 +169,7 @@ object π:
 
   def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
     UUIDGen.randomString[F]
+
+  final class `Π-IOLocal`[A](self: IOLocal[A]) extends `Π-FiberLocal`[F, A](self.get, self.set)
 
 

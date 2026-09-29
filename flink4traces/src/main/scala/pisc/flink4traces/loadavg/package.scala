@@ -19,7 +19,7 @@ package object loadavg:
                      oneMinuteLoad: Double,
                      tenMinutesLoad: Double,
                      fifteenMinutesLoad: Double,
-                     perPIDLoadAvg: Map[Long, LoadAvg]):
+                     perUUIDLoadAvg: Map[String, LoadAvg]):
     def toJson: String =
       s"""{
           |"timestamp":$timestamp,
@@ -32,8 +32,9 @@ package object loadavg:
   case class LoadAvg1msBurst(timestamp: Long,
                              clock: Double,
                              averages: Map[String, LoadAvg],
-                             perPIDLoadAvg1msBurst: Map[Long, LoadAvg1msBurst]):
-    def toJson: String =
+                             perUUIDLoadAvg1msBurst: Map[String, LoadAvg1msBurst])
+      extends websocket.WebSocketSink.SinkableElement:
+    override def toJson: String =
       s"""{
           |"timestamp":$timestamp,
           |"clock":$clock,

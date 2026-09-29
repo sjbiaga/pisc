@@ -32,7 +32,7 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.zio.{ Duration, Exit, Promise, Ref, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, FiberRef, Promise, Ref, Task, UIO, ZIO }
 
   import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
   import `Π-stats`.Rate
@@ -44,6 +44,11 @@ package object sΠ:
 
   type `Π-Function0` = () => String ?=> UIO[Any]
   type `Π-Function1` = `()` => String ?=> UIO[Any]
+
+  /**
+    * Type of causal sets.
+    */
+  type `[]` = Set[Long]
 
 
   given [A]: Conversion[Task[A], UIO[A]] =
@@ -81,7 +86,7 @@ package object sΠ:
     )
 
   private def exclude(key: String)
-                     (using % : %)
+                     (using %)
                      (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]]): UIO[Unit] =
     ZIO.when(`π-elvis`.contains(key))(`π-exclude`(`π-elvis`(key))).unit
 
@@ -92,7 +97,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
-    def flatMap[B](f: `()` => Task[B]): UIO[B] = f(new {})
+    def flatMap[B](f: `()` => UIO[B]): UIO[B] = f(new {})
 
 
   /**
@@ -103,18 +108,21 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): UIO[Double] =
+                       ^ : String, `[]`: FiberRef[`[]`]): UIO[Double] =
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`new {}`, None, rate, `][`)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
-         b, f, _) = opt.get
+         b, f,
+         _, s)    = opt.get
         _        <- b.await.exit
         _        <- f.join
+        _        <- `[]`.set(s)
       yield
         delay
 
@@ -123,7 +131,7 @@ package object sΠ:
       */
     def apply(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.silent(false)(parallelism, rate)(key)(body)
 
     /**
@@ -131,7 +139,7 @@ package object sΠ:
       */
     def apply(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.silent(false)(pace, parallelism, rate)(key)(body)
 
     /**
@@ -139,7 +147,7 @@ package object sΠ:
       */
     def apply(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: => Task[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.silent(true)(parallelism, rate)(key)(code)(body)
 
     /**
@@ -147,7 +155,7 @@ package object sΠ:
       */
     def apply(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(code: => Task[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.silent(true)(pace, parallelism, rate)(key)(code)(body)
 
 
@@ -170,7 +178,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output("ν")(false)(parallelism, rate)(key)(body)
 
     /**
@@ -178,7 +186,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output("ν")(false)(pace, parallelism, rate)(key)(body)
 
     /**
@@ -186,7 +194,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: => Task[Any])(body: `Π-Function1`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output("ν")(true)(parallelism, rate)(key)(code)(body)
 
     /**
@@ -194,7 +202,7 @@ package object sΠ:
       */
     def apply(_nu: "ν")(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(code: => Task[Any])(body: `Π-Function1`)
                                  (using %, /, \)
-                                 (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                 (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output("ν")(true)(pace, parallelism, rate)(key)(code)(body)
 
     //////////////////////////////////////////////////////////////// CONSTANT //
@@ -204,7 +212,7 @@ package object sΠ:
       */
     def apply(_f: false)(parallelism: Int, rate: Rate, value: `()`)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output(false)(parallelism, rate, value)(key)(body)
 
     /**
@@ -212,7 +220,7 @@ package object sΠ:
       */
     def apply(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: `()`)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
-                        (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                        (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output(false)(pace, parallelism, rate, value)(key)(body)
 
     /**
@@ -220,7 +228,7 @@ package object sΠ:
       */
     def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => Task[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output(true)(parallelism, rate, value)(key)(code)(body)
 
     /**
@@ -228,7 +236,7 @@ package object sΠ:
       */
     def apply(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => Task[Any])(body: `Π-Function0`)
                        (using %, /, \)
-                       (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                       (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.output(true)(pace, parallelism, rate, value)(key)(code)(body)
 
     //////////////////////////////////////////////////////////////// VARIABLE //
@@ -238,7 +246,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key)(body)
@@ -250,7 +258,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(body)
@@ -262,7 +270,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String)(code: => Task[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
@@ -274,7 +282,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: => S)(key: String)(code: => Task[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
      if classTag[S].runtimeClass eq getClass
      then
        apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
@@ -286,7 +294,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => Task[S])(key: String)(body: `Π-Function0`)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(parallelism, rate, _)(key)(body)))
@@ -298,7 +306,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, rate: Rate, value: => Task[S])(key: String)(body: `Π-Function0`)
                                               (using %, /, \)
-                                              (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                              (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(pace, parallelism, rate, _)(key)(body)))
@@ -310,7 +318,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])(body: `Π-Function0`)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(parallelism, rate, _)(key)(code)(body)))
@@ -322,7 +330,7 @@ package object sΠ:
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])(body: `Π-Function0`)
                                              (using %, /, \)
-                                             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(pace, parallelism, rate, _)(key)(code)(body)))
@@ -336,7 +344,7 @@ package object sΠ:
       */
     def apply(_n: Null)(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.input(false)(parallelism, rate)(key)(body)
 
     /**
@@ -344,7 +352,7 @@ package object sΠ:
       */
     def apply(_n: Null)(_f: false)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
-                                  (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                  (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.input(false)(pace, parallelism, rate)(key)(body)
 
     /**
@@ -352,7 +360,7 @@ package object sΠ:
       */
     def apply[T](_n: Null)(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: T => Task[T])(body: `Π-Function1`)
                                     (using %, /, \)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.input(true)(parallelism, rate)(key)(code)(body)
 
     /**
@@ -360,7 +368,7 @@ package object sΠ:
       */
     def apply[T](_n: Null)(_t: true)(pace: Duration, parallelism: Int, rate: Rate)(key: String)(code: T => Task[T])(body: `Π-Function1`)
                                     (using %, /, \)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Unit] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Unit] =
       super.input(true)(pace, parallelism, rate)(key)(code)(body)
 
     ////////////////////////////////////////////////////// linear replication //
@@ -371,12 +379,12 @@ package object sΠ:
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => S)(key: String)
                                      (using DummyImplicit)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)
       else
-        apply[S](false)(rate, ZIO.attempt(value))(key)
+        apply(false)(rate, ZIO.attempt(value))(key)
 
     /**
       * variable negative prefix i.e. variable output
@@ -384,36 +392,36 @@ package object sΠ:
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => S)(key: String)(code: => Task[Any])
                                     (using DummyImplicit)
                                     (using %, /)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(rate, value.asInstanceOf[`()`])(key)(code)
       else
-        apply[S](true)(rate, ZIO.attempt(value))(key)(code)
+        apply(true)(rate, ZIO.attempt(value))(key)(code)
 
     /**
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(rate: Rate, value: => Task[S])(key: String)
                                      (using %, /)
-                                     (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+                                     (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)))
+        ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key)))
       else
-        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)))
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(rate, _)(key)))
 
     /**
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(rate: Rate, value: => Task[S])(key: String)(code: => Task[Any])
                                     (using %, /)
-                                    (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+                                    (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Double] =
       if classTag[S].runtimeClass eq getClass
       then
-        ZIO.suspendSucceed((value.asInstanceOf[Task[`()`]]: UIO[`()`]).flatMap(apply(rate, _)(key)(code)))
+        ZIO.suspendSucceed(value.asInstanceOf[UIO[`()`]].flatMap(apply(rate, _)(key)(code)))
       else
-        ZIO.suspendSucceed((value: UIO[S]).map(new `()`(_)).flatMap(apply(rate, _)(key)(code)))
+        ZIO.suspendSucceed(value.map(new `()`(_)).flatMap(apply(rate, _)(key)(code)))
 
     /**
       * negative prefix i.e. output
@@ -421,19 +429,22 @@ package object sΠ:
     def apply(rate: Rate, value: `()`)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): UIO[Double] =
+                       ^ : String, `[]`: FiberRef[`[]`]): UIO[Double] =
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate, `][`)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
-         b, f, i) = opt.get
+         b, f,
+         i, s)    = opt.get
         _        <- i.set(value)
         _        <- b.await.exit
         _        <- f.join
+        _        <- `[]`.set(s)
       yield
         delay
 
@@ -442,7 +453,7 @@ package object sΠ:
       */
     def apply(rate: Rate, value: `()`)(key: String)(code: => Task[Any])
              (using %, /)
-             (using `Π-Map`[String, `Π-Set`[String]], String): UIO[Double] =
+             (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[Double] =
       apply(rate, value)(key) <* exec(code)
 
     /**
@@ -451,19 +462,22 @@ package object sΠ:
     def apply(rate: Rate)(key: String)
              (using % : %, / : /)
              (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
-                       ^ : String): UIO[(`()`, Double)] =
+                       ^ : String, `[]`: FiberRef[`[]`]): UIO[(`()`, Double)] =
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
         result   <- Ref.make[`()`](sΠ.`()`.`null`)
+        `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate, `][`)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
-         b, f, _) = opt.get
+         b, f,
+         _, s)    = opt.get
         _        <- b.await.exit
         _        <- f.join
+        _        <- `[]`.set(s)
         name     <- result.get
       yield
         name -> delay
@@ -473,7 +487,7 @@ package object sΠ:
       */
     def apply[T](rate: Rate)(key: String)(code: T => Task[T])
                 (using %, /)
-                (using `Π-Map`[String, `Π-Set`[String]], String): UIO[(`()`, Double)] =
+                (using `Π-Map`[String, `Π-Set`[String]], String, FiberRef[`[]`]): UIO[(`()`, Double)] =
       apply(rate)(key)
         .map(_.name -> _)
         .flatMap {

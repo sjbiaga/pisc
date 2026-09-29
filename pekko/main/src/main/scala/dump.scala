@@ -26,18 +26,19 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.Map
+import _root_.scala.collection.immutable.{ Map, Seq }
 
 import _root_.org.apache.pekko.actor.typed.scaladsl.Behaviors
 import _root_.org.apache.pekko.actor.typed.Behavior
 
 import `Π-loop`.*
+import `Π-traces`.{ KeyBy, Plugin }
 
 
 package object `Π-dump`:
 
-  type - = Map[String, Int | +] | ((Long, Double), ((Long, Long), Long), (String, String), (Double, Double))
+  type - = Map[String, Int | +] | (Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))
 
   object Dump:
 
-    def apply(): Behavior[-] = Behaviors.stopped
+    def apply(_clock: Double): Behavior[-] = Behaviors.stopped

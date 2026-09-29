@@ -50,7 +50,9 @@ package object `Π-loop`:
                                   parallelism: Int,
                                   threshold: Int,
                                   timeout: Int,
-                                  exit: Boolean)
+                                  exit: Boolean,
+                                  plugins: Set[String],
+                                  causal: Boolean = false)
 
 
   enum Loop:
@@ -142,11 +144,9 @@ package object `Π-loop`:
                     `π-discard`(trick(key))
 
                 nel
-                  .flatten
                   .sliding(parallelism, parallelism)
-                  .toList
                   .foreach {
-                    _.foreach { case (key1, key2, in, (delay, _)) =>
+                    _.foreach { case (key1, key2, in, delay) =>
                                   val k1 = key1.substring(36)
                                   val k2 = key2.substring(36)
                                   val  ^ = key1.substring(0, 36)

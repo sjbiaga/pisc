@@ -267,7 +267,7 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, None, $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, None, $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -339,7 +339,7 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -410,7 +410,7 @@ package sΠ:
                                 continue <- IO.deferred[Option[<>]] >>= IO.ref
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -483,7 +483,7 @@ package sΠ:
                                   continue <- IO.deferred[Option[<>]] >>= IO.ref
                                   deferred <- IO.deferred[Option[<>]]
                                   _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Left(())), $rate)))
+                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
                                   opt      <- deferred.get
                                   _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                                 yield {
@@ -555,7 +555,7 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Right(result)), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {
@@ -626,7 +626,7 @@ package sΠ:
                                 deferred <- IO.deferred[Option[<>]]
                                 _        <- deferred.complete(None).unlessA(first)
                                 result   <- IO.ref(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue -> ($ether, Some(Right(result)), $rate)))
+                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
                                 opt      <- deferred.get
                                 _        <- (linearD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
                               yield {

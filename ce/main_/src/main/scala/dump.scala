@@ -26,16 +26,16 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
-import _root_.scala.collection.immutable.List
+import _root_.scala.collection.immutable.Seq
 import _root_.scala.Option.unless
 
+import _root_.cats.Order
 import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
-import _root_.cats.syntax.flatMap.*
 import _root_.cats.syntax.traverse.*
 
-import _root_.cats.effect.{ IO, ExitCode }
-import _root_.cats.effect.std.Queue
+import _root_.cats.effect.{ IO, ExitCode, Ref }
+import _root_.cats.effect.std.PQueue
 
 import `Π-loop`.*
 import `Π-traces`.*
@@ -46,17 +46,22 @@ package object `Π-dump`:
   private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
 
 
-  type - = Queue[IO, Option[((Long, Double), ((Long, Long), Long), (String, String, Boolean), (Double, Double))]]
+  type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
+
+  given Order[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]] =
+    Order.fromLessThan { (o1, o2) => (o1 zip o2).map(_._4._1 -> _._4._1).map { case ((i1, j1), (i2, j2)) => i1 < i2 || i1 == i2 && j1 < j2 }.getOrElse(o1.isDefined) }
 
 
-  private def record(number: Long, clock: Double, started: Long, ended: Long, keyBy: Boolean, delay: Double, duration: Double): String => IO[Unit] =
+  private def record(number: Long, clock: Double, started: Long, ended: Long,
+                     keyBy: KeyBy,
+                     delay: Double, plugins: Seq[Plugin]): String => IO[Unit] =
     _.split(",") match
       case Array(key, name, polarity, label, rate, agent) =>
         IO.blocking {
           `π-traces`(number, clock, started, ended,
                      agent, name, unless(polarity.isEmpty)(polarity.toBoolean),
                      key.stripPrefix("!"), key.startsWith("!"), label, keyBy,
-                     rate, delay, duration)
+                     rate, plugins, delay)
         }
       case _ =>
         IO.unit
@@ -79,15 +84,20 @@ package object `Π-dump`:
       !.complete(ec).void
     }
 
-  def dump(using % : %, ! : !, - : -): IO[Unit] =
+  def dump(clock: Ref[IO, Double], feedback: Feedback)
+          (using % : %, ! : !, - : -): IO[Unit] =
     -.take.flatMap {
       case Some(_) if `π-traces` eq null =>
-        dump
-      case Some(((no, cl), ((s1, s2), e), (k1, k2, kb), (delay, duration))) =>
+        dump(clock, feedback)
+      case Some((no, ((ts1, ts2), ts), (k1, k2, kb), (_, (delay, plugins)))) =>
         for
-          _ <- record(no, cl, s1, e, kb, delay, duration)(k1)
-          _ <- record(no, cl, s2, e, kb, delay, duration)(k2).unlessA(k1 == k2)
-          _ <- IO.cede >> dump
+          cl <- if delay.isPosInfinity
+                then clock.get
+                else clock.updateAndGet(_ + delay)
+          _  <- feedback.lastR.set(ts -> cl)
+          _  <- record(no, cl, ts1, ts, kb, delay, plugins)(k1)
+          _  <- record(no, cl, ts2, ts, kb, delay, plugins)(k2).unlessA(k1 == k2)
+          _  <- IO.cede >> dump(clock, feedback)
         yield
           ()
       case _ =>
