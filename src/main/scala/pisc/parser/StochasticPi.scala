@@ -430,11 +430,11 @@ object StochasticPi:
 
     extension [T <: AST](ast: T)
 
-      def parse(using excluded: Map[String, Actions]): (T, Actions) =
+      def parse(using excluded: Map[String, Actions], τ_rate: Long): (T, Actions) =
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(0L), None)(sπ_id)
+        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ
@@ -670,6 +670,8 @@ object StochasticPi:
     def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
       given excluded: Map[String, Actions] = Map()
+
+      given Long = if _settings.traces.isDefined then 0L else -1L
 
       given List[Bind] = prog.map(_ -> _.shallow.parse._1)
 
