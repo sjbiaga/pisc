@@ -40,6 +40,8 @@ import zs.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -113,7 +115,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
+          * = ((it :+ end): Seq[Pre | AST]).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -592,7 +594,7 @@ object Program:
 
           val υidυ = id
 
-          val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
+          val πʹ = if λ.`type`.isDefined then π.cc(name = λ.copy()(using None))() else π
 
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
                                                               Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))

@@ -1802,6 +1802,8 @@ class ProgramSuite extends FunSuite:
 
 object ProgramSuite:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   val \ = "IO"
 
   val `^-υidυ` = "υidυ"

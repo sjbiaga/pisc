@@ -31,6 +31,8 @@ package parser
 
 import scala.meta.{ Pat, Term, Type }
 
+import scala.util.parsing.input.{ NoPosition, Position }
+
 import emitter.shared.Meta.rateʹ
 
 import Expression.Code
@@ -43,203 +45,197 @@ import scala.util.parsing.combinator.basc.parser.Expansion.Duplications
 abstract class Calculus extends BioAmbients:
 
   def equation(using Duplications): Parser[Bind] =
-    invocation(true) >> {
-      case (bind, _) if _settings.exclude =>
+    positioned(invocation(true)) >> {
+      case bind: `(*)` if _settings.exclude =>
         ".*".r ^^ { _ => bind -> ∅() }
-      case (bind, bound) =>
+      case bind: `(*)` =>
+        val bound = bind.free
         _code = -1
         _directive = None
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
-        "="~> choice ^^ {
-          case (_sum, _free) =>
-            val sum: + =
-              _sum.flatten match {
-                case ∅() if bind match { case `(*)`("Main") => true case _ => false } =>
-                  `+`(-1, ∥(-1, `.`(∅(), τ(Some(-1L), None)(sπ_id))))
-                case it => it
-              }
-            val free = _free ++ sum.capitals
-            if (free &~ bound).nonEmpty
-            then
-              throw EquationFreeNamesException(bind.identifier, free &~ bound)
-            if _settings.traces.isDefined
-            then
-              bind -> sum.labelʹ(using bind.identifier)
-            else
-              bind -> sum
+        "="~> positioned(choice) ^^ { _sum =>
+          val sum: + =
+            _sum.flatten match {
+              case ∅() if bind match { case `(*)`("Main") => true case _ => false } =>
+                val pos = bind.pos
+                `+`(-1, ∥(-1, `.`(∅(pos), τ(Some(-1L), None)(sπ_id).setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
+              case it => it
+            }
+          val free = _sum.free ++ sum.capitals
+          if (free &~ bound).nonEmpty
+          then
+            throw EquationFreeNamesException(bind.identifier, free &~ bound)
+          if _settings.traces.isDefined
+          then
+            bind -> sum.labelʹ(using bind.identifier)
+          else
+            bind -> sum
         }
     }
 
-  def choice(using Bindings, Duplications, Int): Parser[(+, Names)] =
+  def choice(using Bindings, Duplications, Int): Parser[+] =
     scale >> { scaling =>
       val scalingʹ = scaling.abs
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
-      rep1sep(parallel, "+") ^^ { _.unzip match
-        case (it, ns) =>
-          if scalingʹ == 0
-          then
-            ∅() -> Names()
-          else if _settings.scaling && emitter.canScale
-          then
-            `+`(scaling, it*) -> ns.reduce(_ ++ _)
-          else
-            `+`(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*) -> ns.reduce(_ ++ _)
+      rep1sep(positioned(parallel), "+") ^^ { it =>
+        val ns = it.map(_.free)
+        if scalingʹ == 0
+        then
+          ∅()
+        else if _settings.scaling && emitter.canScale
+        then
+          `+`(scaling, it*).free = ns.reduce(_ ++ _)
+        else
+          `+`(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*).free = ns.reduce(_ ++ _)
       }
     }
 
-  def choiceʹ(using Bindings, Duplications, Int): Parser[(+, Names)] =
-    opt( "("~>choice<~")" ) ^^ { _.getOrElse(∅() -> Names()) }
+  def choiceʹ(using Bindings, Duplications, Int): Parser[+] =
+    opt( "("~>positioned(choice)<~")" ) ^^ (_.getOrElse(∅()))
 
-  def parallel(using Bindings, Duplications, Int): Parser[(∥, Names)] =
+  def parallel(using Bindings, Duplications, Int): Parser[∥] =
     scale >> { scaling =>
       val scalingʹ = scaling.abs
       given Int = if scalingʹ == 1 then summon[Int] else scalingʹ
-      rep1sep(sequential, "|") ^^ { _.unzip match
-        case (it, ns) =>
-          if scalingʹ == 0
-          then
-            ∥(-1, `.`(∅())) -> Names()
-          else if _settings.scaling && emitter.canScale
-          then
-            ∥(scaling, it*) -> ns.reduce(_ ++ _)
-          else
-            ∥(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*) -> ns.reduce(_ ++ _)
+      rep1sep(positioned(sequential), "|") ^^ { it =>
+        val ns = it.map(_.free)
+        if scalingʹ == 0
+        then
+          val pos = it.head.pos
+          ∥(-1, `.`(∅(pos)).setPos(pos))
+        else if _settings.scaling && emitter.canScale
+        then
+          ∥(scaling, it*).free = ns.reduce(_ ++ _)
+        else
+          ∥(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*).free = ns.reduce(_ ++ _)
       }
-    }
+  }
 
-  def sequential(using bindings: Bindings)(using Duplications, Int): Parser[(`.`, Names)] =
+  def sequential(using bindings: Bindings)(using Duplications, Int): Parser[`.`] =
     given Bindings = Bindings(bindings)
-    prefixes ~ ( leaf | choiceʹ ) ^^ {
-      case (it, (bound, free)) ~ (end, freeʹ) =>
+    prefixes ~ ( positioned(leaf) | positioned(choiceʹ) ) ^^ {
+      case (it, (bound, free)) ~ (end: (+ | -)) =>
         bindings ++= cleaned
-        `.`(end, it*) -> (free ++ (freeʹ &~ bound))
+        `.`(end, it*).free = free ++ (end.free &~ bound)
     }
 
   def prefixes(using Bindings, Int): Parser[(List[Pre], (Names, Names))] =
-    rep(prefix) ^^ { _.unzip match
-      case (it, _2) => _2.unzip match
-        case (bs, names) =>
-          val free = Names()
-          names
-            .zipWithIndex
-            .foreach { (ns, i) =>
-              val bound = bs
-                .take(i)
-                .reduceOption(_ ++ _)
-                .getOrElse(Names())
-              free ++= ns -- bound
-            }
-          val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
-          it -> (bound, free)
+    rep(positioned(prefix)) ^^ { it =>
+      val (bs, names) = it.map(_.bound) -> it.map(_.free)
+      val free = Names()
+      names
+        .zipWithIndex
+        .foreach { (ns, i) =>
+          val bound = bs
+            .take(i)
+            .reduceOption(_ ++ _)
+            .getOrElse(Names())
+          free ++= ns -- bound
+        }
+      val bound = bs.reduceOption(_ ++ _).getOrElse(Names())
+      it -> (bound, free)
     }
 
-  def prefix(using Bindings, Int): Parser[(Pre, (Names, Names))] =
-    "ν"~>"("~>names<~")" ^^ { // restriction
-      case it if !it.forall(_._1.isSymbol) =>
-        throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
-      case it => it.unzip match
-        case (λs, bs) =>
-          val bound = bs.reduce(_ ++ _)
-          BindingOccurrence(bound)
-          ν(λs.map(_.asSymbol.name)*) -> (bound, Names())
+  def prefix(using Bindings, Int): Parser[Pre] =
+    positioned {
+      "ν"~>"("~>names<~")" ^^ { // restriction
+        case it if !it.forall(_._1.isSymbol) =>
+          throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
+        case it => it.unzip match
+          case (λs, bs) =>
+            val bound = bs.reduce(_ ++ _)
+            BindingOccurrence(bound)
+            ν(λs.map(_.asSymbol.name)*).bound = bound
+      }
     } |
-    μ<~"." ^^ {
-      case it @ (_, (bound, free)) =>
-        PendingOccurrence(free)
-        BindingOccurrence(bound)
-        it
+    positioned(μ)<~"." ^^ { it =>
+      PendingOccurrence(it.free)
+      BindingOccurrence(it.bound)
+      it
     } |
-    ζ<~"." ^^ {
-      case it @ (_, (_, free)) =>
-        PendingOccurrence(free)
-        it
+    positioned(ζ)<~"." ^^ { it =>
+      PendingOccurrence(it.free)
+      it
     }
 
-  def leaf(using Bindings, Duplications, Int): Parser[(-, Names)] =
-    "["~condition~"]"~choice ^^ { // (mis)match
+  def leaf(using Bindings, Duplications, Int): Parser[AST] =
+    "["~condition~"]"~positioned(choice) ^^ { // (mis)match
       case _ ~ cond ~ _ ~ t =>
-        ?:(cond._1, t._1, None) -> (cond._2 ++ t._2)
+        ?:(cond._1, t, None).free = cond._2 ++ t.free
     } |
-    "if"~condition~"then"~choice~"else"~choice ^^ { // if then else
+    "if"~condition~"then"~positioned(choice)~"else"~positioned(choice) ^^ { // if then else
       case _ ~ cond ~ _ ~ t ~ _ ~ f =>
-        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+        ?:(cond._1, t, Some(f)).free = (cond._2 ++ (t.free ++ f.free))
     } |
-    condition~"?"~choice~":"~choice ^^ { // Elvis operator
+    condition~"?"~positioned(choice)~":"~positioned(choice) ^^ { // Elvis operator
       case cond ~ _ ~ t ~ _ ~ f =>
-        ?:(cond._1, t._1, Some(f._1)) -> (cond._2 ++ (t._2 ++ f._2))
+        ?:(cond._1, t, Some(f)).free = (cond._2 ++ (t.free ++ f.free))
     } |
     ("!"|"¡") ~ scale >> { // [guarded] replication
       case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
         if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡" ) && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡" ) || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
-        opt( pace ) ~ opt( "."~>(μ | ζ)<~"." ) >> { // [guarded] replication
-          case _ ~ Some((π(_, λ(ch: Symbol), _, Some(cons), _, _), _)) if cons.nonEmpty && cons != "ν" =>
+        opt( pace ) ~ opt( "."~>(positioned(μ) | positioned(ζ))<~"." ) >> { // [guarded] replication
+          case _ ~ Some(π(_, λ(ch: Symbol), _, Some(cons), _, _)) if cons.nonEmpty && cons != "ν" =>
             throw ConsGuardParsingException(cons, ch.name)
-          case pace ~ Some(π @ (π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _), _)) =>
+          case pace ~ Some(π @ π(_, λ(ch: Symbol), λ(par: Symbol), Some(cons), _, _)) =>
             if ch == par
             then
               if emitter.hasReplicationInputGuardFlaw(parallelismʹ)
               then
                 warn(throw GuardParsingException(ch.name, cons.isEmpty))
-            val (bound, freeʹ) = π._2
-            PendingOccurrence(freeʹ)
+            val (bound, free) = π.bound -> π.free
+            PendingOccurrence(free)
             BindingOccurrence(bound)
-            choice ^^ {
-              case (sum, free) =>
-                val πʹ: π = {
-                  π._1 match
-                    case it: π =>
-                      it.copy()('!' + it.υidυ)
-                }
-                `!`(parallelismʹ, pace, Some(πʹ), sum) -> (freeʹ ++ (free &~ bound))
+            positioned(choice) ^^ { sum =>
+              val πʹ = π.cc()('!' + π.υidυ)
+              `!`(parallelismʹ, pace, Some(πʹ), sum).free = free ++ (sum.free &~ bound)
             }
           case pace ~ Some(μ) =>
-            val (_, freeʹ) = μ._2
-            PendingOccurrence(freeʹ)
-            choice ^^ {
-              case (sum, free) =>
-                val μʹ: μ | ζ = {
-                  μ._1 match
-                    case it: π =>
-                      it.copy()('!' + it.υidυ)
-                    case it: τ =>
-                      it.copy()('!' + it.υidυ)
-                    case it: ζ =>
-                      it.copy()('!' + it.υidυ)
-                }
-                `!`(parallelismʹ, pace, Some(μʹ), sum) -> (freeʹ ++ free)
+            val free = μ.free
+            PendingOccurrence(free)
+            positioned(choice) ^^ { sum =>
+              val μʹ: μ | ζ = {
+                μ match
+                  case it: π =>
+                    it.cc()('!' + it.υidυ)
+                  case it: τ =>
+                    it.cc()('!' + it.υidυ)
+                  case it: ζ =>
+                    it.cc()('!' + it.υidυ)
+              }
+              `!`(parallelismʹ, pace, Some(μʹ), sum).free = free ++ sum.free
             }
           case pace ~ _ =>
-            choice ^^ {
-              case (sum, free) =>
-                `!`(parallelismʹ, pace, None, sum) -> free
+            positioned(choice) ^^ { sum =>
+              `!`(parallelismʹ, pace, None, sum).free = sum.free
             }
         }
     } |
-    opt(stringLiteral) ~ ("["~>choice<~"]") ^^ { // ambient
-      case Some(label) ~ _ if label.contains(',') =>
-        throw AmbientLabelParsingException(label)
-      case label ~ (sum, free) =>
-        val labelʹ = label.map(_.stripPrefix("\"").stripSuffix("\""))
-        `[]`(labelʹ, sum) -> free
+    positioned {
+      opt(stringLiteral) ~ ("["~>positioned(choice)<~"]") ^^ { // ambient
+        case Some(label) ~ _ if label.contains(',') =>
+          throw AmbientLabelParsingException(label)
+        case label ~ sum =>
+          val labelʹ = label.map(_.stripPrefix("\"").stripSuffix("\""))
+          `[]`(labelʹ, sum).free = sum.free
+      }
     } |
-    capital ^^ {
-      case it @ (_, free) =>
-        PendingOccurrence(free)
-        it
+    positioned(capital) ^^ { it =>
+      PendingOccurrence(it.free)
+      it
     } |
-    invocation() ^^ {
-      case it @ (_, free) =>
-        PendingOccurrence(free)
-        it
+    positioned(invocation()) ^^ { it =>
+      PendingOccurrence(it.free)
+      it
     } |
-    instantiation
+    positioned(instantiation)
 
-  def capital: Parser[(`{}`, Names)]
+  def capital: Parser[`{}`]
 
-  def instantiation(using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
+  def instantiation(using Bindings, Duplications, Int): Parser[AST]
 
   def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
@@ -249,7 +245,7 @@ abstract class Calculus extends BioAmbients:
         (lhs -> rhs -> (mismatch != "=")) -> free
     }
 
-  def invocation(equation: Boolean = false): Parser[(`(*)`, Names)] =
+  def invocation(equation: Boolean = false): Parser[`(*)`] =
     IDENT ~ opt( "("~> names ~ opt(if equation then "*" else "") <~")" ) ^^ {
       case identifier ~ Some(params ~ _) if equation && !params.forall(_._1.isSymbol) =>
         throw EquationParamsException(identifier, params.filterNot(_._1.isSymbol).map(_._1)*)
@@ -258,10 +254,10 @@ abstract class Calculus extends BioAmbients:
                       then params.map(_._1).init
                       else params.map(_._1)
         self += _code
-        `(*)`("Self_" + _code, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`("Self_" + _code, paramsʹ*).free = params.map(_._2).reduce(_ ++ _)
       case "Self" ~ _ =>
         self += _code
-        `(*)`("Self_" + _code) -> Names()
+        `(*)`("Self_" + _code)
       case identifier ~ Some(params ~ init) =>
         val paramsʹ = if equation && init.isDefined
                       then params.map(_._1).init
@@ -270,13 +266,13 @@ abstract class Calculus extends BioAmbients:
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(identifier, paramsʹ*) -> params.map(_._2).reduce(_ ++ _)
+        `(*)`(identifier, paramsʹ*).free = params.map(_._2).reduce(_ ++ _)
       case identifier ~ _ =>
         identifier match
           case s"Self_$n" if (try { n.toInt; true } catch _ => false) =>
             self += n.toInt
           case _ =>
-        `(*)`(identifier) -> Names()
+        `(*)`(identifier)
     }
 
   /**
@@ -291,17 +287,22 @@ abstract class Calculus extends BioAmbients:
 
 object Calculus:
 
+  trait Positional extends scala.util.parsing.input.Positional:
+    val lc: Int => (Int, Int)
+
   type Bind = (`(*)`, +)
 
   export Pre.*
   export AST.*
 
-  enum Pre:
+  enum Pre extends Positional with Free with Bound:
 
     case ν(names: String*) // forcibly
+          (using override val lc: Int => (Int, Int))
 
     case τ(override val rate: Option[Any],
            code: Option[Code])(id: => String)
+          (using override val lc: Int => (Int, Int))
         extends Pre with Act(() => id)
 
     case π(dir: `$`,
@@ -310,6 +311,7 @@ object Calculus:
            polarity: Option[String],
            override val rate: Option[Any],
            code: Option[Code])(id: => String)
+          (using override val lc: Int => (Int, Int))
         extends Pre with Act(() => id)
 
     case ζ(cap: Cap,
@@ -317,6 +319,7 @@ object Calculus:
            polarity: Boolean,
            override val rate: Option[Any],
            code: Option[Code])(id: => String)
+          (using override val lc: Int => (Int, Int))
         extends Pre with Act(() => id)
 
     override def toString: String = this match
@@ -325,44 +328,84 @@ object Calculus:
         if polarity.isDefined
         then
           if polarity.get != "ν"
-          then "" + channel + s"${polarity.get}(" + name + ")."
+          then "" + channel + s"${polarity.get} ? {" + name + "}."
           else s"$dir " + channel + " ! {ν" + name + "}."
-        else if polarity.isDefined
-        then s"$dir " + channel + " ? {" + name + "}."
         else s"$dir " + channel + " ! {" + name + "}."
       case ζ(cap, name, _, _, _) =>
         "" + cap + " " + name + "."
       case _ => "τ."
 
-  enum AST:
+  given [T <: Pre]: Conversion[Pre, T] = _.asInstanceOf[T]
 
-    case +(scaling: Int, choices: AST.∥ *) extends AST with Sum
+  given `_ν_`: {} with
+    extension (self: ν)
+      def cc(names: Seq[String] = self.names): + =
+        (ν(names*)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
+
+  given `_τ_`: {} with
+    extension (self: τ)
+      def cc(rate: Option[Any] = self.rate,
+             code: Option[Code] = self.code)(id: => String = self.id): τ =
+        (τ(rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
+
+  given `_π_`: {} with
+    extension (self: π)
+      def cc(dir: `$` = self.dir,
+             channel: λ = self.channel,
+             name: λ = self.name,
+             polarity: Option[String] = self.polarity,
+             rate: Option[Any] = self.rate,
+             code: Option[Code] = self.code)(id: => String = self.id): π =
+        (π(dir, channel, name, polarity, rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
+
+  given `_ζ_`: {} with
+    extension (self: ζ)
+      def cc(cap: Cap = self.cap,
+             name: String = self.name,
+             polarity: Boolean = self.polarity,
+             rate: Option[Any] = self.rate,
+             code: Option[Code] = self.code)(id: => String = self.id): ζ =
+        (ζ(cap, name, polarity, rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
+
+  enum AST extends Positional with Free:
+
+    case +(scaling: Int, choices: AST.∥ *)
+          (using override val lc: Int => (Int, Int))
+        extends AST with Sum
 
     case ∥(scaling: Int, components: AST.`.`*)
+          (using override val lc: Int => (Int, Int))
 
     case `.`(end: AST.+ | -, prefixes: Pre*)
+            (using override val lc: Int => (Int, Int))
 
     case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
+           (using override val lc: Int => (Int, Int))
 
     case !(parallelism: Int,
            pace: Option[(Long, String)],
            guard: Option[μ | ζ],
            sum: AST.+)
+          (using override val lc: Int => (Int, Int))
 
     case `[]`(label: Option[String], sum: AST.+)
+             (using override val lc: Int => (Int, Int))
 
     case `⟦⟧`(definition: Definition,
               sum: AST.+,
               xid: String = null,
               pointers: List[Symbol] = Nil)
+             (using override val lc: Int => (Int, Int))
 
     case `{}`(identifier: String,
               pointers: List[Symbol],
               agent: Boolean = false,
               params: λ*)
+             (using override val lc: Int => (Int, Int))
 
     case `(*)`(identifier: String,
                params: λ*)
+              (using override val lc: Int => (Int, Int))
 
     override def toString: String = this match
       case ∅() => "()"
@@ -387,26 +430,20 @@ object Calculus:
         else
           "if " + test + " then " + t + " else " + f.get
 
-      case !(-1, _, guard, sum) => "!" + guard.map("." + _).getOrElse("") + sum
+      case !(-1, _, guard, sum) =>
+        "!" + guard.map("." + _).getOrElse("") + sum
 
-      case !(parallelism, _, guard, sum) => s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
+      case !(parallelism, _, guard, sum) if parallelism < -1 =>
+        s"¡${-(parallelism%Int.MaxValue)}*" + guard.map("." + _).getOrElse("") + sum
+
+      case !(parallelism, _, guard, sum) =>
+        s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
 
       case `[]`(label, sum) =>
         label.getOrElse("") + "[ " + sum + " ]"
 
-      case `⟦⟧`(Definition(code, term, constants, variables, _), sum, _, pointers) =>
-        val assignment = if (variables.isEmpty)
-                         then
-                           ""
-                         else {
-                           (variables zip pointers).map { (l, r) => s"${l.name} = ${r.name}" }
-                         ++ variables.drop(pointers.size).map(_.name)
-                         }.mkString("{", ", ", "}")
-        if constants.isEmpty
-        then
-          s"""${Definition(code, term)}$assignment = $sum"""
-        else
-          s"""${Definition(code, term)}${constants.map(_.name).mkString("(", ", ", ")")}$assignment = $sum"""
+      case `⟦⟧`(_, sum, _, _) =>
+        sum.toString
 
       case `{}`(identifier, pointers, agent, params*) =>
         val ps = if agent then params.mkString("(", ", ", ")") else ""
@@ -416,40 +453,71 @@ object Calculus:
         val args = params.map(_.toTerm).toList
         Term.Apply(Term.Name(identifier), Term.ArgClause(args)).toString
 
+  given [T <: AST]: Conversion[AST, T] = _.asInstanceOf[T]
+
   given `_+_`: {} with
     extension (self: +)
-      def copy(scaling: Int = self.scaling,
-               choices: Seq[∥] = self.choices): + =
-        `+`(scaling, choices*)
+      def cc(scaling: Int = self.scaling,
+             choices: Seq[∥] = self.choices): + =
+        `+`(scaling, choices*)(using self.lc).setPos(self.pos).free = self.free
 
   given `_∥_`: {} with
     extension (self: ∥)
-      def copy(scaling: Int = self.scaling,
-               components: Seq[`.`] = self.components): ∥ =
-        ∥(scaling, components*)
+      def cc(scaling: Int = self.scaling,
+             components: Seq[`.`] = self.components): ∥ =
+        ∥(scaling, components*)(using self.lc).setPos(self.pos).free = self.free
 
   given `_._`: {} with
     extension (self: `.`)
-      def copy(end: + | - = self.end,
-               prefixes: Seq[Pre] = self.prefixes): `.` =
-        `.`(end, prefixes*)
+      def cc(end: + | - = self.end,
+             prefixes: Seq[Pre] = self.prefixes): `.` =
+        `.`(end, prefixes*)(using self.lc).setPos(self.pos).free = self.free
+
+  given `_?:_`: {} with
+    extension (self: ?:)
+      def cc(cond: ((λ, λ), Boolean) = self.cond,
+             t: AST.+ = self.t,
+             f: Option[AST.+] = self.f): ?: =
+        `?:`(cond, t, f)(using self.lc).setPos(self.pos).free = self.free
+
+  given `_!_`: {} with
+    extension (self: !)
+      def cc(parallelism: Int = self.parallelism,
+             pace: Option[(Long, String)] = self.pace,
+             guard: Option[μ | ζ] = self.guard,
+             sum: AST.+ = self.sum): ! =
+        `!`(parallelism, pace, guard, sum)(using self.lc).setPos(self.pos).free = self.free
+
+  given `_[]_`: {} with
+    extension (self: `[]`)
+      def cc(label: Option[String] = self.label,
+             sum: AST.+ = self.sum): `[]` =
+        `[]`(label, sum)(using self.lc).setPos(self.pos).free = self.free
+
+  given `_⟦⟧_`: {} with
+    extension (self: `⟦⟧`)
+      def cc(definition: Definition = self.definition,
+             sum: AST.+ = self.sum,
+             xid: String = self.xid,
+             pointers: List[Symbol] = self.pointers): `⟦⟧` =
+        `⟦⟧`(definition, sum, xid, pointers)(using self.lc).setPos(self.pos).free = self.free
 
   given `_{}_`: {} with
     extension (self: `{}`)
-      def copy(identifier: String = self.identifier,
-               pointers: List[Symbol] = self.pointers,
-               agent: Boolean = self.agent,
-               params: Seq[λ] = self.params): `{}` =
-        `{}`(identifier, pointers, agent, params*)
+      def cc(identifier: String = self.identifier,
+             pointers: List[Symbol] = self.pointers,
+             agent: Boolean = self.agent,
+             params: Seq[λ] = self.params): `{}` =
+        `{}`(identifier, pointers, agent, params*)(using self.lc).setPos(self.pos).free = self.free
 
   given `_(*)_`: {} with
     extension (self: `(*)`)
-      def copy(identifier: String = self.identifier,
-               params: Seq[λ] = self.params): `(*)` =
-        `(*)`(identifier, params*)
+      def cc(identifier: String = self.identifier,
+             params: Seq[λ] = self.params): `(*)` =
+        `(*)`(identifier, params*)(using self.lc).setPos(self.pos).free = self.free
 
   object ∅ :
-    def apply(): + = `+`(-1)
+    def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`(-1).setPos(pos)
     def unapply(self: AST): Boolean = self match
       case sum: + => sum.isVoid
       case _ => false
@@ -579,8 +647,11 @@ object Calculus:
         case it @ `.`(end, _*) =>
           h(g(it), end.mapreduce(g)(h))
 
-        case it @ ?:(_, t, f) =>
-          h(h(g(it), t.mapreduce(g)(h)), f.fold(g(∅()))(_.mapreduce(g)(h)))
+        case it @ ?:(_, t, Some(f)) =>
+          h(h(g(it), t.mapreduce(g)(h)), f.mapreduce(g)(h))
+
+        case it @ ?:(_, t, _) =>
+          h(g(it), t.mapreduce(g)(h))
 
         case it @ !(_, _, _, sum) =>
           h(g(it), sum.mapreduce(g)(h))
@@ -602,25 +673,25 @@ object Calculus:
         case ∅() => ast
 
         case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.map(g)(h)))
+          it.cc(choices = choices.map(_.map(g)(h)))
 
         case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.map(g)(h)))
+          it.cc(components = components.map(_.map(g)(h)))
 
         case it @ `.`(end, _*) =>
-          h(it.copy(end = end.map(g)(h)))
+          h(it.cc(end = end.map(g)(h)))
 
-        case ?:(cond, t, f) =>
-          h(?:(cond, t.map(g)(h), f.map(_.map(g)(h))))
+        case it @ ?:(_, t, f) =>
+          h(it.cc(t = t.map(g)(h), f = f.map(_.map(g)(h))))
 
         case it @ !(_, _, _, sum) =>
-          h(it.copy(sum = sum.map(g)(h)))
+          h(it.cc(sum = sum.map(g)(h)))
 
         case it @ `[]`(_, sum) =>
-          h(it.copy(sum = sum.map(g)(h)))
+          h(it.cc(sum = sum.map(g)(h)))
 
         case it @ `⟦⟧`(_, sum, _, _) =>
-          h(it.copy(sum = sum.map(g)(h)))
+          h(it.cc(sum = sum.map(g)(h)))
 
         case _ => h(ast)
 
@@ -633,30 +704,30 @@ object Calculus:
         case ∅() => ast
 
         case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.mapʹ(g)(h)))
+          it.cc(choices = choices.map(_.mapʹ(g)(h)))
 
         case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.mapʹ(g)(h)))
+          it.cc(components = components.map(_.mapʹ(g)(h)))
 
         case it: `.` =>
           val itʹ @ `.`(end, _*) = h(it)
-          itʹ.copy(end = end.mapʹ(g)(h))
+          itʹ.cc(end = end.mapʹ(g)(h))
 
         case it: ?: =>
           val itʹ @ ?:(_, t, f) = h(it)
-          itʹ.copy(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
+          itʹ.cc(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
 
         case it: ! =>
           val itʹ @ !(_, _, _, sum) = h(it)
-          itʹ.copy(sum = sum.mapʹ(g)(h))
+          itʹ.cc(sum = sum.mapʹ(g)(h))
 
         case it: `[]` =>
           val itʹ @ `[]`(_, sum) = h(it)
-          itʹ.copy(sum = sum.mapʹ(g)(h))
+          itʹ.cc(sum = sum.mapʹ(g)(h))
 
         case it: `⟦⟧` =>
           val itʹ @ `⟦⟧`(_, sum, _, _) = h(it)
-          itʹ.copy(sum = sum.mapʹ(g)(h))
+          itʹ.cc(sum = sum.mapʹ(g)(h))
 
         case _ => h(ast)
 
@@ -669,39 +740,39 @@ object Calculus:
         case ∅() => ast
 
         case it @ +(_, choices*) =>
-          it.copy(choices = choices.map(_.mapʹʹ(g)(h)))
+          it.cc(choices = choices.map(_.mapʹʹ(g)(h)))
 
         case it @ ∥(_, components*) =>
-          it.copy(components = components.map(_.mapʹʹ(g)(h)))
+          it.cc(components = components.map(_.mapʹʹ(g)(h)))
 
         case it: `.` =>
           h(it) match
             case (itʹ @ `.`(end, _*), false) =>
-              itʹ.copy(end = end.mapʹʹ(g)(h))
+              itʹ.cc(end = end.mapʹʹ(g)(h))
             case (itʹ, _) => itʹ
 
         case it: ?: =>
           h(it) match
             case (itʹ @ ?:(_, t, f), false) =>
-              itʹ.copy(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
+              itʹ.cc(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
             case (itʹ, _) => itʹ
 
         case it: ! =>
           h(it) match
             case (itʹ @ !(_, _, _, sum), false) =>
-              itʹ.copy(sum = sum.mapʹʹ(g)(h))
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
             case (itʹ, _) => itʹ
 
         case it: `[]` =>
           h(it) match
             case (itʹ @ `[]`(_, sum), false) =>
-              itʹ.copy(sum = sum.mapʹʹ(g)(h))
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
             case (itʹ, _) => itʹ
 
         case it: `⟦⟧` =>
           h(it) match
             case (itʹ @ `⟦⟧`(_, sum, _, _), false) =>
-              itʹ.copy(sum = sum.mapʹʹ(g)(h))
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
             case (itʹ, _) => itʹ
 
         case _ => h(ast)._1
@@ -710,50 +781,52 @@ object Calculus:
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
+      given (Int => (Int, Int)) = ast.lc
+
       ast match
 
-        case ∅() =>
-          ∅()
+        case it @ ∅() =>
+          ∅(it.pos)
 
         case it @ +(_, ∥(-1|1, `.`(sum: +)), choices*) =>
           val lhs = sum.flatten
           val rhs = `+`(-1, choices*).flatten
-          it.copy(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
 
         case it @ +(_, par, choices*) =>
-          val lhs: + = `+`(-1, par.flatten)
+          val lhs = `+`(-1, par.flatten)
           val rhs = `+`(-1, choices*).flatten
-          it.copy(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
 
         case it @ ∥(_, `.`(+(-1|1, par)), components*) =>
           val lhs = par.flatten
           val rhs = ∥(-1, components*).flatten
-          it.copy(components = lhs.components ++ rhs.components)
+          it.cc(components = lhs.components ++ rhs.components)
 
-        case it @ ∥(sc, seq, components*) =>
+        case it @ ∥(_, seq, components*) =>
           val lhs: ∥ = ∥(-1, seq.flatten)
           val rhs = ∥(-1, components*).flatten
-          it.copy(components = lhs.components ++ rhs.components)
+          it.cc(components = lhs.components ++ rhs.components)
 
-        case `.`(+(-1|1, ∥(-1|1, `.`(end, psr*))), psl*) =>
-          `.`(end, (psl ++ psr)*).flatten
+        case it @ `.`(+(-1|1, ∥(-1|1, `.`(end, psr*))), psl*) =>
+          it.cc(end = end, prefixes = psl ++ psr).flatten
 
         case it @ `.`(end, _*) =>
-          it.copy(end = end.flatten)
+          it.cc(end = end.flatten)
 
-        case ?:(cond, t, f) =>
-          ?:(cond, t.flatten, f.map(_.flatten))
+        case it @ ?:(_, t, f) =>
+          it.cc(t = t.flatten, f = f.map(_.flatten))
 
-        case !(-1, None, None, sum) =>
+        case it @ !(-1, None, None, sum) =>
           sum.flatten match
             case +(-1|1, ∥(-1|1, `.`(end: !))) => end
-            case it => `!`(-1, None, None, it)
+            case sumʹ => it.cc(sum = sumʹ)
 
         case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.flatten)
+          it.cc(sum = sum.flatten)
 
         case it @ `[]`(_, sum) =>
-          it.copy(sum = sum.flatten)
+          it.cc(sum = sum.flatten)
 
         case _ => ast
 
@@ -777,21 +850,23 @@ object Calculus:
       object Par:
         inline implicit def lʹ(i: Int)(using n: Int): String = l + "∥" + i + "/" + n
 
-      inline def idʹ(id: => String, ch: String, p: String, r: Any, dc: String): String =
-        id + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + agent + "," + dc
+      inline def idʹ(it: μ | ζ, ch: String, p: String, r: Any, dc: String): String =
+        val (line, col) = it.lc(it.pos.column-1)
+        val lʹ = s"$l@$line.$col"
+        it.υidυ + "," + ch + "," + p + "," + lʹ + "," + rateʹ(r) + "," + agent + "," + dc
 
       val relabelled: Seq[Pre] => Seq[Pre] =
         _.map {
           case it @ τ(Some(0L), _) =>
-            it.copy(rate = Some(-1L))(idʹ(it.id, "τ", "", -1L, "local"))
+            it.cc(rate = Some(-1L))(idʹ(it, "τ", "", -1L, "local"))
           case it if patch => it
           case it: τ =>
-            it.copy()(idʹ(it.id, "τ", "", it.rate.get, "local"))
+            it.cc()(idʹ(it, "τ", "", it.rate.get, "local"))
           case it @ π(dir, λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>
             val polarity = it.polarity match { case Some("") => true case _ => false }
-            it.copy()(idʹ(it.id, name, polarity.toString, rate.get, dir.toString))
+            it.cc()(idʹ(it, name, polarity.toString, rate.get, dir.toString))
           case it @ ζ(cap, name, polarity, rate, _) =>
-            it.copy()(idʹ(it.id, name, polarity.toString, rate.get, cap.toString))
+            it.cc()(idʹ(it, name, polarity.toString, rate.get, cap.toString))
           case it => it
         }
 
@@ -802,43 +877,43 @@ object Calculus:
 
         case ∅() => ast
 
-        case +(sc, ∥(scʹ, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
-          `+`(sc, ∥(scʹ, it.label(l)))
+        case sum @ +(_, par @ ∥(_, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
+          sum.cc(choices = Seq(par.cc(components = Seq(it.label(l)))))
 
-        case +(sc, ∥(scʹ, it*)) =>
+        case sum @ +(_, par @ ∥(_, it*)) =>
           import Par.*
           given Int = it.size
-          `+`(sc, ∥(scʹ, it.zipWithIndex.map(_.label(_))*))
+          sum.cc(choices = Seq(par.cc(components = it.zipWithIndex.map(_.label(_)))))
 
-        case +(sc, it*) =>
+        case sum @ +(_, it*) =>
           import Sum.*
           given Int = it.size
-          `+`(sc, it.zipWithIndex.map(_.label(_))*)
+          sum.cc(choices = it.zipWithIndex.map(_.label(_)))
 
-        case ∥(sc, it*) =>
-          ∥(sc, it.map(_.label(l))*)
+        case par @ ∥(_, it*) =>
+          par.cc(components = it.map(_.label(l)))
 
-        case `.`(end, it*) =>
-          `.`(end.label(l), relabelled(it)*)
+        case seq @ `.`(end, it*) =>
+          seq.cc(end = end.label(l), prefixes = relabelled(it))
 
-        case ?:(cond, t, Some(f)) =>
+        case it @ ?:(cond, t, Some(f)) =>
           import Sum.*
           given Int = 1
-          ?:(cond, t.label(0), Some(f.label(1)))
+          it.cc(t = t.label(0), f = Some(f.label(1)))
 
-        case ?:(cond, t, _) =>
-          ?:(cond, t.label(l), None)
+        case it @ ?:(_, t, _) =>
+          it.cc(t = t.label(l))
 
         case it @ !(_, _, guard @ Some(_), sum) =>
-          it.copy(guard = relabelledʹ(guard), sum = sum.label(l))
+          it.cc(guard = relabelledʹ(guard), sum = sum.label(l))
 
         case it @ !(_, _, _, sum) =>
-          it.copy(sum = sum.label(l))
+          it.cc(sum = sum.label(l))
 
         case it @ `[]`(_, sum) =>
-          it.copy(sum = sum.label(l))
+          it.cc(sum = sum.label(l))
 
         case it @ `⟦⟧`(_, sum, _, _) =>
-          it.copy(sum = sum.label(l))
+          it.cc(sum = sum.label(l))
 
         case _ => ast

@@ -271,7 +271,7 @@ package object `Π-loop`:
                                     ).fork
                               cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
                                       case Some(Plugin.causes(cs)) =>
-                                        if k1.indexOf(',') < 0
+                                        if k1.indexOf(',') < 0 || k1 != k2 && k2.indexOf(',') < 0
                                         then
                                           cs
                                         else
@@ -382,7 +382,7 @@ package object `Π-loop`:
                                 ).fork
                           cs  = plugins.find(_.isInstanceOf[Plugin.causes]) match
                                   case Some(Plugin.causes(cs)) =>
-                                    if k1.indexOf(',') < 0
+                                    if k1.indexOf(',') < 0 || k1 != k2 && k2.indexOf(',') < 0
                                     then
                                       cs
                                     else

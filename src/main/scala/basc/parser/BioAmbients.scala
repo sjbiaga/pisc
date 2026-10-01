@@ -48,12 +48,14 @@ import Expansion.Duplications
 
 abstract class BioAmbients extends Expression:
 
-  def μ: Parser[(μ, (Names, Names))] =
+  def μ: Parser[μ] = μʹ ^^ (_.asInstanceOf[μ])
+
+  private def μʹ: Parser[Pre] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ code =>
         val free = code.map(_._2).getOrElse(Names())
         val rʹ = Some(r.getOrElse(None))
-        τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free)
+        τ(rʹ, code.map(_._1))(sπ_id).free = free
     } |
     opt(dir) ~ name ~ opt("@"~>rate) ~ ("!"~>"{"~>opt("ν")~name<~"}") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case _ ~ (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
@@ -64,12 +66,12 @@ abstract class BioAmbients extends Expression:
         val dʹ = d.getOrElse(`$`.local)
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(dʹ, ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ (free ++ freeʹ &~ bound))
+        (π(dʹ, ch, arg, polarity = ν, rʹ, Some(it))(sπ_id).bound = bound).free = name ++ (free ++ freeʹ &~ bound)
       case d ~ (ch, name) ~ r ~ (ν ~ (arg, free)) ~ _ =>
         val dʹ = d.getOrElse(`$`.local)
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(dʹ, ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ (free &~ bound))
+        (π(dʹ, ch, arg, polarity = ν, rʹ, None)(sπ_id).bound = bound).free = name ++ (free &~ bound)
     } |
     opt(dir) ~ name ~ opt("@"~>rate) ~ ("?"~>"{"~>nameʹ<~"}") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case _ ~ (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -82,7 +84,7 @@ abstract class BioAmbients extends Expression:
         val free = code.map(_._2).getOrElse(Names())
         val dʹ = d.getOrElse(`$`.local)
         val rʹ = Some(r.getOrElse(None))
-        π(dʹ, ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ free)
+        (π(dʹ, ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id).bound = bound).free = name ++ free
     } |
     name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -107,10 +109,10 @@ abstract class BioAmbients extends Expression:
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(`$`.local, ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ (free &~ bound))
+        (π(`$`.local, ch, args, polarity = Some(cons), None, code.map(_._1))("").bound = bound).free = name ++ (free &~ bound)
     }
 
-  def ζ: Parser[(ζ, (Names, Names))] =
+  def ζ: Parser[ζ] =
     ("enter"|"accept"|"exit"|"expel"|"merge+"|"merge-") ~ name ~ opt("@"~>rate) ~ opt( expression ) ^^ {
       case _ ~ (name, _) ~ _ ~ _ if !name.isSymbol =>
         throw PrefixChannelParsingException(name)
@@ -121,7 +123,7 @@ abstract class BioAmbients extends Expression:
           cap match
             case "enter"|"exit"|"merge+" => true
             case "accept"|"expel"|"merge-" => false
-        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ, code.map(_._1))(sζ_id) -> (Names(), free ++ freeʹ)
+        Pre.ζ(Cap.valueOf(cap), name.asSymbol.name, p, rʹ, code.map(_._1))(sζ_id).free = free ++ freeʹ
     }
 
   def dir: Parser[`$`] = ( "local" | "s2s" | "p2c" | "c2p" ) ^^ { `$`.valueOf(_) }
@@ -364,6 +366,21 @@ object BioAmbients:
     def apply(names: Names): Names = Set.from(names)
 
 
+  trait Free:
+    val free = Names()
+    def free_=(free: Names): this.type =
+      this.free.clear()
+      this.free.addAll(free)
+      this
+
+  trait Bound:
+    val bound = Names()
+    def bound_=(bound: Names): this.type =
+      this.bound.clear()
+      this.bound.addAll(bound)
+      this
+
+
   enum `$` { case local, s2s, p2c, c2p }
 
   enum Cap { case enter, accept, exit, expel, `merge+`, `merge-` }
@@ -404,12 +421,12 @@ object BioAmbients:
 
   extension [T <: AST](ast: T)
 
-    def shallow: T =
+    def shallow(using Int => (Int, Int)): T =
 
       ast.map(_.shallow) {
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, (params ++ pointers.map(λ(_)))*)
+        case it @ `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, (params ++ pointers.map(λ(_)))*).setPos(it.pos)
 
         case it => it
 
@@ -466,12 +483,14 @@ object BioAmbients:
 
       def parse(using excluded: Map[String, Actions], τ_rate: Long): (T, Actions) =
 
+        import scala.util.parsing.input.Position
+
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)
+        inline def τ(pos: Position): Calculus.Pre.τ = Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)(using ast.lc).setPos(pos)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
-          val psʹ = ps :+ τ
+          val psʹ = ps :+ τ(end.pos)
           `.`(end, psʹ*).asInstanceOf[S] -> Actions(psʹ*)
 
         def insert_+(sum: +): + =
@@ -546,9 +565,9 @@ object BioAmbients:
             val (it, _) = sum.parse
             (`!`(parallelism, pace, Some(μ), it), Actions(μ))
 
-          case !(parallelism, pace, _, sum) =>
-            val τʹ: τ = τ
-            `!`(parallelism, pace, Some(τʹ.copy()('!' + τʹ.υidυ)), sum).parse
+          case it @ !(parallelism, pace, _, sum) =>
+            val τʹ: τ = τ(it.pos)
+            `!`(parallelism, pace, Some(τʹ.cc()('!' + τʹ.υidυ)), sum).parse
 
           case `[]`(label, sum) =>
             var (it, _) = sum.parse
@@ -807,6 +826,7 @@ object BioAmbients:
       _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+      _last = None
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _init
@@ -817,11 +837,21 @@ object BioAmbients:
       val r =
         (source.getLines() ++ Some(""))
           .zipWithIndex
-          .foldLeft(List[(String, (Int, Int))]() -> false) {
-            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          .foldLeft(List[((Int, Int), List[String])]() -> false) {
+            case ((r, false), (t, n)) => (r :+ ((n, n) -> List(t.stripSuffix("\\")))) -> t.endsWith("\\")
+            case ((r, true), (t, n))  => (r.init :+ ((r.last._1._1, n) -> (r.last._2 :+ t.stripSuffix("\\")))) -> t.endsWith("\\")
           }._1
-          .flatMap { case (it, (m, n)) =>
+          .flatMap { case ((m, n), itʹ) =>
+            lc = { col =>
+              var i = 0
+              var l = 0
+              while itʹ(i).length + l < col
+              do
+                l += itʹ(i).length
+                i += 1
+              (m+i+1, (if l == 0 then col else col%l)+1)
+            }
+            val it = itʹ.mkString
             l = (m+1, n+1)
             if it.matches("^[ ]*#.*") // commented lines
             || it.isBlank // empty lines

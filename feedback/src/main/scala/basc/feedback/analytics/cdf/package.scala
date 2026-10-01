@@ -189,7 +189,7 @@ package object cdf:
         if chartRef.value ne null
         then
           chartRef.value.destroy()
-        chartRef.value_=(Chart(currentCanvas, configurationSchema))
+        chartRef.value = Chart(currentCanvas, configurationSchema)
       }
     }
 

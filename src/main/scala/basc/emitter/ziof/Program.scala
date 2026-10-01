@@ -41,6 +41,8 @@ import ziof.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -141,7 +143,7 @@ object Program:
           val ** = if ch == par then `* <- ZIO.succeed(*)`(par -> parʹ) else `_ <- \\.unit`
           `for * yield ()`(
             `* <- *`(parʹ -> "ν"),
-            `_ <- *`(it.copy(name = λ(Symbol(parʹ)), polarity = None)(it.υidυ).emit(** :: *))
+            `_ <- *`(it.cc(name = λ(Symbol(parʹ)), polarity = None)().emit(** :: *))
           )
 
         case it @ π(dir, λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), r, code) =>
@@ -540,7 +542,7 @@ object Program:
 
           val υidυ = id
 
-          val πʹ = if λ.`type`.isDefined then π.copy(name = λ.copy()(using None))(π.υidυ) else π
+          val πʹ = if λ.`type`.isDefined then π.cc(name = λ.copy()(using None))() else π
 
           val `!.π⋯` =
             `_ <- *` { πʹ.emit { ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),

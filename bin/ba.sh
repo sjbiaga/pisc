@@ -18,7 +18,7 @@ function ba() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/bam.scala\ ../${emit}/http4s.scala
             ;;
@@ -32,7 +32,7 @@ function ba() {
             local deps='--dep co.fs2::fs2-core:3.14.0
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s.scala
             ;;
@@ -92,10 +92,10 @@ function ba_() {
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.37
-                        --dep org.http4s::http4s-dsl:0.23.37
-                        --dep org.http4s::http4s-ember-client:0.23.37
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep org.http4s::http4s-circe:0.23.38
+                        --dep org.http4s::http4s-dsl:0.23.38
+                        --dep org.http4s::http4s-ember-client:0.23.38
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/bam_.scala\ ../${emit}/http4s_.scala
             ;;
@@ -111,10 +111,10 @@ function ba_() {
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.37
-                        --dep org.http4s::http4s-dsl:0.23.37
-                        --dep org.http4s::http4s-ember-client:0.23.37
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep org.http4s::http4s-circe:0.23.38
+                        --dep org.http4s::http4s-dsl:0.23.38
+                        --dep org.http4s::http4s-ember-client:0.23.38
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s_.scala
             ;;

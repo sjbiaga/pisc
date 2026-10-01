@@ -111,7 +111,12 @@ object Main extends helper.Main:
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${ba.ln}! " + t.getMessage + ".")
+        ba.last match
+          case Some(((it, isMacroExpansion), (line, col))) =>
+            Console.err.println(s"Error in file `$in' ${ba.ln}! " + t.getMessage
+                              + s""".\nLast known parse${if isMacroExpansion then " (from macro expansion) " else " "}at line #$line, column #$col.\n$it""")
+          case _ =>
+            Console.err.println(s"Error in file `$in' ${ba.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()
