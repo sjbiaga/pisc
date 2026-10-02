@@ -96,7 +96,7 @@ abstract class Encoding extends Calculus:
         }
     }
 
-  def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[AST] =
+  def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[`⟦⟧`] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear()

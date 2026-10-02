@@ -40,8 +40,12 @@ import dialects.Scala3
 
 import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 
+import _root_.io.circe.syntax.*
+
 import parser.BioAmbients
+import parser.BioAmbients.shallow
 import parser.Calculus.`(*)`
+import parser.Calculus.Bind.given
 import parser.Directive.Settings.Plugin
 import emitter.zs.Program
 
@@ -57,6 +61,7 @@ object Main extends helper.Main:
     var T = 123456
     var E = true
     var I = List.empty[Plugin]
+    var J = false
     var S = false
 
     def bain(arg: String) =
@@ -110,6 +115,37 @@ object Main extends helper.Main:
         ).toString + "\n\n"
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
+
+        if J
+        then
+          try
+            bwr.close()
+            fwr.close()
+          catch _.printStackTrace
+          finally
+            fwr = null
+            bwr = null
+          try
+            val ast = Paths.get(s"$examples/", in.stripSuffix("basc") + "json").toString
+            fwr = FileWriter(ast, UTF_8)
+            bwr = BufferedWriter(fwr)
+            val json = prog_.map(_._1)
+              .drop(1+2)
+              .map(_.shallow -> _)
+              .map(_.asJson)
+              .reduce(_.deepMerge(_))
+              .spaces2
+            bwr.write(json, 0, json.length)
+          catch _.printStackTrace
+          finally
+            try
+              if bwr ne null then bwr.close()
+              if fwr ne null then fwr.close()
+            catch _.printStackTrace
+            finally
+              fwr = null
+              bwr = null
+
       catch t =>
         ba.last match
           case Some(((it, isMacroExpansion), (line, col))) =>
@@ -130,6 +166,7 @@ object Main extends helper.Main:
       case "-T" => T = 123456
       case "-E" => E = true
       case "-I" => I = Nil
+      case "-J" => J = false
       case "-S" => S = false
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
@@ -139,6 +176,7 @@ object Main extends helper.Main:
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-I") => I :::= it.substring(2).split(",").toList.map(Plugin.valueOf)
+      case it if it.startsWith("-J") => J = it.substring(2).toBoolean
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }

@@ -74,7 +74,8 @@ package object velocityreport:
                                  structuralVelocityAlert: Option[StructuralVelocityAlert])
       extends websocket.WebSocketSink.SinkableElement:
     override def uuid: String =
-      attributionReport.map(_.uuid)
+      None
+        .orElse(attributionReport.map(_.uuid))
         .orElse(windowVelocityReport.map(_.uuid))
         .orElse(structuralVelocityAlert.map(_.uuid))
         .get

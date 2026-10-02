@@ -92,6 +92,7 @@ function ba_() {
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
+                        --dep org.gnieh::fs2-data-json-circe:1.14.1
                         --dep org.http4s::http4s-circe:0.23.38
                         --dep org.http4s::http4s-dsl:0.23.38
                         --dep org.http4s::http4s-ember-client:0.23.38
@@ -111,6 +112,7 @@ function ba_() {
                         --dep dev.zio::zio-interop-cats:23.1.0.13
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep io.circe::circe-generic:0.14.16
+                        --dep org.gnieh::fs2-data-json-circe:1.14.1
                         --dep org.http4s::http4s-circe:0.23.38
                         --dep org.http4s::http4s-dsl:0.23.38
                         --dep org.http4s::http4s-ember-client:0.23.38
@@ -151,8 +153,8 @@ function ba_() {
                   --dep org.apache.kafka:kafka-clients:4.3.1 \
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
-                  --dep com.rabbitmq:amqp-client:5.36.0 \
-                  --dep software.amazon.awssdk:sqs:2.55.7 \
+                  --dep com.rabbitmq:amqp-client:5.37.0 \
+                  --dep software.amazon.awssdk:sqs:2.55.10 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \

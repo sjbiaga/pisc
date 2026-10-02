@@ -1,5 +1,6 @@
 package basc
 
+
 package object parser:
 
   import Calculus.{ ?:, `{}`, `(*)`, !, `[]`, `⟦⟧`, π, τ }

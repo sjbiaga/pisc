@@ -23,7 +23,7 @@ lazy val root = (project in file("."))
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += bain,
-    libraryDependencies ++= Seq(scalameta, parsercombinators, ip4s, munit % Test)
+    libraryDependencies ++= Seq(scalameta, parsercombinators, circe, ip4s, munit % Test)
   )
 
 lazy val feedback = (project in file("feedback"))
@@ -102,7 +102,7 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `cef-main` = (project in file("cef/main"))
@@ -130,7 +130,7 @@ lazy val `cef-main_` = (project in file("cef/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, catsstm, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `zio-main` = (project in file("zio/main"))
@@ -214,7 +214,7 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, fs2, catsstm, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, fs2, catsstm, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `zs-main` = (project in file("zs/main"))

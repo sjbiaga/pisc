@@ -38,6 +38,10 @@ import scala.collection.mutable.{
 
 import scala.meta.{ Lit, Term }
 
+import io.circe.{ Codec, Encoder, Json }
+
+import emitter.shared.Meta.rateʹ
+
 import BioAmbients.*
 import Calculus.*
 import Directive.Settings
@@ -338,19 +342,24 @@ object BioAmbients:
 
   trait Act(fun: () => String):
     val rate: Option[Any]
-    final def id = fun()
+    final def id: String = fun()
     final lazy val υidυ: String = id
 
   object Act:
+
     def unapply(self: Pre): Option[Boolean] =
       self match
         case it: Act => Some(it.rate.isDefined)
         case _ => Some(false)
 
+    given Encoder[Act] = it => Json.obj("key"  -> Json.fromString(it.υidυ)
+                                       ,"rate" -> Json.fromString(rateʹ(it.rate.get)))
+
+
   trait Sum { this: + =>
     private var _enabled: Actions = null
-    inline def enabled: Actions = _enabled
-    inline def enabled_=(enabled: Actions): + =
+    inline final def enabled: Actions = _enabled
+    inline final def enabled_=(enabled: Actions): + =
       _enabled = enabled
       this
   }
@@ -366,24 +375,32 @@ object BioAmbients:
     def apply(names: Names): Names = Set.from(names)
 
 
-  trait Free:
-    val free = Names()
-    def free_=(free: Names): this.type =
-      this.free.clear()
-      this.free.addAll(free)
-      this
-
   trait Bound:
-    val bound = Names()
-    def bound_=(bound: Names): this.type =
-      this.bound.clear()
-      this.bound.addAll(bound)
+    private var _bound = Names()
+    inline final def bound = _bound
+    inline final def bound_=(bound: Names): this.type =
+      _bound = bound
       this
 
+  object Bound:
 
-  enum `$` { case local, s2s, p2c, c2p }
+    given Encoder[Bound] = it => Json.obj("bound" -> Json.fromValues(it.bound.map(_.name).map(Json.fromString)))
 
-  enum Cap { case enter, accept, exit, expel, `merge+`, `merge-` }
+  trait Free:
+    private var _free = Names()
+    inline final def free = _free
+    inline final def free_=(free: Names): this.type =
+      _free = free
+      this
+
+  object Free:
+
+    given Encoder[Free] = it => Json.obj("free" -> Json.fromValues(it.free.map(_.name).map(Json.fromString)))
+
+
+  enum `$` derives Codec.AsObject { case local, s2s, p2c, c2p }
+
+  enum Cap derives Codec.AsObject { case enter, accept, exit, expel, `merge+`, `merge-` }
 
 
   // exceptions
@@ -421,12 +438,12 @@ object BioAmbients:
 
   extension [T <: AST](ast: T)
 
-    def shallow(using Int => (Int, Int)): T =
+    def shallow: T =
 
       ast.map(_.shallow) {
 
         case it @ `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, (params ++ pointers.map(λ(_)))*).setPos(it.pos)
+          `(*)`(identifier, (params ++ pointers.map(λ(_)))*)(using it.lc).setPos(it.pos)
 
         case it => it
 
@@ -487,7 +504,9 @@ object BioAmbients:
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ(pos: Position): Calculus.Pre.τ = Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)(using ast.lc).setPos(pos)
+        inline def τ(pos: Position): Calculus.Pre.τ =
+          import Cast.given
+          Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)(using ast.lc).setPos(pos)
 
         def insert[S](end: + | -, ps: Pre*): (S, Actions) =
           val psʹ = ps :+ τ(end.pos)

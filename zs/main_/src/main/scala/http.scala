@@ -26,6 +26,9 @@
  * from Sebastian I. Gliţa-Catina.]
  */
 
+import java.io.File
+import java.nio.charset.StandardCharsets.UTF_8
+
 import zio.*
 import zio.http.*
 import zio.http.Middleware.CorsConfig
@@ -220,6 +223,25 @@ package object `Π-http`:
     )
 
 
+  object ASTRoutes:
+
+    def apply() = Routes(
+      Method.GET / "ast" / string("filename") -> handler { (name: String, _: Request) =>
+        val json = File(name + ".json")
+        if json.exists()
+        then
+          Body.fromFile(json).flatMap(_.asString(UTF_8)).exit.map {
+            case Exit.Success(ast) =>
+              Response.json(ast)
+            case _ =>
+              Response.internalServerError
+          }
+        else
+          ZIO.succeed(Response.notFound("file not found"))
+      }
+    )
+
+
   object HealthCheckRoutes:
 
     def apply() = Routes(
@@ -255,7 +277,7 @@ package object `Π-http`:
           allowedHeaders = Header.AccessControlAllowHeaders.All
         )
         for
-          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
+          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ ASTRoutes() ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
           host  = address
           consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
           consulBase = URL.decode(s"http://$consulAddr/v1/agent").right.get

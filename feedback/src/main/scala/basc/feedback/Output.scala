@@ -440,7 +440,7 @@ object Item:
         ^.marginLeft := "15px",
         ^.`type`     := "checkbox",
         ^.checked    := (if p.stop.value then false else !p.keyBy.value),
-        ^.disabled   := p.stop.value,
+        ^.disabled   := p.service.plugins.contains("causes") || p.stop.value,
         ^.onChange  ==> { (e: ReactEventFromInput) =>
           p.service.keyBy(!e.target.checked).flatMap(p.keyBy.setState(_).to[IO])
         },
@@ -666,8 +666,10 @@ object Item:
               ^.onChange      ==> { (e: ReactEventFromInput) => p.kafka.modState { k => k.copy(analytics = k.analytics.copy(`type` = e.target.value)) } },
 
               <.option(^.value := "-"             , "-"                               ),
-              <.option(^.value := "loadavg"       , "Load Average"                    ),
-              <.option(^.value := "sweepline"     , "Sweep Line"                      ),
+              <.option(^.disabled := p.service.plugins.contains("causes"),
+                       ^.value := "loadavg"       , "Load Average"                    ),
+              <.option(^.disabled := p.service.plugins.contains("causes"),
+                       ^.value := "sweepline"     , "Sweep Line"                      ),
               <.option(^.disabled := !p.service.plugins.contains("causes"),
                        ^.value := "velocityreport", "Velocity Report"                 ),
               <.option(^.disabled := !p.service.plugins.contains("causes") || !p.service.plugins.contains("probability") || !p.kafka.value.own,

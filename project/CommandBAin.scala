@@ -28,12 +28,12 @@ object CommandBAin {
     val A = Seq("127.0.0.1", "localhost").map("-A" + _)
     val F = Seq("cats.effect.IO", "zio.Task").map("-F" + _)
     val P = "-P" + Int.MaxValue
-    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse")),
-                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse")),
-                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse")),
-                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Sfalse")
+    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse")),
+                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse")),
+                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse")),
+                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse")),
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse", "-Sfalse")
                )
 
     def suggestions(args: Seq[String]): Seq[String] =

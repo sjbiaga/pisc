@@ -31,11 +31,8 @@ package parser
 
 import scala.meta.{ Pat, Term, Type }
 
-import scala.util.parsing.input.{ NoPosition, Position }
-
 import emitter.shared.Meta.rateʹ
 
-import Expression.Code
 import BioAmbients.*
 import Calculus.*
 import Encoding.*
@@ -235,7 +232,7 @@ abstract class Calculus extends BioAmbients:
 
   def capital: Parser[`{}`]
 
-  def instantiation(using Bindings, Duplications, Int): Parser[AST]
+  def instantiation(using Bindings, Duplications, Int): Parser[`⟦⟧`]
 
   def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
     name~("="|"≠")~name ^^ {
@@ -287,282 +284,9 @@ abstract class Calculus extends BioAmbients:
 
 object Calculus:
 
-  trait Positional extends scala.util.parsing.input.Positional:
-    val lc: Int => (Int, Int)
-
-  type Bind = (`(*)`, +)
-
+  export ast.{ AST, Bind, Cast, λ, Pre }
   export Pre.*
   export AST.*
-
-  enum Pre extends Positional with Free with Bound:
-
-    case ν(names: String*) // forcibly
-          (using override val lc: Int => (Int, Int))
-
-    case τ(override val rate: Option[Any],
-           code: Option[Code])(id: => String)
-          (using override val lc: Int => (Int, Int))
-        extends Pre with Act(() => id)
-
-    case π(dir: `$`,
-           channel: λ,
-           name: λ,
-           polarity: Option[String],
-           override val rate: Option[Any],
-           code: Option[Code])(id: => String)
-          (using override val lc: Int => (Int, Int))
-        extends Pre with Act(() => id)
-
-    case ζ(cap: Cap,
-           name: String,
-           polarity: Boolean,
-           override val rate: Option[Any],
-           code: Option[Code])(id: => String)
-          (using override val lc: Int => (Int, Int))
-        extends Pre with Act(() => id)
-
-    override def toString: String = this match
-      case ν(names*) => names.mkString("ν(", ", ", ")")
-      case π(dir, channel, name, polarity, _, _) =>
-        if polarity.isDefined
-        then
-          if polarity.get != "ν"
-          then "" + channel + s"${polarity.get} ? {" + name + "}."
-          else s"$dir " + channel + " ! {ν" + name + "}."
-        else s"$dir " + channel + " ! {" + name + "}."
-      case ζ(cap, name, _, _, _) =>
-        "" + cap + " " + name + "."
-      case _ => "τ."
-
-  given [T <: Pre]: Conversion[Pre, T] = _.asInstanceOf[T]
-
-  given `_ν_`: {} with
-    extension (self: ν)
-      def cc(names: Seq[String] = self.names): + =
-        (ν(names*)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
-
-  given `_τ_`: {} with
-    extension (self: τ)
-      def cc(rate: Option[Any] = self.rate,
-             code: Option[Code] = self.code)(id: => String = self.id): τ =
-        (τ(rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
-
-  given `_π_`: {} with
-    extension (self: π)
-      def cc(dir: `$` = self.dir,
-             channel: λ = self.channel,
-             name: λ = self.name,
-             polarity: Option[String] = self.polarity,
-             rate: Option[Any] = self.rate,
-             code: Option[Code] = self.code)(id: => String = self.id): π =
-        (π(dir, channel, name, polarity, rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
-
-  given `_ζ_`: {} with
-    extension (self: ζ)
-      def cc(cap: Cap = self.cap,
-             name: String = self.name,
-             polarity: Boolean = self.polarity,
-             rate: Option[Any] = self.rate,
-             code: Option[Code] = self.code)(id: => String = self.id): ζ =
-        (ζ(cap, name, polarity, rate, code)(id)(using self.lc).setPos(self.pos).bound = self.bound).free = self.free
-
-  enum AST extends Positional with Free:
-
-    case +(scaling: Int, choices: AST.∥ *)
-          (using override val lc: Int => (Int, Int))
-        extends AST with Sum
-
-    case ∥(scaling: Int, components: AST.`.`*)
-          (using override val lc: Int => (Int, Int))
-
-    case `.`(end: AST.+ | -, prefixes: Pre*)
-            (using override val lc: Int => (Int, Int))
-
-    case ?:(cond: ((λ, λ), Boolean), t: AST.+, f: Option[AST.+])
-           (using override val lc: Int => (Int, Int))
-
-    case !(parallelism: Int,
-           pace: Option[(Long, String)],
-           guard: Option[μ | ζ],
-           sum: AST.+)
-          (using override val lc: Int => (Int, Int))
-
-    case `[]`(label: Option[String], sum: AST.+)
-             (using override val lc: Int => (Int, Int))
-
-    case `⟦⟧`(definition: Definition,
-              sum: AST.+,
-              xid: String = null,
-              pointers: List[Symbol] = Nil)
-             (using override val lc: Int => (Int, Int))
-
-    case `{}`(identifier: String,
-              pointers: List[Symbol],
-              agent: Boolean = false,
-              params: λ*)
-             (using override val lc: Int => (Int, Int))
-
-    case `(*)`(identifier: String,
-               params: λ*)
-              (using override val lc: Int => (Int, Int))
-
-    override def toString: String = this match
-      case ∅() => "()"
-      case +(-1, choices*) => choices.mkString(" + ")
-      case +(sc, choices*) => sc + " * " + choices.mkString(" + ")
-
-      case ∥(-1, components*) => components.mkString(" | ")
-      case ∥(sc, components*) => sc + " * " + components.mkString(" | ")
-
-      case `.`(∅()) => "()"
-      case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
-      case `.`(end: +, prefixes*) =>
-        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
-      case `.`(end, prefixes*) =>
-        prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + end
-
-      case ?:(cond, t, f) =>
-        val test = "" + cond._1._1 + (if cond._2 then " ≠ " else " = ") + cond._1._2
-        if f.isEmpty
-        then
-          "[ " + test + " ] " + t
-        else
-          "if " + test + " then " + t + " else " + f.get
-
-      case !(-1, _, guard, sum) =>
-        "!" + guard.map("." + _).getOrElse("") + sum
-
-      case !(parallelism, _, guard, sum) if parallelism < -1 =>
-        s"¡${-(parallelism%Int.MaxValue)}*" + guard.map("." + _).getOrElse("") + sum
-
-      case !(parallelism, _, guard, sum) =>
-        s"!$parallelism*" + guard.map("." + _).getOrElse("") + sum
-
-      case `[]`(label, sum) =>
-        label.getOrElse("") + "[ " + sum + " ]"
-
-      case `⟦⟧`(_, sum, _, _) =>
-        sum.toString
-
-      case `{}`(identifier, pointers, agent, params*) =>
-        val ps = if agent then params.mkString("(", ", ", ")") else ""
-        s"""$identifier$ps{${pointers.map(_.name).mkString(", ")}}"""
-
-      case `(*)`(identifier, params*) =>
-        val args = params.map(_.toTerm).toList
-        Term.Apply(Term.Name(identifier), Term.ArgClause(args)).toString
-
-  given [T <: AST]: Conversion[AST, T] = _.asInstanceOf[T]
-
-  given `_+_`: {} with
-    extension (self: +)
-      def cc(scaling: Int = self.scaling,
-             choices: Seq[∥] = self.choices): + =
-        `+`(scaling, choices*)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_∥_`: {} with
-    extension (self: ∥)
-      def cc(scaling: Int = self.scaling,
-             components: Seq[`.`] = self.components): ∥ =
-        ∥(scaling, components*)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_._`: {} with
-    extension (self: `.`)
-      def cc(end: + | - = self.end,
-             prefixes: Seq[Pre] = self.prefixes): `.` =
-        `.`(end, prefixes*)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_?:_`: {} with
-    extension (self: ?:)
-      def cc(cond: ((λ, λ), Boolean) = self.cond,
-             t: AST.+ = self.t,
-             f: Option[AST.+] = self.f): ?: =
-        `?:`(cond, t, f)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_!_`: {} with
-    extension (self: !)
-      def cc(parallelism: Int = self.parallelism,
-             pace: Option[(Long, String)] = self.pace,
-             guard: Option[μ | ζ] = self.guard,
-             sum: AST.+ = self.sum): ! =
-        `!`(parallelism, pace, guard, sum)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_[]_`: {} with
-    extension (self: `[]`)
-      def cc(label: Option[String] = self.label,
-             sum: AST.+ = self.sum): `[]` =
-        `[]`(label, sum)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_⟦⟧_`: {} with
-    extension (self: `⟦⟧`)
-      def cc(definition: Definition = self.definition,
-             sum: AST.+ = self.sum,
-             xid: String = self.xid,
-             pointers: List[Symbol] = self.pointers): `⟦⟧` =
-        `⟦⟧`(definition, sum, xid, pointers)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_{}_`: {} with
-    extension (self: `{}`)
-      def cc(identifier: String = self.identifier,
-             pointers: List[Symbol] = self.pointers,
-             agent: Boolean = self.agent,
-             params: Seq[λ] = self.params): `{}` =
-        `{}`(identifier, pointers, agent, params*)(using self.lc).setPos(self.pos).free = self.free
-
-  given `_(*)_`: {} with
-    extension (self: `(*)`)
-      def cc(identifier: String = self.identifier,
-             params: Seq[λ] = self.params): `(*)` =
-        `(*)`(identifier, params*)(using self.lc).setPos(self.pos).free = self.free
-
-  object ∅ :
-    def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`(-1).setPos(pos)
-    def unapply(self: AST): Boolean = self match
-      case sum: + => sum.isVoid
-      case _ => false
-
-  case class λ(`val`: Any)(using val `type`: Option[(Type, Option[Type])] = None):
-    val isSymbol: Boolean = `val`.isInstanceOf[Symbol]
-    def asSymbol: Symbol = `val`.asInstanceOf[Symbol]
-
-    type Kind = `val`.type
-
-    val kind: String = `val` match
-      case _: Symbol => "channel name"
-      case _: BigDecimal => "decimal number"
-      case _: Boolean => "True False"
-      case _: String => "string literal"
-      case _: Term => "Scalameta Term"
-      case _ => "polyadic names"
-
-    def toTerm: Term =
-      import scala.meta._
-      import dialects.Scala3
-      `val` match
-        case it: Symbol => Term.Name(it.name)
-        case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
-        case it: Boolean => Lit.Boolean(it)
-        case it: String => Lit.String(it)
-        case it: Term => Expression(it)._1
-
-    def toPat: Pat =
-      import scala.meta._
-      import dialects.Scala3
-      `val` match
-        case it: Symbol => Pat.Macro(Term.QuotedMacroExpr(Term.Name(it.name)))
-        case it: BigDecimal => Lit.Double(it.toDouble)
-        case it: Boolean => Lit.Boolean(it)
-        case it: String => Lit.String(it)
-        case it: Term => it.asInstanceOf[Pat]
-
-    override def toString: String = `val` match
-      case it: Symbol => it.name
-      case it: BigDecimal => "" + it
-      case it: Boolean => it.toString.capitalize
-      case it: String => "\"" + it + "\""
-      case it: Term => "/*" + it + "*/"
-      case it: List[`λ`] => it.mkString(", ")
 
 
   // exceptions
@@ -592,11 +316,6 @@ object Calculus:
 
 
   // functions
-
-  extension (sum: +)
-    def isVoid: Boolean = sum match
-      case +(_) => true
-      case _ => sum.choices.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
 
   extension [T <: AST](ast: T)
 
