@@ -237,16 +237,24 @@ package object `Π-http4s`:
       import _root_.fs2.data.json.*
       import _root_.fs2.data.json.circe.*
 
-      def apply() = HttpRoutes.of[F] {
-        case GET -> Root / json =>
-          Ok {
-            Files[F]
-              .readAll(FilePath(json + ".json"))
-              .through(fs2.text.utf8.decode)
-              .through(tokens)
-              .through(ast.values)
-          }.orElse(NotFound("file not found"))
-      }
+      def apply(AST: Option[String]) =
+        AST match
+          case Some(json) =>
+            HttpRoutes.of[F] {
+              case GET -> Root =>
+                Ok {
+                  Files[F]
+                    .readAll(FilePath(json))
+                    .through(fs2.text.utf8.decode)
+                    .through(tokens)
+                    .through(ast.values)
+                }
+            }
+          case _ =>
+            HttpRoutes.of[F] {
+              case GET -> Root =>
+                NotFound("AST N/A")
+            }
 
 
     object HealthCheckEndpoint extends Http4sDsl[F]:
@@ -256,11 +264,11 @@ package object `Π-http4s`:
       }
 
 
-    def http4s(address: String, batch: Boolean, startedR: Ref[F, Long], feedback: Feedback[F]): Resource[F, Server] =
+    def http4s(address: String, batch: Boolean, startedR: Ref[F, Long], feedback: Feedback[F], AST: Option[String]): Resource[F, Server] =
       val baApp = Router[F](
         "feedback" -> FeedbackEndpoint(feedback),
         "state" -> StateEndpoint(batch, startedR, feedback),
-        "ast" -> ASTEndpoint(),
+        "ast" -> ASTEndpoint(AST),
         "health" -> HealthCheckEndpoint()
       )
       EmberServerBuilder

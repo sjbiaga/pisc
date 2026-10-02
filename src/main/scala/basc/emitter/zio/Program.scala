@@ -671,16 +671,7 @@ object Program:
       given (Enumerator.Generator, Term.Name) =
         (`* <- *`(`^-υidυ` -> \("π-uuid")), \(`^-υidυ`))
 
-      ( prog.tail.head match
-          case (`(*)`(_, λ(parameters: Term)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
-      ) ::
-      ( prog.tail.tail.head match
-          case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
-            Term.Assign(\("π-traces"), traces)
-      ) ::
       prog
-        .drop(1+2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

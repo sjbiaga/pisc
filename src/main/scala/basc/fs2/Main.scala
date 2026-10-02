@@ -48,7 +48,7 @@ import parser.Calculus.{ `(*)`, λ }
 import parser.Calculus.Bind.given
 import parser.Directive.Settings.Plugin
 import emitter.fs2.Program
-import emitter.fs2.Meta.\
+import emitter.fs2.Meta.{ \, \\ }
 
 
 object Main extends helper.Main:
@@ -96,6 +96,14 @@ object Main extends helper.Main:
                           Type.Select(path.asInstanceOf[Term.Select], Type.Name(tpe)),
                           Type.Bounds(None, None, Nil, Nil))
           ) ::
+          ( Defn.Val(Nil,
+                     Pat.Var("π-AST") :: Nil,
+                     Some(Type.Apply(\\("Option"), Type.ArgClause(\\("String") :: Nil))),
+                     if J
+                     then Term.Apply(\("Some"), Term.ArgClause(Lit.String(in.stripSuffix("basc") + "json") :: Nil))
+                     else \("None")
+                    )
+          ) ::
           ( prog.tail.head match
               case (`(*)`(_, λ(parameters: Term)), _) =>
                 Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
@@ -121,7 +129,7 @@ object Main extends helper.Main:
             case (`(*)`(_, λ(typeclasses: Term.Tuple)), _) =>
               typeclasses.args.map { case Term.Name(it) => it }.toSet
 
-        val code = (ps.drop(1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = (ps.drop(1+1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
           .sortBy(_._2)
           .map(_._1)
 
@@ -136,7 +144,7 @@ object Main extends helper.Main:
                               Ctor.Primary(Nil, Name.Anonymous(), Seq.empty),
                               Template(None, Nil, Template.Body(None, code), Nil))
 
-        val codeʹ = ps.take(1+2).mkString("\n\n") + "\n\n" + main.toString
+        val codeʹ = ps.take(1+1+2).mkString("\n\n") + "\n\n" + main.toString
 
         val trick = `trick-or-treat`("π-trick", discarded).toString
         val spell = `spell, magic spell`("π-spell", enabled).toString

@@ -44,10 +44,11 @@ import _root_.io.circe.syntax.*
 
 import parser.BioAmbients
 import parser.BioAmbients.shallow
-import parser.Calculus.`(*)`
+import parser.Calculus.{ `(*)`, λ }
 import parser.Calculus.Bind.given
 import parser.Directive.Settings.Plugin
 import emitter.ce.Program
+import emitter.ce.Meta.{ \, \\ }
 
 
 object Main extends helper.Main:
@@ -85,13 +86,31 @@ object Main extends helper.Main:
 
         val (prog, (discarded, excluded, enabled)) = ba(prog_.map(_._1))
 
-        val ps = Program.Main()(prog)
+        val ps =
+          ( Defn.Val(Nil,
+                     Pat.Var("π-AST") :: Nil,
+                     Some(Type.Apply(\\("Option"), Type.ArgClause(\\("String") :: Nil))),
+                     if J
+                     then Term.Apply(\("Some"), Term.ArgClause(Lit.String(in.stripSuffix("basc") + "json") :: Nil))
+                     else \("None")
+                    )
+          ) ::
+          ( prog.tail.head match
+              case (`(*)`(_, λ(parameters: Term)), _) =>
+                Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
+          ) ::
+          ( prog.tail.tail.head match
+              case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+                Term.Assign(\("π-traces"), traces)
+          ) ::
+          Program.Main()(prog.drop(1+2))
+
         val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
 
-        val code = ps.take(2).mkString("\n\n") + "\n\n"
-                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val code = ps.take(1+2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")

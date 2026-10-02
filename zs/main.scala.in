@@ -62,12 +62,13 @@ object App extends _root_.zio.ZIOApp:
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback, uuid: sΠ.`)(`)
                  (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|)
                  (using sΠ.`}{`.`][`, TSemaphore): URIO[Scope, ExitCode] =
+    val batchMode = parameters.threshold > 0
     val \ =
-      if parameters.threshold > 0
+      if batchMode
       then { (it: UIO[Unit]) => ^.withPermit(it *> *.release) }
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     for
-      _ <- if parameters.threshold > 0
+      _ <- if batchMode
            then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, /, !, &|, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
            else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, /, !, &|, -, *, **)(π.`π-wand`) }.disconnect.fork
       _ <- poll(using %, /, \).uninterruptible.disconnect.fork
@@ -75,7 +76,7 @@ object App extends _root_.zio.ZIOApp:
       r <- ZIO.scoped(FiberRef.make[sΠ.`)(`](uuid))
       ^ <- π.`π-uuid`
       ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
-      x <- http(parameters.address, parameters.threshold > 0, parameters.plugins, started, feedback)(using !) {
+      x <- http(parameters.address, batchMode, parameters.plugins, started, feedback, π.`π-AST`)(using !) {
              π.Main(r)(args*)(using ^, ?)(using %, /, \).runDrain.uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield

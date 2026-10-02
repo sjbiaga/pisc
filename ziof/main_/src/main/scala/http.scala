@@ -225,21 +225,28 @@ package object `Π-http`:
 
   object ASTRoutes:
 
-    def apply() = Routes(
-      Method.GET / "ast" / string("filename") -> handler { (name: String, _: Request) =>
-        val json = File(name + ".json")
-        if json.exists()
-        then
-          Body.fromFile(json).flatMap(_.asString(UTF_8)).exit.map {
-            case Exit.Success(ast) =>
-              Response.json(ast)
-            case _ =>
-              Response.internalServerError
+    def apply(AST: Option[String]) =
+      AST match
+        case Some(json) => Routes(
+          Method.GET / "ast" -> handler {
+            val file = File(json)
+            if file.exists()
+            then
+              Body.fromFile(file).flatMap(_.asString(UTF_8)).exit.map {
+                case Exit.Success(ast) =>
+                  Response.json(ast)
+                case _ =>
+                  Response.internalServerError
+              }
+            else
+              ZIO.succeed(Response.notFound("AST not found"))
           }
-        else
-          ZIO.succeed(Response.notFound("file not found"))
-      }
-    )
+        )
+        case _ => Routes(
+          Method.GET / "ast" -> handler {
+            ZIO.succeed(Response.notFound("AST N/A"))
+          }
+        )
 
 
   object HealthCheckRoutes:
@@ -259,7 +266,7 @@ package object `Π-http`:
   def http(address: String): ZLayer[Any, Throwable, Server.Config] =
     ZLayer.succeed(Server.Config.default.binding(address, 0))
 
-  def http(address: String, batch: Boolean, plugins: Set[String], started: Ref[Long], feedback: Feedback)
+  def http(address: String, batch: Boolean, plugins: Set[String], started: Ref[Long], feedback: Feedback, AST: Option[String])
           (using ! : !)
           (main: UIO[Fiber[Nothing, Any]]): URIO[Client & Server & Scope, ExitCode] =
     Option {
@@ -277,7 +284,7 @@ package object `Π-http`:
           allowedHeaders = Header.AccessControlAllowHeaders.All
         )
         for
-          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ ASTRoutes() ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
+          port <- Server.install((FeedbackRoutes(feedback) ++ StateRoutes(batch, started, feedback) ++ ASTRoutes(AST) ++ HealthCheckRoutes()) @@ Middleware.cors(corsConfig))
           host  = address
           consulAddr = sys.env.get("CONSUL_HTTP_ADDR").getOrElse(s"$host:8500")
           consulBase = URL.decode(s"http://$consulAddr/v1/agent").right.get

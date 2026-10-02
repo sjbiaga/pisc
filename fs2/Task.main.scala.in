@@ -84,13 +84,14 @@ object App extends _root_.zio.interop.catz.CatsApp:
     val dπ = πdump[π.F]()
     val hπ = πhttp4s[π.F]()
     val mπ = π.πmain[π.F]()
+    val batchMode = parameters.threshold > 0
     val \ =
-      if parameters.threshold > 0
+      if batchMode
       then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
       else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     ( for
-        _ <- hπ.http4s(parameters.address, parameters.threshold > 0, started, feedback).flatMap(hπ.http4s(F, parameters.threshold > 0, parameters.plugins, _))
-        _ <- if parameters.threshold > 0
+        _ <- hπ.http4s(parameters.address, batchMode, started, feedback, π.`π-AST`).flatMap(hπ.http4s(F, batchMode, parameters.plugins, _))
+        _ <- if batchMode
              then lπ.loopʹ(parameters, started, batch, feedback, `}{`)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
              else lπ.loop0(parameters, started, feedback, `}{`)(using %, !, &|, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
