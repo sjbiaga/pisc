@@ -34,7 +34,7 @@ class CausalDepthTrackerFunction(keepPast: Double, purgeThreshold: Int)
       var maxParentDepth = 0L
       var latestParentClock = .0
 
-      value.plugins.find(_.isInstanceOf[Plugin.causes]) match
+      value.plugins.get("causes") match
         case Some(Plugin.causes(causes)) =>
           causes.foreach {
             case depId if depthState.contains(depId) =>

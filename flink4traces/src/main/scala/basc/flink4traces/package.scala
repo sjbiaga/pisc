@@ -16,7 +16,7 @@ package object flink4traces:
       rate.charAt(0) match
         case '∞' => ∞(rate.substring(2, rate.length - 1).toLong)
         case '⊤' => ⊤(rate.substring(2, rate.length - 1).toLong)
-        case _   => `ℝ⁺`(BigDecimal(rate.substring(3, rate.length - 1)))
+        case  _  => `ℝ⁺`(BigDecimal(rate.substring(3, rate.length - 1)))
   sealed trait Rate extends Any
   case class ∞(weight: Long) extends AnyVal with Rate
   case class `ℝ⁺`(rate: BigDecimal) extends AnyVal with Rate
@@ -33,7 +33,7 @@ package object flink4traces:
                     clock: Double, started: Long, ended: Long,
                     agent: String, name: String, polarity: Option[Boolean],
                     key: String, guard: Boolean, label: String, keyBy: String,
-                    rate: Rate, plugins: Seq[Plugin], delay: Option[Double],
+                    rate: Rate, plugins: Map[String, Plugin], delay: Option[Double],
                     dir_cap: String, from: String, to: String,
                     snapshot: Option[String])
 
@@ -55,9 +55,9 @@ package object flink4traces:
           val label = record.get("label").toString
           val keyBy = record.get("keyBy").toString
           val rate = Rate.parse(record.get("rate").toString)
-          var plugins = List.empty[Plugin]
+          var plugins = Map.empty[String, Plugin]
           record.get("plugins").asInstanceOf[GenericData.Array[GenericRecord]].forEach { pluginRecord =>
-            plugins ::= {
+            plugins += pluginRecord.getSchema.getName -> {
               pluginRecord.getSchema.getName match
                 case "causes"      =>
                   var causes = List.empty[Long]

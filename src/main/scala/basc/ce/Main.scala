@@ -43,10 +43,10 @@ import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 import _root_.io.circe.syntax.*
 
 import parser.BioAmbients
-import parser.BioAmbients.shallow
 import parser.Calculus.{ `(*)`, λ }
-import parser.Calculus.Bind.given
-import parser.Directive.Settings.Plugin
+import parser.e4s.Bind.given
+import parser.e4s.Document
+import parser.Directive.Settings.{ Elastic4s, Plugin }
 import emitter.ce.Program
 import emitter.ce.Meta.{ \, \\ }
 
@@ -95,19 +95,19 @@ object Main extends helper.Main:
                      else \("None")
                     )
           ) ::
-          ( prog.tail.head match
+          ( prog.tail.tail.head match
               case (`(*)`(_, λ(parameters: Term)), _) =>
                 Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
           ) ::
-          ( prog.tail.tail.head match
+          ( prog.tail.tail.tail.head match
               case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
                 Term.Assign(\("π-traces"), traces)
           ) ::
-          Program.Main()(prog.drop(1+2))
+          Program.Main()(prog.drop(1+3))
 
-        val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
+        val is = prog_.drop(1+3).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
+        val ls = bind.drop(1+3).filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = ps.take(1+2).mkString("\n\n") + "\n\n"
                  + (ps.drop(1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
@@ -148,13 +148,15 @@ object Main extends helper.Main:
             val ast = Paths.get(s"$examples/", in.stripSuffix("basc") + "json").toString
             fwr = FileWriter(ast, UTF_8)
             bwr = BufferedWriter(fwr)
-            val json = prog_.map(_._1)
-              .drop(1+2)
-              .map(_.shallow -> _)
-              .map(_.asJson)
-              .reduce(_.deepMerge(_))
-              .spaces2
-            bwr.write(json, 0, json.length)
+            val json = prog.drop(1+3).asJson
+            val file = json.spaces2
+
+            bwr.write(file, 0, file.length)
+
+            prog.tail.head match
+              case (`(*)`(_, λ(it: Elastic4s)), _) =>
+                elastic4s(it, Document.build(prog.drop(1+3), json))
+
           catch _.printStackTrace
           finally
             try
@@ -199,3 +201,64 @@ object Main extends helper.Main:
       case it if it.startsWith("-S") => S = it.substring(2).toBoolean
       case it => bain(it)
     }
+
+
+  object elastic4s extends ((Elastic4s, Document) => Unit):
+
+    import java.net.http.HttpClient
+    import java.security.cert.X509Certificate
+    import java.security.SecureRandom
+    import javax.net.ssl.{ SSLContext, TrustManager, X509TrustManager }
+
+    import scala.concurrent.duration.Duration
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.Future
+
+    import com.sksamuel.elastic4s.{ Authentication, CommonRequestOptions, ElasticClient, ElasticNodeEndpoint }
+    import com.sksamuel.elastic4s.circe.*
+    import com.sksamuel.elastic4s.ElasticDsl.*
+    import com.sksamuel.elastic4s.sttp4.SttpRequestHttpClient
+
+    import sttp.monad.{ FutureMonad, MonadError }
+    import sttp.client4.Backend
+    import sttp.client4.httpclient.HttpClientFutureBackend
+
+    // Create a trust manager that does not validate certificate chains
+    val trustAllCerts = Array[TrustManager](new X509TrustManager {
+      def getAcceptedIssuers: Array[X509Certificate] = null
+      def checkClientTrusted(certs: Array[X509Certificate], authType: String): Unit = {}
+      def checkServerTrusted(certs: Array[X509Certificate], authType: String): Unit = {}
+    })
+
+    val sslContext = SSLContext.getInstance("TLS")
+    sslContext.init(null, trustAllCerts, new SecureRandom())
+
+    val httpClient = HttpClient.newBuilder()
+      .sslContext(sslContext)
+      .build()
+
+    val index = s"bioambients_$examples"
+
+    given Backend[Future] = HttpClientFutureBackend.usingClient(httpClient)
+
+    given MonadError[Future] = new FutureMonad()
+
+    override def apply(it: Elastic4s, doc: Document): Unit = it match {
+      case Elastic4s("https", host, port, Some(username), Some(password)) =>
+        ElasticClient(new SttpRequestHttpClient(ElasticNodeEndpoint("https", host, port, None)))
+     -> CommonRequestOptions.defaults.copy(authentication = Authentication.UsernamePassword(username, password))
+      case Elastic4s(_, host, port, _, _) =>
+        ElasticClient(new SttpRequestHttpClient(ElasticNodeEndpoint("http", host, port, None)))
+     -> CommonRequestOptions.defaults
+    } match
+        case (client, given CommonRequestOptions) =>
+          given Duration = Duration.Inf
+
+          val exists = client.execute(indexExists(index)).await
+
+          if exists.isSuccess && (exists.result.isExists || client.execute(createIndex(index).mapping(properties(Document.schema))).await.isSuccess)
+          then
+            val into = client.execute(indexInto(index).source(doc)).await
+            if into.isSuccess
+            then
+              println(s"GET /$index/_source/${into.result.id}")

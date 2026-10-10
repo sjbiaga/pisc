@@ -44,7 +44,7 @@ class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Dou
       currentCausalState.observed = Some(value.number)
       currentCausalState.lastEventTimestamp = ctx.timerService.currentProcessingTime
 
-      value.plugins.find(_.isInstanceOf[Plugin.causes]) match
+      value.plugins.get("causes") match
         case Some(Plugin.causes(causes)) if causes.isEmpty =>
           currentCausalState.root = value.number
           currentCausalState.rootStartTime = value.clock
@@ -54,7 +54,7 @@ class CausalPathTrackerFunction(allowedLateness: Long, probabilityThreshold: Dou
 
       state.update(currentCausalState)
 
-      value.plugins.find(_.isInstanceOf[Plugin.probability]) match
+      value.plugins.get("probability") match
         case Some(Plugin.probability(probability)) =>
           val currentMinProb = Option(pathProbState.value).getOrElse(java.lang.Double(1.0))
           pathProbState.update(math.min(currentMinProb, probability.doubleValue))

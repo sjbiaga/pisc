@@ -34,13 +34,9 @@ import scala.meta.Term
 
 import scala.util.parsing.input.{ NoPosition, Position }
 
-import io.circe.{ Encoder, Json }
-import io.circe.syntax.*
-
 import BioAmbients.{ Free, Sum }
 import Encoding.Definition
-import Pre.*
-import AST.*
+import Pre.*, AST.*
 
 
 enum AST extends Positional with Free:
@@ -132,129 +128,13 @@ enum AST extends Positional with Free:
 
 object AST:
 
-  given Encoder[AST] = _ match
-
-    case it @ ∅() =>
-      Json.obj { "+" ->
-        Json
-          .obj(
-            "scaling" -> Json.fromInt(-1),
-            "operands" -> Json.arr()
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ +(scaling, choices*) =>
-      Json.obj { "+" ->
-        Json
-          .obj(
-            "scaling" -> Json.fromInt(scaling),
-            "operands" -> Json.fromValues(choices.map((_: AST).asJson))
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ ∥(scaling, components*) =>
-      Json.obj { "∥" ->
-        Json
-          .obj(
-            "scaling" -> Json.fromInt(scaling),
-            "operands" -> Json.fromValues(components.map((_: AST).asJson))
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ `.`(end, prefixes*) =>
-      Json.obj { "." ->
-        Json
-          .obj(
-            "leaf" -> (end: AST).asJson,
-            "prefixes" -> Json.fromValues(prefixes.map(_.asJson))
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ ?:(((lhs, rhs), mismatch), t, f) =>
-      Json.obj { "?:" ->
-        Json
-          .obj(
-            "lhs" -> lhs.toJson,
-            "rhs" -> rhs.toJson,
-            "mismatch" -> Json.fromBoolean(mismatch),
-            "t" -> (t: AST).asJson,
-            "f" -> f.map((_: AST).asJson).getOrElse(Json.Null)
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ !(parallelism, pace: Option[(Long, String)], Some(guard), sum) if parallelism < -1 =>
-      Json.obj { "¡" ->
-        Json
-          .obj(
-            "parallelism" -> Json.fromLong(-(parallelism%Int.MaxValue)),
-            "pace" -> pace.map { (amount, unit) =>
-              Json.obj("amount" -> Json.fromLong(amount)
-                      ,"unit" -> Json.fromString(unit))
-            }.getOrElse(Json.Null),
-            "guard" -> (guard: Pre).asJson,
-            "operand" -> (sum: AST).asJson
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-    case it @ !(parallelism, pace: Option[(Long, String)], Some(guard), sum) =>
-      Json.obj { "!" ->
-        Json
-          .obj(
-            "parallelism" -> Json.fromLong(parallelism),
-            "pace" -> pace.map { (amount, unit) =>
-              Json.obj("amount" -> Json.fromLong(amount)
-                      ,"unit" -> Json.fromString(unit))
-            }.getOrElse(Json.Null),
-            "guard" -> (guard: Pre).asJson,
-            "operand" -> (sum: AST).asJson
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ `[]`(label, sum) =>
-      Json.obj { "[]" ->
-        Json
-          .obj(
-            "label" -> Json.fromStringOrNull(label),
-            "operand" -> (sum: AST).asJson
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case `⟦⟧`(_, sum, _, _) => (sum: AST).asJson
-
-    case it @ `(*)`(identifier, params*) =>
-      Json.obj { "(*)" ->
-        Json
-          .obj(
-            "identifier" -> Json.fromString(identifier),
-            "parameters" -> Json.fromValues(params.map(_.toJson))
-          )
-          .deepMerge(it.asInstanceOf[Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case _ => Json.Null
-
   given `_+_`: {} with
     extension (self: +)
       def cc(scaling: Int = self.scaling,
              choices: Seq[∥] = self.choices): + =
         import Cast.given
-        `+`(scaling, choices*)(using self.lc).setPos(self.pos).free = self.free
+        val sum: + = `+`(scaling, choices*)(using self.lc).setPos(self.pos).free = self.free
+        sum.enabled = self.enabled
 
   given `_∥_`: {} with
     extension (self: ∥)
@@ -322,10 +202,225 @@ object AST:
   object ∅ :
     def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`(-1).setPos(pos)
     def unapply(self: AST): Boolean = self match
-      case sum: + => sum.isVoid
+      case it: (+ | `⟦⟧`) => it.isVoid
       case _ => false
 
-  extension (sum: +)
-    def isVoid: Boolean = sum match
+  extension (self: + | `⟦⟧`)
+    def isVoid: Boolean = self match
       case +(_) => true
-      case _ => sum.choices.forall(_.components.forall { case `.`(sum: +) => sum.isVoid case _ => false })
+      case `⟦⟧`(_, sum, _, _) => sum.isVoid
+      case sum: + => sum.choices.forall(_.components.forall { case `.`(it: (+ | `⟦⟧`)) => it.isVoid case _ => false })
+
+
+  // functions
+
+  extension [T <: AST](ast: T)
+
+    def foreach(g: AST => Unit)(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
+
+      h.applyOrElse(ast, {
+
+        case ∅() =>
+
+        case +(_, choices*) =>
+          choices.foreach(_.foreach(g)(h))
+
+        case ∥(_, components*) =>
+          components.foreach(_.foreach(g)(h))
+
+        case `.`(end, _*) =>
+          end.foreach(g)(h)
+
+        case ?:(_, t, f) =>
+          t.foreach(g)(h)
+          f.foreach(_.foreach(g)(h))
+
+        case !(_, _, _, sum) =>
+          sum.foreach(g)(h)
+
+        case `[]`(_, sum) =>
+          sum.foreach(g)(h)
+
+        case `⟦⟧`(_, sum, _, _) =>
+          sum.foreach(g)(h)
+
+        case _ => g(ast)
+
+      })
+
+    def mapreduce[R](g: AST => R)(h: (R, R) => R): R =
+
+      ast match
+
+        case ∅() => g(ast)
+
+        case +(_, choices*) =>
+          choices.map(_.mapreduce(g)(h)).reduce(h)
+
+        case ∥(_, components*) =>
+          components.map(_.mapreduce(g)(h)).reduce(h)
+
+        case it @ `.`(end, _*) =>
+          h(g(it), end.mapreduce(g)(h))
+
+        case it @ ?:(_, t, Some(f)) =>
+          h(h(g(it), t.mapreduce(g)(h)), f.mapreduce(g)(h))
+
+        case it @ ?:(_, t, _) =>
+          h(g(it), t.mapreduce(g)(h))
+
+        case it @ !(_, _, _, sum) =>
+          h(g(it), sum.mapreduce(g)(h))
+
+        case it @ `[]`(_, sum) =>
+          h(g(it), sum.mapreduce(g)(h))
+
+        case it @ `⟦⟧`(_, sum, _, _) =>
+          h(g(it), sum.mapreduce(g)(h))
+
+        case _ => g(ast)
+
+    def mapreduceʹ[R](d: AST => R)(g: PartialFunction[AST, R])(h: (R, R) => R): R =
+
+      ast match
+
+        case ∅() => d(ast)
+
+        case it @ +(_, choices*) =>
+          h(g.applyOrElse(it, d), choices.map(_.mapreduceʹ(d)(g)(h)).reduce(h))
+
+        case it @ ∥(_, components*) =>
+          h(g.applyOrElse(it, d), components.map(_.mapreduceʹ(d)(g)(h)).reduce(h))
+
+        case it @ `.`(end, _*) =>
+          h(d(it), end.mapreduceʹ(d)(g)(h))
+
+        case it @ ?:(_, t, Some(f)) =>
+          h(h(d(it), t.mapreduceʹ(d)(g)(h)), f.mapreduceʹ(d)(g)(h))
+
+        case it @ ?:(_, t, _) =>
+          h(d(it), t.mapreduceʹ(d)(g)(h))
+
+        case it @ !(_, _, _, sum) =>
+          h(d(it), sum.mapreduceʹ(d)(g)(h))
+
+        case it @ `[]`(_, sum) =>
+          h(d(it), sum.mapreduceʹ(d)(g)(h))
+
+        case it @ `⟦⟧`(_, sum, _, _) =>
+          h(d(it), sum.mapreduceʹ(d)(g)(h))
+
+        case _ => d(ast)
+
+    def map(g: AST => AST)(h: AST => AST = identity): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.cc(choices = choices.map(_.map(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.cc(components = components.map(_.map(g)(h)))
+
+        case it @ `.`(end, _*) =>
+          h(it.cc(end = end.map(g)(h)))
+
+        case it @ ?:(_, t, f) =>
+          h(it.cc(t = t.map(g)(h), f = f.map(_.map(g)(h))))
+
+        case it @ !(_, _, _, sum) =>
+          h(it.cc(sum = sum.map(g)(h)))
+
+        case it @ `[]`(_, sum) =>
+          h(it.cc(sum = sum.map(g)(h)))
+
+        case it @ `⟦⟧`(_, sum, _, _) =>
+          h(it.cc(sum = sum.map(g)(h)))
+
+        case _ => h(ast)
+
+    def mapʹ(g: AST => AST)(h: AST => AST): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.cc(choices = choices.map(_.mapʹ(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.cc(components = components.map(_.mapʹ(g)(h)))
+
+        case it: `.` =>
+          val itʹ @ `.`(end, _*) = h(it)
+          itʹ.cc(end = end.mapʹ(g)(h))
+
+        case it: ?: =>
+          val itʹ @ ?:(_, t, f) = h(it)
+          itʹ.cc(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
+
+        case it: ! =>
+          val itʹ @ !(_, _, _, sum) = h(it)
+          itʹ.cc(sum = sum.mapʹ(g)(h))
+
+        case it: `[]` =>
+          val itʹ @ `[]`(_, sum) = h(it)
+          itʹ.cc(sum = sum.mapʹ(g)(h))
+
+        case it: `⟦⟧` =>
+          val itʹ @ `⟦⟧`(_, sum, _, _) = h(it)
+          itʹ.cc(sum = sum.mapʹ(g)(h))
+
+        case _ => h(ast)
+
+    def mapʹʹ(g: AST => AST)(h: AST => (AST, Boolean)): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast match
+
+        case ∅() => ast
+
+        case it @ +(_, choices*) =>
+          it.cc(choices = choices.map(_.mapʹʹ(g)(h)))
+
+        case it @ ∥(_, components*) =>
+          it.cc(components = components.map(_.mapʹʹ(g)(h)))
+
+        case it: `.` =>
+          h(it) match
+            case (itʹ @ `.`(end, _*), false) =>
+              itʹ.cc(end = end.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: ?: =>
+          h(it) match
+            case (itʹ @ ?:(_, t, f), false) =>
+              itʹ.cc(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
+            case (itʹ, _) => itʹ
+
+        case it: ! =>
+          h(it) match
+            case (itʹ @ !(_, _, _, sum), false) =>
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `[]` =>
+          h(it) match
+            case (itʹ @ `[]`(_, sum), false) =>
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case it: `⟦⟧` =>
+          h(it) match
+            case (itʹ @ `⟦⟧`(_, sum, _, _), false) =>
+              itʹ.cc(sum = sum.mapʹʹ(g)(h))
+            case (itʹ, _) => itʹ
+
+        case _ => h(ast)._1

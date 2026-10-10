@@ -35,7 +35,7 @@ object Consul:
       lazy val plugins = Meta.get("plugins").split(" ").toSet
       def feedbackUrl(path: String): Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/feedback/" + path)
       lazy val stateUrl: Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/state")
-      def astUrl(file: String): Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/ast/" + file)
+      def astUrl: Uri = Uri.unsafeFromString("http://" + Address + ":" + Port + "/ast")
       def state(using httpClient: Client[IO]): IO[State] =
         import org.http4s.circe.CirceEntityDecoder.*
         httpClient.expect[State](stateUrl)
@@ -63,10 +63,10 @@ object Consul:
         httpClient.expect[String](feedbackUrl("keyBy")).map(_.toBoolean)
       def keyBy(flag: Boolean)(using httpClient: Client[IO]): IO[Boolean] =
         httpClient.successful(Request[IO](Method.PUT, feedbackUrl("keyBy" + "/" + flag))) >> keyBy
-      def ast(file: String)(using httpClient: Client[IO]): IO[List[analytics.ast.Bind]] =
+      def ast(using httpClient: Client[IO]): IO[List[feedback.ast.Bind]] =
         import org.http4s.circe.CirceEntityDecoder.*
-        import analytics.ast.Bind.given
-        httpClient.expect[List[analytics.ast.Bind]](astUrl(file))
+        import feedback.ast.Bind.given
+        httpClient.expect[List[feedback.ast.Bind]](astUrl)
 
   val defaultUrl = "http://localhost:8500"
 

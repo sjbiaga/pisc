@@ -32,9 +32,6 @@ package ast
 
 import scala.meta.Term
 
-import io.circe.{ Encoder, Json }
-import io.circe.syntax.*
-
 import Expression.Code
 import BioAmbients.{ `$`, Cap, Act, Bound, Free }
 
@@ -85,108 +82,6 @@ enum Pre extends Positional with Bound with Free:
 
 
 object Pre:
-
-  given Encoder[Bound & Free] = { it =>
-    import Bound.given, Free.given
-    val bound = it.asInstanceOf[Bound].asJson
-    val free = it.asInstanceOf[Free].asJson
-    free.deepMerge(bound)
-  }
-
-  given Encoder[Pre] = _ match
-
-    case it @ ν(names*) =>
-      Json.obj { "ν" ->
-        Json
-          .obj("names" -> Json.fromValues(names.map(Json.fromString)))
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ τ(Some(rate), _) =>
-      Json.obj { "τ" ->
-        it.asInstanceOf[Act].asJson
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ π(dir, ch, arg, Some("ν"), Some(rate), _) =>
-      Json.obj { "πν" ->
-        Json
-          .obj(
-            "direction" -> dir.asJson,
-            "channel" -> ch.toJson,
-            "argument" -> arg.toJson,
-            "polarity" -> Json.False
-          )
-          .deepMerge(it.asInstanceOf[Act].asJson)
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-    case it @ π(dir, ch, par, Some(""), Some(rate), _) =>
-      Json.obj { "π" ->
-        Json
-          .obj(
-            "direction" -> dir.asJson,
-            "channel" -> ch.toJson,
-            "parameter" -> par.toJson,
-            "polarity" -> Json.True
-          )
-          .deepMerge(it.asInstanceOf[Act].asJson)
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-    case it @ π(_, ch, ops, Some(cons), _, _) =>
-      Json.obj { cons ->
-        Json
-          .obj(
-            "channel" -> ch.toJson,
-            "operator" -> Json.fromString(cons),
-            "operands" -> ops.toJson
-          )
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-    case it @ π(dir, ch, λ(_: Term), None, Some(rate), _) =>
-      Json.obj { "π" ->
-        Json
-          .obj(
-            "direction" -> dir.asJson,
-            "channel" -> ch.toJson,
-            "polarity" -> Json.False
-          )
-          .deepMerge(it.asInstanceOf[Act].asJson)
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-    case it @ π(dir, ch, arg, None, Some(rate), _) =>
-      Json.obj { "π" ->
-        Json
-          .obj(
-            "direction" -> dir.asJson,
-            "channel" -> ch.toJson,
-            "argument" -> arg.toJson,
-            "polarity" -> Json.False
-          )
-          .deepMerge(it.asInstanceOf[Act].asJson)
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case it @ ζ(cap, name: String, polarity: Boolean, Some(rate), _) =>
-      Json.obj { "ζ" ->
-        Json
-          .obj(
-            "capability" -> cap.asJson,
-            "channel" -> Json.fromString(name),
-            "polarity" -> Json.fromBoolean(polarity)
-          )
-          .deepMerge(it.asInstanceOf[Act].asJson)
-          .deepMerge(it.asInstanceOf[Bound & Free].asJson)
-          .deepMerge(it.asInstanceOf[Positional].asJson)
-      }
-
-    case _ => Json.Null
 
   given `_ν_`: {} with
     extension (self: ν)

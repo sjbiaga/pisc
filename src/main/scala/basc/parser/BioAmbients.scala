@@ -40,8 +40,6 @@ import scala.meta.{ Lit, Term }
 
 import io.circe.{ Codec, Encoder, Json }
 
-import emitter.shared.Meta.rateʹ
-
 import BioAmbients.*
 import Calculus.*
 import Directive.Settings
@@ -200,7 +198,7 @@ abstract class BioAmbients extends Expression:
 
   protected val emitter: Emitter
 
-  private[parser] var eqtn: List[Bind] = null
+  private[parser] var eqtn: List[Bindʹ] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   protected var _nest = -1
@@ -347,13 +345,10 @@ object BioAmbients:
 
   object Act:
 
-    def unapply(self: Pre): Option[Boolean] =
+    def unapply(self: Pre): Some[Boolean] =
       self match
         case it: Act => Some(it.rate.isDefined)
         case _ => Some(false)
-
-    given Encoder[Act] = it => Json.obj("key"  -> Json.fromString(it.υidυ)
-                                       ,"rate" -> Json.fromString(rateʹ(it.rate.get)))
 
 
   trait Sum { this: + =>
@@ -461,10 +456,10 @@ object BioAmbients:
              snapshot: Boolean = false
   ) extends Expansion:
 
-    def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
+    def line(using Duplications): Parser[Either[Bindʹ, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
-    private def ensure(implicit prog: List[Bind]): Unit =
+    private def ensure(implicit prog: List[Bindʹ]): Unit =
       import helper.Ensure.*
 
       val i = main
@@ -474,7 +469,7 @@ object BioAmbients:
       given rec: Map[(String, Int), Int] = Map()
       given rep: Map[Int, Int] = Map()
 
-      prog(i)._2.recursive(using "Main" -> 0 :: Nil)
+      prog(i)._3.recursive(using "Main" -> 0 :: Nil)
 
       if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
@@ -485,87 +480,90 @@ object BioAmbients:
           case `(*)`(identifier, params*) =>
             warn(throw RecRepParsingException(identifier, params.size, n))
 
-    private def `(*) => +`(prog: List[Bind]): `(*)` => + = {
+    private def `(*) => +`(prog: List[Bindʹ]): `(*)` => + = {
       case `(*)`(identifier, args*) =>
         prog
           .find {
-            case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
+            case (`(*)`(`identifier`, params*), _, _) if params.size == args.size => true
             case _ => false
           }
           .get
-          ._2
+          ._3
     }
 
     extension [T <: AST](ast: T)
 
-      def parse(using excluded: Map[String, Actions], τ_rate: Long): (T, Actions) =
+      inline def τ: Calculus.Pre.τ =
+        import Cast.given
+        Calculus.Pre.τ(Some(-1L), None)(sπ_id)(using ast.lc).setPos(ast.pos)
 
-        import scala.util.parsing.input.Position
+      def parse(using excluded: Map[String, Actions]): (T, Actions) =
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ(pos: Position): Calculus.Pre.τ =
-          import Cast.given
-          Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)(using ast.lc).setPos(pos)
+        extension [S](self: `.` & S)
+          def append_τ(end: + | -, ps: Pre*): (S, Actions) =
+            val psʹ = ps :+ end.τ
+            self.cc(end = end, prefixes = psʹ).asInstanceOf[S] -> Actions(psʹ*)
 
-        def insert[S](end: + | -, ps: Pre*): (S, Actions) =
-          val psʹ = ps :+ τ(end.pos)
-          `.`(end, psʹ*).asInstanceOf[S] -> Actions(psʹ*)
-
-        def insert_+(sum: +): + =
-          val (seq, enabled) = insert[`.`](sum)
-          `+`(-1, ∥(-1, seq)).enabled = enabled
+        extension (self: +)
+          def prepend_τ: + =
+            val (pos, free) = self.pos -> self.free
+            val (seq, enabled) = (`.`(self).setPos(pos).free = free).append_τ(self)
+            val par = ∥(-1, seq).setPos(pos).free = free
+            val sum = `+`(-1, par).setPos(pos).free = free
+            sum.enabled = enabled
 
         ast match
 
           case ∅() =>
 
-            ast match
+            ast.runtimeChecked match
 
                case it: + =>
                  (it.enabled = nil, it.enabled)
 
           case it: + =>
-            val sum = it.choices.foldLeft(`+`(it.scaling).enabled = nil) {
+            val sum = it.choices.foldLeft(it.cc(choices = Nil).enabled = nil) {
               case (sum: +, par) =>
                 val (parʹ, enabledʹ) = par.parse
                 assert(enabledʹ.nonEmpty)
                 assert((sum.enabled & enabledʹ).isEmpty)
-                `+`(sum.scaling, (sum.choices :+ parʹ)*).enabled = sum.enabled ++ enabledʹ
+                sum.cc(choices = sum.choices :+ parʹ).enabled = sum.enabled ++ enabledʹ
             }
             (sum, sum.enabled)
 
           case it: ∥ =>
-            val (par, enabled) = it.components.foldLeft((∥(it.scaling), nil)) {
+            val (par, enabled) = it.components.foldLeft((it.cc(components = Nil), nil)) {
               case ((par: ∥, enabled), seq) =>
                 val (seqʹ, enabledʹ) = seq.parse
                 assert(enabledʹ.nonEmpty)
                 assert((enabled & enabledʹ).isEmpty)
-                (∥(par.scaling, (par.components :+ seqʹ)*), enabled ++ enabledʹ)
+                (par.cc(components = par.components :+ seqʹ), enabled ++ enabledʹ)
             }
             (par, enabled)
 
-          case `.`(end, ps*) =>
-            val (it, enabled) = end.parse
+          case it @ `.`(end, ps*) =>
+            val (endʹ, enabled) = end.parse
 
             if Actions(ps*).nonEmpty
             then
-              (`.`(it, ps*), Actions(ps*))
+              (it.cc(end = endʹ), Actions(ps*))
             else if enabled.nonEmpty
             then
-              (`.`(it, ps*), enabled)
+              (it.cc(end = endʹ), enabled)
             else
-              assert(it.isInstanceOf[+] && it.asInstanceOf[+].isVoid || it.isInstanceOf[`(*)`])
-              insert(it, ps*)
+              assert(endʹ.isInstanceOf[+] && endʹ.asInstanceOf[+].isVoid || endʹ.isInstanceOf[`(*)`])
+              it.append_τ(endʹ, ps*)
 
-          case ?:(c, _t, _f) =>
+          case it @ ?:(_, _t, _f) =>
             def _t_f(_sum: +): + =
               val (sum, _) = _sum.parse
 
               if sum.enabled.isEmpty
               || sum.enabled.exists(excluded.contains(_))
               then
-                insert_+(sum)
+                sum.prepend_τ
               else
                 sum
 
@@ -578,42 +576,47 @@ object BioAmbients:
             assert(f.map(_.enabled.nonEmpty).getOrElse(true))
 
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
-            (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
+            (it.cc(t = t, f = f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          case !(parallelism, pace, Some(μ), sum) =>
-            val (it, _) = sum.parse
-            (`!`(parallelism, pace, Some(μ), it), Actions(μ))
+          case it @ !(_, _, Some(μ), sum) =>
+            val (sumʹ, _) = sum.parse
+            (it.cc(sum = sumʹ), Actions(μ))
 
-          case it @ !(parallelism, pace, _, sum) =>
-            val τʹ: τ = τ(it.pos)
-            `!`(parallelism, pace, Some(τʹ.cc()('!' + τʹ.υidυ)), sum).parse
+          case it: ! =>
+            val τʹ: τ = it.τ
+            it.cc(guard = Some(τʹ.cc()('!' + τʹ.υidυ))).parse
 
-          case `[]`(label, sum) =>
-            var (it, _) = sum.parse
+          case it @ `[]`(_, sum) =>
+            var (sumʹ, _) = sum.parse
 
-            if it.enabled.isEmpty
+            if sumʹ.enabled.isEmpty
             then
-              it = insert_+(it)
+              sumʹ = sumʹ.prepend_τ
 
-            (`[]`(label, it), it.enabled)
+            (it.cc(sum = sumʹ), sumʹ.enabled)
 
-          case `⟦⟧`(definition @ Definition(_, _, _, variables, _), _sum, xid, pointers) =>
+          case it @ `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
             val n = pointers.size
 
-            val sum: + =
+            val sum =
               if variables.size == n
               then
                 _sum
               else
-                `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                val names = variables.drop(n)
+                val (pos, free) = (_sum.pos, _sum.free -- names)
+                val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
+                val seq = `.`(_sum, νʹ).setPos(pos).free = free
+                val par = ∥(-1, seq).setPos(pos).free = free
+                `+`(-1, par).setPos(pos).free = free
 
-            var (it, _) = sum.parse
+            var (sumʹ, _) = sum.parse
 
-            if it.enabled.isEmpty
+            if sumʹ.enabled.isEmpty
             then
-              it = insert_+(it)
+              sumʹ = sumʹ.prepend_τ
 
-            (`⟦⟧`(definition, it, xid, pointers), it.enabled)
+            (it.cc(sum = sumʹ), sumʹ.enabled)
 
           case _: `{}` => ???
 
@@ -700,7 +703,7 @@ object BioAmbients:
 
           case _: `(*)` => ??? // always "guarded"
 
-      def graph(using prog: List[Bind]): Seq[(Act, Act | Sum)] =
+      def graph(using prog: List[Bindʹ]): Seq[(Act, Act | Sum)] =
 
         ast.mapreduce[Seq[(Act, Act | Sum)]] {
 
@@ -756,9 +759,7 @@ object BioAmbients:
 
       def mixed: Boolean =
 
-        ast match
-
-          case ∅() => false
+        ast.mapreduceʹ(_ => false) {
 
           case it @ +(_, ps*) =>
             extension (self: String)
@@ -766,19 +767,23 @@ object BioAmbients:
                 val i = self.indexOf(",")
                 if i < 0 then self.endsWith(c)
                 else self.substring(0, i).endsWith(c)
-            (it.enabled.find(_("π")) zip it.enabled.find(_("ζ"))).nonEmpty || ps.exists(_.mixed)
+            (it.enabled.find(_("π")) zip it.enabled.find(_("ζ"))).isDefined
 
-          case _ =>
+        }(_ || _)
 
-            ast.mapreduce(_ => false)(_ || _)
 
-    def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+    def apply(prog: List[Bindʹ]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
       given excluded: Map[String, Actions] = Map()
 
-      given Long = if _settings.traces.isDefined then 0L else -1L
-
-      given List[Bind] = prog.map(_ -> _.shallow.parse._1)
+      given List[Bindʹ] = prog.map {
+        case it @ (`(*)`("Main"), _, _sum @ ∅()) =>
+          val pos = _sum.pos
+          val sum = `+`(-1, ∥(-1, `.`(_sum, _sum.τ).setPos(pos)).setPos(pos)).setPos(pos)
+          it.copy(_3 = sum.parse._1)
+        case it =>
+          it.copy(_3 = it._3.shallow.parse._1)
+      }
 
       ensure
 
@@ -788,44 +793,36 @@ object BioAmbients:
 
       val enabled = Map[String, Actions]()
 
-      if _settings.traces.isDefined
-      then
-        val traces = _settings.traces
-        _settings.traces = None
-        given Boolean = true
-        val prog =
-          given_List_Bind
-            .map {
-              case it @ (_, ∅()) => it
-              case (bind @ `(*)`(given String, _*), sum) =>
-                bind -> sum.labelʹ
-            }
-        val r = apply(prog)
-        _settings.traces = traces
-        r
-      else
-        given_List_Bind
-          .tapEach {
-            case (_, sum) =>
-              sum.split(using discarded -> excluded)
+      given_List_Bindʹ
+        .map {
+          case (bind, _, it @ ∅()) =>
+            bind -> it
+          case (bind, true, sum) =>
+            bind -> sum.labelʹ(using bind.identifier + '#' + bind.params.size)
+          case (bind, _, sum) =>
+            bind -> sum
+        }
+        .tapEach {
+          case (_, sum) =>
+            sum.split(using discarded -> excluded)
 
-              sum.graph.foreach { (s, t) =>
-                if !enabled.contains(s.υidυ)
-                then
-                  enabled(s.υidυ) = nil
-                t match
-                  case it: Act =>
-                    enabled(s.υidυ) += it.υidυ
-                  case it: Sum =>
-                    enabled(s.υidυ) ++= it.enabled
-              }
-          }
-          .tapEach {
-            case (`(*)`(identifier, params*), sum) =>
-              if sum.mixed
+            sum.graph.foreach { (s, t) =>
+              if !enabled.contains(s.υidυ)
               then
-                warn(throw MixedChoiceException(identifier, params.size))
-          } -> (discarded, excluded, enabled)
+                enabled(s.υidυ) = nil
+              t match
+                case it: Act =>
+                  enabled(s.υidυ) += it.υidυ
+                case it: Sum =>
+                  enabled(s.υidυ) ++= it.enabled
+            }
+        }
+        .tapEach {
+          case (`(*)`(identifier, params*), sum) =>
+            if sum.mixed
+            then
+              warn(throw MixedChoiceException(identifier, params.size))
+        } -> (discarded, excluded, enabled)
 
 
     private var i: Int = -1
@@ -833,7 +830,8 @@ object BioAmbients:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins, snapshot))
+      _settings = Settings(elastic4s = Settings.Elastic4s("http", address),
+                           parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins, snapshot))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -847,7 +845,7 @@ object BioAmbients:
       l = (0, 0)
       _last = None
 
-    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+    def apply(source: Source, errors: Boolean = false): List[Either[String, Bindʹ]] =
       _init
       _settings.werr = errors
 
@@ -906,7 +904,7 @@ object BioAmbients:
                   scala.sys.error(failure.msg)
           }
           .filter {
-            case Right((`(*)`(s"Self_$n", _*), _))
+            case Right((`(*)`(s"Self_$n", _*), _, _))
                 if { try { n.toInt; true } catch _ => false } =>
               self.contains(n.toInt)
             case _ => true
@@ -919,13 +917,16 @@ object BioAmbients:
           else
             r
         ).filter {
-          case Right((`(*)`(s"Self_$n", _*), _))
+          case Right((`(*)`(s"Self_$n", _*), _, _))
               if { try { n.toInt; true } catch _ => false } =>
             self.contains(n.toInt)
           case _ => true
         }
 
-      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(_settings.parameters.reify)), ∅()): Bind) ::
-      Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), ∅()): Bind) ::
+      _last = None
+
+      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.elastic4s)), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.parameters.reify)), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), false, ∅()): Bindʹ) ::
       prog

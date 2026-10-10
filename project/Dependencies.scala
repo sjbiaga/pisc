@@ -10,16 +10,19 @@ object Dependencies {
   lazy val zc = "dev.zio" %% "zio-concurrent" % "2.1.26"
   lazy val zh = "dev.zio" %% "zio-http" % "3.11.6"
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.26"
-  lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.13"
+  lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.14"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
   lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.4"
   lazy val kafka = "org.apache.kafka" % "kafka-clients" % "4.3.1"
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.3.2" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.37.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.55.10"
-  lazy val circe = "io.circe" %% "circe-generic" % "0.14.16"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.55.14"
+  lazy val circe = "io.circe" %% "circe-generic" % "0.14.17"
   lazy val fs2circe = "org.gnieh" %% "fs2-data-json-circe" % "1.14.1"
+  lazy val elastic4s = Seq("nl.gn0s1s" %% "elastic4s-client-sttp4",
+                           "nl.gn0s1s" %% "elastic4s-json-circe"
+                       ).map(_ % "9.5.0")
   lazy val http4s = Seq("org.http4s" %% "http4s-circe",
                         "org.http4s" %% "http4s-dsl",
                         "org.http4s" %% "http4s-ember-client",

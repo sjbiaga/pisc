@@ -31,37 +31,22 @@ package parser
 
 import scala.meta.{ Pat, Term, Type }
 
-import scala.util.parsing.input.{ NoPosition, Position }
-
-import io.circe.{ Encoder, Json }
-import io.circe.syntax.*
+import io.circe.Json
 
 
 package object ast:
 
   import AST.{ `(*)`, + }
 
-  type Bind = (`(*)`, +)
+  type Bindʹ = (`(*)`, Boolean, +)
 
-  object Bind:
-    given Encoder[Bind] = _ match
-      case (bind @ `(*)`(identifier, params*), sum) =>
-        Json.obj {
-          s"${identifier}_${params.size}" ->
-          Json.obj("agent" -> (bind: AST).asJson
-                  ,"body" -> (sum: AST).asJson)
-        }
+  type Bind = (`(*)`, +)
 
 
   trait Positional extends scala.util.parsing.input.Positional:
     val lc: Int => (Int, Int)
 
-  object Positional:
-    given Encoder[Positional] = { it =>
-      val (line, col) = it.lc(it.pos.column-1)
-      Json.obj("line"   -> Json.fromInt(line)
-              ,"column" -> Json.fromInt(col))
-    }
+    final def location: (Int, Int) = lc(pos.column-1)
 
 
   object Cast:

@@ -41,10 +41,10 @@ import scala.util.parsing.combinator.basc.parser.Expansion.Duplications
 
 abstract class Calculus extends BioAmbients:
 
-  def equation(using Duplications): Parser[Bind] =
+  def equation(using Duplications): Parser[Bindʹ] =
     positioned(invocation(true)) >> {
       case bind: `(*)` if _settings.exclude =>
-        ".*".r ^^ { _ => bind -> ∅() }
+        ".*".r ^^ { _ => (bind, false, ∅()) }
       case bind: `(*)` =>
         val bound = bind.free
         _code = -1
@@ -52,22 +52,12 @@ abstract class Calculus extends BioAmbients:
         given Bindings = Bindings() ++ bound.map(_ -> Occurrence(None, pos()))
         given Int = 1
         "="~> positioned(choice) ^^ { _sum =>
-          val sum: + =
-            _sum.flatten match {
-              case ∅() if bind match { case `(*)`("Main") => true case _ => false } =>
-                val pos = bind.pos
-                `+`(-1, ∥(-1, `.`(∅(pos), τ(Some(-1L), None)(sπ_id).setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
-              case it => it
-            }
+          val sum = _sum.flatten
           val free = _sum.free ++ sum.capitals
           if (free &~ bound).nonEmpty
           then
             throw EquationFreeNamesException(bind.identifier, free &~ bound)
-          if _settings.traces.isDefined
-          then
-            bind -> sum.labelʹ(using bind.identifier)
-          else
-            bind -> sum
+          (bind, _settings.traces.isDefined, sum)
         }
     }
 
@@ -284,9 +274,8 @@ abstract class Calculus extends BioAmbients:
 
 object Calculus:
 
-  export ast.{ AST, Bind, Cast, λ, Pre }
-  export Pre.*
-  export AST.*
+  export ast.{ AST, Bindʹ, Bind, Cast, λ, Pre }
+  export Pre.*, AST.*
 
 
   // exceptions
@@ -317,184 +306,30 @@ object Calculus:
 
   // functions
 
+  extension (self: String)
+
+    def id(it: μ | ζ, ch: String, p: String, r: Any, dc: String)(using agent: String): String =
+      val (line, col) = it.location
+      val l = s"$self@$line.$col"
+      it.υidυ + "," + ch + "," + p + "," + l + "," + rateʹ(r) + "," + agent + "," + dc
+
+    def relabelled(using String): Seq[Pre] => Seq[Pre] =
+      _.map {
+        case it: τ =>
+          it.cc()(id(it, "τ", "", it.rate.get, "local"))
+        case it @ π(dir, λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>
+          val polarity = it.polarity match { case Some("") => true case _ => false }
+          it.cc()(id(it, name, polarity.toString, rate.get, dir.toString))
+        case it @ ζ(cap, name, polarity, rate, _) =>
+          it.cc()(id(it, name, polarity.toString, rate.get, cap.toString))
+        case it => it
+      }
+
+    inline def relabelledʹ(it: Some[μ | ζ])(using String): Option[μ | ζ] =
+      relabelled(it.toSeq).headOption.asInstanceOf[Option[μ | ζ]]
+
+
   extension [T <: AST](ast: T)
-
-    def foreach(g: AST => Unit)(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
-
-      h.applyOrElse(ast, {
-
-        case ∅() =>
-
-        case +(_, choices*) =>
-          choices.foreach(_.foreach(g)(h))
-
-        case ∥(_, components*) =>
-          components.foreach(_.foreach(g)(h))
-
-        case `.`(end, _*) =>
-          end.foreach(g)(h)
-
-        case ?:(_, t, f) =>
-          t.foreach(g)(h)
-          f.foreach(_.foreach(g)(h))
-
-        case !(_, _, _, sum) =>
-          sum.foreach(g)(h)
-
-        case `[]`(_, sum) =>
-          sum.foreach(g)(h)
-
-        case `⟦⟧`(_, sum, _, _) =>
-          sum.foreach(g)(h)
-
-        case _ => g(ast)
-
-      })
-
-    def mapreduce[R](g: AST => R)(h: (R, R) => R): R =
-
-      ast match
-
-        case ∅() => g(ast)
-
-        case +(_, choices*) =>
-          choices.map(_.mapreduce(g)(h)).reduce(h)
-
-        case ∥(_, components*) =>
-          components.map(_.mapreduce(g)(h)).reduce(h)
-
-        case it @ `.`(end, _*) =>
-          h(g(it), end.mapreduce(g)(h))
-
-        case it @ ?:(_, t, Some(f)) =>
-          h(h(g(it), t.mapreduce(g)(h)), f.mapreduce(g)(h))
-
-        case it @ ?:(_, t, _) =>
-          h(g(it), t.mapreduce(g)(h))
-
-        case it @ !(_, _, _, sum) =>
-          h(g(it), sum.mapreduce(g)(h))
-
-        case it @ `[]`(_, sum) =>
-          h(g(it), sum.mapreduce(g)(h))
-
-        case it @ `⟦⟧`(_, sum, _, _) =>
-          h(g(it), sum.mapreduce(g)(h))
-
-        case _ => g(ast)
-
-    def map(g: AST => AST)(h: AST => AST = identity): T =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.map(g)(h)))
-
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.map(g)(h)))
-
-        case it @ `.`(end, _*) =>
-          h(it.cc(end = end.map(g)(h)))
-
-        case it @ ?:(_, t, f) =>
-          h(it.cc(t = t.map(g)(h), f = f.map(_.map(g)(h))))
-
-        case it @ !(_, _, _, sum) =>
-          h(it.cc(sum = sum.map(g)(h)))
-
-        case it @ `[]`(_, sum) =>
-          h(it.cc(sum = sum.map(g)(h)))
-
-        case it @ `⟦⟧`(_, sum, _, _) =>
-          h(it.cc(sum = sum.map(g)(h)))
-
-        case _ => h(ast)
-
-    def mapʹ(g: AST => AST)(h: AST => AST): T =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.mapʹ(g)(h)))
-
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.mapʹ(g)(h)))
-
-        case it: `.` =>
-          val itʹ @ `.`(end, _*) = h(it)
-          itʹ.cc(end = end.mapʹ(g)(h))
-
-        case it: ?: =>
-          val itʹ @ ?:(_, t, f) = h(it)
-          itʹ.cc(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
-
-        case it: ! =>
-          val itʹ @ !(_, _, _, sum) = h(it)
-          itʹ.cc(sum = sum.mapʹ(g)(h))
-
-        case it: `[]` =>
-          val itʹ @ `[]`(_, sum) = h(it)
-          itʹ.cc(sum = sum.mapʹ(g)(h))
-
-        case it: `⟦⟧` =>
-          val itʹ @ `⟦⟧`(_, sum, _, _) = h(it)
-          itʹ.cc(sum = sum.mapʹ(g)(h))
-
-        case _ => h(ast)
-
-    def mapʹʹ(g: AST => AST)(h: AST => (AST, Boolean)): T =
-
-      inline given Conversion[AST, T] = _.asInstanceOf[T]
-
-      ast match
-
-        case ∅() => ast
-
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.mapʹʹ(g)(h)))
-
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.mapʹʹ(g)(h)))
-
-        case it: `.` =>
-          h(it) match
-            case (itʹ @ `.`(end, _*), false) =>
-              itʹ.cc(end = end.mapʹʹ(g)(h))
-            case (itʹ, _) => itʹ
-
-        case it: ?: =>
-          h(it) match
-            case (itʹ @ ?:(_, t, f), false) =>
-              itʹ.cc(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
-            case (itʹ, _) => itʹ
-
-        case it: ! =>
-          h(it) match
-            case (itʹ @ !(_, _, _, sum), false) =>
-              itʹ.cc(sum = sum.mapʹʹ(g)(h))
-            case (itʹ, _) => itʹ
-
-        case it: `[]` =>
-          h(it) match
-            case (itʹ @ `[]`(_, sum), false) =>
-              itʹ.cc(sum = sum.mapʹʹ(g)(h))
-            case (itʹ, _) => itʹ
-
-        case it: `⟦⟧` =>
-          h(it) match
-            case (itʹ @ `⟦⟧`(_, sum, _, _), false) =>
-              itʹ.cc(sum = sum.mapʹʹ(g)(h))
-            case (itʹ, _) => itʹ
-
-        case _ => h(ast)._1
 
     def flatten: T =
 
@@ -549,48 +384,27 @@ object Calculus:
 
         case _ => ast
 
-    def labelʹ(using String)(using patch: Boolean = false): T =
+    def labelʹ(using String): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
 
       ast match
 
-        case +(_, ∥(_, `.`(!(_, _, Some(_), _), it*))) if !it.exists { case Act(it) => it } =>
-          ast.label("+0/0")
+        case sum @ +(_, par @ ∥(_, seq @ `.`(rep @ !(_, _, guard @ Some(_), _sum), it*))) if !it.exists { case Act(it) => it } =>
+          sum.cc(choices = Seq(par.cc(components = Seq(seq.cc(end = rep.cc(guard = "+0/0".relabelledʹ(guard), sum = _sum.label("+0/0")))))))
 
         case _ =>
           ast.label("")
 
-    def label(l: String)(using agent: String, patch: Boolean): T =
+    def label(l: String)(using String): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
       object Sum:
-        inline implicit def lʹ(i: Int)(using n: Int): String = l + "+" + i + "/" + n
+        inline implicit def lʹ(i: Int)(using n: Int): String = l + '+' + i + '/' + n
 
       object Par:
-        inline implicit def lʹ(i: Int)(using n: Int): String = l + "∥" + i + "/" + n
-
-      inline def idʹ(it: μ | ζ, ch: String, p: String, r: Any, dc: String): String =
-        val (line, col) = it.lc(it.pos.column-1)
-        val lʹ = s"$l@$line.$col"
-        it.υidυ + "," + ch + "," + p + "," + lʹ + "," + rateʹ(r) + "," + agent + "," + dc
-
-      val relabelled: Seq[Pre] => Seq[Pre] =
-        _.map {
-          case it @ τ(Some(0L), _) =>
-            it.cc(rate = Some(-1L))(idʹ(it, "τ", "", -1L, "local"))
-          case it if patch => it
-          case it: τ =>
-            it.cc()(idʹ(it, "τ", "", it.rate.get, "local"))
-          case it @ π(dir, λ(Symbol(name)), _, None | Some("" | "ν"), rate, _) =>
-            val polarity = it.polarity match { case Some("") => true case _ => false }
-            it.cc()(idʹ(it, name, polarity.toString, rate.get, dir.toString))
-          case it @ ζ(cap, name, polarity, rate, _) =>
-            it.cc()(idʹ(it, name, polarity.toString, rate.get, cap.toString))
-          case it => it
-        }
-
-      inline def relabelledʹ(it: Some[μ | ζ]): Option[μ | ζ] =
-        relabelled(it.toSeq).headOption.asInstanceOf[Option[μ | ζ]]
+        inline implicit def lʹ(i: Int)(using n: Int): String = l + '∥' + i + '/' + n
 
       ast match
 
@@ -609,13 +423,13 @@ object Calculus:
           given Int = it.size
           sum.cc(choices = it.zipWithIndex.map(_.label(_)))
 
-        case par @ ∥(_, it*) =>
-          par.cc(components = it.map(_.label(l)))
+        case par @ ∥(_, it) =>
+          par.cc(components = Seq(it.label(l)))
 
         case seq @ `.`(end, it*) =>
-          seq.cc(end = end.label(l), prefixes = relabelled(it))
+          seq.cc(end = end.label(l), prefixes = l.relabelled(it))
 
-        case it @ ?:(cond, t, Some(f)) =>
+        case it @ ?:(_, t, Some(f)) =>
           import Sum.*
           given Int = 1
           it.cc(t = t.label(0), f = Some(f.label(1)))
@@ -624,10 +438,8 @@ object Calculus:
           it.cc(t = t.label(l))
 
         case it @ !(_, _, guard @ Some(_), sum) =>
-          it.cc(guard = relabelledʹ(guard), sum = sum.label(l))
-
-        case it @ !(_, _, _, sum) =>
-          it.cc(sum = sum.label(l))
+          val lʹ = l + "+0/0"
+          it.cc(guard = lʹ.relabelledʹ(guard), sum = sum.label(lʹ))
 
         case it @ `[]`(_, sum) =>
           it.cc(sum = sum.label(l))

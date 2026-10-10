@@ -88,11 +88,15 @@ abstract class Expression extends JavaTokenParsers:
   implicit protected var lc: Int => (Int, Int) = null
   protected var _last: Option[Positional] = None
   final def last: Option[((String, Boolean), (Int, Int))] =
-    _last.filter(_.pos ne NoPosition).map { it =>
-      val isMacroExpansion = it match
-         case +(_, ∥(_, `.`(_: `⟦⟧`))) => true
-         case _ => false
-      it.toString -> isMacroExpansion -> lc(it.pos.column-1)
+    def isMacroExpansion(ast: AST): Boolean =
+      ast.mapreduce {
+        case ∅() => false
+        case _: `⟦⟧` => true
+        case _ => false
+      }(_ || _)
+    _last.filter(_.pos ne NoPosition).map {
+      case it: AST => it.toString -> isMacroExpansion(it) -> lc(it.pos.column-1)
+      case it => it.toString -> false -> lc(it.pos.column-1)
     }
   protected var _settings: Settings = null
 

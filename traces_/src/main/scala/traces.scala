@@ -265,7 +265,9 @@ package object `Π-traces`:
               case KeyBy.HID =>
                 plugins.find(_.isInstanceOf[Plugin.causes]).get match
                   case Plugin.causes(causes) =>
-                    s"""{"hid":"${uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))}"}"""
+                    var roots = (rootLabels.keySet & causes).toList.sorted
+                    if roots.isEmpty then roots = List(number)
+                    s"""{"hid":"${uuid + '-' + roots.map(rootLabels(_)).mkString(":")}"}"""
               case KeyBy.ANY =>
                 s"""{"label":"$agent-$label"}"""
               case _         =>
@@ -279,7 +281,9 @@ package object `Π-traces`:
               case KeyBy.HID =>
                 plugins.find(_.isInstanceOf[Plugin.causes]).get match
                   case Plugin.causes(causes) =>
-                    uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+                    var roots = (rootLabels.keySet & causes).toList.sorted
+                    if roots.isEmpty then roots = List(number)
+                    uuid + '-' + roots.map(rootLabels(_)).mkString(":")
               case KeyBy.ANY =>
                 "ANY"
               case _         =>

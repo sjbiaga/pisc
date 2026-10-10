@@ -25,12 +25,12 @@ function ba() {
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/bam.scala\ ../${emit}/http.scala
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.13
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         --dep io.github.timwspence::cats-stm:0.13.5
                         --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
@@ -40,7 +40,7 @@ function ba() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/http.scala
             ;;
     esac
@@ -91,7 +91,7 @@ function ba_() {
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep io.circe::circe-generic:0.14.16
+                        --dep io.circe::circe-generic:0.14.17
                         --dep org.gnieh::fs2-data-json-circe:1.14.1
                         --dep org.http4s::http4s-circe:0.23.38
                         --dep org.http4s::http4s-dsl:0.23.38
@@ -103,15 +103,15 @@ function ba_() {
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/bam_.scala\ ../${emit}/http_.scala
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.13
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         --dep io.github.timwspence::cats-stm:0.13.5
-                        --dep io.circe::circe-generic:0.14.16
+                        --dep io.circe::circe-generic:0.14.17
                         --dep org.gnieh::fs2-data-json-circe:1.14.1
                         --dep org.http4s::http4s-circe:0.23.38
                         --dep org.http4s::http4s-dsl:0.23.38
@@ -124,8 +124,8 @@ function ba_() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/http_.scala
             ;;
     esac
@@ -154,7 +154,7 @@ function ba_() {
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
                   --dep com.rabbitmq:amqp-client:5.37.0 \
-                  --dep software.amazon.awssdk:sqs:2.55.10 \
+                  --dep software.amazon.awssdk:sqs:2.55.14 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.bioambients.replications.exitcode.ignore=false \

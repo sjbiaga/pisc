@@ -83,11 +83,7 @@ abstract class Encoding extends Calculus:
               if !_settings.exclude
               then
                 val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                if _settings.traces.isDefined
-                then
-                  eqtn :+= bind -> sum.labelʹ(using bind.identifier)
-                else
-                  eqtn :+= bind -> sum
+                eqtn :+= (bind, _settings.traces.isDefined, sum)
             Some {
               Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
               ->
