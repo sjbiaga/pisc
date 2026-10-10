@@ -238,7 +238,7 @@ object Encoding:
         }
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
           def count(ast: AST): Unit =
-            ast.foreach(count) {
+            ast.foreachʹ() {
               case it: `⟦⟧` if ids.contains(it.xid) =>
                 duplications += it.xid -> (true -> duplications(it.xid)._2)
                 count(it.sum)
@@ -257,7 +257,7 @@ object Encoding:
             case t => throw t
         }
         def reset(ast: AST): Unit =
-          ast.foreach(reset) {
+          ast.foreachʹ() {
             case it: `⟦⟧` if ids.contains(it.xid) =>
               duplications += it.xid -> (false -> duplications(it.xid)._2)
               reset(it.sum)

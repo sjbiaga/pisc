@@ -216,33 +216,65 @@ object AST:
 
   extension [T <: AST](ast: T)
 
-    def foreach(g: AST => Unit)(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
+    def foreach(g: AST => Unit): Unit =
+
+      g(ast)
+
+      ast match
+
+        case ∅() =>
+
+        case +(_, choices*) =>
+          choices.foreach(_.foreach(g))
+
+        case ∥(_, components*) =>
+          components.foreach(_.foreach(g))
+
+        case `.`(end, _*) =>
+          end.foreach(g)
+
+        case ?:(_, t, f) =>
+          t.foreach(g)
+          f.foreach(_.foreach(g))
+
+        case !(_, _, _, sum) =>
+          sum.foreach(g)
+
+        case `[]`(_, sum) =>
+          sum.foreach(g)
+
+        case `⟦⟧`(_, sum, _, _) =>
+          sum.foreach(g)
+
+        case _ =>
+
+    def foreachʹ(g: AST => Unit = { _ => })(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
 
       h.applyOrElse(ast, {
 
         case ∅() =>
 
         case +(_, choices*) =>
-          choices.foreach(_.foreach(g)(h))
+          choices.foreach(_.foreachʹ(g)(h))
 
         case ∥(_, components*) =>
-          components.foreach(_.foreach(g)(h))
+          components.foreach(_.foreachʹ(g)(h))
 
         case `.`(end, _*) =>
-          end.foreach(g)(h)
+          end.foreachʹ(g)(h)
 
         case ?:(_, t, f) =>
-          t.foreach(g)(h)
-          f.foreach(_.foreach(g)(h))
+          t.foreachʹ(g)(h)
+          f.foreach(_.foreachʹ(g)(h))
 
         case !(_, _, _, sum) =>
-          sum.foreach(g)(h)
+          sum.foreachʹ(g)(h)
 
         case `[]`(_, sum) =>
-          sum.foreach(g)(h)
+          sum.foreachʹ(g)(h)
 
         case `⟦⟧`(_, sum, _, _) =>
-          sum.foreach(g)(h)
+          sum.foreachʹ(g)(h)
 
         case _ => g(ast)
 

@@ -480,15 +480,15 @@ object BioAmbients:
           case `(*)`(identifier, params*) =>
             warn(throw RecRepParsingException(identifier, params.size, n))
 
-    private def `(*) => +`(prog: List[Bindʹ]): `(*)` => + = {
+    private def `(*) => +`(prog: List[Bind]): `(*)` => + = {
       case `(*)`(identifier, args*) =>
         prog
           .find {
-            case (`(*)`(`identifier`, params*), _, _) if params.size == args.size => true
+            case (`(*)`(`identifier`, params*), _) if params.size == args.size => true
             case _ => false
           }
           .get
-          ._3
+          ._2
     }
 
     extension [T <: AST](ast: T)
@@ -703,7 +703,7 @@ object BioAmbients:
 
           case _: `(*)` => ??? // always "guarded"
 
-      def graph(using prog: List[Bindʹ]): Seq[(Act, Act | Sum)] =
+      def graph(using prog: List[Bind]): Seq[(Act, Act | Sum)] =
 
         ast.mapreduce[Seq[(Act, Act | Sum)]] {
 
@@ -787,21 +787,63 @@ object BioAmbients:
 
       ensure
 
-      val discarded = Map[String, Actions]()
+      given List[Bind] =
+        given_List_Bindʹ
+          .map {
+            case (bind, _, it @ ∅()) =>
+              bind -> it
+            case (bind, true, sum) =>
+              bind -> sum.labelʹ(using bind.identifier + '#' + bind.params.size)
+            case (bind, _, sum) =>
+              bind -> sum
+          }
+
+      val relabeling = Map[String, String]()
+
+      given_List_Bind
+        .foreach {
+          case (_, ∅()) =>
+          case (_, sum) =>
+            def index(end: + | -): Unit =
+              end.foreachʹ() {
+                case `.`(end, ps*) =>
+                  ps.foreach {
+                    case it: Act =>
+                      val key = it.υidυ
+                      val i = key.indexOf(',')
+                      if i >= 0
+                      then
+                        relabeling(key.substring(0, i)) = key
+                    case _ =>
+                  }
+                  index(end)
+                case !(_, _, Some(it), sum) =>
+                  val key = it.υidυ
+                  val i = key.indexOf(',')
+                  if i >= 0
+                  then
+                    relabeling(key.substring(0, i)) = key
+                  index(sum)
+              }
+            index(sum)
+        }
+
+      given_List_Bind
+        .tapEach {
+          _._2.foreach {
+            case sum: + =>
+              sum.enabled = sum.enabled.map { key => relabeling.getOrElse(key, key) }
+            case _ =>
+          }
+        }
 
       excluded.clear()
 
+      val discarded = Map[String, Actions]()
+
       val enabled = Map[String, Actions]()
 
-      given_List_Bindʹ
-        .map {
-          case (bind, _, it @ ∅()) =>
-            bind -> it
-          case (bind, true, sum) =>
-            bind -> sum.labelʹ(using bind.identifier + '#' + bind.params.size)
-          case (bind, _, sum) =>
-            bind -> sum
-        }
+      given_List_Bind
         .tapEach {
           case (_, sum) =>
             sum.split(using discarded -> excluded)
