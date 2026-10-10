@@ -17,27 +17,27 @@ function spi() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.22'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.24'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.0'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.1'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.13
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s.scala
             ;;
@@ -45,7 +45,7 @@ function spi() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/http.scala
             ;;
     esac
@@ -94,38 +94,40 @@ function spi_() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.37
-                        --dep org.http4s::http4s-dsl:0.23.37
-                        --dep org.http4s::http4s-ember-client:0.23.37
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep org.gnieh::fs2-data-json-circe:1.14.1
+                        --dep org.http4s::http4s-circe:0.23.38
+                        --dep org.http4s::http4s-dsl:0.23.38
+                        --dep org.http4s::http4s-ember-client:0.23.38
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http4s_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http_.scala
             ;;
         akka)
             local deps='--repo https://repo.akka.io/cAzJkaebGFNkNrv2ILttVDQWmf3u4ThOcE_EbfzM0-N8lDhx/secure
-                        --dep com.typesafe.akka::akka-actor-typed:2.10.22
-                        --dep io.circe::circe-generic:0.14.16'
+                        --dep com.typesafe.akka::akka-actor-typed:2.10.24
+                        --dep io.circe::circe-generic:0.14.17'
             ;;
         pekko)
-            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.0
-                        --dep io.circe::circe-generic:0.14.16'
+            local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.1
+                        --dep io.circe::circe-generic:0.14.17'
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.13
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep org.http4s::http4s-circe:0.23.37
-                        --dep org.http4s::http4s-dsl:0.23.37
-                        --dep org.http4s::http4s-ember-client:0.23.37
-                        --dep org.http4s::http4s-ember-server:0.23.37
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep org.gnieh::fs2-data-json-circe:1.14.1
+                        --dep org.http4s::http4s-circe:0.23.38
+                        --dep org.http4s::http4s-dsl:0.23.38
+                        --dep org.http4s::http4s-ember-client:0.23.38
+                        --dep org.http4s::http4s-ember-server:0.23.38
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s_.scala
             ;;
@@ -133,8 +135,8 @@ function spi_() {
             local deps='--dep dev.zio::zio-concurrent:2.1.26
                         --dep dev.zio::zio-http:3.11.6
                         --dep dev.zio::zio-streams:2.1.26
-                        --dep io.circe::circe-generic:0.14.16
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+                        --dep io.circe::circe-generic:0.14.17
+                        --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/http_.scala
             ;;
     esac
@@ -162,8 +164,8 @@ function spi_() {
                   --dep org.apache.kafka:kafka-clients:4.3.1 \
                   --dep org.apache.avro:avro:1.12.2 \
                   --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
-                  --dep com.rabbitmq:amqp-client:5.36.0 \
-                  --dep software.amazon.awssdk:sqs:2.55.7 \
+                  --dep com.rabbitmq:amqp-client:5.37.0 \
+                  --dep software.amazon.awssdk:sqs:2.55.14 \
                   ${args#?} \
                   2>&1
 #                  -Dpisc.stochastic.replications.exitcode.ignore=false \

@@ -1,7 +1,7 @@
 package pisc
 package feedback
 
-import _root_.io.circe.Codec
+import io.circe.Codec
 
 
 package object analytics:

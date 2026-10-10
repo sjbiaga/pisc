@@ -39,8 +39,9 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.StochasticPi
-import parser.Calculus.`(*)`
+import parser.Calculus.{ `(*)`, λ }
 import emitter.kk.Program
+import emitter.kk.Meta.\
 
 
 object Main extends helper.Main:
@@ -73,10 +74,20 @@ object Main extends helper.Main:
 
         val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
-        val ps = Program.Main(O)(prog)
-        val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
+        val ps =
+          ( prog.tail.tail.head match
+              case (`(*)`(_, λ(parameters: Term)), _) =>
+                Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
+          ) ::
+          ( prog.tail.tail.tail.head match
+              case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+                Term.Assign(\("π-traces"), traces)
+          ) ::
+          Program.Main(O)(prog.drop(1+3))
 
-        val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
+        val is = prog_.drop(1+3).map(_._2).zipWithIndex.map(_.swap).toMap
+
+        val ls = bind.drop(1+3).filter(_._1.isLeft).map(_.left.get -> _)
 
         val code = ps.take(2).mkString("\n\n") + "\n\n"
                  + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
@@ -93,6 +104,7 @@ object Main extends helper.Main:
 
         val init = Π(
           prog
+            .drop(1+3)
             .find {
               case (`(*)`("Main"), _) => true
               case _ => false

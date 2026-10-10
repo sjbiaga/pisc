@@ -1786,5 +1786,7 @@ object ProgramSuite:
 
   val `^-υidυ` = "υidυ"
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   given (Enumerator.Generator, Term.Name) =
     (`* <- *`(`^-υidυ` -> Term.Name("π-uuid")), Term.Name(`^-υidυ`))

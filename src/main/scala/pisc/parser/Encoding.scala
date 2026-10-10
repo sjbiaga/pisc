@@ -71,10 +71,10 @@ abstract class Encoding extends Calculus:
                            .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
                            .map(_ -> Occurrence(None, _))
         given Int = 1
-        "="~> choice ^^ {
-          case (_sum, _free) =>
+        "="~> positioned(choice) ^^ {
+          case _sum =>
             val sum = _sum.flatten
-            val free = _free ++ sum.capitals
+            val free = _sum.free ++ sum.capitals
             if (free &~ bound).nonEmpty
             then
               throw DefinitionFreeNamesException(_code, free &~ bound)
@@ -83,11 +83,7 @@ abstract class Encoding extends Calculus:
               if !_settings.exclude
               then
                 val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                if _settings.traces.isDefined
-                then
-                  eqtn :+= bind -> sum.labelʹ(using bind.identifier)
-                else
-                  eqtn :+= bind -> sum
+                eqtn :+= (bind, _settings.traces.isDefined, sum)
             Some {
               Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
               ->
@@ -96,7 +92,7 @@ abstract class Encoding extends Calculus:
         }
     }
 
-  def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[(`⟦⟧`, Names)] =
+  def instantiation(using bindings: Bindings, duplications: Duplications, _scaling: Int): Parser[`⟦⟧`] =
     given Bindings = Bindings(bindings)
     regexMatch("""⟦(\d*)""".r) >> { m =>
       if _nest == 0 then _cache.clear()
@@ -118,27 +114,26 @@ abstract class Encoding extends Calculus:
           defn.values.reduce(_ ++ _).filterNot(_._2.term.isEmpty)
       } match
         case ((_, definition @ Definition(_, None, _, _, _))) :: Nil =>
-          choice <~ s"$grp1⟧" ^^ {
-            case (sum, free) =>
-              val xid = χ_id
-              duplications += xid -> (false, Map())
-              `⟦⟧`(definition, sum.flatten, xid) -> free
+          positioned(choice) <~ s"$grp1⟧" ^^ { sum =>
+            val xid = χ_id
+            duplications += xid -> (false, Map())
+            `⟦⟧`(definition, sum.flatten, xid).free = sum.free
           }
         case it =>
-          instance(it, s"$grp1⟧") <~ s"$grp1⟧"
+          positioned(instance(it, s"$grp1⟧") <~ s"$grp1⟧")
     } >> {
-      case (exp @ `⟦⟧`(Definition(code, _, constants, variables, _), _, _, _), free) =>
-        opt( pointers ) ^^ { _.getOrElse(Nil -> Names()) } ^^ { (pointersʹ, freeʹ) =>
-          if pointersʹ.size > variables.size
+      case exp @ `⟦⟧`(Definition(code, _, constants, variables, _), _, _, _) =>
+        opt( pointers ) ^^ { _.getOrElse(Nil -> Names()) } ^^ { (pointers, free) =>
+          if pointers.size > variables.size
           then
-            warn(throw TooManyPointersParsingException(code, pointersʹ.size - variables.size))
+            warn(throw TooManyPointersParsingException(code, pointers.size - variables.size))
           try
             given MutableList[(Symbol, Symbol)]()
             val expʹ = exp.rename()(id, sπ_id)
             nest(false)
             bindings ++= purged
-            PendingOccurrence(freeʹ)(using bindings)
-            expʹ.copy(pointers = pointersʹ) -> (free ++ constants ++ freeʹ)
+            PendingOccurrence(free)(using bindings)
+            expʹ.cc(pointers = pointers).free = exp.free ++ constants ++ free
           catch
             case it: NoBPEx => throw NoBindingParsingException(_code, _nest, it.getMessage)
             case it => throw it
@@ -146,7 +141,7 @@ abstract class Encoding extends Calculus:
     }
 
   def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)]
+              (using Bindings, Duplications, Int): Parser[`⟦⟧`]
 
   def pointers: Parser[(List[Symbol], Names)] =
     "{"~>names<~"}" ^^ {
@@ -157,23 +152,23 @@ abstract class Encoding extends Calculus:
           λs.map(_.asSymbol) -> ns.reduce(_ ++ _)
     }
 
-  def capital: Parser[(`{}`, Names)] =
+  override def capital: Parser[`{}`] =
     IDENT ~ pointers ^^ {
       case identifier ~ ps =>
-        `{}`(identifier, ps._1) -> ps._2
+        `{}`(identifier, ps._1).free = ps._2
     } |
-    IDENT <~"{"<~"}" ^^ (`{}`(_, Nil) -> Names()) |
+    IDENT <~"{"<~"}" ^^ (`{}`(_, Nil)) |
     IDENT ~ ("("~>opt( names )<~")") ~ pointers ^^ {
       case identifier ~ Some(params) ~ ps =>
-        `{}`(identifier, ps._1, true, params.map(_._1)*) -> (ps._2 ++ params.map(_._2).reduce(_ ++ _))
+        `{}`(identifier, ps._1, true, params.map(_._1)*).free = ps._2 ++ params.map(_._2).reduce(_ ++ _)
       case identifier ~ _ ~ ps =>
-        `{}`(identifier, ps._1, true) -> ps._2
+        `{}`(identifier, ps._1, true).free = ps._2
     } |
     IDENT ~ ("("~>opt( names )<~")") <~"{"<~"}" ^^ {
       case identifier ~ Some(params) =>
-        `{}`(identifier, Nil, true, params.map(_._1)*) -> params.map(_._2).reduce(_ ++ _)
+        `{}`(identifier, Nil, true, params.map(_._1)*).free = params.map(_._2).reduce(_ ++ _)
       case identifier ~ _ =>
-        `{}`(identifier, Nil, true) -> Names()
+        `{}`(identifier, Nil, true)
     }
 
   protected final val _cache = Map[CacheKey, CacheValue]()
@@ -187,7 +182,7 @@ object Encoding:
 
   type CacheKey = ((Seq[Long], (String, Either[String, String])), Int)
 
-  private type CacheValue = (+ | `⟦⟧`, ((Any, Any), Any), Names, Bindings, Encoding#Input)
+  private type CacheValue = (+ | `⟦⟧`, ((Any, Any), Any), Bindings, Encoding#Input)
 
   case class Macro(parameters: List[Symbol],
                    arity: Int,
@@ -230,6 +225,7 @@ object Encoding:
               replace: (+ | `⟦⟧` => + | `⟦⟧`) ?=> + => +)
              (id: => String, sπ_id: => String)
              (using duplications: Duplications)
+             (using Int => (Int, Int))
              (using Bindings): `⟦⟧` =
       if dups
       then
@@ -242,7 +238,7 @@ object Encoding:
         }
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
           def count(ast: AST): Unit =
-            ast.foreach(count) {
+            ast.foreachʹ() {
               case it: `⟦⟧` if ids.contains(it.xid) =>
                 duplications += it.xid -> (true -> duplications(it.xid)._2)
                 count(it.sum)
@@ -261,7 +257,7 @@ object Encoding:
             case t => throw t
         }
         def reset(ast: AST): Unit =
-          ast.foreach(reset) {
+          ast.foreachʹ() {
             case it: `⟦⟧` if ids.contains(it.xid) =>
               duplications += it.xid -> (false -> duplications(it.xid)._2)
               reset(it.sum)
@@ -450,64 +446,64 @@ object Encoding:
 
       ast.mapʹʹ(rename(_)) {
 
-        case `.`(end, prefixes*) =>
+        case it @ `.`(end, prefixes*) =>
           val n = refresh.size
-          val prefixesʹ = prefixes.map {
-            case ν(_names*) =>
+          val prefixesʹ: Seq[Pre] = prefixes.map {
+            case it @ ν(_names*) =>
               val names = _names.map(Symbol(_)).map(rebind(_))
-              ν(names.map(_.asSymbol.name)*)
+              it.cc(names = names.map(_.asSymbol.name))
             case it @ τ(_, given Option[Code]) =>
-              it.copy(code = recoded)(sπ_id)
+              it.cc(code = recoded)(sπ_id)
             case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), _, given Option[Code]) =>
               val paramsʹ = params.map {
                 case par @ λ(Symbol("")) => par
                 case λ(par: Symbol) => rebind(par)
               }
-              it.copy(channel = renamed(ch), name = λ(paramsʹ), code = recoded)(sπ_id)
+              it.cc(channel = renamed(ch), name = λ(paramsʹ), code = recoded)(sπ_id)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), name = rebind(par), code = recoded)(sπ_id)
+              it.cc(channel = renamed(ch), name = rebind(par), code = recoded)(sπ_id)
             case it @ π(λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), name = renamed(arg), code = recoded)(sπ_id)
+              it.cc(channel = renamed(ch), name = renamed(arg), code = recoded)(sπ_id)
             case it @ π(λ(ch: Symbol), λ(term: Term), None, _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), name = renamed(term), code = recoded)(sπ_id)
+              it.cc(channel = renamed(ch), name = renamed(term), code = recoded)(sπ_id)
             case it @ π(λ(ch: Symbol), _, None, _, given Option[Code]) =>
-              it.copy(channel = renamed(ch), code = recoded)(sπ_id)
+              it.cc(channel = renamed(ch), code = recoded)(sπ_id)
             case _ => ??? // caught by parser
           }
           val endʹ = rename(end)
           refresh.dropInPlace(refresh.size - n)
-          `.`(endʹ, prefixesʹ*) -> true
+          it.cc(end = endʹ, prefixes = prefixesʹ) -> true
 
         case it @ ?:(((λ(lhs: Symbol), λ(rhs: Symbol)), m), _, _) =>
-          it.copy(cond = ((renamed(lhs), renamed(rhs)), m))
+          it.cc(cond = ((renamed(lhs), renamed(rhs)), m))
 
         case it @ ?:(((λ(lhs: Symbol), rhs), m), _, _) =>
-          it.copy(cond = ((renamed(lhs), rhs), m))
+          it.cc(cond = ((renamed(lhs), rhs), m))
 
         case it @ ?:(((lhs, λ(rhs: Symbol)), m), _, _) =>
-          it.copy(cond = ((lhs, renamed(rhs)), m))
+          it.cc(cond = ((lhs, renamed(rhs)), m))
 
         case it @ !(_, _, Some(τ @ τ(_, given Option[Code])), _) =>
-          it.copy(guard = Some(τ.copy(code = recoded)('!' + sπ_id)))
+          it.cc(guard = Some(τ.cc(code = recoded)('!' + sπ_id)))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), _, given Option[Code])), sum) =>
           val n = refresh.size
-          val πʹ = π.copy(channel = renamed(ch), name = rebind(par), code = recoded)('!' + sπ_id)
+          val πʹ = π.cc(channel = renamed(ch), name = rebind(par), code = recoded)('!' + sπ_id)
           val sumʹ = rename(sum)
           refresh.dropInPlace(refresh.size - n)
-          it.copy(guard = Some(πʹ), sum = sumʹ) -> true
+          it.cc(guard = Some(πʹ), sum = sumʹ) -> true
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(arg: Symbol), None, _, given Option[Code])), _) =>
-          val πʹ = π.copy(channel = renamed(ch), name = renamed(arg), code = recoded)('!' + sπ_id)
-          it.copy(guard = Some(πʹ))
+          val πʹ = π.cc(channel = renamed(ch), name = renamed(arg), code = recoded)('!' + sπ_id)
+          it.cc(guard = Some(πʹ))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), λ(term: Term), None, _, given Option[Code])), _) =>
-          val πʹ = π.copy(channel = renamed(ch), name = renamed(term), code = recoded)('!' + sπ_id)
-          it.copy(guard = Some(πʹ))
+          val πʹ = π.cc(channel = renamed(ch), name = renamed(term), code = recoded)('!' + sπ_id)
+          it.cc(guard = Some(πʹ))
 
         case it @ !(_, _, Some(π @ π(λ(ch: Symbol), _, None, _, given Option[Code])), _) =>
-          val πʹ = π.copy(channel = renamed(ch), code = recoded)('!' + sπ_id)
-          it.copy(guard = Some(πʹ))
+          val πʹ = π.cc(channel = renamed(ch), code = recoded)('!' + sπ_id)
+          it.cc(guard = Some(πʹ))
 
         case _: ! => ??? // caught by parser
 
@@ -533,7 +529,7 @@ object Encoding:
             else
               xid
           val pointersʹ = pointers.map(renamed(_).asSymbol)
-          it.copy(definition = dfnʹ, sum = sumʹ, xid = xidʹ, pointers = pointersʹ) -> true
+          it.cc(definition = dfnʹ, sum = sumʹ, xid = xidʹ, pointers = pointersʹ) -> true
 
         case it @ `{}`(_, pointers, _, params*) =>
           val pointersʹ = pointers.map(renamed(_).asSymbol)
@@ -542,7 +538,7 @@ object Encoding:
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-          it.copy(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointersʹ, params = paramsʹ)
 
         case it @ `(*)`(_, params*) =>
           val paramsʹ: Seq[λ] = params
@@ -550,7 +546,7 @@ object Encoding:
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-          it.copy(params = paramsʹ)
+          it.cc(params = paramsʹ)
 
         case it => it
 

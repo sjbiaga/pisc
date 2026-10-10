@@ -31,7 +31,7 @@ class RollingQuantileAccumulator(topic: String, profile: String)
   override def open(openContext: org.apache.flink.api.common.functions.OpenContext): Unit =
     baseMetricGroup = getRuntimeContext
       .getMetricGroup
-      .addGroup("bioambients_flink4traces_cdf")
+      .addGroup("stochasticpicalculus_flink4traces_cdf")
       .addGroup("topic", topic)
       .addGroup("profile", profile)
 

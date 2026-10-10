@@ -166,7 +166,7 @@ package object sweepline:
             )
 
             // Instantiate the Chart instance directly on the mutable reference pointer
-            chartRef.value_=(Chart(currentCanvas, chartConfig))
+            chartRef.value = Chart(currentCanvas, chartConfig)
           else
             // If the instance already exists, modify the properties and trigger a visual update
             val activeChart = chartRef.value

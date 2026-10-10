@@ -1,6 +1,6 @@
 docker exec -it flink-jobmanager flink run \
   -c pisc.flink4traces.cdf.Main \
-  /opt/flink/usrlib/flink-functions4traces-StochastiPiCalculus2Scala-assembly-1.0.jar \
+  /opt/flink/usrlib/flink-functions4traces-StochasticPiCalculus2Scala-assembly-1.0.jar \
   --bootstrap-servers kafka:29092 \
   --schema-registry http://schema-registry:8081 \
   --allowed-lateness 5000 \

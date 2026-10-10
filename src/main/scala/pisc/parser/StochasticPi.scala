@@ -39,6 +39,8 @@ import scala.collection.mutable.{
 import scala.meta.{ Lit, Term }
 import scala.meta.dialects.Scala3
 
+import io.circe.{ Codec, Encoder, Json }
+
 import StochasticPi.*
 import Calculus.*
 import Directive.Settings
@@ -49,12 +51,14 @@ import Expansion.Duplications
 
 abstract class StochasticPi extends Expression:
 
-  def μ: Parser[(μ, (Names, Names))] =
+  def μ: Parser[μ] = μʹ ^^ (_.asInstanceOf[μ])
+
+  private def μʹ: Parser[Pre] =
     "τ"~opt("@"~>rate) ~ opt( expression ) ^^ { // silent prefix
       case _ ~ r ~ code =>
         val free = code.map(_._2).getOrElse(Names())
         val rʹ = Some(r.getOrElse(None))
-        τ(rʹ, code.map(_._1))(sπ_id) -> (Names(), free)
+        τ(rʹ, code.map(_._1))(sπ_id).free = free
     } |
     name ~ opt("@"~>rate) ~ ("<"~>opt("ν")~name<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _  if !ch.isSymbol =>
@@ -64,11 +68,11 @@ abstract class StochasticPi extends Expression:
       case (ch, name) ~ r ~  (ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, rʹ, Some(it))(sπ_id) -> (bound, name ++ (free ++ freeʹ &~ bound))
+        (π(ch, arg, polarity = ν, rʹ, Some(it))(sπ_id).bound = bound).free = name ++ (free ++ freeʹ &~ bound)
       case (ch, name) ~ r ~ (ν ~ (arg, free)) ~ _ =>
         val rʹ = Some(r.getOrElse(None))
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, rʹ, None)(sπ_id) -> (bound, name ++ (free &~ bound))
+        (π(ch, arg, polarity = ν, rʹ, None)(sπ_id).bound = bound).free = name ++ (free &~ bound)
     } |
     name ~ opt("@"~>rate) ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -80,7 +84,7 @@ abstract class StochasticPi extends Expression:
       case (ch, name) ~ r ~ (par, bound) ~ code =>
         val free = code.map(_._2).getOrElse(Names())
         val rʹ = Some(r.getOrElse(None))
-        π(ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id) -> (bound, name ++ free)
+        (π(ch, par, polarity = Some(""), rʹ, code.map(_._1))(sπ_id).bound = bound).free = name ++ free
     } |
     name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -105,7 +109,7 @@ abstract class StochasticPi extends Expression:
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, args, polarity = Some(cons), None, code.map(_._1))("") -> (bound, name ++ (free &~ bound))
+        (π(ch, args, polarity = Some(cons), None, code.map(_._1))("").bound = bound).free = name ++ (free &~ bound)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -176,7 +180,7 @@ abstract class StochasticPi extends Expression:
 
   protected val emitter: Emitter
 
-  private[parser] var eqtn: List[Bind] = null
+  private[parser] var eqtn: List[Bindʹ] = null
   private[parser] var defn: Map[Int, List[Define]] = null
   private[parser] var self: Set[Int] = null
   protected var _nest = -1
@@ -312,11 +316,11 @@ object StochasticPi:
 
   trait Act(fun: () => String):
     val rate: Option[Any]
-    final def id = fun()
+    final def id: String = fun()
     final lazy val υidυ: String = id
 
   object Act:
-    def unapply(self: Pre): Option[Boolean] =
+    def unapply(self: Pre): Some[Boolean] =
       self match
         case it: Act => Some(it.rate.isDefined)
         case _ => Some(false)
@@ -337,6 +341,29 @@ object StochasticPi:
       .map(_.asSymbol)
     )
     def apply(names: Names): Names = Set.from(names)
+
+
+  trait Bound:
+    private var _bound = Names()
+    inline final def bound = _bound
+    inline final def bound_=(bound: Names): this.type =
+      _bound = bound
+      this
+
+  object Bound:
+
+    given Encoder[Bound] = it => Json.obj("bound" -> Json.fromValues(it.bound.map(_.name).map(Json.fromString)))
+
+  trait Free:
+    private var _free = Names()
+    inline final def free = _free
+    inline final def free_=(free: Names): this.type =
+      _free = free
+      this
+
+  object Free:
+
+    given Encoder[Free] = it => Json.obj("free" -> Json.fromValues(it.free.map(_.name).map(Json.fromString)))
 
 
   // exceptions
@@ -375,8 +402,9 @@ object StochasticPi:
 
       ast.map(_.shallow) {
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, (params ++ pointers.map(λ(_)))*)
+        case it @ `{}`(identifier, pointers, true, params*) =>
+          val paramsʹ = pointers.map(λ(_))
+          `(*)`(identifier, (params ++ paramsʹ)*)(using it.lc).setPos(it.pos).free = it.free ++ Names(paramsʹ*)
 
         case it => it
 
@@ -393,10 +421,10 @@ object StochasticPi:
              plugins: List[Settings.Plugin] = Nil
   ) extends Expansion:
 
-    def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
+    def line(using Duplications): Parser[Either[Bindʹ, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
 
-    private def ensure(implicit prog: List[Bind]): Unit =
+    private def ensure(implicit prog: List[Bindʹ]): Unit =
       import helper.Ensure.*
 
       val i = main
@@ -406,7 +434,7 @@ object StochasticPi:
       given rec: Map[(String, Int), Int] = Map()
       given rep: Map[Int, Int] = Map()
 
-      prog(i)._2.recursive(using "Main" -> 0 :: Nil)
+      prog(i)._3.recursive(using "Main" -> 0 :: Nil)
 
       if rec.contains("Main" -> 0) then throw MainParsingExceptionʹ
 
@@ -430,70 +458,77 @@ object StochasticPi:
 
     extension [T <: AST](ast: T)
 
-      def parse(using excluded: Map[String, Actions], τ_rate: Long): (T, Actions) =
+      inline def τ: Calculus.Pre.τ =
+        import Cast.given
+        Calculus.Pre.τ(Some(-1L), None)(sπ_id)(using ast.lc).setPos(ast.pos)
+
+      def parse(using excluded: Map[String, Actions]): (T, Actions) =
 
         inline given Conversion[AST, T] = _.asInstanceOf[T]
 
-        inline def τ: Calculus.Pre.τ = Calculus.Pre.τ(Some(τ_rate), None)(sπ_id)
+        extension [S](self: `.` & S)
+          def append_τ(end: + | -, ps: Pre*): (S, Actions) =
+            val psʹ = ps :+ end.τ
+            self.cc(end = end, prefixes = psʹ).asInstanceOf[S] -> Actions(psʹ*)
 
-        def insert[S](end: + | -, ps: Pre*): (S, Actions) =
-          val psʹ = ps :+ τ
-          `.`(end, psʹ*).asInstanceOf[S] -> Actions(psʹ*)
-
-        def insert_+(sum: +): + =
-          val (seq, enabled) = insert[`.`](sum)
-          `+`(-1, ∥(-1, seq)).enabled = enabled
+        extension (self: +)
+          def prepend_τ: + =
+            val (pos, free) = self.pos -> self.free
+            val (seq, enabled) = (`.`(self).setPos(pos).free = free).append_τ(self)
+            val par = ∥(-1, seq).setPos(pos).free = free
+            val sum = `+`(-1, par).setPos(pos).free = free
+            sum.enabled = enabled
 
         ast match
 
           case ∅() =>
 
-            ast match
+            ast.runtimeChecked match
 
                case it: + =>
                  (it.enabled = nil, it.enabled)
 
           case it: + =>
-            val sum = it.choices.foldLeft(`+`(it.scaling).enabled = nil) {
+            val sum = it.choices.foldLeft(it.cc(choices = Nil).enabled = nil) {
               case (sum: +, par) =>
                 val (parʹ, enabledʹ) = par.parse
                 assert(enabledʹ.nonEmpty)
                 assert((sum.enabled & enabledʹ).isEmpty)
-                `+`(sum.scaling, (sum.choices :+ parʹ)*).enabled = sum.enabled ++ enabledʹ
+                sum.cc(choices = sum.choices :+ parʹ).enabled = sum.enabled ++ enabledʹ
             }
             (sum, sum.enabled)
 
           case it: ∥ =>
-            val (par, enabled) = it.components.foldLeft((∥(it.scaling), nil)) {
+            val (par, enabled) = it.components.foldLeft((it.cc(components = Nil), nil)) {
               case ((par: ∥, enabled), seq) =>
                 val (seqʹ, enabledʹ) = seq.parse
                 assert(enabledʹ.nonEmpty)
                 assert((enabled & enabledʹ).isEmpty)
-                (∥(par.scaling, (par.components :+ seqʹ)*), enabled ++ enabledʹ)
+                (par.cc(components = par.components :+ seqʹ), enabled ++ enabledʹ)
             }
             (par, enabled)
 
-          case `.`(end, ps*) =>
-            val (it, enabled) = end.parse
+          case it @ `.`(end, ps*) =>
+            val (endʹ, enabled) = end.parse
 
             if Actions(ps*).nonEmpty
             then
-              (`.`(it, ps*), Actions(ps*))
+              (it.cc(end = endʹ), Actions(ps*))
             else if enabled.nonEmpty
             then
-              (`.`(it, ps*), enabled)
+              (it.cc(end = endʹ), enabled)
             else
-              assert(it.isInstanceOf[+] && it.asInstanceOf[+].isVoid || it.isInstanceOf[`(*)`])
-              insert(it, ps*)
+              assert(endʹ.isInstanceOf[+] && endʹ.asInstanceOf[+].isVoid || endʹ.isInstanceOf[`(*)`])
+              it.append_τ(endʹ, ps*)
 
-          case ?:(c, _t, _f) =>
+          case it @ ?:(_, _t, _f) =>
             def _t_f(_sum: +): + =
               val (sum, _) = _sum.parse
 
               if sum.enabled.isEmpty
               || sum.enabled.exists(excluded.contains(_))
               then
-                insert_+(sum)
+                sum.prepend_τ
               else
                 sum
 
@@ -506,33 +541,38 @@ object StochasticPi:
             assert(f.map(_.enabled.nonEmpty).getOrElse(true))
 
             assert((t.enabled & f.map(_.enabled).getOrElse(nil)).isEmpty)
-            (?:(c, t, f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
+            (it.cc(t = t, f = f), t.enabled ++ f.map(_.enabled).getOrElse(nil))
 
-          case !(parallelism, pace, Some(μ), sum) =>
-            val (it, _) = sum.parse
-            (`!`(parallelism, pace, Some(μ), it), Actions(μ))
+          case it @ !(_, _, Some(μ), sum) =>
+            val (sumʹ, _) = sum.parse
+            (it.cc(sum = sumʹ), Actions(μ))
 
-          case !(parallelism, pace, _, sum) =>
-            val τʹ: τ = τ
-            `!`(parallelism, pace, Some(τʹ.copy()('!' + τʹ.υidυ)), sum).parse
+          case it: ! =>
+            val τʹ: τ = it.τ
+            it.cc(guard = Some(τʹ.cc()('!' + τʹ.υidυ))).parse
 
-          case `⟦⟧`(definition @ Definition(_, _, _, variables, _), _sum, xid, pointers) =>
+          case it @ `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
             val n = pointers.size
 
-            val sum: + =
+            val sum =
               if variables.size == n
               then
                 _sum
               else
-                `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+                val names = variables.drop(n)
+                val (pos, free) = (_sum.pos, _sum.free -- names)
+                val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
+                val seq = `.`(_sum, νʹ).setPos(pos).free = free
+                val par = ∥(-1, seq).setPos(pos).free = free
+                `+`(-1, par).setPos(pos).free = free
 
-            var (it, _) = sum.parse
+            var (sumʹ, _) = sum.parse
 
-            if it.enabled.isEmpty
+            if sumʹ.enabled.isEmpty
             then
-              it = insert_+(it)
+              sumʹ = sumʹ.prepend_τ
 
-            (`⟦⟧`(definition, it, xid, pointers), it.enabled)
+            (it.cc(sum = sumʹ), sumʹ.enabled)
 
           case _: `{}` => ???
 
@@ -667,54 +707,94 @@ object StochasticPi:
 
         }(_ ++ _)
 
-    def apply(prog: List[Bind]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
+
+    def apply(prog: List[Bindʹ]): (List[Bind], (Map[String, Actions], Map[String, Actions], Map[String, Actions])) =
 
       given excluded: Map[String, Actions] = Map()
 
-      given Long = if _settings.traces.isDefined then 0L else -1L
-
-      given List[Bind] = prog.map(_ -> _.shallow.parse._1)
+      given List[Bindʹ] = prog.map {
+        case it @ (`(*)`("Main"), _, _sum @ ∅()) =>
+          val pos = _sum.pos
+          val sum = `+`(-1, ∥(-1, `.`(_sum, _sum.τ).setPos(pos)).setPos(pos)).setPos(pos)
+          it.copy(_3 = sum.parse._1)
+        case it =>
+          it.copy(_3 = it._3.shallow.parse._1)
+      }
 
       ensure
 
-      val discarded = Map[String, Actions]()
+      given List[Bind] =
+        given_List_Bindʹ
+          .map {
+            case (bind, _, it @ ∅()) =>
+              bind -> it
+            case (bind, true, sum) =>
+              bind -> sum.labelʹ(using bind.identifier + '#' + bind.params.size)
+            case (bind, _, sum) =>
+              bind -> sum
+          }
+
+      val relabeling = Map[String, String]()
+
+      given_List_Bind
+        .foreach {
+          case (_, ∅()) =>
+          case (_, sum) =>
+            def index(end: + | -): Unit =
+              end.foreachʹ() {
+                case `.`(end, ps*) =>
+                  ps.foreach {
+                    case it: Act =>
+                      val key = it.υidυ
+                      val i = key.indexOf(',')
+                      if i >= 0
+                      then
+                        relabeling(key.substring(0, i)) = key
+                    case _ =>
+                  }
+                  index(end)
+                case !(_, _, Some(it), sum) =>
+                  val key = it.υidυ
+                  val i = key.indexOf(',')
+                  if i >= 0
+                  then
+                    relabeling(key.substring(0, i)) = key
+                  index(sum)
+              }
+            index(sum)
+        }
+
+      given_List_Bind
+        .tapEach {
+          _._2.foreach {
+            case sum: + =>
+              sum.enabled = sum.enabled.map { key => relabeling.getOrElse(key, key) }
+            case _ =>
+          }
+        }
 
       excluded.clear()
 
+      val discarded = Map[String, Actions]()
+
       val enabled = Map[String, Actions]()
 
-      if _settings.traces.isDefined
-      then
-        val traces = _settings.traces
-        _settings.traces = None
-        given Boolean = true
-        val prog =
-          given_List_Bind
-            .map {
-              case it @ (_, ∅()) => it
-              case (bind @ `(*)`(given String, _*), sum) =>
-                bind -> sum.labelʹ
-            }
-        val r = apply(prog)
-        _settings.traces = traces
-        r
-      else
-        given_List_Bind
-          .tapEach {
-            case (_, sum) =>
-              sum.split(using discarded -> excluded)
+      given_List_Bind
+        .tapEach {
+          case (_, sum) =>
+            sum.split(using discarded -> excluded)
 
-              sum.graph.foreach { (s, t) =>
-                if !enabled.contains(s.υidυ)
-                then
-                  enabled(s.υidυ) = nil
-                t match
-                  case it: Act =>
-                    enabled(s.υidυ) += it.υidυ
-                  case it: Sum =>
-                    enabled(s.υidυ) ++= it.enabled
-              }
-          } -> (discarded, excluded, enabled)
+            sum.graph.foreach { (s, t) =>
+              if !enabled.contains(s.υidυ)
+              then
+                enabled(s.υidυ) = nil
+              t match
+                case it: Act =>
+                  enabled(s.υidυ) += it.υidυ
+                case it: Sum =>
+                  enabled(s.υidυ) ++= it.enabled
+            }
+        } -> (discarded, excluded, enabled)
 
 
     private var i: Int = -1
@@ -722,7 +802,8 @@ object StochasticPi:
     override def ln: String = if l._1 == l._2 then s"line #${l._2}" else s"lines #${l._1}-#${l._2}"
 
     protected def _init: Unit =
-      _settings = Settings(parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins))
+      _settings = Settings(elastic4s = Settings.Elastic4s("http", address),
+                           parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins))
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -733,8 +814,9 @@ object StochasticPi:
       _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+      _last = None
 
-    def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
+    def apply(source: Source, errors: Boolean = false): List[Either[String, Bindʹ]] =
       _init
       _settings.werr = errors
 
@@ -743,11 +825,21 @@ object StochasticPi:
       val r =
         (source.getLines() ++ Some(""))
           .zipWithIndex
-          .foldLeft(List[(String, (Int, Int))]() -> false) {
-            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          .foldLeft(List[((Int, Int), List[String])]() -> false) {
+            case ((r, false), (t, n)) => (r :+ ((n, n) -> List(t.stripSuffix("\\")))) -> t.endsWith("\\")
+            case ((r, true), (t, n))  => (r.init :+ ((r.last._1._1, n) -> (r.last._2 :+ t.stripSuffix("\\")))) -> t.endsWith("\\")
           }._1
-          .flatMap { case (it, (m, n)) =>
+          .flatMap { case ((m, n), itʹ) =>
+            lc = { col =>
+              var i = 0
+              var l = 0
+              while itʹ(i).length + l < col
+              do
+                l += itʹ(i).length
+                i += 1
+              (m+i+1, (if l == 0 then col else col%l)+1)
+            }
+            val it = itʹ.mkString
             l = (m+1, n+1)
             if it.matches("^[ ]*#.*") // commented lines
             || it.isBlank // empty lines
@@ -783,7 +875,7 @@ object StochasticPi:
                   scala.sys.error(failure.msg)
           }
           .filter {
-            case Right((`(*)`(s"Self_$n", _*), _))
+            case Right((`(*)`(s"Self_$n", _*), _, _))
                 if { try { n.toInt; true } catch _ => false } =>
               self.contains(n.toInt)
             case _ => true
@@ -796,13 +888,16 @@ object StochasticPi:
           else
             r
         ).filter {
-          case Right((`(*)`(s"Self_$n", _*), _))
+          case Right((`(*)`(s"Self_$n", _*), _, _))
               if { try { n.toInt; true } catch _ => false } =>
             self.contains(n.toInt)
           case _ => true
         }
 
-      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
-      Right((`(*)`(null, λ(_settings.parameters.reify)), ∅()): Bind) ::
-      Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), ∅()): Bind) ::
+      _last = None
+
+      Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.elastic4s)), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.parameters.reify)), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), false, ∅()): Bindʹ) ::
       prog

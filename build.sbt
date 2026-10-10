@@ -16,7 +16,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(feedback, flink4traces, `ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `zio-main`, `zio-main_`, `ziof-main`, `ziof-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
+  .aggregate(feedback, beam4traces, flink4traces, `ce-main`, `ce-main_`, `cef-main`, `cef-main_`, `zio-main`, `zio-main_`, `ziof-main`, `ziof-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "Stochastic π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -27,7 +27,7 @@ lazy val root = (project in file("."))
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
     commands += spin,
-    libraryDependencies ++= Seq(scalameta, parsercombinators, ip4s, munit % Test)
+    libraryDependencies ++= Seq(scalameta, parsercombinators, circe, ip4s, munit % Test) ++ elastic4s
   )
 
 lazy val feedback = (project in file("feedback"))
@@ -41,6 +41,17 @@ lazy val feedback = (project in file("feedback"))
     scalaVersion := "3.10.0-RC3",
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
     scalaJSUseMainModuleInitializer := true
+  )
+
+lazy val beam4traces = (project in file("beam4traces"))
+  .settings(
+    name := "beam-functions4traces-StochasticPiCalculus2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "2.13.18",
+    scalacOptions ++= scala2Opts, // :+ "-Xprint:typer",
   )
 
 lazy val flink4traces = (project in file("flink4traces"))
@@ -106,7 +117,7 @@ lazy val `ce-main_` = (project in file("ce/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `cef-main` = (project in file("cef/main"))
@@ -134,7 +145,7 @@ lazy val `cef-main_` = (project in file("cef/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, catseffect, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `zio-main` = (project in file("zio/main"))
@@ -274,7 +285,7 @@ lazy val `fs2-main_` = (project in file("fs2/main_"))
     scalaVersion := "3.10.0-RC3",
     crossScalaVersions ++= Seq("2.13.18", "3.10.0-RC3"),
     scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
-    libraryDependencies ++= Seq(breeze, scaffeine, fs2, circe, munit % Test) ++ http4s
+    libraryDependencies ++= Seq(breeze, scaffeine, fs2, circe, fs2circe, munit % Test) ++ http4s
   )
 
 lazy val `zs-main` = (project in file("zs/main"))

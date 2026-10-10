@@ -28,12 +28,12 @@ object CommandSPin {
     val A = Seq("127.0.0.1", "localhost").map("-A" + _)
     val F = Seq("cats.effect.IO", "zio.Task").map("-F" + _)
     val P = "-P" + Int.MaxValue
-    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf")),
-                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf")),
-                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf")),
-                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf"),
+    val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse") ++ F),
+                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse"),
                    "-kk" -> (Seq(P) ++ (0 to 1).map("-O" + _))
                )
 

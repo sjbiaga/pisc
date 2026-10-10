@@ -384,8 +384,8 @@ package object `Π-stats`:
       .sortBy(_._2)
       .map(_._1)
       .headOption match
-         case None => acc.reverse
-         case Some(it @ (key1, key2, _, (delay, pins))) =>
+        case None => acc.reverse
+        case Some(it @ (key1, key2, _, (delay, pins))) =>
           if whatIfPlugin
           then
             val diff = Λʹ - Λ

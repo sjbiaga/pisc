@@ -250,11 +250,11 @@ package object sΠ:
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
                                               (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key)(body)
-     else
-       apply("*")(false)(parallelism, rate, IO.delay(value))(key)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(parallelism, rate, value.asInstanceOf[`()`])(key)(body)
+      else
+        apply("*")(false)(parallelism, rate, IO.delay(value))(key)(body)
 
     /**
       * linear variable replication output guard w/ pace
@@ -262,11 +262,11 @@ package object sΠ:
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
                                               (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(body)
-     else
-       apply("*")(false)(pace, parallelism, rate, IO.delay(value))(key)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(body)
+      else
+        apply("*")(false)(pace, parallelism, rate, IO.delay(value))(key)(body)
 
     /**
       * linear variable replication output guard w/ code
@@ -274,11 +274,11 @@ package object sΠ:
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
-     else
-       apply("*")(true)(parallelism, rate, IO.delay(value))(key)(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
+      else
+        apply("*")(true)(parallelism, rate, IO.delay(value))(key)(code)(body)
 
     /**
       * linear variable replication output guard w/ pace w/ code
@@ -286,11 +286,11 @@ package object sΠ:
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
                                              (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
-     else
-       apply("*")(true)(pace, parallelism, rate, IO.delay(value))(key)(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(pace, parallelism, rate, value.asInstanceOf[`()`])(key)(code)(body)
+      else
+        apply("*")(true)(pace, parallelism, rate, IO.delay(value))(key)(code)(body)
 
     /**
       * linear variable replication output guard

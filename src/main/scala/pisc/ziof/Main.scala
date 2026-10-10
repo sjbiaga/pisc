@@ -40,10 +40,15 @@ import dialects.Scala3
 
 import com.comcast.ip4s.{ host, Host, IpAddress, Hostname }
 
+import _root_.io.circe.syntax.*
+
 import parser.StochasticPi
-import parser.Calculus.`(*)`
-import parser.Directive.Settings.Plugin
+import parser.Calculus.{ `(*)`, λ }
+import parser.e4s.Bind.given
+import parser.e4s.Document
+import parser.Directive.Settings.{ Elastic4s, Plugin }
 import emitter.ziof.Program
+import emitter.ziof.Meta.{ \, \\ }
 
 
 object Main extends helper.Main:
@@ -55,10 +60,11 @@ object Main extends helper.Main:
     var P = Int.MaxValue
     var H = 0
     var T = 123456
-    var I = List.empty[Plugin]
     var E = true
+    var I = List.empty[Plugin]
+    var J = false
 
-    def spin(arg: String) =
+    def bain(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("pisc") + "scala.in").toString
       var source: Source = null
@@ -68,8 +74,7 @@ object Main extends helper.Main:
       val spi = StochasticPi.Main(StochasticPi.Emitter.ziof, in, A.toString, P, H, T, E, I)
 
       try
-        val root = if arg.startsWith("test") then "test" else "pisc"
-        source = Source.fromFile(s"$examples/$root/$in")
+        source = Source.fromFile(s"$examples/pisc/$in")
         fwr = FileWriter(out, UTF_8)
         bwr = BufferedWriter(fwr)
 
@@ -80,13 +85,31 @@ object Main extends helper.Main:
 
         val (prog, (discarded, excluded, enabled)) = spi(prog_.map(_._1))
 
-        val ps = Program.Main()(prog)
-        val is = prog_.drop(1+2).map(_._2).zipWithIndex.map(_.swap).toMap
+        val ps =
+          ( Defn.Val(Nil,
+                     Pat.Var("π-AST") :: Nil,
+                     Some(Type.Apply(\\("Option"), Type.ArgClause(\\("String") :: Nil))),
+                     if J
+                     then Term.Apply(\("Some"), Term.ArgClause(Lit.String(in.stripSuffix("pisc") + "json") :: Nil))
+                     else \("None")
+                    )
+          ) ::
+          ( prog.tail.tail.head match
+              case (`(*)`(_, λ(parameters: Term)), _) =>
+                Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
+          ) ::
+          ( prog.tail.tail.tail.head match
+              case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
+                Term.Assign(\("π-traces"), traces)
+          ) ::
+          Program.Main()(prog.drop(1+3))
 
-        val ls = bind.drop(1+2).filter(_._1.isLeft).map(_.left.get -> _)
+        val is = prog_.drop(1+3).map(_._2).zipWithIndex.map(_.swap).toMap
 
-        val code = ps.take(2).mkString("\n\n") + "\n\n"
-                 + (ps.drop(2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
+        val ls = bind.drop(1+3).filter(_._1.isLeft).map(_.left.get -> _)
+
+        val code = ps.take(1+2).mkString("\n\n") + "\n\n"
+                 + (ps.drop(1+2).zipWithIndex.map(_ -> is(_)) ++ ls.map(_.parse[Stat].get -> _))
                    .sortBy(_._2)
                    .map(_._1)
                    .mkString("\n\n")
@@ -110,8 +133,46 @@ object Main extends helper.Main:
         ).toString + "\n\n"
 
         bwr.write(magic + elvis + init + code, 0, magic.length + elvis.length + init.length + code.length)
+
+        if J
+        then
+          try
+            bwr.close()
+            fwr.close()
+          catch _.printStackTrace
+          finally
+            fwr = null
+            bwr = null
+          try
+            val ast = Paths.get(s"$examples/", in.stripSuffix("pisc") + "json").toString
+            fwr = FileWriter(ast, UTF_8)
+            bwr = BufferedWriter(fwr)
+            val json = prog.drop(1+3).asJson
+            val file = json.spaces2
+
+            bwr.write(file, 0, file.length)
+
+            prog.tail.head match
+              case (`(*)`(_, λ(it: Elastic4s)), _) =>
+                elastic4s(it, Document.build(prog.drop(1+3), json))
+
+          catch _.printStackTrace
+          finally
+            try
+              if bwr ne null then bwr.close()
+              if fwr ne null then fwr.close()
+            catch _.printStackTrace
+            finally
+              fwr = null
+              bwr = null
+
       catch t =>
-        Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage + ".")
+        spi.last match
+          case Some(((it, isMacroExpansion), (line, col))) =>
+            Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage
+                              + s""".\nLast known parse${if isMacroExpansion then " (from macro expansion) " else " "}at line #$line, column #$col.\n$it""")
+          case _ =>
+            Console.err.println(s"Error in file `$in' ${spi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()
@@ -125,6 +186,7 @@ object Main extends helper.Main:
       case "-T" => T = 123456
       case "-E" => E = true
       case "-I" => I = Nil
+      case "-J" => J = false
       case it if it.startsWith("-A") => A = IpAddress.fromString(it.substring(2))
                                                      .orElse(Hostname.fromString(it.substring(2)))
                                                      .getOrElse(host"localhost")
@@ -133,5 +195,67 @@ object Main extends helper.Main:
       case it if it.startsWith("-T") => T = it.substring(2).toInt
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-I") => I :::= it.substring(2).split(",").toList.map(Plugin.valueOf)
-      case it => spin(it)
+      case it if it.startsWith("-J") => J = it.substring(2).toBoolean
+      case it => bain(it)
     }
+
+
+  object elastic4s extends ((Elastic4s, Document) => Unit):
+
+    import java.net.http.HttpClient
+    import java.security.cert.X509Certificate
+    import java.security.SecureRandom
+    import javax.net.ssl.{ SSLContext, TrustManager, X509TrustManager }
+
+    import scala.concurrent.duration.Duration
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.Future
+
+    import com.sksamuel.elastic4s.{ Authentication, CommonRequestOptions, ElasticClient, ElasticNodeEndpoint }
+    import com.sksamuel.elastic4s.circe.*
+    import com.sksamuel.elastic4s.ElasticDsl.*
+    import com.sksamuel.elastic4s.sttp4.SttpRequestHttpClient
+
+    import sttp.monad.{ FutureMonad, MonadError }
+    import sttp.client4.Backend
+    import sttp.client4.httpclient.HttpClientFutureBackend
+
+    // Create a trust manager that does not validate certificate chains
+    val trustAllCerts = Array[TrustManager](new X509TrustManager {
+      def getAcceptedIssuers: Array[X509Certificate] = null
+      def checkClientTrusted(certs: Array[X509Certificate], authType: String): Unit = {}
+      def checkServerTrusted(certs: Array[X509Certificate], authType: String): Unit = {}
+    })
+
+    val sslContext = SSLContext.getInstance("TLS")
+    sslContext.init(null, trustAllCerts, new SecureRandom())
+
+    val httpClient = HttpClient.newBuilder()
+      .sslContext(sslContext)
+      .build()
+
+    val index = s"stochasticpicalculus_$examples"
+
+    given Backend[Future] = HttpClientFutureBackend.usingClient(httpClient)
+
+    given MonadError[Future] = new FutureMonad()
+
+    override def apply(it: Elastic4s, doc: Document): Unit = it match {
+      case Elastic4s("https", host, port, Some(username), Some(password)) =>
+        ElasticClient(new SttpRequestHttpClient(ElasticNodeEndpoint("https", host, port, None)))
+     -> CommonRequestOptions.defaults.copy(authentication = Authentication.UsernamePassword(username, password))
+      case Elastic4s(_, host, port, _, _) =>
+        ElasticClient(new SttpRequestHttpClient(ElasticNodeEndpoint("http", host, port, None)))
+     -> CommonRequestOptions.defaults
+    } match
+        case (client, given CommonRequestOptions) =>
+          given Duration = Duration.Inf
+
+          val exists = client.execute(indexExists(index)).await
+
+          if exists.isSuccess && (exists.result.isExists || client.execute(createIndex(index).mapping(properties(Document.schema))).await.isSuccess)
+          then
+            val into = client.execute(indexInto(index).source(doc)).await
+            if into.isSuccess
+            then
+              println(s"GET /$index/_source/${into.result.id}")

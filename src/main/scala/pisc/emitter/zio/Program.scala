@@ -40,6 +40,8 @@ import zio.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -111,8 +113,8 @@ object Program:
 
         // SEQUENCE ////////////////////////////////////////////////////////////
 
-        case `.`(end, ps*) =>
-          * = (ps :+ end).foldLeft(*)(_ ::: _.emit)
+        case `.`(end, it*) =>
+          * = ((it :+ end): Seq[Pre | AST]).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -536,20 +538,12 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
+        case `⟦⟧`(Definition(_, _, _, variables, _), sum, _, pointers) =>
           * = (variables zip pointers)
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
-
-          val n = pointers.size
-
-          val sum = if (variables.size == n)
-                    then
-                      _sum
-                    else
-                      `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
           * = * ::: sum.emit
 
@@ -581,16 +575,7 @@ object Program:
       given (Enumerator.Generator, Term.Name) =
         (`* <- *`(`^-υidυ` -> \("π-uuid")), \(`^-υidυ`))
 
-      ( prog.tail.head match
-          case (`(*)`(_, λ(parameters: Term)), _) =>
-            Defn.Val(Nil, Pat.Var("π-parameters") :: Nil, None, parameters)
-      ) ::
-      ( prog.tail.tail.head match
-          case (`(*)`(_, λ(traces: (Lit.Null | Term))), _) =>
-            Term.Assign(\("π-traces"), traces)
-      ) ::
       prog
-        .drop(1+2)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

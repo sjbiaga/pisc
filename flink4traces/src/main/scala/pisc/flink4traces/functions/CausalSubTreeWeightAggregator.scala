@@ -44,8 +44,9 @@ class CausalSubTreeWeightAggregator(allowedLatenessMs: Long,
     then
       observedState.update(0L)
 
-    value.plugins.find(_.isInstanceOf[Plugin.parents]) -> value.plugins.find(_.isInstanceOf[Plugin.whatIf]) -> value.delay match
-      case ((Some(Plugin.parents(parents)), Some(Plugin.whatIf((num, den), diff))), Some(delay)) if observedState.value != value.number =>
+    value.plugins.get("parents") -> value.plugins.get("whatIf") -> value.delay match
+      case ((Some(Plugin.parents(parents)), Some(Plugin.whatIf((num, den), diff))), Some(delay))
+          if observedState.value != value.number =>
         val stepLogWeight = math.log(num.doubleValue) - math.log(den.doubleValue) - diff.multiply(BigDecimal(delay)).doubleValue
 
         traceNodeState.put(value.number, TraceNode(parents, value.name, value.agent + '-' + value.label, stepLogWeight, Some(delay)))
@@ -62,7 +63,8 @@ class CausalSubTreeWeightAggregator(allowedLatenessMs: Long,
 
         ctx.timerService.registerEventTimeTimer(timestamp + allowedLatenessMs)
 
-      case ((Some(Plugin.parents(parents)), Some(Plugin.whatIf(_, _))), None) if observedState.value != value.number =>
+      case ((Some(Plugin.parents(parents)), Some(Plugin.whatIf(_, _))), None)
+          if observedState.value != value.number =>
         traceNodeState.put(value.number, TraceNode(parents, null, null, Double.NaN, None))
 
       case _ =>

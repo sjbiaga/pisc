@@ -38,9 +38,10 @@ import scala.collection.mutable.{
 import scala.util.matching.Regex
 
 import scala.util.parsing.combinator.JavaTokenParsers
+import scala.util.parsing.input.{ NoPosition, Positional }
 
 import StochasticPi.Names
-import Calculus.{ λ, AST }
+import Calculus.*
 import Directive.Settings
 import Encoding.{ renamed, Bindings }
 import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated, Substitution }
@@ -48,6 +49,12 @@ import Expression.*
 
 
 abstract class Expression extends JavaTokenParsers:
+
+  override def positioned[T <: Positional](p: => Parser[T]): Parser[T] =
+    super.positioned(p) ^^ { it =>
+      _last = Some(it)
+      it
+    }
 
   import scala.meta.*
   import scala.meta.dialects.Scala3
@@ -78,6 +85,19 @@ abstract class Expression extends JavaTokenParsers:
 
   protected def in: String
   def ln: String
+  implicit protected var lc: Int => (Int, Int) = null
+  protected var _last: Option[Positional] = None
+  final def last: Option[((String, Boolean), (Int, Int))] =
+    def isMacroExpansion(ast: AST): Boolean =
+      ast.mapreduce {
+        case ∅() => false
+        case _: `⟦⟧` => true
+        case _ => false
+      }(_ || _)
+    _last.filter(_.pos ne NoPosition).map {
+      case it: AST => it.toString -> isMacroExpansion(it) -> lc(it.pos.column-1)
+      case it => it.toString -> false -> lc(it.pos.column-1)
+    }
   protected var _settings: Settings = null
 
   final protected def warn(t: => Nothing): Unit =

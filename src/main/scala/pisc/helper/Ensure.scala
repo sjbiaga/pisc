@@ -49,23 +49,23 @@ object Ensure:
       extends EquationParsingException(s"""No equation for an agent $identifier#$arity""")
 
 
-  private def indexʹ(prog: List[Bind]): ((String, Int)) => Int =
+  private def indexʹ(prog: List[Bindʹ]): ((String, Int)) => Int =
     case (identifier, size) =>
       prog
         .indexWhere {
-          case (`(*)`(`identifier`, params*), _) if params.size == size => true
+          case (`(*)`(`identifier`, params*), _, _) if params.size == size => true
           case _ => false
         }
 
-  def main(using prog: List[Bind]): Int =
+  def main(using prog: List[Bindʹ]): Int =
     if 1 == prog
       .count {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main"), _, _) => true
         case _ => false
       }
     then prog
       .indexWhere {
-        case (`(*)`("Main"), _) => true
+        case (`(*)`("Main"), _, _) => true
         case _ => false
       }
     else -1
@@ -81,10 +81,10 @@ object Ensure:
     def recursive(using stack: List[(String, Int)])
                  (using rec: Map[(String, Int), Int])
                  (using rep: Map[Int, Int])
-                 (using prog: List[Bind])
+                 (using prog: List[Bindʹ])
                  (implicit repl: Int = 0): Unit =
 
-      ast.foreach(_.recursive) {
+      ast.foreachʹ() {
 
         case !(_, _, _, sum) =>
           sum.recursive(stack.size)
@@ -114,7 +114,7 @@ object Ensure:
           if i < 0
           then
             throw NoEquationException(identifier, params.size)
-          val sum = prog(i)._2
+          val sum = prog(i)._3
           sum.recursive(using stack :+ identifier -> params.size)
 
       }

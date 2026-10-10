@@ -236,7 +236,19 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
           case it: String       => List(it)
           case it: List[String] => it
 
-      case "parameters"        =>
+      case "elastic4s"    =>
+        val `type` = "an <http[s]://[username:password@]host:port> URI"
+        settings.elastic4s = self match
+          case it: List[String] =>
+            it.uri(using { msg => DirectiveValueParsingException(_, msg) })[Id](9200).node match
+              case (Some("http") | None, hp, "")                   =>
+                Elastic4s("http", hp.name, hp.number, None, None)
+              case (Some("https") | None, hp, s"${username}:${password}") =>
+                Elastic4s("https", hp.name, hp.number, Some(username), Some(password))
+              case _                => throw DirectiveValueParsingException(directive, `type`)
+          case _                => throw DirectiveValueParsingException(directive, `type`)
+
+      case "parameters"   =>
         settings.parameters = self match
           case it: List[String] => it.map(_.toLowerCase) match
             case List(given String, it)
@@ -327,6 +339,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                                   "scaling"      -> settings.scaling,
                                   "replication"  -> settings.replication,
                                   "typeclasses"  -> settings.typeclasses,
+                                  "elastic4s"    -> settings.elastic4s,
                                   "parameters"   -> settings.parameters,
                                   "traces"       -> settings.traces)
         catch _ =>
@@ -340,6 +353,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               case it @ "scaling"        => it -> settings.scaling
               case it @ "replication"    => it -> settings.replication
               case it @ "typeclasses"    => it -> settings.typeclasses
+              case it @ "elastic4s"      => it -> settings.elastic4s
               case it @ "parameters"     => it -> settings.parameters
               case it @ "traces"         => it -> settings.traces
             }
@@ -357,6 +371,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case ("scaling", it: Boolean)            => settings.scaling = it
             case ("replication", it: (Int, Boolean)) => settings.replication = it
             case ("typeclasses", it: List[String])   => settings.typeclasses = it
+            case ("elastic4s", it: Elastic4s)        => settings.elastic4s = it
             case ("parameters", it: Parameters)      => settings.parameters = it
             case ("traces", it: Option[Traces])      => settings.traces = it
             case _                                   => ???
@@ -388,6 +403,7 @@ object Directive:
        | "scaling"
        | "replication"
        | "typeclasses"
+       | "elastic4s"
        | "parameters"
        | "traces"      => true
     case _             => false
@@ -401,10 +417,17 @@ object Directive:
                       var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
+                      var elastic4s: Settings.Elastic4s = Elastic4s(),
                       var parameters: Settings.Parameters = Parameters(),
                       var traces: Option[Settings.Traces] = None)
 
   object Settings:
+
+    case class Elastic4s(scheme: String = "http",
+                         name: String = "localhost",
+                         number: Int = 9200,
+                         username: Option[String] = None,
+                         password: Option[String] = None) extends Uri.Host with Uri.Port
 
     enum Plugin:
       case causes, parents, probability, syncRate, whatIf

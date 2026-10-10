@@ -242,7 +242,9 @@ package object `Π-traces`:
               case KeyBy.HID =>
                 plugins.find(_.isInstanceOf[Plugin.causes]).get match
                   case Plugin.causes(causes) =>
-                    s"""{"hid":"${uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))}"}"""
+                    var roots = (rootLabels.keySet & causes).toList.sorted
+                    if roots.isEmpty then roots = List(number)
+                    s"""{"hid":"${uuid + '-' + roots.map(rootLabels(_)).mkString(":")}"}"""
               case KeyBy.ANY =>
                 s"""{"label":"$agent-$label"}"""
               case _         =>
@@ -256,7 +258,9 @@ package object `Π-traces`:
               case KeyBy.HID =>
                 plugins.find(_.isInstanceOf[Plugin.causes]).get match
                   case Plugin.causes(causes) =>
-                    uuid + '-' + rootLabels((rootLabels.keySet & causes).headOption.getOrElse(number))
+                    var roots = (rootLabels.keySet & causes).toList.sorted
+                    if roots.isEmpty then roots = List(number)
+                    uuid + '-' + roots.map(rootLabels(_)).mkString(":")
               case KeyBy.ANY =>
                 "ANY"
               case _         =>
@@ -295,7 +299,7 @@ package object `Π-traces`:
     private val _schema = """{
       "namespace": "pisc.avro",
       "type": "record",
-      "name": "BioAmbients2Scala",
+      "name": "StochasticPiCalculus2Scala",
       "fields": [
         { "name" : "uuid", "type": "string" },
         { "name" : "number", "type": "long" },

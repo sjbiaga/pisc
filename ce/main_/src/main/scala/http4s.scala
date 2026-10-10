@@ -220,6 +220,32 @@ package object `Π-http4s`:
     }
 
 
+  object ASTEndpoint extends Http4sDsl[IO]:
+
+    import _root_.fs2.io.file.{ Files, Path => FilePath }
+    import _root_.fs2.data.json.*
+    import _root_.fs2.data.json.circe.*
+
+    def apply(AST: Option[String]) =
+      AST match
+        case Some(json) =>
+          HttpRoutes.of[IO] {
+            case GET -> Root =>
+              Ok {
+                Files[IO]
+                  .readAll(FilePath(json))
+                  .through(fs2.text.utf8.decode)
+                  .through(tokens)
+                  .through(ast.values)
+              }
+          }
+        case _ =>
+          HttpRoutes.of[IO] {
+            case GET -> Root =>
+              NotFound("AST N/A")
+          }
+
+
   object HealthCheckEndpoint extends Http4sDsl[IO]:
 
     def apply() = HttpRoutes.of[IO] {
@@ -227,10 +253,11 @@ package object `Π-http4s`:
     }
 
 
-  def http4s(address: String, batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback): Resource[IO, Server] =
+  def http4s(address: String, batch: Boolean, startedR: Ref[IO, Long], feedback: Feedback, AST: Option[String]): Resource[IO, Server] =
     val spiApp = Router[IO](
       "feedback" -> FeedbackEndpoint(feedback),
       "state" -> StateEndpoint(batch, startedR, feedback),
+      "ast" -> ASTEndpoint(AST),
       "health" -> HealthCheckEndpoint()
     )
     EmberServerBuilder
