@@ -41,11 +41,11 @@ import Pre.*, AST.*
 
 enum AST extends Positional with Free:
 
-  case +(scaling: Int, choices: AST.∥ *)
+  case +(choices: AST.∥ *)
         (using override val lc: Int => (Int, Int))
       extends AST with Sum
 
-  case ∥(scaling: Int, components: AST.`.`*)
+  case ∥(components: AST.`.`*)
         (using override val lc: Int => (Int, Int))
 
   case `.`(end: AST.+ | -, prefixes: Pre*)
@@ -78,11 +78,9 @@ enum AST extends Positional with Free:
 
   override def toString: String = this match
     case ∅() => "()"
-    case +(-1, choices*) => choices.mkString(" + ")
-    case +(sc, choices*) => "" + sc + " * " + choices.mkString(" + ")
+    case +(choices*) => choices.mkString(" + ")
 
-    case ∥(-1, components*) => components.mkString(" | ")
-    case ∥(sc, components*) => "" + sc + " * " + components.mkString(" | ")
+    case ∥(components*) => components.mkString(" | ")
 
     case `.`(∅()) => "()"
     case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
@@ -124,18 +122,16 @@ object AST:
 
   given `_+_`: {} with
     extension (self: +)
-      def cc(scaling: Int = self.scaling,
-             choices: Seq[∥] = self.choices): + =
+      def cc(choices: Seq[∥] = self.choices): + =
         import Cast.given
-        val sum: + = `+`(scaling, choices*)(using self.lc).setPos(self.pos).free = self.free
+        val sum: + = `+`(choices*)(using self.lc).setPos(self.pos).free = self.free
         sum.enabled = self.enabled
 
   given `_∥_`: {} with
     extension (self: ∥)
-      def cc(scaling: Int = self.scaling,
-             components: Seq[`.`] = self.components): ∥ =
+      def cc(components: Seq[`.`] = self.components): ∥ =
         import Cast.given
-        ∥(scaling, components*)(using self.lc).setPos(self.pos).free = self.free
+        ∥(components*)(using self.lc).setPos(self.pos).free = self.free
 
   given `_._`: {} with
     extension (self: `.`)
@@ -187,14 +183,14 @@ object AST:
         `(*)`(identifier, params*)(using self.lc).setPos(self.pos).free = self.free
 
   object ∅ :
-    def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`(-1).setPos(pos)
+    def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`().setPos(pos)
     def unapply(self: AST): Boolean = self match
       case it: (+ | `⟦⟧`) => it.isVoid
       case _ => false
 
   extension (self: + | `⟦⟧`)
     def isVoid: Boolean = self match
-      case +(_) => true
+      case +() => true
       case `⟦⟧`(_, sum, _, _) => sum.isVoid
       case sum: + => sum.choices.forall(_.components.forall { case `.`(it: (+ | `⟦⟧`)) => it.isVoid case _ => false })
 
@@ -211,10 +207,10 @@ object AST:
 
         case ∅() =>
 
-        case +(_, choices*) =>
+        case +(choices*) =>
           choices.foreach(_.foreach(g))
 
-        case ∥(_, components*) =>
+        case ∥(components*) =>
           components.foreach(_.foreach(g))
 
         case `.`(end, _*) =>
@@ -232,32 +228,32 @@ object AST:
 
         case _ =>
 
-    def foreachʹ(g: AST => Unit = { _ => })(h: PartialFunction[AST, Unit] = PartialFunction.empty): Unit =
+    def foreachʹ(g: PartialFunction[AST, Unit]): Unit =
 
-      h.applyOrElse(ast, {
+      g.applyOrElse(ast, {
 
         case ∅() =>
 
-        case +(_, choices*) =>
-          choices.foreach(_.foreachʹ(g)(h))
+        case +(choices*) =>
+          choices.foreach(_.foreachʹ(g))
 
-        case ∥(_, components*) =>
-          components.foreach(_.foreachʹ(g)(h))
+        case ∥(components*) =>
+          components.foreach(_.foreachʹ(g))
 
         case `.`(end, _*) =>
-          end.foreachʹ(g)(h)
+          end.foreachʹ(g)
 
         case ?:(_, t, f) =>
-          t.foreachʹ(g)(h)
-          f.foreach(_.foreachʹ(g)(h))
+          t.foreachʹ(g)
+          f.foreach(_.foreachʹ(g))
 
         case !(_, _, _, sum) =>
-          sum.foreachʹ(g)(h)
+          sum.foreachʹ(g)
 
         case `⟦⟧`(_, sum, _, _) =>
-          sum.foreachʹ(g)(h)
+          sum.foreachʹ(g)
 
-        case _ => g(ast)
+        case _ =>
 
       })
 
@@ -267,10 +263,10 @@ object AST:
 
         case ∅() => g(ast)
 
-        case +(_, choices*) =>
+        case +(choices*) =>
           choices.map(_.mapreduce(g)(h)).reduce(h)
 
-        case ∥(_, components*) =>
+        case ∥(components*) =>
           components.map(_.mapreduce(g)(h)).reduce(h)
 
         case it @ `.`(end, _*) =>
@@ -296,10 +292,10 @@ object AST:
 
         case ∅() => d(ast)
 
-        case it @ +(_, choices*) =>
+        case it @ +(choices*) =>
           h(g.applyOrElse(it, d), choices.map(_.mapreduceʹ(d)(g)(h)).reduce(h))
 
-        case it @ ∥(_, components*) =>
+        case it @ ∥(components*) =>
           h(g.applyOrElse(it, d), components.map(_.mapreduceʹ(d)(g)(h)).reduce(h))
 
         case it @ `.`(end, _*) =>
@@ -319,7 +315,7 @@ object AST:
 
         case _ => d(ast)
 
-    def map(g: AST => AST)(h: AST => AST = identity): T =
+    def map(g: AST => AST): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -327,27 +323,27 @@ object AST:
 
         case ∅() => ast
 
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.map(g)(h)))
+        case it @ +(choices*) =>
+          it.cc(choices = choices.map(_.map(g)))
 
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.map(g)(h)))
+        case it @ ∥(components*) =>
+          it.cc(components = components.map(_.map(g)))
 
         case it @ `.`(end, _*) =>
-          h(it.cc(end = end.map(g)(h)))
+          g(it.cc(end = end.map(g)))
 
         case it @ ?:(_, t, f) =>
-          h(it.cc(t = t.map(g)(h), f = f.map(_.map(g)(h))))
+          g(it.cc(t = t.map(g), f = f.map(_.map(g))))
 
         case it @ !(_, _, _, sum) =>
-          h(it.cc(sum = sum.map(g)(h)))
+          g(it.cc(sum = sum.map(g)))
 
         case it @ `⟦⟧`(_, sum, _, _) =>
-          h(it.cc(sum = sum.map(g)(h)))
+          g(it.cc(sum = sum.map(g)))
 
-        case _ => h(ast)
+        case _ => g(ast)
 
-    def mapʹ(g: AST => AST)(h: AST => AST): T =
+    def mapʹ(g: AST => AST): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -355,31 +351,31 @@ object AST:
 
         case ∅() => ast
 
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.mapʹ(g)(h)))
+        case it @ +(choices*) =>
+          it.cc(choices = choices.map(_.mapʹ(g)))
 
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.mapʹ(g)(h)))
+        case it @ ∥(components*) =>
+          it.cc(components = components.map(_.mapʹ(g)))
 
         case it: `.` =>
-          val itʹ @ `.`(end, _*) = h(it)
-          itʹ.cc(end = end.mapʹ(g)(h))
+          val itʹ @ `.`(end, _*) = g(it)
+          itʹ.cc(end = end.mapʹ(g))
 
         case it: ?: =>
-          val itʹ @ ?:(_, t, f) = h(it)
-          itʹ.cc(t = t.mapʹ(g)(h), f = f.map(_.mapʹ(g)(h)))
+          val itʹ @ ?:(_, t, f) = g(it)
+          itʹ.cc(t = t.mapʹ(g), f = f.map(_.mapʹ(g)))
 
         case it: ! =>
-          val itʹ @ !(_, _, _, sum) = h(it)
-          itʹ.cc(sum = sum.mapʹ(g)(h))
+          val itʹ @ !(_, _, _, sum) = g(it)
+          itʹ.cc(sum = sum.mapʹ(g))
 
         case it: `⟦⟧` =>
-          val itʹ @ `⟦⟧`(_, sum, _, _) = h(it)
-          itʹ.cc(sum = sum.mapʹ(g)(h))
+          val itʹ @ `⟦⟧`(_, sum, _, _) = g(it)
+          itʹ.cc(sum = sum.mapʹ(g))
 
-        case _ => h(ast)
+        case _ => g(ast)
 
-    def mapʹʹ(g: AST => AST)(h: AST => (AST, Boolean)): T =
+    def mapʹʹ(g: AST => (AST, Boolean)): T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
 
@@ -387,34 +383,34 @@ object AST:
 
         case ∅() => ast
 
-        case it @ +(_, choices*) =>
-          it.cc(choices = choices.map(_.mapʹʹ(g)(h)))
+        case it @ +(choices*) =>
+          it.cc(choices = choices.map(_.mapʹʹ(g)))
 
-        case it @ ∥(_, components*) =>
-          it.cc(components = components.map(_.mapʹʹ(g)(h)))
+        case it @ ∥(components*) =>
+          it.cc(components = components.map(_.mapʹʹ(g)))
 
         case it: `.` =>
-          h(it) match
+          g(it) match
             case (itʹ @ `.`(end, _*), false) =>
-              itʹ.cc(end = end.mapʹʹ(g)(h))
+              itʹ.cc(end = end.mapʹʹ(g))
             case (itʹ, _) => itʹ
 
         case it: ?: =>
-          h(it) match
+          g(it) match
             case (itʹ @ ?:(_, t, f), false) =>
-              itʹ.cc(t = t.mapʹʹ(g)(h), f = f.map(_.mapʹʹ(g)(h)))
+              itʹ.cc(t = t.mapʹʹ(g), f = f.map(_.mapʹʹ(g)))
             case (itʹ, _) => itʹ
 
         case it: ! =>
-          h(it) match
+          g(it) match
             case (itʹ @ !(_, _, _, sum), false) =>
-              itʹ.cc(sum = sum.mapʹʹ(g)(h))
+              itʹ.cc(sum = sum.mapʹʹ(g))
             case (itʹ, _) => itʹ
 
         case it: `⟦⟧` =>
-          h(it) match
+          g(it) match
             case (itʹ @ `⟦⟧`(_, sum, _, _), false) =>
-              itʹ.cc(sum = sum.mapʹʹ(g)(h))
+              itʹ.cc(sum = sum.mapʹʹ(g))
             case (itʹ, _) => itʹ
 
-        case _ => h(ast)._1
+        case _ => g(ast)._1

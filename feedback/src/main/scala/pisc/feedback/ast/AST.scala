@@ -13,13 +13,11 @@ enum AST extends Positional with Free derives Codec.AsObject:
   case +(override val line: Int,
          override val column: Int,
          override val free: Names,
-         scaling: Int,
          operands: AST*)
 
   case ∥(override val line: Int,
          override val column: Int,
          override val free: Names,
-         scaling: Int,
          operands: AST*)
 
   case `.`(override val line: Int,
@@ -61,11 +59,9 @@ enum AST extends Positional with Free derives Codec.AsObject:
 
   override def toString: String = this match
     case ∅() => "()"
-    case +(_, _, _, -1, choices*) => choices.mkString(" + ")
-    case +(_, _, _, sc, choices*) => "" + sc + " * " + choices.mkString(" + ")
+    case +(_, _, _, choices*) => choices.mkString(" + ")
 
-    case ∥(_, _, _, -1, components*) => components.mkString(" | ")
-    case ∥(_, _, _, sc, components*) => "" + sc + " * " + components.mkString(" | ")
+    case ∥(_, _, _, components*) => components.mkString(" | ")
 
     case `.`(_, _, _, ∅()) => "()"
     case `.`(_, _, _, ∅(), prefixes*) => prefixes.mkString(" ") + " ()"
@@ -101,8 +97,8 @@ object AST:
 
   object ∅ :
     def unapply(self: AST): Boolean = self match
-      case +(_, _, _, _) => true
-      case _             => false
+      case +(_, _, _) => true
+      case _          => false
 
   object Searched:
 
@@ -119,14 +115,14 @@ object AST:
 
       ast match
 
-        case sum @ +(_, _, _, _, par @ ∥(_, _, _, _, seq @ `.`(_, _, _, rep @ `¡`(_, _, _, _, _, guard, _sum), it*))) if !it.exists { case Act(it) => it } =>
+        case sum @ +(_, _, _, par @ ∥(_, _, _, seq @ `.`(_, _, _, rep @ `¡`(_, _, _, _, _, guard, _sum), it*))) if !it.exists { case Act(it) => it } =>
           l.substring(4) match
             case "" =>
               Some(sum :: par :: seq :: rep :: Nil <-> Seq(guard))
             case given String =>
               _sum.unlabel.map(sum :: par :: seq :: rep :: _ <-> _)
 
-        case sum @ +(_, _, _, _, par @ ∥(_, _, _, _, seq @ `.`(_, _, _, rep @ !(_, _, _, _, _, guard, _sum), it*))) if !it.exists { case Act(it) => it } =>
+        case sum @ +(_, _, _, par @ ∥(_, _, _, seq @ `.`(_, _, _, rep @ !(_, _, _, _, _, guard, _sum), it*))) if !it.exists { case Act(it) => it } =>
           l.substring(4) match
             case "" =>
               Some(sum :: par :: seq :: rep :: Nil <-> Seq(guard))
@@ -143,24 +139,13 @@ object AST:
 
         case ∅() => None
 
-        case sum @ +(_, _, _, _, par @ ∥(_, _, _, _, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
+        case sum @ +(_, _, _, par @ ∥(_, _, _, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
           it.unlabel.map(sum :: par :: _ <-> _)
 
-        case sum @ +(_, _, _, _, par @ ∥(_, _, _, _, it*)) =>
-          when(l.charAt(0) == '∥') {
-            Try {
-              val i = l.substring(1, j).toInt
-              val k = it.size.toString.size
-              when(l.substring(1+j, 1+j+k).toInt == it.size) {
-                it(i) -> l.substring(1+j+k)
-              }
-            }.toOption.flatten.flatMap {
-              case (o, given String) =>
-                o.unlabel.map(sum :: par :: o :: _ <-> _)
-            }
-          }.flatten
+        case sum @ +(_, _, _, it) =>
+          it.unlabel.map(sum :: _ <-> _)
 
-        case sum @ +(_, _, _, _, it*) =>
+        case sum @ +(_, _, _, it*) =>
           when(l.charAt(0) == '+') {
             Try {
               val i = l.substring(1, j).toInt
@@ -174,8 +159,19 @@ object AST:
             }
           }.flatten
 
-        case it @ ∥(_, _, _, _, seq) =>
-          seq.unlabel.map(it :: _ <-> _)
+        case par @ ∥(_, _, _, it*) =>
+          when(l.charAt(0) == '∥') {
+            Try {
+              val i = l.substring(1, j).toInt
+              val k = it.size.toString.size
+              when(l.substring(1+j, 1+j+k).toInt == it.size) {
+                it(i) -> l.substring(1+j+k)
+              }
+            }.toOption.flatten.flatMap {
+              case (o, given String) =>
+                o.unlabel.map(par :: o :: _ <-> _)
+            }
+          }.flatten
 
         case it: `.` if l.isEmpty =>
           Some(it :: Nil <-> it.prefixes)

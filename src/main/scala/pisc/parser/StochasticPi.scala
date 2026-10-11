@@ -284,8 +284,7 @@ object StochasticPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter(val canScale: Boolean = false,
-               val featuresLinearReplication: Boolean = false,
+  enum Emitter(val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
     def this(featuresLinearReplication: Boolean) =
       this(featuresLinearReplication = featuresLinearReplication,
@@ -298,7 +297,7 @@ object StochasticPi:
     case ziof extends Emitter(true)
     case fs2 extends Emitter(true)
     case zs extends Emitter(true)
-    case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
+    case kk extends Emitter(hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Actions = Set[String]
@@ -400,7 +399,7 @@ object StochasticPi:
 
     def shallow: T =
 
-      ast.map(_.shallow) {
+      ast.map {
 
         case it @ `{}`(identifier, pointers, true, params*) =>
           val paramsʹ = pointers.map(λ(_))
@@ -475,8 +474,8 @@ object StochasticPi:
           def prepend_τ: + =
             val (pos, free) = self.pos -> self.free
             val (seq, enabled) = (`.`(self).setPos(pos).free = free).append_τ(self)
-            val par = ∥(-1, seq).setPos(pos).free = free
-            val sum = `+`(-1, par).setPos(pos).free = free
+            val par = ∥(seq).setPos(pos).free = free
+            val sum = `+`(par).setPos(pos).free = free
             sum.enabled = enabled
 
         ast match
@@ -563,8 +562,8 @@ object StochasticPi:
                 val (pos, free) = (_sum.pos, _sum.free -- names)
                 val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
                 val seq = `.`(_sum, νʹ).setPos(pos).free = free
-                val par = ∥(-1, seq).setPos(pos).free = free
-                `+`(-1, par).setPos(pos).free = free
+                val par = ∥(seq).setPos(pos).free = free
+                `+`(par).setPos(pos).free = free
 
             var (sumʹ, _) = sum.parse
 
@@ -584,11 +583,11 @@ object StochasticPi:
 
           case ∅() => nil
 
-          case it @ +(_, par) =>
+          case it @ +(par) =>
             par.split
             it.enabled
 
-          case it @ +(_, ps*) =>
+          case it @ +(ps*) =>
             val ls = ps.map(_.split)
             var ts = ls.take(0)
             var ds = ls.drop(1)
@@ -611,7 +610,7 @@ object StochasticPi:
 
             it.enabled
 
-          case ∥(_, ss*) =>
+          case ∥(ss*) =>
             ss.map(_.split).reduce(_ ++ _)
 
           case `.`(_: `(*)`, ps*) =>
@@ -715,7 +714,7 @@ object StochasticPi:
       given List[Bindʹ] = prog.map {
         case it @ (`(*)`("Main"), _, _sum @ ∅()) =>
           val pos = _sum.pos
-          val sum = `+`(-1, ∥(-1, `.`(_sum, _sum.τ).setPos(pos)).setPos(pos)).setPos(pos)
+          val sum = `+`(∥(`.`(_sum, _sum.τ).setPos(pos)).setPos(pos)).setPos(pos)
           it.copy(_3 = sum.parse._1)
         case it =>
           it.copy(_3 = it._3.shallow.parse._1)
@@ -734,41 +733,33 @@ object StochasticPi:
               bind -> sum
           }
 
-      val relabeling = Map[String, String]()
+      val relabeled = Map[String, String]()
+
+      val relabeling: Iterable[Pre] => Unit =
+        _.foreach {
+          case it: Act =>
+            val key = it.υidυ
+            val i = key.indexOf(',')
+            if i >= 0
+            then
+              relabeled(key.substring(0, i)) = key
+          case _ =>
+        }
 
       given_List_Bind
         .foreach {
-          case (_, ∅()) =>
-          case (_, sum) =>
-            def index(end: + | -): Unit =
-              end.foreachʹ() {
-                case `.`(end, ps*) =>
-                  ps.foreach {
-                    case it: Act =>
-                      val key = it.υidυ
-                      val i = key.indexOf(',')
-                      if i >= 0
-                      then
-                        relabeling(key.substring(0, i)) = key
-                    case _ =>
-                  }
-                  index(end)
-                case !(_, _, Some(it), sum) =>
-                  val key = it.υidυ
-                  val i = key.indexOf(',')
-                  if i >= 0
-                  then
-                    relabeling(key.substring(0, i)) = key
-                  index(sum)
-              }
-            index(sum)
+          _._2.foreach {
+            case `.`(_, it*) => relabeling(it)
+            case !(_, _, it @ Some(_), _) => relabeling(it)
+            case _ =>
+          }
         }
 
       given_List_Bind
         .tapEach {
           _._2.foreach {
             case sum: + =>
-              sum.enabled = sum.enabled.map { key => relabeling.getOrElse(key, key) }
+              sum.enabled = sum.enabled.map { key => relabeled.getOrElse(key, key) }
             case _ =>
           }
         }

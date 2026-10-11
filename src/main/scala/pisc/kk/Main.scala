@@ -104,7 +104,6 @@ object Main extends helper.Main:
 
         val init = Π(
           prog
-            .drop(1+3)
             .find {
               case (`(*)`("Main"), _) => true
               case _ => false

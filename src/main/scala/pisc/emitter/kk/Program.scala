@@ -54,13 +54,13 @@ object Program:
 
       self match
 
-        case ∥(_, operand) =>
+        case ∥(operand) =>
           operand.generateʹ
 
         case it @ `.`(?:(_, _, None)) =>
           def cases(sum: +): Either[Stat, (Term, Stat)] =
             sum match
-              case +(-1, ∥(-1, `.`(?:(((lhs, rhs), mismatch), t, None)))) =>
+              case +(∥(`.`(?:(((lhs, rhs), mismatch), t, None)))) =>
 
                 val `else` = Term.Block(`π-exclude`(t.enabled) :: `Behaviors.ignore` :: Nil)
 
@@ -121,7 +121,7 @@ object Program:
 
                     Left(Lit.Unit())
 
-          val (recv, stat) = cases(`+`(-1, ∥(-1, it))).right.get
+          val (recv, stat) = cases(`+`(∥(it))).right.get
 
           val name = id
 
@@ -137,7 +137,7 @@ object Program:
         case ∅() =>
           None -> -1
 
-        case +(-1, it*) if it.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
+        case +(it*) if it.forall { case ∥(`.`(?:(_, _, None))) => true case _ => false } =>
           val defs = it.foldRight(List[(Stat, Defn.Def)]())(_.generateʹ :: _)
 
           val name = id
@@ -154,7 +154,7 @@ object Program:
 
           Some(dfn(name, defsʹ :+ `Behaviors.receive { case _ => *; empty } (release?)`(recv))) -> -1
 
-        case +(-1|1, operand) =>
+        case +(operand) =>
           operand.generate
 
         case it: + =>
@@ -164,14 +164,9 @@ object Program:
 
           val name = id
 
-          var names = defs.map(_.name.value)
+          val names = defs.map(_.name.value)
 
           opt._1 += name -> given_Listʹ_String.toList
-
-          it.scaling match
-            case -1|1 =>
-            case _ =>
-              names = List.fill(it.scaling)(names).reduce(_ ::: _)
 
           val υidυs = names.map(_ => id)
 
@@ -186,7 +181,7 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(-1|1, operand) =>
+        case ∥(operand) =>
           given Listʹ[String]()
 
           operand.generate match
@@ -226,12 +221,7 @@ object Program:
               Some(name -> (id -> parallelism))
           }.toMap
 
-          var names = defs.map(_._1.get.name.value)
-
-          it.scaling match
-            case -1|1 =>
-            case _ =>
-              names = List.fill(it.scaling)(names).reduce(_ ::: _)
+          val names = defs.map(_._1.get.name.value)
 
           val υidυs = names.map(_ => id)
 

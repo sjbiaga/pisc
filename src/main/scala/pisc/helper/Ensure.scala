@@ -84,7 +84,7 @@ object Ensure:
                  (using prog: List[Bindʹ])
                  (implicit repl: Int = 0): Unit =
 
-      ast.foreachʹ() {
+      ast.foreachʹ {
 
         case !(_, _, _, sum) =>
           sum.recursive(stack.size)

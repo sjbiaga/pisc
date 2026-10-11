@@ -235,4 +235,18 @@ package object `Π-stats`:
       .headOption match
         case None => acc.reverse
         case Some(it @ (key1, key2, _, _)) =>
-          ∥(% - key1 - key2)(`π-trick`)(check, it :: acc)
+          val k1 = key1.substring(36)
+          val k2 = key2.substring(36)
+          val  ^ = key1.substring(0, 36)
+          val ^^ = key2.substring(0, 36)
+          var %% = % - key1 - key2
+          %%.keys.foreach { key =>
+            val k = key.substring(36)
+            if `π-trick`.contains(k)
+            && {
+              val ^^^ = key.substring(0, 36)
+              `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+            } then
+              %% = %% - key
+          }
+          ∥(%%)(`π-trick`)(check, it :: acc)
