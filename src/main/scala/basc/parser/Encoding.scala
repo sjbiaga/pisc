@@ -237,18 +237,14 @@ object Encoding:
           }
         }
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
-          def count(ast: AST): Unit =
-            ast.foreachʹ() {
-              case it: `⟦⟧` if ids.contains(it.xid) =>
-                duplications += it.xid -> (true -> duplications(it.xid)._2)
-                count(it.sum)
-              case it: `⟦⟧` if idsʹ.contains(it.xid) =>
-                count(it.sum)
-              case it: `⟦⟧` =>
-                ids += it.xid
-                count(it.sum)
-            }
-          count(ast)
+          ast.foreach {
+            case it: `⟦⟧` if ids.contains(it.xid) =>
+              duplications += it.xid -> (true -> duplications(it.xid)._2)
+            case it: `⟦⟧` if idsʹ.contains(it.xid) =>
+            case it: `⟦⟧` =>
+              ids += it.xid
+            case _ =>
+          }
           try
             given MutableList[(Symbol, Symbol)]()
             ast.rename(dups, duplicated)(id, sπ_id, sζ_id)
@@ -256,14 +252,12 @@ object Encoding:
             case t: NoBPEx => throw NoBindingParsingException(_code, nest, t.getMessage)
             case t => throw t
         }
-        def reset(ast: AST): Unit =
-          ast.foreachʹ() {
-            case it: `⟦⟧` if ids.contains(it.xid) =>
-              duplications += it.xid -> (false -> duplications(it.xid)._2)
-              reset(it.sum)
-          }
         val exp: `⟦⟧` = `⟦⟧`(this, replace(sum))
-        reset(exp.sum)
+        exp.sum.foreach {
+          case it: `⟦⟧` if ids.contains(it.xid) =>
+            duplications += it.xid -> (false -> duplications(it.xid)._2)
+          case _ =>
+        }
         exp
       else
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
@@ -442,9 +436,8 @@ object Encoding:
         ast.rename(dups, duplicated, collect)(id, sπ_id, sζ_id, χ_id)
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
-      import parser.Calculus.given
 
-      ast.mapʹʹ(rename(_)) {
+      ast.mapʹʹ {
 
         case it @ `.`(end, prefixes*) =>
           val n = refresh.size

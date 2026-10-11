@@ -70,11 +70,11 @@ abstract class Calculus extends BioAmbients:
         if scalingʹ == 0
         then
           ∅()
-        else if _settings.scaling && emitter.canScale
+        else if scalingʹ == 1
         then
-          `+`(scaling, it*).free = ns.reduce(_ ++ _)
+          `+`(it*).free = ns.reduce(_ ++ _)
         else
-          `+`(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*).free = ns.reduce(_ ++ _)
+          `+`((1 to scalingʹ).flatMap(_ => it.map(_.deepcopy(sπ_id, sζ_id)))*).free = ns.reduce(_ ++ _)
       }
     }
 
@@ -90,12 +90,12 @@ abstract class Calculus extends BioAmbients:
         if scalingʹ == 0
         then
           val pos = it.head.pos
-          ∥(-1, `.`(∅(pos)).setPos(pos))
-        else if _settings.scaling && emitter.canScale
+          ∥(`.`(∅(pos)).setPos(pos))
+        else if scalingʹ == 1
         then
-          ∥(scaling, it*).free = ns.reduce(_ ++ _)
+          ∥(it*).free = ns.reduce(_ ++ _)
         else
-          ∥(-1, List.fill(scalingʹ)(it).reduce(_ ++ _).toSeq*).free = ns.reduce(_ ++ _)
+          ∥((1 to scalingʹ).flatMap(_ => it.map(_.deepcopy(sπ_id, sζ_id)))*).free = ns.reduce(_ ++ _)
       }
   }
 
@@ -331,6 +331,37 @@ object Calculus:
 
   extension [T <: AST](ast: T)
 
+    def deepcopy(sπ_id: => String, sζ_id: => String): T =
+
+      inline given Conversion[AST, T] = _.asInstanceOf[T]
+
+      ast.map {
+
+        case it @ `.`(_, ps*) =>
+          val psʹ: Seq[Pre] = ps.map {
+            case τ: τ =>
+              τ.cc()(sπ_id)
+            case π: π =>
+              π.cc()(sπ_id)
+            case ζ: ζ =>
+              ζ.cc()(sζ_id)
+            case it => it
+          }
+          it.cc(prefixes = psʹ)
+
+        case it @ !(_, _, Some(τ: τ), _) =>
+          it.cc(guard = Some(τ.cc()('!' + sπ_id)))
+
+        case it @ !(_, _, Some(π: π), _) =>
+          it.cc(guard = Some(π.cc()('!' + sπ_id)))
+
+        case it @ !(_, _, Some(ζ: ζ), _) =>
+          it.cc(guard = Some(ζ.cc()('!' + sζ_id)))
+
+        case it => it
+
+      }
+
     def flatten: T =
 
       inline given Conversion[AST, T] = _.asInstanceOf[T]
@@ -342,27 +373,27 @@ object Calculus:
         case it @ ∅() =>
           ∅(it.pos)
 
-        case it @ +(_, ∥(-1|1, `.`(sum: +)), choices*) =>
+        case it @ +(∥(`.`(sum: +)), choices*) =>
           val lhs = sum.flatten
-          val rhs = `+`(-1, choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+          val rhs = `+`(choices*).flatten
+          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid))
 
-        case it @ +(_, par, choices*) =>
-          val lhs = `+`(-1, par.flatten)
-          val rhs = `+`(-1, choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+        case it @ +(par, choices*) =>
+          val lhs = `+`(par.flatten)
+          val rhs = `+`(choices*).flatten
+          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid))
 
-        case it @ ∥(_, `.`(+(-1|1, par)), components*) =>
+        case it @ ∥(`.`(+(par)), components*) =>
           val lhs = par.flatten
-          val rhs = ∥(-1, components*).flatten
+          val rhs = ∥(components*).flatten
           it.cc(components = lhs.components ++ rhs.components)
 
-        case it @ ∥(_, seq, components*) =>
-          val lhs: ∥ = ∥(-1, seq.flatten)
-          val rhs = ∥(-1, components*).flatten
+        case it @ ∥(seq, components*) =>
+          val lhs: ∥ = ∥(seq.flatten)
+          val rhs = ∥(components*).flatten
           it.cc(components = lhs.components ++ rhs.components)
 
-        case it @ `.`(+(-1|1, ∥(-1|1, `.`(end, psr*))), psl*) =>
+        case it @ `.`(+(∥(`.`(end, psr*))), psl*) =>
           it.cc(end = end, prefixes = psl ++ psr).flatten
 
         case it @ `.`(end, _*) =>
@@ -373,7 +404,7 @@ object Calculus:
 
         case it @ !(-1, None, None, sum) =>
           sum.flatten match
-            case +(-1|1, ∥(-1|1, `.`(end: !))) => end
+            case +(∥(`.`(end: !))) => end
             case sumʹ => it.cc(sum = sumʹ)
 
         case it @ !(_, _, _, sum) =>
@@ -390,7 +421,7 @@ object Calculus:
 
       ast match
 
-        case sum @ +(_, par @ ∥(_, seq @ `.`(rep @ !(_, _, guard @ Some(_), _sum), it*))) if !it.exists { case Act(it) => it } =>
+        case sum @ +(par @ ∥(seq @ `.`(rep @ !(_, _, guard @ Some(_), _sum), it*))) if !it.exists { case Act(it) => it } =>
           sum.cc(choices = Seq(par.cc(components = Seq(seq.cc(end = rep.cc(guard = "+0/0".relabelledʹ(guard), sum = _sum.label("+0/0")))))))
 
         case _ =>
@@ -410,21 +441,21 @@ object Calculus:
 
         case ∅() => ast
 
-        case sum @ +(_, par @ ∥(_, it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
+        case sum @ +(par @ ∥(it: `.`)) if !it.prefixes.exists { case Act(it) => it } =>
           sum.cc(choices = Seq(par.cc(components = Seq(it.label(l)))))
 
-        case sum @ +(_, par @ ∥(_, it*)) =>
-          import Par.*
-          given Int = it.size
-          sum.cc(choices = Seq(par.cc(components = it.zipWithIndex.map(_.label(_)))))
+        case sum @ +(it) =>
+          sum.cc(choices = Seq(it.label(l)))
 
-        case sum @ +(_, it*) =>
+        case sum @ +(it*) =>
           import Sum.*
           given Int = it.size
           sum.cc(choices = it.zipWithIndex.map(_.label(_)))
 
-        case par @ ∥(_, it) =>
-          par.cc(components = Seq(it.label(l)))
+        case par @ ∥(it*) =>
+          import Par.*
+          given Int = it.size
+          par.cc(components = it.zipWithIndex.map(_.label(_)))
 
         case seq @ `.`(end, it*) =>
           seq.cc(end = end.label(l), prefixes = l.relabelled(it))

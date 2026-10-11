@@ -53,13 +53,13 @@ object Program:
 
       self match
 
-        case ∥(_, operand) =>
+        case ∥(operand) =>
           operand.emitʹ
 
         case it @ `.`(?:(_, _, None)) =>
           def cases(sum: +): Term =
             sum match
-              case +(_, ∥(_, `.`(?:(((lhs, rhs), mismatch), t, None)))) =>
+              case +(∥(`.`(?:(((lhs, rhs), mismatch), t, None)))) =>
                 if mismatch
                 then
                   `if * then … else …`(====(lhs, rhs), `_ <- *`(`π-exclude`(t.enabled)), cases(t))
@@ -68,7 +68,7 @@ object Program:
               case _ =>
                 sum.emit
 
-          `_ <- *`(cases(`+`(-1, ∥(-1, it))))
+          `_ <- *`(cases(`+`(∥(it))))
 
         case _ => ???
 
@@ -82,10 +82,11 @@ object Program:
 
         case ∅() =>
 
-        case +(_, operand) =>
+        case +(operand) =>
           * = operand.emit
 
-        case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
+
+        case it: + if it.choices.forall { case ∥(`.`(?:(_, _, None))) => true case _ => false } =>
           val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = `_ <- *`(`List( *, … ).collectAllPar`(ios*))
@@ -100,7 +101,7 @@ object Program:
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(_, operand) =>
+        case ∥(operand) =>
           * = operand.emit
 
         case it: ∥ =>

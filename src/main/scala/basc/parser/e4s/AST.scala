@@ -41,13 +41,11 @@ enum AST extends Positional with Free derives Codec.AsObject:
   case +(override val line: Int,
          override val column: Int,
          override val free: Names,
-         scaling: Int,
          operands: AST*)
 
   case ∥(override val line: Int,
          override val column: Int,
          override val free: Names,
-         scaling: Int,
          operands: AST*)
 
   case `.`(override val line: Int,
@@ -107,13 +105,13 @@ object AST:
       self match
 
         case it @ ast.AST.∅() =>
-          `+`(line, column, it.free, -1)
+          `+`(line, column, it.free)
 
-        case it @ ast.AST.+(sc, choices*) =>
-          `+`(line, column, it.free, sc, choices.map(_.toAST)*)
+        case it @ ast.AST.+(choices*) =>
+          `+`(line, column, it.free, choices.map(_.toAST)*)
 
-        case it @ ast.AST.∥(sc, components*) =>
-          ∥(line, column, it.free, sc, components.map(_.toAST)*)
+        case it @ ast.AST.∥(components*) =>
+          ∥(line, column, it.free, components.map(_.toAST)*)
 
         case it @ ast.AST.`.`(end, prefixes*) =>
           `.`(line, column, it.free, end.toAST, prefixes.map(_.toPre)*)

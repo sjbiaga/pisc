@@ -538,7 +538,7 @@ object Expansion:
                (using substitution: Substitution)
                (using rename: + | `⟦⟧` => + | `⟦⟧`): T =
 
-      ast.mapʹ(_.replace(tooMP)) {
+      ast.mapʹ {
 
         case it @ `.`(_, prefixes*) =>
           val prefixesʹ = prefixes.map {
@@ -625,9 +625,8 @@ object Expansion:
                    (using pointers: List[Symbol]): T =
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
-      import _root_.basc.parser.Calculus.given
 
-      ast.mapʹʹ(_.concatenate(tooMP)) {
+      ast.mapʹʹ {
 
         case it: `⟦⟧` =>
           val pointersʹ = it.pointers ::: pointers
@@ -647,9 +646,8 @@ object Expansion:
     def update(using bindings: Bindings): T =
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
-      import _root_.basc.parser.Calculus.given
 
-      ast.mapʹʹ(_.update) {
+      ast.mapʹʹ {
 
         case it @ `.`(end, prefixes*) =>
           given Bindings = Bindings(bindings)

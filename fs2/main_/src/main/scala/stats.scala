@@ -386,6 +386,20 @@ package object `Π-stats`:
       .headOption match
         case None => acc.reverse
         case Some(it @ (key1, key2, _, (delay, pins))) =>
+          val k1 = key1.substring(36)
+          val k2 = key2.substring(36)
+          val  ^ = key1.substring(0, 36)
+          val ^^ = key2.substring(0, 36)
+          var %% = % - key1 - key2
+          %%.keys.foreach { key =>
+            val k = key.substring(36)
+            if `π-trick`.contains(k)
+            && {
+              val ^^^ = key.substring(0, 36)
+              `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+            } then
+              %% = %% - key
+          }
           if whatIfPlugin
           then
             val diff = Λʹ - Λ
@@ -393,6 +407,6 @@ package object `Π-stats`:
               case whatIf: Plugin.whatIf => whatIf.copy(difference = diff)
               case plugin => plugin
             }
-            ∥(% - key1 - key2, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
+            ∥(%%, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
           else
-            ∥(% - key1 - key2, plugins)(`π-trick`)(check, it :: acc)
+            ∥(%%, plugins)(`π-trick`)(check, it :: acc)
