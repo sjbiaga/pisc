@@ -91,8 +91,8 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P{}") match
-          case Success((`{}`("P", Nil, false), free), _) =>
-            assert(free.isEmpty)
+          case Success(it @ `{}`("P", Nil, false), _) =>
+            assert(it.free.isEmpty)
           case _ =>
             assert(false)
 
@@ -105,8 +105,8 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(True){n}") match
-          case Success((`{}`("P", List(Symbol("n")), true, λ(true)), free), _) =>
-            assertEquals(free, Names() + Symbol("n"))
+          case Success(it @ `{}`("P", List(Symbol("n")), true, λ(true)), _) =>
+            assertEquals(it.free, Names() + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -119,8 +119,8 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(){n}") match
-          case Success((`{}`("P", List(Symbol("n")), true), free), _) =>
-            assertEquals(free, Names() + Symbol("n"))
+          case Success(it @ `{}`("P", List(Symbol("n")), true), _) =>
+            assertEquals(it.free, Names() + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -133,8 +133,8 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(True){}") match
-          case Success((`{}`("P", Nil, true, λ(true)), free), _) =>
-            assert(free.isEmpty)
+          case Success(it @ `{}`("P", Nil, true, λ(true)), _) =>
+            assert(it.free.isEmpty)
           case _ =>
             assert(false)
 
@@ -147,8 +147,8 @@ class EncodingParserSuite extends FunSuite:
     val `13` = new EncodingParserTest:
       override def test =
         parseAll(capital, "P(){}") match
-          case Success((`{}`("P", Nil, true), free), _) =>
-            assert(free.isEmpty)
+          case Success(it @ `{}`("P", Nil, true), _) =>
+            assert(it.free.isEmpty)
           case _ =>
             assert(false)
 

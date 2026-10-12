@@ -39,6 +39,7 @@ import parser.Calculus.*
 import Meta.{ \ => _, * }
 import Program.emit
 import ProgramSuite.*
+import ProgramSuite.given
 
 
 class ProgramSuite extends FunSuite:
@@ -1575,3 +1576,5 @@ class ProgramSuite extends FunSuite:
 object ProgramSuite:
 
   val \ = "IO"
+
+  given (Int => (Int, Int)) = { _ => (0, 0) }

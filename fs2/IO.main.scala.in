@@ -60,5 +60,9 @@ object π:
       Stream.eval(self.map(_.compile.drain).parSequenceVoid)
     private[π] inline def πparSequence(semaphore: Semaphore[F]): Stream[F, Unit] =
       self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence
+    private[π] inline def πparSequence(N: Int): Stream[F, Unit] =
+      Stream.eval(self.map(_.compile.drain.parReplicateA_(N)).parSequenceVoid)
+    private[π] inline def πparSequence(N: Int, semaphore: Semaphore[F]): Stream[F, Unit] =
+      self.map(Stream.eval(semaphore.tryAcquire).ifM(_, Stream.empty)).πparSequence(N)
 
 

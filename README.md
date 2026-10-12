@@ -1,7 +1,7 @@
 Pi-calculus in SCala aka PISC ala RISC
 ======================================
 
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in beta stage.
 [Polyadic π-calculus](https://github.com/sjbiaga/pisc/tree/polyadic) is also supported.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
 [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful

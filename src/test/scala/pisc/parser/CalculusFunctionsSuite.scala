@@ -130,4 +130,6 @@ object CalculusFunctionsSuite:
 
   val τ_ = τ(None)
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   given Conversion[Char, `(*)`] = { it => `(*)`(it.toString, Nil)  }

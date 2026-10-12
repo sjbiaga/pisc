@@ -600,12 +600,12 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(definition, """⟦ t"1" ⟧{z} =""") match
+        parseAll(definition, """⟦ t"1" ⟧{z} = z<z>.""") match
           case Success(Some(definition), _) =>
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition
             parseAll(equation, "P(x) = ⟦ 1 ⟧{x}") match
-              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, pointers))))), _) =>
+              case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), _, _, pointers))))), _) =>
                 val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("x"))) =>
@@ -626,19 +626,19 @@ class EncodingFunctionsSuite extends FunSuite:
 
     val `13` = new ExpansionParserTest:
       override def test =
-        parseAll(definition, """⟦1 t"1" 1⟧{z} =""") match
-          case Success(Some(definition1 @ (_, Definition(_, _, _, _, ∅()))), _) =>
+        parseAll(definition, """⟦1 t"1" 1⟧{z} = z<z>.""") match
+          case Success(Some(definition1 @ (_, Definition(_, _, _, _, _))), _) =>
             if !defn.contains(_code) then defn(_code) = Nil
             defn(_code) ::= definition1
             parseAll(definition, """⟦2 t"2" 2⟧{y} = ⟦1 1 1⟧{y}""") match
-              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), ∅(), _, pointers))))))), _) =>
+              case Success(Some(definition2 @ (_, Definition(_, _, _, _, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables, _), _, _, pointers))))))), _) =>
                 if !defn.contains(_code) then defn(_code) = Nil
                 defn(_code) ::= definition2
                 val assignment = variables zip pointers
                 assignment.headOption match
                   case Some((Symbol("z_υ2υ"), Symbol("y"))) =>
                     parseAll(equation, "P(x) = ⟦2 2 2⟧{x}") match
-                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables2, _), +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables1, _), ∅(), _, pointers1)))), _, pointers2))))), _) =>
+                      case Success((_, +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables2, _), +(_, ∥(_, `.`(`⟦⟧`(Definition(_, _, _, variables1, _), _, _, pointers1)))), _, pointers2))))), _) =>
                         val assignment1 = variables1 zip pointers1
                         val assignment2 = variables2 zip pointers2
                         assignment1.headOption -> assignment2.headOption match
@@ -661,5 +661,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
 
 object EncodingFunctionsSuite:
+
+  given (Int => (Int, Int)) = { _ => (0, 0) }
 
   given Conversion[Char, `{}`] = { it => `{}`(it.toString, Nil, false)  }

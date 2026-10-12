@@ -48,12 +48,14 @@ import Expansion.Duplications
 
 abstract class Pi extends Expression:
 
-  def μ: Parser[(μ, (Names, Names))] =
+  def μ: Parser[μ] = μʹ ^^ (_.asInstanceOf[μ])
+
+  private def μʹ: Parser[Pre] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
-        τ(Some(it)) -> (Names(), free)
+        τ(Some(it)).free = free
       case _ =>
-        τ(None) -> (Names(), Names())
+        τ(None)
     } |
     name ~ ("<"~>opt(opt("ν")~name)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
@@ -62,14 +64,14 @@ abstract class Pi extends Expression:
         throw PrefixChannelParsingException(par)
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ Some((it, freeʹ)) =>
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, Some(it)) -> (bound, name ++ (free ++ freeʹ &~ bound))
+        (π(ch, arg, polarity = ν, Some(it)).bound = bound).free = name ++ (free ++ freeʹ &~ bound)
       case (ch, name) ~ Some(ν ~ (arg, free)) ~ _ =>
         val bound = ν.fold(Names())(_=>free)
-        π(ch, arg, polarity = ν, None) -> (bound, name ++ (free &~ bound))
+        (π(ch, arg, polarity = ν, None).bound = bound).free = name ++ (free &~ bound)
       case (ch, name) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, Some(it)) -> (Names(), name ++ freeʹ)
+        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, Some(it)).free = name ++ freeʹ
       case (ch, name) ~ _ ~ _ =>
-        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, None) -> (Names(), name)
+        π(ch, λ(emitter.nullOnEmptyOutput), polarity = None, None).free = name
     } |
     name ~ ("("~>nameʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _ if !ch.isSymbol =>
@@ -80,7 +82,7 @@ abstract class Pi extends Expression:
         throw TermParsingException(enums)
       case (ch, name) ~ (par, bound) ~ code =>
         val freeʹ = code.map(_._2).getOrElse(Names())
-        π(ch, par, polarity = Some(""), code.map(_._1)) -> (bound, name ++ freeʹ)
+        (π(ch, par, polarity = Some(""), code.map(_._1)).bound = bound).free = name ++ freeʹ
     } |
     name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -105,7 +107,7 @@ abstract class Pi extends Expression:
         val args = λ(params.map(_._1))
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, args, polarity = Some(cons), code.map(_._1)) -> (bound, name ++ (free &~ bound))
+        (π(ch, args, polarity = Some(cons), code.map(_._1)).bound = bound).free = name ++ (free &~ bound)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -130,12 +132,16 @@ abstract class Pi extends Expression:
     rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
 
   def scale: Parser[Int] =
-    opt( wholeNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt.abs) }
+    opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
+      case Some(_: String) => 0
+      case Some(it: Long)  => it.toInt
+      case _               => -1
+    }
 
   def pace: Parser[(Long, String)] =
-    wholeNumber ~ opt( ","~> ident ) ^^ {
+    naturalNumber ~ opt( ","~> ident ) ^^ {
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
+        amount -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -146,6 +152,9 @@ abstract class Pi extends Expression:
       "" ~> // handle whitespace
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
+
+  def naturalNumber: Parser[Long] =
+    """\d+""".r ^? { case it if it.toLong > 0 => it.toLong }
 
   protected val emitter: Emitter
 
@@ -251,19 +260,21 @@ object Pi:
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
     def this(_n: Null) =
-      this(featuresLinearReplication = true,
+      this(canScale = true,
+           featuresLinearReplication = true,
            hasReplicationInputGuardFlaw = _ >= -1)
-    def this(featuresLinearReplication: Boolean) =
+    def this(canScale: Boolean, featuresLinearReplication: Boolean) =
       this(nullOnEmptyOutput = Lit.Null(),
+           canScale = canScale,
            featuresLinearReplication = featuresLinearReplication,
            hasReplicationInputGuardFlaw = if featuresLinearReplication
                                           then _ >= -1
                                           else _ != 1)
     case ce extends Emitter(null)
-    case zio extends Emitter()
-    case fs2 extends Emitter(true)
-    case monix extends Emitter(false)
-    case zs extends Emitter(true)
+    case zio extends Emitter(null)
+    case fs2 extends Emitter(true, true)
+    case monix extends Emitter(false, false)
+    case zs extends Emitter(true, true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
@@ -275,6 +286,21 @@ object Pi:
       .map(_.asSymbol)
     )
     def apply(names: Names): Names = Set.from(names)
+
+
+  trait Bound:
+    private var _bound = Names()
+    inline final def bound = _bound
+    inline final def bound_=(bound: Names): this.type =
+      _bound = bound
+      this
+
+  trait Free:
+    private var _free = Names()
+    inline final def free = _free
+    inline final def free_=(free: Names): this.type =
+      _free = free
+      this
 
 
   // exceptions
@@ -305,10 +331,11 @@ object Pi:
 
     def shallow: T =
 
-      ast.map(_.shallow) {
+      ast.map {
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, Nil, (params ++ pointers.map(λ(_)))*)
+        case it @ `{}`(identifier, pointers, true, params*) =>
+          val paramsʹ = pointers.map(λ(_))
+          `(*)`(identifier, Nil, (params ++ paramsʹ)*)(using it.lc).setPos(it.pos).free = it.free ++ Names(paramsʹ*)
 
         case it => it
 
@@ -362,6 +389,7 @@ object Pi:
       _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+      _last = None
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _init
@@ -372,11 +400,21 @@ object Pi:
       val r =
         (source.getLines() ++ Some(""))
           .zipWithIndex
-          .foldLeft(List[(String, (Int, Int))]() -> false) {
-            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          .foldLeft(List[((Int, Int), List[String])]() -> false) {
+            case ((r, false), (t, n)) => (r :+ ((n, n) -> List(t.stripSuffix("\\")))) -> t.endsWith("\\")
+            case ((r, true), (t, n))  => (r.init :+ ((r.last._1._1, n) -> (r.last._2 :+ t.stripSuffix("\\")))) -> t.endsWith("\\")
           }._1
-          .flatMap { case (it, (m, n)) =>
+          .flatMap { case ((m, n), itʹ) =>
+            lc = { col =>
+              var i = 0
+              var l = 0
+              while itʹ(i).length + l < col
+              do
+                l += itʹ(i).length
+                i += 1
+              (m+i+1, (if l == 0 then col else col%l)+1)
+            }
+            val it = itʹ.mkString
             l = (m+1, n+1)
             if it.matches("^[ ]*#.*") // commented lines
             || it.isBlank // empty lines
@@ -424,6 +462,8 @@ object Pi:
             self.contains(n.toInt)
           case _ => true
         }
+
+      _last = None
 
       Right((`(*)`(null, Nil, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
       prog

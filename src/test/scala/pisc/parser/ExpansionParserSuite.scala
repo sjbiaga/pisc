@@ -80,13 +80,13 @@ class ExpansionParserSuite extends FunSuite:
     val `13` = new ExpansionParserTest:
       override def test =
         parseAll(instantiation(using Bindings(), Duplications(), 1), "⟦⟧") match
-          case Success((`⟦⟧`(Definition(0, None, _, _, ∅()), ∅(), _, _), _), _) =>
+          case Success(`⟦⟧`(Definition(0, None, _, _, ∅()), ∅(), _, _), _) =>
           case _ =>
             assert(false)
       override def instance(defs: List[Define], end: String)
-                           (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
-        new Parser[(`⟦⟧`, Names)]:
-          override def apply(_in: Input): ParseResult[(`⟦⟧`, Names)] =
+                           (using Bindings, Duplications, Int): Parser[`⟦⟧`] =
+        new Parser[`⟦⟧`]:
+          override def apply(_in: Input): ParseResult[`⟦⟧`] =
             Failure(null, _in)
       parseAll(definition, "⟦⟧ = ") match
         case Success(Some(it), _) =>

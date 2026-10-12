@@ -30,7 +30,7 @@ package object Π:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
-  import _root_.zio.{ Exit, Promise, Queue, Task, UIO, ZIO }
+  import _root_.zio.{ Duration, Exit, Queue, Task, UIO, ZIO }
 
   import `Π-magic`.*
 
@@ -66,15 +66,41 @@ package object Π:
   /**
     * silent transition
     */
-  val τ: UIO[Option[Unit]] = ZIO.succeed(Some(()))
+  object τ extends τ:
+
+    def apply(): UIO[Option[Unit]] = ZIO.yieldNow.as(Some(()))
+
+    /**
+      * linear replication guard
+      */
+    def apply(_f: false)(parallelism: Int)(body: UIO[Any]): UIO[Unit] =
+      super.silent(false)(parallelism)(body)
+
+    /**
+      * linear replication guard w/ pace
+      */
+    def apply(_f: false)(pace: Duration, parallelism: Int)(body: UIO[Any]): UIO[Unit] =
+      super.silent(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int)(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      super.silent(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: Duration, parallelism: Int)(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      super.silent(true)(pace, parallelism)(code)(body)
 
 
   /**
     * prefix
     */
-  implicit final class `()`(private val name: Any) extends AnyVal:
+  implicit final class `()`(private[Π] val name: Any) extends AnyVal with Macros:
 
-    private def q = `()`[><]
+    protected def q = `()`[><]
 
     def ====(that: `()`) =
       try
@@ -85,6 +111,170 @@ package object Π:
     inline def unary_! : Boolean = name == null
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
+
+    // LINEAR REPLICATION //////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////// BOUND //
+
+    /**
+      * linear replication bound output guard
+      */
+    def apply(_nu: "ν")(_f: false)(parallelism: Int)(body: `()` => UIO[Any]): UIO[Unit] =
+      super.output("ν")(false)(parallelism)(body)
+
+    /**
+      * linear replication bound output guard w/ pace
+      */
+    def apply(_nu: "ν")(_f: false)(pace: Duration, parallelism: Int)(body: `()` => UIO[Any]): UIO[Unit] =
+      super.output("ν")(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication bound output guard w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(parallelism: Int)(code: UIO[Any])(body: `()` => UIO[Any]): UIO[Unit] =
+      super.output("ν")(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication bound output guard w/ pace w/ code
+      */
+    def apply(_nu: "ν")(_t: true)(pace: Duration, parallelism: Int)(code: UIO[Any])(body: `()` => UIO[Any]): UIO[Unit] =
+      super.output("ν")(true)(pace, parallelism)(code)(body)
+
+    //////////////////////////////////////////////////////////////// CONSTANT //
+
+    /**
+      * linear constant replication output guard
+      */
+    def apply(_f: false)(parallelism: Int, value: `()`)(body: UIO[Any]): UIO[Unit] =
+      super.output(false)(parallelism, value)(body)
+
+    /**
+      * linear constant replication output guard w/ pace
+      */
+    def apply(_f: false)(pace: Duration, parallelism: Int, value: `()`)(body: UIO[Any]): UIO[Unit] =
+      super.output(false)(pace, parallelism, value)(body)
+
+    /**
+      * linear constant replication output guard w/ code
+      */
+    def apply(_t: true)(parallelism: Int, value: `()`)(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      super.output(true)(parallelism, value)(code)(body)
+
+    /**
+      * linear constant replication output guard w/ pace w/ code
+      */
+    def apply(_t: true)(pace: Duration, parallelism: Int, value: `()`)(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      super.output(true)(pace, parallelism, value)(code)(body)
+
+    //////////////////////////////////////////////////////////////// VARIABLE //
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S)(body: UIO[Any])(using DummyImplicit): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(parallelism, value.asInstanceOf[`()`])(body)
+      else
+        apply("*")(false)(parallelism, ZIO.attempt(value))(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, value: => S)(body: UIO[Any])(using DummyImplicit): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(pace, parallelism, value.asInstanceOf[`()`])(body)
+      else
+        apply("*")(false)(pace, parallelism, ZIO.attempt(value))(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S)(code: UIO[Any])(body: UIO[Any])(using DummyImplicit): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(parallelism, value.asInstanceOf[`()`])(code)(body)
+      else
+        apply("*")(true)(parallelism, ZIO.attempt(value))(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, value: => S)(code: UIO[Any])(body: UIO[Any])(using DummyImplicit): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(pace, parallelism, value.asInstanceOf[`()`])(code)(body)
+      else
+        apply("*")(true)(pace, parallelism, ZIO.attempt(value))(code)(body)
+
+    /**
+      * linear variable replication output guard
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => Task[S])(body: UIO[Any]): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(parallelism, _)(body)))
+      else
+        super.output("*")(false)(parallelism, value)(body)
+
+    /**
+      * linear variable replication output guard w/ pace
+      */
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: Duration, parallelism: Int, value: => Task[S])(body: UIO[Any]): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(pace, parallelism, _)(body)))
+      else
+        super.output("*")(false)(pace, parallelism, value)(body)
+
+    /**
+      * linear variable replication output guard w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => Task[S])(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(parallelism, _)(code)(body)))
+      else
+        super.output("*")(true)(parallelism, value)(code)(body)
+
+    /**
+      * linear variable replication output guard w/ pace w/ code
+      */
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: Duration, parallelism: Int, value: => Task[S])(code: UIO[Any])(body: UIO[Any]): UIO[Unit] =
+      if classTag[S].runtimeClass eq getClass
+      then
+        ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(pace, parallelism, _)(code)(body)))
+      else
+        super.output("*")(true)(pace, parallelism, value)(code)(body)
+
+    /////////////////////////////////////////////////////////////////// INPUT //
+
+    /**
+      * linear replication input guard
+      */
+    def apply(_n: Null)(_f: false)(parallelism: Int)(body: `()` => UIO[Any]): UIO[Unit] =
+      super.input(false)(parallelism)(body)
+
+    /**
+      * linear replication input guard w/ pace
+      */
+    def apply(_n: Null)(_f: false)(pace: Duration, parallelism: Int)(body: `()` => UIO[Any]): UIO[Unit] =
+      super.input(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication input guard w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(parallelism: Int)(code: T => Task[T])(body: `()` => UIO[Any]): UIO[Unit] =
+      super.input(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication input guard w/ pace w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(pace: Duration, parallelism: Int)(code: T => Task[T])(body: `()` => UIO[Any]): UIO[Unit] =
+      super.input(true)(pace, parallelism)(code)(body)
+
+    ////////////////////////////////////////////////////// linear replication //
 
     /**
       * variable negative prefix i.e. variable output

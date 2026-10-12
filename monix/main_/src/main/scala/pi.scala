@@ -229,7 +229,7 @@ package object Π:
           * `null` replication output guard w/ pace
           */
         def apply(_pace: FiniteDuration): Iterant[F, Unit] =
-         apply()
+          apply()
 
         /**
           * `null` replication output guard w/ code

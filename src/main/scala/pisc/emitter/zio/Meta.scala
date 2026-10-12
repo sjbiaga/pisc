@@ -113,13 +113,32 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => `ZIO.unit`
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
 
-  def `List( *, … ).collectAllPar`(* : Term*)(`…`: String): Term =
+  def `List( *, … ).collectAllPar(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
     } match
       case Nil => `ZIO.unit`
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar"), Term.ArgClause(`…` :: Nil))
+
+  def `List( *, … ).collectAllPar(N)`(* : Term*)(N: Int): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => `ZIO.unit`
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar"),
+                            Term.ArgClause(Lit.Int(N) :: Nil))
+
+  def `List( *, … ).collectAllPar(N, …)`(* : Term*)(N: Int, `…`: String): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => `ZIO.unit`
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"),
+                                                   Term.ArgClause(it.toList)), "πcollectAllPar"),
+                            Term.ArgClause(Lit.Int(N) :: \(`…`) :: Nil))
 
 
   def `\\.\\\\ { def *(*: ()): UIO[Any] = …; * }`(* : (String, String), `…`: Term): Term =

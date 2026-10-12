@@ -183,9 +183,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "τ /*println('ch)*/") match
-          case Success((τ(Some(_)), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ τ(Some(_)), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -210,9 +210,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<>") match
-          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, None), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, None), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -225,9 +225,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<n>") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), None, None), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Symbol("n")), None, None), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -240,9 +240,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<n> /*println('m)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), None, Some(_)), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Symbol("n")), None, Some(_)), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n") + Symbol("m"))
           case _ =>
             assert(false)
 
@@ -255,9 +255,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<True>") match
-          case Success((π(λ(Symbol("ch")), λ(true), None, None), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ π(λ(Symbol("ch")), λ(true), None, None), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -270,9 +270,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<True> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(true), None, Some(_)), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
+          case Success(it @ π(λ(Symbol("ch")), λ(true), None, Some(_)), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -285,9 +285,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch</*0*/>") match
-          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), None, None), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Lit.Int(0)), None, None), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -300,9 +300,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch</*0*/> /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Lit.Int(0)), None, Some(_)), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Lit.Int(0)), None, Some(_)), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -315,9 +315,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<>/*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, Some(_)), (bound, free)), _) =>
-            assert(bound.isEmpty)
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Term.Apply(Term.Name("()"), Lit.Null() :: Nil)), None, Some(_)), _) =>
+            assert(it.bound.isEmpty)
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -366,9 +366,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch(n)") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None), (bound, free)), _) =>
-            assertEquals(bound, Names() + Symbol("n"))
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), None), _) =>
+            assertEquals(it.bound, Names() + Symbol("n"))
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -381,9 +381,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch(n) /*println('n)*/") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), Some(_)), (bound, free)), _) =>
-            assertEquals(bound, Names() + Symbol("n"))
-            assertEquals(free, Names() + Symbol("ch") + Symbol("n"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Symbol("n")), Some(_), Some(_)), _) =>
+            assertEquals(it.bound, Names() + Symbol("n"))
+            assertEquals(it.free, Names() + Symbol("ch") + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -396,9 +396,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "ch<νn>") match
-          case Success((π(λ(Symbol("ch")), λ(Symbol("n")), Some("ν"), None), (bound, free)), _) =>
-            assertEquals(bound, Names() + Symbol("n"))
-            assertEquals(free, Names() + Symbol("ch"))
+          case Success(it @ π(λ(Symbol("ch")), λ(Symbol("n")), Some("ν"), None), _) =>
+            assertEquals(it.bound, Names() + Symbol("n"))
+            assertEquals(it.free, Names() + Symbol("ch"))
           case _ =>
             assert(false)
 
@@ -411,9 +411,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "n<νn>") match
-          case Success((π(λ(Symbol("n")), λ(Symbol("n")), Some("ν"), None), (bound, free)), _) =>
-            assertEquals(bound, Names() + Symbol("n"))
-            assertEquals(free, Names() + Symbol("n"))
+          case Success(it @ π(λ(Symbol("n")), λ(Symbol("n")), Some("ν"), None), _) =>
+            assertEquals(it.bound, Names() + Symbol("n"))
+            assertEquals(it.free, Names() + Symbol("n"))
           case _ =>
             assert(false)
 
@@ -426,9 +426,9 @@ class PiParserSuite extends FunSuite:
     val `13` = new PiParserTest:
       override def test =
         parseAll(μ, "n(n)") match
-          case Success((π(λ(Symbol("n")), λ(Symbol("n")), Some(""), None), (bound, free)), _) =>
-            assertEquals(bound, Names() + Symbol("n"))
-            assertEquals(free, Names() + Symbol("n"))
+          case Success(it @ π(λ(Symbol("n")), λ(Symbol("n")), Some(""), None), _) =>
+            assertEquals(it.bound, Names() + Symbol("n"))
+            assertEquals(it.free, Names() + Symbol("n"))
           case _ =>
             assert(false)
 

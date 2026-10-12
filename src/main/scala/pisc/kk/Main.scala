@@ -79,7 +79,12 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${pi.ln}! " + t.getMessage + ".")
+        pi.last match
+          case Some(((it, isMacroExpansion), (line, col))) =>
+            Console.err.println(s"Error in file `$in' ${pi.ln}! " + t.getMessage
+                              + s""".\nLast known parse${if isMacroExpansion then " (from macro expansion) " else " "}at line #$line, column #$col.\n$it""")
+          case _ =>
+            Console.err.println(s"Error in file `$in' ${pi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()

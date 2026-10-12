@@ -40,6 +40,8 @@ import zs.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -80,7 +82,7 @@ object Program:
 
         case ∅() =>
 
-        case +(_, operand) =>
+        case +(-1|1, operand) =>
           * = operand.emit
 
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
@@ -98,23 +100,34 @@ object Program:
 
           val sem = id
 
-          * = List(
-            `* <- Semaphore(…)`(sem, 1),
-            `_ <- *`(`List( *, … ).collectAllPar(…)`(zss*)(sem))
-          )
+          if it.scaling.abs == 1
+          then
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(`List( *, … ).collectAllPar(…)`(zss*)(sem))
+            )
+          else
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(`List( *, … ).collectAllPar(N, …)`(zss*)(it.scaling, sem))
+            )
 
         /////////////////////////////////////////////////////////// summation //
 
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(_, operand) =>
+        case ∥(-1|1, operand) =>
           * = operand.emit
 
         case it: ∥ =>
           val zss = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).collectAllPar`(zss*))
+          if it.scaling.abs == 1
+          then
+            * = `_ <- *`(`List( *, … ).collectAllPar`(zss*))
+          else
+            * = `_ <- *`(`List( *, … ).collectAllPar(N)`(zss*)(it.scaling))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -122,7 +135,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
+          * = ((it :+ end): Seq[Pre | AST]).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 

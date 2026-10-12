@@ -172,41 +172,41 @@ package object Π:
       * linear variable replication output guard
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S)(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(false)(parallelism, value.asInstanceOf[`()`])(body)
-     else
-       apply("*")(false)(parallelism, IO.delay(value))(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(parallelism, value.asInstanceOf[`()`])(body)
+      else
+        apply("*")(false)(parallelism, IO.delay(value))(body)
 
     /**
       * linear variable replication output guard w/ pace
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => S)(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(false)(pace, parallelism, value.asInstanceOf[`()`])(body)
-     else
-       apply("*")(false)(pace, parallelism, IO.delay(value))(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(false)(pace, parallelism, value.asInstanceOf[`()`])(body)
+      else
+        apply("*")(false)(pace, parallelism, IO.delay(value))(body)
 
     /**
       * linear variable replication output guard w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(true)(parallelism, value.asInstanceOf[`()`])(code)(body)
-     else
-       apply("*")(true)(parallelism, IO.delay(value))(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(parallelism, value.asInstanceOf[`()`])(code)(body)
+      else
+        apply("*")(true)(parallelism, IO.delay(value))(code)(body)
 
     /**
       * linear variable replication output guard w/ pace w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => S)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply(true)(pace, parallelism, value.asInstanceOf[`()`])(code)(body)
-     else
-       apply("*")(true)(pace, parallelism, IO.delay(value))(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply(true)(pace, parallelism, value.asInstanceOf[`()`])(code)(body)
+      else
+        apply("*")(true)(pace, parallelism, IO.delay(value))(code)(body)
 
     /**
       * linear variable replication output guard

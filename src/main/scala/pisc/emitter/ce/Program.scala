@@ -40,6 +40,8 @@ import ce.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -80,7 +82,7 @@ object Program:
 
         case ∅() =>
 
-        case +(_, operand) =>
+        case +(-1|1, operand) =>
           * = operand.emit
 
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
@@ -98,23 +100,36 @@ object Program:
 
           val sem = id
 
-          * = List(
-            `* <- Semaphore(…)`(sem, 1),
-            `_ <- *`(`List( *, … ).parTraverse`(ios*)(sem))
-          )
+          if it.scaling.abs == 1
+          then
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(`List( *, … ).parTraverse`(ios*)(sem))
+            )
+          else
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parTraverse`(ios*)(sem), "parReplicateA_"),
+                                  Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
+            )
 
         /////////////////////////////////////////////////////////// summation //
 
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(_, operand) =>
+        case ∥(-1|1, operand) =>
           * = operand.emit
 
         case it: ∥ =>
           val ios = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+          if it.scaling.abs == 1
+          then
+            * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+          else
+            * = `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parSequence`(ios*), "parReplicateA_"),
+                                    Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -122,7 +137,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
+          * = ((it :+ end): Seq[Pre | AST]).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 

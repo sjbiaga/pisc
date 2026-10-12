@@ -43,6 +43,8 @@ import kk.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   import Optimize.Opt
 
   extension (self: AST)(using id: => String)

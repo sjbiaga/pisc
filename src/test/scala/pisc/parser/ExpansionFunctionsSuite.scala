@@ -43,6 +43,7 @@ import _root_.pisc.parser.Encoding.*
 import scala.util.parsing.combinator.pisc.parser.Expansion
 import Expansion.*
 import ExpansionFunctionsSuite.*
+import ExpansionFunctionsSuite.given
 
 
 class ExpansionFunctionsSuite extends FunSuite:
@@ -159,7 +160,7 @@ class ExpansionFunctionsSuite extends FunSuite:
     val `13` = new ExpansionFunctionTest:
       override def test =
         assertMatches(parseAll(choice, "x<x>.")) {
-          case Success((sum, _), _) =>
+          case Success(sum, _) =>
             val shadow = Symbol("x_shadow")
             given Bindings = Map(Symbol("x") -> Occurrence(Some(shadow), Position(1, true)))
 
@@ -177,7 +178,7 @@ class ExpansionFunctionsSuite extends FunSuite:
     val `13` = new ExpansionFunctionTest:
       override def test =
         assertMatches(parseAll(choice, "x(x). x<x>.")) {
-          case Success((sum, _), _) =>
+          case Success(sum, _) =>
             val name = Symbol("x")
             val shadow = Symbol("x_shadow")
             given Bindings = Map(name -> Occurrence(Some(shadow), Position(1, true)))
@@ -197,7 +198,7 @@ class ExpansionFunctionsSuite extends FunSuite:
     val `13` = new ExpansionFunctionTest:
       override def test =
         assertMatches(parseAll(leaf, "! .x<x>. x<x>.")) {
-          case Success((rep, _), _) =>
+          case Success(rep, _) =>
             val shadow = Symbol("x_shadow")
             given Bindings = Map(Symbol("x") -> Occurrence(Some(shadow), Position(1, true)))
 
@@ -216,7 +217,7 @@ class ExpansionFunctionsSuite extends FunSuite:
     val `13` = new ExpansionFunctionTest:
       override def test =
         assertMatches(parseAll(leaf, "! .x(x). x<x>.")) {
-          case Success((rep, _), _) =>
+          case Success(rep, _) =>
             val name = Symbol("x")
             val shadow = Symbol("x_shadow")
             given Bindings = Map(name -> Occurrence(Some(shadow), Position(1, true)))
@@ -264,6 +265,8 @@ class ExpansionFunctionsSuite extends FunSuite:
 
 
 object ExpansionFunctionsSuite:
+
+  given (Int => (Int, Int)) = { _ => (0, 0) }
 
   abstract class ExpansionFunctionTest extends Expansion:
     override protected val emitter: Emitter = Emitter.test
