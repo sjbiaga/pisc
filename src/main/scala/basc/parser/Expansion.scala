@@ -178,7 +178,7 @@ abstract class Expansion extends Encoding:
 
                   if op.charAt(0).isUpper
                   then
-                    substitution(op) = ∅()
+                    substitution(op) = ∅().setPos(in.drop(start - offset).pos)
 
                     val inʹ = in.drop(start + n - offset)
                     success(inʹ)
@@ -273,6 +273,20 @@ abstract class Expansion extends Encoding:
                             bf(sum.free)
 
                             val sumʹ = sum.flatten.update(using Bindings(given_Bindings))
+
+                            val colʹ = in.drop(start - offset).pos.column
+
+                            extension (self: AST)
+                              def shift: Unit =
+                                val col = self.pos.column
+                                self.pos =
+                                  new scala.util.parsing.input.Position {
+                                    override val line: Int = 1
+                                    override val column: Int = colʹ + col - 1
+                                    override protected val lineContents: String = "N/A"
+                                  }
+
+                            sumʹ.foreach(_.shift)
 
                             substitution(op) = sumʹ
 

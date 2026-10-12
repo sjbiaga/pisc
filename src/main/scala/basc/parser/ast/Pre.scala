@@ -30,8 +30,6 @@ package basc
 package parser
 package ast
 
-import scala.meta.Term
-
 import Expression.Code
 import BioAmbients.{ `$`, Cap, Act, Bound, Free }
 

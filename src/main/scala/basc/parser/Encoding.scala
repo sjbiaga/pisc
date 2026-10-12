@@ -71,24 +71,23 @@ abstract class Encoding extends Calculus:
                            .map { it => it -> (if parameters.contains(it) then pos_() else pos()) }
                            .map(_ -> Occurrence(None, _))
         given Int = 1
-        "="~> positioned(choice) ^^ {
-          case _sum =>
-            val sum = _sum.flatten
-            val free = _sum.free ++ sum.capitals
-            if (free &~ bound).nonEmpty
+        "="~> positioned(choice) ^^ { _sum =>
+          val sum = _sum.flatten
+          val free = _sum.free ++ sum.capitals
+          if (free &~ bound).nonEmpty
+          then
+            throw DefinitionFreeNamesException(_code, free &~ bound)
+          if parameters.size == _parameters.size
+          then
+            if !_settings.exclude
             then
-              throw DefinitionFreeNamesException(_code, free &~ bound)
-            if parameters.size == _parameters.size
-            then
-              if !_settings.exclude
-              then
-                val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
-                eqtn :+= (bind, _settings.traces.isDefined, sum)
-            Some {
-              Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
-              ->
-              Definition(_code, term, constants, variables, sum)
-            }
+              val bind: `(*)` = `(*)`("Self_" + _code, bound.map(λ(_)).toSeq*)
+              eqtn :+= (bind, _settings.traces.isDefined, sum)
+          Some {
+            Macro(parameters.toList, _parameters.size, constants, variables, given_Bindings, sum)
+            ->
+            Definition(_code, term, constants, variables, sum)
+          }
         }
     }
 
@@ -120,7 +119,7 @@ abstract class Encoding extends Calculus:
             `⟦⟧`(definition, sum.flatten, xid).free = sum.free
           }
         case it =>
-          positioned(instance(it, s"$grp1⟧") <~ s"$grp1⟧")
+          positioned(instance(it, s"$grp1⟧")) <~ s"$grp1⟧"
     } >> {
       case exp @ `⟦⟧`(Definition(code, _, constants, variables, _), _, _, _) =>
         opt( pointers ) ^^ { _.getOrElse(Nil -> Names()) } ^^ { (pointers, free) =>

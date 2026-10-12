@@ -29,8 +29,6 @@
 package basc
 package parser
 
-import scala.meta.{ Pat, Term, Type }
-
 import emitter.shared.Meta.rateʹ
 
 import BioAmbients.*
@@ -391,7 +389,7 @@ object Calculus:
         case it @ ∥(seq, components*) =>
           val lhs: ∥ = ∥(seq.flatten)
           val rhs = ∥(components*).flatten
-          it.cc(components = lhs.components ++ rhs.components)
+          it.cc(components = (lhs.components ++ rhs.components).filterNot { case `.`(sum: +) => sum.isVoid case _ => false })
 
         case it @ `.`(+(∥(`.`(end, psr*))), psl*) =>
           it.cc(end = end, prefixes = psl ++ psr).flatten

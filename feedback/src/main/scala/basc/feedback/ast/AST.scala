@@ -69,8 +69,8 @@ enum AST extends Positional with Free derives Codec.AsObject:
 
     case ∥(_, _, _, components*) => components.mkString(" | ")
 
-    case `.`(_, _, _, ∅()) => "()"
-    case `.`(_, _, _, ∅(), prefixes*) => prefixes.mkString(" ") + " ()"
+    case `.`(_, _, _, it @ ∅()) => it.toString
+    case `.`(_, _, _, it @ ∅(), prefixes*) => prefixes.mkString(" ") + " " + it
     case `.`(_, _, _, end: +, prefixes*) =>
       prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
     case `.`(_, _, _, end, prefixes*) =>

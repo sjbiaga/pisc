@@ -60,7 +60,7 @@ function ba() {
     done
     set ${srcs#?} ../${emit}/ba.scala ../${emit}/dump.scala ../${emit}/traces.scala ../${emit}/loop.scala ../${emit}/stats.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC3 \
+                  -q -O -nowarn -S 3.10.0 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
@@ -145,7 +145,7 @@ function ba_() {
     done
     set ${srcs#?} ../${emit}/ba_.scala ../${emit}/dump_.scala ../${emit}/traces_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.0-RC3 \
+                  -q -O -nowarn -S 3.10.0 \
                   --dep org.scalanlp::breeze:2.1.0 \
                   --dep com.github.blemale::scaffeine:5.3.0 \
                   --dep eu.timepit::refined:0.11.4 \
