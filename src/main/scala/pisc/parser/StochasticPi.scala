@@ -37,7 +37,6 @@ import scala.collection.mutable.{
 }
 
 import scala.meta.{ Lit, Term }
-import scala.meta.dialects.Scala3
 
 import io.circe.{ Codec, Encoder, Json }
 
@@ -155,10 +154,10 @@ abstract class StochasticPi extends Expression:
 
   def scale: Parser[Int] =
     opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
-      case Some(_: String)  => Some(BigInt(0))
-      case Some(it: BigInt) => Some(it)
-      case _                => None
-    } ^^ { _.fold(-1)(_.toInt) }
+      case Some(_: String)  => 0
+      case Some(it: BigInt) => it.toInt
+      case _                => -1
+    }
 
   def pace: Parser[(Long, String)] =
     naturalNumber ~ opt( ","~> ident ) ^^ {

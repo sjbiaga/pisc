@@ -214,9 +214,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
           case it: String => it
           case _          => throw DirectiveValueParsingException(directive, "a time unit")
 
-      case "scaling"      =>
-        settings.scaling = boolean
-
       case "replication"  =>
         settings.replication = self match
           case it: List[String] => it.map(_.toLowerCase) match
@@ -336,7 +333,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                                   "duplications" -> settings.dups,
                                   "exclude"      -> settings.exclude,
                                   "paceunit"     -> settings.paceunit,
-                                  "scaling"      -> settings.scaling,
                                   "replication"  -> settings.replication,
                                   "typeclasses"  -> settings.typeclasses,
                                   "elastic4s"    -> settings.elastic4s,
@@ -350,7 +346,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               case it @ "duplications"   => it -> settings.dups
               case "exclude" | "include" => "exclude" -> settings.exclude
               case it @ "paceunit"       => it -> settings.paceunit
-              case it @ "scaling"        => it -> settings.scaling
               case it @ "replication"    => it -> settings.replication
               case it @ "typeclasses"    => it -> settings.typeclasses
               case it @ "elastic4s"      => it -> settings.elastic4s
@@ -368,7 +363,6 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
             case ("duplications", it: Boolean)       => settings.dups = it
             case ("exclude", it: Boolean)            => settings.exclude = it
             case ("paceunit", it: String)            => settings.paceunit = it
-            case ("scaling", it: Boolean)            => settings.scaling = it
             case ("replication", it: (Int, Boolean)) => settings.replication = it
             case ("typeclasses", it: List[String])   => settings.typeclasses = it
             case ("elastic4s", it: Elastic4s)        => settings.elastic4s = it
@@ -400,7 +394,6 @@ object Directive:
        | "errors" | "duplications"
        | "exclude" | "include"
        | "paceunit"
-       | "scaling"
        | "replication"
        | "typeclasses"
        | "elastic4s"
@@ -414,7 +407,6 @@ object Directive:
                       var dups: Boolean = false,
                       var exclude: Boolean = false,
                       var paceunit: String = "second",
-                      var scaling: Boolean = false,
                       var replication: (Int, Boolean) = (-1, false),
                       var typeclasses: List[String] = Nil,
                       var elastic4s: Settings.Elastic4s = Elastic4s(),

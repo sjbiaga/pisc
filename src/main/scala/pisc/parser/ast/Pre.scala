@@ -30,8 +30,6 @@ package pisc
 package parser
 package ast
 
-import scala.meta.Term
-
 import Expression.Code
 import StochasticPi.{ Act, Bound, Free }
 

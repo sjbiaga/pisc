@@ -57,7 +57,7 @@ abstract class Expression extends JavaTokenParsers:
     }
 
   import scala.meta.*
-  import scala.meta.dialects.Scala3
+  import dialects.Scala3
 
   /** Scala comment enclosing any [[Scalameta]] [[Term]]
     * or [[Enumerator]]s (used for assignment)

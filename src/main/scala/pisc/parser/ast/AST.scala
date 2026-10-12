@@ -82,8 +82,8 @@ enum AST extends Positional with Free:
 
     case ∥(components*) => components.mkString(" | ")
 
-    case `.`(∅()) => "()"
-    case `.`(∅(), prefixes*) => prefixes.mkString(" ") + " ()"
+    case `.`(it @ ∅()) => it.toString
+    case `.`(it @ ∅(), prefixes*) => prefixes.mkString(" ") + " " + it
     case `.`(end: +, prefixes*) =>
       prefixes.mkString(" ") + (if prefixes.isEmpty then "" else " ") + "(" + end + ")"
     case `.`(end, prefixes*) =>
@@ -143,8 +143,8 @@ object AST:
   given `_?:_`: {} with
     extension (self: ?:)
       def cc(cond: ((λ, λ), Boolean) = self.cond,
-             t: AST.+ = self.t,
-             f: Option[AST.+] = self.f): ?: =
+             t: + = self.t,
+             f: Option[+] = self.f): ?: =
         import Cast.given
         `?:`(cond, t, f)(using self.lc).setPos(self.pos).free = self.free
 
@@ -153,14 +153,14 @@ object AST:
       def cc(parallelism: Int = self.parallelism,
              pace: Option[(Long, String)] = self.pace,
              guard: Option[μ] = self.guard,
-             sum: AST.+ = self.sum): ! =
+             sum: + = self.sum): ! =
         import Cast.given
         `!`(parallelism, pace, guard, sum)(using self.lc).setPos(self.pos).free = self.free
 
   given `_⟦⟧_`: {} with
     extension (self: `⟦⟧`)
       def cc(definition: Definition = self.definition,
-             sum: AST.+ = self.sum,
+             sum: + = self.sum,
              xid: String = self.xid,
              pointers: List[Symbol] = self.pointers): `⟦⟧` =
         import Cast.given
@@ -185,7 +185,7 @@ object AST:
   object ∅ :
     def apply(pos: Position = NoPosition)(using Int => (Int, Int)): + = `+`().setPos(pos)
     def unapply(self: AST): Boolean = self match
-      case it: (+ | `⟦⟧`) => it.isVoid
+      case it: + => it.isVoid
       case _ => false
 
   extension (self: + | `⟦⟧`)
