@@ -105,7 +105,7 @@ class PiSuite extends FunSuite:
     } match
       case _ :: Right((`(*)`("Main", _), +(_, ∥(_, `.`(exp, ν("x")))))) :: Nil =>
         assertMatches(exp) {
-          case `⟦⟧`(_, +(_, ∥(_, `.`(∅(), π(λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), None)))), _, _) => true
+          case `⟦⟧`(_, +(_, ∥(_, `.`(+(_, ∥(_, `.`(∅(), π(λ(Symbol("x")), λ(Symbol(s"u_$_")), Some(""), None)))), ν(s"u_$_")))), _, _) => true
         }
 
   }

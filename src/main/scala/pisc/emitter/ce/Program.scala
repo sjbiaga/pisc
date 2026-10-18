@@ -147,6 +147,7 @@ object Program:
         case ν(names*) =>
           * = names.map { it => `* <- *`(it -> "ν") }.toList
 
+
         case τ(Some((Left(enums), _))) =>
           * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
           * = * ::: enums
@@ -577,20 +578,12 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
+        case `⟦⟧`(Definition(_, _, _, variables, _), sum, _, pointers) =>
           * = (variables zip pointers)
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
-
-          val n = pointers.size
-
-          val sum = if (variables.size == n)
-                    then
-                      _sum
-                    else
-                      `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
           * = * ::: sum.emit
 
@@ -620,7 +613,6 @@ object Program:
     def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
       prog
-        .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

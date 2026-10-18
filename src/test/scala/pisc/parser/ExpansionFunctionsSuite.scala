@@ -266,6 +266,8 @@ class ExpansionFunctionsSuite extends FunSuite:
 
 object ExpansionFunctionsSuite:
 
+  given Boolean = false
+
   given (Int => (Int, Int)) = { _ => (0, 0) }
 
   abstract class ExpansionFunctionTest extends Expansion:

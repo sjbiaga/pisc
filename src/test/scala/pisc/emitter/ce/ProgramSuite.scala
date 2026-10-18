@@ -1341,7 +1341,7 @@ class ProgramSuite extends FunSuite:
     * } yield ()
     * }}}
     */
-  test("replication - output - no parallelism & no pace") {
+  test("replication - unguarded - no parallelism & no pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(-1, None, None, ∅())
@@ -1400,7 +1400,7 @@ class ProgramSuite extends FunSuite:
     * } yield ()
     * }}}
     */
-  test("replication - output - parallelism >= 0 & no pace") {
+  test("replication - unguarded - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(13, None, None, ∅())
@@ -1463,7 +1463,7 @@ class ProgramSuite extends FunSuite:
     * } yield ()
     * }}}
     */
-  test("replication - output - no parallelism & nonempty pace") {
+  test("replication - unguarded - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(-1, Some(13L->"seconds"), None, ∅())
@@ -1525,7 +1525,7 @@ class ProgramSuite extends FunSuite:
     * } yield ()
     * }}}
     */
-  test("replication - output - parallelism >= 0 & nonempty pace") {
+  test("replication - unguarded - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(13, Some(13L->"seconds"), None, ∅())

@@ -72,6 +72,7 @@ abstract class Expansion extends Encoding:
                        (using Bindings, Duplications, Int): Parser[`⟦⟧`] =
     var idx = -1
     val xid = χ_id
+    given Boolean = emitter == Emitter.go
 
     new Parser[`⟦⟧`] {
 
@@ -519,8 +520,23 @@ object Expansion:
       case _ => λ(name)
 
   def replaced(term: Term)
+              (using go: Boolean)
               (using Substitution): Term =
-    Expression(term)._1
+    term match
+      case it @ (Lit.Int(_) | Lit.Long(_) | Lit.Boolean(_) | Lit.Double(_) | Lit.String(_)) if go => it
+      case Term.Name(str) if go =>
+        Term.Name {
+          Expression.identifiers(str)
+            .foldLeft(str) { (r, it) =>
+              replaced(it) match
+                case λ(Symbol(name)) =>
+                  r.replaceAll(s"'${it.name}", s"'$name")
+                case value =>
+                  r.replaceAll(s"'${it.name}", value.toString)
+            }
+        }
+      case _ =>
+        Expression(term)._1
 
   def updated(name: Symbol)
              (using bindings: Bindings): Symbol =
@@ -529,18 +545,35 @@ object Expansion:
       case _ => name
 
   def updated(term: Term)
+             (using go: Boolean)
              (using Bindings): Term =
-    Expression(term)._1
+    term match
+      case it @ (Lit.Int(_) | Lit.Long(_) | Lit.Boolean(_) | Lit.Double(_) | Lit.String(_)) if go => it
+      case Term.Name(str) if go =>
+        Term.Name {
+          Expression.identifiers(str)
+            .foldLeft(str) { (r, it) =>
+              r.replaceAll(s"'${it.name}", s"'${updated(it).name}")
+            }
+        }
+      case _ =>
+        Expression(term)._1
 
-  private def recoded(using code: Option[Code])
-                     (using substitution: Substitution = null)
-                     (using updating: Bindings = null): Option[Code] =
-    code.map { (_, orig) =>
-      Expression(orig)._1 match
-        case term @ Term.ForYield(enums, _) =>
-          (Left(enums), term)
-        case term =>
-          (Right(term), term)
+  def recoded(using code: Option[Code])
+             (using go: Boolean)
+             (using substitution: Substitution = null)
+             (using updating: Bindings = null): Option[Code] =
+    code.map {
+      case it @ (_, Lit.Int(_) | Lit.Long(_) | Lit.Boolean(_) | Lit.Double(_) | Lit.String(_)) if go => it
+      case (_, it: Term.Name) if go && (substitution ne null) =>
+        val lit = replaced(it)
+        (Right(lit), lit)
+      case (_, it: Term.Name) if go && (updating ne null) =>
+        val lit = updated(it)
+        (Right(lit), lit)
+      case (_, orig) =>
+        val term = Expression(orig)._1
+        Expression.recode(term)
     }
 
 
@@ -549,6 +582,7 @@ object Expansion:
   extension [T <: AST](ast: T)
 
     def replace(tooMP: (Int, Int) => Unit)
+               (using Boolean)
                (using substitution: Substitution)
                (using rename: + | `⟦⟧` => + | `⟦⟧`): T =
 
@@ -652,7 +686,8 @@ object Expansion:
       }
 
 
-    def update(using bindings: Bindings): T =
+    def update(using bindings: Bindings)
+              (using Boolean): T =
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
 
@@ -668,7 +703,7 @@ object Expansion:
               it.cc(code = recoded)
             case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), given Option[Code]) =>
               val chʹ = updated(ch)
-              given_Bindings --= params.map(_.asSymbol).filterNot(_.name.isEmpty)
+              given_Bindings --= params.map(_.asSymbol)
               it.cc(channel = chʹ, code = recoded)
             case it @ π(λ(ch: Symbol), λ(par: Symbol), Some(_), given Option[Code]) =>
               val chʹ = updated(ch)

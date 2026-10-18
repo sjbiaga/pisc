@@ -154,6 +154,8 @@ Emitters
 
 - [ZStream](https://github.com/sjbiaga/pisc/tree/main/zs/README.md)
 
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/main/go/README.md)
+
 
 Branches
 --------

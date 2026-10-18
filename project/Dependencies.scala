@@ -5,7 +5,7 @@ object Dependencies {
   lazy val akka = "com.typesafe.akka" %% "akka-actor-typed" % "2.10.24"
   lazy val pekko = "org.apache.pekko" %% "pekko-actor-typed" % "1.7.1"
   lazy val fs2 = "co.fs2" %% "fs2-core" % "3.13.0"
-  lazy val monix = "io.monix" %% "monix" % "3.4.1"
+  lazy val monix = "io.monix" %% "monix" % "3.5.2"
   lazy val zc = "dev.zio" %% "zio-concurrent" % "2.1.26"
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.26"
   lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.14"

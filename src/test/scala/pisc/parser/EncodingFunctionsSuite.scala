@@ -662,6 +662,8 @@ class EncodingFunctionsSuite extends FunSuite:
 
 object EncodingFunctionsSuite:
 
+  given Boolean = false
+
   given (Int => (Int, Int)) = { _ => (0, 0) }
 
   given Conversion[Char, `{}`] = { it => `{}`(it.toString, Nil, false)  }

@@ -1,0 +1,63 @@
+// -*- indent-tabs-mode: nil; -*-
+
+type Go_SemaphorePi struct {
+    weighted *semaphore.Weighted
+}
+
+func Go_NewSemaphorePi(n int64) Go_SemaphorePi {
+    Go_SemaphorePi(weighted = semaphore.NewWeighted(n))
+}
+
+func (self Go_SemaphorePi) AcquireN(ctx context.Context, n int64) Option[Void] {
+    FromError(self.weighted.Acquire(ctx, n)).ToOption()
+}
+
+func (self Go_SemaphorePi) Acquire1(ctx context.Context) Option[Void] {
+    self.AcquireN(ctx, 1)
+}
+
+func (self Go_SemaphorePi) Release1() Option[bool] {
+    self.weighted.Release(1)
+    Some(true)
+}
+
+func (self Go_SemaphorePi) TryAcquireN(n int64) Option[bool] {
+    if (self.weighted.TryAcquire(n)) Some(true) else None()
+}
+
+func (self Go_SemaphorePi) TryAcquire1() Option[bool] {
+    self.TryAcquireN(1)
+}
+
+type Go_ReleasablePi struct {
+    semaphore Go_SemaphorePi
+}
+
+func (self Go_ReleasablePi) Close() {
+    self.semaphore.Release1()
+}
+
+func Go_PacePi(amount int64, paceunit time.Duration) Option[bool] {
+    time.Sleep(time.Duration(amount) * paceunit)
+    Some(true)
+}
+
+func PrintNoLn(message any) Option[bool] {
+    Print(message)
+    Some(true)
+}
+
+func PrintLn(message any) Option[bool] {
+    Println(message)
+    Some(true)
+}
+
+func Go_SpawnPi(f func () Option[bool]) Option[bool] {
+    go_interop.Spawn(() => f())
+    Some(true)
+}
+
+func main() {
+    val go_context = context.Background()
+    Main(go_context, ListFromSlice(os.Args).Tail())
+}

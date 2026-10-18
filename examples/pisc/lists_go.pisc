@@ -1,0 +1,30 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ pi -go lists.gala -- 1 2 3 5
+
+@import "strconv"
+
+@func parse(text string) Try[int] { bind n = strconv.Atoi(text); Success(n) }
+
+@func toInt(text string) Go_NamePi { Go_IntPi(parse(text).ToOption().Get()) }
+
+@func foreach(channel Go_NamePi, list List[Go_NamePi]) Option[bool] {
+@    channel match {
+@        case Go_QueuePi(it) => {
+@            list.ForEach((item) => it.Go_EnqueuePi(item))
+@            it.Go_EnqueuePi(Go_NothingPi())
+@        }
+@        case it => Panic(it)
+@    }
+@    Some(true)
+@}
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{lists_go}
+
+Main = ν(ch)                                         \
+     ( τ/*bind _ = foreach(ch, args.Map(toInt)) */.  \
+     | Sum(ch, /*0*/)                                \
+     )
+
+Sum(ch, sum) = ch(item). if /* 'item.IsNothing() */ = True then τ/* PrintLn('sum.ToInt()) */.  \
+                         else Sum(ch, /*Go_IntPi('sum.ToInt() + 'item.ToInt())*/)

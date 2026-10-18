@@ -40,7 +40,7 @@ import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.parsing.input.{ NoPosition, Positional }
 
-import Pi.Names
+import Pi.{ Emitter, Names }
 import Calculus.*
 import Directive.Settings
 import Encoding.{ renamed, Bindings }
@@ -57,31 +57,48 @@ abstract class Expression extends JavaTokenParsers:
     }
 
   import scala.meta.*
-  import scala.meta.dialects.Scala3
+  import dialects.Scala3
 
   /** Scala comment enclosing any [[Scalameta]] [[Term]]
     * or [[Enumerator]]s (used for assignment)
     * @return
     */
   def expression: Parser[(Code, Names)] =
-    expression_r ^^ { it =>
-      val expr = it.stripPrefix("/*").stripSuffix("*/")
-      try
-        val orig = expr.parse[Term].get
-        Expression(orig) match
-          case (term, names) =>
-            (Right(term), orig) -> names
-      catch _ =>
+    if emitter == Emitter.go
+    then
+      expression_r ^^ { it =>
+        val str = it.stripPrefix("/*").stripSuffix("*/").trim
+        val lit =
+          str.parse[Term].getOrElse(Term.Name(str)) match
+            case it: Lit.Int => it
+            case it: Lit.Long => it
+            case it: Lit.Boolean => it
+            case it: Lit.Double => it
+            case it: Lit.String => it
+            case _ => Term.Name(str)
+        (Right(lit), lit) -> identifiers(str)
+      }
+    else
+      expression_r ^^ { it =>
+        val expr = it.stripPrefix("/*").stripSuffix("*/")
         try
-          val orig = ("for { " + expr + " } yield ()").parse[Term].get
+          val orig = expr.parse[Term].get
           Expression(orig) match
-            case (Term.ForYield(enums, _), names) =>
-              (Left(enums), orig) -> names
-        catch t =>
-          throw ExpressionParsingException(expr, t)
-    }
+            case (term, names) =>
+              (Right(term), orig) -> names
+        catch _ =>
+          try
+            val orig = ("for { " + expr + " } yield ()").parse[Term].get
+            Expression(orig) match
+              case (Term.ForYield(enums, _), names) =>
+                (Left(enums), orig) -> names
+          catch t =>
+            throw ExpressionParsingException(expr, t)
+      }
 
   def regexMatch(r: Regex): Parser[Regex.Match]
+
+  protected val emitter: Emitter
 
   protected def in: String
   def ln: String
@@ -234,6 +251,11 @@ abstract class Expression extends JavaTokenParsers:
 object Expression:
 
   private lazy val expression_r = "[/][*].*?[*][/]".r
+
+  private lazy val identifier_r = "['][a-zA-Z_]['a-zA-Z0-9_\"]*".r
+
+  def identifiers(it: String): Names =
+    Set.from(identifier_r.findAllIn(it).toSeq.map(_.substring(1)).map(Symbol(_)))
 
   private lazy val template_r = """⟦(\d*)(.*?)\1⟧""".r
 

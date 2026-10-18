@@ -29,7 +29,7 @@
 package pisc
 package parser
 
-import scala.meta.{ Pat, Term, Type }
+import scala.meta.{ Lit, Pat, Term, Type }
 
 
 package object ast:
@@ -67,8 +67,6 @@ package object ast:
       case _ => "polyadic names"
 
     def toTerm: Term =
-      import scala.meta._
-      import dialects.Scala3
       `val` match
         case it: Symbol => Term.Name(it.name)
         case it: BigDecimal => Term.Apply(Term.Name("BigDecimal"), Term.ArgClause(Lit.String(it.toString)::Nil))
@@ -77,8 +75,6 @@ package object ast:
         case it: Term => Expression(it)._1
 
     def toPat: Pat =
-      import scala.meta._
-      import dialects.Scala3
       `val` match
         case it: Symbol => Pat.Macro(Term.QuotedMacroExpr(Term.Name(it.name)))
         case it: BigDecimal => Lit.Double(it.toDouble)

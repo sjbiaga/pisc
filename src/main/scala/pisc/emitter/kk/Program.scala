@@ -252,7 +252,7 @@ object Program:
           var ns = ps.flatMap {
             case ν(names*) => names
             case π(_, λ(Symbol(arg)), Some(_), _) => Some(arg)
-            case π(_, λ(params: List[`λ`]), Some(_), _) => params.map(_.asSymbol.name).filter(_.nonEmpty)
+            case π(_, λ(params: List[`λ`]), Some(_), _) => params.map(_.asSymbol.name).filterNot(_.startsWith("_"))
             case _ => Nil
           }.toSet.toSeq
 
@@ -534,14 +534,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
-          val n = pointers.size
-
-          val sum: + = if (variables.size == n)
-                       then
-                         _sum
-                       else
-                         `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
+        case `⟦⟧`(_, sum, _, _) =>
 
           sum.scheme(null)(callback)
 
@@ -711,7 +704,6 @@ object Program:
       val id = new helper.υidυ
       given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
-        .drop(1)
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>

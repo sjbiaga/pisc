@@ -162,6 +162,7 @@ abstract class Calculus extends Pi:
     ("!"|"¡") ~ scale >> { // [guarded] replication
       case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
+        if parallelismʹ == -1 && lin == "¡" then parallelismʹ = 1
         if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡") && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
         parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡") || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
         opt( pace ) ~ opt( "."~>positioned(μ)<~"." ) >> {
@@ -347,5 +348,12 @@ object Calculus:
 
         case it @ !(_, _, _, sum) =>
           it.cc(sum = sum.flatten)
+
+        case it @ `⟦⟧`(definition @ Definition(_, _, _, variables, _), sum, _, pointers)
+            if variables.size > pointers.size =>
+          val pos = it.pos
+          val nu = ν(variables.drop(pointers.size).map(_.name).toSeq*)
+          val sumʹ = `+`(-1, ∥(-1, `.`(sum, nu.setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
+          it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ)
 
         case _ => ast

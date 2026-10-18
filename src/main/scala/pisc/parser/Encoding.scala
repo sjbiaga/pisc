@@ -35,7 +35,7 @@ import scala.collection.mutable.{
   LinkedHashSet => Set
 }
 
-import scala.meta.Term
+import scala.meta.{ Lit, Term }
 
 import helper.υidυ.rewrite
 
@@ -128,7 +128,7 @@ abstract class Encoding extends Calculus:
             warn(throw TooManyPointersParsingException(code, pointers.size - variables.size))
           try
             given MutableList[(Symbol, Symbol)]()
-            val expʹ = exp.rename()(id)
+            val expʹ = exp.rename()(id)(using emitter == Emitter.go)
             nest(false)
             bindings ++= purged
             PendingOccurrence(free)(using bindings)
@@ -191,6 +191,7 @@ object Encoding:
                    sum: +):
     def apply(code: Int, term: Term, dups: Boolean)
              (id: => String, χ_id: => String)
+             (using Boolean)
              (using Duplications): Fresh =
       given Bindings = Bindings(bindings)
       given MutableList[(Symbol, Symbol)]()
@@ -225,6 +226,7 @@ object Encoding:
              (id: => String)
              (using duplications: Duplications)
              (using Int => (Int, Int))
+             (using Boolean)
              (using Bindings): `⟦⟧` =
       if dups
       then
@@ -363,16 +365,33 @@ object Encoding:
               case _ => throw NoBPEx(it.name)
 
   def renamed(term: Term)
-             (using MutableList[(Symbol, Symbol)])
-             (using Bindings): Term =
-    Expression(term)._1
+             (using go: Boolean)
+             (using refresh: MutableList[(Symbol, Symbol)])
+             (using bindings: Bindings): Term =
+    term match
+      case it @ (Lit.Int(_) | Lit.Long(_) | Lit.Boolean(_) | Lit.Double(_) | Lit.String(_)) if go => it
+      case Term.Name(str) if go =>
+        Term.Name {
+          Expression.identifiers(str)
+            .foldLeft(str) { (r, it) =>
+              r.replaceAll(s"'${it.name}", s"'${renamed(it).name}")
+            }
+        }
+      case _ =>
+        Expression(term)._1
 
   def recoded(using code: Option[Code])
+             (using go: Boolean)
              (using MutableList[(Symbol, Symbol)])
              (using Bindings): Option[Code] =
-    code.map { (_, orig) =>
-      val term = Expression(orig)._1
-      Expression.recode(term)
+    code.map {
+      case it @ (_, Lit.Int(_) | Lit.Long(_) | Lit.Boolean(_) | Lit.Double(_) | Lit.String(_)) if go => it
+      case (_, it: Term.Name) if go =>
+        val lit = renamed(it)
+        (Right(lit), lit)
+      case (_, orig) =>
+        val term = Expression(orig)._1
+        Expression.recode(term)
     }
 
   def purged(using bindings: Bindings): Bindings =
@@ -415,6 +434,7 @@ object Encoding:
                duplicated: (Bindings, Duplications) ?=> String => Term => Unit = { (_, _) ?=> { _ => { _ => } } },
                collect: Boolean = false)
               (id: => String, χ_id: => String = null)
+              (using Boolean)
               (using bindings: Bindings)
               (using duplications: Duplications)
               (using refresh: MutableList[(Symbol, Symbol)]): T =
@@ -447,7 +467,7 @@ object Encoding:
               it.cc(code = recoded)
             case it @ π(λ(ch: Symbol), λ(params: List[`λ`]), Some(_), given Option[Code]) =>
               val paramsʹ = params.map {
-                case par @ λ(Symbol("")) => par
+                case par @ λ(Symbol(s"_$_")) => par
                 case λ(par: Symbol) => rebind(par)
               }
               it.cc(channel = renamed(ch), name = λ(paramsʹ), code = recoded)

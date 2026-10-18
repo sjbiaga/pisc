@@ -38,8 +38,10 @@ import scala.io.Source
 import scala.meta.*
 import dialects.Scala3
 
+import parser.Calculus.{ `(*)`, λ }
 import parser.Pi
 import emitter.fs2.Program
+import emitter.fs2.Meta.{ \, \\ }
 
 
 object Main:
@@ -67,7 +69,21 @@ object Main:
         val bind = pi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main(F)(pi(prog.map(_._1)))
+        given Set[String] =
+          prog.head._1 match
+            case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Async", "Parallel")
+            case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
+              typeclasses.args.map { case Term.Name(it) => it }.toSet
+
+        val Array(tpe, _path*) = F.split('.').reverse
+        val path = _path.reverse.map(\(_)).foldLeft("_root_": Term)(Term.Select(_, _))
+
+        val ps =
+          Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
+                    Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
+                    Type.Bounds(None, None, Nil, Nil))
+          ::
+          Program.Main()(pi(prog.drop(1).map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)

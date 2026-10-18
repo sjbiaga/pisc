@@ -91,12 +91,12 @@ abstract class Pi extends Expression:
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
       case (ch, _) ~ _ ~ params ~ _
           if {
-            val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
+            val paramsʹ = params.filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
             paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
           } =>
         throw PrefixChannelsParsingExceptionʹ(ch.asSymbol,
                                               params
-                                                .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                .filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
                                                 .map(_._1.asSymbol.name)*)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
@@ -123,13 +123,13 @@ abstract class Pi extends Expression:
     name ~ opt(`type`) ^^ {
       case (λ, free) ~ tpe =>
         (λ.copy()(using tpe), free)
-    }
+    } | "_" ^^ { it => λ(Symbol(it + id)) -> Names() }
 
   def names: Parser[List[(λ, Names)]] =
     rep1sep(name, ",")
 
   def namesʹ: Parser[List[(λ, Names)]] =
-    rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
+    rep1sep(nameʹ, ",")
 
   def scale: Parser[Int] =
     opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
@@ -140,6 +140,8 @@ abstract class Pi extends Expression:
 
   def pace: Parser[(Long, String)] =
     naturalNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit if emitter == Emitter.go =>
+        amount -> unit.getOrElse(_settings.paceunit).capitalize
       case amount ~ unit =>
         amount -> unit.getOrElse(_settings.paceunit)
     }
@@ -155,8 +157,6 @@ abstract class Pi extends Expression:
 
   def naturalNumber: Parser[Long] =
     """\d+""".r ^? { case it if it.toLong > 0 => it.toLong }
-
-  protected val emitter: Emitter
 
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
@@ -276,6 +276,7 @@ object Pi:
     case monix extends Emitter(false, false)
     case zs extends Emitter(true, true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
+    case go extends Emitter(nullOnEmptyOutput = Lit.Null())
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]
@@ -380,6 +381,7 @@ object Pi:
 
     protected def _init: Unit =
       _settings = Settings()
+      if emitter == Emitter.go then _settings.paceunit = _settings.paceunit.capitalize
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()

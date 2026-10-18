@@ -67,7 +67,7 @@ object Main:
         val bind = pi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main(opt)(pi(prog.map(_._1)))
+        val ps = Program.Main(opt)(pi(prog.drop(1).map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
