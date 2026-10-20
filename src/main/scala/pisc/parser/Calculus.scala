@@ -353,30 +353,44 @@ object Calculus:
             itʹ
 
         case it @ ?:(_, t, f) =>
-          it.cc(t = t.flatten, f = f.map(_.flatten)) match
-            case ?:(_, ∅(), None | Some(∅())) => ∅(ast.pos)
-            case itʹ => itʹ
+          val itʹ = it.cc(t = t.flatten, f = f.map(_.flatten))
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
 
         case it @ !(-1, None, None, sum) =>
-          { sum.flatten match
-              case +(-1|1, ∥(-1|1, `.`(end: !))) => end
-              case sumʹ => it.cc(sum = sumʹ)
-          } match
-            case !(_, _, None, ∅()) => ∅(ast.pos)
-            case itʹ => itʹ
+          val itʹ = sum.flatten match
+            case +(-1|1, ∥(-1|1, `.`(end: !))) => end
+            case sumʹ => it.cc(sum = sumʹ)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
 
         case it @ !(_, _, _, sum) =>
-          it.cc(sum = sum.flatten) match
-            case !(_, _, None, ∅()) => ∅(ast.pos)
-            case itʹ => itʹ
+          val itʹ = it.cc(sum = sum.flatten)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
 
         case it @ `⟦⟧`(definition @ Definition(_, _, _, variables, _), sum, _, pointers)
             if variables.size > pointers.size =>
           val pos = it.pos
           val nu = ν(variables.drop(pointers.size).map(_.name).toSeq*)
           val sumʹ = `+`(-1, ∥(-1, `.`(sum, nu.setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
-          it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ) match
-            case `⟦⟧`(_, ∅(), _, _) => ∅(ast.pos)
-            case itʹ => itʹ
+          val itʹ = it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
+
+        case it: `⟦⟧` if it.isVoid =>
+          ∅(ast.pos)
 
         case _ => ast
