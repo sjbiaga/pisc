@@ -212,12 +212,14 @@ enum Gala(using id: => String):
         s"${indent}}" ::
         Nil
 
-      case init(it) if it.isEmpty => Nil
+      case init(it) if it.isEmpty =>
+        Nil
 
       case init(it) =>
         indent + it.map(_._1).mkString("val ", ", ", "") + it.map(_._2).mkString(" = ", ", ", "")
 
-      case noop() => Nil
+      case noop() =>
+        Nil
 
       case nu(names*) =>
         names.map(s"${indent}bind " + _ + " = " + "Some(Go_QueuePi(Go_NewBlockingQueuePi()))").toList
@@ -246,10 +248,10 @@ enum Gala(using id: => String):
         s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ(${names.mkString(", ")})" ::
         s"${indent}}" ::
-        (it.tail: body).issue(indent) :::
+        it.tail.issue(indent) :::
         s"${indent}$υidυ(${names.mkString(", ")})" :: // LEAF, tailcall
         Nil
 
@@ -267,10 +269,10 @@ enum Gala(using id: => String):
         s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ(${names.mkString(", ")})" ::
         s"${indent}}" ::
-        (it.tail: body).issue(indent) :::
+        it.tail.issue(indent) :::
         s"${indent}$υidυ(${names.mkString(", ")})" :: // LEAF, tailcall
         Nil
 
@@ -282,10 +284,10 @@ enum Gala(using id: => String):
         s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
-        (it.tail: body).issue(indent) :::
+        it.tail.issue(indent) :::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
 
@@ -301,10 +303,10 @@ enum Gala(using id: => String):
         s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
-        (it.tail: body).issue(indent) :::
+        it.tail.issue(indent) :::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
 
@@ -382,7 +384,7 @@ enum Gala(using id: => String):
         s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
         s"${indent}$υidυ()" :: // LEAF, tailcall
@@ -399,7 +401,7 @@ enum Gala(using id: => String):
         s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
-        (it: body).issue(indentʹ) :::
+        it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
         s"${indent}$υidυ()" :: // LEAF, tailcall

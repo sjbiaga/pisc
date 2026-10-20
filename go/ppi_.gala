@@ -138,16 +138,16 @@ func (q Go_BlockingQueuePi) Go_EnqueuePi(item collection_immutable.List[Go_NameP
                 if (*q.stop) {
                     None[bool]()
                 } else {
-                    for q.bools.Size() == 0 {
+                    for RequirePtr(q.bools).Size() == 0 {
                         q.notFull.Wait()
                     }
 
-                    q.bools.RemoveAt(0)
+                    RequirePtr(q.bools).RemoveAt(0)
 
                     if (*q.stop) {
                         None[bool]()
                     } else {
-                        q.items.Append(item)
+                        RequirePtr(q.items).Append(item)
 
                         q.notEmpty.Signal()
 
@@ -165,16 +165,16 @@ func (q Go_BlockingQueuePi) Go_DequeuePi() Option[collection_immutable.List[Go_N
             None[collection_immutable.List[Go_NamePi]]()
         } else {
             resource.WithLock(q.dequeue, () => {
-                q.bools.Append(true)
+                RequirePtr(q.bools).Append(true)
 
                 q.notFull.Signal()
 
-                for q.items.Size() == 0 {
+                for RequirePtr(q.items).Size() == 0 {
                     q.notEmpty.Wait()
                 }
 
-                val item = q.items.Get(0)
-                q.items.RemoveAt(0)
+                val item = RequirePtr(q.items).Get(0)
+                RequirePtr(q.items).RemoveAt(0)
 
                 Some(item)
             })
@@ -188,23 +188,23 @@ func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (collection_immutable.List[Go_N
             None[collection_immutable.List[Go_NamePi]]()
         } else {
             resource.WithLock(q.dequeue, () => {
-                q.bools.Append(true)
+                RequirePtr(q.bools).Append(true)
 
                 q.notFull.Signal()
 
-                for q.items.Size() == 0 {
+                for RequirePtr(q.items).Size() == 0 {
                     q.notEmpty.Wait()
                 }
 
-                var item = q.items.Get(0)
-                q.items.RemoveAt(0)
+                var item = RequirePtr(q.items).Get(0)
+                RequirePtr(q.items).RemoveAt(0)
 
                 item = f(item)
 
                 if (item.Head().Equal(Go_NothingPi())) {
                     *q.stop = true
 
-                    q.bools.Append(true)
+                    RequirePtr(q.bools).Append(true)
 
                     q.notFull.Signal()
 
