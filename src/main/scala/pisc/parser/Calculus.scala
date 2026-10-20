@@ -206,7 +206,7 @@ abstract class Calculus extends Pi:
 
   def instantiation(using Bindings, Duplications, Int): Parser[`⟦⟧`]
 
-  def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
+  def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] =
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
         val free = free_lhs ++ free_rhs
@@ -267,7 +267,7 @@ object Calculus:
 
   private val qual_r = "[{][^}]*[}]".r
 
-  export ast.{ AST, Bind, Cast, λ, Pre }
+  export ast.{ AST, Bind, λ, -, μ, Pre }
   export Pre.*, AST.*
 
 
@@ -309,51 +309,74 @@ object Calculus:
 
       ast match
 
-        case it @ ∅() =>
-          ∅(it.pos)
+        case ∅() =>
+          ∅(ast.pos)
 
-        case it @ +(_, ∥(-1|1, `.`(sum: +)), choices*) =>
+        case it @ +(-1|1, ∥(-1|1, `.`(sum @ +(-1|1, _*))), choices*) =>
           val lhs = sum.flatten
           val rhs = `+`(-1, choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+          it.cc(choices = lhs.choices.filterNot(`+`(-1, _).isVoid) ++ rhs.choices) match
+            case ∅() => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ +(_, par, choices*) =>
           val lhs = `+`(-1, par.flatten)
           val rhs = `+`(-1, choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(-1, _).isVoid))
+          it.cc(choices = lhs.choices.filterNot(`+`(-1, _).isVoid) ++ rhs.choices) match
+            case ∅() => ∅(ast.pos)
+            case itʹ => itʹ
 
-        case it @ ∥(_, `.`(+(-1|1, par)), components*) =>
+        case it @ ∥(-1|1, `.`(+(-1|1, par @ ∥(-1|1, _*))), components*) =>
           val lhs = par.flatten
           val rhs = ∥(-1, components*).flatten
-          it.cc(components = lhs.components ++ rhs.components)
+          it.cc(components = lhs.components.filterNot(_.isVoid) ++ rhs.components)
 
         case it @ ∥(_, seq, components*) =>
           val lhs: ∥ = ∥(-1, seq.flatten)
           val rhs = ∥(-1, components*).flatten
-          it.cc(components = (lhs.components ++ rhs.components).filterNot { case `.`(sum: +) => sum.isVoid case _ => false })
+          it.cc(components = lhs.components.filterNot(_.isVoid) ++ rhs.components)
 
         case it @ `.`(+(-1|1, ∥(-1|1, `.`(end, psr*))), psl*) =>
-          it.cc(end = end, prefixes = psl ++ psr).flatten
+          val itʹ = it.cc(end = end, prefixes = psl ++ psr).flatten
+          if itʹ.isVoid
+          then
+            `.`(∅(ast.pos)).setPos(ast.pos)
+          else
+            itʹ
 
         case it @ `.`(end, _*) =>
-          it.cc(end = end.flatten)
+          val itʹ = it.cc(end = end.flatten)
+          if itʹ.isVoid
+          then
+            `.`(∅(ast.pos)).setPos(ast.pos)
+          else
+            itʹ
 
         case it @ ?:(_, t, f) =>
-          it.cc(t = t.flatten, f = f.map(_.flatten))
+          it.cc(t = t.flatten, f = f.map(_.flatten)) match
+            case ?:(_, ∅(), None | Some(∅())) => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ !(-1, None, None, sum) =>
-          sum.flatten match
-            case +(-1|1, ∥(-1|1, `.`(end: !))) => end
-            case sumʹ => it.cc(sum = sumʹ)
+          { sum.flatten match
+              case +(-1|1, ∥(-1|1, `.`(end: !))) => end
+              case sumʹ => it.cc(sum = sumʹ)
+          } match
+            case !(_, _, None, ∅()) => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ !(_, _, _, sum) =>
-          it.cc(sum = sum.flatten)
+          it.cc(sum = sum.flatten) match
+            case !(_, _, None, ∅()) => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ `⟦⟧`(definition @ Definition(_, _, _, variables, _), sum, _, pointers)
             if variables.size > pointers.size =>
           val pos = it.pos
           val nu = ν(variables.drop(pointers.size).map(_.name).toSeq*)
           val sumʹ = `+`(-1, ∥(-1, `.`(sum, nu.setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
-          it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ)
+          it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ) match
+            case `⟦⟧`(_, ∅(), _, _) => ∅(ast.pos)
+            case itʹ => itʹ
 
         case _ => ast

@@ -109,7 +109,7 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => `IO.cede`
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence")
 
-  def `List( *, … ).parTraverse`(* : Term*)(`…`: String): Term =
+  def `List( *, … ).parTraverse(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")) => None
       case it => Some(it)

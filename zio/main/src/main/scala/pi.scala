@@ -216,7 +216,7 @@ package object Π:
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(parallelism, _)(body)))
       else
-        super.output("*")(false)(parallelism, value)(body)
+        ZIO.suspendSucceed(super.output("*")(false)(parallelism, value)(body))
 
     /**
       * linear variable replication output guard w/ pace
@@ -226,7 +226,7 @@ package object Π:
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(false)(pace, parallelism, _)(body)))
       else
-        super.output("*")(false)(pace, parallelism, value)(body)
+        ZIO.suspendSucceed(super.output("*")(false)(pace, parallelism, value)(body))
 
     /**
       * linear variable replication output guard w/ code
@@ -236,7 +236,7 @@ package object Π:
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(parallelism, _)(code)(body)))
       else
-        super.output("*")(true)(parallelism, value)(code)(body)
+        ZIO.suspendSucceed(super.output("*")(true)(parallelism, value)(code)(body))
 
     /**
       * linear variable replication output guard w/ pace w/ code
@@ -246,7 +246,7 @@ package object Π:
       then
         ZIO.suspendSucceed(value.asInstanceOf[Task[`()`]].flatMap(apply(true)(pace, parallelism, _)(code)(body)))
       else
-        super.output("*")(true)(pace, parallelism, value)(code)(body)
+        ZIO.suspendSucceed(super.output("*")(true)(pace, parallelism, value)(code)(body))
 
     /////////////////////////////////////////////////////////////////// INPUT //
 

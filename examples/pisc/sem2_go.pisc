@@ -36,5 +36,4 @@ P(s) = ⟦ "P" ^ 100 ⟧
 Q(s) = ⟦ "Q" ^ 200 ⟧
 R(s) = ⟦ "R" ^ 300 ⟧
 
-#Main = ν(s) s<s>. ( s(t).(!Sem(s)) + s(t).(P(s) | Q(s)) + R(s) )
 Main = ν(s) ( Sem(s) | P(s) | Q(s) | R(s) )

@@ -99,7 +99,7 @@ func (self Go_NamePi) IsNothing() bool {
 }
 
 struct Go_BlockingQueuePi(
-    var items *collection_mutable.Array[Go_NamePi],
+    items *collection_mutable.Array[Go_NamePi],
     mu *go_interop.Mutex,
     notEmpty *sync.Cond
 )
@@ -116,7 +116,7 @@ func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
 
 func (q Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
     resource.WithLock(q.mu, () => {
-        q.items.Append(item)
+        RequirePtr(q.items).Append(item)
         q.notEmpty.Signal()
         Some(true)
     })
@@ -124,12 +124,12 @@ func (q Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
 
 func (q Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
     resource.WithLock(q.mu, () => {
-        for q.items.Size() == 0 {
+        for RequirePtr(q.items).Size() == 0 {
             q.notEmpty.Wait()
         }
 
-        val item = q.items.Get(0)
-        q.items.RemoveAt(0)
+        val item = RequirePtr(q.items).Get(0)
+        RequirePtr(q.items).RemoveAt(0)
 
         Some(item)
     })
@@ -137,12 +137,12 @@ func (q Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
 
 func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
     resource.WithLock(q.mu, () => {
-        for q.items.Size() == 0 {
+        for RequirePtr(q.items).Size() == 0 {
             q.notEmpty.Wait()
         }
 
-        val item = q.items.Get(0)
-        q.items.RemoveAt(0)
+        val item = RequirePtr(q.items).Get(0)
+        RequirePtr(q.items).RemoveAt(0)
 
         Some(f(item))
     })

@@ -26,7 +26,7 @@ function pi() {
             local srcs=\ ../${emit}/pim.scala
             ;;
         zio)
-            local deps='--dep dev.zio::zio-concurrent:2.1.26
+            local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/pim.scala
             ;;
@@ -47,8 +47,8 @@ function pi() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26
+            local deps='--dep dev.zio::zio-concurrent:2.1.27
+                        --dep dev.zio::zio-streams:2.1.27
                         --dep dev.zio::zio-interop-cats:23.1.0.14'
             ;;
         go)
@@ -114,7 +114,7 @@ function pi_() {
             local srcs=\ ../${emit}/pim_.scala
             ;;
         zio)
-            local deps='--dep dev.zio::zio-concurrent:2.1.26
+            local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-interop-cats:23.1.0.14'
             local srcs=\ ../${emit}/pim_.scala
             ;;
@@ -135,8 +135,8 @@ function pi_() {
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zs)
-            local deps='--dep dev.zio::zio-concurrent:2.1.26
-                        --dep dev.zio::zio-streams:2.1.26
+            local deps='--dep dev.zio::zio-concurrent:2.1.27
+                        --dep dev.zio::zio-streams:2.1.27
                         --dep dev.zio::zio-interop-cats:23.1.0.14'
             ;;
         go)

@@ -57,7 +57,7 @@ object Program:
               case +(_, ∥(_, `.`(?:(cond, t, None)))) =>
                 elvis(cond, cases(t), Nil: body) :: Nil
               case _ =>
-                Gala.cases(semaphore.get, true) :: sum.emit
+                Gala.cases(semaphore.get, tryacquire = true) :: sum.emit
 
           cases(`+`(-1, ∥(-1, it)))
 
@@ -72,6 +72,7 @@ object Program:
         // SUMMATION ///////////////////////////////////////////////////////////
 
         case ∅() =>
+          * = void()
 
         case +(_, operand) =>
           * = operand.emit
@@ -81,7 +82,7 @@ object Program:
 
           val ops = it.choices.foldRight(List[body]())(_.emitʹ :: _)
 
-          * = cases(sem.get, false) :: par(ops)
+          * = cases(sem.get) :: par(ops)
 
         case it: + =>
           val ops = it.choices.foldRight(List[body]())(_.emit :: _)
@@ -125,33 +126,25 @@ object Program:
           * = tau()
 
 
-        case π(λ(Symbol(ch)), arg @ λ(Symbol(par)), Some("ν"), str) =>
+        case π(λ(Symbol(ch)), arg @ λ(Symbol(par)), Some("ν"), opt) =>
 
-          str match
+          opt match
             case Some((Right(term), _)) =>
               * = nu(par) :: bind(ch, arg, None) :: code(term) :: Nil
             case _ =>
               * = nu(par) :: bind(ch, arg, None) :: Nil
 
-        case π(λ(Symbol(ch)), arg @ λ(_: Term), None, str) =>
+        case π(λ(Symbol(ch)), arg, None, opt) =>
 
-          str match
+          opt match
             case Some((Right(term), _)) =>
               * = bind(ch, arg, None) :: code(term) :: Nil
             case _ =>
               * = bind(ch, arg, None) :: Nil
 
-        case π(λ(Symbol(ch)), arg, None, str) =>
+        case π(λ(Symbol(ch)), par @ λ(Symbol(_)), Some(""), opt) =>
 
-          str match
-            case Some((Right(term), _)) =>
-              * = bind(ch, arg, None) :: code(term) :: Nil
-            case _ =>
-              * = bind(ch, arg, None) :: Nil
-
-        case π(λ(Symbol(ch)), par @ λ(Symbol(_)), Some(""), str) =>
-
-          str match
+          opt match
             case Some((Right(term: Term.Name), _)) =>
               * = bind(ch, par, Some(term)) :: Nil
             case Some((Right(term), _)) =>

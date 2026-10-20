@@ -104,12 +104,12 @@ object Program:
           then
             * = List(
               `* <- Semaphore(…)`(sem, 1),
-              `_ <- *`(`List( *, … ).parTraverse`(ios*)(sem))
+              `_ <- *`(`List( *, … ).parTraverse(…)`(ios*)(sem))
             )
           else
             * = List(
               `* <- Semaphore(…)`(sem, 1),
-              `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parTraverse`(ios*)(sem), "parReplicateA_"),
+              `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parTraverse(…)`(ios*)(sem), "parReplicateA_"),
                                   Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
             )
 

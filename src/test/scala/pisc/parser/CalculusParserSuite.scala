@@ -242,7 +242,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(condition, "(( m = n ))") match
+        parseAll(condition, "m = n") match
           case Success((((λ(Symbol("m")), λ(Symbol("n"))), false), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
@@ -256,7 +256,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(condition, "(( True = False ))") match
+        parseAll(condition, "True = False") match
           case Success((((λ(true), λ(false)), false), free), _) =>
             assert(free.isEmpty)
           case _ =>
@@ -270,7 +270,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(condition, "(( m ≠ n ))") match
+        parseAll(condition, "m ≠ n") match
           case Success((((λ(Symbol("m")), λ(Symbol("n"))), true), free), _) =>
             assertEquals(free, Names() + Symbol("m") + Symbol("n"))
           case _ =>
@@ -284,7 +284,7 @@ class CalculusParserSuite extends FunSuite:
 
     val `13` = new CalculusParserTest:
       override def test =
-        parseAll(condition, "(( True ≠ False ))") match
+        parseAll(condition, "True ≠ False") match
           case Success((((λ(true), λ(false)), true), free), _) =>
             assert(free.isEmpty)
           case _ =>

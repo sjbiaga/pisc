@@ -386,7 +386,7 @@ class EncodingFunctionsSuite extends FunSuite:
   test("rename - restriction - via refresh") {
 
     val `13` = `+`(-1, ∥(-1,  `.`(?:(((λ(true), λ(false)), false),
-                                     `+`(-1, ∥(-1, `.`(`!`(-1, None, None, ∅()), ν("x")))),
+                                     `+`(-1, ∥(-1, `.`(`!`(-1, None, None, ∅()), ν("x"), τ(None)))),
                                      Some(`+`(-1, ∥(-1, `.`(`(*)`("P", Nil)))))))))
 
     val id = new helper.υidυ
@@ -396,7 +396,7 @@ class EncodingFunctionsSuite extends FunSuite:
 
     `13`.rename()(id()) match
       case +(-1, ∥(-1, `.`(?:(((λ(true), λ(false)), false),
-                              +(-1, ∥(-1, `.`(!(_, _, None, ∅()), ν("x_υ1υ")))),
+                              +(-1, ∥(-1, `.`(!(_, _, None, ∅()), ν("x_υ1υ"), τ(None)))),
                               Some(+(-1, ∥(-1, `.`(`(*)`("P", Nil))))))))) =>
       case _ =>
         assert(false)

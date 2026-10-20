@@ -34,9 +34,13 @@ import scala.meta.{ Lit, Pat, Term, Type }
 
 package object ast:
 
-  import AST.{ `(*)`, + }
+  import AST.{ +, ?:, `{}`, `(*)`, !, `⟦⟧` }, Pre.{ π, τ }
 
   type Bind = (`(*)`, +)
+
+  type - = ?: | `{}` | `(*)` | ! | `⟦⟧`
+
+  type μ = π | τ
 
 
   trait Positional extends scala.util.parsing.input.Positional:

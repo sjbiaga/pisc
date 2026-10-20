@@ -51,10 +51,8 @@ class ProgramSuite extends FunSuite:
 """var υidυ func (Go_NamePi) Option[bool]
 υidυ = (name Go_NamePi) Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
-
     bind name = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(name)
@@ -67,7 +65,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(name)
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -83,10 +81,8 @@ var υidυ func (Go_NamePi) Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
-
     bind name = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(name)
@@ -99,7 +95,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(name)
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -112,7 +108,6 @@ bind _ = υidυ(name)"""
 """var υidυ func (Go_NamePi) Option[bool]
 υidυ = (name Go_NamePi) Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -128,7 +123,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(name)
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -144,7 +139,6 @@ var υidυ func (Go_NamePi) Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -160,7 +154,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(name)
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -177,10 +171,8 @@ bind _ = υidυ(name)"""
 """var υidυ func (Go_NamePi) Option[bool]
 υidυ = (name Go_NamePi) Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
-
     bind name = guard match {
         case Go_QueuePi(it) => it.Go_DequeuePi()
         case it => Panic(it)
@@ -191,7 +183,7 @@ bind name = guard match {
     case Go_QueuePi(it) => it.Go_DequeuePi()
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -207,10 +199,8 @@ var υidυ func (Go_NamePi) Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
-
     bind name = guard match {
         case Go_QueuePi(it) => it.Go_DequeuePi()
         case it => Panic(it)
@@ -221,7 +211,7 @@ bind name = guard match {
     case Go_QueuePi(it) => it.Go_DequeuePi()
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -234,7 +224,6 @@ bind _ = υidυ(name)"""
 """var υidυ func (Go_NamePi) Option[bool]
 υidυ = (name Go_NamePi) Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -248,7 +237,7 @@ bind name = guard match {
     case Go_QueuePi(it) => it.Go_DequeuePi()
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -264,7 +253,6 @@ var υidυ func (Go_NamePi) Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -278,7 +266,7 @@ bind name = guard match {
     case Go_QueuePi(it) => it.Go_DequeuePi()
     case it => Panic(it)
 }
-bind _ = υidυ(name)"""
+υidυ(name)"""
     )
   }
 
@@ -295,10 +283,8 @@ bind _ = υidυ(name)"""
 """var υidυ func () Option[bool]
 υidυ = () Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
-
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
         case it => Panic(it)
@@ -309,7 +295,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
     case it => Panic(it)
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
@@ -325,10 +311,8 @@ var υidυ func () Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
-
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
         case it => Panic(it)
@@ -339,7 +323,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
     case it => Panic(it)
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
@@ -352,7 +336,6 @@ bind _ = υidυ()"""
 """var υidυ func () Option[bool]
 υidυ = () Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -366,7 +349,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
     case it => Panic(it)
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
@@ -382,7 +365,6 @@ var υidυ func () Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
@@ -396,7 +378,7 @@ bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(guard)
     case it => Panic(it)
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
@@ -413,17 +395,15 @@ bind _ = υidυ()"""
 """var υidυ func () Option[bool]
 υidυ = () Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
-
     υidυ()
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
-  test("replication - unguarded guard - parallelism >= 0 & no pace") {
+  test("replication - unguarded - parallelism >= 0 & no pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(13, None, None, ∅())
@@ -435,17 +415,15 @@ var υidυ func () Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
-
     υidυ()
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
-  test("replication - unguarded guard - no parallelism & nonempty pace") {
+  test("replication - unguarded - no parallelism & nonempty pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(-1, Some(13L->"Second"), None, ∅())
@@ -454,17 +432,16 @@ bind _ = υidυ()"""
 """var υidυ func () Option[bool]
 υidυ = () Option[bool] => {
     bind _ = Go_SpawnPi(() => {
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
     υidυ()
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 
-  test("replication - unguarded guard - parallelism >= 0 & nonempty pace") {
+  test("replication - unguarded - parallelism >= 0 & nonempty pace") {
     implicit def id: String = "υidυ"
 
     val `13` = `!`(13, Some(13L->"Second"), None, ∅())
@@ -476,13 +453,12 @@ var υidυ func () Option[bool]
     bind _ = υidυ.Acquire1(go_context)
     bind _ = Go_SpawnPi(() => {
         use υidυ = Go_ReleasablePi(υidυ)
-
         Some(true)
     })
     bind _ = Go_PacePi(13, time.Second)
     υidυ()
 }
-bind _ = υidυ()"""
+υidυ()"""
     )
   }
 

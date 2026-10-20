@@ -99,8 +99,11 @@ func (self Go_NamePi) IsNothing() bool {
 }
 
 struct Go_BlockingQueuePi(
+    bools *collection_mutable.Array[bool],
     items *collection_mutable.Array[Go_NamePi],
     mu *go_interop.Mutex,
+    enqueue *go_interop.Mutex,
+    dequeue *go_interop.Mutex,
     notEmpty *sync.Cond,
     notFull *sync.Cond,
     stop *bool
@@ -111,8 +114,11 @@ func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
     var stop = false
 
     Go_BlockingQueuePi(
+        bools = collection_mutable.EmptyArray[bool](),
         items = collection_mutable.EmptyArray[Go_NamePi](),
         mu = lock,
+        enqueue = go_interop.NewMutex(),
+        dequeue = go_interop.NewMutex(),
         notEmpty = sync.NewCond(lock),
         notFull = sync.NewCond(lock),
         stop = &stop
@@ -124,20 +130,30 @@ func (q Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
         if (item.Equal(Go_NothingPi())) {
             *q.stop = true
             None[bool]()
+        } else if (*q.stop) {
+            None[bool]()
         } else {
-            for q.items.Size() == 1 {
-                q.notFull.Wait()
-            }
+            resource.WithLock(q.enqueue, () => {
+                if (*q.stop) {
+                    None[bool]()
+                } else {
+                    for RequirePtr(q.bools).Size() == 0 {
+                        q.notFull.Wait()
+                    }
 
-            if (*q.stop) {
-                None[bool]()
-            } else {
-                q.items.Append(item)
+                    RequirePtr(q.bools).RemoveAt(0)
 
-                q.notEmpty.Signal()
+                    if (*q.stop) {
+                        None[bool]()
+                    } else {
+                        RequirePtr(q.items).Append(item)
 
-                Some(true)
-            }
+                        q.notEmpty.Signal()
+
+                        Some(true)
+                    }
+                }
+            })
         }
     })
 }
@@ -147,16 +163,20 @@ func (q Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
         if (*q.stop) {
             None[Go_NamePi]()
         } else {
-            for q.items.Size() == 0 {
-                q.notEmpty.Wait()
-            }
+            resource.WithLock(q.dequeue, () => {
+                RequirePtr(q.bools).Append(true)
 
-            val item = q.items.Get(0)
-            q.items.RemoveAt(0)
+                q.notFull.Signal()
 
-            q.notFull.Signal()
+                for RequirePtr(q.items).Size() == 0 {
+                    q.notEmpty.Wait()
+                }
 
-            Some(item)
+                val item = RequirePtr(q.items).Get(0)
+                RequirePtr(q.items).RemoveAt(0)
+
+                Some(item)
+            })
         }
     })
 }
@@ -166,26 +186,32 @@ func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[G
         if (*q.stop) {
             None[Go_NamePi]()
         } else {
-            for q.items.Size() == 0 {
-                q.notEmpty.Wait()
-            }
-
-            var item = q.items.Get(0)
-            q.items.RemoveAt(0)
-
-            item = f(item)
-
-            if (item.Equal(Go_NothingPi())) {
-                *q.stop = true
+            resource.WithLock(q.dequeue, () => {
+                RequirePtr(q.bools).Append(true)
 
                 q.notFull.Signal()
 
-                None[Go_NamePi]()
-            } else {
-                q.notFull.Signal()
+                for RequirePtr(q.items).Size() == 0 {
+                    q.notEmpty.Wait()
+                }
 
-                Some(item)
-            }
+                var item = RequirePtr(q.items).Get(0)
+                RequirePtr(q.items).RemoveAt(0)
+
+                item = f(item)
+
+                if (item.Equal(Go_NothingPi())) {
+                    *q.stop = true
+
+                    RequirePtr(q.bools).Append(true)
+
+                    q.notFull.Signal()
+
+                    None[Go_NamePi]()
+                } else {
+                    Some(item)
+                }
+            })
         }
     })
 }

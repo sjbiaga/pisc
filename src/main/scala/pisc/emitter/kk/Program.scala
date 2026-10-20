@@ -35,7 +35,6 @@ import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ, 
 import scala.meta.*
 import dialects.Scala3
 
-import parser.-
 import parser.Calculus.*
 import parser.Encoding.*
 import kk.Meta.*

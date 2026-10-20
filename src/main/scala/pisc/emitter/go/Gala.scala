@@ -38,7 +38,7 @@ import Gala.*
 
 enum Gala(using id: => String):
 
-  case bind(channel: String, name: λ, polarity: Option[Term.Name])
+  case bind(channel: String, param: λ, polarity: Option[Term.Name])
            (using => String)
 
   case body(lines: List[Gala])
@@ -47,7 +47,7 @@ enum Gala(using id: => String):
   case call(agent: String, names: Seq[λ])
            (using => String)
 
-  case cases(semaphore: String, tryacquire: Boolean)
+  case cases(semaphore: String, tryacquire: Boolean = false)
            (using => String)
 
   case code(term: Term)
@@ -81,46 +81,59 @@ enum Gala(using id: => String):
 
   case tau()(using => String)
 
-  override def toString: String = toString("")
+  case void()(using => String)
 
-  protected def toString(indent: String): String =
+  override def toString: String = issue("").mkString("\n")
+
+  protected def issue(indent: String): List[String] =
     val indentʹ = indent + " "*4
 
     given context = none
 
+    given Conversion[String, List[String]] = List(_)
+
     this match
 
       case bind(channel, λ(Lit.Null()), None) =>
-        val enqueue = s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NothingPi())\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind _ = " + s"$channel match {\n$enqueue\n${indent}}"
+        s"${indent}bind _ = " + s"$channel match {" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NothingPi())" ::
+        s"${indentʹ}case it => Panic(it)" ::
+        s"${indent}}" ::
+        Nil
 
-      case bind(channel, name, None) =>
-        val enqueue = s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(${name.toName})\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind _ = " + s"$channel match {\n$enqueue\n${indent}}"
+      case bind(channel, param, None) =>
+        s"${indent}bind _ = " + s"$channel match {" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(${param.toName})" ::
+        s"${indentʹ}case it => Panic(it)" ::
+        s"${indent}}" ::
+        Nil
 
-      case bind(channel, λ(Symbol(s"_$_")), Some(null)) =>
-        val dequeue = s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi()\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind _ = " + s"$channel match {\n$dequeue\n${indent}}"
-
-      case bind(channel, λ(Symbol(s"_$_")), Some(Term.Name(fun))) =>
-        val dequeue = s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi_($fun)\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind _ = " + s"$channel match {\n$dequeue\n${indent}}"
-
-      case bind(channel, λ(Symbol(name)), Some(null)) =>
-        val dequeue = s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi()\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind " + name + " = " + s"$channel match {\n$dequeue\n${indent}}"
-
-      case bind(channel, λ(Symbol(name)), Some(Term.Name(fun))) =>
-        val dequeue = s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi_($fun)\n${indentʹ}case it => Panic(it)"
-        s"${indent}bind " + name + " = " + s"$channel match {\n$dequeue\n${indent}}"
-
-      case bind(_, _, _) => ???
+      case bind(channel, param, Some(term)) =>
+        val indentʹʹ = indentʹ + " "*4
+        val indentʹʹʹ = indentʹʹ + " "*4
+        val indentʹʹʹʹ = indentʹʹʹ + " "*4
+        val υidυ = id
+        val name = param match
+          case λ(Symbol(s"_$_")) => "_"
+          case λ(Symbol(it)) => it
+        val dequeue = term match
+          case null =>
+            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi()"
+          case Term.Name(fun) =>
+            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi_($fun)"
+        s"${indent}bind $name = $channel match {" ::
+        dequeue ::
+        s"${indentʹ}case it => Panic(it)" ::
+        s"${indent}}" ::
+        Nil
 
       case it: body =>
-        it.body.map(_.toString(indent)).mkString("\n")
+        it.body.flatMap(_.issue(indent))
 
       case call(agent, names) =>
-        indent + "bind _ = " + agent + '_' + names.size + names.map(_.toName).mkString("(go_context, ", ", ", ")")
+        indent + "bind _ = " + agent + '_' + names.size + names.map(_.toName).mkString("(go_context, ", ", ", ")") ::
+        s"${indent}Some(true)" ::
+        Nil
 
       case cases(sem: String, false) =>
         indent + s"bind $sem = Some(Go_NewSemaphorePi(1))"
@@ -144,37 +157,54 @@ enum Gala(using id: => String):
 
       case elvis(((lhs, rhs), mismatch), t, body(Nil)) =>
         given context = context(lhs, rhs)
+        var cond = s"${lhs.toName}.Equal(${rhs.toName})"
         if mismatch
         then
-          s"${indent}bind _ = if (!${lhs.toName}.Equal(${rhs.toName})) {\n${t.toString(indentʹ)}\n${indentʹ}Some(true)\n${indent}} else Some(false)"
-        else
-          s"${indent}bind _ = if (${lhs.toName}.Equal(${rhs.toName})) {\n${t.toString(indentʹ)}\n${indentʹ}Some(true)\n${indent}} else Some(false)"
+          cond = s"!$cond"
+        s"${indent}bind _ = if (${lhs.toName}.Equal(${rhs.toName})) {" ::
+        t.issue(indentʹ) :::
+        s"${indent}} else Some(false)" ::
+        s"${indent}Some(true)" :: // LEAF
+        Nil
 
       case elvis(((lhs, rhs), mismatch), t, f) =>
-        val tʹ = t.toString(indentʹ)
-        val fʹ = f.toString(indentʹ)
+        val tʹ = t.issue(indentʹ)
+        val fʹ = f.issue(indentʹ)
         given context = context(lhs, rhs)
+        var cond = s"${lhs.toName}.Equal(${rhs.toName})"
         if mismatch
         then
-          s"${indent}bind _ = if (${lhs.toName}.Equal(${rhs.toName})) {\n$fʹ\n${indentʹ}Some(true)\n${indent}} else {\n$tʹ\n${indentʹ}Some(false)\n${indent}}"
-        else
-          s"${indent}bind _ = if (${lhs.toName}.Equal(${rhs.toName})) {\n$tʹ\n${indentʹ}Some(true)\n${indent}} else {\n$fʹ\n${indentʹ}Some(false)\n${indent}}"
+          cond = s"!$cond"
+        s"${indent}bind _ = if ($cond) {" :: tʹ :::
+        s"${indent}} else {" :: fʹ :::
+        s"${indent}}" ::
+        s"${indent}Some(true)" :: // LEAF
+        Nil
 
       case func("Main", Nil, body) =>
-        indent + s"func Main(go_context context.Context, args List[string]) Option[bool] {\n" + body.toString(indentʹ) + s"\n${indentʹ}Some(true)\n${indent}}"
+        indent + s"func Main(go_context context.Context, args List[string]) Option[bool] {" ::
+        body.issue(indentʹ) :::
+        s"${indent}}" ::
+        Nil
 
       case func(agent, names, body) =>
-        indent + "func " + agent + '_' + names.size + names.map(_ + " Go_NamePi").mkString("(go_context context.Context, ", ", ", ")") + " Option[bool] {\n" + body.toString(indentʹ) + s"\n${indentʹ}Some(true)\n${indent}}"
+        val params = names.map(_ + " Go_NamePi").mkString("(go_context context.Context, ", ", ", ")")
+        indent + "func " + agent + '_' + names.size + params + " Option[bool] {" ::
+        body.issue(indentʹ) :::
+        s"${indent}}" ::
+        Nil
 
-      case init(it) if it.isEmpty => ""
+      case init(it) if it.isEmpty =>
+        Nil
 
       case init(it) =>
         indent + it.map(_._1).mkString("val ", ", ", "") + it.map(_._2).mkString(" = ", ", ", "")
 
-      case noop() => ""
+      case noop() =>
+        Nil
 
       case nu(names*) =>
-        names.map(s"${indent}bind " + _ + " = " + "Some(Go_QueuePi(Go_NewBlockingQueuePi()))").mkString("\n")
+        names.map(s"${indent}bind " + _ + " = " + "Some(Go_QueuePi(Go_NewBlockingQueuePi()))").toList
 
       case pace(amount, paceunit) =>
         indent + "bind _ = Go_PacePi(" + amount + ", time." + paceunit + ")"
@@ -183,92 +213,147 @@ enum Gala(using id: => String):
         val sem = id
         val acquire = s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})"
         val releasable = s"${indentʹ}use $id = Go_ReleasablePi($sem)"
-        s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))\n" +
-        ops.map(_.toString(indentʹ)).map(s"${indent}bind _ = Go_SpawnPi(() => {\n$releasable\n" + _ + s"\n${indentʹ}Some(true)\n${indent}})").mkString(acquire + "\n", "\n", "\n" + acquire)
+        s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))" ::
+        acquire ::
+        ops.map(_.issue(indentʹ)).flatMap(s"${indent}bind _ = Go_SpawnPi(() => {" :: releasable :: _ ::: s"${indent}})" :: Nil) :::
+        acquire ::
+        s"${indent}Some(true)" :: // LEAF
+        Nil
 
       case rep(-1, it @ _ :: nu(name) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
-        s"${indent}var $υidυ func (Go_NamePi) Option[bool]\n" +
-        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ($name)\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ($name)"
+        s"${indent}var $υidυ func (Go_NamePi) Option[bool]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
 
       case rep(parallelism, it @ _ :: nu(name) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sem = id
-        val releasable = s"${indentʹʹ}use $id = Go_ReleasablePi($sem)"
-        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)\n" +
-        s"${indent}var $υidυ func (Go_NamePi) Option[bool]\n" +
-        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {\n${indentʹ}bind _ = $sem.Acquire1(go_context)\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n$releasable\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ($name)\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ($name)"
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func (Go_NamePi) Option[bool]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
 
       case rep(-1, it, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
-        s"${indent}var $υidυ func () Option[bool]\n" +
-        s"${indent}$υidυ = () Option[bool] => {\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ()\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ()"
+        s"${indent}var $υidυ func () Option[bool]" ::
+        s"${indent}$υidυ = () Option[bool] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ()" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ()" :: // LEAF, tailcall
+        Nil
 
       case rep(parallelism, it, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sem = id
-        val releasable = s"${indentʹʹ}use $id = Go_ReleasablePi($sem)"
-        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)\n" +
-        s"${indent}var $υidυ func () Option[bool]\n" +
-        s"${indent}$υidυ = () Option[bool] => {\n${indentʹ}bind _ = $sem.Acquire1(go_context)\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n$releasable\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ()\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ()"
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func () Option[bool]" ::
+        s"${indent}$υidυ = () Option[bool] => {" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ()" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ()" :: // LEAF, tailcall
+        Nil
 
       case rep(-1, it @ _ :: bind(_, λ(Symbol(name)), _) :: _, Some(true), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
-        s"${indent}var $υidυ func (Go_NamePi) Option[bool]\n" +
-        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ($name)\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ($name)"
+        val sem = id
+        s"${indent}var $υidυ func (Go_NamePi) Option[bool]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
 
       case rep(parallelism, it @ _ :: bind(_, λ(Symbol(name)), _) :: _, Some(true), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sem = id
-        val releasable = s"${indentʹʹ}use $id = Go_ReleasablePi($sem)"
-        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)\n" +
-        s"${indent}var $υidυ func (Go_NamePi) Option[bool]\n" +
-        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {\n${indentʹ}bind _ = $sem.Acquire1(go_context)\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n$releasable\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ($name)\n${indent}}\n" + (it.tail: body).toString(indent) + s"\n${indent}bind _ = $υidυ($name)"
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func (Go_NamePi) Option[bool]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Option[bool] => {" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.issue(indent) :::
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
 
       case rep(-1, it, None, op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
-        s"${indent}var $υidυ func () Option[bool]\n" +
-        s"${indent}$υidυ = () Option[bool] => {\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ()\n${indent}}\n${indent}bind _ = $υidυ()"
+        s"${indent}var $υidυ func () Option[bool]" ::
+        s"${indent}$υidυ = () Option[bool] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ()" ::
+        s"${indent}}" ::
+        s"${indent}$υidυ()" :: // LEAF, tailcall
+        Nil
 
       case rep(parallelism, it, None, op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sem = id
-        val releasable = s"${indentʹʹ}use $id = Go_ReleasablePi($sem)"
-        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)\n" +
-        s"${indent}var $υidυ func () Option[bool]\n" +
-        s"${indent}$υidυ = () Option[bool] => {\n${indentʹ}bind _ = $sem.Acquire1(go_context)\n" +
-        s"${indentʹ}bind _ = Go_SpawnPi(() => {\n$releasable\n" + op.toString(indentʹʹ) + s"\n${indentʹʹ}Some(true)\n${indentʹ}})\n" +
-        (it: body).toString(indentʹ) + "\n" +
-        s"${indentʹ}$υidυ()\n${indent}}\n${indent}bind _ = $υidυ()"
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func () Option[bool]" ::
+        s"${indent}$υidυ = () Option[bool] => {" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        s"${indentʹʹ}use $id = Go_ReleasablePi($sem)" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) :::
+        s"${indentʹ}$υidυ()" ::
+        s"${indent}}" ::
+        s"${indent}$υidυ()" :: // LEAF, tailcall
+        Nil
 
       case _: rep => ???
 
@@ -278,11 +363,19 @@ enum Gala(using id: => String):
         val releasable = s"${indentʹ}use $id = Go_ReleasablePi($sem)"
         val tryacquire = s"${indentʹ}bind _ = $semʹ.TryAcquire1()"
         val acquire = s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})"
-        s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))\n" +
-        s"${indent}bind $semʹ = Some(Go_NewSemaphorePi(1))\n" +
-        ops.map(_.toString(indentʹ)).map(s"${indent}bind _ = Go_SpawnPi(() => {\n$releasable\n$tryacquire\n" + _ + s"\n${indentʹ}Some(true)\n${indent}})").mkString(acquire + "\n", "\n", "\n" + acquire)
+        s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))" ::
+        s"${indent}bind $semʹ = Some(Go_NewSemaphorePi(1))" ::
+        acquire ::
+        ops.map(_.issue(indentʹ)).flatMap(s"${indent}bind _ = Go_SpawnPi(() => {" :: releasable :: tryacquire :: _ ::: s"${indentʹ}Some(true)" :: s"${indent}})" :: Nil) :::
+        acquire ::
+        s"${indent}Some(true)" :: // LEAF
+        Nil
 
-      case tau() => ""
+      case tau() =>
+        Nil
+
+      case void() =>
+        s"${indent}Some(true)" // LEAF
 
 
 object Gala:
