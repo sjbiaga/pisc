@@ -377,10 +377,10 @@ package Π:
                       n <- stopR.get.ifM(IO.pure(null),
                                          for
                                            name <- ><()($ref)
-                                           _    <- stopR.set(true).whenA(name == null)
+                                           _    <- stopR.set(true).whenA(name.head == null)
                                          yield name)
                       _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                         $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
+                                         $sleep >> nextS.release >> $body(n.map(new `()`(_))) >> loop)
                     yield
                       ()
                   loop
@@ -418,10 +418,10 @@ package Π:
                       n <- stopR.get.ifM(IO.pure(null),
                                          for
                                            name <- ><()($ref)($code)
-                                           _    <- stopR.set(true).whenA(name == null)
+                                           _    <- stopR.set(true).whenA(name.head == null)
                                          yield name)
                       _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                         $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
+                                         $sleep >> nextS.release >> $body(n.map(new `()`(_))) >> loop)
                     yield
                       ()
                   loop

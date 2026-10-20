@@ -2,7 +2,7 @@ Polyadic Pi-calculus in SCala aka PISC ala RISC
 ===============================================
 
 [π-calculus](https://github.com/sjbiaga/pisc/tree/main) is a variant.
-[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in alpha stage.
+[Stochastic π-calculus](https://github.com/sjbiaga/pisc/tree/stochastic) is in beta stage.
 [Ambient Calculus](https://github.com/sjbiaga/pisc/tree/ambient) is nicely done, too.
 [BioAmbients](https://github.com/sjbiaga/pisc/tree/bioambients) is another fruitful
 combination of ambients with stochastic π-calculus.
@@ -155,6 +155,8 @@ Emitters
 - [Monix](https://github.com/sjbiaga/pisc/tree/polyadic/monix/README.md)
 
 - [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic/zs/README.md)
+
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/polyadic/go/README.md)
 
 
 Branches

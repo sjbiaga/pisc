@@ -40,6 +40,8 @@ import monix.Meta.*
 
 object Program:
 
+  given (Int => (Int, Int)) = { _ => (0, 0) }
+
   private def pace(args: List[Term])(using pace: Option[(Long, String)]) =
     pace match
       case Some((time, unit)) => Term.Select(Lit.Long(time), unit) :: args
@@ -91,7 +93,7 @@ object Program:
           val ifs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
-            `* <- Semaphore(…)`(sem.get),
+            `* <- Semaphore(…)`(sem.get, 1),
             `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
           )
 
@@ -101,7 +103,7 @@ object Program:
           val sem = id
 
           * = List(
-            `* <- Semaphore(…)`(sem),
+            `* <- Semaphore(…)`(sem, 1),
             `_ <- *`(`Observable( *, … ).mapParF(…)`(ifs*)(sem))
           )
 
@@ -124,7 +126,7 @@ object Program:
         // SEQUENCE ////////////////////////////////////////////////////////////
 
         case `.`(end, it*) =>
-          * = (it :+ end).foldLeft(*)(_ ::: _.emit)
+          * = ((it :+ end): Seq[Pre | AST]).foldLeft(*)(_ ::: _.emit)
 
         //////////////////////////////////////////////////////////// sequence //
 
@@ -446,7 +448,7 @@ object Program:
 
         // REPLICATION /////////////////////////////////////////////////////////
 
-        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), polarity @ Some(_), code, params*)), sum) =>
+        case !(parallelism, given Option[(Long, String)], Some(π @ π(_, Some(_), _, params*)), sum) =>
           val args = params.map {
             case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
             case λ(Symbol(par)) => par
@@ -454,7 +456,7 @@ object Program:
 
           val υidυ = id
 
-          val πʹ = π(λ(Symbol(ch)), polarity, code, params.map(_.copy()(using None))*)
+          val πʹ = π.cc(names = params.map(_.copy()(using None)))
 
           val `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(pace(params.map(_.asSymbol.name).map(\(_)).toList))))
 
@@ -540,20 +542,12 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
+        case `⟦⟧`(Definition(_, _, _, variables, _), sum, _, pointers) =>
           * = (variables zip pointers)
             .map(_.name -> _.name)
             .map(Pat.Var(_) -> _)
             .map(Enumerator.Val(_, _))
             .toList
-
-          val n = pointers.size
-
-          val sum = if (variables.size == n)
-                    then
-                      _sum
-                    else
-                      `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
 
           * = * ::: sum.emit
 
@@ -578,30 +572,15 @@ object Program:
       *
 
 
-  final class Main(F: String):
+  final class Main:
 
     implicit private def `*[F]`(* : List[Enumerator]): Term =
       if *.nonEmpty then `for *[F] yield ()`(* *)
       else \(`_ <- \\.unit`)
 
-    def apply(prog: List[Bind]): List[Stat] =
+    def apply(prog: List[Bind])(using Set[String]): List[Stat] =
       val id = new helper.υidυ
-
-      given Set[String] =
-        prog.head match
-          case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Concurrent", "ContextShift", "Parallel", "Timer", "TaskLift", "TaskLike")
-          case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
-            typeclasses.args.map { case Term.Name(it) => it }.toSet
-
-      val Array(tpe, _path*) = F.split('.').reverse
-      val path = _path.reverse.map(\(_)).foldLeft("_root_": Term)(Term.Select(_, _))
-
-      Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
-                Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
-                Type.Bounds(None, None, Nil, Nil))
-      ::
       prog
-        .drop(1)
         .map(_ -> _.emit(using id()))
         .map(_.swap)
         .map(defn(_)(_))

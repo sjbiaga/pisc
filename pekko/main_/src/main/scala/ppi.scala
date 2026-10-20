@@ -82,8 +82,8 @@ package object Π:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(value: => S*)
-                          (using DummyImplicit)
-                          (using ExecutionContext): Future[Option[Unit]] =
+                                     (using DummyImplicit)
+                                     (using ExecutionContext): Future[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.map(_.asInstanceOf[`()`])*)
@@ -94,8 +94,8 @@ package object Π:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(value: => S*)(code: => Future[Any])
-                          (using DummyImplicit)
-                          (using ExecutionContext): Future[Option[Unit]] =
+                                    (using DummyImplicit)
+                                    (using ExecutionContext): Future[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.map(_.asInstanceOf[`()`])*)(code)
@@ -106,7 +106,7 @@ package object Π:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_f: false)(value: => Future[S]*)
-                          (using ExecutionContext): Future[Option[Unit]] =
+                                     (using ExecutionContext): Future[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         Future(Future.sequence(value.map(_.asInstanceOf[Future[`()`]])).flatMap(apply(_*))).flatten
@@ -117,7 +117,7 @@ package object Π:
       * variable negative prefix i.e. variable output
       */
     def apply[S: ClassTag](_t: true)(value: => Future[S]*)(code: => Future[Any])
-                          (using ExecutionContext): Future[Option[Unit]] =
+                                    (using ExecutionContext): Future[Option[Unit]] =
       if classTag[S].runtimeClass eq getClass
       then
         Future(Future.sequence(value.map(_.asInstanceOf[Future[`()`]])).flatMap(apply(_*)(code))).flatten

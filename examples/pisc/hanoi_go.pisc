@@ -1,0 +1,52 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# ./examples $ ppi_ -go hanoi_go.gala
+
+@import "bufio"
+@import "strconv"
+@import "strings"
+
+@val reader = bufio.NewReader(os.Stdin)
+
+@func parse(text string) Try[int] { bind n = strconv.Atoi(strings.TrimSpace(text)); Success(n) }
+
+@func done(_ List[Go_NamePi]) List[Go_NamePi] = ListOf(Go_NothingPi())
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{hanoi_go}
+
+Main = ν(a,b,c)      \
+     ( (¡.a<"a">.)   \
+     | (¡.b<"b">.)   \
+     | (¡.c<"c">.)   \
+     | Hanoi(a,b,c)  \
+     )
+
+Hanoi(a,b,c,n*) = ν(w)                                               \
+                ( τ/*bind _ = PrintNoLn("n = ");                     \
+                     bind 'n = reader.ReadString('\n').ToOption();   \
+                     bind 'n = parse(n).ToOption()                   \
+                   */.                                               \
+                  Hanoi(a,b,c,/*Go_IntPi('n)*/,w)                    \
+                | w(w).                                              \
+                  τ/*bind _ = 'w.Print();                            \
+                     bind _ = PrintLn(" moves")*/.                   \
+                  ( a(_)/*done*/. | b(_)/*done*/. | c(_)/*done*/. )  \
+                )
+
+
+Move(from,to,z) = from(x).to(y).                                                  \
+                  τ/*bind _ = PrintLn('x.ToString() + " -> " + 'y.ToString())*/.  \
+                                z</*1*/>.
+
+Hanoi(a,b,c,n,w) = if /*'n.ToInt() <= 1*/ = True                                                 \
+                   then ν(z) ( Move(a,c,z) | z(z).w<z>. )                                        \
+                   else ν(x)                                                                     \
+                      ( Hanoi(a,c,b,/*Go_IntPi('n.ToInt()-1)*/,x)                                \
+                      | x(x). ν(y)                                                               \
+                              ( Move(a,c,y)                                                      \
+                              | y(y). ν(z)                                                       \
+                                      ( Hanoi(b,a,c,/*Go_IntPi('n.ToInt()-1)*/,z)                \
+                                      | z(z).w</*Go_IntPi('x.ToInt()+'y.ToInt()+'z.ToInt())*/>.  \
+                                      )                                                          \
+                              )                                                                  \
+                      )

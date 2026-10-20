@@ -1,0 +1,150 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package pi
+
+import (
+    "martianoff/gala/collection_immutable"
+    "martianoff/gala/collection_mutable"
+    "martianoff/gala/go_interop"
+    "martianoff/gala/resource"
+    "math/big"
+    "sync"
+)
+
+sealed type Go_NamePi {
+    case Go_QueuePi(it Go_BlockingQueuePi)
+    case Go_NumberPi(it *big.Float)
+    case Go_BooleanPi(it bool)
+    case Go_StringPi(it string)
+    default case Go_NothingPi()
+}
+
+func Go_IntPi(it int) Go_NamePi {
+    Go_NumberPi(big.NewFloat(float64(it)))
+}
+
+func (self Go_NamePi) Print() Option[bool] {
+    self match {
+        case Go_QueuePi(it) => Print(it)
+        case Go_NumberPi(it) => Print(it)
+        case Go_BooleanPi(it) => Print(it)
+        case Go_StringPi(it) => Print(it)
+        case _ => Print()
+    }
+    Some(true)
+}
+
+func (self Go_NamePi) PrintLn() Option[bool] {
+    self match {
+        case Go_QueuePi(it) => Println(it)
+        case Go_NumberPi(it) => Println(it)
+        case Go_BooleanPi(it) => Println(it)
+        case Go_StringPi(it) => Println(it)
+        case _ => Println()
+    }
+    Some(true)
+}
+
+func (self Go_NamePi) ToNumber() *big.Float {
+    self match {
+        case Go_NumberPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) ToFloat64() float64 {
+    self match {
+        case Go_NumberPi(it) =>
+            it.Float64() match {
+                case (f64, _) => f64
+                case _ => Panic(it)
+            }
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) ToInt64() int64 {
+    self match {
+        case Go_NumberPi(it) =>
+            it.Int64() match {
+                case (i64, _) => i64
+                case _ => Panic(it)
+            }
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) ToInt() int {
+    int(self.ToInt64())
+}
+
+func (self Go_NamePi) ToBoolean() bool {
+    self match {
+        case Go_BooleanPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) ToString() string {
+    self match {
+        case Go_StringPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) IsNothing() bool {
+    self match {
+        case Go_NothingPi() => true
+        case _ => false
+    }
+}
+
+struct Go_BlockingQueuePi(
+    items *collection_mutable.Array[collection_immutable.List[Go_NamePi]],
+    mu *go_interop.Mutex,
+    notEmpty *sync.Cond
+)
+
+func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
+    val lock = go_interop.NewMutex()
+
+    Go_BlockingQueuePi(
+        items = collection_mutable.EmptyArray[collection_immutable.List[Go_NamePi]](),
+        mu = lock,
+        notEmpty = sync.NewCond(lock)
+    )
+}
+
+func (q Go_BlockingQueuePi) Go_EnqueuePi(item collection_immutable.List[Go_NamePi]) Option[bool] {
+    resource.WithLock(q.mu, () => {
+        q.items.Append(item)
+        q.notEmpty.Signal()
+        Some(true)
+    })
+}
+
+func (q Go_BlockingQueuePi) Go_DequeuePi() Option[collection_immutable.List[Go_NamePi]] {
+    resource.WithLock(q.mu, () => {
+        for q.items.Size() == 0 {
+            q.notEmpty.Wait()
+        }
+
+        val item = q.items.Get(0)
+        q.items.RemoveAt(0)
+
+        Some(item)
+    })
+}
+
+func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (collection_immutable.List[Go_NamePi]) collection_immutable.List[Go_NamePi]) Option[collection_immutable.List[Go_NamePi]] {
+    resource.WithLock(q.mu, () => {
+        for q.items.Size() == 0 {
+            q.notEmpty.Wait()
+        }
+
+        val item = q.items.Get(0)
+        q.items.RemoveAt(0)
+
+        Some(f(item))
+    })
+}

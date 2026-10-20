@@ -128,7 +128,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `zio` contains three files: `ppi.scala`, `ppi_.scala`, and `main.scala.in`.
+The root project folder `zio` contains three files: `ppi.scala`, `ppim.scala`, and `main.scala.in`.
 
 !!!Warning: do not delete them!!!
 

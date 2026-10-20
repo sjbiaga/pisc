@@ -1,0 +1,72 @@
+# -*- indent-tabs-mode: nil; -*-
+
+# https://github.com/alexj136/nodes/blob/master/examples/greeter
+
+@import "bufio"
+@import . "strings"
+
+@val reader = bufio.NewReader(os.Stdin)
+
+@func nl(name List[Go_NamePi]) List[Go_NamePi] {
+@    name match {
+@        case Cons(Go_StringPi(it), Nil()) => ListOf(Go_StringPi(it + "\n"))
+@        case it => it
+@    }
+@}
+
+@func Substring(text string, start int, end int) string {
+@    val runes = ArrayFromSlice(go_interop.ToRunes(text))
+@    val subRunes = runes.Slice(start, end)
+@    var builder = Builder{}
+@    subRunes.ForEach((r rune) => {
+@        builder.WriteRune(r)
+@    })
+@    builder.String()
+@}
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{greeter}
+
+Main = ν(stdin, stdout) Greeter(stdin, stdout)
+
+Greeter(stdin, stdout, line*) = \
+                              ( stdout<"What's your name?">.stdin(name). \
+                                                                         if /* TrimSpace('name.ToString()) == "" */ = True \
+                                                                         then stdout#1<>. Greeter(stdin, stdout) \
+                                                                         else Chooser(stdout, name) \
+                              ) \
+                              | \
+                              ( stdout(prompt) /* nl */. \
+                                τ /*bind _ = 'prompt.Print(); \
+                                    bind 'line = reader.ReadString('\n').ToOption()*/. \
+                                                         stdin</*Go_StringPi(TrimSpace(line))*/>.stdout(greet) /* nl */. \
+                                [/* 'greet.IsNothing() */ = False] τ/*bind _ = 'greet.Print()*/. \
+                              )
+
+Chooser(stdout, name) = Greeter1(stdout, name) \
+                      + Greeter2(stdout, name) \
+                      + Greeter3(stdout, name)
+
+Greeter1(stdout, name) = \
+                       ( ( [/*ToUpper(Substring('name.ToString(), 0, 1))*/ = "Q"] stdout<"That's an unusual name.">. ) \
+                       + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
+                       + ( [/*ToUpper(Substring(name.ToString(), 0, 1))*/ ≠ "Q"] \
+                           [name ≠ "Voldemort"] stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>.  ) \
+                       )
+
+Greeter2(stdout, name) = \
+                       ( if /*ToUpper(Substring(name.ToString(), 0, 1))*/ = "Q" \
+                         then stdout<"That's an unusual name.">. \
+                         else \
+                           if name = "Voldemort" \
+                           then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
+                           else stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>. \
+                       )
+
+Greeter3(stdout, name) = \
+                       ( /*ToUpper(Substring(name.ToString(), 0, 1))*/ = "Q" \
+                         ? stdout<"That's an unusual name.">. \
+                         : \
+                           name = "Voldemort" \
+                           ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
+                           : stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>. \
+                       )

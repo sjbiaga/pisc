@@ -57,13 +57,18 @@ object Meta extends emitter.shared.streams.Meta:
                body)
 
 
+  private val tc: String => Type =
+    _.split('.').reverse match
+      case Array(it) => Type.Name(it)
+      case Array(hd, tl*) => Type.Select(tl.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
+
   def `String*`(* : String)(using tcs: Set[String]) =
     Member.ParamClauseGroup(
       Type.ParamClause(Type.Param(Nil,
                                   \\("F"),
                                   Type.ParamClause(Type.Param(Nil, Name.Placeholder(), Type.ParamClause(Nil),
                                                               Type.Bounds(None, None, Nil, Nil)) :: Nil),
-                                  Type.Bounds(None, None, tcs.map(\\(_)).toList, Nil)) :: Nil),
+                                  Type.Bounds(None, None, tcs.map(tc).toList, Nil)) :: Nil),
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(\\("String"))), None) :: Nil,
                        None) :: Nil
     ) :: Nil
@@ -74,7 +79,7 @@ object Meta extends emitter.shared.streams.Meta:
                                   \\("F"),
                                   Type.ParamClause(Type.Param(Nil, Name.Placeholder(), Type.ParamClause(Nil),
                                                               Type.Bounds(None, None, Nil, Nil)) :: Nil),
-                                  Type.Bounds(None, None, tcs.map(\\(_)).toList, Nil)) :: Nil),
+                                  Type.Bounds(None, None, tcs.map(tc).toList, Nil)) :: Nil),
       Term.ParamClause(*
                         .map(Term.Param(Nil, _, Some(Type.Apply(\\("()"), Type.ArgClause(\\("F") :: Nil))), None))
                         .toList,
@@ -98,6 +103,24 @@ object Meta extends emitter.shared.streams.Meta:
       case Nil => \(Nil)
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence"),
                             Term.ArgClause(`…` :: Nil))
+
+  def `List( *, … ).parSequence(N)`(* : Term*)(N: Int): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => \(Nil)
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence"),
+                            Term.ArgClause(Lit.Int(N) :: Nil))
+
+  def `List( *, … ).parSequence(N, …)`(* : Term*)(N: Int, `…`: String): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => \(Nil)
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πparSequence"),
+                            Term.ArgClause(Lit.Int(N) :: \(`…`) :: Nil))
 
   private def `_ <- +`(parallelism: Int,
                        cbarrier: String,
@@ -130,7 +153,7 @@ object Meta extends emitter.shared.streams.Meta:
       )
 
     `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
@@ -167,7 +190,7 @@ object Meta extends emitter.shared.streams.Meta:
       )
 
     `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, \\\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `* <- +`(parallelism: Int, replication: Term, sum: List[Enumerator], parameters: String*)(using id: => String): List[Enumerator] =

@@ -113,7 +113,7 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => `ZIO.unit`
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
 
-  def `List( *, … ).collectAllPar`(* : Term*)(`…`: String): Term =
+  def `List( *, … ).collectAllPar(…)`(* : Term*)(`…`: String): Term =
     *.flatMap {
       case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
       case it => Some(it)
@@ -121,6 +121,41 @@ object Meta extends emitter.shared.effects.Meta:
       case Nil => `ZIO.unit`
       case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar"), Term.ArgClause(`…` :: Nil))
 
+  def `List( *, … ).collectAllPar(N)`(* : Term*)(N: Int): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => `ZIO.unit`
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar"),
+                            Term.ArgClause(Lit.Int(N) :: Nil))
+
+  def `List( *, … ).collectAllPar(N, …)`(* : Term*)(N: Int, `…`: String): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => `ZIO.unit`
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"),
+                                                   Term.ArgClause(it.toList)), "πcollectAllPar"),
+                            Term.ArgClause(Lit.Int(N) :: \(`…`) :: Nil))
+
+
+  def `\\.\\\\ { def *(*: Seq[()]): UIO[Any] = …; * }`(* : String, ** : String, `…`: Term): Term =
+    Term.Apply(Term.Select(\, \\),
+               Term.ArgClause(
+                 Term.Block(
+                   Defn.Def(Nil,
+                            *,
+                            Member.ParamClauseGroup(Type.ParamClause(Nil),
+                                                    Term.ParamClause(Term.Param(Nil, **, Some(Type.Apply(\\("Seq"), Type.ArgClause(Type.Name("()") :: Nil))), None) :: Nil,
+                                                                     None) :: Nil) :: Nil,
+                            `: UIO[Any]`,
+                             `…`
+                   ) :: \(*) :: Nil
+                 ) :: Nil
+               )
+    )
 
   def `\\.\\\\ { def *(*: (), ⋯): UIO[Any] = …; * }`(* : String, `…`: Term, ** : String*): Term =
     Term.Apply(Term.Select(\, \\),

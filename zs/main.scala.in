@@ -66,5 +66,9 @@ object π:
       ZStream.fromZIO(ZIO.collectAllParDiscard(self.map(_.runDrain)))
     private[π] inline def πcollectAllPar(semaphore: Semaphore[UIO]): ZStream[Any, Nothing, Unit] =
       self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar
+    private[π] inline def πcollectAllPar(N: Int): ZStream[Any, Nothing, Unit] =
+      ZStream.fromZIO(ZIO.foreachParDiscard(1 to N)(_ => ZIO.collectAllParDiscard(self.map(_.runDrain))))
+    private[π] inline def πcollectAllPar(N: Int, semaphore: Semaphore[UIO]): ZStream[Any, Nothing, Unit] =
+      self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar(N)
 
 

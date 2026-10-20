@@ -48,12 +48,14 @@ import Expansion.Duplications
 
 abstract class PolyadicPi extends Expression:
 
-  def μ(parallelism: Option[Int]): Parser[(μ, (Names, Names))] =
+  def μ(parallelism: Option[Int]): Parser[μ] = μʹ(parallelism) ^^ (_.asInstanceOf[μ])
+
+  private def μʹ(parallelism: Option[Int]): Parser[Pre] =
     "τ" ~> opt( expression ) ^^ { // silent prefix
       case Some((it, free)) =>
-        τ(Some(it)) -> (Names(), free)
+        τ(Some(it)).free = free
       case _ =>
-        τ(None) -> (Names(), Names())
+        τ(None)
     } |
     name ~ opt(arity) ~ ("<"~>opt(opt("ν")~names)<~">") ~ opt( expression ) ^^ { // negative prefix i.e. output
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
@@ -76,17 +78,17 @@ abstract class PolyadicPi extends Expression:
         val bound = args.filter(_._1.isSymbol) match
           case Nil => Names()
           case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
-        π(ch, polarity = ν, Some(it), args.map(_._1)*) -> (bound, name ++ (free ++ freeʹ &~ bound))
+        (π(ch, polarity = ν, Some(it), args.map(_._1)*).bound = bound).free = name ++ (free ++ freeʹ &~ bound)
       case (ch, name) ~ _ ~ Some(ν ~ args) ~ _ =>
         val free = args.map(_._2).reduce(_ ++ _)
         val bound = args.filter(_._1.isSymbol) match
           case Nil => Names()
           case ls => ν.fold(Names()) { _ => ls.map(_._2).reduce(_ ++ _) }
-        π(ch, polarity = ν, None, args.map(_._1)*) -> (bound, name ++ (free &~ bound))
+        (π(ch, polarity = ν, None, args.map(_._1)*).bound = bound).free = name ++ (free &~ bound)
       case (ch, name) ~ Some(arity) ~ _ ~ Some((it, freeʹ)) =>
-        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*) -> (Names(), name ++ freeʹ)
+        π(ch, polarity = None, Some(it), Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*).free = name ++ freeʹ
       case (ch, name) ~ Some(arity) ~ _ ~ _ =>
-        π(ch, polarity = None, None, Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*) -> (Names(), name)
+        π(ch, polarity = None, None, Seq.fill(arity)(λ(emitter.nullOnEmptyOutput))*).free = name
     } |
     name ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // positive prefix i.e. input
       case (ch, _) ~ _ ~ _  if !ch.isSymbol =>
@@ -101,21 +103,21 @@ abstract class PolyadicPi extends Expression:
         val args = params.map(_._1)
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, polarity = Some(""), code.map(_._1), args*) -> (bound, name ++ free)
+        (π(ch, polarity = Some(""), code.map(_._1), args*).bound = bound).free = name ++ free
     } |
-    name ~ cons_r ~ ("("~>namesʹʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
+    name ~ cons_r ~ ("("~>namesʹ<~")") ~ opt( expression ) ^^ { // polyadic unconsing
       case (ch, _) ~ _ ~ _ ~ _ if !ch.isSymbol =>
         throw PrefixChannelParsingException(ch)
       case _ ~ _ ~ params ~ _ if !params.forall(_._1.isSymbol) =>
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
       case (ch, _) ~ _ ~ params ~ _
           if {
-            val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
+            val paramsʹ = params.filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
             paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
           } =>
         throw PrefixUniquenessParsingException(ch.asSymbol,
                                                params
-                                                 .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                 .filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
                                                  .map(_._1.asSymbol.name)*)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
@@ -126,7 +128,7 @@ abstract class PolyadicPi extends Expression:
         val args = params.map(_._1)
         val bound = params.map(_._2).reduce(_ ++ _)
         val free = code.map(_._2).getOrElse(Names())
-        π(ch, polarity = Some(cons), code.map(_._1), args*) -> (bound, name ++ (free &~ bound))
+        (π(ch, polarity = Some(cons), code.map(_._1), args*).bound = bound).free = name ++ (free &~ bound)
     }
 
   def name: Parser[(λ, Names)] = ident ^^ (Symbol(_)) ^^ { it => λ(it) -> Set(it) } |
@@ -142,7 +144,7 @@ abstract class PolyadicPi extends Expression:
     name ~ opt(`type`) ^^ {
       case (λ, free) ~ tpe =>
         (λ.copy()(using tpe), free)
-    }
+    } | "_" ^^ { it => λ(Symbol(it + id)) -> Names() }
 
   def names: Parser[List[(λ, Names)]] =
     rep1sep(name, ",")
@@ -150,16 +152,19 @@ abstract class PolyadicPi extends Expression:
   def namesʹ: Parser[List[(λ, Names)]] =
     rep1sep(nameʹ, ",")
 
-  def namesʹʹ: Parser[List[(λ, Names)]] =
-    rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
-
   def scale: Parser[Int] =
-    opt( wholeNumber <~ "*" ) ^^ { _.fold(-1)(_.toInt.abs) }
+    opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
+      case Some(_: String) => 0
+      case Some(it: Long)  => it.toInt
+      case _               => -1
+    }
 
   def pace: Parser[(Long, String)] =
-    wholeNumber ~ opt( ","~> ident ) ^^ {
+    naturalNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit if emitter == Emitter.go =>
+        amount -> unit.getOrElse(_settings.paceunit).capitalize
       case amount ~ unit =>
-        amount.toLong.abs -> unit.getOrElse(_settings.paceunit)
+        amount -> unit.getOrElse(_settings.paceunit)
     }
 
   /**
@@ -171,11 +176,12 @@ abstract class PolyadicPi extends Expression:
       rep1(acceptIf(Character.isLowerCase)("channel name expected but '" + _ + "' found"),
           elem("channel name part", { (ch: Char) => Character.isJavaIdentifierPart(ch) || ch == '\'' || ch == '"' })) ^^ (_.mkString)
 
+  def naturalNumber: Parser[Long] =
+    """\d+""".r ^? { case it if it.toLong > 0 => it.toLong }
+
   /** Arity. */
   def arity: Parser[Int] =
-    "#"~>"""\d+""".r ^^ { _.toInt }
-
-  protected val emitter: Emitter
+    "#"~>naturalNumber ^^ (_.toInt)
 
   private[parser] var eqtn: List[Bind] = null
   private[parser] var defn: Map[Int, List[Define]] = null
@@ -280,22 +286,25 @@ object PolyadicPi:
                val featuresLinearReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
     def this(_n: Null) =
-      this(allowsMixedOutput = _.fold(true)(_ >= -1),
+      this(canScale = true,
+           allowsMixedOutput = _.fold(true)(_ >= -1),
            featuresLinearReplication = true,
            hasReplicationInputGuardFlaw = _ >= -1)
-    def this(featuresLinearReplication: Boolean) =
+    def this(canScale: Boolean, featuresLinearReplication: Boolean) =
       this(nullOnEmptyOutput = Lit.Null(),
            allowsMixedOutput = { _ => false },
+           canScale = canScale,
            featuresLinearReplication = featuresLinearReplication,
            hasReplicationInputGuardFlaw = if featuresLinearReplication
                                           then _ >= -1
                                           else _ != 1)
     case ce extends Emitter(null)
-    case zio extends Emitter()
-    case fs2 extends Emitter(true)
-    case monix extends Emitter(false)
-    case zs extends Emitter(true)
+    case zio extends Emitter(null)
+    case fs2 extends Emitter(true, true)
+    case monix extends Emitter(false, false)
+    case zs extends Emitter(true, true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
+    case go extends Emitter(nullOnEmptyOutput = Lit.Null())
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]
@@ -306,6 +315,21 @@ object PolyadicPi:
       .map(_.asSymbol)
     )
     def apply(names: Names): Names = Set.from(names)
+
+
+  trait Bound:
+    private var _bound = Names()
+    inline final def bound = _bound
+    inline final def bound_=(bound: Names): this.type =
+      _bound = bound
+      this
+
+  trait Free:
+    private var _free = Names()
+    inline final def free = _free
+    inline final def free_=(free: Names): this.type =
+      _free = free
+      this
 
 
   // exceptions
@@ -348,18 +372,19 @@ object PolyadicPi:
 
     def shallow: T =
 
-      ast.map(_.shallow) {
+      ast.map {
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, Nil, (params ++ pointers.map(λ(_)))*)
+        case it @ `{}`(identifier, pointers, true, params*) =>
+          val paramsʹ = pointers.map(λ(_))
+          `(*)`(identifier, Nil, (params ++ paramsʹ)*)(using it.lc).setPos(it.pos).free = it.free ++ Names(paramsʹ*)
 
         case it => it
 
       }
 
 
-  final class Main(override protected val emitter: Emitter,
-                   override protected val in: String) extends Expansion:
+  class Main(override protected val emitter: Emitter,
+             override protected val in: String) extends Expansion:
 
     def line(using Duplications): Parser[Either[Bind, Option[Define]]] =
       equation ^^ { Left(_) } | definition ^^ { Right(_) }
@@ -396,6 +421,7 @@ object PolyadicPi:
 
     protected def _init: Unit =
       _settings = Settings()
+      if emitter == Emitter.go then _settings.paceunit = _settings.paceunit.capitalize
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -405,6 +431,7 @@ object PolyadicPi:
       _χ_id = new helper.υidυ
       i = 0
       l = (0, 0)
+      _last = None
 
     def apply(source: Source, errors: Boolean = false): List[Either[String, Bind]] =
       _init
@@ -415,11 +442,21 @@ object PolyadicPi:
       val r =
         (source.getLines() ++ Some(""))
           .zipWithIndex
-          .foldLeft(List[(String, (Int, Int))]() -> false) {
-            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          .foldLeft(List[((Int, Int), List[String])]() -> false) {
+            case ((r, false), (t, n)) => (r :+ ((n, n) -> List(t.stripSuffix("\\")))) -> t.endsWith("\\")
+            case ((r, true), (t, n))  => (r.init :+ ((r.last._1._1, n) -> (r.last._2 :+ t.stripSuffix("\\")))) -> t.endsWith("\\")
           }._1
-          .flatMap { case (it, (m, n)) =>
+          .flatMap { case ((m, n), itʹ) =>
+            lc = { col =>
+              var i = 0
+              var l = 0
+              while itʹ(i).length + l < col
+              do
+                l += itʹ(i).length
+                i += 1
+              (m+i+1, (if l == 0 then col else col%l)+1)
+            }
+            val it = itʹ.mkString
             l = (m+1, n+1)
             if it.matches("^[ ]*#.*") // commented lines
             || it.isBlank // empty lines
@@ -467,6 +504,8 @@ object PolyadicPi:
             self.contains(n.toInt)
           case _ => true
         }
+
+      _last = None
 
       Right((`(*)`(null, Nil, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), ∅()): Bind) ::
       prog

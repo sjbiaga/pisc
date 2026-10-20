@@ -38,9 +38,10 @@ import scala.collection.mutable.{
 import scala.util.matching.Regex
 
 import scala.util.parsing.combinator.JavaTokenParsers
+import scala.util.parsing.input.{ NoPosition, Positional }
 
-import PolyadicPi.Names
-import Calculus.{ λ, AST }
+import PolyadicPi.{ Emitter, Names }
+import Calculus.*
 import Directive.Settings
 import Encoding.{ renamed, Bindings }
 import scala.util.parsing.combinator.pisc.parser.Expansion.{ replaced, updated, Substitution }
@@ -49,35 +50,71 @@ import Expression.*
 
 abstract class Expression extends JavaTokenParsers:
 
+  override def positioned[T <: Positional](p: => Parser[T]): Parser[T] =
+    super.positioned(p) ^^ { it =>
+      _last = Some(it)
+      it
+    }
+
   import scala.meta.*
-  import scala.meta.dialects.Scala3
+  import dialects.Scala3
 
   /** Scala comment enclosing any [[Scalameta]] [[Term]]
     * or [[Enumerator]]s (used for assignment)
     * @return
     */
   def expression: Parser[(Code, Names)] =
-    expression_r ^^ { it =>
-      val expr = it.stripPrefix("/*").stripSuffix("*/")
-      try
-        val orig = expr.parse[Term].get
-        Expression(orig) match
-          case (term, names) =>
-            (Right(term), orig) -> names
-      catch _ =>
+    if emitter == Emitter.go
+    then
+      expression_r ^^ { it =>
+        val str = it.stripPrefix("/*").stripSuffix("*/").trim
+        val lit =
+          str.parse[Term].getOrElse(Term.Name(str)) match
+            case it: Lit.Int => it
+            case it: Lit.Long => it
+            case it: Lit.Boolean => it
+            case it: Lit.Double => it
+            case it: Lit.String => it
+            case _ => Term.Name(str)
+        (Right(lit), lit) -> identifiers(str)
+      }
+    else
+      expression_r ^^ { it =>
+        val expr = it.stripPrefix("/*").stripSuffix("*/")
         try
-          val orig = ("for { " + expr + " } yield ()").parse[Term].get
+          val orig = expr.parse[Term].get
           Expression(orig) match
-            case (Term.ForYield(enums, _), names) =>
-              (Left(enums), orig) -> names
-        catch t =>
-          throw ExpressionParsingException(expr, t)
-    }
+            case (term, names) =>
+              (Right(term), orig) -> names
+        catch _ =>
+          try
+            val orig = ("for { " + expr + " } yield ()").parse[Term].get
+            Expression(orig) match
+              case (Term.ForYield(enums, _), names) =>
+                (Left(enums), orig) -> names
+          catch t =>
+            throw ExpressionParsingException(expr, t)
+      }
 
   def regexMatch(r: Regex): Parser[Regex.Match]
 
+  protected val emitter: Emitter
+
   protected def in: String
   def ln: String
+  implicit protected var lc: Int => (Int, Int) = null
+  protected var _last: Option[Positional] = None
+  final def last: Option[((String, Boolean), (Int, Int))] =
+    def isMacroExpansion(ast: AST): Boolean =
+      ast.mapreduce {
+        case ∅() => false
+        case _: `⟦⟧` => true
+        case _ => false
+      }(_ || _)
+    _last.filter(_.pos ne NoPosition).map {
+      case it: AST => it.toString -> isMacroExpansion(it) -> lc(it.pos.column-1)
+      case it => it.toString -> false -> lc(it.pos.column-1)
+    }
   protected var _settings: Settings = null
 
   final protected def warn(t: => Nothing): Unit =
@@ -181,11 +218,11 @@ abstract class Expression extends JavaTokenParsers:
               Some(term) -> given_Names
           case (term @ Term.Assign(Term.Name(lhs), Term.Tuple(rhs)), _)
               if it.group(1).isEmpty =>
-            _directive = Some(lhs -> rhs.map { case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString })
+            _directive = Some(lhs -> rhs.map { case Lit.Null() => null case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString })
             Some(term) -> Names()
           case (term @ Term.Assign(Term.Name(lhs), rhs), _)
               if it.group(1).isEmpty =>
-            _directive = Some(lhs -> (rhs match { case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString }))
+            _directive = Some(lhs -> (rhs match { case Lit.Null() => null case Lit.Char(it) => s"'$it'" case Lit.String(it) => s"\"$it\"" case it => it.toString }))
             Some(term) -> Names()
           case (term, given Names) =>
             given MutableList[String]()
@@ -214,6 +251,11 @@ abstract class Expression extends JavaTokenParsers:
 object Expression:
 
   private lazy val expression_r = "[/][*].*?[*][/]".r
+
+  private lazy val identifier_r = "['][a-zA-Z_]['a-zA-Z0-9_\"]*".r
+
+  def identifiers(it: String): Names =
+    Set.from(identifier_r.findAllIn(it).toSeq.map(_.substring(1)).map(Symbol(_)))
 
   private lazy val template_r = """⟦(\d*)(.*?)\1⟧""".r
 

@@ -35,7 +35,6 @@ import scala.collection.mutable.{ ListBuffer => Listʹ, LinkedHashMap => Mapʹ, 
 import scala.meta.*
 import dialects.Scala3
 
-import parser.-
 import parser.Calculus.*
 import parser.Encoding.*
 import kk.Meta.*
@@ -44,6 +43,8 @@ import kk.Meta.*
 object Program:
 
   import Optimize.Opt
+
+  given (Int => (Int, Int)) = { _ => (0, 0) }
 
   extension (self: AST)(using id: => String)
 
@@ -249,12 +250,12 @@ object Program:
           var code = ts.flatMap(_._2)
           var ns = ps.flatMap {
             case ν(names*) => names
-            case π(_, Some(_), _, params*) => params.filter(_.isSymbol).map(_.asSymbol.name).filterNot(_.isEmpty)
+            case π(_, Some(_), _, params*) => params.filter(_.isSymbol).map(_.asSymbol.name).filterNot(_.startsWith("_"))
             case _ => Nil
           }.toSet.toSeq
 
           end match {
-            case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
+            case `⟦⟧`(Definition(_, _, _, variables, _), _, _, pointers) =>
               code ++= (variables zip pointers)
                 .map(_.name -> _.name)
                 .map(Pat.Var(_) -> _)
@@ -539,15 +540,7 @@ object Program:
 
         // INSTANTIATION ///////////////////////////////////////////////////////
 
-        case `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
-          val n = pointers.size
-
-          val sum: + = if (variables.size == n)
-                       then
-                         _sum
-                       else
-                         `+`(-1, ∥(-1, `.`(_sum, ν(variables.drop(n).map(_.name).toSeq*))))
-
+        case `⟦⟧`(_, sum, _, _) =>
           sum.scheme(null)(callback)
 
         case _: `{}` => ???
@@ -617,7 +610,7 @@ object Program:
                              Term.ArgClause(expr::Nil)
                            ))
             case _ =>
-              * = `_ <- *`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true)::Nil)),
+              * = `_ <- *`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(false)::Nil)),
                                       Term.ArgClause(args)))
 
         case π(λ(Symbol(ch)), nu @ (None | Some("ν")), code, params*) =>
@@ -662,6 +655,7 @@ object Program:
               params.zipWithIndex.foreach {
                 case (λ(Symbol(`ch`)), i) =>
                   * :+= `* <- Future.successful(*)`(ch -> paramsʹ(i).asSymbol.name)
+                case _ =>
               }
 
         case π(λ(Symbol(ch)), Some(""), code, params*) =>
@@ -733,7 +727,6 @@ object Program:
       val id = new helper.υidυ
       given opt: Opt = Opt(Mapʹ(), Setʹ())
       prog
-        .drop(1)
         .zipWithIndex
         .map {
           case ((bind, ∅()), k) =>

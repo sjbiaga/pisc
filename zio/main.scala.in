@@ -63,5 +63,9 @@ object π:
       ZIO.collectAllParDiscard(self)
     private[π] inline def πcollectAllPar(semaphore: Semaphore[UIO]): UIO[Unit] =
       self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar
+    private[π] inline def πcollectAllPar(N: Int): UIO[Unit] =
+      ZIO.foreachParDiscard(1 to N)(_ => self.πcollectAllPar)
+    private[π] inline def πcollectAllPar(N: Int, semaphore: Semaphore[UIO]): UIO[Unit] =
+      self.map(_.whenZIO(semaphore.tryAcquire)).πcollectAllPar(N)
 
 

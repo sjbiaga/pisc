@@ -174,41 +174,41 @@ package object Π:
       * linear variable replication output guard
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S*)(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply("-")(false)(parallelism, value.map(_.asInstanceOf[`()`])*)(body)
-     else
-       apply("*")(false)(parallelism, value.map(IO.delay)*)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply("-")(false)(parallelism, value.map(_.asInstanceOf[`()`])*)(body)
+      else
+        apply("*")(false)(parallelism, value.map(IO.delay)*)(body)
 
     /**
       * linear variable replication output guard w/ pace
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => S*)(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply("-")(false)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(body)
-     else
-       apply("*")(false)(pace, parallelism, value.map(IO.delay)*)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply("-")(false)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(body)
+      else
+        apply("*")(false)(pace, parallelism, value.map(IO.delay)*)(body)
 
     /**
       * linear variable replication output guard w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S*)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply("-")(true)(parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
-     else
-       apply("*")(true)(parallelism, value.map(IO.delay)*)(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply("-")(true)(parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
+      else
+        apply("*")(true)(parallelism, value.map(IO.delay)*)(code)(body)
 
     /**
       * linear variable replication output guard w/ pace w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => S*)(code: IO[Any])(body: IO[Any])(using DummyImplicit): IO[Unit] =
-     if classTag[S].runtimeClass eq getClass
-     then
-       apply("-")(true)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
-     else
-       apply("*")(true)(pace, parallelism, value.map(IO.delay)*)(code)(body)
+      if classTag[S].runtimeClass eq getClass
+      then
+        apply("-")(true)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
+      else
+        apply("*")(true)(pace, parallelism, value.map(IO.delay)*)(code)(body)
 
     /**
       * linear variable replication output guard
@@ -249,6 +249,32 @@ package object Π:
         IO.defer(value.map(_.asInstanceOf[IO[`()`]]).sequence.flatMap(apply("-")(true)(pace, parallelism, _*)(code)(body)))
       else
         IO.defer(super.output("*")(true)(pace, parallelism, value.sequence)(code)(body))
+
+    /////////////////////////////////////////////////////////////////// INPUT //
+
+    /**
+      * linear replication input guard
+      */
+    def apply(_n: Null)(_f: false)(parallelism: Int)(body: Seq[`()`] => IO[Any]): IO[Unit] =
+      super.input(false)(parallelism)(body)
+
+    /**
+      * linear replication input guard w/ pace
+      */
+    def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int)(body: Seq[`()`] => IO[Any]): IO[Unit] =
+      super.input(false)(pace, parallelism)(body)
+
+    /**
+      * linear replication input guard w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(parallelism: Int)(code: Seq[T] => IO[Seq[T]])(body: Seq[`()`] => IO[Any]): IO[Unit] =
+      super.input(true)(parallelism)(code)(body)
+
+    /**
+      * linear replication input guard w/ pace w/ code
+      */
+    def apply[T](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int)(code: Seq[T] => IO[Seq[T]])(body: Seq[`()`] => IO[Any]): IO[Unit] =
+      super.input(true)(pace, parallelism)(code)(body)
 
     ////////////////////////////////////////////////////// linear replication //
 

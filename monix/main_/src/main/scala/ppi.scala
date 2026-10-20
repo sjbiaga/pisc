@@ -407,7 +407,7 @@ package object Π:
         * `null` output prefix w/ pace
         */
       def apply(_arity: Int, _pace: FiniteDuration): Iterant[F, Unit] =
-         apply(_arity)
+        apply(_arity)
 
       /**
         * `null` output prefix w/ code

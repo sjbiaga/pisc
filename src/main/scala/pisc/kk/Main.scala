@@ -67,7 +67,7 @@ object Main:
         val bind = ppi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main(opt)(ppi(prog.map(_._1)))
+        val ps = Program.Main(opt)(ppi(prog.drop(1).map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
@@ -79,7 +79,12 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage + ".")
+        ppi.last match
+          case Some(((it, isMacroExpansion), (line, col))) =>
+            Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage
+                              + s""".\nLast known parse${if isMacroExpansion then " (from macro expansion) " else " "}at line #$line, column #$col.\n$it""")
+          case _ =>
+            Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()

@@ -39,7 +39,9 @@ import scala.meta.*
 import dialects.Scala3
 
 import parser.PolyadicPi
+import parser.Calculus.*
 import emitter.monix.Program
+import emitter.monix.Meta.{ \, \\ }
 
 
 object Main:
@@ -67,7 +69,21 @@ object Main:
         val bind = ppi(source).zipWithIndex
         val prog = bind.filter(_._1.isRight).map(_.right.get -> _)
 
-        val ps = Program.Main(F)(ppi(prog.map(_._1)))
+        given Set[String] =
+          prog.head._1 match
+            case (`(*)`(_, _, λ(_: Lit.Null)), _) => Set("Concurrent", "ContextShift", "Parallel", "Timer", "TaskLift", "TaskLike")
+            case (`(*)`(_, _, λ(typeclasses: Term.Tuple)), _) =>
+              typeclasses.args.map { case Term.Name(it) => it }.toSet
+
+        val Array(tpe, _path*) = F.split('.').reverse
+        val path = _path.reverse.map(\(_)).foldLeft("_root_": Term)(Term.Select(_, _))
+
+        val ps =
+          Defn.Type(Nil, \\("F"), Type.ParamClause(Nil),
+                    Type.Select(path.asInstanceOf[Term.Select], \\(tpe)),
+                    Type.Bounds(None, None, Nil, Nil))
+          ::
+          Program.Main()(ppi(prog.drop(1).map(_._1)))
         val is = prog.drop(1).map(_._2).zipWithIndex.map(_.swap).toMap
 
         val ls = bind.drop(1).filter(_._1.isLeft).map(_.left.get -> _)
@@ -80,7 +96,12 @@ object Main:
 
         bwr.write(code, 0, code.length)
       catch t =>
-        Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage + ".")
+        ppi.last match
+          case Some(((it, isMacroExpansion), (line, col))) =>
+            Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage
+                              + s""".\nLast known parse${if isMacroExpansion then " (from macro expansion) " else " "}at line #$line, column #$col.\n$it""")
+          case _ =>
+            Console.err.println(s"Error in file `$in' ${ppi.ln}! " + t.getMessage + ".")
         throw t
       finally
         if bwr ne null then bwr.close()
