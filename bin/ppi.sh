@@ -215,8 +215,8 @@ function ppio() {
             gala)
                 { head ../${emit}/import.${type}.in -n -1;
                   cat in/"$1".${type}.in |
-                  grep '^import' |
-                  sed -e 's/^import.[.][ ]/    . /' -e 's/^import./      /';
+                  grep '^[ ]*import' |
+                  sed -e 's/^[ ]*import[ ]*[.][ ]*/    . /' -e 's/^[ ]*import[ ]*/      /';
                   echo ')';
                   cat ../${emit}/main.${type}.in;
                   cat in/"$1".${type}.in | sed -e 's/υ/u/g' | sed -e '/^import/d'; } >| out/"$1".${type}.out
@@ -227,9 +227,11 @@ function ppio() {
                 mkdir "$1"
                 mv "$1".${type} "$1"
                 cd "$1"
-                mkdir pi
-                cd pi
+                mkdir ppi
+                cd ppi
                 ln -s ../../../${emit}/ppi.${type}
+                ln -s ../../../${emit}/ppim.${type}
+                ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
                 cd ..
@@ -238,9 +240,11 @@ function ppio() {
                 mkdir "$1_"
                 mv "$1".${type} "$1_"
                 cd "$1_"
-                mkdir pi
-                cd pi
+                mkdir ppi
+                cd ppi
                 ln -s ../../../${emit}/ppi_.${type}
+                ln -s ../../../${emit}/ppim_.${type}
+                ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
                 popd &>/dev/null

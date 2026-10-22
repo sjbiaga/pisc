@@ -44,30 +44,30 @@ package Π:
 
     import Macros.*
 
-    // LINEAR REPLICATION //////////////////////////////////////////////////////
+    // MODULO REPLICATION //////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////// BOUND //
 
     /**
-      * linear replication bound output guard
+      * modulo replication bound output guard
       */
     protected inline def output(_nu: "ν")(_f: false)(inline arity: Int)(inline parallelism: Int)(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ `(ν)`.outputCode('arity)('ref)('parallelism)('body)('{ IO.unit }) }
 
     /**
-      * linear replication bound output guard w/ pace
+      * modulo replication bound output guard w/ pace
       */
     protected inline def output(_nu: "ν")(_f: false)(inline arity: Int)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ `(ν)`.outputCode('arity)('ref)('parallelism)('body)('{ IO.sleep(pace) }) }
 
     /**
-      * linear replication bound output guard w/ code
+      * modulo replication bound output guard w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline arity: Int)(inline parallelism: Int)(inline code: IO[Any])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ `(ν)`.outputCode('arity)('ref)('parallelism)('body)('{ exec(code).void }) }
 
     /**
-      * linear replication bound output guard w/ pace w/ code
+      * modulo replication bound output guard w/ pace w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline arity: Int)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: IO[Any])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ `(ν)`.outputCode('arity)('ref)('parallelism)('{ exec(code) >> body(_) })('{ exec(code) >> IO.sleep(pace) }) }
@@ -75,25 +75,25 @@ package Π:
     //////////////////////////////////////////////////////////////// CONSTANT //
 
     /**
-      * linear constant replication output guard
+      * modulo constant replication output guard
       */
     protected inline def output(_f: false)(inline parallelism: Int, inline value: `()`*)(inline body: IO[Any]): IO[Unit] =
       ${ outputCode('ref)('parallelism, 'value)('body)('{ IO.unit }) }
 
     /**
-      * linear constant replication output guard w/ pace
+      * modulo constant replication output guard w/ pace
       */
     protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`*)(inline body: IO[Any]): IO[Unit] =
       ${ outputCode('ref)('parallelism, 'value)('body)('{ IO.sleep(pace) }) }
 
     /**
-      * linear constant replication output guard w/ code
+      * modulo constant replication output guard w/ code
       */
     protected inline def output(_t: true)(inline parallelism: Int, inline value: `()`*)(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
       ${ outputCode('ref)('parallelism, 'value)('body)('{ exec(code).void }) }
 
     /**
-      * linear constant replication output guard w/ pace w/ code
+      * modulo constant replication output guard w/ pace w/ code
       */
     protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`*)(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
       ${ outputCode('ref)('parallelism, 'value)('body)('{ exec(code) >> IO.sleep(pace) }) }
@@ -101,25 +101,25 @@ package Π:
     //////////////////////////////////////////////////////////////// VARIABLE //
 
     /**
-      * linear variable replication output guard
+      * modulo variable replication output guard
       */
     protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline value: IO[Seq[S]])(inline body: IO[Any]): IO[Unit] =
      ${ `(*)`.outputCode('ref)('parallelism, 'value)('body)('{ IO.unit }) }
 
     /**
-      * linear variable replication output guard w/ pace
+      * modulo variable replication output guard w/ pace
       */
     protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: IO[Seq[S]])(inline body: IO[Any]): IO[Unit] =
      ${ `(*)`.outputCode('ref)('parallelism, 'value)('body)('{ IO.sleep(pace) }) }
 
     /**
-      * linear variable replication output guard w/ code
+      * modulo variable replication output guard w/ code
       */
     protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline value: IO[Seq[S]])(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
      ${ `(*)`.outputCode('ref)('parallelism, 'value)('body)('{ exec(code).void }) }
 
     /**
-      * linear variable replication output guard w/ pace w/ code
+      * modulo variable replication output guard w/ pace w/ code
       */
     protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: IO[Seq[S]])(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
      ${ `(*)`.outputCode('ref)('parallelism, 'value)('body)('{ exec(code) >> IO.sleep(pace) }) }
@@ -127,30 +127,30 @@ package Π:
     /////////////////////////////////////////////////////////////////// INPUT //
 
     /**
-      * linear replication input guard
+      * modulo replication input guard
       */
     protected inline def input(_f: false)(inline parallelism: Int)(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('body)('{ IO.unit }) }
 
     /**
-      * linear replication input guard w/ pace
+      * modulo replication input guard w/ pace
       */
     protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('body)('{ IO.sleep(pace) }) }
 
     /**
-      * linear replication input guard w/ code
+      * modulo replication input guard w/ code
       */
     protected inline def input[T](_t: true)(inline parallelism: Int)(code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.unit }) }
 
     /**
-      * linear replication input guard w/ pace w/ code
+      * modulo replication input guard w/ pace w/ code
       */
     protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.sleep(pace) }) }
 
-    ////////////////////////////////////////////////////// linear replication //
+    ////////////////////////////////////////////////////// modulo replication //
 
   }
 
@@ -160,25 +160,25 @@ package Π:
     import Macros.τ.*
 
     /**
-      * linear replication guard
+      * modulo replication guard
       */
     protected inline def silent(_f: false)(inline parallelism: Int)(inline body: IO[Any]): IO[Unit] =
       ${ silentCode('parallelism)('body)('{ IO.unit }) }
 
     /**
-      * linear replication guard w/ pace
+      * modulo replication guard w/ pace
       */
     protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: IO[Any]): IO[Unit] =
       ${ silentCode('parallelism)('body)('{ IO.sleep(pace) }) }
 
     /**
-      * linear replication guard w/ code
+      * modulo replication guard w/ code
       */
     protected inline def silent(_t: true)(inline parallelism: Int)(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
       ${ silentCode('parallelism)('body)('{ exec(code).void }) }
 
     /**
-      * linear replication guard w/ pace w/ code
+      * modulo replication guard w/ pace w/ code
       */
     protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: IO[Any])(inline body: IO[Any]): IO[Unit] =
       ${ silentCode('parallelism)('body)('{ exec(code) >> IO.sleep(pace) }) }
@@ -192,7 +192,7 @@ package Π:
                     (sleep: Expr[IO[Unit]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            linearCB <- CyclicBarrier[IO]($parallelism)
+            moduloCB <- CyclicBarrier[IO]($parallelism)
             unfold    = {
               def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
                 for
@@ -200,7 +200,7 @@ package Π:
                   loop   = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- linearCB.await
+                        _ <- moduloCB.await
                         _ <- prevS.fold(IO.unit)(_.acquire)
                         _ <- $sleep
                         _ <- nextS.release
@@ -226,14 +226,14 @@ package Π:
     object `(ν)`:
 
       /**
-        * linear replication bound output guard
+        * modulo replication bound output guard
         */
       def outputCode(arity: Expr[Int])(ref: Expr[>*<])
                     (parallelism: Expr[Int])(body: Expr[Seq[`()`] => IO[Any]])
                     (sleep: Expr[IO[Unit]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            linearCB <- CyclicBarrier[IO]($parallelism)
+            moduloCB <- CyclicBarrier[IO]($parallelism)
             stopR    <- IO.ref(false)
             unfold    = {
               def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
@@ -242,7 +242,7 @@ package Π:
                   loop   = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- linearCB.await
+                        _ <- moduloCB.await
                         _ <- prevS.fold(IO.unit)(_.acquire)
                         n <- ν.map(identity).replicateA($arity)
                         _ <- stopR.get.ifM(IO.unit,
@@ -269,14 +269,14 @@ package Π:
         }
 
     /**
-      * linear constant replication output guard
+      * modulo constant replication output guard
       */
     def outputCode(ref: Expr[>*<])
                   (parallelism: Expr[Int], value: Expr[Seq[`()`]])(body: Expr[IO[Any]])
                   (sleep: Expr[IO[Unit]])
                   (using Quotes): Expr[IO[Unit]] =
      '{ for
-          linearCB <- CyclicBarrier[IO]($parallelism)
+          moduloCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
             def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
@@ -285,7 +285,7 @@ package Π:
                 loop   = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- linearCB.await
+                      _ <- moduloCB.await
                       _ <- prevS.fold(IO.unit)(_.acquire)
                       _ <- stopR.get.ifM(IO.unit,
                                          for
@@ -314,14 +314,14 @@ package Π:
     object `(*)`:
 
       /**
-        * linear variable replication output guard
+        * modulo variable replication output guard
         */
       def outputCode[S](ref: Expr[>*<])
                        (parallelism: Expr[Int], value: Expr[IO[Seq[S]]])(body: Expr[IO[Any]])
                        (sleep: Expr[IO[Unit]])
                        (using Type[S], Quotes): Expr[IO[Unit]] =
        '{ for
-            linearCB <- CyclicBarrier[IO]($parallelism)
+            moduloCB <- CyclicBarrier[IO]($parallelism)
             stopR    <- IO.ref(false)
             unfold    = {
               def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
@@ -330,7 +330,7 @@ package Π:
                   loop   = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- linearCB.await
+                        _ <- moduloCB.await
                         _ <- prevS.fold(IO.unit)(_.acquire)
                         _ <- stopR.get.ifM(IO.unit,
                                            for
@@ -356,14 +356,14 @@ package Π:
       }
 
     /**
-      * linear replication input guard
+      * modulo replication input guard
       */
     def inputCode(ref: Expr[>*<])
                  (parallelism: Expr[Int])(body: Expr[Seq[`()`] => IO[Any]])
                  (sleep: Expr[IO[Unit]])
                  (using Quotes): Expr[IO[Unit]] =
      '{ for
-          linearCB <- CyclicBarrier[IO]($parallelism)
+          moduloCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
             def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
@@ -372,7 +372,7 @@ package Π:
                 loop   = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- linearCB.await
+                      _ <- moduloCB.await
                       _ <- prevS.fold(IO.unit)(_.acquire)
                       n <- stopR.get.ifM(IO.pure(null),
                                          for
@@ -397,14 +397,14 @@ package Π:
       }
 
     /**
-      * linear replication input guard w/ code
+      * modulo replication input guard w/ code
       */
     def inputCode[T](ref: Expr[>*<])
                     (parallelism: Expr[Int])(code: Expr[Seq[T] => IO[Seq[T]]])(body: Expr[Seq[`()`] => IO[Any]])
                     (sleep: Expr[IO[Unit]])
                     (using Type[T], Quotes): Expr[IO[Unit]] =
      '{ for
-          linearCB <- CyclicBarrier[IO]($parallelism)
+          moduloCB <- CyclicBarrier[IO]($parallelism)
           stopR    <- IO.ref(false)
           unfold    = {
             def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
@@ -413,7 +413,7 @@ package Π:
                 loop   = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- linearCB.await
+                      _ <- moduloCB.await
                       _ <- prevS.fold(IO.unit)(_.acquire)
                       n <- stopR.get.ifM(IO.pure(null),
                                          for

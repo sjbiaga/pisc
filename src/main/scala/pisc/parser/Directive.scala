@@ -132,7 +132,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                 if given_String == "parallelism" =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
             case List(given String, it: String)
-                if given_String == "linear"      =>
+                if given_String == "modulo"      =>
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, message)
           case _                => throw DirectiveValueParsingException(directive, message)
@@ -222,7 +222,7 @@ object Directive:
 
   object Settings:
 
-    private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting")
+    private lazy val messages = Map("replication" -> "a <parallelism> number or a <modulo> boolean setting")
     def message(implicit key: String) = messages(canonical(key))
 
 

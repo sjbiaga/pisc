@@ -1,0 +1,265 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package ppi
+
+import (
+    "context"
+    "github.com/marusama/cyclicbarrier"
+    "golang.org/x/sync/semaphore"
+  . "martianoff/gala/collection_immutable"
+    "martianoff/gala/go_interop"
+  . "martianoff/gala/std"
+)
+
+func Go_SilentPi(
+    ctx context.Context,
+    parallelism int64,
+    body func () Option[bool],
+    code func () Option[bool]
+) Option[bool] {
+    val cb = cyclicbarrier.New(int(parallelism))
+
+    val first = semaphore.NewWeighted(1)
+
+    var unfold func(int, *semaphore.Weighted) Void
+    unfold = (remaining int, prev *semaphore.Weighted) Void => {
+        val next *semaphore.Weighted =
+            if (remaining == 1) first
+            else {
+                val weighted = semaphore.NewWeighted(1)
+                weighted.TryAcquire(1)
+                weighted
+            }
+        var loop func() Void
+        loop = () Void => {
+            cb.Await(ctx)
+            prev.Acquire(ctx, 1)
+            code()
+            next.Release(1)
+            body()
+            loop()
+        }
+        if (remaining == 1) {
+            loop()
+        } else {
+            go_interop.Spawn(() => loop())
+            unfold(remaining - 1, next)
+        }
+    }
+
+    unfold(int(parallelism), first)
+
+    Some(true)
+}
+
+func (self Go_NamePi) Go_BoundOutputPi(
+    ctx context.Context,
+    arity int,
+    parallelism int64,
+    body func (List[Go_NamePi]) Option[bool],
+    code func () Option[bool]
+) Option[bool] {
+    self match {
+
+        case Go_QueuePi(q) => {
+
+            val cb = cyclicbarrier.New(int(parallelism))
+
+            val first = semaphore.NewWeighted(1)
+
+            var unfold func(int, *semaphore.Weighted) Void
+            unfold = (remaining int, prev *semaphore.Weighted) Void => {
+                val next *semaphore.Weighted =
+                    if (remaining == 1) first
+                    else {
+                        val weighted = semaphore.NewWeighted(1)
+                        weighted.TryAcquire(1)
+                        weighted
+                    }
+                var loop func() Void
+                loop = () Void => {
+                    cb.Await(ctx)
+                    prev.Acquire(ctx, 1)
+                    val names = ArrayTabulate[Go_NamePi](arity, (_) => Go_QueuePi(Go_NewBlockingQueuePi())).ToList()
+                    q.Go_EnqueuePi(names)
+                    code()
+                    next.Release(1)
+                    body(names)
+                    loop()
+                }
+                if (remaining == 1) {
+                    loop()
+                } else {
+                    go_interop.Spawn(() => loop())
+                    unfold(remaining - 1, next)
+                }
+            }
+
+            unfold(int(parallelism), first)
+
+        }
+
+        case it => Panic(it)
+
+    }
+
+    Some(true)
+}
+
+func (self Go_NamePi) Go_OutputPi(
+    ctx context.Context,
+    parallelism int64,
+    body func () Option[bool],
+    code func () Option[bool],
+    value func () List[Go_NamePi]
+) Option[bool] {
+    self match {
+
+        case Go_QueuePi(q) => {
+
+            val cb = cyclicbarrier.New(int(parallelism))
+
+            val first = semaphore.NewWeighted(1)
+
+            var unfold func(int, *semaphore.Weighted) Void
+            unfold = (remaining int, prev *semaphore.Weighted) Void => {
+                val next *semaphore.Weighted =
+                    if (remaining == 1) first
+                    else {
+                        val weighted = semaphore.NewWeighted(1)
+                        weighted.TryAcquire(1)
+                        weighted
+                    }
+                var loop func() Void
+                loop = () Void => {
+                    cb.Await(ctx)
+                    prev.Acquire(ctx, 1)
+                    q.Go_EnqueuePi(value())
+                    code()
+                    next.Release(1)
+                    body()
+                    loop()
+                }
+                if (remaining == 1) {
+                    loop()
+                } else {
+                    go_interop.Spawn(() => loop())
+                    unfold(remaining - 1, next)
+                }
+            }
+
+            unfold(int(parallelism), first)
+
+        }
+
+        case it => Panic(it)
+
+    }
+
+    Some(true)
+}
+
+func (self Go_NamePi) Go_InputPi(
+    ctx context.Context,
+    parallelism int64,
+    body func (List[Go_NamePi]) Option[bool],
+    code func () Option[bool]
+) Option[bool] {
+    self match {
+
+        case Go_QueuePi(q) => {
+
+            val cb = cyclicbarrier.New(int(parallelism))
+
+            val first = semaphore.NewWeighted(1)
+
+            var unfold func(int, *semaphore.Weighted) Void
+            unfold = (remaining int, prev *semaphore.Weighted) Void => {
+                val next *semaphore.Weighted =
+                    if (remaining == 1) first
+                    else {
+                        val weighted = semaphore.NewWeighted(1)
+                        weighted.TryAcquire(1)
+                        weighted
+                    }
+                var loop func() Void
+                loop = () Void => {
+                    cb.Await(ctx)
+                    prev.Acquire(ctx, 1)
+                    val names = q.Go_DequeuePi().Get()
+                    code()
+                    next.Release(1)
+                    body(names)
+                    loop()
+                }
+                if (remaining == 1) {
+                    loop()
+                } else {
+                    go_interop.Spawn(() => loop())
+                    unfold(remaining - 1, next)
+                }
+            }
+
+            unfold(int(parallelism), first)
+
+        }
+
+        case it => Panic(it)
+
+    }
+
+    Some(true)
+}
+
+func (self Go_NamePi) Go_InputPi_(
+    ctx context.Context,
+    parallelism int64,
+    fun func (List[Go_NamePi]) List[Go_NamePi],
+    body func (List[Go_NamePi]) Option[bool],
+    code func () Option[bool]
+) Option[bool] {
+    self match {
+
+        case Go_QueuePi(q) => {
+
+            val cb = cyclicbarrier.New(int(parallelism))
+
+            val first = semaphore.NewWeighted(1)
+
+            var unfold func(int, *semaphore.Weighted) Void
+            unfold = (remaining int, prev *semaphore.Weighted) Void => {
+                val next *semaphore.Weighted =
+                    if (remaining == 1) first
+                    else {
+                        val weighted = semaphore.NewWeighted(1)
+                        weighted.TryAcquire(1)
+                        weighted
+                    }
+                var loop func() Void
+                loop = () Void => {
+                    cb.Await(ctx)
+                    prev.Acquire(ctx, 1)
+                    val names = q.Go_DequeuePi_(fun).Get()
+                    code()
+                    next.Release(1)
+                    body(names)
+                    loop()
+                }
+                if (remaining == 1) {
+                    loop()
+                } else {
+                    go_interop.Spawn(() => loop())
+                    unfold(remaining - 1, next)
+                }
+            }
+
+            unfold(int(parallelism), first)
+
+        }
+
+        case it => Panic(it)
+
+    }
+
+    Some(true)
+}

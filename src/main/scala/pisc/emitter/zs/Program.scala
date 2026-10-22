@@ -449,7 +449,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some("ν"), code, params*)), sum) if parallelism < -1 =>
 

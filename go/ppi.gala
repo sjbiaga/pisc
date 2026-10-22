@@ -1,14 +1,11 @@
 // -*- indent-tabs-mode: nil; -*-
 
-package pi
+package ppi
 
 import (
-    "martianoff/gala/collection_immutable"
-    "martianoff/gala/collection_mutable"
-    "martianoff/gala/go_interop"
-    "martianoff/gala/resource"
+    "github.com/hut8/goq"
+  . "martianoff/gala/collection_immutable"
     "math/big"
-    "sync"
 )
 
 sealed type Go_NamePi {
@@ -100,51 +97,24 @@ func (self Go_NamePi) IsNothing() bool {
 }
 
 struct Go_BlockingQueuePi(
-    items *collection_mutable.Array[collection_immutable.List[Go_NamePi]],
-    mu *go_interop.Mutex,
-    notEmpty *sync.Cond
+    queue *goq.Queue[List[Go_NamePi]]
 )
 
 func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
-    val lock = go_interop.NewMutex()
-
     Go_BlockingQueuePi(
-        items = collection_mutable.EmptyArray[collection_immutable.List[Go_NamePi]](),
-        mu = lock,
-        notEmpty = sync.NewCond(lock)
+        queue = goq.NewQueue[List[Go_NamePi]]()
     )
 }
 
-func (q Go_BlockingQueuePi) Go_EnqueuePi(item collection_immutable.List[Go_NamePi]) Option[bool] {
-    resource.WithLock(q.mu, () => {
-        RequirePtr(q.items).Append(item)
-        q.notEmpty.Signal()
-        Some(true)
-    })
+func (self Go_BlockingQueuePi) Go_EnqueuePi(item List[Go_NamePi]) Option[bool] {
+    self.queue.Enqueue(item)
+    Some(true)
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi() Option[collection_immutable.List[Go_NamePi]] {
-    resource.WithLock(q.mu, () => {
-        for RequirePtr(q.items).Size() == 0 {
-            q.notEmpty.Wait()
-        }
-
-        val item = RequirePtr(q.items).Get(0)
-        RequirePtr(q.items).RemoveAt(0)
-
-        Some(item)
-    })
+func (self Go_BlockingQueuePi) Go_DequeuePi() Option[List[Go_NamePi]] {
+    Some(self.queue.Dequeue())
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (collection_immutable.List[Go_NamePi]) collection_immutable.List[Go_NamePi]) Option[collection_immutable.List[Go_NamePi]] {
-    resource.WithLock(q.mu, () => {
-        for RequirePtr(q.items).Size() == 0 {
-            q.notEmpty.Wait()
-        }
-
-        val item = RequirePtr(q.items).Get(0)
-        RequirePtr(q.items).RemoveAt(0)
-
-        Some(f(item))
-    })
+func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (List[Go_NamePi]) List[Go_NamePi]) Option[List[Go_NamePi]] {
+    Some(f(self.queue.Dequeue()))
 }

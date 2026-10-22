@@ -32,7 +32,7 @@ The BNF formal grammar for processes is the following.
     LEAF           ::= "[" NAME ("="|"≠") NAME "]" CHOICE
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                     | "!" [ SCALE ] [ PACE ] [ "." μ "." ] CHOICE
+                     | ("!"|"¡") [ SCALE ] [ PACE ] [ "." μ "." ] CHOICE
                      | CAPITAL
                      | INVOCATION
                      | INSTANTIATION

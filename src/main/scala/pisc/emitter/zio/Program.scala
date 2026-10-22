@@ -293,7 +293,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some(nu), code, params*)), sum) if parallelism < -1 =>
           val υidυ = id

@@ -6,7 +6,7 @@
 
 ⟦ EXCLUDE = NO ⟧
 
-Sem(s) = ! 2* .s(r). r(r). τ/*bind _ = 'r.PrintLn()*/.
+Sem(s) = ¡ 2* .s(r). r(r). τ/*bind _ = 'r.PrintLn()*/.
 
 ##################################################################### Clients ##
 
@@ -14,7 +14,7 @@ Sem(s) = ! 2* .s(r). r(r). τ/*bind _ = 'r.PrintLn()*/.
 
 ⟦ EXCLUDE = YES ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. ! 1,second .s<νr>. τ/*bind _ = PrintLn('n + ".acq")*/. τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. r</*Go_StringPi('n + ".rel")*/>.
+⟦ 'n ^ 'd ⟧(s) = τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. ¡ 1,second .s<νr>. τ/*bind _ = PrintLn('n + ".acq")*/. τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. r</*Go_StringPi('n + ".rel")*/>.
 
 Main = ν(s) ( Sem(s) | ⟦ "P" ^ 100 ⟧ | ⟦ "Q" ^ 200 ⟧ | ⟦ "R" ^ 300 ⟧ )
 
@@ -22,7 +22,7 @@ Main = ν(s) ( Sem(s) | ⟦ "P" ^ 100 ⟧ | ⟦ "Q" ^ 200 ⟧ | ⟦ "R" ^ 300 �
 
 ⟦ EXCLUDE = YES ⟧
 
-Main(s, n, d) = τ/*bind _ = Go_PacePi('d.ToInt64(), time.Millisecond)*/. ! 1,second .s<νr>. τ/*bind _ = PrintLn('n.ToString() + ".acq")*/. τ/*bind _ = Go_PacePi('d.ToInt64(), time.Millisecond)*/. r</*Go_StringPi('n.ToString() + ".rel")*/>.
+Main(s, n, d) = τ/*bind _ = Go_PacePi('d.ToInt64(), time.Millisecond)*/. ¡ 1,second .s<νr>. τ/*bind _ = PrintLn('n.ToString() + ".acq")*/. τ/*bind _ = Go_PacePi('d.ToInt64(), time.Millisecond)*/. r</*Go_StringPi('n.ToString() + ".rel")*/>.
 
 Main = ν(s) ( Sem(s) | Main(s, "P", 100) | Main(s, "Q", 200) | Main(s, "R", 300) )
 
@@ -30,7 +30,7 @@ Main = ν(s) ( Sem(s) | Main(s, "P", 100) | Main(s, "Q", 200) | Main(s, "R", 300
 
 ⟦ EXCLUDE = NO ⟧
 
-⟦ 'n ^ 'd ⟧(s) = τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. ! 1,second .s<νr>. τ/*bind _ = PrintLn('n + ".acq")*/. τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. r</*Go_StringPi('n + ".rel")*/>.
+⟦ 'n ^ 'd ⟧(s) = τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. ¡ 1,second .s<νr>. τ/*bind _ = PrintLn('n + ".acq")*/. τ/*bind _ = Go_PacePi('d, time.Millisecond)*/. r</*Go_StringPi('n + ".rel")*/>.
 
 P(s) = ⟦ "P" ^ 100 ⟧
 Q(s) = ⟦ "Q" ^ 200 ⟧

@@ -57,7 +57,7 @@ object Program:
               case +(_, ∥(_, `.`(?:(cond, t, None)))) =>
                 elvis(cond, cases(t), Nil: body) :: Nil
               case _ =>
-                Gala.cases(semaphore.get, true) :: sum.emit
+                Gala.cases(semaphore.get, tryacquire = true) :: sum.emit
 
           cases(`+`(-1, ∥(-1, it)))
 
@@ -82,7 +82,7 @@ object Program:
 
           val ops = it.choices.foldRight(List[body]())(_.emitʹ :: _)
 
-          * = cases(sem.get, false) :: par(ops)
+          * = cases(sem.get) :: par(ops)
 
         case it: + =>
           val ops = it.choices.foldRight(List[body]())(_.emit :: _)
@@ -123,7 +123,7 @@ object Program:
           * = tau() :: code(term) :: Nil
 
         case τ(_) =>
-          * = tau()
+          * = tau() :: noop() :: Nil
 
 
         case π(λ(Symbol(ch)), Some("ν"), opt, params*) =>
@@ -134,7 +134,7 @@ object Program:
             case Some((Right(term), _)) =>
               * = nu(names*) :: bind(ch, params, None) :: code(term) :: Nil
             case _ =>
-              * = nu(names*) :: bind(ch, params, None) :: Nil
+              * = nu(names*) :: bind(ch, params, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), None, opt, params*) =>
 
@@ -142,17 +142,17 @@ object Program:
             case Some((Right(term), _)) =>
               * = bind(ch, params, None) :: code(term) :: Nil
             case _ =>
-              * = bind(ch, params, None) :: Nil
+              * = bind(ch, params, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), Some(""), opt, params*) =>
 
           opt match
             case Some((Right(term: Term.Name), _)) =>
-              * = bind(ch, params, Some(term)) :: Nil
+              * = bind(ch, params, Some(term)) :: noop() :: Nil
             case Some((Right(term), _)) =>
               * = bind(ch, params, Some(null)) :: code(term) :: Nil
             case _ =>
-              * = bind(ch, params, Some(null)) :: Nil
+              * = bind(ch, params, Some(null)) :: noop() :: Nil
 
         case _: π => ???
 
@@ -184,7 +184,7 @@ object Program:
 
         case !(parallelism, paceʹ, _, sum) =>
 
-          * = rep(parallelism, paceʹ.map(pace(_, _)).getOrElse(noop()), None, sum.emit)
+          * = rep(parallelism, paceʹ.map(pace(_, _)).getOrElse(noop()) :: tau() :: noop(), None, sum.emit)
 
         ///////////////////////////////////////////////////////// replication //
 
