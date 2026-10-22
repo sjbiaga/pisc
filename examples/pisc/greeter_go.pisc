@@ -3,6 +3,7 @@
 # https://github.com/alexj136/nodes/blob/master/examples/greeter
 
 @import "bufio"
+@import "martianoff/gala/go_interop"
 @import . "strings"
 
 @val reader = bufio.NewReader(os.Stdin)

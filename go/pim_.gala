@@ -167,7 +167,6 @@ func (self Go_NamePi) Go_OutputPi(
                 loop = () Option[bool] => {
                     bind _ = FromError(cb.Await(ctx)).ToOption()
                     bind _ = prev.Acquire1(ctx)
-                    bind name = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
                     bind _ = q.Go_EnqueuePi(value())
                     bind _ = code()
                     bind _ = next.Release1()
