@@ -106,7 +106,7 @@ abstract trait Meta:
   def `* :: … :: * = *`(* : (String, String), `…`: String*) =
     def pat(** : String*): Pat =
       val head =
-        if **.head.isEmpty then
+        if **.head.startsWith("_") then
           Pat.Wildcard()
         else
           Pat.Var(**.head)
