@@ -215,8 +215,8 @@ function pio() {
             gala)
                 { head ../${emit}/import.${type}.in -n -1;
                   cat in/"$1".${type}.in |
-                  grep '^import' |
-                  sed -e 's/^import.[.][ ]/    . /' -e 's/^import./      /';
+                  grep '^[ ]*import' |
+                  sed -e 's/^[ ]*import[ ]*[.][ ]*/    . /' -e 's/^[ ]*import[ ]*/      /';
                   echo ')';
                   cat ../${emit}/main.${type}.in;
                   cat in/"$1".${type}.in | sed -e 's/υ/u/g' | sed -e '/^import/d'; } >| out/"$1".${type}.out
@@ -230,6 +230,8 @@ function pio() {
                 mkdir pi
                 cd pi
                 ln -s ../../../${emit}/pi.${type}
+                ln -s ../../../${emit}/pim.${type}
+                ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
                 cd ..
@@ -241,6 +243,8 @@ function pio() {
                 mkdir pi
                 cd pi
                 ln -s ../../../${emit}/pi_.${type}
+                ln -s ../../../${emit}/pim_.${type}
+                ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
                 popd &>/dev/null

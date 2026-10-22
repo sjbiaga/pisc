@@ -134,7 +134,7 @@ Main = ν(x) ( (!.x(y). τ/*ZIO.debug(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/
             | (x</*-gen.nextInt.abs*/>.)                                                           \
             )
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
+⟦ REPLICATION = (MODULO,YES) ⟧
 
 ⟦ EXCLUDE = YES ⟧
 
@@ -153,7 +153,7 @@ Main = ν(x) ( (! 4* .x(y). τ/*ZIO.debug(y)*/.)  \
             )
 
 ⟦ REPLICATION = (PARALLELISM,-1) ⟧
-⟦ REPLICATION = (LINEAR,NO) ⟧
+⟦ REPLICATION = (MODULO,NO) ⟧
 
 ⟦ EXCLUDE = YES ⟧
 

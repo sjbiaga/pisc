@@ -279,7 +279,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(nu), code)), sum) if parallelism < -1 =>
           val par = if λ.`type`.isDefined then id else arg

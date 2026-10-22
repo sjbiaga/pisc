@@ -3,11 +3,8 @@
 package pi
 
 import (
-    "martianoff/gala/collection_mutable"
-    "martianoff/gala/go_interop"
-    "martianoff/gala/resource"
+    "github.com/hut8/goq"
     "math/big"
-    "sync"
 )
 
 sealed type Go_NamePi {
@@ -99,51 +96,24 @@ func (self Go_NamePi) IsNothing() bool {
 }
 
 struct Go_BlockingQueuePi(
-    items *collection_mutable.Array[Go_NamePi],
-    mu *go_interop.Mutex,
-    notEmpty *sync.Cond
+    queue *goq.Queue[Go_NamePi]
 )
 
 func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
-    val lock = go_interop.NewMutex()
-
     Go_BlockingQueuePi(
-        items = collection_mutable.EmptyArray[Go_NamePi](),
-        mu = lock,
-        notEmpty = sync.NewCond(lock)
+        queue = goq.NewQueue[Go_NamePi]()
     )
 }
 
-func (q Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
-    resource.WithLock(q.mu, () => {
-        RequirePtr(q.items).Append(item)
-        q.notEmpty.Signal()
-        Some(true)
-    })
+func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
+    self.queue.Enqueue(item)
+    Some(true)
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
-    resource.WithLock(q.mu, () => {
-        for RequirePtr(q.items).Size() == 0 {
-            q.notEmpty.Wait()
-        }
-
-        val item = RequirePtr(q.items).Get(0)
-        RequirePtr(q.items).RemoveAt(0)
-
-        Some(item)
-    })
+func (self Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
+    Some(self.queue.Dequeue())
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
-    resource.WithLock(q.mu, () => {
-        for RequirePtr(q.items).Size() == 0 {
-            q.notEmpty.Wait()
-        }
-
-        val item = RequirePtr(q.items).Get(0)
-        RequirePtr(q.items).RemoveAt(0)
-
-        Some(f(item))
-    })
+func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
+    Some(f(self.queue.Dequeue()))
 }

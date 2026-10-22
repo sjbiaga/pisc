@@ -3,11 +3,9 @@
 package pi
 
 import (
-    "martianoff/gala/collection_mutable"
+    "github.com/jsouthworth/queue"
     "martianoff/gala/go_interop"
-    "martianoff/gala/resource"
     "math/big"
-    "sync"
 )
 
 sealed type Go_NamePi {
@@ -99,119 +97,100 @@ func (self Go_NamePi) IsNothing() bool {
 }
 
 struct Go_BlockingQueuePi(
-    bools *collection_mutable.Array[bool],
-    items *collection_mutable.Array[Go_NamePi],
-    mu *go_interop.Mutex,
-    enqueue *go_interop.Mutex,
-    dequeue *go_interop.Mutex,
-    notEmpty *sync.Cond,
-    notFull *sync.Cond,
+    queue queue.Queue,
+    mutex *go_interop.Mutex,
     stop *bool
 )
 
 func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
-    val lock = go_interop.NewMutex()
     var stop = false
 
     Go_BlockingQueuePi(
-        bools = collection_mutable.EmptyArray[bool](),
-        items = collection_mutable.EmptyArray[Go_NamePi](),
-        mu = lock,
-        enqueue = go_interop.NewMutex(),
-        dequeue = go_interop.NewMutex(),
-        notEmpty = sync.NewCond(lock),
-        notFull = sync.NewCond(lock),
+        queue = queue.NewBlocking(0),
+        mutex = go_interop.NewMutex(),
         stop = &stop
     )
 }
 
-func (q Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
-    resource.WithLock(q.mu, () => {
-        if (item.Equal(Go_NothingPi())) {
-            *q.stop = true
-            None[bool]()
-        } else if (*q.stop) {
-            None[bool]()
-        } else {
-            resource.WithLock(q.enqueue, () => {
-                if (*q.stop) {
-                    None[bool]()
-                } else {
-                    for RequirePtr(q.bools).Size() == 0 {
-                        q.notFull.Wait()
-                    }
-
-                    RequirePtr(q.bools).RemoveAt(0)
-
-                    if (*q.stop) {
-                        None[bool]()
-                    } else {
-                        RequirePtr(q.items).Append(item)
-
-                        q.notEmpty.Signal()
-
-                        Some(true)
-                    }
-                }
-            })
-        }
-    })
+type unlockable struct {
+    mutex *go_interop.Mutex
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
-    resource.WithLock(q.mu, () => {
-        if (*q.stop) {
-            None[Go_NamePi]()
-        } else {
-            resource.WithLock(q.dequeue, () => {
-                RequirePtr(q.bools).Append(true)
-
-                q.notFull.Signal()
-
-                for RequirePtr(q.items).Size() == 0 {
-                    q.notEmpty.Wait()
-                }
-
-                val item = RequirePtr(q.items).Get(0)
-                RequirePtr(q.items).RemoveAt(0)
-
-                Some(item)
-            })
-        }
-    })
+func (self unlockable) Close() {
+    self.mutex.Unlock()
 }
 
-func (q Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
-    resource.WithLock(q.mu, () => {
-        if (*q.stop) {
-            None[Go_NamePi]()
+func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
+    self.mutex.Lock()
+    use unlock = unlockable(self.mutex)
+    if (*self.stop) {
+        None[bool]()
+    } else if (item.Equal(Go_NothingPi())) {
+        *self.stop = true
+        None[bool]()
+    } else {
+        self.mutex.Unlock()
+        self.queue.Enqueue(item)
+        self.mutex.Lock()
+        if (*self.stop) {
+            None[bool]()
         } else {
-            resource.WithLock(q.dequeue, () => {
-                RequirePtr(q.bools).Append(true)
+            Some(true)
+        }
+    }
+}
 
-                q.notFull.Signal()
-
-                for RequirePtr(q.items).Size() == 0 {
-                    q.notEmpty.Wait()
-                }
-
-                var item = RequirePtr(q.items).Get(0)
-                RequirePtr(q.items).RemoveAt(0)
-
-                item = f(item)
-
-                if (item.Equal(Go_NothingPi())) {
-                    *q.stop = true
-
-                    RequirePtr(q.bools).Append(true)
-
-                    q.notFull.Signal()
-
+func (self Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
+    self.mutex.Lock()
+    use unlock = unlockable(self.mutex)
+    if (*self.stop) {
+        None[Go_NamePi]()
+    } else {
+        self.mutex.Unlock()
+        any(self.queue.Dequeue()) match {
+            case item: Go_NamePi => {
+                self.mutex.Lock()
+                if (*self.stop) {
+                    None[Go_NamePi]()
+                } else if (item.Equal(Go_NothingPi())) {
+                    *self.stop = true
                     None[Go_NamePi]()
                 } else {
                     Some(item)
                 }
-            })
+            }
+            case it => {
+                self.mutex.Lock()
+                it match { case _ => Panic(it) }
+            }
         }
-    })
+    }
+}
+
+func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
+    self.mutex.Lock()
+    use unlock = unlockable(self.mutex)
+    if (*self.stop) {
+        None[Go_NamePi]()
+    } else {
+        self.mutex.Unlock()
+        any(self.queue.Dequeue()) match {
+            case _item: Go_NamePi => {
+                val item = f(_item)
+                self.mutex.Lock()
+                if (*self.stop) {
+                    None[Go_NamePi]()
+                } else if (item.Equal(Go_NothingPi())) {
+                    *self.stop = true
+                    None[Go_NamePi]()
+                } else {
+                    Some(item)
+                }
+            }
+            case it => {
+                self.mutex.Lock()
+                it match { case _ => Panic(it) }
+            }
+        }
+    }
 }

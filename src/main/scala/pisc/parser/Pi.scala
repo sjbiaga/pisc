@@ -257,17 +257,17 @@ object Pi:
 
   enum Emitter(val nullOnEmptyOutput: Term = emitter.shared.Meta.`()(null)`,
                val canScale: Boolean = false,
-               val featuresLinearReplication: Boolean = false,
+               val featuresModuloReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
     def this(_n: Null) =
       this(canScale = true,
-           featuresLinearReplication = true,
+           featuresModuloReplication = true,
            hasReplicationInputGuardFlaw = _ >= -1)
-    def this(canScale: Boolean, featuresLinearReplication: Boolean) =
+    def this(canScale: Boolean, featuresModuloReplication: Boolean) =
       this(nullOnEmptyOutput = Lit.Null(),
            canScale = canScale,
-           featuresLinearReplication = featuresLinearReplication,
-           hasReplicationInputGuardFlaw = if featuresLinearReplication
+           featuresModuloReplication = featuresModuloReplication,
+           hasReplicationInputGuardFlaw = if featuresModuloReplication
                                           then _ >= -1
                                           else _ != 1)
     case ce extends Emitter(null)
@@ -276,7 +276,7 @@ object Pi:
     case monix extends Emitter(false, false)
     case zs extends Emitter(true, true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
-    case go extends Emitter(nullOnEmptyOutput = Lit.Null())
+    case go extends Emitter(nullOnEmptyOutput = Lit.Null(), featuresModuloReplication = true)
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]

@@ -33,7 +33,6 @@ package main
 import (
       "context"
       "golang.org/x/sync/semaphore"
-      "martianoff/gala/go_interop"
     . "martianoff/gala/std"
     . "martianoff/gala/collection_immutable"
       "os"

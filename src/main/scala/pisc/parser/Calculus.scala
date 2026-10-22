@@ -163,8 +163,8 @@ abstract class Calculus extends Pi:
       case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
         if parallelismʹ == -1 && lin == "¡" then parallelismʹ = 1
-        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡") && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
-        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡") || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡") && emitter.featuresModuloReplication then parallelismʹ = Int.MinValue
+        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡") || !emitter.featuresModuloReplication then parallelismʹ else -parallelismʹ
         opt( pace ) ~ opt( "."~>positioned(μ)<~"." ) >> {
           case _ ~ Some(π(λ(ch: Symbol), _, Some(cons), _)) if cons.nonEmpty && cons != "ν" =>
             throw ConsGuardParsingException(cons, ch.name)
@@ -380,9 +380,12 @@ object Calculus:
 
         case it @ `⟦⟧`(definition @ Definition(_, _, _, variables, _), sum, _, pointers)
             if variables.size > pointers.size =>
-          val pos = it.pos
-          val nu = ν(variables.drop(pointers.size).map(_.name).toSeq*)
-          val sumʹ = `+`(-1, ∥(-1, `.`(sum, nu.setPos(pos)).setPos(pos)).setPos(pos)).setPos(pos)
+          val names = variables.drop(pointers.size)
+          val (pos, free) = (sum.pos, sum.free -- names)
+          val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
+          val seq = `.`(sum, νʹ).setPos(pos).free = free
+          val par = ∥(-1, seq).setPos(pos).free = free
+          val sumʹ = `+`(-1, par).setPos(pos).free = free
           val itʹ = it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ)
           if itʹ.isVoid
           then

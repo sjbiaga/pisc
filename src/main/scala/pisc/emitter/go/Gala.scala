@@ -150,8 +150,8 @@ enum Gala(using id: => String):
       case code(lit @ Lit.String(_)) =>
         indent + s"""bind _ = Some(Go_StringPi(""" + lit.value + "))"
 
-      case code(Term.Name(str)) =>
-        indent + str.replaceAll("[']([a-zA-Z_]['a-zA-Z0-9_\"]*)", "$1")
+      case code(Term.Name(it)) =>
+        indent + it.replaceAll("[']([a-zA-Z_]['a-zA-Z0-9_\"]*)", "$1")
 
       case code(_) => ???
 
@@ -211,14 +211,84 @@ enum Gala(using id: => String):
 
       case par(ops) =>
         val sem = id
-        val acquire = s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})"
         val releasable = s"${indentʹ}use $id = Go_ReleasablePi($sem)"
         s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))" ::
-        acquire ::
+        s"${indent}bind _ = $sem.TryAcquireN(${ops.size})" ::
         ops.map(_.issue(indentʹ)).flatMap(s"${indent}bind _ = Go_SpawnPi(() => {" :: releasable :: _ ::: s"${indent}})" :: Nil) :::
-        acquire ::
+        s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})" ::
         s"${indent}Some(true)" :: // LEAF
         Nil
+
+      case rep(parallelism, it @ pace :: nu(name) :: bind(channel, _, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
+        val υidυ = id
+        val υidυʹ = id
+        s"${indent}val $υidυ func (Go_NamePi) Option[bool] = (($name) => {" ::
+        op.issue(indentʹ) :::
+        s"${indent}})" ::
+        s"${indent}val $υidυʹ func () Option[bool] = () => {" ::
+        (pace :: code :: Nil).issue(indentʹ) :::
+        s"${indentʹ}Some(true)" ::
+        s"${indent}}" ::
+        s"${indent}$channel.Go_BoundOutputPi(go_context, ${-(parallelism%Int.MaxValue)}, $υidυ, $υidυʹ)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ pace :: bind(channel, param, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
+        val υidυ = id
+        val υidυʹ = id
+        val υidυʹʹ = id
+        s"${indent}val $υidυ func () Option[bool] = () => {" ::
+        op.issue(indentʹ) :::
+        s"${indent}}" ::
+        s"${indent}val $υidυʹ func () Option[bool] = () => {" ::
+        (pace :: code :: Nil).issue(indentʹ) :::
+        s"${indentʹ}Some(true)" ::
+        s"${indent}}" ::
+        s"${indent}val $υidυʹʹ func () Go_NamePi = () => {" ::
+        s"${indentʹ}${param.toName}" ::
+        s"${indent}}" ::
+        s"${indent}$channel.Go_OutputPi(go_context, ${-(parallelism%Int.MaxValue)}, $υidυ, $υidυʹ, $υidυʹʹ)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ pace :: tau() :: code :: Nil, None | Some(false), op) if parallelism < -1 =>
+        val υidυ = id
+        val υidυʹ = id
+        s"${indent}val $υidυ func () Option[bool] = () => {" ::
+        op.issue(indentʹ) :::
+        s"${indent}}" ::
+        s"${indent}val $υidυʹ func () Option[bool] = () => {" ::
+        (pace :: code :: Nil).issue(indentʹ) :::
+        s"${indentʹ}Some(true)" ::
+        s"${indent}}" ::
+        s"${indent}Go_SilentPi(go_context, ${-(parallelism%Int.MaxValue)}, $υidυ, $υidυʹ)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ pace :: bind(channel, λ(Symbol(name)), Some(null)) :: code :: Nil, Some(true), op) if parallelism < -1 =>
+        val υidυ = id
+        val υidυʹ = id
+        s"${indent}val $υidυ func (Go_NamePi) Option[bool] = (($name) => {" ::
+        op.issue(indentʹ) :::
+        s"${indent}})" ::
+        s"${indent}val $υidυʹ func () Option[bool] = () => {" ::
+        (pace :: code :: Nil).issue(indentʹ) :::
+        s"${indentʹ}Some(true)" ::
+        s"${indent}}" ::
+        s"${indent}$channel.Go_InputPi(go_context, ${-(parallelism%Int.MaxValue)}, $υidυ, $υidυʹ)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ pace :: bind(channel, λ(Symbol(name)), Some(Term.Name(fun))) :: code :: Nil, Some(true), op) if parallelism < -1 =>
+        val υidυ = id
+        val υidυʹ = id
+        s"${indent}val $υidυ func (Go_NamePi) Option[bool] = (($name) => {" ::
+        op.issue(indentʹ) :::
+        s"${indent}})" ::
+        s"${indent}val $υidυʹ func () Option[bool] = () => {" ::
+        (pace :: code :: Nil).issue(indentʹ) :::
+        s"${indentʹ}Some(true)" ::
+        s"${indent}}" ::
+        s"${indent}$channel.Go_InputPi_(go_context, ${-(parallelism%Int.MaxValue)}, $fun, $υidυ, $υidυʹ)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, _, _, _) if parallelism < -1 => ???
 
       case rep(-1, it @ _ :: nu(name) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
@@ -362,12 +432,11 @@ enum Gala(using id: => String):
         val semʹ = id
         val releasable = s"${indentʹ}use $id = Go_ReleasablePi($sem)"
         val tryacquire = s"${indentʹ}bind _ = $semʹ.TryAcquire1()"
-        val acquire = s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})"
         s"${indent}bind $sem = Some(Go_NewSemaphorePi(${ops.size}))" ::
         s"${indent}bind $semʹ = Some(Go_NewSemaphorePi(1))" ::
-        acquire ::
+        s"${indent}bind _ = $sem.TryAcquireN(${ops.size})" ::
         ops.map(_.issue(indentʹ)).flatMap(s"${indent}bind _ = Go_SpawnPi(() => {" :: releasable :: tryacquire :: _ ::: s"${indentʹ}Some(true)" :: s"${indent}})" :: Nil) :::
-        acquire ::
+        s"${indent}bind _ = $sem.AcquireN(go_context, ${ops.size})" ::
         s"${indent}Some(true)" :: // LEAF
         Nil
 

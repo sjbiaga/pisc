@@ -402,7 +402,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), code)), sum) if parallelism < -1 =>
 

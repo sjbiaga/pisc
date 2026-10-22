@@ -138,7 +138,7 @@ Main = ν(x) ( (!.x(y). τ/*Console[F].println(1->y)*/. x</*gen.nextInt.abs*/>. 
             | (x</*-gen.nextInt.abs*/>.)                                                                             \
             )
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
+⟦ REPLICATION = (MODULO,YES) ⟧
 
 ⟦ EXCLUDE = YES ⟧
 
@@ -157,7 +157,7 @@ Main = ν(x) ( (! 4* .x(y). τ/*Console[F].println(y)*/.)  \
             )
 
 ⟦ REPLICATION = (PARALLELISM,-1) ⟧
-⟦ REPLICATION = (LINEAR,NO) ⟧
+⟦ REPLICATION = (MODULO,NO) ⟧
 
 ⟦ EXCLUDE = YES ⟧
 

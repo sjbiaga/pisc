@@ -16,7 +16,7 @@
 
 @def sleep[F[_]: Async](d: FiniteDuration) = Async[F].sleep(d)
 
-                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
                                                                 ⟦ INCLUDE = ce ⟧
 
@@ -36,21 +36,17 @@
 
 ⟦ EXCLUDE = YES ⟧
 
-⟦ REPLICATION = (LINEAR,NO) ⟧
-
 Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ################################################################# Semaphore ✔ ##
 
 ⟦ EXCLUDE = NO ⟧
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
-
-Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
+Sem(s) = ¡ 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ##################################################################### Clients ##
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
+⟦ REPLICATION = (MODULO,YES) ⟧
 
 ####################################################################### Macro ##
 
