@@ -3,6 +3,7 @@
 package pi
 
 import (
+    "context"
     "github.com/hut8/goq"
     "math/big"
 )
@@ -109,17 +110,17 @@ func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
     )
 }
 
-func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Go_TrampolinePi[Go_NamePi] {
+func (self Go_BlockingQueuePi) Go_EnqueuePi(_ context.Context, item Go_NamePi) Go_TrampolinePi[Go_NamePi] {
     Go_CallPi(() => {
         self.queue.Enqueue(item)
         Go_returnPi
     })
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi() Go_TrampolinePi[Go_NamePi] {
+func (self Go_BlockingQueuePi) Go_DequeuePi(_ context.Context) Go_TrampolinePi[Go_NamePi] {
     Go_CallPi(() => Go_donePi(self.queue.Dequeue()))
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Go_TrampolinePi[Go_NamePi] {
+func (self Go_BlockingQueuePi) Go_DequeuePi_(_ context.Context, f func (Go_NamePi) Go_NamePi) Go_TrampolinePi[Go_NamePi] {
     Go_CallPi(() => Go_donePi(f(self.queue.Dequeue())))
 }

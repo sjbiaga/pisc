@@ -40,7 +40,7 @@ Greeter(stdin, stdout, line*) = \
                                 τ /*bind _ = 'prompt.Print(); \
                                     bind 'line = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))))*/. \
                                                          stdin</*Go_StringPi(TrimSpace(line.ToString()))*/>.stdout(greet) /* nl */. \
-                                [/* 'greet.IsNothing() */ = False] τ/*bind _ = 'greet.Print()*/. \
+                                [ /* 'greet.IsNothing() */ = False ] τ/*bind _ = 'greet.Print()*/. \
                               )
 
 Chooser(stdout, name) = Greeter1(stdout, name) \

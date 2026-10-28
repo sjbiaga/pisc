@@ -27,7 +27,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `go` contains three files: `pi.gala`, `import.gala.in`, and `main.gala.in`.
+The root project folder `go` contains four files: `pi.gala`, `pim.gala`, `import.gala.in`, and `main.gala.in`.
 
 !!!Warning: do not delete them!!!
 

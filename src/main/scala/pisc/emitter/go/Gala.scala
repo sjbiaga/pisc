@@ -184,14 +184,14 @@ enum Gala:
 
       case pi(channel, λ(Lit.Null()), None) =>
         s"${indent}bind _ = " + s"$channel match {" ::
-        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NothingPi())" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NothingPi())" ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::
         Nil
 
       case pi(channel, param, None) =>
         s"${indent}bind _ = " + s"$channel match {" ::
-        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(${param.toName})" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, ${param.toName})" ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::
         Nil
@@ -205,9 +205,9 @@ enum Gala:
         s"${indent}bind $name = $channel match {" ::
         ( term match
           case null =>
-            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi()"
+            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi(go_context)"
           case Term.Name(fun) =>
-            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi_($fun)"
+            s"${indentʹ}case Go_QueuePi(it) => it.Go_DequeuePi_(go_context, $fun)"
         ) ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::

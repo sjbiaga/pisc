@@ -82,7 +82,7 @@ func (self Go_NamePi) Go_BoundOutputPi(
                             cb.Await(ctx)
                             prev.Acquire(ctx, 1)
                             val name = Go_QueuePi(Go_NewBlockingQueuePi())
-                            q.Go_EnqueuePi(name).Run()
+                            q.Go_EnqueuePi(ctx, name).Run()
                             code().Run()
                             next.Release(1)
                             body(name).Run()
@@ -138,7 +138,7 @@ func (self Go_NamePi) Go_OutputPi(
                         for true {
                             cb.Await(ctx)
                             prev.Acquire(ctx, 1)
-                            q.Go_EnqueuePi(value()).Run()
+                            q.Go_EnqueuePi(ctx, value()).Run()
                             code().Run()
                             next.Release(1)
                             body().Run()
@@ -193,7 +193,7 @@ func (self Go_NamePi) Go_InputPi(
                         for true {
                             cb.Await(ctx)
                             prev.Acquire(ctx, 1)
-                            val name = q.Go_DequeuePi().Run().Get()
+                            val name = q.Go_DequeuePi(ctx).Run().Get()
                             code().Run()
                             next.Release(1)
                             body(name).Run()
@@ -249,7 +249,7 @@ func (self Go_NamePi) Go_InputPi_(
                         for true {
                             cb.Await(ctx)
                             prev.Acquire(ctx, 1)
-                            val name = q.Go_DequeuePi_(fun).Run().Get()
+                            val name = q.Go_DequeuePi_(ctx, fun).Run().Get()
                             code().Run()
                             next.Release(1)
                             body(name).Run()

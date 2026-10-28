@@ -4,6 +4,7 @@ package pi
 
 import (
     "context"
+    "github.com/marusama/cyclicbarrier"
     "golang.org/x/sync/semaphore"
     "martianoff/gala/go_interop"
   . "martianoff/gala/std"
@@ -60,6 +61,15 @@ type Go_ReleasablePi struct {
 
 func (self Go_ReleasablePi) Close() {
     self.Semaphore.Release1().Run()
+}
+
+type awaitable struct {
+    ctx context.Context
+    barrier cyclicbarrier.CyclicBarrier
+}
+
+func (self awaitable) Close() {
+    FromError(self.barrier.Await(self.ctx))
 }
 
 type unlockable struct {
