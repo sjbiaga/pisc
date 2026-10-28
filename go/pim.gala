@@ -7,257 +7,271 @@ import (
     "github.com/marusama/cyclicbarrier"
     "golang.org/x/sync/semaphore"
     "martianoff/gala/go_interop"
-  . "martianoff/gala/std"
 )
 
 func Go_SilentPi(
     ctx context.Context,
     parallelism int64,
-    body func () Option[bool],
-    code func () Option[bool]
-) Option[bool] {
-    val cb = cyclicbarrier.New(int(parallelism))
+    body func () Go_TrampolinePi[Go_NamePi],
+    code func () Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val cb = cyclicbarrier.New(int(parallelism))
 
-    val first = semaphore.NewWeighted(1)
+        val first = semaphore.NewWeighted(1)
 
-    var unfold func(int, *semaphore.Weighted) Void
-    unfold = (remaining int, prev *semaphore.Weighted) Void => {
-        val next *semaphore.Weighted =
-            if (remaining == 1) first
-            else {
-                val weighted = semaphore.NewWeighted(1)
-                weighted.TryAcquire(1)
-                weighted
+        var unfold func(int, *semaphore.Weighted) bool
+        unfold = (remaining int, prev *semaphore.Weighted) bool => {
+            val next *semaphore.Weighted =
+                if (remaining == 1) first
+                else {
+                    val weighted = semaphore.NewWeighted(1)
+                    weighted.TryAcquire(1)
+                    weighted
+                }
+            val loop = () bool => {
+                for true {
+                    cb.Await(ctx)
+                    prev.Acquire(ctx, 1)
+                    code().Run()
+                    next.Release(1)
+                    body().Run()
+                }
+                true
             }
-        var loop func() Void
-        loop = () Void => {
-            cb.Await(ctx)
-            prev.Acquire(ctx, 1)
-            code()
-            next.Release(1)
-            body()
-            loop()
+            if (remaining == 1) {
+                loop()
+            } else {
+                go_interop.Spawn(() => loop())
+                unfold(remaining - 1, next)
+            }
         }
-        if (remaining == 1) {
-            loop()
-        } else {
-            go_interop.Spawn(() => loop())
-            unfold(remaining - 1, next)
-        }
-    }
 
-    unfold(int(parallelism), first)
+        unfold(int(parallelism), first)
 
-    Some(true)
+        Go_returnPi
+    })
 }
 
 func (self Go_NamePi) Go_BoundOutputPi(
     ctx context.Context,
     parallelism int64,
-    body func (Go_NamePi) Option[bool],
-    code func () Option[bool]
-) Option[bool] {
-    self match {
+    body func (Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    code func () Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
 
-        case Go_QueuePi(q) => {
+            case Go_QueuePi(q) => {
 
-            val cb = cyclicbarrier.New(int(parallelism))
+                val cb = cyclicbarrier.New(int(parallelism))
 
-            val first = semaphore.NewWeighted(1)
+                val first = semaphore.NewWeighted(1)
 
-            var unfold func(int, *semaphore.Weighted) Void
-            unfold = (remaining int, prev *semaphore.Weighted) Void => {
-                val next *semaphore.Weighted =
-                    if (remaining == 1) first
-                    else {
-                        val weighted = semaphore.NewWeighted(1)
-                        weighted.TryAcquire(1)
-                        weighted
+                var unfold func(int, *semaphore.Weighted) bool
+                unfold = (remaining int, prev *semaphore.Weighted) bool => {
+                    val next *semaphore.Weighted =
+                        if (remaining == 1) first
+                        else {
+                            val weighted = semaphore.NewWeighted(1)
+                            weighted.TryAcquire(1)
+                            weighted
+                        }
+                    val loop = () bool => {
+                        for true {
+                            cb.Await(ctx)
+                            prev.Acquire(ctx, 1)
+                            val name = Go_QueuePi(Go_NewBlockingQueuePi())
+                            q.Go_EnqueuePi(name).Run()
+                            code().Run()
+                            next.Release(1)
+                            body(name).Run()
+                        }
+                        true
                     }
-                var loop func() Void
-                loop = () Void => {
-                    cb.Await(ctx)
-                    prev.Acquire(ctx, 1)
-                    val name = Go_QueuePi(Go_NewBlockingQueuePi())
-                    q.Go_EnqueuePi(name)
-                    code()
-                    next.Release(1)
-                    body(name)
-                    loop()
+                    if (remaining == 1) {
+                        loop()
+                    } else {
+                        go_interop.Spawn(() => loop())
+                        unfold(remaining - 1, next)
+                    }
                 }
-                if (remaining == 1) {
-                    loop()
-                } else {
-                    go_interop.Spawn(() => loop())
-                    unfold(remaining - 1, next)
-                }
+
+                unfold(int(parallelism), first)
+
             }
 
-            unfold(int(parallelism), first)
+            case it => Panic(it)
 
         }
 
-        case it => Panic(it)
-
-    }
-
-    Some(true)
+        Go_returnPi
+    })
 }
 
 func (self Go_NamePi) Go_OutputPi(
     ctx context.Context,
     parallelism int64,
-    body func () Option[bool],
-    code func () Option[bool],
+    body func () Go_TrampolinePi[Go_NamePi],
+    code func () Go_TrampolinePi[Go_NamePi],
     value func () Go_NamePi
-) Option[bool] {
-    self match {
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
 
-        case Go_QueuePi(q) => {
+            case Go_QueuePi(q) => {
 
-            val cb = cyclicbarrier.New(int(parallelism))
+                val cb = cyclicbarrier.New(int(parallelism))
 
-            val first = semaphore.NewWeighted(1)
+                val first = semaphore.NewWeighted(1)
 
-            var unfold func(int, *semaphore.Weighted) Void
-            unfold = (remaining int, prev *semaphore.Weighted) Void => {
-                val next *semaphore.Weighted =
-                    if (remaining == 1) first
-                    else {
-                        val weighted = semaphore.NewWeighted(1)
-                        weighted.TryAcquire(1)
-                        weighted
+                var unfold func(int, *semaphore.Weighted) bool
+                unfold = (remaining int, prev *semaphore.Weighted) bool => {
+                    val next *semaphore.Weighted =
+                        if (remaining == 1) first
+                        else {
+                            val weighted = semaphore.NewWeighted(1)
+                            weighted.TryAcquire(1)
+                            weighted
+                        }
+                    val loop = () bool => {
+                        for true {
+                            cb.Await(ctx)
+                            prev.Acquire(ctx, 1)
+                            q.Go_EnqueuePi(value()).Run()
+                            code().Run()
+                            next.Release(1)
+                            body().Run()
+                        }
+                        true
                     }
-                var loop func() Void
-                loop = () Void => {
-                    cb.Await(ctx)
-                    prev.Acquire(ctx, 1)
-                    q.Go_EnqueuePi(value())
-                    code()
-                    next.Release(1)
-                    body()
-                    loop()
+                    if (remaining == 1) {
+                        loop()
+                    } else {
+                        go_interop.Spawn(() => loop())
+                        unfold(remaining - 1, next)
+                    }
                 }
-                if (remaining == 1) {
-                    loop()
-                } else {
-                    go_interop.Spawn(() => loop())
-                    unfold(remaining - 1, next)
-                }
+
+                unfold(int(parallelism), first)
+
             }
 
-            unfold(int(parallelism), first)
+            case it => Panic(it)
 
         }
 
-        case it => Panic(it)
-
-    }
-
-    Some(true)
+        Go_returnPi
+    })
 }
 
 func (self Go_NamePi) Go_InputPi(
     ctx context.Context,
     parallelism int64,
-    body func (Go_NamePi) Option[bool],
-    code func () Option[bool]
-) Option[bool] {
-    self match {
+    body func (Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    code func () Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
 
-        case Go_QueuePi(q) => {
+            case Go_QueuePi(q) => {
 
-            val cb = cyclicbarrier.New(int(parallelism))
+                val cb = cyclicbarrier.New(int(parallelism))
 
-            val first = semaphore.NewWeighted(1)
+                val first = semaphore.NewWeighted(1)
 
-            var unfold func(int, *semaphore.Weighted) Void
-            unfold = (remaining int, prev *semaphore.Weighted) Void => {
-                val next *semaphore.Weighted =
-                    if (remaining == 1) first
-                    else {
-                        val weighted = semaphore.NewWeighted(1)
-                        weighted.TryAcquire(1)
-                        weighted
+                var unfold func(int, *semaphore.Weighted) bool
+                unfold = (remaining int, prev *semaphore.Weighted) bool => {
+                    val next *semaphore.Weighted =
+                        if (remaining == 1) first
+                        else {
+                            val weighted = semaphore.NewWeighted(1)
+                            weighted.TryAcquire(1)
+                            weighted
+                        }
+                    val loop = () bool => {
+                        for true {
+                            cb.Await(ctx)
+                            prev.Acquire(ctx, 1)
+                            val name = q.Go_DequeuePi().Run().Get()
+                            code().Run()
+                            next.Release(1)
+                            body(name).Run()
+                        }
+                        true
                     }
-                var loop func() Void
-                loop = () Void => {
-                    cb.Await(ctx)
-                    prev.Acquire(ctx, 1)
-                    val name = q.Go_DequeuePi().Get()
-                    code()
-                    next.Release(1)
-                    body(name)
-                    loop()
+                    if (remaining == 1) {
+                        loop()
+                    } else {
+                        go_interop.Spawn(() => loop())
+                        unfold(remaining - 1, next)
+                    }
                 }
-                if (remaining == 1) {
-                    loop()
-                } else {
-                    go_interop.Spawn(() => loop())
-                    unfold(remaining - 1, next)
-                }
+
+                unfold(int(parallelism), first)
+
             }
 
-            unfold(int(parallelism), first)
+            case it => Panic(it)
 
         }
 
-        case it => Panic(it)
-
-    }
-
-    Some(true)
+        Go_returnPi
+    })
 }
 
 func (self Go_NamePi) Go_InputPi_(
     ctx context.Context,
     parallelism int64,
     fun func (Go_NamePi) Go_NamePi,
-    body func (Go_NamePi) Option[bool],
-    code func () Option[bool]
-) Option[bool] {
-    self match {
+    body func (Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    code func () Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
 
-        case Go_QueuePi(q) => {
+            case Go_QueuePi(q) => {
 
-            val cb = cyclicbarrier.New(int(parallelism))
+                val cb = cyclicbarrier.New(int(parallelism))
 
-            val first = semaphore.NewWeighted(1)
+                val first = semaphore.NewWeighted(1)
 
-            var unfold func(int, *semaphore.Weighted) Void
-            unfold = (remaining int, prev *semaphore.Weighted) Void => {
-                val next *semaphore.Weighted =
-                    if (remaining == 1) first
-                    else {
-                        val weighted = semaphore.NewWeighted(1)
-                        weighted.TryAcquire(1)
-                        weighted
+                var unfold func(int, *semaphore.Weighted) bool
+                unfold = (remaining int, prev *semaphore.Weighted) bool => {
+                    val next *semaphore.Weighted =
+                        if (remaining == 1) first
+                        else {
+                            val weighted = semaphore.NewWeighted(1)
+                            weighted.TryAcquire(1)
+                            weighted
+                        }
+                    val loop = () bool => {
+                        for true {
+                            cb.Await(ctx)
+                            prev.Acquire(ctx, 1)
+                            val name = q.Go_DequeuePi_(fun).Run().Get()
+                            code().Run()
+                            next.Release(1)
+                            body(name).Run()
+                        }
+                        true
                     }
-                var loop func() Void
-                loop = () Void => {
-                    cb.Await(ctx)
-                    prev.Acquire(ctx, 1)
-                    val name = q.Go_DequeuePi_(fun).Get()
-                    code()
-                    next.Release(1)
-                    body(name)
-                    loop()
+                    if (remaining == 1) {
+                        loop()
+                    } else {
+                        go_interop.Spawn(() => loop())
+                        unfold(remaining - 1, next)
+                    }
                 }
-                if (remaining == 1) {
-                    loop()
-                } else {
-                    go_interop.Spawn(() => loop())
-                    unfold(remaining - 1, next)
-                }
+
+                unfold(int(parallelism), first)
+
             }
 
-            unfold(int(parallelism), first)
+            case it => Panic(it)
 
         }
 
-        case it => Panic(it)
-
-    }
-
-    Some(true)
+        Go_returnPi
+    })
 }

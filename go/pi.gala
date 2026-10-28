@@ -10,7 +10,7 @@ import (
 sealed type Go_NamePi {
     case Go_QueuePi(it Go_BlockingQueuePi)
     case Go_NumberPi(it *big.Float)
-    case Go_BooleanPi(it bool)
+    case Go_BoolPi(it bool)
     case Go_StringPi(it string)
     default case Go_NothingPi()
 }
@@ -19,26 +19,30 @@ func Go_IntPi(it int) Go_NamePi {
     Go_NumberPi(big.NewFloat(float64(it)))
 }
 
-func (self Go_NamePi) Print() Option[bool] {
-    self match {
-        case Go_QueuePi(it) => Print(it)
-        case Go_NumberPi(it) => Print(it)
-        case Go_BooleanPi(it) => Print(it)
-        case Go_StringPi(it) => Print(it)
-        case _ => Print()
-    }
-    Some(true)
+func (self Go_NamePi) Print() Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
+            case Go_QueuePi(it) => Print(it)
+            case Go_NumberPi(it) => Print(it)
+            case Go_BoolPi(it) => Print(it)
+            case Go_StringPi(it) => Print(it)
+            case _ => Print()
+        }
+        Go_returnPi
+    })
 }
 
-func (self Go_NamePi) PrintLn() Option[bool] {
-    self match {
-        case Go_QueuePi(it) => Println(it)
-        case Go_NumberPi(it) => Println(it)
-        case Go_BooleanPi(it) => Println(it)
-        case Go_StringPi(it) => Println(it)
-        case _ => Println()
-    }
-    Some(true)
+func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
+            case Go_QueuePi(it) => Println(it)
+            case Go_NumberPi(it) => Println(it)
+            case Go_BoolPi(it) => Println(it)
+            case Go_StringPi(it) => Println(it)
+            case _ => Println()
+        }
+        Go_returnPi
+    })
 }
 
 func (self Go_NamePi) ToNumber() *big.Float {
@@ -74,9 +78,9 @@ func (self Go_NamePi) ToInt() int {
     int(self.ToInt64())
 }
 
-func (self Go_NamePi) ToBoolean() bool {
+func (self Go_NamePi) ToBool() bool {
     self match {
-        case Go_BooleanPi(it) => it
+        case Go_BoolPi(it) => it
         case it => Panic(it)
     }
 }
@@ -105,15 +109,17 @@ func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
     )
 }
 
-func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Option[bool] {
-    self.queue.Enqueue(item)
-    Some(true)
+func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self.queue.Enqueue(item)
+        Go_returnPi
+    })
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi() Option[Go_NamePi] {
-    Some(self.queue.Dequeue())
+func (self Go_BlockingQueuePi) Go_DequeuePi() Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => Go_donePi(self.queue.Dequeue()))
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Option[Go_NamePi] {
-    Some(f(self.queue.Dequeue()))
+func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (Go_NamePi) Go_NamePi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => Go_donePi(f(self.queue.Dequeue())))
 }

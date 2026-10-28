@@ -1,22 +1,24 @@
 # -*- indent-tabs-mode: nil; -*-
 
-# ./examples $ pi -go lists.gala -- 1 2 3 5
+# ./examples $ pi -go lists_go.gala -- 1 2 3 5
 
 @import "strconv"
 
-@func parse(text string) Try[int] { bind n = strconv.Atoi(text); Success(n) }
+@func parse(text string) Try[int] { strconv.Atoi(text) }
 
 @func toInt(text string) Go_NamePi { Go_IntPi(parse(text).ToOption().Get()) }
 
-@func foreach(channel Go_NamePi, list List[Go_NamePi]) Option[bool] {
-@    channel match {
-@        case Go_QueuePi(it) => {
-@            list.ForEach((item) => it.Go_EnqueuePi(item))
-@            it.Go_EnqueuePi(Go_NothingPi())
+@func foreach(channel Go_NamePi, list List[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+@    Go_CallPi(() => {
+@        channel match {
+@            case Go_QueuePi(it) => {
+@                list.ForEach((item) => it.Go_EnqueuePi(item).Run())
+@                it.Go_EnqueuePi(Go_NothingPi()).Run()
+@            }
+@            case it => Panic(it)
 @        }
-@        case it => Panic(it)
-@    }
-@    Some(true)
+@        Go_returnPi
+@    })
 @}
 
                                                                  ⟦ EXCLUDE = 0 ⟧{lists_go}
@@ -26,5 +28,5 @@ Main = ν(ch)                                         \
      | Sum(ch, /*0*/)                                \
      )
 
-Sum(ch, sum) = ch(item). if /* 'item.IsNothing() */ = True then τ/* PrintLn('sum.ToInt()) */.  \
+Sum(ch, sum) = ch(item). if /* 'item.IsNothing() */ = True then τ/* bind _ = PrintLn('sum.ToInt()) */.  \
                          else Sum(ch, /*Go_IntPi('sum.ToInt() + 'item.ToInt())*/)

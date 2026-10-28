@@ -1,23 +1,29 @@
 // -*- indent-tabs-mode: nil; -*-
 
-func Go_PacePi(amount int64, paceunit time.Duration) Option[bool] {
-    time.Sleep(time.Duration(amount) * paceunit)
-    Some(true)
+func Go_PacePi(amount int64, paceunit time.Duration) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        time.Sleep(time.Duration(amount) * paceunit)
+        Go_returnPi
+    })
 }
 
-func PrintNoLn(message any) Option[bool] {
-    Print(message)
-    Some(true)
+func PrintNoLn(message ...any) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        Print(message...)
+        Go_returnPi
+    })
 }
 
-func PrintLn(message any) Option[bool] {
-    Println(message)
-    Some(true)
+func PrintLn(message ...any) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        Println(message...)
+        Go_returnPi
+    })
 }
 
 func main() {
     val go_context = context.Background()
-    Main(go_context, ListFromSlice(os.Args).Tail())
+    Main(ListFromSlice(os.Args).Tail(), go_context).Run()
 }
 
 

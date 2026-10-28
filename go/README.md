@@ -2,7 +2,8 @@ Pi-calculus in SCala aka PISC ala RISC
 ======================================
 
 The π-calculus maps one to one on `Gala` monadic notation
-"inside" the `Option` monad.
+"inside" an `Option` monad transformer - a fail-fast stack-safe
+custom trampoline.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Gala` code, which further
