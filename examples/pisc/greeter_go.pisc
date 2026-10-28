@@ -8,8 +8,8 @@
 
 @val reader = bufio.NewReader(os.Stdin)
 
-@func nl(name List[Go_NamePi]) List[Go_NamePi] {
-@    name match {
+@func nl(names List[Go_NamePi]) List[Go_NamePi] {
+@    names match {
 @        case Cons(Go_StringPi(it), Nil()) => ListOf(Go_StringPi(it + "\n"))
 @        case it => it
 @    }
@@ -32,15 +32,15 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout)
 Greeter(stdin, stdout, line*) = \
                               ( stdout<"What's your name?">.stdin(name). \
                                                                          if /* TrimSpace('name.ToString()) == "" */ = True \
-                                                                         then stdout#1<>. Greeter(stdin, stdout) \
+                                                                         then stdout#1<>. \
                                                                          else Chooser(stdout, name) \
                               ) \
                               | \
                               ( stdout(prompt) /* nl */. \
                                 τ /*bind _ = 'prompt.Print(); \
-                                    bind 'line = reader.ReadString('\n').ToOption()*/. \
-                                                         stdin</*Go_StringPi(TrimSpace(line))*/>.stdout(greet) /* nl */. \
-                                [/* 'greet.IsNothing() */ = False] τ/*bind _ = 'greet.Print()*/. \
+                                    bind 'line = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))))*/. \
+                                                         stdin</*Go_StringPi(TrimSpace(line.ToString()))*/>.stdout(greet) /* nl */. \
+                                τ/*bind _ = 'greet.Print()*/. \
                               )
 
 Chooser(stdout, name) = Greeter1(stdout, name) \

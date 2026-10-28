@@ -9,9 +9,18 @@ import (
   . "martianoff/gala/std"
 )
 
-func Go_SpawnPi(f func () Option[bool]) Option[bool] {
-    go_interop.Spawn(() => f())
-    Some(true)
+func Go_SpawnPi(f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        go_interop.Spawn(() => f().Run())
+        Go_returnPi
+    })
+}
+
+func Go_Spawn_ReleasablePi(s Go_SemaphorePi, f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        go_interop.Spawn(() => { use r = Go_ReleasablePi(s); f().Run() })
+        Go_returnPi
+    })
 }
 
 type Go_SemaphorePi struct {
@@ -22,24 +31,26 @@ func Go_NewSemaphorePi(n int64) Go_SemaphorePi {
     Go_SemaphorePi(weighted = semaphore.NewWeighted(n))
 }
 
-func (self Go_SemaphorePi) AcquireN(ctx context.Context, n int64) Option[Void] {
-    FromError(self.weighted.Acquire(ctx, n)).ToOption()
+func (self Go_SemaphorePi) AcquireN(ctx context.Context, n int64) Go_TrampolinePi[Go_NamePi] {
+    Go_voidPi(FromError(self.weighted.Acquire(ctx, n)).ToOption())
 }
 
-func (self Go_SemaphorePi) Acquire1(ctx context.Context) Option[Void] {
+func (self Go_SemaphorePi) Acquire1(ctx context.Context) Go_TrampolinePi[Go_NamePi] {
     self.AcquireN(ctx, 1)
 }
 
-func (self Go_SemaphorePi) Release1() Option[bool] {
-    self.weighted.Release(1)
-    Some(true)
+func (self Go_SemaphorePi) Release1() Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self.weighted.Release(1)
+        Go_returnPi
+    })
 }
 
-func (self Go_SemaphorePi) TryAcquireN(n int64) Option[bool] {
-    if (self.weighted.TryAcquire(n)) Some(true) else None()
+func (self Go_SemaphorePi) TryAcquireN(n int64) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => if (self.weighted.TryAcquire(n)) Go_returnPi else Go_nonePi)
 }
 
-func (self Go_SemaphorePi) TryAcquire1() Option[bool] {
+func (self Go_SemaphorePi) TryAcquire1() Go_TrampolinePi[Go_NamePi] {
     self.TryAcquireN(1)
 }
 
@@ -48,5 +59,23 @@ type Go_ReleasablePi struct {
 }
 
 func (self Go_ReleasablePi) Close() {
-    self.Semaphore.Release1()
+    self.Semaphore.Release1().Run()
+}
+
+type unlockable struct {
+    mutex *go_interop.Mutex
+}
+
+func (self unlockable) Close() {
+    self.mutex.Unlock()
+}
+
+type waitable struct {
+    ctx context.Context
+    semaphore Go_SemaphorePi
+    capacity int64
+}
+
+func (self waitable) Close() {
+    self.semaphore.AcquireN(self.ctx, self.capacity).Run()
 }

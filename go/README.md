@@ -2,7 +2,8 @@ Polyadic Pi-calculus in SCala aka PISC ala RISC
 ===============================================
 
 The π-calculus maps one to one on `Gala` monadic notation
-"inside" the `Option` monad.
+"inside" an `Option` monad transformer - a fail-fast stack-safe
+custom trampoline.
 
 After code generation, the π-calculus "processes" could be
 programmatically typed as `Gala` code, which further
@@ -26,7 +27,7 @@ The `examples` folder *must* have three sub-folders:
        in/
        out/
 
-The root project folder `go` contains three files: `ppi.gala`, `import.gala.in`, and `main.gala.in`.
+The root project folder `go` contains four files: `ppi.gala`, `ppim.gala`, `import.gala.in`, and `main.gala.in`.
 
 !!!Warning: do not delete them!!!
 

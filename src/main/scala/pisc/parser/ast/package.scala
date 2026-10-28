@@ -67,6 +67,10 @@ package object ast:
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
+      case _: Lit.Int | _: Lit.Long => "Golang integer literal"
+      case _: Lit.Boolean => "Golang bool literal"
+      case _: Lit.Double => "Golang float64 literal"
+      case _: Lit.String => "Golang string literal"
       case _: Term => "Scalameta Term"
 
     def toTerm: Term =
@@ -90,4 +94,9 @@ package object ast:
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
       case it: String => "\"" + it + "\""
+      case it: Lit.Int => "/*" + it.value + "*/"
+      case it: Lit.Long => "/*" + it.value + "*/"
+      case it: Lit.Boolean => "/*" + it.value + "*/"
+      case it: Lit.Double => "/*" + it.value + "*/"
+      case it: Lit.String =>  "/*" + it + "*/"
       case it: Term => "/*" + it + "*/"

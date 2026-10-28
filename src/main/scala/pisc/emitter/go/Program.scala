@@ -42,9 +42,9 @@ object Program:
 
   given (Int => (Int, Int)) = { _ => (0, 0) }
 
-  extension (self: Pre | AST)(using id: => String)
+  extension (self: Pre | AST)
 
-    def emitʹ(implicit semaphore: Option[String]): body =
+    def emitʹ(implicit semaphore: alloc): body =
 
       self match
 
@@ -57,7 +57,7 @@ object Program:
               case +(_, ∥(_, `.`(?:(cond, t, None)))) =>
                 elvis(cond, cases(t), Nil: body) :: Nil
               case _ =>
-                Gala.cases(semaphore.get, tryacquire = true) :: sum.emit
+                Gala.cases(semaphore, tryacquire = true) :: sum.emit
 
           cases(`+`(-1, ∥(-1, it)))
 
@@ -78,11 +78,11 @@ object Program:
           * = operand.emit
 
         case it: + if it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
-          implicit val sem = Some(id)
+          implicit val sem: alloc = alloc()
 
           val ops = it.choices.foldRight(List[body]())(_.emitʹ :: _)
 
-          * = cases(sem.get) :: par(ops)
+          * = sem :: cases(sem) :: par(ops)
 
         case it: + =>
           val ops = it.choices.foldRight(List[body]())(_.emit :: _)
@@ -132,27 +132,27 @@ object Program:
 
           opt match
             case Some((Right(term), _)) =>
-              * = nu(names*) :: bind(ch, params, None) :: code(term) :: Nil
+              * = nu(names*) :: pi(ch, params, None) :: code(term) :: Nil
             case _ =>
-              * = nu(names*) :: bind(ch, params, None) :: noop() :: Nil
+              * = nu(names*) :: pi(ch, params, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), None, opt, params*) =>
 
           opt match
             case Some((Right(term), _)) =>
-              * = bind(ch, params, None) :: code(term) :: Nil
+              * = pi(ch, params, None) :: code(term) :: Nil
             case _ =>
-              * = bind(ch, params, None) :: noop() :: Nil
+              * = pi(ch, params, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), Some(""), opt, params*) =>
 
           opt match
             case Some((Right(term: Term.Name), _)) =>
-              * = bind(ch, params, Some(term)) :: noop() :: Nil
+              * = pi(ch, params, Some(term)) :: noop() :: Nil
             case Some((Right(term), _)) =>
-              * = bind(ch, params, Some(null)) :: code(term) :: Nil
+              * = pi(ch, params, Some(null)) :: code(term) :: Nil
             case _ =>
-              * = bind(ch, params, Some(null)) :: noop() :: Nil
+              * = pi(ch, params, Some(null)) :: noop() :: Nil
 
         case _: π => ???
 
@@ -216,8 +216,7 @@ object Program:
   final class Main:
 
     def apply(prog: List[Bind]): List[func] =
-      val id = new helper.υidυ
       prog
-        .map(_ -> _.emit(using id()))
+        .map(_ -> _.emit)
         .map(_.swap)
-        .map(defn(_)(using id())(_))
+        .map(defn(_)(_))

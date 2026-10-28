@@ -219,7 +219,7 @@ function ppio() {
                   sed -e 's/^[ ]*import[ ]*[.][ ]*/    . /' -e 's/^[ ]*import[ ]*/      /';
                   echo ')';
                   cat ../${emit}/main.${type}.in;
-                  cat in/"$1".${type}.in | sed -e 's/υ/u/g' | sed -e '/^import/d'; } >| out/"$1".${type}.out
+                  cat in/"$1".${type}.in | sed -e 's/υ/u/g' | sed -e '/^[ ]*import/d'; } >| out/"$1".${type}.out
                 trap 'popd &>/dev/null' SIGINT
                 pushd . &>/dev/null
                 cp out/"$1".${type}.out "$1".${type}
@@ -231,6 +231,7 @@ function ppio() {
                 cd ppi
                 ln -s ../../../${emit}/ppi.${type}
                 ln -s ../../../${emit}/ppim.${type}
+                ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
@@ -244,6 +245,7 @@ function ppio() {
                 cd ppi
                 ln -s ../../../${emit}/ppi_.${type}
                 ln -s ../../../${emit}/ppim_.${type}
+                ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null

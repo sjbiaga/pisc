@@ -8,9 +8,9 @@
 
 @val reader = bufio.NewReader(os.Stdin)
 
-@func parse(text string) Try[int] { bind n = strconv.Atoi(strings.TrimSpace(text)); Success(n) }
+@func parse(text string) Try[int] { strconv.Atoi(strings.TrimSpace(text)) }
 
-@func done(_ List[Go_NamePi]) List[Go_NamePi] = ListOf(Go_NothingPi())
+@func done(_ List[Go_NamePi]) List[Go_NamePi] = EmptyList()
 
                                                                  ⟦ EXCLUDE = 0 ⟧{hanoi_go}
 
@@ -21,16 +21,16 @@ Main = ν(a,b,c)      \
      | Hanoi(a,b,c)  \
      )
 
-Hanoi(a,b,c,n*) = ν(w)                                               \
-                ( τ/*bind _ = PrintNoLn("n = ");                     \
-                     bind 'n = reader.ReadString('\n').ToOption();   \
-                     bind 'n = parse(n).ToOption()                   \
-                   */.                                               \
-                  Hanoi(a,b,c,/*Go_IntPi('n)*/,w)                    \
-                | w(w).                                              \
-                  τ/*bind _ = 'w.Print();                            \
-                     bind _ = PrintLn(" moves")*/.                   \
-                  ( a(_)/*done*/. | b(_)/*done*/. | c(_)/*done*/. )  \
+Hanoi(a,b,c,n*) = ν(w)                                                                                                       \
+                ( τ/*bind _ = PrintNoLn("n = ");                                                                             \
+                     bind 'n = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))));  \
+                     bind 'n = Go_CallPi(() => Go_DonePi(parse(n.ToString()).ToOption().Map((it) => Go_IntPi(it))))          \
+                   */.                                                                                                       \
+                  Hanoi(a,b,c,n,w)                                                                                           \
+                | w(w).                                                                                                      \
+                  τ/*bind _ = 'w.Print();                                                                                    \
+                     bind _ = PrintLn(" moves")*/.                                                                           \
+                  ( a(_)/*done*/. | b(_)/*done*/. | c(_)/*done*/. )                                                          \
                 )
 
 

@@ -46,132 +46,130 @@ class ProgramSuite extends FunSuite:
     * `! .guard<νname1,name2>.`
     */
   test("replication - bound output guard - no parallelism & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
+"""var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
-    bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
-    υidυ(name1, name2)
+    _υ1υ(name1, name2)
 }
-bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
-υidυ(name1, name2)""")
+_υ1υ(name1, name2)""")
   }
 
   /**
     * `! 13* .guard<νname1,name2>.`
     */
   test("replication - bound output guard - parallelism >= 0 & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
-    bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
-    υidυ(name1, name2)
+    _υ1υ(name1, name2)
 }
-bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
-υidυ(name1, name2)""")
+_υ1υ(name1, name2)""")
   }
 
   /**
     * `! 13,seconds .guard<νname1,name2>.`
     */
   test("replication - bound output guard - no parallelism & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
+"""var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
-    bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
-    υidυ(name1, name2)
+    _υ1υ(name1, name2)
 }
-bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
-υidυ(name1, name2)""")
+_υ1υ(name1, name2)""")
   }
 
   /**
     * `! 13* 13,seconds .guard<νname1,name2>.`
     */
   test("replication - bound output guard - parallelism >= 0 & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some("ν"), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
-    bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
-    υidυ(name1, name2)
+    _υ1υ(name1, name2)
 }
-bind name1 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Some(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
-υidυ(name1, name2)""")
+_υ1υ(name1, name2)""")
   }
 
   //////////////////////////////////////////////// replication (bound output) //
@@ -182,37 +180,39 @@ bind _ = guard match {
     * `! .guard(name1,name2).`
     */
   test("replication - input guard - no parallelism & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
+"""var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     guard match {
-        case Go_QueuePi(υidυ) =>
-            υidυ.Go_DequeuePi() match {
-                case Some(Cons(name1, Cons(name2, Nil()))) => {
-                    υidυ(name1, name2)
+        case Go_QueuePi(_υ2υ) => {
+            bind _υ2υ = _υ2υ.Go_DequeuePi()
+            _υ2υ.ToList() match {
+                case Cons(name1, Cons(name2, Nil())) => {
+                    _υ1υ(name1, name2)
                 }
-                case Some(it) => Panic(it)
-                case _ => None()
+                case it => Panic(it)
             }
+        }
         case it => Panic(it)
     }
 }
 guard match {
-    case Go_QueuePi(υidυ) =>
-        υidυ.Go_DequeuePi() match {
-            case Some(Cons(name1, Cons(name2, Nil()))) => {
-                υidυ(name1, name2)
+    case Go_QueuePi(_υ3υ) => {
+        bind _υ3υ = _υ3υ.Go_DequeuePi()
+        _υ3υ.ToList() match {
+            case Cons(name1, Cons(name2, Nil())) => {
+                _υ1υ(name1, name2)
             }
-            case Some(it) => Panic(it)
-            case _ => None()
+            case it => Panic(it)
         }
+    }
     case it => Panic(it)
 }""")
   }
@@ -221,40 +221,41 @@ guard match {
     * `! 13* .guard(name1,name2).`
     */
   test("replication - input guard - parallelism >= 0 & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     guard match {
-        case Go_QueuePi(υidυ) =>
-            υidυ.Go_DequeuePi() match {
-                case Some(Cons(name1, Cons(name2, Nil()))) => {
-                    υidυ(name1, name2)
+        case Go_QueuePi(_υ3υ) => {
+            bind _υ3υ = _υ3υ.Go_DequeuePi()
+            _υ3υ.ToList() match {
+                case Cons(name1, Cons(name2, Nil())) => {
+                    _υ1υ(name1, name2)
                 }
-                case Some(it) => Panic(it)
-                case _ => None()
+                case it => Panic(it)
             }
+        }
         case it => Panic(it)
     }
 }
 guard match {
-    case Go_QueuePi(υidυ) =>
-        υidυ.Go_DequeuePi() match {
-            case Some(Cons(name1, Cons(name2, Nil()))) => {
-                υidυ(name1, name2)
+    case Go_QueuePi(_υ4υ) => {
+        bind _υ4υ = _υ4υ.Go_DequeuePi()
+        _υ4υ.ToList() match {
+            case Cons(name1, Cons(name2, Nil())) => {
+                _υ1υ(name1, name2)
             }
-            case Some(it) => Panic(it)
-            case _ => None()
+            case it => Panic(it)
         }
+    }
     case it => Panic(it)
 }""")
   }
@@ -263,38 +264,40 @@ guard match {
     * `! 13,seconds .guard(name1,name2).`
     */
   test("replication - input guard - no parallelism & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
+"""var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
     guard match {
-        case Go_QueuePi(υidυ) =>
-            υidυ.Go_DequeuePi() match {
-                case Some(Cons(name1, Cons(name2, Nil()))) => {
-                    υidυ(name1, name2)
+        case Go_QueuePi(_υ2υ) => {
+            bind _υ2υ = _υ2υ.Go_DequeuePi()
+            _υ2υ.ToList() match {
+                case Cons(name1, Cons(name2, Nil())) => {
+                    _υ1υ(name1, name2)
                 }
-                case Some(it) => Panic(it)
-                case _ => None()
+                case it => Panic(it)
             }
+        }
         case it => Panic(it)
     }
 }
 guard match {
-    case Go_QueuePi(υidυ) =>
-        υidυ.Go_DequeuePi() match {
-            case Some(Cons(name1, Cons(name2, Nil()))) => {
-                υidυ(name1, name2)
+    case Go_QueuePi(_υ3υ) => {
+        bind _υ3υ = _υ3υ.Go_DequeuePi()
+        _υ3υ.ToList() match {
+            case Cons(name1, Cons(name2, Nil())) => {
+                _υ1υ(name1, name2)
             }
-            case Some(it) => Panic(it)
-            case _ => None()
+            case it => Panic(it)
         }
+    }
     case it => Panic(it)
 }""")
   }
@@ -303,41 +306,42 @@ guard match {
     * `! 13* 13,seconds .guard(name1,name2).`
     */
   test("replication - input guard - parallelism >= 0 & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), Some(""), None, λ(Symbol("name1")), λ(Symbol("name2")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func (Go_NamePi, Go_NamePi) Option[bool]
-υidυ = (name1 Go_NamePi, name2 Go_NamePi) Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
     guard match {
-        case Go_QueuePi(υidυ) =>
-            υidυ.Go_DequeuePi() match {
-                case Some(Cons(name1, Cons(name2, Nil()))) => {
-                    υidυ(name1, name2)
+        case Go_QueuePi(_υ3υ) => {
+            bind _υ3υ = _υ3υ.Go_DequeuePi()
+            _υ3υ.ToList() match {
+                case Cons(name1, Cons(name2, Nil())) => {
+                    _υ1υ(name1, name2)
                 }
-                case Some(it) => Panic(it)
-                case _ => None()
+                case it => Panic(it)
             }
+        }
         case it => Panic(it)
     }
 }
 guard match {
-    case Go_QueuePi(υidυ) =>
-        υidυ.Go_DequeuePi() match {
-            case Some(Cons(name1, Cons(name2, Nil()))) => {
-                υidυ(name1, name2)
+    case Go_QueuePi(_υ4υ) => {
+        bind _υ4υ = _υ4υ.Go_DequeuePi()
+        _υ4υ.ToList() match {
+            case Cons(name1, Cons(name2, Nil())) => {
+                _υ1υ(name1, name2)
             }
-            case Some(it) => Panic(it)
-            case _ => None()
+            case it => Panic(it)
         }
+    }
     case it => Panic(it)
 }""")
   }
@@ -350,116 +354,114 @@ guard match {
     * `! .guard<guard,guard>.`
     */
   test("replication - output guard - no parallelism & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
+"""var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
-    υidυ()
+    _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13* .guard<guard,guard>.`
     */
   test("replication - output guard - parallelism >= 0 & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
-    υidυ()
+    _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13,seconds .guard<guard,guard>.`
     */
   test("replication - output guard - no parallelism & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
+"""var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
-    υidυ()
+    _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13* 13,seconds .guard<guard,guard>.`
     */
   test("replication - output guard - parallelism >= 0 & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, Some(13L->"seconds"), Some(π(λ(Symbol("guard")), None, None, λ(Symbol("guard")), λ(Symbol("guard")))), ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
-    bind _ = υidυ.Acquire1(go_context)
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
-    υidυ()
+    _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(ListOf(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   ////////////////////////////////////////////////////// replication (output) //
@@ -470,82 +472,82 @@ bind _ = guard match {
     * `!`
     */
   test("replication - unguarded - no parallelism & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, None, None, ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
+"""var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
-    υidυ()
+    _υ1υ()
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13*`
     */
   test("replication - unguarded - parallelism >= 0 & no pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, None, None, ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
-    υidυ()
+    _υ1υ()
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13,seconds`
     */
   test("replication - unguarded - no parallelism & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(-1, Some(13L->"seconds"), None, ∅())
 
     assertEquals(`13`.emit.toString,
-"""var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
+"""var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
-        Some(true)
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
-    υidυ()
+    _υ1υ()
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /**
     * `! 13* 13,seconds`
     */
   test("replication - unguarded - parallelism >= 0 & nonempty pace") {
-    implicit def id: String = "υidυ"
+    implicit def id: String = "_υ1υ"
 
     val `13` = `!`(13, Some(13L->"seconds"), None, ∅())
 
     assertEquals(`13`.emit.toString,
-"""val υidυ = Go_NewSemaphorePi(13)
-var υidυ func () Option[bool]
-υidυ = () Option[bool] => {
-    bind _ = Go_SpawnPi(() => {
-        use υidυ = Go_ReleasablePi(υidυ)
-        Some(true)
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func () Go_TrampolinePi[Go_NamePi]
+_υ1υ = () Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
     })
     bind _ = Go_PacePi(13, time.seconds)
-    υidυ()
+    _υ1υ()
 }
-υidυ()""")
+_υ1υ()""")
   }
 
   /////////////////////////////////////////////////// replication (unguarded) //

@@ -1,0 +1,118 @@
+// -*- indent-tabs-mode: nil; -*-
+
+/*
+ * Copyright (c) 2023-2026 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+package ppi
+
+import (
+    "context"
+    "martianoff/gala/go_interop"
+  . "martianoff/gala/std"
+)
+
+// A fail-fast stack-safe generic trampoline that can only be used for some type.
+sealed type Go_TrampolinePi[T any] {
+    case Go_DonePi(value Option[T])
+    case Go_CallPi(thunk func() Go_TrampolinePi[T])
+    case Go_FlatMapPi(this Go_TrampolinePi[T], kleisli func (T) Go_TrampolinePi[Go_NamePi])
+}
+
+func Go_Call_ReleasablePi(
+    semaphore Go_SemaphorePi,
+    fun func() Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        use r = Go_ReleasablePi(semaphore)
+        Go_DonePi(fun().Run())
+    })
+}
+
+func Go_Call_unlockablePi(
+    mutex *go_interop.Mutex,
+    fun func() Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        mutex.Lock()
+        use u = unlockable(mutex)
+        Go_DonePi(fun().Run())
+    })
+}
+
+func Go_Call_waitablePi(
+    ctx context.Context,
+    parallelism int64,
+    fun func(Go_SemaphorePi) Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val s = Go_NewSemaphorePi(parallelism)
+        use w = waitable(ctx, s, parallelism)
+        s.TryAcquireN(parallelism).Run()
+        Go_DonePi(fun(s).Run())
+    })
+}
+
+func Go_donePi[T any](value T) Go_TrampolinePi[T] { Go_DonePi(Some(value)) }
+
+val Go_nonePi = Go_DonePi(None[Go_NamePi]())
+
+val Go_returnPi = Go_donePi(Go_SlicePi())
+
+func Go_voidPi(fun func() Option[Void]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() =>
+        if (fun().IsDefined())
+            Go_returnPi
+        else
+            Go_nonePi
+    )
+}
+
+func (self Go_TrampolinePi[T]) Get() Either[Go_TrampolinePi[T], Option[T]] {
+    self match {
+        case Go_DonePi(value) => Right(value)
+        case Go_CallPi(thunk) => Left(thunk())
+        case Go_FlatMapPi(Go_DonePi(Some(it)), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
+        case Go_FlatMapPi(Go_DonePi(None()), _) => Right(None()) // fail-fast
+        case Go_FlatMapPi(Go_CallPi(thunk), k) => Left(Go_FlatMapPi(thunk(), k))
+        case Go_FlatMapPi(Go_FlatMapPi(this, f), g) => Left(this.FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1, g)))
+    }
+}
+
+func (self Go_TrampolinePi[T]) Run() Option[T] {
+    var loop Either[Go_TrampolinePi[T], Option[T]] = Left(self)
+    for loop.IsLeft() { loop = loop.GetLeft().Get() } // stack-safe
+    loop.GetRight()
+}
+
+func (self Go_TrampolinePi[T]) Map[U any](f func(T) U) Go_TrampolinePi[U] {
+    self.FlatMap[U]((it) => Go_donePi[U](f(it)))
+}
+
+func (self Go_TrampolinePi[T]) FlatMap[U any](k func(T) Go_TrampolinePi[U]) Go_TrampolinePi[U] {
+    As[Go_TrampolinePi[U]](Go_FlatMapPi[T](self, ((it) => As[Go_TrampolinePi[Go_NamePi]](k(it)).V1))).V1
+}
