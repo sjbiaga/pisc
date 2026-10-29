@@ -191,9 +191,10 @@ enum Gala:
         s"${indent}Go_returnPi" :: // LEAF
         Nil
 
-      case pi(channel, Seq(λ(Lit.Null()), _*), None) =>
+      case pi(channel, params @ Seq(λ(Lit.Null()), _*), None) =>
+        val nulls = (", Go_SlicePi()" * params.size).substring(2)
         s"${indent}bind _ = " + s"$channel match {" ::
-        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(Go_SlicePi())" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi($nulls))" ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::
         Nil
@@ -201,7 +202,7 @@ enum Gala:
       case pi(channel, params, None) =>
         val items = params.map(_.toName).mkString(", ")
         s"${indent}bind _ = " + s"$channel match {" ::
-        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi($items))" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi($items))" ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::
         Nil
@@ -212,8 +213,8 @@ enum Gala:
         val indentʹʹʹʹ = indentʹʹʹ + " "*4
         val υidυ = id
         val dequeue = term match
-          case null => "Go_DequeuePi()"
-          case Term.Name(fun) => s"Go_DequeuePi_($fun)"
+          case null => "Go_DequeuePi(go_context)"
+          case Term.Name(fun) => s"Go_DequeuePi_(go_context, $fun)"
         val conses = params.map(_.asSymbol.name).foldRight("Nil()") {
           case (s"_$_", tail) => s"Cons(_, $tail)"
           case (head, tail) => s"Cons($head, $tail)"

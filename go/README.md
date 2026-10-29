@@ -55,4 +55,4 @@ where `example/pisc/ex.pisc` contains the π-calculus source (equations binding 
 expressions).
 
 Note that [Gala](https://github.com/martianoff/gala) must be installed and the command `gala`
-available (perhaps `alias`ed).
+available (perhaps `alias`ed). Also, do a `go clean -cache` every now and then.

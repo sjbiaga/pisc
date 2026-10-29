@@ -10,7 +10,7 @@
 
 @func parse(text string) Try[int] { strconv.Atoi(strings.TrimSpace(text)) }
 
-@func done(_ List[Go_NamePi]) List[Go_NamePi] = EmptyList()
+@func done(_ List[Go_NamePi]) List[Go_NamePi] = ListOf(Go_SlicePi())
 
                                                                  ⟦ EXCLUDE = 0 ⟧{hanoi_go}
 

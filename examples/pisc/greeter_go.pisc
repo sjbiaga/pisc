@@ -32,7 +32,7 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout)
 Greeter(stdin, stdout, line*) = \
                               ( stdout<"What's your name?">.stdin(name). \
                                                                          if /* TrimSpace('name.ToString()) == "" */ = True \
-                                                                         then stdout#1<>. \
+                                                                         then stdout#1<>. Greeter(stdin, stdout) \
                                                                          else Chooser(stdout, name) \
                               ) \
                               | \
@@ -40,7 +40,7 @@ Greeter(stdin, stdout, line*) = \
                                 τ /*bind _ = 'prompt.Print(); \
                                     bind 'line = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))))*/. \
                                                          stdin</*Go_StringPi(TrimSpace(line.ToString()))*/>.stdout(greet) /* nl */. \
-                                τ/*bind _ = 'greet.Print()*/. \
+                                [ /* 'greet.IsEmpty() */ = False ] τ/*bind _ = 'greet.Print()*/. \
                               )
 
 Chooser(stdout, name) = Greeter1(stdout, name) \

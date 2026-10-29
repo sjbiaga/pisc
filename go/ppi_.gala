@@ -3,10 +3,13 @@
 package ppi
 
 import (
-    "github.com/jsouthworth/queue"
+    "context"
+    "github.com/hut8/goq"
+    "github.com/marusama/cyclicbarrier"
   . "martianoff/gala/collection_immutable"
-    "martianoff/gala/go_interop"
+  . "martianoff/gala/concurrent"
     "math/big"
+    "sync/atomic"
 )
 
 sealed type Go_NamePi {
@@ -111,92 +114,57 @@ func (self Go_NamePi) IsEmpty() bool {
 }
 
 struct Go_BlockingQueuePi(
-    queue queue.Queue,
-    mutex *go_interop.Mutex,
-    stop *bool
+    queue *goq.Queue[Tuple[Go_NamePi, cyclicbarrier.CyclicBarrier]],
+    stop *atomic.Bool
 )
 
 func Go_NewBlockingQueuePi() Go_BlockingQueuePi {
-    var stop = false
+    var stop atomic.Bool
 
     Go_BlockingQueuePi(
-        queue = queue.NewBlocking(0),
-        mutex = go_interop.NewMutex(),
+        queue = goq.NewQueue[Tuple[Go_NamePi, cyclicbarrier.CyclicBarrier]](),
         stop = &stop
     )
 }
 
-func (self Go_BlockingQueuePi) Go_EnqueuePi(item Go_NamePi) Go_TrampolinePi[Go_NamePi] {
-    Go_Call_unlockablePi(self.mutex, () => {
-        if (*self.stop) {
+func (self Go_BlockingQueuePi) Go_EnqueuePi(ctx context.Context, item Go_NamePi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val b2 = cyclicbarrier.New(2)
+        val it Tuple[Go_NamePi, cyclicbarrier.CyclicBarrier] = (item, b2)
+        self.queue.Enqueue(it)
+        bind _ = Go_voidPi(FromError(b2.Await(ctx)).ToOption())
+        if (self.stop.Load())
             Go_nonePi
-        } else if (item.IsEmpty()) {
-            *self.stop = true
-            Go_nonePi
-        } else {
-            self.mutex.Unlock()
-            self.queue.Enqueue(item)
-            self.mutex.Lock()
-            if (*self.stop) {
+        else
+            Go_returnPi
+    })
+}
+
+func (self Go_BlockingQueuePi) Go_DequeuePi(ctx context.Context) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val (item, b2) = self.queue.Dequeue()
+        Go_Call_awaitablePi(ctx, b2, () =>
+            if (item.ToList().Head().IsEmpty()) {
+                self.stop.Store(true)
                 Go_nonePi
             } else {
-                Go_returnPi
+                Go_donePi(item)
             }
-        }
+        )
     })
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi() Go_TrampolinePi[Go_NamePi] {
-    Go_Call_unlockablePi(self.mutex, () => {
-        if (*self.stop) {
-            Go_nonePi
-        } else {
-            self.mutex.Unlock()
-            any(self.queue.Dequeue()) match {
-                case item: Go_NamePi => {
-                    self.mutex.Lock()
-                    if (*self.stop) {
-                        Go_nonePi
-                    } else if (item.IsEmpty()) {
-                        *self.stop = true
-                        Go_nonePi
-                    } else {
-                        Go_donePi(item)
-                    }
-                }
-                case it => {
-                    self.mutex.Lock()
-                    it match { case _ => Panic(it) }
-                }
+func (self Go_BlockingQueuePi) Go_DequeuePi_(ctx context.Context, f func (List[Go_NamePi]) List[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val (_item, b2) = self.queue.Dequeue()
+        val item = f(_item.ToList())
+        Go_Call_awaitablePi(ctx, b2, () =>
+            if (item.Head().IsEmpty()) {
+                self.stop.Store(true)
+                Go_nonePi
+            } else {
+                Go_donePi(Go_SlicePi(item.ToGoSlice()))
             }
-        }
-    })
-}
-
-func (self Go_BlockingQueuePi) Go_DequeuePi_(f func (List[Go_NamePi]) List[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
-    Go_Call_unlockablePi(self.mutex, () => {
-        if (*self.stop) {
-            Go_nonePi
-        } else {
-            self.mutex.Unlock()
-            any(self.queue.Dequeue()) match {
-                case _item: Go_NamePi => {
-                    val item = Go_SlicePi(f(_item.ToList()).ToGoSlice())
-                    self.mutex.Lock()
-                    if (*self.stop) {
-                        Go_nonePi
-                    } else if (item.IsEmpty()) {
-                        *self.stop = true
-                        Go_nonePi
-                    } else {
-                        Go_donePi(item)
-                    }
-                }
-                case it => {
-                    self.mutex.Lock()
-                    it match { case _ => Panic(it) }
-                }
-            }
-        }
+        )
     })
 }

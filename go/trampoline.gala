@@ -32,6 +32,7 @@ package ppi
 
 import (
     "context"
+    "github.com/marusama/cyclicbarrier"
     "martianoff/gala/go_interop"
   . "martianoff/gala/std"
 )
@@ -41,6 +42,17 @@ sealed type Go_TrampolinePi[T any] {
     case Go_DonePi(value Option[T])
     case Go_CallPi(thunk func() Go_TrampolinePi[T])
     case Go_FlatMapPi(this Go_TrampolinePi[T], kleisli func (T) Go_TrampolinePi[Go_NamePi])
+}
+
+func Go_Call_awaitablePi(
+    ctx context.Context,
+    cb cyclicbarrier.CyclicBarrier,
+    fun func() Go_TrampolinePi[Go_NamePi]
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        use a = awaitable(ctx, cb)
+        Go_DonePi(fun().Run())
+    })
 }
 
 func Go_Call_ReleasablePi(

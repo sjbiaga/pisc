@@ -59,7 +59,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
@@ -67,7 +67,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
 _υ1υ(name1, name2)""")
@@ -92,7 +92,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
@@ -100,7 +100,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
 _υ1υ(name1, name2)""")
@@ -124,7 +124,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
@@ -132,7 +132,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
 _υ1υ(name1, name2)""")
@@ -158,7 +158,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
@@ -166,7 +166,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(name1, name2))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
 }
 _υ1υ(name1, name2)""")
@@ -192,7 +192,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     })
     guard match {
         case Go_QueuePi(_υ2υ) => {
-            bind _υ2υ = _υ2υ.Go_DequeuePi()
+            bind _υ2υ = _υ2υ.Go_DequeuePi(go_context)
             _υ2υ.ToList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
@@ -205,7 +205,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 }
 guard match {
     case Go_QueuePi(_υ3υ) => {
-        bind _υ3υ = _υ3υ.Go_DequeuePi()
+        bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
         _υ3υ.ToList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
@@ -235,7 +235,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     })
     guard match {
         case Go_QueuePi(_υ3υ) => {
-            bind _υ3υ = _υ3υ.Go_DequeuePi()
+            bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
             _υ3υ.ToList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
@@ -248,7 +248,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 }
 guard match {
     case Go_QueuePi(_υ4υ) => {
-        bind _υ4υ = _υ4υ.Go_DequeuePi()
+        bind _υ4υ = _υ4υ.Go_DequeuePi(go_context)
         _υ4υ.ToList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
@@ -277,7 +277,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_PacePi(13, time.seconds)
     guard match {
         case Go_QueuePi(_υ2υ) => {
-            bind _υ2υ = _υ2υ.Go_DequeuePi()
+            bind _υ2υ = _υ2υ.Go_DequeuePi(go_context)
             _υ2υ.ToList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
@@ -290,7 +290,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 }
 guard match {
     case Go_QueuePi(_υ3υ) => {
-        bind _υ3υ = _υ3υ.Go_DequeuePi()
+        bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
         _υ3υ.ToList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
@@ -321,7 +321,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_PacePi(13, time.seconds)
     guard match {
         case Go_QueuePi(_υ3υ) => {
-            bind _υ3υ = _υ3υ.Go_DequeuePi()
+            bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
             _υ3υ.ToList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
@@ -334,7 +334,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 }
 guard match {
     case Go_QueuePi(_υ4υ) => {
-        bind _υ4υ = _υ4υ.Go_DequeuePi()
+        bind _υ4υ = _υ4υ.Go_DequeuePi(go_context)
         _υ4υ.ToList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
@@ -365,13 +365,13 @@ _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
         Go_returnPi
     })
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
     _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
 _υ1υ()""")
@@ -394,13 +394,13 @@ _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
         Go_returnPi
     })
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
     _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
 _υ1υ()""")
@@ -422,13 +422,13 @@ _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     })
     bind _ = Go_PacePi(13, time.seconds)
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
     _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
 _υ1υ()""")
@@ -452,13 +452,13 @@ _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     })
     bind _ = Go_PacePi(13, time.seconds)
     bind _ = guard match {
-        case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
     _υ1υ()
 }
 bind _ = guard match {
-    case Go_QueuePi(it) => it.Go_EnqueuePi(Go_NamesPi(guard, guard))
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
 }
 _υ1υ()""")

@@ -77,7 +77,7 @@ func (self Go_NamePi) Go_BoundOutputPi(
                         bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
                         bind _ = prev.Acquire1(ctx)
                         val names = ArrayTabulate[Go_NamePi](arity, (_) => Go_QueuePi(Go_NewBlockingQueuePi()))
-                        bind _ = q.Go_EnqueuePi(Go_SlicePi(names.ToGoSlice()))
+                        bind _ = q.Go_EnqueuePi(ctx, Go_SlicePi(names.ToGoSlice()))
                         bind _ = code()
                         bind _ = next.Release1()
                         bind _ = body(names.ToList())
@@ -126,7 +126,7 @@ func (self Go_NamePi) Go_OutputPi(
                     loop = () Go_TrampolinePi[Go_NamePi] => {
                         bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
                         bind _ = prev.Acquire1(ctx)
-                        bind _ = q.Go_EnqueuePi(Go_SlicePi(value().ToGoSlice()))
+                        bind _ = q.Go_EnqueuePi(ctx, Go_SlicePi(value().ToGoSlice()))
                         bind _ = code()
                         bind _ = next.Release1()
                         bind _ = body()
@@ -174,7 +174,7 @@ func (self Go_NamePi) Go_InputPi(
                     loop = () Go_TrampolinePi[Go_NamePi] => {
                         bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
                         bind _ = prev.Acquire1(ctx)
-                        bind name = q.Go_DequeuePi()
+                        bind name = q.Go_DequeuePi(ctx)
                         bind _ = code()
                         bind _ = next.Release1()
                         bind _ = body(name.ToList())
@@ -223,7 +223,7 @@ func (self Go_NamePi) Go_InputPi_(
                     loop = () Go_TrampolinePi[Go_NamePi] => {
                         bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
                         bind _ = prev.Acquire1(ctx)
-                        bind name = q.Go_DequeuePi_(fun)
+                        bind name = q.Go_DequeuePi_(ctx, fun)
                         bind _ = code()
                         bind _ = next.Release1()
                         bind _ = body(name.ToList())
