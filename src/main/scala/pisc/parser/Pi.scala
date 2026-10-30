@@ -271,6 +271,7 @@ object Pi:
                                           then _ >= -1
                                           else _ != 1)
     case ce extends Emitter(null)
+    case cot extends Emitter(null)
     case zio extends Emitter(null)
     case fs2 extends Emitter(true, true)
     case monix extends Emitter(false, false)

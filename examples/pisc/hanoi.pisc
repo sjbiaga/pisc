@@ -7,7 +7,7 @@
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-                                                       ⟦ INCLUDE = (fs2,monix) ⟧
+                                                   ⟦ INCLUDE = (cot,fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
 @given [F[_]]: Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
@@ -21,6 +21,20 @@
 @def println(a: Any) = IO.println(a)
 
 @def blocking(a: => Any) = IO.blocking(a)
+
+                                                               ⟦ INCLUDE = cot ⟧
+
+@import cats.effect.std.Console
+
+@def ![F[_]: Applicative]: String => OptionT[F, Any] = { _ => OptionT.none[F, Any] }
+
+@def print[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].print(a))
+
+@def println[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].println(a))
+
+@def blocking[F[_]: Async](a: => Any) = OptionT.liftF(Async[F].blocking(a))
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
                                                                ⟦ INCLUDE = fs2 ⟧
 
@@ -71,21 +85,21 @@ Main = ν(a,b,c)                                       \
      | Hanoi(a,b,c,/*args.headOption.map(_.toInt)*/)  \
      )
 
-Hanoi(a,b,c,m,n*) = ν(w)                                                      \
-                ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
-                     'n <- blocking {                                         \
-                             try                                              \
-                               'm.getOrElse {                                 \
-                                 scala.io.StdIn.readLine.toInt                \
-                               }                                              \
-                             catch _ => -1                                    \
-                           }                                                  \
-                    */.                                                       \
-                  Hanoi(a,b,c,n,w)                                            \
-                | w(w).                                                       \
-                  τ/*_ <- println(s"#${'w} moves")*/.                         \
-                  ( a(a)/*!*/. | b(b)/*!*/. | c(c)/*!*/. )                    \
-                )
+Hanoi(a,b,c,m,n*) = ν(w)                                                        \
+                  ( τ/* _ <- print(s"n = ${'m.fold("")(_.toString + "\n")}");   \
+                       'n <- blocking {                                         \
+                               try                                              \
+                                 'm.getOrElse {                                 \
+                                   scala.io.StdIn.readLine.toInt                \
+                                 }                                              \
+                               catch _ => -1                                    \
+                             }                                                  \
+                      */.                                                       \
+                    Hanoi(a,b,c,n,w)                                            \
+                  | w(w).                                                       \
+                    τ/*_ <- println(s"#${'w} moves")*/.                         \
+                    ( a(_)/*!*/. | b(_)/*!*/. | c(_)/*!*/. )                    \
+                  )
 
 
 Move(from,to,z) = from(x).to(y).                         \

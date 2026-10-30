@@ -76,9 +76,6 @@ object Meta extends emitter.shared.effects.Meta:
 
   val `IO.cede` = Term.Select(\, "cede")
 
-  def `* <- IO.pure(*)`(* : (String, Term)): Enumerator.Generator =
-    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
-
   private val `IO.*`: Term => Boolean =
     case Term.Select(Term.Name(`\\`), _) => true
     case Term.Apply(it, _) => `IO.*`(it)
@@ -91,9 +88,6 @@ object Meta extends emitter.shared.effects.Meta:
       Enumerator.Generator(`* <- …`(), *)
     else
       Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
-
-  def `_ <- IO.sleep(*.…)`(* : Long, `…`: String): Enumerator =
-    Enumerator.Generator(`* <- …`(), Term.Apply(Term.Select(\, "sleep"), Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
 
 
   def `_ <- *.tryAcquire.ifM`(* : String, ** : Term): Enumerator.Generator =

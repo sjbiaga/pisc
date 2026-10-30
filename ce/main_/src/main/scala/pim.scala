@@ -70,7 +70,7 @@ package Π:
       * modulo replication bound output guard w/ pace w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: IO[Any])(inline body: `()` => IO[Any]): IO[Unit] =
-      ${ `(ν)`.outputCode('ref)('parallelism)('{ exec(code) >> body(_) })('{ exec(code) >> IO.sleep(pace) }) }
+      ${ `(ν)`.outputCode('ref)('parallelism)('body)('{ exec(code) >> IO.sleep(pace) }) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 

@@ -24,6 +24,19 @@
 
 @def sleep(d: FiniteDuration) = IO.sleep(d)
 
+                                                               ⟦ INCLUDE = cot ⟧
+
+@import cats.effect.std.Console
+
+@given Conversion[`()`[F], Long] = _.`()`[Long]
+@given Conversion[`()`[F], String] = _.`()`[String]
+
+@def println[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].println(a))
+
+@def sleep[F[_]: Async](d: FiniteDuration) = OptionT.sleep(d)
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+
                                                           ⟦ INCLUDE = (zio,zs) ⟧
 
 @def println(a: Any) = ZIO.debug(a)

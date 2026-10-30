@@ -26,6 +26,7 @@ object CommandPin {
     }
 
     val opts = Map("-ce" -> Nil,
+                   "-cot" -> Seq("cats.effect.IO", "zio.Task").map("-F" + _),
                    "-zio" -> Nil,
                    "-fs2" -> Seq("cats.effect.IO", "zio.Task").map("-F" + _),
                    "-monix" -> Seq("cats.effect.IO", "monix.eval.Task").map("-F" + _),
@@ -36,7 +37,7 @@ object CommandPin {
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {
         case it if it.startsWith("-") && args.size == 1 =>
-          Seq("-ce", "-zio", "-kk", "-fs2", "-monix", "-zs", "-go").filter(_.startsWith(it.toLowerCase))
+          Seq("-ce", "-cot", "-zio", "-kk", "-fs2", "-monix", "-zs", "-go").filter(_.startsWith(it.toLowerCase))
         case it =>
           { if (it.isEmpty && args.size == 1) suggestions(Seq("-")) else Nil } ++
           { if (args.size > 1 && opts.contains(args(1))) opts(args(1)) else Nil } ++

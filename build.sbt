@@ -15,7 +15,7 @@ val scala3Opts = Seq("-feature", "-language:implicitConversions", "-indent", "-X
 // val scala3Opts = Seq("-feature", "-language:implicitConversions", "-explain-types", "-indent", "-new-syntax")
 
 lazy val root = (project in file("."))
-  .aggregate(`ce-main`, `ce-main_`, `zio-main`, `zio-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `monix-main`, `monix-main_`, `zs-main`, `zs-main_`)
+  .aggregate(`ce-main`, `ce-main_`, `cot-main`, `cot-main_`, `zio-main`, `zio-main_`, `akka-main`, `akka-main_`, `pekko-main`, `pekko-main_`, `fs2-main`, `fs2-main_`, `monix-main`, `monix-main_`, `zs-main`, `zs-main_`)
   .settings(
     name := "π-Calculus2Scala",
     organization := "sjb.ia.ga",
@@ -45,6 +45,32 @@ lazy val `ce-main` = (project in file("ce/main"))
 lazy val `ce-main_` = (project in file("ce/main_"))
   .settings(
     name := "ce_ π-Calculus2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.10.1-RC1",
+    crossScalaVersions ++= Seq("2.13.18", "3.10.1-RC1"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(catseffect, munit % Test)
+  )
+
+lazy val `cot-main` = (project in file("cot/main"))
+  .settings(
+    name := "cot π-Calculus2Scala",
+    organization := "sjb.ia.ga",
+    organizationName := "sjbiaga",
+    version := "1.0",
+    maxErrors := 5,
+    scalaVersion := "3.10.1-RC1",
+    crossScalaVersions ++= Seq("2.13.18", "3.10.1-RC1"),
+    scalacOptions ++= scala3Opts, // :+ "-Xprint:typer",
+    libraryDependencies ++= Seq(catseffect, munit % Test)
+  )
+
+lazy val `cot-main_` = (project in file("cot/main_"))
+  .settings(
+    name := "cot_ π-Calculus2Scala",
     organization := "sjb.ia.ga",
     organizationName := "sjbiaga",
     version := "1.0",
@@ -211,7 +237,7 @@ lazy val `zs-main_` = (project in file("zs/main_"))
     libraryDependencies ++= Seq(zc, zs, zic, munit % Test)
   )
 
-unmanagedSources / excludeFilter := "ce/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "[fz]s*/pi*.scala" || "monix/pi*.scala" || "examples/*.scala"
+unmanagedSources / excludeFilter := "c[eo]*/pi*.scala" || "*[ae]kk[ao]/pi*.scala" || "[fz]s*/pi*.scala" || "monix/pi*.scala" || "examples/*.scala"
 
 // ThisBuild / evictionErrorLevel := Level.Info
 

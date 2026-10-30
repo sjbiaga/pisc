@@ -4,7 +4,7 @@ function pi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -22,6 +22,12 @@ function pi() {
     case "$emit" in
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/pim.scala
+            ;;
+        cot)
+            local deps='--dep org.typelevel::cats-effect:3.7.1
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/pim.scala
             ;;
@@ -72,7 +78,7 @@ function pi() {
         scala)
             set ${srcs#?} ../${emit}/pi.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.0 \
+                          -q -O -nowarn -S 3.10.1-RC1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -92,7 +98,7 @@ function pi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -110,6 +116,12 @@ function pi_() {
     case "$emit" in
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/pim_.scala
+            ;;
+        cot)
+            local deps='--dep org.typelevel::cats-effect:3.7.1
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/pim_.scala
             ;;
@@ -160,7 +172,7 @@ function pi_() {
         scala)
             set ${srcs#?} ../${emit}/pi_.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.0 \
+                          -q -O -nowarn -S 3.10.1-RC1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -180,7 +192,7 @@ function pio() {
     [ $# -gt 0 ] || return
     local emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -196,7 +208,7 @@ function pio() {
             ;;
     esac
     case "$emit" in
-        fs2|monix)
+        cot|fs2|monix)
             local F=`grep 'type.F.=.' in/"$1".scala.in`
             local F=${F##*.}.
             ;;

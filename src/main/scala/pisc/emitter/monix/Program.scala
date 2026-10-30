@@ -67,7 +67,7 @@ object Program:
                   `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
                 val υidυ = id
-                `* <- Stream.evalF(*)`(υidυ -> Term.Select(semaphore.get, "tryAcquire")) ::
+                `* <- liftF(*)`(υidυ -> Term.Select(semaphore.get, "tryAcquire")) ::
                 Enumerator.Generator(`* <- …`(), `if * then … else …`(υidυ, sum.emit, Nil))
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
@@ -138,7 +138,7 @@ object Program:
 
         case τ(Some((Left(enums), _))) =>
           * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil))))
-          * = * ::: `Stream.evalF(…)`(enums)
+          * = * ::: `liftF(…)`(enums)
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil))),
@@ -253,7 +253,7 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              * :+= `_ <- Stream.evalF(*)`(term)
+              * :+= `_ <- liftF(*)`(term)
             case _ =>
 
         case _: π => ??? // caught by parser
@@ -376,7 +376,7 @@ object Program:
           code match
             case Some((Left(enums), _)) =>
               * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))))
-              * = * ::: `Stream.evalF(…)`(enums)
+              * = * ::: `liftF(…)`(enums)
             case Some((Right(term), _)) =>
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))),
                                       Term.ArgClause(term :: Nil)))

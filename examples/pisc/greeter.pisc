@@ -6,7 +6,7 @@
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-                                                       ⟦ INCLUDE = (fs2,monix) ⟧
+                                                   ⟦ INCLUDE = (cot,fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], String] = _.`()`[String]
 
@@ -17,6 +17,18 @@
 @def print(a: Any) = IO.print(a)
 
 @def blocking(a: => Any) = IO.blocking(a)
+
+                                                               ⟦ INCLUDE = cot ⟧
+
+@import cats.effect.std.Console
+
+@def nl[F[_]: Applicative]: String => OptionT[F, Any] = { it => OptionT.pure(s"$it\n") }
+
+@def print[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].print(a))
+
+@def blocking[F[_]: Async](a: => Any) = OptionT.liftF(Async[F].blocking(a))
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 
                                                                ⟦ INCLUDE = fs2 ⟧
 

@@ -57,6 +57,14 @@ abstract trait Meta extends shared.Meta:
   def `_ <- \\.*`(* : String): Enumerator.Generator =
     Enumerator.Generator(`* <- …`(), Term.Select(\, *))
 
+  def `* <- \\(*)`(* : (String, Term)): Enumerator.Generator =
+    `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
+
+  def `_ <- \\.sleep(*.…)`(* : Long, `…`: String): Enumerator =
+    Enumerator.Generator(`* <- …`(),
+                         Term.Apply(Term.Select(\, "sleep"),
+                                    Term.ArgClause(Term.Select(Lit.Long(*), `…`) :: Nil)))
+
 
   @tailrec
   final def `for * yield ()`(* : Enumerator*): Term =

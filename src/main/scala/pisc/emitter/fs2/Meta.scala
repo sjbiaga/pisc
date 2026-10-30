@@ -153,8 +153,8 @@ object Meta extends emitter.shared.streams.Meta:
                                                                                            :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
-    `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, "emit"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
@@ -191,8 +191,8 @@ object Meta extends emitter.shared.streams.Meta:
                                                                                            :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
       )
 
-    `* <- Stream.evalF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- *`(name -> Term.Apply(Term.Select(\, "emit"), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
+    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
