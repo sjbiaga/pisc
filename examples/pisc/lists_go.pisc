@@ -8,12 +8,12 @@
 
 @func toInt(text string) Go_NamePi { Go_IntPi(parse(text).ToOption().Get()) }
 
-@func foreach(channel Go_NamePi, list List[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+@func foreach(ctx context.Context, channel Go_NamePi, list List[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
 @    Go_CallPi(() => {
 @        channel match {
 @            case Go_QueuePi(it) => {
-@                list.ForEach((item) => it.Go_EnqueuePi(item).Run())
-@                it.Go_EnqueuePi(Go_NothingPi()).Run()
+@                list.ForEach((item) => it.Go_EnqueuePi(ctx, item).Run())
+@                it.Go_EnqueuePi(ctx, Go_NothingPi()).Run()
 @            }
 @            case it => Panic(it)
 @        }
@@ -23,9 +23,9 @@
 
                                                                  ⟦ EXCLUDE = 0 ⟧{lists_go}
 
-Main = ν(ch)                                         \
-     ( τ/*bind _ = foreach(ch, args.Map(toInt)) */.  \
-     | Sum(ch, /*0*/)                                \
+Main = ν(ch)                                                     \
+     ( τ/*bind _ = foreach(go_context, ch, args.Map(toInt)) */.  \
+     | Sum(ch, /*0*/)                                            \
      )
 
 Sum(ch, sum) = ch(item). if /* 'item.IsNothing() */ = True then τ/* bind _ = PrintLn('sum.ToInt()) */.  \

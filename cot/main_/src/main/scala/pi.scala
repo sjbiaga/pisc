@@ -332,7 +332,7 @@ package object Π:
       * positive prefix i.e. input
       */
     def apply[T: ClassTag]()(code: T => OptionT[F, Any]): OptionT[F, `()`[F]] =
-      ><()(code)(eth).map(new `()`[F](_))
+      ><()(eth)(code).map(new `()`[F](_))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -357,7 +357,7 @@ package object Π:
             .flatMap(_ => OptionT.unless(name == null)(name))
         }
 
-      def apply[F[_]: Monad, T: ClassTag]()(code: T => OptionT[F, Any])(`<Q`: ><[F]): OptionT[F, Any] =
+      def apply[F[_]: Monad, T: ClassTag]()(`<Q`: ><[F])(code: T => OptionT[F, Any]): OptionT[F, Any] =
         OptionT.liftF(`<Q`.queue.take).flatMap {
           case it @ (null, _) => OptionT.pure(it)
           case (it: T, b2) => code(it).orElse(OptionT.pure(null)).map(_ -> b2)

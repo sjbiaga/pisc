@@ -34,7 +34,7 @@ package object Π:
 
   import _root_.cats.syntax.functor.*
 
-  import _root_.cats.{ Defer, Functor }
+  import _root_.cats.{ Defer, Functor, Monad }
   import _root_.cats.data.OptionT
   import _root_.cats.effect.{ Concurrent, Temporal }
   import _root_.cats.effect.std.Queue
@@ -327,10 +327,7 @@ package object Π:
       * positive prefix i.e. input
       */
     def apply[T: ClassTag]()(code: T => OptionT[F, Any]): OptionT[F, `()`[F]] =
-      ><()(q).flatMap {
-        case it @ null => OptionT.pure(it)
-        case it: T => code(it)
-      }.map(new `()`[F](_))
+      ><[F, T]()(q)(code).map(new `()`[F](_))
 
     override def toString: String = if name == null then "null" else name.toString
 
@@ -346,3 +343,9 @@ package object Π:
 
       inline def apply[F[_]: Functor]()(`<Q`: ><[F]): OptionT[F, Any] =
         OptionT.liftF(`<Q`.take)
+
+      inline def apply[F[_]: Monad, T: ClassTag]()(`<Q`: ><[F])(code: T => OptionT[F, Any]): OptionT[F, Any] =
+        ><()(`<Q`).flatMap {
+          case it @ null => OptionT.pure(it)
+          case it: T => code(it)
+        }

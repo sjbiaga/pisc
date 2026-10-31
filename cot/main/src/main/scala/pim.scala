@@ -433,7 +433,7 @@ package Π:
                     for
                       _ <- OptionT.liftF(moduloCB.await)
                       _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
-                      n <- ><()($q)($code)
+                      n <- ><()($q)($code).flatTapNone(nextS.release)
                       _ <- $sleep.flatTapNone(nextS.release)
                       _ <- OptionT.liftF(nextS.release)
                       _ <- $body(new `()`[F](n))

@@ -243,6 +243,7 @@ function pio() {
                 cd pi
                 ln -s ../../../${emit}/pi.${type}
                 ln -s ../../../${emit}/pim.${type}
+                cp ../../../${emit}/sleep.go .
                 ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..
@@ -257,6 +258,7 @@ function pio() {
                 cd pi
                 ln -s ../../../${emit}/pi_.${type}
                 ln -s ../../../${emit}/pim_.${type}
+                cp ../../../${emit}/sleep.go .
                 ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..

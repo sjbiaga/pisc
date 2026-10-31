@@ -42,6 +42,7 @@ sealed type Go_TrampolinePi[T any] {
     case Go_DonePi(value Option[T])
     case Go_CallPi(thunk func() Go_TrampolinePi[T])
     case Go_FlatMapPi(this Go_TrampolinePi[T], kleisli func (T) Go_TrampolinePi[Go_NamePi])
+    case Go_FlatTapNonePi(this Go_TrampolinePi[T], ifNone func())
 }
 
 func Go_Call_awaitablePi(
@@ -108,10 +109,29 @@ func (self Go_TrampolinePi[T]) Get() Either[Go_TrampolinePi[T], Option[T]] {
     self match {
         case Go_DonePi(value) => Right(value)
         case Go_CallPi(thunk) => Left(thunk())
+
+        case Go_FlatTapNonePi(Go_DonePi(None()), n) => { n(); Right(None()) } // fail-fast
+        case Go_FlatTapNonePi(Go_DonePi(it), _) => Right(it)
+        case Go_FlatTapNonePi(Go_CallPi(thunk), n) => Left(Go_FlatTapNonePi(thunk(), n))
+
+        case Go_FlatTapNonePi(Go_FlatMapPi(Go_DonePi(Some(it)), k), n) => Left(Go_FlatTapNonePi(As[Go_TrampolinePi[T]](k(it)).V1, n))
+        case Go_FlatTapNonePi(Go_FlatMapPi(Go_DonePi(_), _), n) => { n(); Right(None()) } // fail-fast
+        case Go_FlatTapNonePi(Go_FlatMapPi(Go_CallPi(thunk), k), n) => Left(Go_FlatTapNonePi(Go_FlatMapPi(thunk(), k), n))
+        case Go_FlatTapNonePi(Go_FlatMapPi(Go_FlatMapPi(this, f), g), n) => Left(Go_FlatTapNonePi(this.FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1, g)), n))
+        case Go_FlatTapNonePi(Go_FlatMapPi(Go_FlatTapNonePi(this, m), k), n) => Left(Go_FlatMapPi(this.FlatTapNone(() => { m(); n() }), (x) => k(x).FlatTapNone(n)))
+
+        case Go_FlatTapNonePi(Go_FlatTapNonePi(this, m), n) => Left(Go_FlatTapNonePi(this, () => { m(); n() }))
+
         case Go_FlatMapPi(Go_DonePi(Some(it)), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
-        case Go_FlatMapPi(Go_DonePi(None()), _) => Right(None()) // fail-fast
+        case Go_FlatMapPi(Go_DonePi(_), _) => Right(None()) // fail-fast
         case Go_FlatMapPi(Go_CallPi(thunk), k) => Left(Go_FlatMapPi(thunk(), k))
         case Go_FlatMapPi(Go_FlatMapPi(this, f), g) => Left(this.FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1, g)))
+
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(Some(it)), _), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(_), n), _) => { n(); Right(None()) } // fail-fast
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_CallPi(thunk), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(thunk(), n), k))
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatMapPi(this, f), n), g) => Left(this.FlatTapNone(n).FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1.FlatTapNone(n), g)))
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatTapNonePi(this, m), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(this, () => { m(); n() }), k))
     }
 }
 
@@ -127,4 +147,12 @@ func (self Go_TrampolinePi[T]) Map[U any](f func(T) U) Go_TrampolinePi[U] {
 
 func (self Go_TrampolinePi[T]) FlatMap[U any](k func(T) Go_TrampolinePi[U]) Go_TrampolinePi[U] {
     As[Go_TrampolinePi[U]](Go_FlatMapPi[T](self, ((it) => As[Go_TrampolinePi[Go_NamePi]](k(it)).V1))).V1
+}
+
+func (self Go_TrampolinePi[T]) FlatTapNone(ifNone func()) Go_TrampolinePi[T] {
+    Go_FlatTapNonePi(self, ifNone)
+}
+
+func (self Go_TrampolinePi[T]) Unless(condition bool) Go_TrampolinePi[T] {
+    if (condition) Go_DonePi(None[T]()) else self
 }

@@ -121,6 +121,9 @@ func (self Go_BlockingQueuePi) Go_DequeuePi(_ context.Context) Go_TrampolinePi[G
     Go_CallPi(() => Go_donePi(self.queue.Dequeue()))
 }
 
-func (self Go_BlockingQueuePi) Go_DequeuePi_(_ context.Context, f func (Go_NamePi) Go_NamePi) Go_TrampolinePi[Go_NamePi] {
-    Go_CallPi(() => Go_donePi(f(self.queue.Dequeue())))
+func (self Go_BlockingQueuePi) Go_DequeuePi_(_ context.Context, f func (Go_NamePi) Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        bind item = f(self.queue.Dequeue())
+        Go_donePi(item)
+    })
 }

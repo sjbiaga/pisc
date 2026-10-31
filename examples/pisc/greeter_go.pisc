@@ -8,10 +8,10 @@
 
 @val reader = bufio.NewReader(os.Stdin)
 
-@func nl(name Go_NamePi) Go_NamePi {
+@func nl(name Go_NamePi) Go_TrampolinePi[Go_NamePi] {
 @    name match {
-@        case Go_StringPi(it) => Go_StringPi(it + "\n")
-@        case it => it
+@        case Go_StringPi(it) => Go_donePi(Go_StringPi(it + "\n"))
+@        case _ => Go_nonePi
 @    }
 @}
 
@@ -32,7 +32,7 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout)
 Greeter(stdin, stdout, line*) = \
                               ( stdout<"What's your name?">.stdin(name). \
                                                                          if /* TrimSpace('name.ToString()) == "" */ = True \
-                                                                         then stdout<>. Greeter(stdin, stdout) \
+                                                                         then stdout<>. \
                                                                          else Chooser(stdout, name) \
                               ) \
                               | \
@@ -40,7 +40,7 @@ Greeter(stdin, stdout, line*) = \
                                 τ /*bind _ = 'prompt.Print(); \
                                     bind 'line = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))))*/. \
                                                          stdin</*Go_StringPi(TrimSpace(line.ToString()))*/>.stdout(greet) /* nl */. \
-                                [ /* 'greet.IsNothing() */ = False ] τ/*bind _ = 'greet.Print()*/. \
+                                τ/*bind _ = 'greet.Print()*/. \
                               )
 
 Chooser(stdout, name) = Greeter1(stdout, name) \

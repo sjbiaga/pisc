@@ -259,7 +259,7 @@ package Π:
                         n <- ν[F]()
                         s <- OptionT.liftF($eth.stop.get)
                         _ <- OptionT.unless(s)(><[F](n.name)($eth)).flatten.flatTapNone(nextS.release)
-                        _ <- $sleep.flatTapNone(nextS.release)
+                        _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
                         _ <- OptionT.liftF(nextS.release)
                         _ <- $body(n)
                         _ <- loop
@@ -303,7 +303,7 @@ package Π:
                       _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       _ <- OptionT.unless(s)(><[F]($value.name)($eth)).flatten.flatTapNone(nextS.release)
-                      _ <- $sleep.flatTapNone(nextS.release)
+                      _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
                       _ <- OptionT.liftF(nextS.release)
                       _ <- $body
                       _ <- loop
@@ -350,7 +350,7 @@ package Π:
                         _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
                         s <- OptionT.liftF($eth.stop.get)
                         _ <- OptionT.unless(s)($value().flatMap(><(_)($eth))).flatten.flatTapNone(nextS.release)
-                        _ <- $sleep.flatTapNone(nextS.release)
+                        _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
                         _ <- OptionT.liftF(nextS.release)
                         _ <- $body
                         _ <- loop
@@ -394,7 +394,7 @@ package Π:
                       _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       n <- OptionT.unless(s)(><()($eth)).flatten.flatTapNone(nextS.release)
-                      _ <- $sleep.flatTapNone(nextS.release)
+                      _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
                       _ <- OptionT.liftF(nextS.release)
                       _ <- $body(new `()`[F](n))
                       _ <- loop
@@ -440,7 +440,7 @@ package Π:
                       _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       n <- OptionT.unless(s)(><()($eth)($code)).flatten.flatTapNone(nextS.release)
-                      _ <- $sleep.flatTapNone(nextS.release)
+                      _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
                       _ <- OptionT.liftF(nextS.release)
                       _ <- $body(new `()`[F](n))
                       _ <- loop
