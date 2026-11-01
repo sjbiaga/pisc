@@ -28,12 +28,27 @@
 
 //package main.scala.in
 
+import _root_.cats.data.OptionT
+
+
 object App extends _root_.cats.effect.IOApp:
 
-  import _root_.cats.effect.ExitCode
+  import _root_.cats.syntax.functor.*
+  import _root_.cats.syntax.flatMap.*
+  import _root_.cats.effect.{ Concurrent, Deferred, ExitCode, Ref, Resource }
+  import _root_.cats.effect.syntax.monadCancel.*
+  import _root_.cats.effect.syntax.spawn.*
 
   override def run(args: List[String]) =
-    π.Main[π.F](args*).fold(ExitCode.Error)(_ => ExitCode.Success)
+    ( for
+        given Deferred[[X] =>> OptionT[π.F, X], Unit] <- Resource.eval(Deferred[[X] =>> OptionT[π.F, X], Unit])
+        stop <- Resource.eval(Deferred[[X] =>> OptionT[π.F, X], Unit])
+        _ <- π.Main[π.F](args*).guarantee((given_Deferred_OptionT_Unit.complete(()) >> stop.complete(())).void).background
+      yield
+        given_Deferred_OptionT_Unit -> stop
+    ).use { (signal, stop) =>
+      Concurrent[[X] =>> OptionT[π.F, X]].race(Concurrent[[X] =>> OptionT[π.F, X]].never, signal.get).onCancel(signal.complete(()).void).guarantee(stop.get)
+    }.fold(ExitCode.Error)(_ => ExitCode.Success)
 
 
 object π:
@@ -42,7 +57,6 @@ object π:
   import _root_.scala.concurrent.duration.*
 
   import _root_.cats.*
-  import _root_.cats.data.OptionT
   import _root_.cats.instances.list.*
   import _root_.cats.syntax.all.*
 
@@ -53,14 +67,6 @@ object π:
 
   import Π.*
 
-
-  extension (self: OptionT.type)
-    def unit[F[_]: Applicative]: OptionT[F, Unit] =
-      self.pure[F].apply(())
-
-  extension (self: OptionT.type)
-    def sleep[F[_]: Temporal](time: FiniteDuration): OptionT[F, Unit] =
-      self.liftF[F, Unit](Temporal[F].sleep(time))
 
   extension [F[_]: Concurrent: Parallel](self: πLs[OptionT[F, Unit]])
     private[π] inline def πparSequence: OptionT[F, Unit] =

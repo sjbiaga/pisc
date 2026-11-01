@@ -34,18 +34,29 @@ package object Π:
 
   import _root_.cats.syntax.functor.*
 
-  import _root_.cats.{ Defer, Functor, Monad }
+  import _root_.cats.{ Defer, Monad }
   import _root_.cats.data.OptionT
-  import _root_.cats.effect.{ Concurrent, Temporal }
+  import _root_.cats.effect.{ Deferred, Temporal }
   import _root_.cats.effect.std.Queue
 
   import `Π-magic`.*
 
 
+  extension [F[_]: Temporal, A](self: OptionT[F, A])
+    def race(using signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, A] =
+      OptionT(Temporal[[X] =>> OptionT[F, X]].race(signal.get.flatMap(_ => OptionT.none[F, A]), self).map(_.toOption).value.map(_.flatten))
+
+  extension (_self: OptionT.type)
+    def sleep[F[_]: Temporal](time: FiniteDuration)(using signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      Temporal[[X] =>> OptionT[F, X]].timeoutTo(signal.get.flatMap(_ => OptionT.none), time, unit)
+    def unit[F[_]: Monad]: OptionT[F, Unit] =
+      Monad[[X] =>> OptionT[F, X]].unit
+
+
   /**
     * restriction aka new name
     */
-  final class ν[F[_]: Concurrent: Defer: Temporal]:
+  final class ν[F[_]: Defer: Temporal]:
 
     def map[B](f: `()`[F] => B): OptionT[F, B] = flatMap(f andThen OptionT.pure[F].apply)
     def flatMap[B](f: `()`[F] => OptionT[F, B]): OptionT[F, B] =
@@ -55,9 +66,9 @@ package object Π:
   /**
     * silent transition
     */
-  final class τ[F[_]: Concurrent: Temporal] extends τMacros[F]:
+  final class τ[F[_]: Temporal] extends τMacros[F]:
 
-    def apply(): OptionT[F, Unit] = OptionT.liftF(Concurrent[F].cede)
+    def apply(): OptionT[F, Unit] = OptionT.liftF(Temporal[F].cede)
 
     /**
       * modulo replication guard
@@ -68,7 +79,7 @@ package object Π:
     /**
       * modulo replication guard w/ pace
       */
-    def apply(_f: false)(pace: FiniteDuration, parallelism: Int)(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int)(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.silent(false)(pace, parallelism)(body)
 
     /**
@@ -80,14 +91,14 @@ package object Π:
     /**
       * modulo replication guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int)(code: => OptionT[F, Any])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int)(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.silent(true)(pace, parallelism)(code)(body)
 
 
   /**
     * prefix
     */
-  implicit final class `()`[F[_]: Concurrent: Defer: Temporal](/*private[Π] */val name: Any) extends Macros[F]:
+  implicit final class `()`[F[_]: Defer: Temporal](/*private[Π] */val name: Any) extends Macros[F]:
 
     protected def q = `()`[><[F]]
 
@@ -108,25 +119,25 @@ package object Π:
     /**
       * modulo replication bound output guard
       */
-    def apply(_nu: "ν")(_f: false)(parallelism: Int)(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_nu: "ν")(_f: false)(parallelism: Int)(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output("ν")(false)(parallelism)(body)
 
     /**
       * modulo replication bound output guard w/ pace
       */
-    def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output("ν")(false)(pace, parallelism)(body)
 
     /**
       * modulo replication bound output guard w/ code
       */
-    def apply(_nu: "ν")(_t: true)(parallelism: Int)(code: => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_nu: "ν")(_t: true)(parallelism: Int)(code: => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output("ν")(true)(parallelism)(code)(body)
 
     /**
       * modulo replication bound output guard w/ pace w/ code
       */
-    def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int)(code: => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int)(code: => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output("ν")(true)(pace, parallelism)(code)(body)
 
     //////////////////////////////////////////////////////////////// CONSTANT //
@@ -134,25 +145,25 @@ package object Π:
     /**
       * modulo constant replication output guard
       */
-    def apply(_f: false)(parallelism: Int, value: `()`[F])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_f: false)(parallelism: Int, value: `()`[F])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output(false)(parallelism, value)(body)
 
     /**
       * modulo constant replication output guard w/ pace
       */
-    def apply(_f: false)(pace: FiniteDuration, parallelism: Int, value: `()`[F])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_f: false)(pace: FiniteDuration, parallelism: Int, value: `()`[F])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output(false)(pace, parallelism, value)(body)
 
     /**
       * modulo constant replication output guard w/ code
       */
-    def apply(_t: true)(parallelism: Int, value: `()`[F])(code: => OptionT[F, Any])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_t: true)(parallelism: Int, value: `()`[F])(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output(true)(parallelism, value)(code)(body)
 
     /**
       * modulo constant replication output guard w/ pace w/ code
       */
-    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, value: `()`[F])(code: => OptionT[F, Any])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_t: true)(pace: FiniteDuration, parallelism: Int, value: `()`[F])(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.output(true)(pace, parallelism, value)(code)(body)
 
     //////////////////////////////////////////////////////////////// VARIABLE //
@@ -160,7 +171,7 @@ package object Π:
     /**
       * modulo variable replication output guard
       */
-    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S)(body: OptionT[F, Unit])(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => S)(body: OptionT[F, Unit])(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(false)(parallelism, value.asInstanceOf[`()`[F]])(body)
@@ -170,7 +181,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ pace
       */
-    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => S)(body: OptionT[F, Unit])(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => S)(body: OptionT[F, Unit])(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(false)(pace, parallelism, value.asInstanceOf[`()`[F]])(body)
@@ -180,7 +191,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S)(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => S)(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(true)(parallelism, value.asInstanceOf[`()`[F]])(code)(body)
@@ -190,7 +201,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => S)(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => S)(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(true)(pace, parallelism, value.asInstanceOf[`()`[F]])(code)(body)
@@ -200,7 +211,7 @@ package object Π:
     /**
       * modulo variable replication output guard
       */
-    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => OptionT[F, S])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, value: => OptionT[F, S])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(false)(parallelism, _)(body)))
@@ -210,7 +221,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ pace
       */
-    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => OptionT[F, S])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, value: => OptionT[F, S])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(false)(pace, parallelism, _)(body)))
@@ -220,7 +231,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => OptionT[F, S])(code: => OptionT[F, Any])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, value: => OptionT[F, S])(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(true)(parallelism, _)(code)(body)))
@@ -230,7 +241,7 @@ package object Π:
     /**
       * modulo variable replication output guard w/ pace w/ code
       */
-    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => OptionT[F, S])(code: => OptionT[F, Any])(body: OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, value: => OptionT[F, S])(code: => OptionT[F, Any])(body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(true)(pace, parallelism, _)(code)(body)))
@@ -242,25 +253,25 @@ package object Π:
     /**
       * modulo replication input guard
       */
-    def apply(_n: Null)(_f: false)(parallelism: Int)(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_n: Null)(_f: false)(parallelism: Int)(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.input(false)(parallelism)(body)
 
     /**
       * modulo replication input guard w/ pace
       */
-    def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int)(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.input(false)(pace, parallelism)(body)
 
     /**
       * modulo replication input guard w/ code
       */
-    def apply[T: ClassTag](_n: Null)(_t: true)(parallelism: Int)(code: T => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[T: ClassTag](_n: Null)(_t: true)(parallelism: Int)(code: T => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.input(true)(parallelism)(code)(body)
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    def apply[T: ClassTag](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int)(code: T => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
+    def apply[T: ClassTag](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int)(code: T => OptionT[F, Any])(body: `()`[F] => OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       super.input(true)(pace, parallelism)(code)(body)
 
     ////////////////////////////////////////////////////// modulo replication //
@@ -268,7 +279,7 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_f: false)(value: => S)(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_f: false)(value: => S)(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.asInstanceOf[`()`[F]])
@@ -278,7 +289,7 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(value: => S)(code: => OptionT[F, Any])(using DummyImplicit): OptionT[F, Unit] =
+    def apply[S: ClassTag](_t: true)(value: => S)(code: => OptionT[F, Any])(using DummyImplicit)(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         apply(value.asInstanceOf[`()`[F]])(code)
@@ -288,7 +299,7 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_f: false)(value: => OptionT[F, S]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_f: false)(value: => OptionT[F, S])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(_)))
@@ -298,7 +309,7 @@ package object Π:
     /**
       * variable negative prefix i.e. variable output
       */
-    def apply[S: ClassTag](_t: true)(value: => OptionT[F, S])(code: => OptionT[F, Any]): OptionT[F, Unit] =
+    def apply[S: ClassTag](_t: true)(value: => OptionT[F, S])(code: => OptionT[F, Any])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       if classTag[S].runtimeClass eq getClass
       then
         Defer[[X] =>> OptionT[F, X]].defer(value.asInstanceOf[OptionT[F, `()`[F]]].flatMap(apply(_)(code)))
@@ -308,25 +319,25 @@ package object Π:
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`[F]): OptionT[F, Unit] =
+    def apply(value: `()`[F])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       ><(value.name)(q)
 
     /**
       * negative prefix i.e. output
       */
-    def apply(value: `()`[F])(code: => OptionT[F, Any]): OptionT[F, Unit] =
+    def apply(value: `()`[F])(code: => OptionT[F, Any])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       apply(value).flatMap(_ => code).void
 
     /**
       * positive prefix i.e. input
       */
-    def apply(): OptionT[F, `()`[F]] =
+    def apply()(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, `()`[F]] =
       ><()(q).map(new `()`[F](_))
 
     /**
       * positive prefix i.e. input
       */
-    def apply[T: ClassTag]()(code: T => OptionT[F, Any]): OptionT[F, `()`[F]] =
+    def apply[T: ClassTag]()(code: T => OptionT[F, Any])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, `()`[F]] =
       ><[F, T]()(q)(code).map(new `()`[F](_))
 
     override def toString: String = if name == null then "null" else name.toString
@@ -338,14 +349,15 @@ package object Π:
 
     object >< :
 
-      inline def apply[F[_]: Functor](name: Any)(`>Q`: ><[F]): OptionT[F, Unit] =
-        OptionT.liftF(`>Q`.offer(name))
+      inline def apply[F[_]: Temporal](name: Any)(`>Q`: ><[F])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+        OptionT.liftF(`>Q`.offer(name)).race
 
-      inline def apply[F[_]: Functor]()(`<Q`: ><[F]): OptionT[F, Any] =
-        OptionT.liftF(`<Q`.take)
+      inline def apply[F[_]: Temporal]()(`<Q`: ><[F])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Any] =
+        OptionT.liftF(`<Q`.take).race
 
-      inline def apply[F[_]: Monad, T: ClassTag]()(`<Q`: ><[F])(code: T => OptionT[F, Any]): OptionT[F, Any] =
-        ><()(`<Q`).flatMap {
-          case it @ null => OptionT.pure(it)
-          case it: T => code(it)
-        }
+      inline def apply[F[_]: Temporal, T: ClassTag]()(`<Q`: ><[F])(code: T => OptionT[F, Any])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Any] =
+        ( OptionT.liftF(`<Q`.take).flatMap {
+            case it @ null => OptionT.pure(it)
+            case it: T => code(it)
+          }
+        ).race

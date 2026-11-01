@@ -34,20 +34,19 @@ package Π:
 
   import _root_.scala.quoted.{ Expr, Type, Quotes }
 
-  import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.{ Defer, Functor, Monad }
   import _root_.cats.data.OptionT
-  import _root_.cats.effect.{ Concurrent, Ref, Temporal }
+  import _root_.cats.effect.{ Deferred, Ref, Temporal }
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
   import _root_.cats.effect.syntax.spawn.*
 
   import Π.`Π-magic`.><
 
 
-  trait Macros[F[_]: Concurrent: Defer: Temporal] { this: `()`[F] =>
+  trait Macros[F[_]: Defer: Temporal] { this: `()`[F] =>
 
     import Macros.*
 
@@ -58,111 +57,111 @@ package Π:
     /**
       * modulo replication bound output guard
       */
-    protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     /**
       * modulo replication bound output guard w/ pace
       */
-    protected inline def output(_nu: "ν")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_nu: "ν")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     /**
       * modulo replication bound output guard w/ code
       */
-    protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ code.void })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ code.void })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     /**
       * modulo replication bound output guard w/ pace w/ code
       */
-    protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ code.semiflatMap(_ => Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ `(ν)`.outputCode('eth)('parallelism)('body)('{ code.flatMap(_ => OptionT.sleep[F](pace)) })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
     /**
       * modulo constant replication output guard
       */
-    protected inline def output(_f: false)(inline parallelism: Int, inline value: `()`[F])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ outputCode('eth)('parallelism, 'value)('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_f: false)(inline parallelism: Int, inline value: `()`[F])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ outputCode('eth)('parallelism, 'value)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo constant replication output guard w/ pace
       */
-    protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`[F])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ outputCode('eth)('parallelism, 'value)('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`[F])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ outputCode('eth)('parallelism, 'value)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo constant replication output guard w/ code
       */
-    protected inline def output(_t: true)(inline parallelism: Int, inline value: `()`[F])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ outputCode('eth)('parallelism, 'value)('body)('{ code.void })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_t: true)(inline parallelism: Int, inline value: `()`[F])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ outputCode('eth)('parallelism, 'value)('body)('{ code.void })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo constant replication output guard w/ pace w/ code
       */
-    protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`[F])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ outputCode('eth)('parallelism, 'value)('body)('{ code.semiflatMap(_ => Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: `()`[F])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ outputCode('eth)('parallelism, 'value)('body)('{ code.flatMap(_ => OptionT.sleep[F](pace)) })('{ summon[Temporal[F]] })('signal) }
 
     //////////////////////////////////////////////////////////////// VARIABLE //
 
     /**
       * modulo variable replication output guard
       */
-    protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline value: => OptionT[F, S])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline value: => OptionT[F, S])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo variable replication output guard w/ pace
       */
-    protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: => OptionT[F, S])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline value: => OptionT[F, S])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo variable replication output guard w/ code
       */
-    protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline value: => OptionT[F, S])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ code.void })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline value: => OptionT[F, S])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ code.void })('{ summon[Temporal[F]] })('signal) }
 
     /**
       * modulo variable replication output guard w/ pace w/ code
       */
-    protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: => OptionT[F, S])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ code.semiflatMap(_ => Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline value: => OptionT[F, S])(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+     ${ `(*)`.outputCode('eth)('parallelism, '{ () => value })('body)('{ code.flatMap(_ => OptionT.sleep[F](pace)) })('{ summon[Temporal[F]] })('signal) }
 
-    // /////////////////////////////////////////////////////////////////// INPUT //
+    /////////////////////////////////////////////////////////////////// INPUT //
 
     /**
       * modulo replication input guard
       */
-    protected inline def input(_f: false)(inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ inputCode('eth)('parallelism)('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def input(_f: false)(inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ inputCode('eth)('parallelism)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     /**
       * modulo replication input guard w/ pace
       */
-    protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ inputCode('eth)('parallelism)('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] }) }
+    protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ inputCode('eth)('parallelism)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('signal) }
 
     /**
       * modulo replication input guard w/ code
       */
-    protected inline def input[T: ClassTag](_t: true)(inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] })('{ classTag[T] }) }
+    protected inline def input[T: ClassTag](_t: true)(inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('{ classTag[T] })('signal) }
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    protected inline def input[T: ClassTag](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }, '{ summon[Defer[F]] }, '{ summon[Temporal[F]] })('{ classTag[T] }) }
+    protected inline def input[T: ClassTag](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('{ classTag[T] })('signal) }
 
     ////////////////////////////////////////////////////// modulo replication //
 
   }
 
 
-  trait τMacros[F[_]: Concurrent: Temporal]:
+  trait τMacros[F[_]: Temporal]:
 
     import Macros.τ.*
 
@@ -170,25 +169,25 @@ package Π:
       * modulo replication guard
       */
     protected inline def silent(_f: false)(inline parallelism: Int)(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ silentCode('parallelism)('body)('{ OptionT.liftF(Concurrent[F].unit) })('{ summon[Concurrent[F]] }) }
+      ${ silentCode('parallelism)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] }) }
 
     /**
       * modulo replication guard w/ pace
       */
-    protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ silentCode('parallelism)('body)('{ OptionT.liftF(Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }) }
+    protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int)(inline body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ silentCode('parallelism)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] }) }
 
     /**
       * modulo replication guard w/ code
       */
     protected inline def silent(_t: true)(inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ silentCode('parallelism)('body)('{ code.void })('{ summon[Concurrent[F]] }) }
+      ${ silentCode('parallelism)('body)('{ code.void })('{ summon[Temporal[F]] }) }
 
     /**
       * modulo replication guard w/ pace w/ code
       */
-    protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit]): OptionT[F, Unit] =
-      ${ silentCode('parallelism)('body)('{ code.semiflatMap(_ => Temporal[F].sleep(pace)) })('{ summon[Concurrent[F]] }) }
+    protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: OptionT[F, Any])(inline body: OptionT[F, Unit])(using Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+      ${ silentCode('parallelism)('body)('{ code.flatMap(_ => OptionT.sleep[F](pace)) })('{ summon[Temporal[F]] }) }
 
 
   object Macros:
@@ -197,9 +196,9 @@ package Π:
 
       def silentCode[F[_]](parallelism: Expr[Int])(body: Expr[OptionT[F, Unit]])
                           (sleep: Expr[OptionT[F, Unit]])
-                          (concurrentF: Expr[Concurrent[F]])
+                          (temporalF: Expr[Temporal[F]])
                           (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
-       '{ given Concurrent[F] = $concurrentF
+       '{ given Temporal[F] = $temporalF
           for
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
             unfold    = {
@@ -210,7 +209,7 @@ package Π:
                     lazy val loop: OptionT[F, Unit] =
                       for
                         _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                         _ <- $sleep.flatTapNone(nextS.release)
                         _ <- OptionT.liftF(nextS.release)
                         _ <- $body
@@ -240,11 +239,12 @@ package Π:
       def outputCode[F[_]](eth: Expr[><[F]])
                           (parallelism: Expr[Int])(body: Expr[`()`[F] => OptionT[F, Unit]])
                           (sleep: Expr[OptionT[F, Unit]])
-                          (concurrentF: Expr[Concurrent[F]], deferF: Expr[Defer[F]], temporalF: Expr[Temporal[F]])
+                          (temporalF: Expr[Temporal[F]], deferF: Expr[Defer[F]])
+                          (signal: Expr[Deferred[[X] =>> OptionT[F, X], Unit]])
                           (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
-       '{ given Concurrent[F] = $concurrentF
+       '{ given Temporal[F] = $temporalF
           given Defer[F] = $deferF
-          given Temporal[F] = $temporalF
+          given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
           for
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
             unfold    = {
@@ -255,7 +255,7 @@ package Π:
                     lazy val loop: OptionT[F, Unit] =
                       for
                         _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                         n <- ν[F]()
                         s <- OptionT.liftF($eth.stop.get)
                         _ <- OptionT.unless(s)(><[F](n.name)($eth)).flatten.flatTapNone(nextS.release)
@@ -285,11 +285,11 @@ package Π:
     def outputCode[F[_]](eth: Expr[><[F]])
                         (parallelism: Expr[Int], value: Expr[`()`[F]])(body: Expr[OptionT[F, Unit]])
                         (sleep: Expr[OptionT[F, Unit]])
-                        (concurrentF: Expr[Concurrent[F]], deferF: Expr[Defer[F]], temporalF: Expr[Temporal[F]])
+                        (temporalF: Expr[Temporal[F]])
+                        (signal: Expr[Deferred[[X] =>> OptionT[F, X], Unit]])
                         (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
-     '{ given Concurrent[F] = $concurrentF
-        given Defer[F] = $deferF
-        given Temporal[F] = $temporalF
+     '{ given Temporal[F] = $temporalF
+        given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
           moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
           unfold    = {
@@ -300,7 +300,7 @@ package Π:
                   lazy val loop: OptionT[F, Unit] =
                     for
                       _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       _ <- OptionT.unless(s)(><[F]($value.name)($eth)).flatten.flatTapNone(nextS.release)
                       _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
@@ -332,11 +332,11 @@ package Π:
       def outputCode[F[_], S](eth: Expr[><[F]])
                              (parallelism: Expr[Int], value: Expr[() => OptionT[F, S]])(body: Expr[OptionT[F, Unit]])
                              (sleep: Expr[OptionT[F, Unit]])
-                             (concurrentF: Expr[Concurrent[F]], deferF: Expr[Defer[F]], temporalF: Expr[Temporal[F]])
+                             (temporalF: Expr[Temporal[F]])
+                             (signal: Expr[Deferred[[X] =>> OptionT[F, X], Unit]])
                              (using Quotes, Type[F], Type[S]): Expr[OptionT[F, Unit]] =
-       '{ given Concurrent[F] = $concurrentF
-          given Defer[F] = $deferF
-          given Temporal[F] = $temporalF
+       '{ given Temporal[F] = $temporalF
+          given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
           for
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
             unfold    = {
@@ -347,7 +347,7 @@ package Π:
                     lazy val loop: OptionT[F, Unit] =
                       for
                         _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                         s <- OptionT.liftF($eth.stop.get)
                         _ <- OptionT.unless(s)($value().flatMap(><(_)($eth))).flatten.flatTapNone(nextS.release)
                         _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
@@ -376,11 +376,12 @@ package Π:
     def inputCode[F[_]](eth: Expr[><[F]])
                        (parallelism: Expr[Int])(body: Expr[`()`[F] => OptionT[F, Unit]])
                        (sleep: Expr[OptionT[F, Unit]])
-                       (concurrentF: Expr[Concurrent[F]], deferF: Expr[Defer[F]], temporalF: Expr[Temporal[F]])
+                       (temporalF: Expr[Temporal[F]], deferF: Expr[Defer[F]])
+                       (signal: Expr[Deferred[[X] =>> OptionT[F, X], Unit]])
                        (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
-     '{ given Concurrent[F] = $concurrentF
+     '{ given Temporal[F] = $temporalF
         given Defer[F] = $deferF
-        given Temporal[F] = $temporalF
+        given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
           moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
           unfold    = {
@@ -391,7 +392,7 @@ package Π:
                   lazy val loop: OptionT[F, Unit] =
                     for
                       _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       n <- OptionT.unless(s)(><()($eth)).flatten.flatTapNone(nextS.release)
                       _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)
@@ -412,7 +413,7 @@ package Π:
           _        <- unfold($parallelism, None)
         yield
           ()
-      }
+     }
 
     /**
       * modulo replication input guard w/ code
@@ -420,13 +421,14 @@ package Π:
     def inputCode[F[_], T](eth: Expr[><[F]])
                           (parallelism: Expr[Int])(code: Expr[T => OptionT[F, Any]])(body: Expr[`()`[F] => OptionT[F, Unit]])
                           (sleep: Expr[OptionT[F, Unit]])
-                          (concurrentF: Expr[Concurrent[F]], deferF: Expr[Defer[F]], temporalF: Expr[Temporal[F]])
+                          (temporalF: Expr[Temporal[F]], deferF: Expr[Defer[F]])
                           (classTagT: Expr[ClassTag[T]])
+                          (signal: Expr[Deferred[[X] =>> OptionT[F, X], Unit]])
                           (using Quotes, Type[F], Type[T]): Expr[OptionT[F, Unit]] =
-     '{ given Concurrent[F] = $concurrentF
+     '{ given Temporal[F] = $temporalF
         given Defer[F] = $deferF
-        given Temporal[F] = $temporalF
         given ClassTag[T] = $classTagT
+        given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
           moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
           unfold    = {
@@ -437,7 +439,7 @@ package Π:
                   lazy val loop: OptionT[F, Unit] =
                     for
                       _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Concurrent[F].unit)(_.acquire))
+                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
                       s <- OptionT.liftF($eth.stop.get)
                       n <- OptionT.unless(s)(><()($eth)($code)).flatten.flatTapNone(nextS.release)
                       _ <- $sleep.flatTapNone($eth.stop.set(true) >> nextS.release)

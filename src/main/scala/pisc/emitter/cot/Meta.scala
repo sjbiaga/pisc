@@ -62,6 +62,31 @@ object Meta extends emitter.shared.tagless.Meta:
       case Array(it) => Type.Name(it)
       case Array(hd, tl*) => Type.Select(tl.reverse.map(\(_)).foldLeft(\("_root_"): Term)(Term.Select(_, _)).asInstanceOf[Term.Select], Type.Name(hd))
 
+  private val `Deferred[[X] =>> OptionT[F, X], Unit]` =
+    Type.Apply(
+      Type.Name("Deferred"),
+      Type.ArgClause(List(
+        Type.Lambda(
+          Type.ParamClause(List(
+            Type.Param(
+              Nil,
+              Type.Name("X"),
+              Type.ParamClause(Nil),
+              Type.Bounds(None, None, Nil, Nil)
+            )
+          )),
+          Type.Apply(
+            Type.Name("OptionT"),
+            Type.ArgClause(List(
+              Type.Name("F"),
+              Type.Name("X")
+            ))
+          )
+        ),
+        Type.Name("Unit")
+      ))
+    )
+
   def `String*`(* : String)(using tcs: Set[String]) =
     Member.ParamClauseGroup(
       Type.ParamClause(Type.Param(Nil,
@@ -70,7 +95,9 @@ object Meta extends emitter.shared.tagless.Meta:
                                                               Type.Bounds(None, None, Nil, Nil)) :: Nil),
                                   Type.Bounds(None, None, tcs.map(tc).toList, Nil)) :: Nil),
       Term.ParamClause(Term.Param(Nil, *, Some(Type.Repeated(\\("String"))), None) :: Nil,
-                       None) :: Nil
+                       None) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(`Deferred[[X] =>> OptionT[F, X], Unit]`), None) :: Nil
+                      ,Some(Mod.Using())) :: Nil
     ) :: Nil
 
   def `(…)`(* : String*)(using tcs: Set[String]) =
@@ -83,7 +110,9 @@ object Meta extends emitter.shared.tagless.Meta:
       Term.ParamClause(*
                         .map(Term.Param(Nil, _, Some(Type.Apply(\\("()"), Type.ArgClause(\\("F") :: Nil))), None))
                         .toList,
-                       None) :: Nil
+                       None) ::
+      Term.ParamClause(Term.Param(Mod.Using() :: Nil, Name.Anonymous(), Some(`Deferred[[X] =>> OptionT[F, X], Unit]`), None) :: Nil
+                      ,Some(Mod.Using())) :: Nil
     ) :: Nil
 
   def `_ <- *.flatTapNone(….release)`(* : Term, `…`: String) =

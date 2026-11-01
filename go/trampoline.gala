@@ -110,6 +110,17 @@ func (self Go_TrampolinePi[T]) Get() Either[Go_TrampolinePi[T], Option[T]] {
         case Go_DonePi(value) => Right(value)
         case Go_CallPi(thunk) => Left(thunk())
 
+        case Go_FlatMapPi(Go_DonePi(Some(it)), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
+        case Go_FlatMapPi(Go_DonePi(_), _) => Right(None()) // fail-fast
+        case Go_FlatMapPi(Go_CallPi(thunk), k) => Left(Go_FlatMapPi(thunk(), k))
+        case Go_FlatMapPi(Go_FlatMapPi(this, f), g) => Left(this.FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1, g)))
+
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(Some(it)), _), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(_), n), _) => { n(); Right(None()) } // fail-fast
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_CallPi(thunk), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(thunk(), n), k))
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatMapPi(this, f), n), g) => Left(this.FlatTapNone(n).FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1.FlatTapNone(n), g)))
+        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatTapNonePi(this, m), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(this, () => { m(); n() }), k))
+
         case Go_FlatTapNonePi(Go_DonePi(None()), n) => { n(); Right(None()) } // fail-fast
         case Go_FlatTapNonePi(Go_DonePi(it), _) => Right(it)
         case Go_FlatTapNonePi(Go_CallPi(thunk), n) => Left(Go_FlatTapNonePi(thunk(), n))
@@ -121,17 +132,6 @@ func (self Go_TrampolinePi[T]) Get() Either[Go_TrampolinePi[T], Option[T]] {
         case Go_FlatTapNonePi(Go_FlatMapPi(Go_FlatTapNonePi(this, m), k), n) => Left(Go_FlatMapPi(this.FlatTapNone(() => { m(); n() }), (x) => k(x).FlatTapNone(n)))
 
         case Go_FlatTapNonePi(Go_FlatTapNonePi(this, m), n) => Left(Go_FlatTapNonePi(this, () => { m(); n() }))
-
-        case Go_FlatMapPi(Go_DonePi(Some(it)), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
-        case Go_FlatMapPi(Go_DonePi(_), _) => Right(None()) // fail-fast
-        case Go_FlatMapPi(Go_CallPi(thunk), k) => Left(Go_FlatMapPi(thunk(), k))
-        case Go_FlatMapPi(Go_FlatMapPi(this, f), g) => Left(this.FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1, g)))
-
-        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(Some(it)), _), k) => Left(As[Go_TrampolinePi[T]](k(it)).V1)
-        case Go_FlatMapPi(Go_FlatTapNonePi(Go_DonePi(_), n), _) => { n(); Right(None()) } // fail-fast
-        case Go_FlatMapPi(Go_FlatTapNonePi(Go_CallPi(thunk), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(thunk(), n), k))
-        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatMapPi(this, f), n), g) => Left(this.FlatTapNone(n).FlatMap[T]((x) => Go_FlatMapPi(As[Go_TrampolinePi[T]](f(x)).V1.FlatTapNone(n), g)))
-        case Go_FlatMapPi(Go_FlatTapNonePi(Go_FlatTapNonePi(this, m), n), k) => Left(Go_FlatMapPi(Go_FlatTapNonePi(this, () => { m(); n() }), k))
     }
 }
 
