@@ -141,13 +141,13 @@ package Π:
     /**
       * modulo replication input guard w/ code
       */
-    protected inline def input[T](_t: true)(inline parallelism: Int)(code: T => IO[T])(inline body: `()` => IO[Any]): IO[Unit] =
+    protected inline def input[T](_t: true)(inline parallelism: Int)(inline code: T => IO[T])(inline body: `()` => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.unit }) }
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: T => IO[T])(inline body: `()` => IO[Any]): IO[Unit] =
+    protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: T => IO[T])(inline body: `()` => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.sleep(pace) }) }
 
     ////////////////////////////////////////////////////// modulo replication //

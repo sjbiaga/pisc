@@ -140,13 +140,13 @@ package Π:
     /**
       * modulo replication input guard w/ code
       */
-    protected inline def input[T](_t: true)(inline parallelism: Int)(code: T => Task[T])(inline body: `()` => UIO[Any]): UIO[Unit] =
+    protected inline def input[T](_t: true)(inline parallelism: Int)(inline code: T => Task[T])(inline body: `()` => UIO[Any]): UIO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ ZIO.unit }) }
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    protected inline def input[T](_t: true)(inline pace: Duration, inline parallelism: Int)(code: T => Task[T])(inline body: `()` => UIO[Any]): UIO[Unit] =
+    protected inline def input[T](_t: true)(inline pace: Duration, inline parallelism: Int)(inline code: T => Task[T])(inline body: `()` => UIO[Any]): UIO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ ZIO.sleep(pace) }) }
 
     ////////////////////////////////////////////////////// modulo replication //

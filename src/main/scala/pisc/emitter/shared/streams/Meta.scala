@@ -31,10 +31,5 @@ package emitter
 package shared
 package streams
 
-import scala.annotation.tailrec
-
-import scala.meta.*
-import dialects.Scala3
-
 
 abstract trait Meta extends shared.tagless.Meta

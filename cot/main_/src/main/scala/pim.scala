@@ -147,13 +147,13 @@ package Π:
     /**
       * modulo replication input guard w/ code
       */
-    protected inline def input[T: ClassTag](_t: true)(inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+    protected inline def input[T: ClassTag](_t: true)(inline parallelism: Int)(inline code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.unit[F] })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('{ classTag[T] })('signal) }
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    protected inline def input[T: ClassTag](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
+    protected inline def input[T: ClassTag](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: T => OptionT[F, Any])(inline body: `()`[F] => OptionT[F, Unit])(using inline signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =
       ${ inputCode('eth)('parallelism)('code)('body)('{ OptionT.sleep[F](pace) })('{ summon[Temporal[F]] }, '{ summon[Defer[F]] })('{ classTag[T] })('signal) }
 
     ////////////////////////////////////////////////////// modulo replication //
