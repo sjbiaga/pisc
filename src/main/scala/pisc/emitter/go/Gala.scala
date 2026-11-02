@@ -180,7 +180,7 @@ enum Gala:
         names.map(s"${indent}bind " + _ + " = " + "Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))").toList
 
       case pace(amount, paceunit) =>
-        indent + "bind _ = Go_PacePi(" + amount + ", time." + paceunit + ")"
+        indent + "bind _ = Go_PacePi(go_context, " + amount + ", time." + paceunit + ")"
 
       case par(ops) =>
         val sem = id

@@ -31,12 +31,12 @@
 package main
 
 import (
-      "context"
-      "golang.org/x/sync/semaphore"
-    . "martianoff/gala/std"
-    . "martianoff/gala/collection_immutable"
-      "math/big"
-      "os"
-      "time"
-    . "main/ppi"
+    "context"
+    "golang.org/x/sync/semaphore"
+  . "martianoff/gala/std"
+  . "martianoff/gala/collection_immutable"
+    "math/big"
+    "os"
+    "time"
+  . "main/ppi"
 )

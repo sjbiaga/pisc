@@ -24,6 +24,19 @@
 
 @def sleep(d: FiniteDuration) = IO.sleep(d)
 
+                                                               ⟦ INCLUDE = cot ⟧
+
+@import cats.effect.std.Console
+
+@given Conversion[`()`[F], Long] = _.`()`[Long]
+@given Conversion[`()`[F], String] = _.`()`[String]
+
+@def println[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].println(a))
+
+@def sleep[F[_]: Async](d: FiniteDuration)(using Deferred[[X] =>> OptionT[F, X], Unit]) = OptionT.sleep(d)
+
+                                      ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
+
                                                           ⟦ INCLUDE = (zio,zs) ⟧
 
 @def println(a: Any) = ZIO.debug(a)
@@ -36,21 +49,17 @@
 
 ⟦ EXCLUDE = YES ⟧
 
-⟦ REPLICATION = (LINEAR,NO) ⟧
-
 Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ################################################################# Semaphore ✔ ##
 
 ⟦ EXCLUDE = NO ⟧
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
-
-Sem(s) = ! 2* .s(r). r(r). τ/*_ <- println('r)*/.
+Sem(s) = ¡ 2* .s(r). r(r). τ/*_ <- println('r)*/.
 
 ##################################################################### Clients ##
 
-⟦ REPLICATION = (LINEAR,YES) ⟧
+⟦ REPLICATION = (MODULO,YES) ⟧
 
 ####################################################################### Macro ##
 
@@ -78,4 +87,6 @@ P(s) = ⟦ "P" ^ /*100L*/ ⟧
 Q(s) = ⟦ "Q" ^ /*200L*/ ⟧
 R(s) = ⟦ "R" ^ /*300L*/ ⟧
 
-Main = ν(s) ( Sem(s) | P(s) | Q(s) | R(s) )
+⟦ SCALING = true ⟧
+
+Main = ν(s) ( Sem(s) | ( 1 * 2 * P(s) ) | Q(s) | R(s) )

@@ -221,7 +221,7 @@ object Program:
             case _ =>
               params.zipWithIndex.foreach {
                 case (λ(Symbol(`ch`)), i) =>
-                  * :+= `* <- IO.pure(*)`(ch -> paramsʹ(i).asSymbol.name)
+                  * :+= `* <- \\.\\\\(*)`(ch -> paramsʹ(i).asSymbol.name)
                 case _ =>
               }
 
@@ -453,7 +453,7 @@ object Program:
                                                                      `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(args.map(\(_)).toList))))
                                               }
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val sem = if parallelism < 0 then null else id
 
@@ -485,7 +485,7 @@ object Program:
 
           val `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(params.map(_.asSymbol.name).map(\(_)).toList)))
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` = params.zipWithIndex.flatMap {
             case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
@@ -537,7 +537,7 @@ object Program:
                                                                    `_ <- *`(υidυ))
                                             }
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val sem = if parallelism < 0 then null else id
 
@@ -562,7 +562,7 @@ object Program:
 
           val `!.⋯` = `_ <- *`(υidυ) :: Nil
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 
           val sem = if parallelism < 0 then null else id
 

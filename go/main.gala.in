@@ -1,10 +1,7 @@
 // -*- indent-tabs-mode: nil; -*-
 
-func Go_PacePi(amount int64, paceunit time.Duration) Go_TrampolinePi[Go_NamePi] {
-    Go_CallPi(() => {
-        time.Sleep(time.Duration(amount) * paceunit)
-        Go_returnPi
-    })
+func Go_PacePi(ctx context.Context, amount int64, paceunit time.Duration) Go_TrampolinePi[Go_NamePi] {
+    Go_voidPi(FromError(Go_SleepPi(ctx, time.Duration(amount) * paceunit)).ToOption())
 }
 
 func PrintNoLn(message ...any) Go_TrampolinePi[Go_NamePi] {

@@ -4,7 +4,7 @@ function ppi() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -22,6 +22,12 @@ function ppi() {
     case "$emit" in
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/ppim.scala
+            ;;
+        cot)
+            local deps='--dep org.typelevel::cats-effect:3.7.1
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/ppim.scala
             ;;
@@ -72,7 +78,7 @@ function ppi() {
         scala)
             set ${srcs#?} ../${emit}/ppi.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.0 \
+                          -q -O -nowarn -S 3.10.1-RC2 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -92,7 +98,7 @@ function ppi_() {
     [ $# -gt 0 ] || return
     local srcs args emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -110,6 +116,12 @@ function ppi_() {
     case "$emit" in
         ce)
             local deps='--dep org.typelevel::cats-effect:3.7.1
+                        -Dcats.effect.warnOnNonMainThreadDetected=false'
+            local srcs=\ ../${emit}/ppim_.scala
+            ;;
+        cot)
+            local deps='--dep org.typelevel::cats-effect:3.7.1
+                        --dep dev.zio::zio-interop-cats:23.1.0.14
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/ppim_.scala
             ;;
@@ -160,7 +172,7 @@ function ppi_() {
         scala)
             set ${srcs#?} ../${emit}/ppi_.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.0 \
+                          -q -O -nowarn -S 3.10.1-RC2 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -180,7 +192,7 @@ function ppio() {
     [ $# -gt 0 ] || return
     local emit=ce type=scala
     case "$1" in
-        -ce|-zio|-akka|-pekko|-fs2|-monix|-zs)
+        -ce|-cot|-zio|-akka|-pekko|-fs2|-monix|-zs)
             local emit="${1#?}"
             shift
             ;;
@@ -196,7 +208,7 @@ function ppio() {
             ;;
     esac
     case "$emit" in
-        fs2|monix)
+        cot|fs2|monix)
             local F=`grep 'type.F.=.' in/"$1".scala.in`
             local F=${F##*.}.
             ;;
@@ -231,6 +243,7 @@ function ppio() {
                 cd ppi
                 ln -s ../../../${emit}/ppi.${type}
                 ln -s ../../../${emit}/ppim.${type}
+                cp ../../../${emit}/sleep.go .
                 ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..
@@ -245,6 +258,7 @@ function ppio() {
                 cd ppi
                 ln -s ../../../${emit}/ppi_.${type}
                 ln -s ../../../${emit}/ppim_.${type}
+                cp ../../../${emit}/sleep.go .
                 ln -s ../../../${emit}/trampoline.${type}
                 ln -s ../../../${emit}/util.${type}
                 cd ..

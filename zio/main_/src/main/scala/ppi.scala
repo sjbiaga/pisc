@@ -173,7 +173,7 @@ package object Π:
       then
         apply("-")(false)(parallelism, value.map(_.asInstanceOf[`()`])*)(body)
       else
-        apply("*")(false)(parallelism, value.map(ZIO.attempt(_))*)(body)
+        ZIO.suspendSucceed(apply("*")(false)(parallelism, value.map(ZIO.succeed(_))*)(body))
 
     /**
       * modulo variable replication output guard w/ pace
@@ -183,7 +183,7 @@ package object Π:
       then
         apply("-")(false)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(body)
       else
-        apply("*")(false)(pace, parallelism, value.map(ZIO.attempt(_))*)(body)
+        ZIO.suspendSucceed(apply("*")(false)(pace, parallelism, value.map(ZIO.succeed(_))*)(body))
 
     /**
       * modulo variable replication output guard w/ code
@@ -193,7 +193,7 @@ package object Π:
       then
         apply("-")(true)(parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
       else
-        apply("*")(true)(parallelism, value.map(ZIO.attempt(_))*)(code)(body)
+        ZIO.suspendSucceed(apply("*")(true)(parallelism, value.map(ZIO.succeed(_))*)(code)(body))
 
     /**
       * modulo variable replication output guard w/ pace w/ code
@@ -203,7 +203,7 @@ package object Π:
       then
         apply("-")(true)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
       else
-        apply("*")(true)(pace, parallelism, value.map(ZIO.attempt(_))*)(code)(body)
+        ZIO.suspendSucceed(apply("*")(true)(pace, parallelism, value.map(ZIO.succeed(_))*)(code)(body))
 
     /**
       * modulo variable replication output guard
@@ -281,7 +281,7 @@ package object Π:
       then
         apply(value.map(_.asInstanceOf[`()`])*)
       else
-        apply(false)(value.map(ZIO.attempt)*)
+        ZIO.suspendSucceed(apply(false)(value.map(ZIO.attempt)*))
 
     /**
       * variable negative prefix i.e. variable output
@@ -291,7 +291,7 @@ package object Π:
       then
         apply(value.map(_.asInstanceOf[`()`])*)(code)
       else
-        apply(true)(value.map(ZIO.attempt)*)(code)
+        ZIO.suspendSucceed(apply(true)(value.map(ZIO.attempt)*)(code))
 
     /**
       * variable negative prefix i.e. variable output

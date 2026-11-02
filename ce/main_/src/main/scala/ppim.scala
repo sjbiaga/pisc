@@ -70,7 +70,7 @@ package Π:
       * modulo replication bound output guard w/ pace w/ code
       */
     protected inline def output(_nu: "ν")(_t: true)(inline arity: Int)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: IO[Any])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
-      ${ `(ν)`.outputCode('arity)('ref)('parallelism)('{ exec(code) >> body(_) })('{ exec(code) >> IO.sleep(pace) }) }
+      ${ `(ν)`.outputCode('arity)('ref)('parallelism)('body)('{ exec(code) >> IO.sleep(pace) }) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
@@ -141,13 +141,13 @@ package Π:
     /**
       * modulo replication input guard w/ code
       */
-    protected inline def input[T](_t: true)(inline parallelism: Int)(code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
+    protected inline def input[T](_t: true)(inline parallelism: Int)(inline code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.unit }) }
 
     /**
       * modulo replication input guard w/ pace w/ code
       */
-    protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
+    protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int)(inline code: Seq[T] => IO[Seq[T]])(inline body: Seq[`()`] => IO[Any]): IO[Unit] =
       ${ inputCode('ref)('parallelism)('code)('body)('{ IO.sleep(pace) }) }
 
     ////////////////////////////////////////////////////// modulo replication //

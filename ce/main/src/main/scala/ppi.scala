@@ -179,7 +179,7 @@ package object Π:
       then
         apply("-")(false)(parallelism, value.map(_.asInstanceOf[`()`])*)(body)
       else
-        apply("*")(false)(parallelism, value.map(IO.delay)*)(body)
+        IO.defer(apply("*")(false)(parallelism, value.map(IO.pure)*)(body))
 
     /**
       * modulo variable replication output guard w/ pace
@@ -189,7 +189,7 @@ package object Π:
       then
         apply("-")(false)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(body)
       else
-        apply("*")(false)(pace, parallelism, value.map(IO.delay)*)(body)
+        IO.defer(apply("*")(false)(pace, parallelism, value.map(IO.pure)*)(body))
 
     /**
       * modulo variable replication output guard w/ code
@@ -199,7 +199,7 @@ package object Π:
       then
         apply("-")(true)(parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
       else
-        apply("*")(true)(parallelism, value.map(IO.delay)*)(code)(body)
+        IO.defer(apply("*")(true)(parallelism, value.map(IO.pure)*)(code)(body))
 
     /**
       * modulo variable replication output guard w/ pace w/ code
@@ -209,7 +209,7 @@ package object Π:
       then
         apply("-")(true)(pace, parallelism, value.map(_.asInstanceOf[`()`])*)(code)(body)
       else
-        apply("*")(true)(pace, parallelism, value.map(IO.delay)*)(code)(body)
+        IO.defer(apply("*")(true)(pace, parallelism, value.map(IO.pure)*)(code)(body))
 
     /**
       * modulo variable replication output guard
@@ -287,7 +287,7 @@ package object Π:
       then
         apply(value.map(_.asInstanceOf[`()`])*)
       else
-        apply(false)(value.map(IO.delay)*)
+        IO.defer(apply(false)(value.map(IO.pure)*))
 
     /**
       * variable negative prefix i.e. variable output
@@ -297,7 +297,7 @@ package object Π:
       then
         apply(value.map(_.asInstanceOf[`()`])*)(code)
       else
-        apply(true)(value.map(IO.delay)*)(code)
+        IO.defer(apply(true)(value.map(IO.pure)*)(code))
 
     /**
       * variable negative prefix i.e. variable output

@@ -4,7 +4,7 @@
 
 # https://github.com/alexj136/nodes/blob/master/examples/lists
 
-                                                               ⟦ INCLUDE = fs2 ⟧
+                                                         ⟦ INCLUDE = (cot,fs2) ⟧
 
 @import cats.effect.std.Console
 
@@ -22,9 +22,9 @@
 
                                                                  ⟦ EXCLUDE = 0 ⟧(nothing){lists}
 
-⟦ REPLICATION = (LINEAR,NO) ⟧
+⟦ REPLICATION = (MODULO,NO) ⟧
 
-                                                          ⟦ INCLUDE = (ce,zio) ⟧
+                                                      ⟦ INCLUDE = (ce,cot,zio) ⟧
 
 Main = ν(sumlist)ν(print)                                    \
      ( Client(sumlist, print, /*args.map(_.toInt).toList*/)  \
