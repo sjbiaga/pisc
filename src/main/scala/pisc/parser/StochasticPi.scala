@@ -92,12 +92,12 @@ abstract class StochasticPi extends Expression:
         throw PrefixChannelsParsingException(params.filterNot(_._1.isSymbol).map(_._1)*)
       case (ch, _) ~ _ ~ params ~ _
           if {
-            val paramsʹ = params.filterNot { case (λ(Symbol("")), _) => true case _ => false }
+            val paramsʹ = params.filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
             paramsʹ.size > paramsʹ.distinctBy { case (λ(Symbol(it)), _) => it }.size
           } =>
         throw PrefixChannelsParsingExceptionʹ(ch.asSymbol,
                                               params
-                                                .filterNot { case (λ(Symbol("")), _) => true case _ => false }
+                                                .filterNot { case (λ(Symbol(s"_$_")), _) => true case _ => false }
                                                 .map(_._1.asSymbol.name)*)
       case _ ~ _ ~ _ ~ Some(((Left(enums), _), _)) =>
         throw TermParsingException(enums)
@@ -144,13 +144,13 @@ abstract class StochasticPi extends Expression:
     name ~ opt(`type`) ^^ {
       case (λ, free) ~ tpe =>
         (λ.copy()(using tpe), free)
-    }
+    } | "_" ^^ { it => λ(Symbol(it + id)) -> Names() }
 
   def names: Parser[List[(λ, Names)]] =
     rep1sep(name, ",")
 
   def namesʹ: Parser[List[(λ, Names)]] =
-    rep1sep(opt(nameʹ) ^^ { _.getOrElse(λ(Symbol("")) -> Names()) }, ",")
+    rep1sep(nameʹ, ",")
 
   def scale: Parser[Int] =
     opt( ("0+".r | naturalNumber) <~ "*" ) ^^ {
@@ -161,6 +161,8 @@ abstract class StochasticPi extends Expression:
 
   def pace: Parser[(Long, String)] =
     naturalNumber ~ opt( ","~> ident ) ^^ {
+      case amount ~ unit if emitter == Emitter.go =>
+        amount.toLong -> unit.getOrElse(_settings.paceunit).capitalize
       case amount ~ unit =>
         amount.toLong -> unit.getOrElse(_settings.paceunit)
     }
@@ -176,8 +178,6 @@ abstract class StochasticPi extends Expression:
 
   def naturalNumber: Parser[BigInt] =
     """\d+""".r ^^ { BigInt(_) } ^? { case it if it > 0 => it }
-
-  protected val emitter: Emitter
 
   private[parser] var eqtn: List[Bindʹ] = null
   private[parser] var defn: Map[Int, List[Define]] = null
@@ -283,20 +283,22 @@ object StochasticPi:
 
   private val cons_r = """[^/*{\[(<.,"'\p{Alnum}@\p{Space}'",.>)\]}*/]+""".r
 
-  enum Emitter(val featuresLinearReplication: Boolean = false,
+  enum Emitter(val featuresModuloReplication: Boolean = false,
                val hasReplicationInputGuardFlaw: Int => Boolean = { _ => true }):
-    def this(featuresLinearReplication: Boolean) =
-      this(featuresLinearReplication = featuresLinearReplication,
-           hasReplicationInputGuardFlaw = if featuresLinearReplication
+    def this(featuresModuloReplication: Boolean) =
+      this(featuresModuloReplication = featuresModuloReplication,
+           hasReplicationInputGuardFlaw = if featuresModuloReplication
                                           then _ >= -1
                                           else _ != 1)
-    case ce extends Emitter(true)
-    case cef extends Emitter(true)
-    case zio extends Emitter(true)
-    case ziof extends Emitter(true)
+    case ce extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
+    case cef extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
+    case cot extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
+    case zio extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
+    case ziof extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
     case fs2 extends Emitter(true)
     case zs extends Emitter(true)
     case kk extends Emitter(hasReplicationInputGuardFlaw = { _ => false })
+    case go extends Emitter(true, hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Actions = Set[String]
@@ -549,21 +551,7 @@ object StochasticPi:
             val τʹ: τ = it.τ
             it.cc(guard = Some(τʹ.cc()('!' + τʹ.υidυ))).parse
 
-          case it @ `⟦⟧`(Definition(_, _, _, variables, _), _sum, _, pointers) =>
-            val n = pointers.size
-
-            val sum =
-              if variables.size == n
-              then
-                _sum
-              else
-                val names = variables.drop(n)
-                val (pos, free) = (_sum.pos, _sum.free -- names)
-                val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
-                val seq = `.`(_sum, νʹ).setPos(pos).free = free
-                val par = ∥(seq).setPos(pos).free = free
-                `+`(par).setPos(pos).free = free
-
+          case it @ `⟦⟧`(_, sum, _, _) =>
             var (sumʹ, _) = sum.parse
 
             if sumʹ.enabled.isEmpty
@@ -794,6 +782,7 @@ object StochasticPi:
     protected def _init: Unit =
       _settings = Settings(elastic4s = Settings.Elastic4s("http", address),
                            parameters = Settings.Parameters(address, parallelism, threshold, timeout, exit, plugins))
+      if emitter == Emitter.go then _settings.paceunit = _settings.paceunit.capitalize
       Directive("push" -> "1", emitter, _settings)()
       eqtn = List()
       defn = Map()
@@ -888,6 +877,6 @@ object StochasticPi:
 
       Right((`(*)`(null, λ(if _settings.typeclasses.isEmpty then Lit.Null() else Term.Tuple(_settings.typeclasses.map(Term.Name(_))))), false, ∅()): Bindʹ) ::
       Right((`(*)`(null, λ(_settings.elastic4s)), false, ∅()): Bindʹ) ::
-      Right((`(*)`(null, λ(_settings.parameters.reify)), false, ∅()): Bindʹ) ::
+      Right((`(*)`(null, λ(_settings.parameters.reify(emitter))), false, ∅()): Bindʹ) ::
       Right((`(*)`(null, λ(_settings.traces.fold(Lit.Null())(_.reify))), false, ∅()): Bindʹ) ::
       prog

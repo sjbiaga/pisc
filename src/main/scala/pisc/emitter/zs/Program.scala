@@ -144,7 +144,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Apply(Term.Select(ch, "(ν)"), Term.ArgClause(rate(r.get) :: pace(Nil))),
                                                         Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                                              Term.ArgClause(expr :: Nil)))
@@ -167,7 +167,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Apply(Term.Select(ch, "(*)"), n),
                                                             Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
@@ -187,7 +187,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                                       Term.ArgClause(expr :: Nil)))
@@ -270,7 +270,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `* <- *`(par -> Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(ν)"), Term.ArgClause(rate(r.get) :: pace(Nil))),
                                                         Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                                              Term.ArgClause(expr :: Nil)))
@@ -316,7 +316,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(*)"), n),
                                                             Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
@@ -338,7 +338,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(Term.Apply(Term.Apply(Term.Select(ch, "(!)"), Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
                                       Term.ArgClause(expr :: Nil)))
@@ -371,13 +371,13 @@ object Program:
 
           * = * ::: sum.emit()
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ(Symbol(par)), Some("ν"), r, code)), sum) if parallelism < -1 =>
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `* <- +`(par, -parallelism,
                            Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(ν)"), Term.ArgClause(rate(r.get) :: pace(Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),
@@ -429,7 +429,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- +`(-parallelism,
                            Term.Apply(Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n),
                                                             Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
@@ -455,7 +455,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- +`(-parallelism,
                            Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), Term.ArgClause(rate(r.get) :: pace(arg.toTerm :: Nil))),
                                                  Term.ArgClause(Lit.String(it.υidυ) :: Nil)),

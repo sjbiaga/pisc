@@ -1,0 +1,606 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+    "github.com/marusama/cyclicbarrier"
+  . "martianoff/gala/concurrent"
+)
+
+func Go_SilentPi(
+    parallelism int64,
+    rate Go_RatePi,
+    key string,
+    scope Go_NamePi,
+    body func (Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    sleep func () Go_TrampolinePi[Go_NamePi],
+    go_stochastic Go_StochasticPi
+) Go_TrampolinePi[Go_NamePi] {
+    val ctx = go_stochastic.Go_ctxPi
+    Go_Call_waitablePi(ctx, parallelism, (end) => {
+        val moduloP = NewPromise[Go_NamePi]()
+        val moduloCB = cyclicbarrier.New(int(parallelism))
+
+        val firstS = Go_NewSemaphorePi(1)
+
+        var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+        unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+            val first = remaining == int(parallelism)
+            val last = remaining == 1
+
+            val nextS =
+                if (last) firstS
+                else {
+                    val sem = Go_NewSemaphorePi(1)
+                    sem.TryAcquire1().Run()
+                    sem
+                }
+
+            var continue_at = NewPromise[Go_NamePi]()
+
+            val main = Go_CallPi(() => {
+                bind _ = if (first) exclude(key, go_stochastic) else Go_returnPi
+                bind stop = if (first) Go_donePi(Go_BoolPi(false)) else Go_AwaitPi(moduloP)
+                bind _ = Go_returnPi.Unless(stop.AsBool())
+
+                val promise = NewPromise[Go_NamePi]()
+                if (!first) { promise.Success(go_OptionPi(None())) }
+                val reply = Go_ReplyPi(
+                    promise = promise,
+                    continue_at = &continue_at
+                )
+                val query = Go_QueryPi(
+                   ether = tau_ether,
+                   polarity = None(),
+                   rate = rate,
+                   reply = reply
+                )
+                go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope1.AsString(), key, query))
+                bind opt = Go_AwaitPi(promise)
+                bind _ = Go_DonePi(opt.asOption())
+                            .FlatTapNone(() => if (first) moduloP.Success(Go_BoolPi(true)) else {})
+                            .OrElse(Go_returnPi.Unless(first))
+                Go_CallPi(() => { if (first) moduloP.Success(Go_BoolPi(false)) else {}; Go_returnPi })
+            })
+
+            var loop func (bool) Go_TrampolinePi[Go_NamePi]
+            loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
+                bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
+                bind _ = prevS.Acquire1(ctx)
+                bind _ =
+                    if (!enabled)
+                        go_stochastic.Go_callbackPi(() => {
+                            val hmap = go_stochastic.Go_enabledMapPi
+                            Go_Call_unlockablePi(hmap.mutex, () => {
+                                hmap.hmap.Get(scope1.AsString() + key) match {
+                                    case Some(Go_ActionPi(_, q)) =>
+                                        *hmap.hmap = hmap.hmap.Put(scope1.AsString() + key, Go_ActionPi(true, q))
+                                    case it => Panic(it)
+                                }
+                                Go_returnPi
+                            })
+                        })
+                    else
+                        Go_returnPi
+                bind opt = Go_AwaitPi(continue_at)
+                bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                continue_at = NewPromise[Go_NamePi]()
+                val ptr = opt.asPointer()
+                val barrier = ptr.barrier
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind _ = sleep()
+                bind _ = nextS.Release1()
+                bind _ = body(scope2)
+                loop(false)
+            }
+
+            val start = Go_CallPi(() => {
+                bind _ = main
+                loop(first)
+            })
+
+            if (last) {
+                Go_Call_ReleasablePi(end, start)
+            } else {
+                bind _ = Go_Spawn_ReleasablePi(end, start)
+                bind scope3 = Go_UUIDPi()
+                unfold(remaining - 1, nextS, scope2, scope3)
+            }
+        }
+
+        if (parallelism == 1)
+            unfold(int(parallelism), firstS, scope, scope)
+        else {
+            bind scope2 = Go_UUIDPi()
+            unfold(int(parallelism), firstS, scope, scope2)
+        }
+    })
+}
+
+func (self Go_NamePi) Go_BoundOutputPi(
+    parallelism int64,
+    rate Go_RatePi,
+    key string,
+    scope Go_NamePi,
+    body func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    sleep func () Go_TrampolinePi[Go_NamePi],
+    go_stochastic Go_StochasticPi
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() =>
+        self match {
+            case Go_EtherPi(ether) => {
+                val ctx = go_stochastic.Go_ctxPi
+                Go_Call_waitablePi(ctx, parallelism, (end) => {
+                    val moduloP = NewPromise[Go_NamePi]()
+                    val moduloCB = cyclicbarrier.New(int(parallelism))
+
+                    val firstS = Go_NewSemaphorePi(1)
+
+                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                        val first = remaining == int(parallelism)
+                        val last = remaining == 1
+
+                        val nextS =
+                            if (last) firstS
+                            else {
+                                val sem = Go_NewSemaphorePi(1)
+                                sem.TryAcquire1().Run()
+                                sem
+                            }
+
+                        var continue_at = NewPromise[Go_NamePi]()
+
+                        val main = Go_CallPi(() => {
+                            bind _ = if (first) exclude(key, go_stochastic) else Go_returnPi
+                            bind stop = if (first) Go_donePi(Go_BoolPi(false)) else Go_AwaitPi(moduloP)
+                            bind _ = Go_returnPi.Unless(stop.AsBool())
+
+                            val promise = NewPromise[Go_NamePi]()
+                            if (!first) { promise.Success(go_OptionPi(None())) }
+                            val reply = Go_ReplyPi(
+                                promise = promise,
+                                continue_at = &continue_at
+                            )
+                            val query = Go_QueryPi(
+                               ether = ether,
+                               polarity = Some(Left(true)),
+                               rate = rate,
+                               reply = reply
+                            )
+                            go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope1.AsString(), key, query))
+                            bind opt = Go_AwaitPi(promise)
+                            bind _ = Go_DonePi(opt.asOption())
+                                        .FlatTapNone(() => if (first) moduloP.Success(Go_BoolPi(true)) else {})
+                                        .OrElse(Go_returnPi.Unless(first))
+                            Go_CallPi(() => { if (first) moduloP.Success(Go_BoolPi(false)) else {}; Go_returnPi })
+                        })
+
+                        var loop func (bool) Go_TrampolinePi[Go_NamePi]
+                        loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
+                            bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
+                            bind _ = prevS.Acquire1(ctx)
+                            bind _ =
+                                if (!enabled)
+                                    go_stochastic.Go_callbackPi(() => {
+                                        val hmap = go_stochastic.Go_enabledMapPi
+                                        Go_Call_unlockablePi(hmap.mutex, () => {
+                                            hmap.hmap.Get(scope1.AsString() + key) match {
+                                                case Some(Go_ActionPi(_, q)) =>
+                                                    *hmap.hmap = hmap.hmap.Put(scope1.AsString() + key, Go_ActionPi(true, q))
+                                                case it => Panic(it)
+                                            }
+                                            Go_returnPi
+                                        })
+                                    })
+                                else
+                                    Go_returnPi
+                            bind opt = Go_AwaitPi(continue_at)
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            continue_at = NewPromise[Go_NamePi]()
+                            val ptr = opt.asPointer()
+                            val input = ptr.input.Get()
+                            bind name = Go_NuPi()
+                            (*input).Success(name)
+                            val barrier = ptr.barrier
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = sleep()
+                            bind _ = nextS.Release1()
+                            bind _ = body(name, scope2)
+                            loop(false)
+                        }
+
+                        val start = Go_CallPi(() => {
+                            bind _ = main
+                            loop(first)
+                        })
+
+                        if (last) {
+                            Go_Call_ReleasablePi(end, start)
+                        } else {
+                            bind _ = Go_Spawn_ReleasablePi(end, start)
+                            bind scope3 = Go_UUIDPi()
+                            unfold(remaining - 1, nextS, scope2, scope3)
+                        }
+                    }
+
+                    if (parallelism == 1)
+                        unfold(int(parallelism), firstS, scope, scope)
+                    else {
+                        bind scope2 = Go_UUIDPi()
+                        unfold(int(parallelism), firstS, scope, scope2)
+                    }
+                })
+            }
+            case it => Panic(it)
+        }
+    )
+}
+
+func (self Go_NamePi) Go_OutputPi(
+    parallelism int64,
+    rate Go_RatePi,
+    key string,
+    scope Go_NamePi,
+    body func (Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    sleep func () Go_TrampolinePi[Go_NamePi],
+    value func () Go_TrampolinePi[Go_NamePi],
+    go_stochastic Go_StochasticPi
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() =>
+        self match {
+            case Go_EtherPi(ether) => {
+                val ctx = go_stochastic.Go_ctxPi
+                Go_Call_waitablePi(ctx, parallelism, (end) => {
+                    val moduloP = NewPromise[Go_NamePi]()
+                    val moduloCB = cyclicbarrier.New(int(parallelism))
+
+                    val firstS = Go_NewSemaphorePi(1)
+
+                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                        val first = remaining == int(parallelism)
+                        val last = remaining == 1
+
+                        val nextS =
+                            if (last) firstS
+                            else {
+                                val sem = Go_NewSemaphorePi(1)
+                                sem.TryAcquire1().Run()
+                                sem
+                            }
+
+                        var continue_at = NewPromise[Go_NamePi]()
+
+                        val main = Go_CallPi(() => {
+                            bind _ = if (first) exclude(key, go_stochastic) else Go_returnPi
+                            bind stop = if (first) Go_donePi(Go_BoolPi(false)) else Go_AwaitPi(moduloP)
+                            bind _ = Go_returnPi.Unless(stop.AsBool())
+
+                            val promise = NewPromise[Go_NamePi]()
+                            if (!first) { promise.Success(go_OptionPi(None())) }
+                            val reply = Go_ReplyPi(
+                                promise = promise,
+                                continue_at = &continue_at
+                            )
+                            val query = Go_QueryPi(
+                               ether = ether,
+                               polarity = Some(Left(true)),
+                               rate = rate,
+                               reply = reply
+                            )
+                            go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope1.AsString(), key, query))
+                            bind opt = Go_AwaitPi(promise)
+                            bind _ = Go_DonePi(opt.asOption())
+                                        .FlatTapNone(() => if (first) moduloP.Success(Go_BoolPi(true)) else {})
+                                        .OrElse(Go_returnPi.Unless(first))
+                            Go_CallPi(() => { if (first) moduloP.Success(Go_BoolPi(false)) else {}; Go_returnPi })
+                        })
+
+                        var loop func (bool) Go_TrampolinePi[Go_NamePi]
+                        loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
+                            bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
+                            bind _ = prevS.Acquire1(ctx)
+                            bind _ =
+                                if (!enabled)
+                                    go_stochastic.Go_callbackPi(() => {
+                                        val hmap = go_stochastic.Go_enabledMapPi
+                                        Go_Call_unlockablePi(hmap.mutex, () => {
+                                            hmap.hmap.Get(scope1.AsString() + key) match {
+                                                case Some(Go_ActionPi(_, q)) =>
+                                                    *hmap.hmap = hmap.hmap.Put(scope1.AsString() + key, Go_ActionPi(true, q))
+                                                case it => Panic(it)
+                                            }
+                                            Go_returnPi
+                                        })
+                                    })
+                                else
+                                    Go_returnPi
+                            bind opt = Go_AwaitPi(continue_at)
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            continue_at = NewPromise[Go_NamePi]()
+                            val ptr = opt.asPointer()
+                            val input = ptr.input.Get()
+                            bind name = value()
+                            (*input).Success(name)
+                            val barrier = ptr.barrier
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = sleep()
+                            bind _ = nextS.Release1()
+                            bind _ = body(scope2)
+                            loop(false)
+                        }
+
+                        val start = Go_CallPi(() => {
+                            bind _ = main
+                            loop(first)
+                        })
+
+                        if (last) {
+                            Go_Call_ReleasablePi(end, start)
+                        } else {
+                            bind _ = Go_Spawn_ReleasablePi(end, start)
+                            bind scope3 = Go_UUIDPi()
+                            unfold(remaining - 1, nextS, scope2, scope3)
+                        }
+                    }
+
+                    if (parallelism == 1)
+                        unfold(int(parallelism), firstS, scope, scope)
+                    else {
+                        bind scope2 = Go_UUIDPi()
+                        unfold(int(parallelism), firstS, scope, scope2)
+                    }
+                })
+            }
+            case it => Panic(it)
+        }
+    )
+}
+
+func (self Go_NamePi) Go_InputPi(
+    parallelism int64,
+    rate Go_RatePi,
+    key string,
+    scope Go_NamePi,
+    body func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    sleep func () Go_TrampolinePi[Go_NamePi],
+    go_stochastic Go_StochasticPi
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() =>
+        self match {
+            case Go_EtherPi(ether) => {
+                val ctx = go_stochastic.Go_ctxPi
+                Go_Call_waitablePi(ctx, parallelism, (end) => {
+                    val moduloP = NewPromise[Go_NamePi]()
+                    val moduloCB = cyclicbarrier.New(int(parallelism))
+
+                    val firstS = Go_NewSemaphorePi(1)
+
+                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                        val first = remaining == int(parallelism)
+                        val last = remaining == 1
+
+                        val nextS =
+                            if (last) firstS
+                            else {
+                                val sem = Go_NewSemaphorePi(1)
+                                sem.TryAcquire1().Run()
+                                sem
+                            }
+
+                        var result = NewPromise[Go_NamePi]()
+                        var continue_at = NewPromise[Go_NamePi]()
+
+                        val main = Go_CallPi(() => {
+                            bind _ = if (first) exclude(key, go_stochastic) else Go_returnPi
+                            bind stop = if (first) Go_donePi(Go_BoolPi(false)) else Go_AwaitPi(moduloP)
+                            bind _ = Go_returnPi.Unless(stop.AsBool())
+
+                            val promise = NewPromise[Go_NamePi]()
+                            if (!first) { promise.Success(go_OptionPi(None())) }
+                            val reply = Go_ReplyPi(
+                                promise = promise,
+                                continue_at = &continue_at
+                            )
+                            val query = Go_QueryPi(
+                               ether = ether,
+                               polarity = Some(Right(&result)),
+                               rate = rate,
+                               reply = reply
+                            )
+                            go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope1.AsString(), key, query))
+                            bind opt = Go_AwaitPi(promise)
+                            bind _ = Go_DonePi(opt.asOption())
+                                        .FlatTapNone(() => if (first) moduloP.Success(Go_BoolPi(true)) else {})
+                                        .OrElse(Go_returnPi.Unless(first))
+                            Go_CallPi(() => { if (first) moduloP.Success(Go_BoolPi(false)) else {}; Go_returnPi })
+                        })
+
+                        var loop func (bool) Go_TrampolinePi[Go_NamePi]
+                        loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
+                            bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
+                            bind _ = prevS.Acquire1(ctx)
+                            bind _ =
+                                if (!enabled)
+                                    go_stochastic.Go_callbackPi(() => {
+                                        val hmap = go_stochastic.Go_enabledMapPi
+                                        Go_Call_unlockablePi(hmap.mutex, () => {
+                                            hmap.hmap.Get(scope1.AsString() + key) match {
+                                                case Some(Go_ActionPi(_, q)) =>
+                                                    *hmap.hmap = hmap.hmap.Put(scope1.AsString() + key, Go_ActionPi(true, q))
+                                                case it => Panic(it)
+                                            }
+                                            Go_returnPi
+                                        })
+                                    })
+                                else
+                                    Go_returnPi
+                            bind opt = Go_AwaitPi(continue_at)
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            continue_at = NewPromise[Go_NamePi]()
+                            val ptr = opt.asPointer()
+                            val barrier = ptr.barrier
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = sleep()
+                            bind _ = nextS.Release1()
+                            bind name = Go_AwaitPi(result)
+                            result = NewPromise[Go_NamePi]()
+                            bind _ = body(name, scope2)
+                            loop(false)
+                        }
+
+                        val start = Go_CallPi(() => {
+                            bind _ = main
+                            loop(first)
+                        })
+
+                        if (last) {
+                            Go_Call_ReleasablePi(end, start)
+                        } else {
+                            bind _ = Go_Spawn_ReleasablePi(end, start)
+                            bind scope3 = Go_UUIDPi()
+                            unfold(remaining - 1, nextS, scope2, scope3)
+                        }
+                    }
+
+                    if (parallelism == 1)
+                        unfold(int(parallelism), firstS, scope, scope)
+                    else {
+                        bind scope2 = Go_UUIDPi()
+                        unfold(int(parallelism), firstS, scope, scope2)
+                    }
+                })
+            }
+            case it => Panic(it)
+        }
+    )
+}
+
+func (self Go_NamePi) Go_InputPi_(
+    parallelism int64,
+    rate Go_RatePi,
+    key string,
+    scope Go_NamePi,
+    body func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    sleep func () Go_TrampolinePi[Go_NamePi],
+    fun func(Go_NamePi) Go_TrampolinePi[Go_NamePi],
+    go_stochastic Go_StochasticPi
+) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() =>
+        self match {
+            case Go_EtherPi(ether) => {
+                val ctx = go_stochastic.Go_ctxPi
+                Go_Call_waitablePi(ctx, parallelism, (end) => {
+                    val moduloP = NewPromise[Go_NamePi]()
+                    val moduloCB = cyclicbarrier.New(int(parallelism))
+
+                    val firstS = Go_NewSemaphorePi(1)
+
+                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                        val first = remaining == int(parallelism)
+                        val last = remaining == 1
+
+                        val nextS =
+                            if (last) firstS
+                            else {
+                                val sem = Go_NewSemaphorePi(1)
+                                sem.TryAcquire1().Run()
+                                sem
+                            }
+
+                        var result = NewPromise[Go_NamePi]()
+                        var continue_at = NewPromise[Go_NamePi]()
+
+                        val main = Go_CallPi(() => {
+                            bind _ = if (first) exclude(key, go_stochastic) else Go_returnPi
+                            bind stop = if (first) Go_donePi(Go_BoolPi(false)) else Go_AwaitPi(moduloP)
+                            bind _ = Go_returnPi.Unless(stop.AsBool())
+
+                            val promise = NewPromise[Go_NamePi]()
+                            if (!first) { promise.Success(go_OptionPi(None())) }
+                            val reply = Go_ReplyPi(
+                                promise = promise,
+                                continue_at = &continue_at
+                            )
+                            val query = Go_QueryPi(
+                               ether = ether,
+                               polarity = Some(Right(&result)),
+                               rate = rate,
+                               reply = reply
+                            )
+                            go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope1.AsString(), key, query))
+                            bind opt = Go_AwaitPi(promise)
+                            bind _ = Go_DonePi(opt.asOption())
+                                        .FlatTapNone(() => if (first) moduloP.Success(Go_BoolPi(true)) else {})
+                                        .OrElse(Go_returnPi.Unless(first))
+                            Go_CallPi(() => { if (first) moduloP.Success(Go_BoolPi(false)) else {}; Go_returnPi })
+                        })
+
+                        var loop func (bool) Go_TrampolinePi[Go_NamePi]
+                        loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
+                            bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
+                            bind _ = prevS.Acquire1(ctx)
+                            bind _ =
+                                if (!enabled)
+                                    go_stochastic.Go_callbackPi(() => {
+                                        val hmap = go_stochastic.Go_enabledMapPi
+                                        Go_Call_unlockablePi(hmap.mutex, () => {
+                                            hmap.hmap.Get(scope1.AsString() + key) match {
+                                                case Some(Go_ActionPi(_, q)) =>
+                                                    *hmap.hmap = hmap.hmap.Put(scope1.AsString() + key, Go_ActionPi(true, q))
+                                                case it => Panic(it)
+                                            }
+                                            Go_returnPi
+                                        })
+                                    })
+                                else
+                                    Go_returnPi
+                            bind opt = Go_AwaitPi(continue_at)
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            continue_at = NewPromise[Go_NamePi]()
+                            val ptr = opt.asPointer()
+                            val barrier = ptr.barrier
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                            bind _ = sleep()
+                            bind _ = nextS.Release1()
+                            bind name = Go_AwaitPi(result)
+                            result = NewPromise[Go_NamePi]()
+                            bind name = fun(name)
+                            bind _ = body(name, scope2)
+                            loop(false)
+                        }
+
+                        val start = Go_CallPi(() => {
+                            bind _ = main
+                            loop(first)
+                        })
+
+                        if (last) {
+                            Go_Call_ReleasablePi(end, start)
+                        } else {
+                            bind _ = Go_Spawn_ReleasablePi(end, start)
+                            bind scope3 = Go_UUIDPi()
+                            unfold(remaining - 1, nextS, scope2, scope3)
+                        }
+                    }
+
+                    if (parallelism == 1)
+                        unfold(int(parallelism), firstS, scope, scope)
+                    else {
+                        bind scope2 = Go_UUIDPi()
+                        unfold(int(parallelism), firstS, scope, scope2)
+                    }
+                })
+            }
+            case it => Panic(it)
+        }
+    )
+}

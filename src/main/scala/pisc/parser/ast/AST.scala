@@ -188,11 +188,15 @@ object AST:
       case it: + => it.isVoid
       case _ => false
 
-  extension (self: + | `⟦⟧`)
+  extension (self: + | - | `.`)
     def isVoid: Boolean = self match
       case +() => true
+      case sum: + => sum.choices.forall(_.components.forall(_.isVoid))
+      case `.`(end, ps*) if ps.forall { case _: ν => true case _ => false } => end.isVoid
+      case ?:(_, t, f) => t.isVoid && f.fold(true)(_.isVoid)
+      case !(_, _, None, sum) => sum.isVoid
       case `⟦⟧`(_, sum, _, _) => sum.isVoid
-      case sum: + => sum.choices.forall(_.components.forall { case `.`(it: (+ | `⟦⟧`)) => it.isVoid case _ => false })
+      case _ => false
 
 
   // functions

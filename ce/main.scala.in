@@ -44,7 +44,7 @@ object App extends _root_.cats.effect.IOApp:
 
   import `Π-dump`.*, `Π-dump`.given
   import `Π-http4s`.http4s
-  import `Π-loop`.*, `Π-loop`.given
+  import `Π-loop`.*
   import `Π-traces`.{ KeyBy, Plugin }
 
 
@@ -109,7 +109,7 @@ object App extends _root_.cats.effect.IOApp:
       % <- AtomicCell[IO].of(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[IO, ((String, String), +)]
       * <- Semaphore[IO](0)
-      ** <- PQueue.unbounded[IO, (Int, List[((String, String), ++++)])]
+      ** <- Queue.unbounded[IO, List[((String, String), ++++)]]
       - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L)

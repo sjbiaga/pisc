@@ -149,7 +149,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
@@ -159,7 +159,7 @@ object Program:
                              Term.ArgClause(expr::Nil)
                            ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
+              val expr: Term = `_ <- ZIO { * }`(term)
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
@@ -188,7 +188,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
                                  Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: argʹ.toTerm :: Nil)),
@@ -197,7 +197,7 @@ object Program:
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- ZIO { * }`(term))
+              val expr: Term = `_ <- ZIO { * }`(term)
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
                                  Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: argʹ.toTerm :: Nil)),
@@ -290,7 +290,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(nu), r, code)), sum) if parallelism < -1 =>
           val par = if λ.`type`.isDefined then id else arg
@@ -304,7 +304,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -351,7 +351,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -394,7 +394,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -431,7 +431,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(

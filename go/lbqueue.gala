@@ -1,0 +1,90 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+gbq "github.com/hxxshidage/go-blocking-queue"
+  . "martianoff/gala/collection_immutable"
+ cm "martianoff/gala/collection_mutable"
+    "martianoff/gala/go_interop"
+    "martianoff/gala/resource"
+    "time"
+)
+
+struct Go_ListBlockingQueuePi[T any](
+    mu *go_interop.Mutex,
+    bq gbq.BlockQueue,
+    ar Ptr[cm.Array[T]],
+    var of bool
+)
+
+func Go_NewListBlockingQueuePi[T any](capacity uint) *Go_ListBlockingQueuePi[T] {
+    &Go_ListBlockingQueuePi[T](
+        mu = go_interop.NewMutex(),
+        bq = gbq.NewBlockingQueue(uint32(capacity)),
+        ar = cm.EmptyArray[T](),
+        of = false
+    )
+}
+
+func (self *Go_ListBlockingQueuePi[T]) Size() int {
+    resource.WithLock(self.mu, () => {
+        int(self.bq.Len()) + (if (self.of) 1 else 0)
+    })
+}
+
+func (self *Go_ListBlockingQueuePi[T]) Enqueue(item List[T]) {
+    resource.WithLock(self.mu, () => {
+        if (self.bq.Len() == self.bq.Cap()) {
+            self.ar.AppendAll(item.ToGoSlice())
+            self.of = true
+            true
+        } else {
+            self.bq.Put(item)
+        }
+    })
+}
+
+func (self *Go_ListBlockingQueuePi[T]) Dequeue() List[T] {
+    val ret = any(self.bq.Take()) match {
+                  case it: List[T] => Flatten(ListOf(it))
+                  case _ => Panic(nil)
+              }
+    resource.WithLock(self.mu, () => {
+        if (self.of) {
+            val it = ListFromSlice(self.ar.ToGoSlice())
+            self.ar.Clear()
+            self.of = false
+            self.bq.Put(it)
+        }
+        ret
+    })
+}
+
+func (self *Go_ListBlockingQueuePi[T]) DequeueWithTimeout(timeout time.Duration) Option[List[T]] {
+    val el, ok = self.bq.Poll(timeout)
+    val ret =
+        if (ok) {
+            any(el) match {
+                case it: List[T] => Some(Flatten(ListOf(it)))
+                case _ => Panic(nil)
+            }
+        } else {
+            None[List[T]]()
+        }
+    resource.WithLock(self.mu, () => {
+        if (self.of) {
+            val it = ListFromSlice(self.ar.ToGoSlice())
+            self.ar.Clear()
+            self.of = false
+            if (ok) {
+                self.bq.Put(it)
+                ret
+            } else {
+                Some(it)
+            }
+        } else {
+            ret
+        }
+    })
+}

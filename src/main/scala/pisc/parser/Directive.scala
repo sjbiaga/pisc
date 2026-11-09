@@ -221,7 +221,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
                 if given_String == "parallelism" =>
               (-1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }), settings.replication._2)
             case List(given String, it)
-                if given_String == "linear"      =>
+                if given_String == "modulo"      =>
               (settings.replication._1, it.boolean(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case _                               => throw DirectiveValueParsingException(directive, message)
           case _                => throw DirectiveValueParsingException(directive, message)
@@ -256,7 +256,7 @@ case class Directive(directive: (String, String | List[String]), emitter: Emitte
               settings.parameters.copy(parallelism = 1 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case List(given String, it)
                 if given_String == "threshold"   =>
-              settings.parameters.copy(threshold = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
+              settings.parameters.copy(threshold = it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
             case List(given String, it)
                 if given_String == "timeout"     =>
               settings.parameters.copy(timeout = 0 max it.number(using { msg => DirectiveSettingParsingException(directive._1, _, msg) }))
@@ -430,13 +430,21 @@ object Directive:
                           timeout: Int = 123456,
                           exit: Boolean = true,
                           plugins: List[Plugin] = Nil):
-      lazy val reify: Term = Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
-                                                                       :: Lit.Int(parallelism)
-                                                                       :: Lit.Int(threshold)
-                                                                       :: Lit.Int(timeout)
-                                                                       :: Lit.Boolean(exit)
-                                                                       :: Term.Apply(\("Set"), Term.ArgClause(plugins.map(_.toString).map(Lit.String(_))))
-                                                                       :: Nil))
+      def reify(emitter: Emitter): Term =
+        if emitter == Emitter.go
+        then
+          Term.Apply(\("Go_ParametersPi"), Term.ArgClause(Lit.Int(parallelism)
+                                                       :: Lit.Int(threshold)
+                                                       :: Lit.Int(timeout)
+                                                       :: Nil))
+        else
+          Term.Apply(\("Π-Parameters"), Term.ArgClause(Lit.String(address)
+                                                    :: Lit.Int(parallelism)
+                                                    :: Lit.Int(threshold)
+                                                    :: Lit.Int(timeout)
+                                                    :: Lit.Boolean(exit)
+                                                    :: Term.Apply(\("Set"), Term.ArgClause(plugins.map(_.toString).map(Lit.String(_))))
+                                                    :: Nil))
 
     trait Traces(val backend: Traces.Backend = Traces.Backend.same):
       lazy val reify: Term
@@ -552,7 +560,7 @@ object Directive:
 
       trait Portʹ(override val number: Int) extends Port
 
-    private lazy val messages = Map("replication" -> "a <parallelism> number or a <linear> boolean setting",
+    private lazy val messages = Map("replication" -> "a <parallelism> number or a <modulo> boolean setting",
                                     "parameters"  -> ( "an <address> ip/hostname or "
                                                      + "a <parallelism> number or "
                                                      + "a <threshold> number or "

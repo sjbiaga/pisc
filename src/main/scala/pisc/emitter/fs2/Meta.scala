@@ -180,9 +180,9 @@ object Meta extends emitter.shared.streams.Meta:
                                                                                Term.ArgClause(^._2 :: Nil, Some(Mod.Using())))) :: Nil)))*)
       )
 
-    `* <- Stream.eval(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
-    `* <- Stream.eval(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- Stream.eval(*)`(first, Term.Apply(Term.Select(`*[F]`("Ref"), "of"), Term.ArgClause(Term.Ascribe(Lit.Null(), \\("[]")) :: Nil))) ::
+    `* <- liftF(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
+    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- liftF(*)`(first, Term.Apply(Term.Select(`*[F]`("Ref"), "of"), Term.ArgClause(Term.Ascribe(Lit.Null(), \\("[]")) :: Nil))) ::
     `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: \(first) :: Nil))) :: Nil
 
@@ -236,9 +236,9 @@ object Meta extends emitter.shared.streams.Meta:
                                                                                Term.ArgClause(^._2 :: Nil, Some(Mod.Using())))) :: Nil)))*)
       )
 
-    `* <- Stream.eval(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
-    `* <- Stream.eval(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
-    `* <- Stream.eval(*)`(first, Term.Apply(Term.Select(`*[F]`("Ref"), "of"), Term.ArgClause(Term.Ascribe(Lit.Null(), \\("[]")) :: Nil))) ::
+    `* <- liftF(*)`(deferred, `*[F]`("Deferred", \\("Boolean"))) ::
+    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- liftF(*)`(first, Term.Apply(Term.Select(`*[F]`("Ref"), "of"), Term.ArgClause(Term.Ascribe(Lit.Null(), \\("[]")) :: Nil))) ::
     `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
     `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: \(first) :: Nil))) :: Nil
 

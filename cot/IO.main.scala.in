@@ -1,0 +1,177 @@
+/*
+ * Copyright (c) 2023-2026 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+//package main.scala.in
+
+import _root_.cats.effect.IOLocal
+import _root_.cats.effect.std.Semaphore
+
+
+object πApp extends _root_.cats.effect.IOApp:
+
+  import _root_.scala.collection.immutable.{ List, Map, Seq, Set }
+
+  import _root_.scala.reflect.{ ClassTag, classTag }
+
+  import _root_.cats.syntax.applicative.*
+  import _root_.cats.syntax.flatMap.*
+
+  import _root_.cats.effect.{ Deferred, ExitCode, Ref }
+  import _root_.cats.effect.kernel.Resource
+  import _root_.cats.effect.std.{ AtomicCell, PQueue, Queue }
+
+  import `Π-dump`.*, `Π-dump`.given
+  import `Π-http4s`.*
+  import `Π-loop`.*
+  import `Π-traces`.{ KeyBy, Plugin }
+
+
+  private val spicsa = "pisc.stochastic.communications.bind.address"
+  private val spicsp = "pisc.stochastic.communications.parallelism.level"
+  private val spicsh = "pisc.stochastic.communications.batch.threshold"
+  private val spicst = "pisc.stochastic.communications.timeout.microseconds"
+  private val spicse = "pisc.stochastic.communications.exit.passthrough"
+
+
+  private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], clock: Ref[π.F, Double], feedback: Feedback[π.F])
+                    (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
+                    (using ClassTag[T]): π.F[ExitCode] =
+    val F = classTag[T].runtimeClass.getCanonicalName
+    val lπ = πloop[π.F]()
+    val dπ = πdump[π.F]()
+    val hπ = πhttp4s[π.F]()
+    val mπ = π.πmain[π.F]()
+    val batchMode = parameters.threshold > 0
+    val \ =
+      if batchMode
+      then { (it: π.F[Unit]) => ^.use(_ => it >> *.release) }
+      else { (it: π.F[Unit]) => ^.use(_ => it >> lπ.peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
+    ( for
+        _ <- hπ.http4s(parameters.address, batchMode, started, feedback, π.`π-AST`).flatMap(hπ.http4s(F, batchMode, parameters.plugins, _))
+        _ <- if batchMode
+             then lπ.loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
+        _ <- lπ.poll(using %, /, \).background
+        _ <- dπ.dump(clock, feedback)(using %, !, -).background
+        ^ <- Resource.eval(π.`π-uuid`[π.F])
+        ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
+        _ <- mπ.Main(args*)(using ^, π.`Π-IOLocal`(?))(using %, /, \).value.background
+      yield
+        ()
+    ).use { _ =>
+      val stop = feedback
+        .pauseRD_stopR_exitRD
+        .evalModify { case ((pauseD, _), exitD) =>
+          (pauseD.complete(()) >> exitD.complete(())).map(pauseD -> true -> exitD -> _)
+        }
+      (feedback.initR.set(true) >> !.get).onCancel(stop.void).guarantee(!.get.void)
+    }
+
+  override def run(args: List[String]) =
+    val a = if sys.Prop.StringProp(spicsa).isSet
+            then sys.Prop.StringProp(spicsa).value
+            else π.`π-parameters`.address
+    val p = if sys.Prop.IntProp(spicsp).isSet
+            then sys.Prop.IntProp(spicsp).value
+            else π.`π-parameters`.parallelism
+    val h = if sys.Prop.IntProp(spicsh).isSet
+            then sys.Prop.IntProp(spicsh).value
+            else π.`π-parameters`.threshold
+    val t = if sys.Prop.IntProp(spicst).isSet
+            then sys.Prop.IntProp(spicst).value
+            else π.`π-parameters`.timeout
+    val e = if sys.BooleanProp.keyExists(spicse).value
+            then true
+            else π.`π-parameters`.exit
+    var plugins = π.`π-parameters`.plugins
+    if plugins.contains(classOf[Plugin.parents].getSimpleName)
+    then
+      plugins += classOf[Plugin.causes].getSimpleName
+    val c = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val params = `Π-Parameters`(a, 1 max p, 0 max h, 0 max t, e, plugins, c)
+    for
+      % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
+      / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
+      * <- Semaphore[π.F](0)
+      ** <- Queue.unbounded[π.F, List[((String, String), ++++[π.F])]]
+      - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
+      ! <- Deferred[π.F, ExitCode]
+      &| <- Ref[π.F].of(0L)
+      n <- Ref[π.F].of(0L)
+      ^ <- Semaphore[π.F](1)
+      b <- Ref[π.F].of(0L)
+      c <- Ref[π.F].of(.0)
+      paramsRD <- Deferred[π.F, `Π-Parameters`].flatMap(Ref[π.F].of)
+      paramsR  <- Ref[π.F].of(params)
+      tracesR  <- Ref[π.F].of(true)
+      keyByR   <- Ref[π.F].of(true)
+      lastR    <- Ref[π.F].of(0L -> .0)
+      ps_st_ex <- (Deferred[π.F, Unit].flatTap(_.complete(())) product Deferred[π.F, Unit]).flatMap { (pauseD, exitD) => AtomicCell[π.F].of(pauseD -> false -> exitD) }
+      _        <- ps_st_ex.get.flatMap(_._2.complete(())).whenA(e)
+      initR    <- Ref[π.F].of(false)
+      doneR    <- Ref[π.F].of(false)
+      feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
+      _ <- `π-enable`[π.F](π.`π-main`)(using %)
+      x <- run[π.F[Unit]](args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !, &|)
+    yield
+      x
+
+
+object π:
+
+  import _root_.scala.collection.immutable.{ List => πLs }
+  import _root_.scala.concurrent.duration.*
+
+  import _root_.cats.*
+  import _root_.cats.data.OptionT
+  import _root_.cats.instances.list.*
+  import _root_.cats.syntax.all.*
+
+  import _root_.cats.effect.*
+  import _root_.cats.effect.std.UUIDGen
+  import _root_.cats.effect.syntax.all.*
+
+  import _root_.eu.timepit.refined.*
+
+  import sΠ.*
+
+  import `Π-loop`.{ %, /, \, `Π-Parameters` }
+  import `Π-stats`.{ ∞, `ℝ⁺`, ⊤ }
+  import `Π-traces`.{ `π-traces`, `Π-Backend`, `Π-ConsoleCSV`, `Π-FileCSV`, `Π-AmazonSQS`, `Π-Kafka`, `Π-RabbitMQ` }
+
+
+  extension [F[_]: Concurrent: Parallel](self: πLs[OptionT[F, Unit]])
+    private[π] inline def πparSequence: OptionT[F, Unit] =
+      self.parSequenceVoid
+
+  def `π-uuid`[F[_]: Functor: UUIDGen]: F[String] =
+    UUIDGen.randomString[F]
+
+  final class `Π-IOLocal`[A](self: IOLocal[A]) extends `Π-FiberLocal`[F, A](self.get, self.set)
+
+

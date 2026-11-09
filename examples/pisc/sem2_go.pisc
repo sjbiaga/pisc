@@ -1,0 +1,45 @@
+# -*- indent-tabs-mode: nil; -*-
+
+                                                                 ⟦ EXCLUDE = 0 ⟧{sem2_go}
+
+################################################################# Semaphore ✕ ##
+
+⟦ EXCLUDE = YES ⟧
+
+Sem(s) = ! 2* .s(r). r(r). τ/*bind _ = 'r.PrintLn()*/.
+
+################################################################# Semaphore ✔ ##
+
+⟦ EXCLUDE = NO ⟧
+
+Sem(s) = ¡ 2* .s@0.15(r). r@0.6(r). τ/*bind _ = 'r.PrintLn()*/.
+
+## Clients #####################################################################
+
+####################################################################### Macro ##
+
+⟦ EXCLUDE = YES ⟧
+
+⟦ 'n ^ 'd ⟧(s) = τ/*_ <- sleep('d.milliseconds)*/. ¡ 1,second .s<νr>. τ/*_ <- println('n + ".acq")*/. τ/*_ <- sleep('d.milliseconds)*/. r</*'n + ".rel"*/>.
+
+Main = ν(s) ( Sem(s) | ⟦ "P" ^ /*100L*/ ⟧ | ⟦ "Q" ^ /*200L*/ ⟧ | ⟦ "R" ^ /*300L*/ ⟧ )
+
+####################################################################### Agent ##
+
+⟦ EXCLUDE = YES ⟧
+
+Main(s, n, d) = τ/*_ <- sleep(('d: Long).milliseconds)*/. ¡ 1,second .s. τ/*_ <- println(('n: String) + ".acq")*/. τ/*_ <- sleep(('d: Long).milliseconds)*/. r</*('n: String) + ".rel"*/>.
+
+Main = ν(s) ( Sem(s) | Main(s, "P", /*100L*/) | Main(s, "Q", /*200L*/) | Main(s, "R", /*300L*/) )
+
+############################################################### Macro / Agent ##
+
+⟦ EXCLUDE = NO ⟧
+
+⟦ 'n ^ 'd ⟧(s) = τ/*bind _ = Go_PacePi(go_stochastic.Go_ctxPi, 'd, time.Millisecond)*/. ¡ 1,second .s@0.125<νr>. τ/*bind _ = PrintLn('n + ".acq")*/. τ/*bind _ = Go_PacePi(go_stochastic.Go_ctxPi, 'd, time.Millisecond)*/. r@0.4</*Go_StringPi('n + ".rel")*/>.
+
+P(s) = ⟦ "P" ^ 100 ⟧
+Q(s) = ⟦ "Q" ^ 200 ⟧
+R(s) = ⟦ "R" ^ 300 ⟧
+
+Main = ν(s) ( Sem(s) | P(s) | Q(s) | R(s) )

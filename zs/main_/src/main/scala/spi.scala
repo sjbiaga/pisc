@@ -112,7 +112,7 @@ package object sΠ:
       object `(+)`:
 
         /**
-          * linear replication guard
+          * modulo replication guard
           */
         def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using %, /, \)
@@ -120,7 +120,7 @@ package object sΠ:
           apply(rate, Duration.Zero)(key)(?, -, *, <, >, +)
 
         /**
-          * linear replication guard w/ pace
+          * modulo replication guard w/ pace
           */
         def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
@@ -178,7 +178,7 @@ package object sΠ:
             ()
 
         /**
-          * linear replication guard w/ code
+          * modulo replication guard w/ code
           */
         def apply[T](rate: Rate)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
@@ -186,7 +186,7 @@ package object sΠ:
           apply(rate)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
-          * linear replication guard w/ pace w/ code
+          * modulo replication guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: Duration)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
@@ -327,7 +327,7 @@ package object sΠ:
         object `(ν)`:
 
           /**
-            * linear replication bound output guard
+            * modulo replication bound output guard
             */
           def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using %, /, \)
@@ -335,7 +335,7 @@ package object sΠ:
             apply(rate, Duration.Zero)(key)(?, -, *, <, >, +)
 
           /**
-            * linear replication bound output guard w/ pace
+            * modulo replication bound output guard w/ pace
             */
           def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                    (using % : %, / : /, \ : \)
@@ -394,7 +394,7 @@ package object sΠ:
               it
 
           /**
-            * linear replication bound output guard w/ code
+            * modulo replication bound output guard w/ code
             */
           def apply[T](rate: Rate)(key: String)(code: Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
@@ -402,7 +402,7 @@ package object sΠ:
             apply(rate)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
-            * linear replication bound output guard w/ pace w/ code
+            * modulo replication bound output guard w/ pace w/ code
             */
           def apply[T](rate: Rate, pace: Duration)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                       (using %, /, \)
@@ -410,7 +410,7 @@ package object sΠ:
             apply(rate, pace)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
-          * linear constant replication output guard
+          * modulo constant replication output guard
           */
         def apply(rate: Rate, value: `()`)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using %, /, \)
@@ -418,7 +418,7 @@ package object sΠ:
           apply(rate, Duration.Zero, value)(key)(?, -, *, <, >, +)
 
         /**
-          * linear constant replication output guard w/ pace
+          * modulo constant replication output guard w/ pace
           */
         def apply(rate: Rate, pace: Duration, value: `()`)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
@@ -476,7 +476,7 @@ package object sΠ:
             ()
 
         /**
-          * linear constant replication output guard w/ code
+          * modulo constant replication output guard w/ code
           */
         def apply[T](rate: Rate, value: `()`)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
@@ -484,7 +484,7 @@ package object sΠ:
           apply(rate, value)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
-          * linear constant replication output guard w/ pace w/ code
+          * modulo constant replication output guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: Duration, value: `()`)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
@@ -494,7 +494,7 @@ package object sΠ:
         object `(*)`:
 
           /**
-            * linear variable replication output guard
+            * modulo variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                        (using DummyImplicit)
@@ -507,7 +507,7 @@ package object sΠ:
               apply[S](1)(rate, ZIO.attempt(value))(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace
+            * modulo variable replication output guard w/ pace
             */
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => S)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                        (using DummyImplicit)
@@ -520,7 +520,7 @@ package object sΠ:
               apply[S](2)(rate, pace, ZIO.attempt(value))(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ code
+            * modulo variable replication output guard w/ code
             */
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                           (using DummyImplicit)
@@ -533,7 +533,7 @@ package object sΠ:
               apply[S, T](3)(rate, ZIO.attempt(value))(key)(code)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace w/ code
+            * modulo variable replication output guard w/ pace w/ code
             */
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => S)(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                           (using DummyImplicit)
@@ -546,7 +546,7 @@ package object sΠ:
               apply[S, T](4)(rate, pace, ZIO.attempt(value))(key)(code)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard
+            * modulo variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => Task[S])(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                        (using %, /, \)
@@ -554,7 +554,7 @@ package object sΠ:
             apply[S](2)(rate, Duration.Zero, value)(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace
+            * modulo variable replication output guard w/ pace
             */
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: Duration, value: => Task[S])(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                        (using % : %, / : /, \ : \)
@@ -616,7 +616,7 @@ package object sΠ:
                 ()
 
           /**
-            * linear variable replication output guard w/ code
+            * modulo variable replication output guard w/ code
             */
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => Task[S])(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                           (using %, /, \)
@@ -624,7 +624,7 @@ package object sΠ:
             apply[S](1)(rate, value)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
           /**
-            * linear variable replication output guard w/ pace w/ code
+            * modulo variable replication output guard w/ pace w/ code
             */
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: Duration, value: => Task[S])(key: String)(code: => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                                           (using %, /, \)
@@ -632,7 +632,7 @@ package object sΠ:
             apply[S](2)(rate, pace, value)(key)(?, -, *, <, >, +).tap(_ => exec(code))
 
         /**
-          * linear replication input guard
+          * modulo replication input guard
           */
         def apply(rate: Rate)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using %, /, \)
@@ -640,7 +640,7 @@ package object sΠ:
           apply(rate, Duration.Zero)(key)(?, -, *, <, >, +)
 
         /**
-          * linear replication input guard w/ pace
+          * modulo replication input guard w/ pace
           */
         def apply(rate: Rate, pace: Duration)(key: String)(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                  (using % : %, / : /, \ : \)
@@ -700,7 +700,7 @@ package object sΠ:
             it
 
         /**
-          * linear replication input guard w/ code
+          * modulo replication input guard w/ code
           */
         def apply[T](rate: Rate)(key: String)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)
@@ -708,7 +708,7 @@ package object sΠ:
           apply(rate)(key)(?, -, *, <, >, +).mapZIO { it => exec(code(it.`()`[T])).map(new `()`(_)) }
 
         /**
-          * linear replication input guard w/ pace w/ code
+          * modulo replication input guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: Duration)(key: String)(code: T => Task[T])(? : Promise[Nothing, Boolean], - : CyclicBarrier, * : Option[Semaphore[UIO]], < : Ref[`[]`], > : Ref[`[]`], + : Semaphore[UIO])
                     (using %, /, \)

@@ -135,7 +135,7 @@ package object sΠ:
         delay
 
     /**
-      * linear replication guard
+      * modulo replication guard
       */
     def apply(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
@@ -143,7 +143,7 @@ package object sΠ:
       super.silent(false)(parallelism, rate)(key)(body)
 
     /**
-      * linear replication guard w/ pace
+      * modulo replication guard w/ pace
       */
     def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
@@ -151,7 +151,7 @@ package object sΠ:
       super.silent(false)(pace, parallelism, rate)(key)(body)
 
     /**
-      * linear replication guard w/ code
+      * modulo replication guard w/ code
       */
     def apply(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
@@ -159,7 +159,7 @@ package object sΠ:
       super.silent(true)(parallelism, rate)(key)(code)(body)
 
     /**
-      * linear replication guard w/ pace w/ code
+      * modulo replication guard w/ pace w/ code
       */
     def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
@@ -177,12 +177,12 @@ package object sΠ:
     inline def `()`[T]: T = name.asInstanceOf[T]
     inline def `()`(using DummyImplicit): `()` = this
 
-    // LINEAR REPLICATION //////////////////////////////////////////////////////
+    // MODULO REPLICATION //////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////// BOUND //
 
     /**
-      * linear replication bound output guard
+      * modulo replication bound output guard
       */
     def apply(_nu: "ν")(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
@@ -190,7 +190,7 @@ package object sΠ:
       super.output("ν")(false)(parallelism, rate)(key)(body)
 
     /**
-      * linear replication bound output guard w/ pace
+      * modulo replication bound output guard w/ pace
       */
     def apply(_nu: "ν")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
@@ -198,7 +198,7 @@ package object sΠ:
       super.output("ν")(false)(pace, parallelism, rate)(key)(body)
 
     /**
-      * linear replication bound output guard w/ code
+      * modulo replication bound output guard w/ code
       */
     def apply(_nu: "ν")(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function1`)
                                  (using %, /, \)
@@ -206,7 +206,7 @@ package object sΠ:
       super.output("ν")(true)(parallelism, rate)(key)(code)(body)
 
     /**
-      * linear replication bound output guard w/ pace w/ code
+      * modulo replication bound output guard w/ pace w/ code
       */
     def apply(_nu: "ν")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(code: => IO[Any])(body: `Π-Function1`)
                                  (using %, /, \)
@@ -216,7 +216,7 @@ package object sΠ:
     //////////////////////////////////////////////////////////////// CONSTANT //
 
     /**
-      * linear constant replication output guard
+      * modulo constant replication output guard
       */
     def apply(_f: false)(parallelism: Int, rate: Rate, value: `()`)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
@@ -224,7 +224,7 @@ package object sΠ:
       super.output(false)(parallelism, rate, value)(key)(body)
 
     /**
-      * linear constant replication output guard w/ pace
+      * modulo constant replication output guard w/ pace
       */
     def apply(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String)(body: `Π-Function0`)
                         (using %, /, \)
@@ -232,7 +232,7 @@ package object sΠ:
       super.output(false)(pace, parallelism, rate, value)(key)(body)
 
     /**
-      * linear constant replication output guard w/ code
+      * modulo constant replication output guard w/ code
       */
     def apply(_t: true)(parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
@@ -240,7 +240,7 @@ package object sΠ:
       super.output(true)(parallelism, rate, value)(key)(code)(body)
 
     /**
-      * linear constant replication output guard w/ pace w/ code
+      * modulo constant replication output guard w/ pace w/ code
       */
     def apply(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: `()`)(key: String)(code: => IO[Any])(body: `Π-Function0`)
                        (using %, /, \)
@@ -250,7 +250,7 @@ package object sΠ:
     //////////////////////////////////////////////////////////////// VARIABLE //
 
     /**
-      * linear variable replication output guard
+      * modulo variable replication output guard
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
@@ -262,7 +262,7 @@ package object sΠ:
         apply("*")(false)(parallelism, rate, IO.delay(value))(key)(body)
 
     /**
-      * linear variable replication output guard w/ pace
+      * modulo variable replication output guard w/ pace
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(body: `Π-Function0`)(using DummyImplicit)
                                               (using %, /, \)
@@ -274,7 +274,7 @@ package object sΠ:
         apply("*")(false)(pace, parallelism, rate, IO.delay(value))(key)(body)
 
     /**
-      * linear variable replication output guard w/ code
+      * modulo variable replication output guard w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
@@ -286,7 +286,7 @@ package object sΠ:
         apply("*")(true)(parallelism, rate, IO.delay(value))(key)(code)(body)
 
     /**
-      * linear variable replication output guard w/ pace w/ code
+      * modulo variable replication output guard w/ pace w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => S)(key: String)(code: => IO[Any])(body: `Π-Function0`)(using DummyImplicit)
                                              (using %, /, \)
@@ -298,7 +298,7 @@ package object sΠ:
         apply("*")(true)(pace, parallelism, rate, IO.delay(value))(key)(code)(body)
 
     /**
-      * linear variable replication output guard
+      * modulo variable replication output guard
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(parallelism: Int, rate: Rate, value: => IO[S])(key: String)(body: `Π-Function0`)
                                               (using %, /, \)
@@ -310,7 +310,7 @@ package object sΠ:
         super.output("*")(false)(parallelism, rate, value)(key)(body)
 
     /**
-      * linear variable replication output guard w/ pace
+      * modulo variable replication output guard w/ pace
       */
     def apply[S: ClassTag](_s: "*")(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String)(body: `Π-Function0`)
                                               (using %, /, \)
@@ -322,7 +322,7 @@ package object sΠ:
         super.output("*")(false)(pace, parallelism, rate, value)(key)(body)
 
     /**
-      * linear variable replication output guard w/ code
+      * modulo variable replication output guard w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
@@ -334,7 +334,7 @@ package object sΠ:
         super.output("*")(true)(parallelism, rate, value)(key)(code)(body)
 
     /**
-      * linear variable replication output guard w/ pace w/ code
+      * modulo variable replication output guard w/ pace w/ code
       */
     def apply[S: ClassTag](_s: "*")(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate, value: => IO[S])(key: String)(code: => IO[Any])(body: `Π-Function0`)
                                              (using %, /, \)
@@ -348,7 +348,7 @@ package object sΠ:
     /////////////////////////////////////////////////////////////////// INPUT //
 
     /**
-      * linear replication input guard
+      * modulo replication input guard
       */
     def apply(_n: Null)(_f: false)(parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
@@ -356,7 +356,7 @@ package object sΠ:
       super.input(false)(parallelism, rate)(key)(body)
 
     /**
-      * linear replication input guard w/ pace
+      * modulo replication input guard w/ pace
       */
     def apply(_n: Null)(_f: false)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(body: `Π-Function1`)
                                   (using %, /, \)
@@ -364,7 +364,7 @@ package object sΠ:
       super.input(false)(pace, parallelism, rate)(key)(body)
 
     /**
-      * linear replication input guard w/ code
+      * modulo replication input guard w/ code
       */
     def apply[T](_n: Null)(_t: true)(parallelism: Int, rate: Rate)(key: String)(code: T => IO[T])(body: `Π-Function1`)
                                     (using %, /, \)
@@ -372,14 +372,14 @@ package object sΠ:
       super.input(true)(parallelism, rate)(key)(code)(body)
 
     /**
-      * linear replication input guard w/ pace w/ code
+      * modulo replication input guard w/ pace w/ code
       */
     def apply[T](_n: Null)(_t: true)(pace: FiniteDuration, parallelism: Int, rate: Rate)(key: String)(code: T => IO[T])(body: `Π-Function1`)
                                     (using %, /, \)
                                     (using `Π-Map`[String, `Π-Set`[String]], String, IOLocal[`[]`]): IO[Unit] =
       super.input(true)(pace, parallelism, rate)(key)(code)(body)
 
-    ////////////////////////////////////////////////////// linear replication //
+    ////////////////////////////////////////////////////// modulo replication //
 
     /**
       * variable negative prefix i.e. variable output

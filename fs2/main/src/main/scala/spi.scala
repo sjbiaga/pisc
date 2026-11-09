@@ -124,7 +124,7 @@ package object sΠ:
       object `(+)`:
 
         /**
-          * linear replication guard
+          * modulo replication guard
           */
         def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using %[F], /[F], \[F])
@@ -132,7 +132,7 @@ package object sΠ:
           apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
 
         /**
-          * linear replication guard w/ pace
+          * modulo replication guard w/ pace
           */
         def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
@@ -172,7 +172,7 @@ package object sΠ:
             ()
 
         /**
-          * linear replication guard w/ code
+          * modulo replication guard w/ code
           */
         def apply[T](rate: Rate)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])
@@ -180,7 +180,7 @@ package object sΠ:
           apply(rate)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
         /**
-          * linear replication guard w/ pace w/ code
+          * modulo replication guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])
@@ -307,7 +307,7 @@ package object sΠ:
         object `(ν)`:
 
           /**
-            * linear replication bound output guard
+            * modulo replication bound output guard
             */
           def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                    (using %[F], /[F], \[F])
@@ -315,7 +315,7 @@ package object sΠ:
             apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
 
           /**
-            * linear replication bound output guard w/ pace
+            * modulo replication bound output guard w/ pace
             */
           def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                    (using % : %[F], / : /[F], \ : \[F])
@@ -356,7 +356,7 @@ package object sΠ:
               it
 
           /**
-            * linear replication bound output guard w/ code
+            * modulo replication bound output guard w/ code
             */
           def apply[T](rate: Rate)(key: String)(code: F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                       (using %[F], /[F], \[F])
@@ -364,7 +364,7 @@ package object sΠ:
             apply(rate)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
           /**
-            * linear replication bound output guard w/ pace w/ code
+            * modulo replication bound output guard w/ pace w/ code
             */
           def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                       (using %[F], /[F], \[F])
@@ -372,7 +372,7 @@ package object sΠ:
             apply(rate, pace)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
         /**
-          * linear constant replication output guard
+          * modulo constant replication output guard
           */
         def apply(rate: Rate, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using %[F], /[F], \[F])
@@ -380,7 +380,7 @@ package object sΠ:
           apply(rate,`Duration.Zero` , value)(key)(?, -, *, <, >, +)
 
         /**
-          * linear constant replication output guard w/ pace
+          * modulo constant replication output guard w/ pace
           */
         def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
@@ -420,7 +420,7 @@ package object sΠ:
             ()
 
         /**
-          * linear constant replication output guard w/ code
+          * modulo constant replication output guard w/ code
           */
         def apply[T](rate: Rate, value: `()`[F])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])
@@ -428,7 +428,7 @@ package object sΠ:
           apply(rate, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
         /**
-          * linear constant replication output guard w/ pace w/ code
+          * modulo constant replication output guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])
@@ -438,7 +438,7 @@ package object sΠ:
         object `(*)`:
 
           /**
-            * linear variable replication output guard
+            * modulo variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                        (using DummyImplicit)
@@ -451,7 +451,7 @@ package object sΠ:
               apply[S](1)(rate, Async[F].delay(value))(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace
+            * modulo variable replication output guard w/ pace
             */
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                        (using DummyImplicit)
@@ -464,7 +464,7 @@ package object sΠ:
               apply[S](2)(rate, pace, Async[F].delay(value))(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ code
+            * modulo variable replication output guard w/ code
             */
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                           (using DummyImplicit)
@@ -477,7 +477,7 @@ package object sΠ:
               apply[S, T](3)(rate, Async[F].delay(value))(key)(code)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace w/ code
+            * modulo variable replication output guard w/ pace w/ code
             */
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                           (using DummyImplicit)
@@ -490,7 +490,7 @@ package object sΠ:
               apply[S, T](4)(rate, pace, Async[F].delay(value))(key)(code)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard
+            * modulo variable replication output guard
             */
           def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                        (using %[F], /[F], \[F])
@@ -498,7 +498,7 @@ package object sΠ:
             apply[S](2)(rate, `Duration.Zero`, value)(key)(?, -, *, <, >, +)
 
           /**
-            * linear variable replication output guard w/ pace
+            * modulo variable replication output guard w/ pace
             */
           def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                        (using % : %[F], / : /[F], \ : \[F])
@@ -542,7 +542,7 @@ package object sΠ:
                 ()
 
           /**
-            * linear variable replication output guard w/ code
+            * modulo variable replication output guard w/ code
             */
           def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => F[S])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                           (using %[F], /[F], \[F])
@@ -550,7 +550,7 @@ package object sΠ:
             apply[S](1)(rate, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
           /**
-            * linear variable replication output guard w/ pace w/ code
+            * modulo variable replication output guard w/ pace w/ code
             */
           def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                                           (using %[F], /[F], \[F])
@@ -558,7 +558,7 @@ package object sΠ:
             apply[S](2)(rate, pace, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
 
         /**
-          * linear replication input guard
+          * modulo replication input guard
           */
         def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using %[F], /[F], \[F])
@@ -566,7 +566,7 @@ package object sΠ:
           apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
 
         /**
-          * linear replication input guard w/ pace
+          * modulo replication input guard w/ pace
           */
         def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                  (using % : %[F], / : /[F], \ : \[F])
@@ -608,7 +608,7 @@ package object sΠ:
             it
 
         /**
-          * linear replication input guard w/ code
+          * modulo replication input guard w/ code
           */
         def apply[T](rate: Rate)(key: String)(code: T => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])
@@ -616,7 +616,7 @@ package object sΠ:
           apply(rate)(key)(?, -, *, <, >, +).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
 
         /**
-          * linear replication input guard w/ pace w/ code
+          * modulo replication input guard w/ pace w/ code
           */
         def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: T => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
                     (using %[F], /[F], \[F])

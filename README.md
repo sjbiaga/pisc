@@ -26,7 +26,7 @@ The BNF formal grammar for processes is the following.
     LEAF           ::= "[" NAME ("="|"≠") NAME "]" CHOICE
                      | "if" NAME ("="|"≠") NAME "then" CHOICE "else" CHOICE
                      | NAME ("="|"≠") NAME "?" CHOICE ":" CHOICE
-                     | "!" [ SCALE ] [ PACE ] [ "." μ "." ] CHOICE
+                     | ("!"|"¡") [ SCALE ] [ PACE ] [ "." μ "." ] CHOICE
                      | CAPITAL
                      | INVOCATION
                      | INSTANTIATION
@@ -128,6 +128,8 @@ Emitters
 
 - [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/cef/README.md)
 
+- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/stochastic/cot/README.md)
+
 - [ZIO](https://github.com/sjbiaga/pisc/tree/stochastic/zio/README.md)
 
 - [ZIO (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/ziof/README.md)
@@ -139,6 +141,8 @@ Emitters
 - [FS2](https://github.com/sjbiaga/pisc/tree/stochastic/fs2/README.md)
 
 - [ZStream](https://github.com/sjbiaga/pisc/tree/stochastic/zs/README.md)
+
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/stochastic/go/README.md)
 
 
 Branches

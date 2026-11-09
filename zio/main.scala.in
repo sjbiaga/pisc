@@ -46,7 +46,7 @@ object App extends _root_.zio.ZIOApp:
 
   import `Π-dump`.*, `Π-dump`.given
   import `Π-http`.http
-  import `Π-loop`.*, `Π-loop`.given
+  import `Π-loop`.*
   import `Π-traces`.{ KeyBy, Plugin }
 
 
@@ -136,7 +136,7 @@ object App extends _root_.zio.ZIOApp:
       % <- Ref.Synchronized.make(Map[String, Int | (Boolean, +)]())
       / <- Queue.unbounded[((String, String), +)]
       * <- Semaphore[UIO](0)
-      ** <- TPriorityQueue.empty[(Int, List[((String, String), ++++)])].commit
+      ** <- Queue.unbounded[List[((String, String), ++++)]]
       - <- TPriorityQueue.empty[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]].commit
       ! <- Promise.make[Nothing, ExitCode]
       &| <- Ref.make(0L)

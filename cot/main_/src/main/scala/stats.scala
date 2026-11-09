@@ -1,0 +1,432 @@
+/*
+ * Copyright (c) 2023-2026 Sebastian I. Gliţa-Catina <gseba@users.sourceforge.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * [Except as contained in this notice, the name of Sebastian I. Gliţa-Catina
+ * shall not be used in advertising or otherwise to promote the sale, use
+ * or other dealings in this Software without prior written authorization
+ * from Sebastian I. Gliţa-Catina.]
+ */
+
+import _root_.scala.collection.immutable.{ List, Map }
+import _root_.scala.collection.mutable.HashMap
+import _root_.scala.concurrent.duration.*
+import _root_.scala.Option.unless
+
+import _root_.breeze.stats.distributions.Exponential
+import _root_.breeze.stats.distributions.Rand.VariableSeed.*
+
+import _root_.com.github.blemale.scaffeine.{ Scaffeine, Cache }
+
+import _root_.cats.effect.Ref
+
+import `Π-traces`.Plugin
+
+
+package object `Π-stats`:
+
+  import sΠ.{ `Π-Map`, `Π-Set`, `()`, `[]` }
+
+  sealed trait Rate extends Any:
+    var whatIf: Option[`ℝ⁺`] = None
+  case class ∞(weight: Long) extends AnyVal with Rate
+  case class `ℝ⁺`(rate: BigDecimal) extends Rate:
+    def apply(whatIf: `ℝ⁺`): this.type =
+      this.whatIf = Some(whatIf)
+      this
+  case class ⊤(weight: Long) extends AnyVal with Rate
+
+  private final case class EtherPolarity[F[_]](ether: {}, polarity: Option[Either[Unit, Ref[F, `()`[F]]]]):
+    override def equals(any: Any): Boolean = any match
+      case that: EtherPolarity[F] =>
+        (this.ether eq that.ether) && { (this.polarity -> that.polarity) match
+          case (None, None) | (Some(Left(_)), Some(Left(_))) | (Some(Right(_)), Some(Right(_))) => true
+          case _ => false }
+      case _ => false
+
+  private val distributionCache: Cache[Double, Exponential] =
+    Scaffeine()
+      .recordStats()
+      .expireAfterWrite(1.hour)
+      .maximumSize(500)
+      .build[Double, Exponential]()
+
+  private inline def distribution(rate: Double) =
+    distributionCache.getIfPresent(rate).getOrElse {
+      val it = Exponential(rate)
+      distributionCache.put(rate, it)
+      it
+    }
+
+  private inline def delta(rate: Double): Double =
+    distribution(rate).draw()
+
+  class StatisticsException(msg: String, cause: Throwable = null)
+      extends RuntimeException(msg, cause)
+
+  case class CombinedActivitiesException(how: String)
+      extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
+
+  @annotation.tailrec
+  def ∥[F[_]](% : Map[String, ({}, Option[Either[Unit, Ref[F, `()`[F]]]], Rate, `[]`)], plugins: Set[String])
+             (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
+             (check: Boolean = false, acc: List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] = Nil): List[(String, String, Ref[F, `()`[F]], (Double, Seq[Plugin]))] =
+                                                                                                                     // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^
+                                                                                                                     // key1    key1|2  input             delay   plugins
+
+    val causesPlugin = plugins.contains(classOf[Plugin.causes].getSimpleName)
+    val parentsPlugin = plugins.contains(classOf[Plugin.parents].getSimpleName)
+    val probabilityPlugin = plugins.contains(classOf[Plugin.probability].getSimpleName)
+    val syncRatePlugin = plugins.contains(classOf[Plugin.syncRate].getSimpleName)
+    val whatIfPlugin = plugins.contains(classOf[Plugin.whatIf].getSimpleName)
+
+    val mls = HashMap[EtherPolarity[F], List[Either[Long, Either[BigDecimal, Long]]]]() // lists
+
+    %
+      .foreach {
+        case (_, (e, p, r: ∞, _))    => // immediate
+          val ep = EtherPolarity[F](e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Left(r.weight)
+        case (_, (e, p, r: `ℝ⁺`, _)) => // timed
+          val ep = EtherPolarity[F](e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Right(Left(r.rate))
+        case (_, (e, p, r: ⊤, _))    => // passive
+          val ep = EtherPolarity[F](e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Right(Right(r.weight))
+      }
+
+    val msrt = HashMap[EtherPolarity[F], BigDecimal]() // [timed] sums of rates
+
+    mls // timed
+      .foreach {
+        case (ep, ls) =>
+          val rs = ls
+            .filter(_.isRight)
+            .filter(_.right.get.isLeft)
+            .map(_.right.get.left.get)
+          if rs.nonEmpty
+          then
+            msrt(ep) = rs.sum
+      }
+
+    val mswi = HashMap[EtherPolarity[F], BigDecimal]() // [immediate] sums of weights
+
+    mls // immediate
+      .foreach {
+        case (ep, ls) =>
+          val ws = ls
+            .filter(_.isLeft)
+            .map(_.left.get)
+          if ws.nonEmpty
+          then
+            mswi(ep) = ws.sum
+      }
+
+    val mswp = HashMap[EtherPolarity[F], BigDecimal]() // [passive] sums of weights
+
+    mls // passive
+      .foreach {
+        case (ep, ls) =>
+          val ws = ls
+            .filter(_.isRight)
+            .filter(_.right.get.isRight)
+            .map(_.right.get.right.get)
+          if ws.nonEmpty
+          then
+            mswp(ep) = ws.sum
+      }
+
+    // whatIf //////////////////////////////////////////////////////////////////
+
+    val mlsʹ = if whatIfPlugin then HashMap[EtherPolarity[F], List[Either[Long, Either[BigDecimal, Long]]]]() else null // lists
+
+    if whatIfPlugin
+    then
+      %
+        .foreach {
+          case (_, (e, p, r, _)) =>
+            val ep = EtherPolarity[F](e, p)
+            if !mlsʹ.contains(ep) then mlsʹ(ep) = Nil
+            r.whatIf match
+              case Some(r) => // timed
+                mlsʹ(ep) ::= Right(Left(r.rate))
+              case _       =>
+                r match
+                  case r: ∞    => // immediate
+                    mlsʹ(ep) ::= Left(r.weight)
+                  case r: `ℝ⁺` => // timed
+                    mlsʹ(ep) ::= Right(Left(r.rate))
+                  case r: ⊤    => // passive
+                    mlsʹ(ep) ::= Right(Right(r.weight))
+        }
+
+    val msrtʹ = if whatIfPlugin then HashMap[EtherPolarity[F], BigDecimal]() else null // [timed] sums of rates
+
+    if whatIfPlugin
+    then
+      mlsʹ // timed
+        .foreach {
+          case (ep, ls) =>
+            val rs = ls
+              .filter(_.isRight)
+              .filter(_.right.get.isLeft)
+              .map(_.right.get.left.get)
+            if rs.nonEmpty
+            then
+              msrtʹ(ep) = rs.sum
+        }
+
+    val mswiʹ = if whatIfPlugin then HashMap[EtherPolarity[F], BigDecimal]() else null // [immediate] sums of weights
+
+    if whatIfPlugin
+    then
+      mlsʹ // immediate
+        .foreach {
+          case (ep, ls) =>
+            val ws = ls
+              .filter(_.isLeft)
+              .map(_.left.get)
+            if ws.nonEmpty
+            then
+              mswiʹ(ep) = ws.sum
+        }
+
+    val mswpʹ = if whatIfPlugin then HashMap[EtherPolarity[F], BigDecimal]() else null // [passive] sums of weights
+
+    if whatIfPlugin
+    then
+      mlsʹ // passive
+        .foreach {
+          case (ep, ls) =>
+            val ws = ls
+              .filter(_.isRight)
+              .filter(_.right.get.isRight)
+              .map(_.right.get.right.get)
+            if ws.nonEmpty
+            then
+              mswpʹ(ep) = ws.sum
+        }
+
+    var Λ = BigDecimal(0)
+    var Λʹ = BigDecimal(0)
+
+    ////////////////////////////////////////////////////////////////// whatIf //
+
+    if check
+    then
+      val ert = msrt.keySet.filter(_.polarity.isDefined).map(_.ether)
+      val ewi = mswi.keySet.filter(_.polarity.isDefined).map(_.ether)
+      val ewp = mswp.keySet.filter(_.polarity.isDefined).map(_.ether)
+
+      if (ert & ewi).nonEmpty
+      || (ewi & ewp).nonEmpty
+      || (ewp & ert).nonEmpty
+      then
+        throw CombinedActivitiesException("mixed")
+
+    val χ = %
+      .map {
+        case (k, (e, p, r: ∞, s))    => k -> (EtherPolarity[F](e, p), BigDecimal(0) -> r.weight, s) // immediate
+        case (k, (e, p, r: `ℝ⁺`, s)) => k -> (EtherPolarity[F](e, p), r.rate -> 0L             , s) // timed
+        case (k, (e, p, r: ⊤, s))    => k -> (EtherPolarity[F](e, p), BigDecimal(0) -> r.weight, s) // passive
+      }.toSeq
+
+    val χʹ =
+      if whatIfPlugin
+      then %
+        .map {
+          case (k, (e, p, r: ∞, s))    => k -> (EtherPolarity[F](e, p), Option.empty[BigDecimal] -> r.weight           , s) // immediate
+          case (k, (e, p, r: `ℝ⁺`, s)) => k -> (EtherPolarity[F](e, p), r.whatIf.map(_.rate).orElse(Some(r.rate)) -> 0L, s) // timed
+          case (k, (e, p, r: ⊤, s))    => k -> (EtherPolarity[F](e, p), Option.empty[BigDecimal] -> r.weight           , s) // passive
+        }.toSeq
+      else null
+
+    var r = List[((String, String, Ref[F, `()`[F]], (Double, Seq[Plugin])), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2  input             delay   plugins         pri  delay
+
+    for
+      i <- 0 until χ.size
+      (key1, (ep1, (rate1, weight1), set1)) = χ(i)
+    do
+      if ep1.polarity eq None
+      then
+        val ((probability, rate), priority) =
+          if msrt.contains(ep1)
+          then
+            val apr1 = msrt(ep1)
+            val prb = rate1 / apr1
+            prb -> rate1.toDouble -> 2
+          else if mswi.contains(ep1)
+          then
+            val apr1 = mswi(ep1)
+            val prb = weight1 / apr1
+            prb -> Double.PositiveInfinity -> 1
+          else if mswp.contains(ep1)
+          then
+            val apr1 = mswp(ep1)
+            val prb = weight1 / apr1
+            prb -> .0 -> 3
+          else
+            ???
+        val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
+
+        var ps = Seq.empty[Plugin]
+        if causesPlugin
+        then
+          ps :+= Plugin.causes(set1)
+        if parentsPlugin
+        then
+          val max1 = unless(set1.isEmpty)(set1.max)
+          ps :+= Plugin.parents(max1.toSet)
+        if probabilityPlugin
+        then
+          ps :+= Plugin.probability(probability)
+        if syncRatePlugin
+        then
+          ps :+= Plugin.syncRate(unless(rate.isPosInfinity)(BigDecimal(rate)))
+        if whatIfPlugin
+        then
+          χʹ(i)._2._2._1 match
+            case Some(rate1ʹ) =>
+              Λ += rate1; Λʹ += rate1ʹ
+              ps :+= Plugin.whatIf(rate1ʹ -> rate1, null)
+            case _            =>
+              // (Λʹ-Λ)*Δt: rates are zero if passive | delay is zero if immediate
+              ps :+= Plugin.whatIf(BigDecimal(1) -> BigDecimal(1), null)
+
+        r ::= (key1, key1, null, delay -> ps) -> (priority -> delay)
+      else
+        val ^ = key1.substring(0, 36)
+        for
+          j <- i+1 until χ.size
+          (key2, (ep2, (rate2, weight2), set2)) = χ(j)
+          if (ep2.polarity ne None)
+          && (ep1.ether eq ep2.ether)
+          && ep1.polarity.get.isLeft == ep2.polarity.get.isRight
+        do
+          val ^^ = key2.substring(0, 36)
+          if ^ != ^^
+          || {
+            val k1 = key1.substring(36)
+            val k2 = key2.substring(36)
+            !`π-trick`.contains(k1) || !`π-trick`(k1).contains(k2)
+          }
+          then
+            val ((probability, rate), priority) =
+              if msrt.contains(ep1)
+              && msrt.contains(ep2)
+              then
+                val apr1 = msrt(ep1)
+                val apr2 = msrt(ep2)
+                val prb = (rate1 / apr1) * (rate2 / apr2)
+                prb -> prb * (apr1 min apr2) -> 2
+              else if mswi.contains(ep1)
+                   && mswi.contains(ep2)
+              then
+                val apr1 = mswi(ep1)
+                val apr2 = mswi(ep2)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb -> prb * (apr1 min apr2) -> 1
+              else if mswp.contains(ep1)
+                   && mswp.contains(ep2)
+              then
+                val apr1 = mswp(ep1)
+                val apr2 = mswp(ep2)
+                val prb = (weight1 / apr1) * (weight2 / apr2)
+                prb -> prb * (apr1 min apr2) -> 3
+              else
+                ???
+            val delay = delta(rate.toDouble)
+
+            var ps = Seq.empty[Plugin]
+            if causesPlugin
+            then
+              ps :+= Plugin.causes(set1 ++ set2)
+            if parentsPlugin
+            then
+              val max1 = unless(set1.isEmpty)(set1.max)
+              val max2 = unless(set2.isEmpty)(set2.max)
+              ps :+= Plugin.parents(max1.toSet ++ max2.toSet)
+            if probabilityPlugin
+            then
+              ps :+= Plugin.probability(probability)
+            if syncRatePlugin
+            then
+              ps :+= Plugin.syncRate(Some(rate))
+            if whatIfPlugin
+            then
+              val rateʹ =
+                χʹ(i)._2._2._1 zip χʹ(j)._2._2._1 match
+                  case Some((rate1ʹ, rate2ʹ)) =>
+                    val apr1 = msrtʹ(ep1)
+                    val apr2 = msrtʹ(ep2)
+                    val prb = (rate1ʹ / apr1) * (rate2ʹ / apr2)
+                    prb * (apr1 min apr2)
+                  case _                      =>
+                    rate
+              Λ += rate; Λʹ += rateʹ
+              ps :+= Plugin.whatIf(rateʹ -> rate, null)
+
+            val ref = ep1.polarity.get.orElse(ep2.polarity.get).right.get
+            r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
+
+    r
+      .sortBy(_._2)
+      .map(_._1)
+      .headOption match
+        case None => acc.reverse
+        case Some(it @ (key1, key2, _, (delay, pins))) =>
+          val k1 = key1.substring(36)
+          val k2 = key2.substring(36)
+          val  ^ = key1.substring(0, 36)
+          val ^^ = key2.substring(0, 36)
+          var %% = % - key1 - key2
+          %%.keys.foreach { key =>
+            val k = key.substring(36)
+            if `π-trick`.contains(k)
+            && {
+              val ^^^ = key.substring(0, 36)
+              `π-trick`(k).contains(k1) && ^ == ^^^ || `π-trick`(k).contains(k2) && ^^ == ^^^
+            } then
+              %% = %% - key
+          }
+          if whatIfPlugin
+          then
+            val diff = Λʹ - Λ
+            val pinsʹ = pins.map {
+              case whatIf: Plugin.whatIf => whatIf.copy(difference = diff)
+              case plugin => plugin
+            }
+            if %%.isEmpty
+            then
+              (it.copy(_4 = (delay, pinsʹ)) :: acc).reverse
+            else
+              ∥(%%, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
+          else
+            if %%.isEmpty
+            then
+              (it :: acc).reverse
+            else
+              ∥(%%, plugins)(`π-trick`)(check, it :: acc)

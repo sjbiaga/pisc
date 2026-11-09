@@ -1,0 +1,203 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+ gs "github.com/r0fls/gostats"
+  . "martianoff/gala/collection_immutable"
+ cm "martianoff/gala/collection_mutable"
+  . "martianoff/gala/concurrent"
+  . "martianoff/gala/std"
+    "math"
+    "math/big"
+)
+
+sealed type Go_RatePi {
+    case Go_ImmediatePi(weight uint64)
+    case Go_TimedPi(rate *big.Float)
+    case Go_PassivePi(weight uint64)
+}
+
+func delta(rate float64) float64 {
+    gs.Exponential(rate).Random()
+}
+
+struct EtherPolarity(ether string, polarity Option[Either[bool, *Promise[Go_NamePi]]])
+
+func (this EtherPolarity) Hash() uint32 { HashString(this.ether) }
+
+func (this EtherPolarity) Compare(that EtherPolarity) int {
+    if (this.ether < that.ether) -1
+    else if (this.ether > that.ether) 1
+    else if (this.polarity.IsDefined() && that.polarity.IsDefined()) {
+        if (this.polarity.Get().IsLeft() && that.polarity.Get().IsRight()) -1
+        else if (this.polarity.Get().IsRight() && that.polarity.Get().IsLeft()) 1
+        else 0
+    } else 0
+}
+
+struct PriorityDelay(priority int, delay float64)
+
+func (this PriorityDelay) Compare(that PriorityDelay) int {
+    if (this.priority == that.priority)
+        if (this.delay < that.delay) -1
+        else if (this.delay > that.delay) 1
+        else 0
+    else this.priority - that.priority
+}
+
+func Go_StatsPi(data1 HashMap[string, Tuple3[string, Option[Either[bool, *Promise[Go_NamePi]]], Go_RatePi]],
+                trick HashMap[string, HashSet[string]],
+                acc List[Tuple4[string, string, Option[*Promise[Go_NamePi]], float64]] = EmptyList()) List[Tuple4[string, string, Option[*Promise[Go_NamePi]], float64]] {
+    val mls = cm.EmptyHashMap[EtherPolarity, List[Either[uint64, Either[*big.Float, uint64]]]]() // lists
+
+    data1.ForEachKV((_, value) => value match {
+        case (ether, polarity, Go_ImmediatePi(weight)) => {// immediate
+            val ep = EtherPolarity(ether, polarity)
+            mls.PutIfAbsent(ep, EmptyList())
+            mls.Update(ep, (list) => list.Prepend(Left(weight)))
+        }
+        case (ether, polarity, Go_TimedPi(rate))       => {// timed
+            val ep = EtherPolarity(ether, polarity)
+            mls.PutIfAbsent(ep, EmptyList())
+            mls.Update(ep, (list) => list.Prepend(Right(Left(rate))))
+        }
+        case (ether, polarity, Go_PassivePi(weight))   => {// passive
+            val ep = EtherPolarity(ether, polarity)
+            mls.PutIfAbsent(ep, EmptyList())
+            mls.Update(ep, (list) => list.Prepend(Right(Right(weight))))
+        }
+        case it => Panic(it)
+    })
+
+    val msrt = cm.EmptyHashMap[EtherPolarity, *big.Float]() // [timed] sums of rates
+
+    mls.ForEachKV((ep, ls) => { // timed
+        val rs = ls.Filter((it) => it.IsRight())
+                   .Filter((it) => it.GetRight().IsLeft())
+                   .Map((it) => it.GetRight().GetLeft())
+        if (!rs.IsEmpty()) {
+            msrt.Put(ep, rs.Reduce((a, r) => a.Add(a, r)))
+        }
+    })
+
+    val mswi = cm.EmptyHashMap[EtherPolarity, *big.Float]() // [immediate] sums of weights
+
+    mls.ForEachKV((ep, ls) => { // immediate
+        val ws = ls.Filter((it) => it.IsLeft())
+                   .Map((it) => it.GetLeft())
+        if (!ws.IsEmpty()) {
+            mswi.Put(ep, big.NewFloat(float64(ws.Reduce((a, w) => a + w))))
+        }
+    })
+
+    val mswp = cm.EmptyHashMap[EtherPolarity, *big.Float]() // [passive] sums of weights
+
+    mls.ForEachKV((ep, ls) => { // passive
+        val ws = ls.Filter((it) => it.IsRight())
+                   .Filter((it) => it.GetRight().IsRight())
+                   .Map((it) => it.GetRight().GetRight())
+        if (!ws.IsEmpty()) {
+            mswp.Put(ep, big.NewFloat(float64(ws.Reduce((a, w) => a + w))))
+        }
+    })
+
+    val chi List[Tuple3[string, EtherPolarity, Tuple[*big.Float, *big.Float]]] = data1.ToList().Map((it) => it match {
+        case (key, (ether, polarity, Go_ImmediatePi(weight))) =>
+             (key, EtherPolarity(ether, polarity), (big.NewFloat(0), big.NewFloat(float64(weight))))
+        case (key, (ether, polarity, Go_TimedPi(rate))) =>
+             (key, EtherPolarity(ether, polarity), (rate, big.NewFloat(0)))
+        case (key, (ether, polarity, Go_PassivePi(weight))) =>
+             (key, EtherPolarity(ether, polarity), (big.NewFloat(0), big.NewFloat(float64(weight))))
+        case it => Panic(it)
+    })
+
+    val r = cm.EmptyList[Tuple[Tuple4[string, string, Option[*Promise[Go_NamePi]], float64], PriorityDelay]]()
+    //                                ^^^^^^  ^^^^^^         ^^^^^^^^^^^^^^^^^^^   ^^^^^^^   ^^^     ^^^^^
+    //                                key1    key1|2         input                 delay     pri     delay
+
+    chi.ZipWithIndex()
+       .ForEach((it) => it match {
+        case ((key1, ep1, (rate1, weight1)), i) => {
+            if (ep1.polarity.IsEmpty()) {
+                val (rate, priority) =
+                    if (msrt.Contains(ep1)) {
+                        val r, _ = rate1.Float64()
+                        (r, 2)
+                    } else if (mswi.Contains(ep1))
+                        (math.Inf(1), 1)
+                    else if (mswp.Contains(ep1))
+                        (0., 3)
+                    else
+                        Panic("N/A")
+                val delay = if (rate == 0.) math.Inf(1) else delta(rate)
+                r.Prepend(((key1, key1, None[*Promise[Go_NamePi]](), delay), PriorityDelay(priority, delay)))
+            } else {
+                val scope1 = Go_SubstringPi(key1, 0, 36)
+                chi.Drop(i+1)
+                   .ForEach((it) => it match {
+                    case (key2, ep2, (rate2, weight2)) if ep2.polarity.IsDefined()
+                                                       && ep1.ether == ep2.ether
+                                                       && ep1.polarity.Get().IsLeft() == ep2.polarity.Get().IsRight() => {
+                        val scope2 = Go_SubstringPi(key2, 0, 36)
+                        val k1 = Go_SubstringPi(key1, 36, key1.Size())
+                        val k2 = Go_SubstringPi(key2, 36, key2.Size())
+                        if (scope1 != scope2 || !trick.Contains(k1) || !trick(k1).Contains(k2)) {
+                           val (_rate, priority) =
+                               if (msrt.Contains(ep1) && msrt.Contains(ep2)) {
+                                  val apr1 = msrt.Apply(ep1)
+                                  val apr2 = msrt.Apply(ep2)
+                                  val prb = weight2.Mul(weight1.Quo(rate1, apr1), weight2.Quo(rate2, apr2))
+                                  (weight2.Mul(prb, if (apr1.Cmp(apr2) < 0) apr1 else apr2), 2)
+                               } else if (mswi.Contains(ep1) && mswi.Contains(ep2)) {
+                                  val apr1 = mswi.Apply(ep1)
+                                  val apr2 = mswi.Apply(ep2)
+                                  val prb = rate2.Mul(rate1.Quo(weight1, apr1), rate2.Quo(weight2, apr2))
+                                  (rate2.Mul(prb, if (apr1.Cmp(apr2) < 0) apr1 else apr2), 1)
+                               } else if (mswp.Contains(ep1) && mswp.Contains(ep2)) {
+                                  val apr1 = mswp.Apply(ep1)
+                                  val apr2 = mswp.Apply(ep2)
+                                  val prb = rate2.Mul(rate1.Quo(weight1, apr1), rate2.Quo(weight2, apr2))
+                                  (rate2.Mul(prb, if (apr1.Cmp(apr2) < 0) apr1 else apr2), 3)
+                               } else
+                                   Panic("The immediate and/or timed and/or passive activities must not be mixed")
+                            val rate, _ = _rate.Float64()
+                            val delay = delta(rate)
+                            val input = if (ep1.polarity.Get().IsRight()) ep1.polarity.Get().GetRight()
+                                        else ep2.polarity.Get().GetRight()
+                            r.Prepend(((key1, key2, Some(input), delay), PriorityDelay(priority, delay)))
+                        }
+                    }
+                    case _ => {}
+                })
+            }
+        }
+    })
+
+    r.SortBy((it) => it.V2)
+     .Map((it) => it.V1)
+     .HeadOption() match {
+        case Some(it) => {
+            val (key1, key2, _, _) = it
+            val k1 = Go_SubstringPi(key1, 36, key1.Size())
+            val k2 = Go_SubstringPi(key2, 36, key2.Size())
+            val scope1 = Go_SubstringPi(key1, 0, 36)
+            val scope2 = Go_SubstringPi(key2, 0, 36)
+            var data2 = data1.Remove(key1).Remove(key2)
+            data2.Keys().ForEach((key) => {
+                val k = Go_SubstringPi(key, 36, key.Size())
+                val scope = Go_SubstringPi(key, 0, 36)
+                if (trick.Contains(k)
+                && (trick(k).Contains(k1) && scope1 == scope || trick(k).Contains(k2) && scope2 == scope)) {
+                  data2 = data2.Remove(key)
+                }
+            })
+            if (data2.IsEmpty())
+                acc.Prepend(it).Reverse()
+            else
+                Go_StatsPi(data2, trick, acc.Prepend(it))
+        }
+        case _ =>
+            acc.Reverse()
+    }
+}

@@ -40,7 +40,7 @@ implicit val πTaskConsoleInstance: _root_.cats.effect.std.Console[zio.Task] =
   _root_.cats.effect.std.Console.make[zio.Task]
 
 
-object App extends _root_.zio.interop.catz.CatsApp:
+object App extends CatsApp:
 
   import _root_.scala.collection.immutable.{ List, Map, Seq, Set }
 
@@ -61,7 +61,7 @@ object App extends _root_.zio.interop.catz.CatsApp:
 
   import `Π-dump`.*, `Π-dump`.given
   import `Π-http4s`.*
-  import `Π-loop`.*, `Π-loop`.given
+  import `Π-loop`.*
   import `Π-traces`.{ KeyBy, Plugin }
 
 
@@ -133,7 +133,7 @@ object App extends _root_.zio.interop.catz.CatsApp:
       % <- AtomicCell[π.F].of(Map[String, Int | (Boolean, +[π.F])]())
       / <- Queue.unbounded[π.F, ((String, String), +[π.F])]
       * <- Semaphore[π.F](0)
-      ** <- PQueue.unbounded[π.F, (Int, List[((String, String), ++++[π.F])])]
+      ** <- Queue.unbounded[π.F, List[((String, String), ++++[π.F])]]
       - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
       ! <- Deferred[π.F, _root_.cats.effect.ExitCode]
       &| <- Ref[π.F].of(0L)

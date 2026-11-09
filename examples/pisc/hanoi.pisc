@@ -7,7 +7,7 @@
 @given Conversion[`()`, Int] = _.`()`[Int]
 @given Conversion[`()`, Option[Int]] = _.`()`[Option[Int]]
 
-                                                               ⟦ INCLUDE = fs2 ⟧
+                                                         ⟦ INCLUDE = (cot,fs2) ⟧
 
 @given Conversion[`()`[F], Int] = _.`()`[Int]
 @given Conversion[`()`[F], Option[Int]] = _.`()`[Option[Int]]
@@ -19,6 +19,18 @@
 @def println(a: Any) = IO.println(a)
 
 @def blocking(a: => Any) = IO.blocking(a)
+
+                                                               ⟦ INCLUDE = cot ⟧
+
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+@import cats.effect.std.Console
+
+@def print(a: Any) = OptionT.liftF(Console[F].print(a))
+
+@def println(a: Any) = OptionT.liftF(Console[F].println(a))
+
+@def blocking(a: => Any) = OptionT.liftF(Async[F].blocking(a))
 
                                                                ⟦ INCLUDE = fs2 ⟧
 

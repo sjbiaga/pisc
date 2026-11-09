@@ -5,16 +5,28 @@
 @given Conversion[`()`, Long] = _.`()`[Long]
 @given Conversion[`()`, String] = _.`()`[String]
 
-                                                               ⟦ INCLUDE = fs2 ⟧
-
-@import cats.effect.std.Console
+                                                           ⟦ INCLUDE = (cot,fs2) ⟧
 
 @given Conversion[`()`[F], Long] = _.`()`[Long]
 @given Conversion[`()`[F], String] = _.`()`[String]
 
-@def println[F[_]: Console](a: Any) = Console[F].println(a)
+                                                               ⟦ INCLUDE = fs2 ⟧
 
-@def sleep[F[_]: Async](d: FiniteDuration) = Async[F].sleep(d)
+@import cats.effect.std.Console
+
+@def println(a: Any) = Console[F].println(a)
+
+@def sleep(d: FiniteDuration) = Async[F].sleep(d)
+
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+                                                               ⟦ INCLUDE = cot ⟧
+
+@import cats.effect.std.Console
+
+@def println(a: Any) = OptionT.liftF(Console[F].println(a))
+
+@def sleep(d: FiniteDuration) = OptionT.sleep(d)
 
                       ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
 

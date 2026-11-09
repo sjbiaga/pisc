@@ -29,7 +29,7 @@
 package pisc
 package helper
 
-import scala.collection.{ Map, Set }
+import scala.collection.Map
 
 import scala.meta.*
 import dialects.Scala3

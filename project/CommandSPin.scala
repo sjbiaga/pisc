@@ -30,17 +30,19 @@ object CommandSPin {
     val P = "-P" + Int.MaxValue
     val opts = Map("-ce" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
                    "-cef" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-cot" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse") ++ F),
                    "-zio" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
                    "-ziof" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
-                   "-fs2" -> (Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse") ++ F),
-                   "-zs" -> Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse"),
+                   "-fs2" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse") ++ F),
+                   "-zs" -> (A ++ Seq(P, "-H0", "-T123456", "-Etrue", "-Icauses", "-Iparents", "-Iprobability", "-IsyncRate", "-IwhatIf", "-Jfalse")),
+                   "-go" -> Seq(P, "-H0", "-T123456"),
                    "-kk" -> (Seq(P) ++ (0 to 1).map("-O" + _))
                )
 
     def suggestions(args: Seq[String]): Seq[String] =
       args.flatMap {
         case it if it.startsWith("-") && args.size == 1 =>
-          Seq("-ce", "-cef", "-zio", "-ziof", "-kk", "-fs2", "-zs").filter(_.startsWith(it.toLowerCase))
+          Seq("-ce", "-cef", "-cot", "-zio", "-ziof", "-kk", "-fs2", "-zs", "-go").filter(_.startsWith(it.toLowerCase))
         case it =>
           { if (it.isEmpty && args.size == 1) suggestions(Seq("-")) else Nil } ++
           { if (args.size > 1 && opts.contains(args(1))) opts(args(1)) else Nil } ++

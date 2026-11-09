@@ -10,7 +10,7 @@
 
 @given Conversion[`()`, String] = _.`()`[String]
 
-                                                               ⟦ INCLUDE = fs2 ⟧
+                                                         ⟦ INCLUDE = (cot,fs2) ⟧
 
 @given Conversion[`()`[F], String] = _.`()`[String]
 
@@ -21,6 +21,18 @@
 @def print(a: Any) = IO.print(a)
 
 @def blocking(a: => Any) = IO.blocking(a)
+
+                                                               ⟦ INCLUDE = cot ⟧
+
+                      ⟦ TYPECLASSES = (Async,cats.effect.std.Console,Parallel) ⟧
+
+@import cats.effect.std.Console
+
+@def nl: String => OptionT[F, Any] = { it => OptionT.pure(s"$it\n") }
+
+@def print(a: Any) = OptionT.liftF(Console[F].print(a))
+
+@def blocking(a: => Any) = OptionT.liftF(Async[F].blocking(a))
 
                                                                ⟦ INCLUDE = fs2 ⟧
 
@@ -61,9 +73,9 @@ Greeter(stdin, stdout, line*) = \
                                 τ/*_ <- print('greet)*/. \
                               )
 
-Chooser(stdout, name) = τ@r.Greeter'(stdout, name)  \
-                      + τ@r.Greeter"(stdout, name)  \
-                      + τ@r.Greeter"'(stdout, name)
+Chooser(stdout, name) = τ@r. Greeter'(stdout, name)  \
+                      + τ@r. Greeter"(stdout, name)  \
+                      + τ@r. Greeter"'(stdout, name)
 
 Greeter'(stdout, name) = \
                        ( ([/*name.substring(0,1).toUpperCase*/ = "Q"] stdout<"That's an unusual name.">.)  \

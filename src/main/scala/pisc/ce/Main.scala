@@ -64,7 +64,7 @@ object Main extends helper.Main:
     var I = List.empty[Plugin]
     var J = false
 
-    def bain(arg: String) =
+    def spin(arg: String) =
       val in = if arg.endsWith(".pisc") then arg else arg + ".pisc"
       val out = Paths.get(s"$examples/in/", in.stripSuffix("pisc") + "scala.in").toString
       var source: Source = null
@@ -196,7 +196,7 @@ object Main extends helper.Main:
       case it if it.startsWith("-E") => E = it.substring(2).toBoolean
       case it if it.startsWith("-I") => I :::= it.substring(2).split(",").toList.map(Plugin.valueOf)
       case it if it.startsWith("-J") => J = it.substring(2).toBoolean
-      case it => bain(it)
+      case it => spin(it)
     }
 
 

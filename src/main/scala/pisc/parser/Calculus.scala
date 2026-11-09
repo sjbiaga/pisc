@@ -156,8 +156,8 @@ abstract class Calculus extends StochasticPi:
     ("!"|"¡") ~ scale >> { // [guarded] replication
       case lin ~ parallelism =>
         var parallelismʹ = if parallelism == -1 then _settings.replication._1 else parallelism
-        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡" ) && emitter.featuresLinearReplication then parallelismʹ = Int.MinValue
-        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡" ) || !emitter.featuresLinearReplication then parallelismʹ else -parallelismʹ
+        if parallelismʹ.abs == 1 && (_settings.replication._2 || lin == "¡" ) && emitter.featuresModuloReplication then parallelismʹ = Int.MinValue
+        parallelismʹ = if parallelismʹ < 2 || !(_settings.replication._2 || lin == "¡" ) || !emitter.featuresModuloReplication then parallelismʹ else -parallelismʹ
         opt( pace ) ~ opt( "."~>positioned(μ)<~"." ) >> { // [guarded] replication
           case _ ~ Some(π(λ(ch: Symbol), _, Some(cons), _, _)) if cons.nonEmpty && cons != "ν" =>
             throw ConsGuardParsingException(cons, ch.name)
@@ -207,7 +207,7 @@ abstract class Calculus extends StochasticPi:
 
   def instantiation(using Bindings, Duplications, Int): Parser[`⟦⟧`]
 
-  def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] = "("~>condition<~")" |
+  def condition(using Bindings): Parser[(((λ, λ), Boolean), Names)] =
     name~("="|"≠")~name ^^ {
       case (lhs, free_lhs) ~ mismatch ~ (rhs, free_rhs) =>
         val free = free_lhs ++ free_rhs
@@ -257,7 +257,7 @@ abstract class Calculus extends StochasticPi:
 
 object Calculus:
 
-  export ast.{ AST, Bindʹ, Bind, Cast, λ, Pre }
+  export ast.{ AST, Bindʹ, Bind, Cast, λ, -, μ, Pre }
   export Pre.*, AST.*
 
 
@@ -343,45 +343,92 @@ object Calculus:
 
       ast match
 
-        case it @ ∅() =>
-          ∅(it.pos)
+        case ∅() =>
+          ∅(ast.pos)
 
         case it @ +(∥(`.`(sum: +)), choices*) =>
           val lhs = sum.flatten
           val rhs = `+`(choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid))
+          it.cc(choices = lhs.choices.filterNot(`+`(_).isVoid) ++ rhs.choices) match
+            case ∅() => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ +(par, choices*) =>
           val lhs = `+`(par.flatten)
           val rhs = `+`(choices*).flatten
-          it.cc(choices = (lhs.choices ++ rhs.choices).filterNot(`+`(_).isVoid))
+          it.cc(choices = lhs.choices.filterNot(`+`(_).isVoid) ++ rhs.choices) match
+            case ∅() => ∅(ast.pos)
+            case itʹ => itʹ
 
         case it @ ∥(`.`(+(par)), components*) =>
           val lhs = par.flatten
           val rhs = ∥(components*).flatten
-          it.cc(components = lhs.components ++ rhs.components)
+          it.cc(components = lhs.components.filterNot(_.isVoid) ++ rhs.components)
 
         case it @ ∥(seq, components*) =>
           val lhs: ∥ = ∥(seq.flatten)
           val rhs = ∥(components*).flatten
-          it.cc(components = (lhs.components ++ rhs.components).filterNot { case `.`(sum: +) => sum.isVoid case _ => false })
+          it.cc(components = lhs.components.filterNot(_.isVoid) ++ rhs.components)
 
         case it @ `.`(+(∥(`.`(end, psr*))), psl*) =>
-          it.cc(end = end, prefixes = psl ++ psr).flatten
+          val itʹ = it.cc(end = end, prefixes = psl ++ psr).flatten
+          if itʹ.isVoid
+          then
+            `.`(∅(ast.pos)).setPos(ast.pos)
+          else
+            itʹ
 
         case it @ `.`(end, _*) =>
-          it.cc(end = end.flatten)
+          val itʹ = it.cc(end = end.flatten)
+          if itʹ.isVoid
+          then
+            `.`(∅(ast.pos)).setPos(ast.pos)
+          else
+            itʹ
 
         case it @ ?:(_, t, f) =>
-          it.cc(t = t.flatten, f = f.map(_.flatten))
+          val itʹ = it.cc(t = t.flatten, f = f.map(_.flatten))
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
 
         case it @ !(-1, None, None, sum) =>
-          sum.flatten match
+          val itʹ = sum.flatten match
             case +(∥(`.`(end: !))) => end
             case sumʹ => it.cc(sum = sumʹ)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
 
         case it @ !(_, _, _, sum) =>
-          it.cc(sum = sum.flatten)
+          val itʹ = it.cc(sum = sum.flatten)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
+
+        case it @ `⟦⟧`(definition @ Definition(_, _, _, variables, _), sum, _, pointers)
+            if variables.size > pointers.size =>
+          val names = variables.drop(pointers.size)
+          val (pos, free) = (sum.pos, sum.free -- names)
+          val νʹ: ν = ν(names.map(_.name).toSeq*).setPos(pos).bound = names
+          val seq = `.`(sum, νʹ).setPos(pos).free = free
+          val par = ∥(seq).setPos(pos).free = free
+          val sumʹ = `+`(par).setPos(pos).free = free
+          val itʹ = it.cc(definition = definition.copy(variables = variables.take(pointers.size)), sum = sumʹ)
+          if itʹ.isVoid
+          then
+            ∅(ast.pos)
+          else
+            itʹ
+
+        case it: `⟦⟧` if it.isVoid =>
+          ∅(ast.pos)
 
         case _ => ast
 

@@ -6,11 +6,9 @@
 
 @given Conversion[`()`, Int] = _.`()`[Int]
 
-                                                               ⟦ INCLUDE = fs2 ⟧
+                                                         ⟦ INCLUDE = (cot,fs2) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Int] = _.`()`[Int]
-
-                                                               ⟦ INCLUDE = fs2 ⟧
 
 @import cats.effect.std.Console
 
@@ -23,8 +21,6 @@
 @def println(a: Any) = ZIO.debug(a)
 
                                                                  ⟦ EXCLUDE = 0 ⟧{replication}
-
-                                                                 ⟦ TRACES = on ⟧
 
                                                                ⟦ EXCLUDE = yes ⟧
 
@@ -156,7 +152,7 @@ Main = ν(x) ( (!.x(y). τ/*println(1->y)*/. x</*gen.nextInt.abs*/>. x(y). τ/*p
             | (x</*-gen.nextInt.abs*/>.)                                                       \
             )
 
-⟦ replication = (linear,yes) ⟧
+⟦ replication = (modulo,yes) ⟧
 
                                                                ⟦ EXCLUDE = yes ⟧
 
@@ -171,7 +167,7 @@ Main = ν(x) ( (¡ 4* .x(y : (Int, Int) /**/). τ/*println(y._2)*/. [/*y._1 < 4*
 # several infinite publishers, several infinite subscribers ✔
 
 Main = ν(x) ( (¡ 4* .x(y). τ/*println(y)*/.)  \
-            | (¡ 4* .x</*gen.nextInt*/>.)     \
+            | (¡ 4* 1 .x</*gen.nextInt*/>.)   \
             )
 
                                                                ⟦ EXCLUDE = yes ⟧

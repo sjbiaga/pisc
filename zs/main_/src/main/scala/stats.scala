@@ -54,6 +54,14 @@ package object `Π-stats`:
       this
   case class ⊤(weight: Long) extends AnyVal with Rate
 
+  private final case class EtherPolarity(ether: {}, polarity: Option[Either[Unit, Ref[`()`]]]):
+    override def equals(any: Any): Boolean = any match
+      case that: EtherPolarity =>
+        (this.ether eq that.ether) && { (this.polarity -> that.polarity) match
+          case (None, None) | (Some(Left(_)), Some(Left(_))) | (Some(Right(_)), Some(Right(_))) => true
+          case _ => false }
+      case _ => false
+
   private val distributionCache: Cache[Double, Exponential] =
     Scaffeine()
       .recordStats()
@@ -90,22 +98,25 @@ package object `Π-stats`:
     val syncRatePlugin = plugins.contains(classOf[Plugin.syncRate].getSimpleName)
     val whatIfPlugin = plugins.contains(classOf[Plugin.whatIf].getSimpleName)
 
-    val mls = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), List[Either[Long, Either[BigDecimal, Long]]]]() // lists
+    val mls = HashMap[EtherPolarity, List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
     %
       .foreach {
         case (_, (e, p, r: ∞, _))    => // immediate
-          if !mls.contains(e -> p) then mls(e -> p) = Nil
-          mls(e -> p) ::= Left(r.weight)
+          val ep = EtherPolarity(e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Left(r.weight)
         case (_, (e, p, r: `ℝ⁺`, _)) => // timed
-          if !mls.contains(e -> p) then mls(e -> p) = Nil
-          mls(e -> p) ::= Right(Left(r.rate))
+          val ep = EtherPolarity(e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Right(Left(r.rate))
         case (_, (e, p, r: ⊤, _))    => // passive
-          if !mls.contains(e -> p) then mls(e -> p) = Nil
-          mls(e -> p) ::= Right(Right(r.weight))
+          val ep = EtherPolarity(e, p)
+          if !mls.contains(ep) then mls(ep) = Nil
+          mls(ep) ::= Right(Right(r.weight))
       }
 
-    val msrt = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() // [timed] sums of rates
+    val msrt = HashMap[EtherPolarity, BigDecimal]() // [timed] sums of rates
 
     mls // timed
       .foreach {
@@ -119,7 +130,7 @@ package object `Π-stats`:
             msrt(ep) = rs.sum
       }
 
-    val mswi = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() // [immediate] sums of weights
+    val mswi = HashMap[EtherPolarity, BigDecimal]() // [immediate] sums of weights
 
     mls // immediate
       .foreach {
@@ -132,7 +143,7 @@ package object `Π-stats`:
             mswi(ep) = ws.sum
       }
 
-    val mswp = HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() // [passive] sums of weights
+    val mswp = HashMap[EtherPolarity, BigDecimal]() // [passive] sums of weights
 
     mls // passive
       .foreach {
@@ -148,28 +159,29 @@ package object `Π-stats`:
 
     // whatIf //////////////////////////////////////////////////////////////////
 
-    val mlsʹ = if whatIfPlugin then HashMap[({}, Option[Either[Unit, Ref[`()`]]]), List[Either[Long, Either[BigDecimal, Long]]]]() else null // lists
+    val mlsʹ = if whatIfPlugin then HashMap[EtherPolarity, List[Either[Long, Either[BigDecimal, Long]]]]() else null // lists
 
     if whatIfPlugin
     then
       %
         .foreach {
           case (_, (e, p, r, _)) =>
-            if !mlsʹ.contains(e -> p) then mlsʹ(e -> p) = Nil
+            val ep = EtherPolarity(e, p)
+            if !mlsʹ.contains(ep) then mlsʹ(ep) = Nil
             r.whatIf match
               case Some(r) => // timed
-                mlsʹ(e -> p) ::= Right(Left(r.rate))
+                mlsʹ(ep) ::= Right(Left(r.rate))
               case _       =>
                 r match
                   case r: ∞    => // immediate
-                    mlsʹ(e -> p) ::= Left(r.weight)
+                    mlsʹ(ep) ::= Left(r.weight)
                   case r: `ℝ⁺` => // timed
-                    mlsʹ(e -> p) ::= Right(Left(r.rate))
+                    mlsʹ(ep) ::= Right(Left(r.rate))
                   case r: ⊤    => // passive
-                    mlsʹ(e -> p) ::= Right(Right(r.weight))
+                    mlsʹ(ep) ::= Right(Right(r.weight))
         }
 
-    val msrtʹ = if whatIfPlugin then HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() else null // [timed] sums of rates
+    val msrtʹ = if whatIfPlugin then HashMap[EtherPolarity, BigDecimal]() else null // [timed] sums of rates
 
     if whatIfPlugin
     then
@@ -185,7 +197,7 @@ package object `Π-stats`:
               msrtʹ(ep) = rs.sum
         }
 
-    val mswiʹ = if whatIfPlugin then HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() else null // [immediate] sums of weights
+    val mswiʹ = if whatIfPlugin then HashMap[EtherPolarity, BigDecimal]() else null // [immediate] sums of weights
 
     if whatIfPlugin
     then
@@ -200,7 +212,7 @@ package object `Π-stats`:
               mswiʹ(ep) = ws.sum
         }
 
-    val mswpʹ = if whatIfPlugin then HashMap[({}, Option[Either[Unit, Ref[`()`]]]), BigDecimal]() else null // [passive] sums of weights
+    val mswpʹ = if whatIfPlugin then HashMap[EtherPolarity, BigDecimal]() else null // [passive] sums of weights
 
     if whatIfPlugin
     then
@@ -223,9 +235,9 @@ package object `Π-stats`:
 
     if check
     then
-      val ert = msrt.keySet.filter(_._2.isDefined).map(_._1)
-      val ewi = mswi.keySet.filter(_._2.isDefined).map(_._1)
-      val ewp = mswp.keySet.filter(_._2.isDefined).map(_._1)
+      val ert = msrt.keySet.filter(_.polarity.isDefined).map(_.ether)
+      val ewi = mswi.keySet.filter(_.polarity.isDefined).map(_.ether)
+      val ewp = mswp.keySet.filter(_.polarity.isDefined).map(_.ether)
 
       if (ert & ewi).nonEmpty
       || (ewi & ewp).nonEmpty
@@ -235,18 +247,18 @@ package object `Π-stats`:
 
     val χ = %
       .map {
-        case (k, (e, p, r: ∞, s))    => k -> (e, p, BigDecimal(0) -> r.weight, s) // immediate
-        case (k, (e, p, r: `ℝ⁺`, s)) => k -> (e, p, r.rate -> 0L             , s) // timed
-        case (k, (e, p, r: ⊤, s))    => k -> (e, p, BigDecimal(0) -> r.weight, s) // passive
+        case (k, (e, p, r: ∞, s))    => k -> (EtherPolarity(e, p), BigDecimal(0) -> r.weight, s) // immediate
+        case (k, (e, p, r: `ℝ⁺`, s)) => k -> (EtherPolarity(e, p), r.rate -> 0L             , s) // timed
+        case (k, (e, p, r: ⊤, s))    => k -> (EtherPolarity(e, p), BigDecimal(0) -> r.weight, s) // passive
       }.toSeq
 
     val χʹ =
       if whatIfPlugin
       then %
         .map {
-          case (k, (e, p, r: ∞, s))    => k -> (e, p, Option.empty[BigDecimal] -> r.weight           , s) // immediate
-          case (k, (e, p, r: `ℝ⁺`, s)) => k -> (e, p, r.whatIf.map(_.rate).orElse(Some(r.rate)) -> 0L, s) // timed
-          case (k, (e, p, r: ⊤, s))    => k -> (e, p, Option.empty[BigDecimal] -> r.weight           , s) // passive
+          case (k, (e, p, r: ∞, s))    => k -> (EtherPolarity(e, p), Option.empty[BigDecimal] -> r.weight           , s) // immediate
+          case (k, (e, p, r: `ℝ⁺`, s)) => k -> (EtherPolarity(e, p), r.whatIf.map(_.rate).orElse(Some(r.rate)) -> 0L, s) // timed
+          case (k, (e, p, r: ⊤, s))    => k -> (EtherPolarity(e, p), Option.empty[BigDecimal] -> r.weight           , s) // passive
         }.toSeq
       else null
 
@@ -256,24 +268,24 @@ package object `Π-stats`:
 
     for
       i <- 0 until χ.size
-      (key1, (ether1, polarity1, (rate1, weight1), set1)) = χ(i)
+      (key1, (ep1, (rate1, weight1), set1)) = χ(i)
     do
-      if polarity1 eq None
+      if ep1.polarity eq None
       then
         val ((probability, rate), priority) =
-          if msrt.contains(ether1 -> polarity1)
+          if msrt.contains(ep1)
           then
-            val apr1 = msrt(ether1 -> polarity1)
+            val apr1 = msrt(ep1)
             val prb = rate1 / apr1
             prb -> rate1.toDouble -> 2
-          else if mswi.contains(ether1 -> polarity1)
+          else if mswi.contains(ep1)
           then
-            val apr1 = mswi(ether1 -> polarity1)
+            val apr1 = mswi(ep1)
             val prb = weight1 / apr1
             prb -> Double.PositiveInfinity -> 1
-          else if mswp.contains(ether1 -> polarity1)
+          else if mswp.contains(ep1)
           then
-            val apr1 = mswp(ether1 -> polarity1)
+            val apr1 = mswp(ep1)
             val prb = weight1 / apr1
             prb -> .0 -> 3
           else
@@ -296,7 +308,7 @@ package object `Π-stats`:
           ps :+= Plugin.syncRate(unless(rate.isPosInfinity)(BigDecimal(rate)))
         if whatIfPlugin
         then
-          χʹ(i)._2._3._1 match
+          χʹ(i)._2._2._1 match
             case Some(rate1ʹ) =>
               Λ += rate1; Λʹ += rate1ʹ
               ps :+= Plugin.whatIf(rate1ʹ -> rate1, null)
@@ -309,10 +321,10 @@ package object `Π-stats`:
         val ^ = key1.substring(0, 36)
         for
           j <- i+1 until χ.size
-          (key2, (ether2, polarity2, (rate2, weight2), set2)) = χ(j)
-          if (polarity2 ne None)
-          && (ether1 eq ether2)
-          && polarity1.get.isLeft == polarity2.get.isRight
+          (key2, (ep2, (rate2, weight2), set2)) = χ(j)
+          if (ep2.polarity ne None)
+          && (ep1.ether eq ep2.ether)
+          && ep1.polarity.get.isLeft == ep2.polarity.get.isRight
         do
           val ^^ = key2.substring(0, 36)
           if ^ != ^^
@@ -323,25 +335,25 @@ package object `Π-stats`:
           }
           then
             val ((probability, rate), priority) =
-              if msrt.contains(ether1 -> polarity1)
-              && msrt.contains(ether2 -> polarity2)
+              if msrt.contains(ep1)
+              && msrt.contains(ep2)
               then
-                val apr1 = msrt(ether1 -> polarity1)
-                val apr2 = msrt(ether2 -> polarity2)
+                val apr1 = msrt(ep1)
+                val apr2 = msrt(ep2)
                 val prb = (rate1 / apr1) * (rate2 / apr2)
                 prb -> prb * (apr1 min apr2) -> 2
-              else if mswi.contains(ether1 -> polarity1)
-                   && mswi.contains(ether2 -> polarity2)
+              else if mswi.contains(ep1)
+                   && mswi.contains(ep2)
               then
-                val apr1 = mswi(ether1 -> polarity1)
-                val apr2 = mswi(ether2 -> polarity2)
+                val apr1 = mswi(ep1)
+                val apr2 = mswi(ep2)
                 val prb = (weight1 / apr1) * (weight2 / apr2)
                 prb -> prb * (apr1 min apr2) -> 1
-              else if mswp.contains(ether1 -> polarity1)
-                   && mswp.contains(ether2 -> polarity2)
+              else if mswp.contains(ep1)
+                   && mswp.contains(ep2)
               then
-                val apr1 = mswp(ether1 -> polarity1)
-                val apr2 = mswp(ether2 -> polarity2)
+                val apr1 = mswp(ep1)
+                val apr2 = mswp(ep2)
                 val prb = (weight1 / apr1) * (weight2 / apr2)
                 prb -> prb * (apr1 min apr2) -> 3
               else
@@ -366,10 +378,10 @@ package object `Π-stats`:
             if whatIfPlugin
             then
               val rateʹ =
-                χʹ(i)._2._3._1 zip χʹ(j)._2._3._1 match
+                χʹ(i)._2._2._1 zip χʹ(j)._2._2._1 match
                   case Some((rate1ʹ, rate2ʹ)) =>
-                    val apr1 = msrtʹ(ether1 -> polarity1)
-                    val apr2 = msrtʹ(ether2 -> polarity2)
+                    val apr1 = msrtʹ(ep1)
+                    val apr2 = msrtʹ(ep2)
                     val prb = (rate1ʹ / apr1) * (rate2ʹ / apr2)
                     prb * (apr1 min apr2)
                   case _                      =>
@@ -377,7 +389,7 @@ package object `Π-stats`:
               Λ += rate; Λʹ += rateʹ
               ps :+= Plugin.whatIf(rateʹ -> rate, null)
 
-            val ref = polarity1.get.orElse(polarity2.get).right.get
+            val ref = ep1.polarity.get.orElse(ep2.polarity.get).right.get
             r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
 
     r
@@ -407,6 +419,14 @@ package object `Π-stats`:
               case whatIf: Plugin.whatIf => whatIf.copy(difference = diff)
               case plugin => plugin
             }
-            ∥(%%, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
+            if %%.isEmpty
+            then
+              (it.copy(_4 = (delay, pinsʹ)) :: acc).reverse
+            else
+              ∥(%%, plugins)(`π-trick`)(check, it.copy(_4 = (delay, pinsʹ)) :: acc)
           else
-            ∥(%%, plugins)(`π-trick`)(check, it :: acc)
+            if %%.isEmpty
+            then
+              (it :: acc).reverse
+            else
+              ∥(%%, plugins)(`π-trick`)(check, it :: acc)

@@ -1,0 +1,409 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+    "context"
+    "github.com/hut8/goq"
+gbq "github.com/hxxshidage/go-blocking-queue"
+    "github.com/marusama/cyclicbarrier"
+  . "martianoff/gala/collection_immutable"
+  . "martianoff/gala/concurrent"
+    "martianoff/gala/go_interop"
+    "martianoff/gala/resource"
+  . "martianoff/gala/std"
+    "strings"
+    "time"
+    "sync/atomic"
+)
+
+func Go_SubstringPi(text string, start int, end int) string {
+    val runes = ArrayFromSlice(go_interop.ToRunes(text))
+    val subRunes = runes.Slice(start, end)
+    var builder = strings.Builder{}
+    subRunes.ForEach((r rune) => {
+        builder.WriteRune(r)
+    })
+    builder.String()
+}
+
+// TYPES ///////////////////////////////////////////////////////////////////////
+
+struct Go_ParametersPi(Parallelism uint, Threshold int, Timeout uint)
+
+type Go_EnabledQueuePi struct {
+    queue *goq.Queue[Tuple3[string, string, Go_QueryPi]]
+}
+
+func Go_NewEnabledQueuePi() Go_EnabledQueuePi {
+    Go_EnabledQueuePi(
+        queue = goq.NewQueue[Tuple3[string, string, Go_QueryPi]]()
+    )
+}
+
+type Go_ScheduledQueuePi struct {
+    queue *Go_ListBlockingQueuePi[Tuple[Tuple[string, string], Tuple3[float64, Option[*Promise[Go_NamePi]], Tuple[Go_ReplyPi, Go_ReplyPi]]]]
+}
+
+func Go_NewScheduledQueuePi(capacity uint) Go_ScheduledQueuePi {
+    Go_ScheduledQueuePi(
+        queue = Go_NewListBlockingQueuePi[Tuple[Tuple[string, string], Tuple3[float64, Option[*Promise[Go_NamePi]], Tuple[Go_ReplyPi, Go_ReplyPi]]]](capacity)
+    )
+}
+
+type Go_ReturnPi struct {
+    delay float64
+    barrier cyclicbarrier.CyclicBarrier
+    input Option[*Promise[Go_NamePi]]
+}
+
+type Go_ReplyPi struct {
+    promise Promise[Go_NamePi]
+    continue_at *Promise[Go_NamePi]
+}
+
+type Go_QueryPi struct {
+    ether string
+    polarity Option[Either[bool, *Promise[Go_NamePi]]]
+    rate Go_RatePi
+    reply Go_ReplyPi
+}
+
+sealed type Go_EnabledPi {
+    case Go_CounterPi(number uint)
+    case Go_ActionPi(enabled bool, query Go_QueryPi)
+}
+
+type Go_EnabledMapPi struct {
+    mutex *go_interop.Mutex
+    hmap *HashMap[string, Go_EnabledPi]
+}
+
+// FUNCTIONS ///////////////////////////////////////////////////////////////////
+
+func Go_NewEnabledMapPi() Go_EnabledMapPi {
+    var hmap = EmptyHashMap[string, Go_EnabledPi]()
+    Go_EnabledMapPi(
+        mutex = go_interop.NewMutex(),
+        hmap = &hmap
+    )
+}
+
+func Go_EnablePi(enabled HashSet[string], hmap Go_EnabledMapPi) Go_TrampolinePi[Go_NamePi] {
+    Go_Call_unlockablePi(hmap.mutex, () => {
+        *hmap.hmap = enabled.FoldLeft(*hmap.hmap, ( (m, key) => {   val n = m.Get(key) match {
+                                                                        case Some(Go_CounterPi(n)) => n
+                                                                        case None() => uint(0)
+                                                                        case it => Panic(it)
+                                                                    }
+                                                                    m.Put(key, Go_CounterPi(n + 1))
+                                                                })
+        )
+        Go_returnPi
+    })
+}
+
+func enable(key string, hmap Go_EnabledMapPi, wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]) Go_TrampolinePi[Go_NamePi] {
+    val (_, spell) = wand
+    Go_EnablePi(spell.Get(key).Get(), hmap)
+}
+
+func discard(key string, scope string, hmap Go_EnabledMapPi, wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]) List[string] {
+    val (trick, _) = wand
+    trick.Get(key) match {
+        case Some(discarded) => {
+            discarded.ForEach((it) => {
+                hmap.hmap.Get(scope + it) match {
+                    case Some(Go_ActionPi(_, q)) =>
+                        q.reply.promise.Success(go_OptionPi(None()))
+                    case _ => { /* to be discarded but got excluded */ }
+                }
+            })
+            discarded.ToList().Map((it) => scope + it)
+        }
+        case _ => EmptyList[string]()
+    }
+}
+
+func Go_PeekPi(queue Go_ScheduledQueuePi, hmap Go_EnabledMapPi, wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]) Go_TrampolinePi[Go_NamePi] {
+    Go_Call_unlockablePi(hmap.mutex, () => {
+        val data =
+            if (hmap.hmap.Exists((_, value) => value match { case Go_CounterPi(_) => true case _ => false }))
+                EmptyHashMap[string, Tuple3[string, Option[Either[bool, *Promise[Go_NamePi]]], Go_RatePi]]()
+            else
+                hmap.hmap
+                    .Filter((_, value) => value match { case Go_ActionPi(true, _) => true case _ => false })
+                    .FoldLeftKV(
+                        EmptyHashMap[string, Tuple3[string, Option[Either[bool, *Promise[Go_NamePi]]], Go_RatePi]](),
+                        ((m, k, v) => v match { case Go_ActionPi(_, q) => m.Put(k, (q.ether, q.polarity, q.rate))
+                                                case it => Panic(it) })
+                    )
+        if (data.IsEmpty()) {
+            queue.queue.Enqueue(EmptyList[Tuple[Tuple[string, string], Tuple3[float64, Option[*Promise[Go_NamePi]], Tuple[Go_ReplyPi, Go_ReplyPi]]]]())
+        } else {
+            val nel = Go_StatsPi(data, wand.V1).Map((it) => {
+                val (key1, key2, input, delay) = it
+                val pc1 = hmap.hmap.Get(key1) match { case Some(Go_ActionPi(_, q)) => q.reply case it => Panic(it) }
+                val pc2 = hmap.hmap.Get(key2) match { case Some(Go_ActionPi(_, q)) => q.reply case it => Panic(it) }
+                ((key1, key2), (delay, input, (pc1, pc2)))
+            })
+            *hmap.hmap = nel.Map((it) => it match {
+                case ((key1, key2), _) => {
+                    val k1 = Go_SubstringPi(key1, 36, key1.Size())
+                    val k2 = Go_SubstringPi(key2, 36, key2.Size())
+                    val scope1 = Go_SubstringPi(key1, 0, 36)
+                    val scope2 = Go_SubstringPi(key2, 0, 36)
+                    val r1 = hmap.hmap.Get(key1) match { case Some(Go_ActionPi(_, q)) => q.reply case it => Panic(it) }
+                    val r2 = hmap.hmap.Get(key2) match { case Some(Go_ActionPi(_, q)) => q.reply case it => Panic(it) }
+                    val l1 = if (r1.promise.IsCompleted()) EmptyList[string]() else discard(k1, scope1, hmap, wand)
+                    val l2 = if (k1 == k2 || r2.promise.IsCompleted()) EmptyList[string]() else discard(k2, scope2, hmap, wand)
+                    var remove = l1.AppendAll(l2)
+                    if (r1.continue_at == nil) { remove = remove.Prepend(key1) }
+                    if (k1 != k2 && r2.continue_at == nil) { remove = remove.Prepend(key2) }
+                    var disable = EmptyList[string]()
+                    if (r1.continue_at != nil) { disable = disable.Prepend(key1) }
+                    if (k1 != k2 && r2.continue_at != nil) { disable = disable.Prepend(key2) }
+                    (remove, disable)
+                }
+            }).FoldRight(*hmap.hmap, ((it, m) => {
+                val (remove, disable) = it
+                disable.FoldLeft(remove.FoldLeft(m, ((m, k) => m.Remove(k))),
+                                 ((m, k) => m.Get(k) match  { case Some(Go_ActionPi(_, q)) =>
+                                                                  m.Put(k, Go_ActionPi(false, q))
+                                                              case it => Panic(it)
+                                                            }))
+            }))
+            queue.queue.Enqueue(nel)
+        }
+        Go_returnPi
+    })
+}
+
+func canExit(hmap Go_EnabledMapPi, wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]) bool {
+    val (trick, _) = wand
+    resource.WithLock(hmap.mutex, () =>
+        !hmap.hmap.Exists((_, value) => value match { case Go_CounterPi(_) => true case _ => false }) &&
+        hmap.hmap.ForAll((key1, value1) =>
+            value1 match {
+                case Go_ActionPi(true, Go_QueryPi(_, None(), _, _)) => false
+                case Go_ActionPi(true, Go_QueryPi(e1, Some(p1), _, _)) => {
+                    val k1 = Go_SubstringPi(key1, 36, key1.Size())
+                    val scope1 = Go_SubstringPi(key1, 0, 36)
+                    !hmap.hmap.Exists((key2, value2) =>
+                        value2 match {
+                            case Go_ActionPi(true, Go_QueryPi(e2, Some(p2), _, _)) if e1 == e2 && p1.IsLeft() == p2.IsRight() => {
+                                val k2 = Go_SubstringPi(key2, 36, key2.Size())
+                                val scope2 = Go_SubstringPi(key2, 0, 36)
+                                scope1 != scope2 || !trick.Contains(k1) || !trick(k1).Contains(k2)
+                            }
+                            case _ => false
+                        }
+                    )
+                }
+                case _ => true
+            })
+    )
+}
+
+type Go_LoopBatchPi struct {
+    mutex *go_interop.Mutex
+    sem gbq.BlockQueue
+}
+
+func Go_NewLoopBatchPi(mutex *go_interop.Mutex, threshold int) *Go_LoopBatchPi {
+    &Go_LoopBatchPi(
+        mutex = mutex,
+        sem = gbq.NewBlockingQueue(uint32(threshold))
+    )
+}
+
+func (self *Go_LoopBatchPi) Apply() {
+    if (self.sem.Len() < self.sem.Cap()) {
+        self.sem.Put(nil)
+    }
+}
+
+func Go_Loop_Pi(
+    ctx context.Context,
+    queue Go_ScheduledQueuePi,
+    hmap Go_EnabledMapPi,
+    batch *Go_LoopBatchPi,
+    started *int64,
+    poll Go_SemaphorePi,
+    parameters Go_ParametersPi,
+    wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]
+) Go_TrampolinePi[Go_NamePi] {
+    var count int64 = 0
+
+    bind _ = Go_Spawn_ReleasablePi(poll, () => {
+        val _, ok = batch.sem.Poll(time.Duration(parameters.Timeout * 1000) * time.Nanosecond)
+        if (ok) { atomic.AddInt64(&count, 1) }
+        Go_returnPi
+    }).Replicate(parameters.Threshold)
+    bind _ = poll.AcquireN(ctx, int64(parameters.Threshold))
+
+    bind loop = Go_Call_unlockablePi(batch.mutex, () => {
+        for batch.sem.Len() > 0 { batch.sem.Take() }
+        bind _ = Go_PeekPi(queue, hmap, wand)
+        val nel = queue.queue.Dequeue()
+        if (nel.IsEmpty()) {
+            if (*started + count == 0)
+                Go_donePi(Go_BoolPi(!canExit(hmap, wand)))
+            else
+                Go_donePi(Go_BoolPi(true))
+        } else {
+            val sem = Go_NewSemaphorePi(int64(parameters.Parallelism))
+            val fun = ((f func(Tuple[Tuple[string, string], Tuple3[float64, Option[*Promise[Go_NamePi]], Tuple[Go_ReplyPi, Go_ReplyPi]]]) Go_TrampolinePi[Go_NamePi]) =>
+                if (parameters.Parallelism == 1)
+                    nel.ForEach((it) => f(it).Run())
+                else
+                    nel.ForEach((it) => Go_SpawnPi(f(it)).Run())
+            )
+            fun ((it) => Go_CallPi(() => it match {
+                case ((key1, key2), (delay, input, (pc1, pc2))) => {
+                    val k1 = Go_SubstringPi(key1, 36, key1.Size())
+                    val k2 = Go_SubstringPi(key2, 36, key2.Size())
+                    val cb = cyclicbarrier.New(if (k1 == k2) 2 else 3)
+                    bind _ = sem.Acquire1(ctx)
+                    atomic.AddInt64(started, 1)
+                    bind _ = Go_Spawn_ReleasablePi(sem, () => {
+                        bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
+                        bind _ = enable(k1, hmap, wand)
+                        bind _ = if (k1 != k2) enable(k2, hmap, wand) else Go_returnPi
+                        bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
+                        atomic.AddInt64(started, -1)
+                        Go_returnPi
+                    })
+                    val ptr = &Go_ReturnPi(
+                        delay = delay,
+                        barrier = cb,
+                        input = input
+                    )
+                    var opt = go_PointerPi(ptr)
+                    pc1.promise.Success(go_OptionPi(Some(&opt)))
+                    if (k1 != k2) pc2.promise.Success(go_OptionPi(Some(&opt))) else {}
+                    if (pc1.continue_at != nil) (*pc1.continue_at).Success(go_OptionPi(Some(&opt))) else {}
+                    if (k1 != k2 && pc2.continue_at != nil) (*pc2.continue_at).Success(go_OptionPi(Some(&opt))) else {}
+                    Go_returnPi
+                }
+                case it => Panic(it)
+            }))
+            Go_donePi(Go_BoolPi(true))
+        }
+    })
+
+    if (loop.AsBool())
+        Go_Loop_Pi(ctx, queue, hmap, batch, started, poll, parameters, wand)
+    else
+        Go_returnPi
+}
+
+func Go_Loop0Pi(
+    ctx context.Context,
+    queue Go_ScheduledQueuePi,
+    hmap Go_EnabledMapPi,
+    started *int64,
+    parameters Go_ParametersPi,
+    wand Tuple[HashMap[string, HashSet[string]], HashMap[string, HashSet[string]]]
+) Go_TrampolinePi[Go_NamePi] {
+    val nel = queue.queue.Dequeue()
+    val opt =
+        if (nel.IsEmpty())
+            if (*started == 0)
+                queue.queue.DequeueWithTimeout(time.Duration(parameters.Timeout * 1000) * time.Nanosecond) match {
+                    case None() =>
+                        if (queue.queue.Size() == 0)
+                            None()
+                        else
+                            Some(nel)
+                    case it => it
+                }
+            else
+                Some(nel)
+        else
+            Some(nel)
+    bind loop = opt match {
+        case Some(nel) if nel.NonEmpty() => {
+            val sem = Go_NewSemaphorePi(int64(parameters.Parallelism))
+            val fun = ((f func(Tuple[Tuple[string, string], Tuple3[float64, Option[*Promise[Go_NamePi]], Tuple[Go_ReplyPi, Go_ReplyPi]]]) Go_TrampolinePi[Go_NamePi]) =>
+                if (parameters.Parallelism == 1)
+                    nel.ForEach((it) => f(it).Run())
+                else
+                    nel.ForEach((it) => Go_SpawnPi(f(it)).Run())
+            )
+            fun ((it) => Go_CallPi(() => it match {
+                case ((key1, key2), (delay, input, (pc1, pc2))) => {
+                    val k1 = Go_SubstringPi(key1, 36, key1.Size())
+                    val k2 = Go_SubstringPi(key2, 36, key2.Size())
+                    val cb = cyclicbarrier.New(if (k1 == k2) 2 else 3)
+                    bind _ = sem.Acquire1(ctx)
+                    atomic.AddInt64(started, 1)
+                    bind _ = Go_Spawn_ReleasablePi(sem, () => {
+                        bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
+                        bind _ = enable(k1, hmap, wand)
+                        bind _ = if (k1 != k2) enable(k2, hmap, wand) else Go_returnPi
+                        bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
+                        bind _ =
+                            if (atomic.AddInt64(started, -1) == 0)
+                                Go_PeekPi(queue, hmap, wand)
+                            else
+                                Go_returnPi
+                        Go_returnPi
+                    })
+                    val ptr = &Go_ReturnPi(
+                        delay = delay,
+                        barrier = cb,
+                        input = input
+                    )
+                    var opt = go_PointerPi(ptr)
+                    pc1.promise.Success(go_OptionPi(Some(&opt)))
+                    if (k1 != k2) pc2.promise.Success(go_OptionPi(Some(&opt))) else {}
+                    if (pc1.continue_at != nil) (*pc1.continue_at).Success(go_OptionPi(Some(&opt))) else {}
+                    if (k1 != k2 && pc2.continue_at != nil) (*pc2.continue_at).Success(go_OptionPi(Some(&opt))) else {}
+                    Go_returnPi
+                }
+                case it => Panic(it)
+            }))
+            Go_donePi(Go_BoolPi(true))
+        }
+        case None() if canExit(hmap, wand) =>
+            Go_donePi(Go_BoolPi(false))
+        case _ =>
+            Go_donePi(Go_BoolPi(true))
+    }
+
+    if (loop.AsBool())
+        Go_Loop0Pi(ctx, queue, hmap, started, parameters, wand)
+    else
+        Go_returnPi
+}
+
+func Go_PollPi(queue Go_EnabledQueuePi, hmap Go_EnabledMapPi, callback func(func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        val (scope, key, query) = queue.queue.Dequeue()
+        bind _ =
+            if (query.reply.Get().promise.Get().IsCompleted())
+                Go_Call_unlockablePi(hmap.mutex, () => {
+                    *hmap.hmap = hmap.hmap.Put(scope + key, Go_ActionPi(false, query))
+                    Go_returnPi
+                })
+            else
+                callback(() => {
+                    Go_Call_unlockablePi(hmap.mutex, () => {
+                        hmap.hmap.Get(key) match {
+                            case Some(Go_CounterPi(n)) => {
+                                if (n == 1) {
+                                    *hmap.hmap = hmap.hmap.Remove(key)
+                                } else {
+                                    *hmap.hmap = hmap.hmap.Put(key, Go_CounterPi(n - 1))
+                                }
+                                *hmap.hmap = hmap.hmap.Put(scope + key, Go_ActionPi(true, query))
+                            }
+                            case it => Panic(it)
+                        }
+                        Go_returnPi
+                    })
+                })
+        Go_PollPi(queue, hmap, callback)
+    })
+}

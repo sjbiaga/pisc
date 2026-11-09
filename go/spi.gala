@@ -1,0 +1,321 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+    "context"
+gbq "github.com/hxxshidage/go-blocking-queue"
+  . "martianoff/gala/concurrent"
+  . "martianoff/gala/collection_immutable"
+    "martianoff/gala/go_interop"
+    "martianoff/gala/resource"
+    "math/big"
+)
+
+sealed type Go_NamePi {
+    case Go_EtherPi(it string)
+    case Go_NumberPi(it *big.Float)
+    case Go_BoolPi(it bool)
+    case Go_StringPi(it string)
+    case go_OptionPi(it Option[*Go_NamePi])
+    case go_PointerPi(it *Go_ReturnPi)
+    case go_TuplePi(it Tuple[*Go_NamePi, *Go_NamePi])
+}
+
+func Go_IntPi(it int) Go_NamePi {
+    Go_NumberPi(big.NewFloat(float64(it)))
+}
+
+func Go_Float64Pi(it float64) Go_NamePi {
+    Go_NumberPi(big.NewFloat(it))
+}
+
+func (self Go_NamePi) Print() Go_TrampolinePi[Go_NamePi] {
+    self match {
+        case Go_EtherPi(it) => Print(&it)
+        case Go_NumberPi(it) => Print(it)
+        case Go_BoolPi(it) => Print(it)
+        case Go_StringPi(it) => Print(it)
+        case go_OptionPi(Some(it)) => {
+            Print("Some(")
+            (*it).Print()
+            Print(")")
+        }
+        case go_OptionPi(_) => Print("None()")
+        case go_PointerPi(it) => Print(it)
+        case go_TuplePi((v1, v2)) => {
+            Print("(")
+            (*v1).Print()
+            Print(",")
+            (*v2).Print()
+            Print(")")
+        }
+        case _ => Print()
+    }
+    Go_returnPi
+}
+
+func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
+    self match {
+        case Go_EtherPi(it) => Println(&it)
+        case Go_NumberPi(it) => Println(it)
+        case Go_BoolPi(it) => Println(it)
+        case Go_StringPi(it) => Println(it)
+        case go_OptionPi(Some(it)) => {
+            Print("Some(")
+            (*it).Print()
+            Println(")")
+        }
+        case go_OptionPi(_) => Println("None()")
+        case go_PointerPi(it) => Println(it)
+        case go_TuplePi((v1, v2)) => {
+            Print("(")
+            (*v1).Print()
+            Print(",")
+            (*v2).Print()
+            Println(")")
+        }
+        case _ => Print()
+    }
+    Go_returnPi
+}
+
+func (self Go_NamePi) AsNumber() *big.Float {
+    self match {
+        case Go_NumberPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) AsFloat64() float64 {
+    self match {
+        case Go_NumberPi(it) =>
+            it.Float64() match {
+                case (f64, _) => f64
+                case _ => Panic(it)
+            }
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) AsInt64() int64 {
+    self match {
+        case Go_NumberPi(it) =>
+            it.Int64() match {
+                case (i64, _) => i64
+                case _ => Panic(it)
+            }
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) AsInt() int {
+    int(self.AsInt64())
+}
+
+func (self Go_NamePi) AsBool() bool {
+    self match {
+        case Go_BoolPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) AsString() string {
+    self match {
+        case Go_StringPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) asOption() Option[Go_NamePi] {
+    self match {
+        case go_OptionPi(Some(it)) => Some(*it)
+        case go_OptionPi(_) => None()
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) asPointer() *Go_ReturnPi {
+    self match {
+        case go_PointerPi(it) => it
+        case it => Panic(it)
+    }
+}
+
+func (self Go_NamePi) AsTuple() Tuple[Go_NamePi, Go_NamePi] {
+    self match {
+        case go_TuplePi((v1, v2)) => (*v1, *v2)
+        case it => Panic(it)
+    }
+}
+
+type Go_StochasticPi struct {
+    Go_ctxPi context.Context
+    Go_mutexPi *go_interop.Mutex
+    Go_elvisPi HashMap[string, HashSet[string]]
+    Go_enabledMapPi Go_EnabledMapPi
+    Go_enabledQueuePi Go_EnabledQueuePi
+    Go_callbackPi func(func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi]
+}
+
+func Go_NuPi() Go_TrampolinePi[Go_NamePi] {
+    Go_UUIDPi().Map((it) => Go_EtherPi(it.AsString()))
+}
+
+func Go_ExcludePi(excluded HashSet[string], go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    go_stochastic.Go_callbackPi(() => {
+        val hmap = go_stochastic.Go_enabledMapPi
+        Go_Call_unlockablePi(hmap.mutex, () => {
+            *hmap.hmap = excluded.FoldLeft(*hmap.hmap, ((m, key) => {   val n = m.Get(key) match {
+                                                                            case Some(Go_CounterPi(n)) => n
+                                                                            case it => Panic(it)
+                                                                        }
+                                                                        if (n == 1)
+                                                                            m.Remove(key)
+                                                                        else
+                                                                            m.Put(key, Go_CounterPi(n - 1))
+                                                                    })
+            )
+            Go_returnPi
+        })
+    })
+}
+
+func exclude(key string, go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    if (go_stochastic.Go_elvisPi.Contains(key))
+        Go_ExcludePi(go_stochastic.Go_elvisPi.Apply(key), go_stochastic)
+    else
+        Go_returnPi
+}
+
+val tau_ether = Go_UUIDPi().Run().Get().AsString()
+
+func Go_SilentPrefixPi(rate Go_RatePi, key string, scope string, go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        bind _ = exclude(key, go_stochastic)
+        val promise = NewPromise[Go_NamePi]()
+        val continue_at *Promise[Go_NamePi] = nil
+        val reply = Go_ReplyPi(
+            promise = promise,
+            continue_at = continue_at
+        )
+        val query = Go_QueryPi(
+           ether = tau_ether,
+           polarity = None(),
+           rate = rate,
+           reply = reply
+        )
+        go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope, key, query))
+        bind opt = Go_AwaitPi(promise)
+        bind opt = Go_DonePi(opt.asOption())
+        val ptr = opt.asPointer()
+        val barrier = ptr.barrier
+        bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+        bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+        Go_donePi(Go_Float64Pi(ptr.delay))
+    })
+}
+
+func (self Go_NamePi) Go_OutputPrefixPi(name Go_NamePi, rate Go_RatePi, key string, scope string, go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
+            case Go_EtherPi(ether) => {
+                bind _ = exclude(key, go_stochastic)
+                val promise = NewPromise[Go_NamePi]()
+                val continue_at *Promise[Go_NamePi] = nil
+                val reply = Go_ReplyPi(
+                    promise = promise,
+                    continue_at = continue_at
+                )
+                val query = Go_QueryPi(
+                   ether = ether,
+                   polarity = Some(Left(true)),
+                   rate = rate,
+                   reply = reply
+                )
+                go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope, key, query))
+                bind opt = Go_AwaitPi(promise)
+                bind opt = Go_DonePi(opt.asOption())
+                val ptr = opt.asPointer()
+                val input = ptr.input.Get()
+                (*input).Success(name)
+                val barrier = ptr.barrier
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                Go_donePi(Go_Float64Pi(ptr.delay))
+            }
+            case it => Panic(it)
+        }
+    })
+}
+
+func (self Go_NamePi) Go_InputPrefixPi(rate Go_RatePi, key string, scope string, go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
+            case Go_EtherPi(ether) => {
+                bind _ = exclude(key, go_stochastic)
+                var result = NewPromise[Go_NamePi]()
+                val promise = NewPromise[Go_NamePi]()
+                val continue_at *Promise[Go_NamePi] = nil
+                val reply = Go_ReplyPi(
+                    promise = promise,
+                    continue_at = continue_at
+                )
+                val query = Go_QueryPi(
+                   ether = ether,
+                   polarity = Some(Right(&result)),
+                   rate = rate,
+                   reply = reply
+                )
+                go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope, key, query))
+                bind opt = Go_AwaitPi(promise)
+                bind opt = Go_DonePi(opt.asOption())
+                val ptr = opt.asPointer()
+                val barrier = ptr.barrier
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind name = Go_AwaitPi(result)
+                var namep = name
+                var delay = Go_Float64Pi(ptr.delay)
+                Go_donePi(go_TuplePi((&namep, &delay)))
+            }
+            case it => Panic(it)
+        }
+    })
+}
+
+func (self Go_NamePi) Go_InputPrefixPi_(rate Go_RatePi, key string, scope string, f func(Go_NamePi) Go_TrampolinePi[Go_NamePi], go_stochastic Go_StochasticPi) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self match {
+            case Go_EtherPi(ether) => {
+                bind _ = exclude(key, go_stochastic)
+                var result = NewPromise[Go_NamePi]()
+                val promise = NewPromise[Go_NamePi]()
+                val continue_at *Promise[Go_NamePi] = nil
+                val reply = Go_ReplyPi(
+                    promise = promise,
+                    continue_at = continue_at
+                )
+                val query = Go_QueryPi(
+                   ether = ether,
+                   polarity = Some(Right(&result)),
+                   rate = rate,
+                   reply = reply
+                )
+                go_stochastic.Go_enabledQueuePi.queue.Enqueue((scope, key, query))
+                bind opt = Go_AwaitPi(promise)
+                bind opt = Go_DonePi(opt.asOption())
+                val ptr = opt.asPointer()
+                val barrier = ptr.barrier
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
+                bind name = Go_AwaitPi(result)
+                bind name = f(name)
+                var namep = name
+                var delay = Go_Float64Pi(ptr.delay)
+                Go_donePi(go_TuplePi((&namep, &delay)))
+            }
+            case it => Panic(it)
+        }
+    })
+}

@@ -1,0 +1,97 @@
+// -*- indent-tabs-mode: nil; -*-
+
+package spi
+
+import (
+    "context"
+    "github.com/marusama/cyclicbarrier"
+guu "github.com/hashicorp/go-uuid"
+    "golang.org/x/sync/semaphore"
+    "martianoff/gala/go_interop"
+  . "martianoff/gala/std"
+)
+
+func Go_UUIDPi() Go_TrampolinePi[Go_NamePi] {
+    val id, err = guu.GenerateUUID()
+    Go_DonePi(GoTry(id, err).ToOption().Map((it string) => Go_StringPi(it)))
+}
+
+func Go_SpawnPi(f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        go_interop.Spawn(() => Go_CallPi(f).Run())
+        Go_returnPi
+    })
+}
+
+func Go_Spawn_ReleasablePi(s Go_SemaphorePi, f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        go_interop.Spawn(() => { use r = Go_ReleasablePi(s); Go_CallPi(f).Run() })
+        Go_returnPi
+    })
+}
+
+type Go_SemaphorePi struct {
+    weighted *semaphore.Weighted
+}
+
+func Go_NewSemaphorePi(n int64) Go_SemaphorePi {
+    Go_SemaphorePi(weighted = semaphore.NewWeighted(n))
+}
+
+func (self Go_SemaphorePi) AcquireN(ctx context.Context, n int64) Go_TrampolinePi[Go_NamePi] {
+    Go_voidPi(FromError(self.weighted.Acquire(ctx, n)).ToOption())
+}
+
+func (self Go_SemaphorePi) Acquire1(ctx context.Context) Go_TrampolinePi[Go_NamePi] {
+    self.AcquireN(ctx, 1)
+}
+
+func (self Go_SemaphorePi) Release1() Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        self.weighted.Release(1)
+        Go_returnPi
+    })
+}
+
+func (self Go_SemaphorePi) TryAcquireN(n int64) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => if (self.weighted.TryAcquire(n)) Go_returnPi else Go_nonePi)
+}
+
+func (self Go_SemaphorePi) TryAcquire1() Go_TrampolinePi[Go_NamePi] {
+    self.TryAcquireN(1)
+}
+
+type Go_ReleasablePi struct {
+    Semaphore Go_SemaphorePi
+}
+
+func (self Go_ReleasablePi) Close() {
+    self.Semaphore.Release1().Run()
+}
+
+type awaitable struct {
+    ctx context.Context
+    barrier cyclicbarrier.CyclicBarrier
+}
+
+func (self awaitable) Close() {
+    FromError(self.barrier.Await(self.ctx))
+}
+
+type unlockable struct {
+    mutex *go_interop.Mutex
+}
+
+func (self unlockable) Close() {
+    self.mutex.Unlock()
+}
+
+type waitable struct {
+    ctx context.Context
+    semaphore Go_SemaphorePi
+    capacity int64
+}
+
+func (self waitable) Close() {
+    self.semaphore.AcquireN(self.ctx, self.capacity).Run()
+}

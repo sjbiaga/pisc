@@ -149,7 +149,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
@@ -159,7 +159,7 @@ object Program:
                              Term.ArgClause(expr::Nil)
                            ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr: Term = `_ <- IO { * }`(term)
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
@@ -188,7 +188,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
                                  Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: argʹ.toTerm :: Nil)),
@@ -197,7 +197,7 @@ object Program:
                                Term.ArgClause(expr::Nil)
                              ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr: Term = `_ <- IO { * }`(term)
               * :+= `_ <- *`(Term.Apply(
                                Term.Apply(
                                  Term.Apply(\(ch), Term.ArgClause(rate(r.get) :: argʹ.toTerm :: Nil)),
@@ -218,7 +218,7 @@ object Program:
               if ch == par
               then
                 val λ(Symbol(parʹ)) = argʹ
-                * :+= `* <- IO.pure(*)`(par -> parʹ)
+                * :+= `* <- \\.\\\\(*)`(par -> parʹ)
 
         case π(λ(Symbol(ch)), λ(params: List[`λ`]), Some(cons), r, code) =>
           val args = params.map {
@@ -290,7 +290,7 @@ object Program:
         ////////////////////////// (mis)match | if then else | elvis operator //
 
 
-        // (LINEAR) REPLICATION ////////////////////////////////////////////////
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(it @ π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(nu), r, code)), sum) if parallelism < -1 =>
           val par = if λ.`type`.isDefined then id else arg
@@ -304,7 +304,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -351,7 +351,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -394,7 +394,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -431,7 +431,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -475,7 +475,7 @@ object Program:
           val `!.π⋯` = πʹ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(arg :: Nil)),
                                                               Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
           val `val` =
             λ.`type` match
@@ -511,7 +511,7 @@ object Program:
           val `!.μ⋯` = μ.emit :+ ^._1 :+ `_ <- *`(Term.Apply(Term.Apply(\(υidυ), Term.ArgClause(Nil)),
                                                              Term.ArgClause(^._2 :: Nil, Some(Mod.Using()))))
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
+          val `!⋯` = pace.map(`_ <- \\.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
           val sem = if parallelism < 0 then null else id
 

@@ -1,0 +1,73 @@
+// -*- indent-tabs-mode: nil; -*-
+
+func Go_PacePi(ctx context.Context, amount int64, paceunit time.Duration) Go_TrampolinePi[Go_NamePi] {
+    Go_voidPi(FromError(Go_SleepPi(ctx, time.Duration(amount) * paceunit)).ToOption())
+}
+
+func PrintNoLn(message ...any) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        Print(message...)
+        Go_returnPi
+    })
+}
+
+func PrintLn(message ...any) Go_TrampolinePi[Go_NamePi] {
+    Go_CallPi(() => {
+        Println(message...)
+        Go_returnPi
+    })
+}
+
+func main() {
+    val batchMode = go_spi_parameters.Threshold > 0
+    val ctx = context.Background()
+    val mutex = go_interop.NewMutex()
+    val enabledMap = Go_NewEnabledMapPi()
+    val enabledQueue = Go_NewEnabledQueuePi()
+    val scheduledQueue = Go_NewScheduledQueuePi(uint(1 + (if (batchMode) 0 else -go_spi_parameters.Threshold)))
+
+    val batch = if (batchMode) Go_NewLoopBatchPi(mutex, go_spi_parameters.Threshold) else nil
+
+    val callback =
+        if (batchMode)
+            (it func() Go_TrampolinePi[Go_NamePi]) =>
+                Go_Call_unlockablePi(mutex, () => {
+                    bind _ = it()
+                    batch.Apply()
+                    Go_returnPi
+                })
+        else
+            (it func() Go_TrampolinePi[Go_NamePi]) =>
+                Go_Call_unlockablePi(mutex, () => {
+                    bind _ = it()
+                    Go_PeekPi(scheduledQueue, enabledMap, go_spi_wand)
+                })
+
+    val go_stochastic = Go_StochasticPi(
+        Go_ctxPi = ctx,
+        Go_mutexPi = mutex,
+        Go_elvisPi = go_spi_elvis,
+        Go_enabledMapPi = enabledMap,
+        Go_enabledQueuePi = enabledQueue,
+        Go_callbackPi = callback
+    )
+
+    Go_CallPi(() => {
+        bind _ = Go_EnablePi(go_spi_main, enabledMap)
+
+        var started int64 = 0
+        bind _ =
+            if (batchMode) {
+                val poll = Go_NewSemaphorePi(int64(go_spi_parameters.Threshold))
+                bind _ = poll.TryAcquireN(int64(go_spi_parameters.Threshold))
+                Go_SpawnPi(Go_Loop_Pi(ctx, scheduledQueue, enabledMap, batch, &started, poll, go_spi_parameters, go_spi_wand))
+            }
+            else
+                Go_SpawnPi(Go_Loop0Pi(ctx, scheduledQueue, enabledMap, &started, go_spi_parameters, go_spi_wand))
+        bind _ = Go_SpawnPi(Go_PollPi(enabledQueue, enabledMap, callback))
+
+        Main(ListFromSlice(os.Args).Tail(), Go_UUIDPi().Run().Get(), go_stochastic)
+    }).Run()
+}
+
+

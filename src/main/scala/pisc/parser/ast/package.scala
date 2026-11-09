@@ -29,18 +29,22 @@
 package pisc
 package parser
 
-import scala.meta.{ Pat, Term, Type }
+import scala.meta.{ Lit, Pat, Term, Type }
 
 import io.circe.Json
 
 
 package object ast:
 
-  import AST.{ `(*)`, + }
+  import AST.{ +, ?:, `{}`, `(*)`, !, `⟦⟧` }, Pre.{ π, τ }
 
   type Bindʹ = (`(*)`, Boolean, +)
 
   type Bind = (`(*)`, +)
+
+  type - = ?: | `{}` | `(*)` | ! | `⟦⟧`
+
+  type μ = π | τ
 
 
   trait Positional extends scala.util.parsing.input.Positional:
@@ -64,9 +68,14 @@ package object ast:
 
     val kind: String = `val` match
       case _: Symbol => "channel name"
+      case _: emitter.go.Gala.alloc => "channel name"
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
+      case _: Lit.Int | _: Lit.Long => "go int literal"
+      case _: Lit.Boolean => "Golang bool literal"
+      case _: Lit.Double => "Golang float64 literal"
+      case _: Lit.String => "Golang string literal"
       case _: Term => "Scalameta Term"
       case _ => "polyadic names"
 
@@ -77,7 +86,7 @@ package object ast:
         case it: Boolean => Json.fromBoolean(it)
         case it: String => Json.fromString("\"" + it + "\"")
         case it: List[`λ`] => Json.fromValues(it.map(_.toJson))
-        case it: Term => Json.Null
+        case _ => Json.Null
 
     def toPat: Pat =
       import scala.meta._
@@ -101,8 +110,15 @@ package object ast:
 
     override def toString: String = `val` match
       case it: Symbol => it.name
+      case emitter.go.Gala.alloc(null) => "N/A"
+      case emitter.go.Gala.alloc(it) => it
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
-      case it: String => "\"" + it + "\""
+      case it: String => "\"" + it.replaceAll("[\"]", "\\\"") + "\""
+      case it: Lit.Int => "/*" + it.value + "*/"
+      case it: Lit.Long => "/*" + it.value + "*/"
+      case it: Lit.Boolean => "/*" + it.value + "*/"
+      case it: Lit.Double => "/*" + it.value + "*/"
+      case it: Lit.String =>  "/*" + it + "*/"
       case it: Term => "/*" + it + "*/"
       case it: List[`λ`] => it.mkString(", ")
