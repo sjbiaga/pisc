@@ -24,7 +24,7 @@ Main = ν(a,b,c)      \
 Hanoi(a,b,c,n*) = ν(w)                                                                                                       \
                 ( τ/*bind _ = PrintNoLn("n = ");                                                                             \
                      bind 'n = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))));  \
-                     bind 'n = Go_CallPi(() => Go_DonePi(parse(n.ToString()).ToOption().Map((it) => Go_IntPi(it))))          \
+                     bind 'n = Go_CallPi(() => Go_DonePi(parse(n.AsString()).ToOption().Map((it) => Go_IntPi(it))))          \
                    */.                                                                                                       \
                   Hanoi(a,b,c,n,w)                                                                                           \
                 | w(w).                                                                                                      \
@@ -35,18 +35,18 @@ Hanoi(a,b,c,n*) = ν(w)                                                         
 
 
 Move(from,to,z) = from(x).to(y).                                                  \
-                  τ/*bind _ = PrintLn('x.ToString() + " -> " + 'y.ToString())*/.  \
+                  τ/*bind _ = PrintLn('x.AsString() + " -> " + 'y.AsString())*/.  \
                                 z</*1*/>.
 
-Hanoi(a,b,c,n,w) = if /*'n.ToInt() <= 1*/ = True                                                 \
+Hanoi(a,b,c,n,w) = if /*'n.AsInt() <= 1*/ = True                                                 \
                    then ν(z) ( Move(a,c,z) | z(z).w<z>. )                                        \
                    else ν(x)                                                                     \
-                      ( Hanoi(a,c,b,/*Go_IntPi('n.ToInt()-1)*/,x)                                \
+                      ( Hanoi(a,c,b,/*Go_IntPi('n.AsInt()-1)*/,x)                                \
                       | x(x). ν(y)                                                               \
                               ( Move(a,c,y)                                                      \
                               | y(y). ν(z)                                                       \
-                                      ( Hanoi(b,a,c,/*Go_IntPi('n.ToInt()-1)*/,z)                \
-                                      | z(z).w</*Go_IntPi('x.ToInt()+'y.ToInt()+'z.ToInt())*/>.  \
+                                      ( Hanoi(b,a,c,/*Go_IntPi('n.AsInt()-1)*/,z)                \
+                                      | z(z).w</*Go_IntPi('x.AsInt()+'y.AsInt()+'z.AsInt())*/>.  \
                                       )                                                          \
                               )                                                                  \
                       )

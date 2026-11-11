@@ -52,11 +52,11 @@ enum Gala:
 
   case func(agent: String, names: Seq[String], body: Gala.body)
 
-  case init(assignment: List[(String, String)])
+  case init(assignment: Either[List[(String, String)], (String, alloc)])
 
   case noop()
 
-  case nu(names: String*)
+  case nu(names: alloc | Seq[String])
 
   case pace(amount: Long, paceunit: String)
 
@@ -158,17 +158,23 @@ enum Gala:
         s"${indent}}" ::
         Nil
 
-      case init(it) if it.isEmpty =>
+      case init(Left(Nil)) =>
         Nil
 
-      case init(it) =>
+      case init(Left(it)) =>
         indent + it.map(_._1).mkString("val ", ", ", "") + it.map(_._2).mkString(" = ", ", ", "")
+
+      case init(Right(it)) =>
+        indent + s"val ${it._1} = ${it._2.id}"
 
       case noop() =>
         Nil
 
-      case nu(names*) =>
-        names.map(s"${indent}bind " + _ + " = " + "Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))").toList
+      case nu(alloc(name)) =>
+        s"${indent}bind $name = Go_NuPi()"
+
+      case nu(Seq(names*)) =>
+        names.map(s"${indent}bind " + _ + " = " + "Go_NuPi()").toList
 
       case pace(amount, paceunit) =>
         indent + "bind _ = Go_PacePi(go_context, " + amount + ", time." + paceunit + ")"
@@ -185,6 +191,13 @@ enum Gala:
       case pi(channel, λ(Lit.Null()), None) =>
         s"${indent}bind _ = " + s"$channel match {" ::
         s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NothingPi())" ::
+        s"${indentʹ}case it => Panic(it)" ::
+        s"${indent}}" ::
+        Nil
+
+      case pi(channel, λ(alloc(name)), None) =>
+        s"${indent}bind _ = " + s"$channel match {" ::
+        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, $name)" ::
         s"${indentʹ}case it => Panic(it)" ::
         s"${indent}}" ::
         Nil
@@ -215,7 +228,10 @@ enum Gala:
 
       // MODULO REPLICATION ////////////////////////////////////////////////////
 
-      case rep(parallelism, pace :: nu(name) :: pi(channel, _, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
+      case rep(parallelism, hd :: _ :: nu(alloc(_)) :: pi(channel, _, _) :: tl, Some(false), op) if parallelism < -1 =>
+        rep(parallelism, hd :: nu(Seq(channel)) :: pi(channel, λ(Symbol(channel)), None) :: tl.init, Some(false), op).issue(indent)
+
+      case rep(parallelism, pace :: nu(Seq(name)) :: pi(channel, _, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
         val υidυ = id
         val υidυʹ = id
         s"${indent}val $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi] = (($name) => {" ::
@@ -288,7 +304,40 @@ enum Gala:
 
       // REPLICATION ///////////////////////////////////////////////////////////
 
-      case rep(-1, it @ _ :: nu(name) :: _, Some(false), op) =>
+      case rep(-1, it @ _ :: _ :: nu(alloc(_)) :: pi(name, _, _) :: _, Some(false), op) =>
+        val indentʹʹ = indentʹ + " "*4
+        val υidυ = id
+        s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) ::: // allocate
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.tail.issue(indent) ::: // dont reallocate
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ _ :: _ :: nu(alloc(_)) :: pi(name, _, _) :: _, Some(false), op) =>
+        val indentʹʹ = indentʹ + " "*4
+        val υidυ = id
+        val sem = id
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
+        s"${indent}$υidυ = ($name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) ::: // allocate
+        s"${indentʹ}$υidυ($name)" ::
+        s"${indent}}" ::
+        it.tail.tail.issue(indent) ::: // dont reallocate
+        s"${indent}$υidυ($name)" :: // LEAF, tailcall
+        Nil
+
+      case rep(-1, it @ _ :: nu(Seq(name)) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
@@ -303,7 +352,7 @@ enum Gala:
         s"${indent}$υidυ($name)" :: // LEAF, tailcall
         Nil
 
-      case rep(parallelism, it @ _ :: nu(name) :: _, Some(false), op) =>
+      case rep(parallelism, it @ _ :: nu(Seq(name)) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sem = id

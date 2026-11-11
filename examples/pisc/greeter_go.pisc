@@ -31,7 +31,7 @@ Main = ν(stdin, stdout) Greeter(stdin, stdout)
 
 Greeter(stdin, stdout, line*) = \
                               ( stdout<"What's your name?">.stdin(name). \
-                                                                         if /* TrimSpace('name.ToString()) == "" */ = True \
+                                                                         if /* TrimSpace('name.AsString()) == "" */ = True \
                                                                          then stdout<>. \
                                                                          else Chooser(stdout, name) \
                               ) \
@@ -39,7 +39,7 @@ Greeter(stdin, stdout, line*) = \
                               ( stdout(prompt) /* nl */. \
                                 τ /*bind _ = 'prompt.Print(); \
                                     bind 'line = Go_CallPi(() => Go_DonePi(reader.ReadString('\n').ToOption().Map((it) => Go_StringPi(it))))*/. \
-                                                         stdin</*Go_StringPi(TrimSpace(line.ToString()))*/>.stdout(greet) /* nl */. \
+                                                         stdin</*Go_StringPi(TrimSpace(line.AsString()))*/>.stdout(greet) /* nl */. \
                                 τ/*bind _ = 'greet.Print()*/. \
                               )
 
@@ -48,26 +48,26 @@ Chooser(stdout, name) = Greeter1(stdout, name) \
                       + Greeter3(stdout, name)
 
 Greeter1(stdout, name) = \
-                       ( ( [/*ToUpper(Substring('name.ToString(), 0, 1))*/ = "Q"] stdout<"That's an unusual name.">. ) \
+                       ( ( [/*ToUpper(Substring('name.AsString(), 0, 1))*/ = "Q"] stdout<"That's an unusual name.">. ) \
                        + ( [name = "Voldemort"] stdout<"WARNING! LORD VOLDEMORT IS HERE!">. ) \
-                       + ( [/*ToUpper(Substring(name.ToString(), 0, 1))*/ ≠ "Q"] \
-                           [name ≠ "Voldemort"] stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>.  ) \
+                       + ( [/*ToUpper(Substring(name.AsString(), 0, 1))*/ ≠ "Q"] \
+                           [name ≠ "Voldemort"] stdout</*Go_StringPi("Hello " + 'name.AsString() + "!")*/>.  ) \
                        )
 
 Greeter2(stdout, name) = \
-                       ( if /*ToUpper(Substring(name.ToString(), 0, 1))*/ = "Q" \
+                       ( if /*ToUpper(Substring(name.AsString(), 0, 1))*/ = "Q" \
                          then stdout<"That's an unusual name.">. \
                          else \
                            if name = "Voldemort" \
                            then stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           else stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>. \
+                           else stdout</*Go_StringPi("Hello " + 'name.AsString() + "!")*/>. \
                        )
 
 Greeter3(stdout, name) = \
-                       ( /*ToUpper(Substring(name.ToString(), 0, 1))*/ = "Q" \
+                       ( /*ToUpper(Substring(name.AsString(), 0, 1))*/ = "Q" \
                          ? stdout<"That's an unusual name.">. \
                          : \
                            name = "Voldemort" \
                            ? stdout<"WARNING! LORD VOLDEMORT IS HERE!">. \
-                           : stdout</*Go_StringPi("Hello " + 'name.ToString() + "!")*/>. \
+                           : stdout</*Go_StringPi("Hello " + 'name.AsString() + "!")*/>. \
                        )

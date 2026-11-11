@@ -35,7 +35,7 @@ package object Π:
   import _root_.cats.syntax.functor.*
   import _root_.cats.syntax.flatMap.*
 
-  import _root_.cats.{ Defer, Monad }
+  import _root_.cats.{ Defer, Functor, Monad }
   import _root_.cats.data.OptionT
   import _root_.cats.effect.{ Deferred, Ref, Temporal }
   import _root_.cats.effect.std.{ CyclicBarrier, Queue }
@@ -43,9 +43,13 @@ package object Π:
   import `Π-magic`.*
 
 
+  extension [F[_]: Functor, A](self: OptionT[F, Option[A]])
+    def semiflatten: OptionT[F, A] =
+      OptionT(self.value.map(_.flatten))
+
   extension [F[_]: Temporal, A](self: OptionT[F, A])
     def race(using signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, A] =
-      OptionT(Temporal[[X] =>> OptionT[F, X]].race(signal.get.flatMap(_ => OptionT.none[F, A]), self).map(_.toOption).value.map(_.flatten))
+      Temporal[[X] =>> OptionT[F, X]].race(signal.get.flatMap(_ => OptionT.none[F, A]), self).map(_.toOption).semiflatten
 
   extension (_self: OptionT.type)
     def sleep[F[_]: Temporal](time: FiniteDuration)(using signal: Deferred[[X] =>> OptionT[F, X], Unit]): OptionT[F, Unit] =

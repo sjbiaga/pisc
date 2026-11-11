@@ -40,6 +40,128 @@ import ProgramSuite.given
 
 class ProgramSuite extends FunSuite:
 
+  // REPLICATION (BOUND OUTPUT W/ ALLOC) ///////////////////////////////////////
+
+  test("replication - bound output guard w/ alloc - no parallelism & no pace") {
+
+    val `13` = `!`(-1, None, Some(π(λ(Symbol("guard")), λ(Symbol("guard")), Some("ν"), None)), ∅())
+
+    assertEquals(`13`.emit.toString,
+"""var _υ1υ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (guard Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = Go_SpawnPi(() => {
+        Go_returnPi
+    })
+    bind _υ2υ = Go_NuPi()
+    bind _ = guard match {
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ2υ)
+        case it => Panic(it)
+    }
+    val guard = _υ2υ
+    _υ1υ(guard)
+}
+bind _υ2υ = Go_NuPi()
+bind _ = guard match {
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ2υ)
+    case it => Panic(it)
+}
+val guard = _υ2υ
+_υ1υ(guard)"""
+    )
+  }
+
+  test("replication - bound output guard w/ alloc - parallelism >= 0 & no pace") {
+
+    val `13` = `!`(13, None, Some(π(λ(Symbol("guard")), λ(Symbol("guard")), Some("ν"), None)), ∅())
+
+    assertEquals(`13`.emit.toString,
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (guard Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
+    })
+    bind _υ3υ = Go_NuPi()
+    bind _ = guard match {
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ3υ)
+        case it => Panic(it)
+    }
+    val guard = _υ3υ
+    _υ1υ(guard)
+}
+bind _υ3υ = Go_NuPi()
+bind _ = guard match {
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ3υ)
+    case it => Panic(it)
+}
+val guard = _υ3υ
+_υ1υ(guard)"""
+    )
+  }
+
+  test("replication - bound output guard w/ alloc - no parallelism & nonempty pace") {
+
+    val `13` = `!`(-1, Some(13L->"Second"), Some(π(λ(Symbol("guard")), λ(Symbol("guard")), Some("ν"), None)), ∅())
+
+    assertEquals(`13`.emit.toString,
+"""var _υ1υ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (guard Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = Go_SpawnPi(() => {
+        Go_returnPi
+    })
+    bind _ = Go_PacePi(go_context, 13, time.Second)
+    bind _υ2υ = Go_NuPi()
+    bind _ = guard match {
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ2υ)
+        case it => Panic(it)
+    }
+    val guard = _υ2υ
+    _υ1υ(guard)
+}
+bind _υ2υ = Go_NuPi()
+bind _ = guard match {
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ2υ)
+    case it => Panic(it)
+}
+val guard = _υ2υ
+_υ1υ(guard)"""
+    )
+  }
+
+  test("replication - bound output guard w/ alloc - parallelism >= 0 & nonempty pace") {
+
+    val `13` = `!`(13, Some(13L->"Second"), Some(π(λ(Symbol("guard")), λ(Symbol("guard")), Some("ν"), None)), ∅())
+
+    assertEquals(`13`.emit.toString,
+"""val _υ2υ = Go_NewSemaphorePi(13)
+var _υ1υ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]
+_υ1υ = (guard Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
+        Go_returnPi
+    })
+    bind _ = Go_PacePi(go_context, 13, time.Second)
+    bind _υ3υ = Go_NuPi()
+    bind _ = guard match {
+        case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ3υ)
+        case it => Panic(it)
+    }
+    val guard = _υ3υ
+    _υ1υ(guard)
+}
+bind _υ3υ = Go_NuPi()
+bind _ = guard match {
+    case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, _υ3υ)
+    case it => Panic(it)
+}
+val guard = _υ3υ
+_υ1υ(guard)"""
+    )
+  }
+
+  /////////////////////////////////////// replication (bound output w/ alloc) //
+
   // REPLICATION (BOUND OUTPUT) ////////////////////////////////////////////////
 
   test("replication - bound output guard - no parallelism & no pace") {
@@ -52,14 +174,14 @@ _υ1υ = (name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
         Go_returnPi
     })
-    bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
         case it => Panic(it)
     }
     _υ1υ(name)
 }
-bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
     case it => Panic(it)
@@ -80,14 +202,14 @@ _υ1υ = (name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
-    bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
         case it => Panic(it)
     }
     _υ1υ(name)
 }
-bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
     case it => Panic(it)
@@ -107,14 +229,14 @@ _υ1υ = (name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
         Go_returnPi
     })
     bind _ = Go_PacePi(go_context, 13, time.Second)
-    bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
         case it => Panic(it)
     }
     _υ1υ(name)
 }
-bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
     case it => Panic(it)
@@ -136,14 +258,14 @@ _υ1υ = (name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
         Go_returnPi
     })
     bind _ = Go_PacePi(go_context, 13, time.Second)
-    bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
         case it => Panic(it)
     }
     _υ1υ(name)
 }
-bind name = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, name)
     case it => Panic(it)

@@ -116,7 +116,7 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = nu(names*)
+          * = nu(names)
 
 
         case τ(Some((Right(term), _))) =>
@@ -126,13 +126,23 @@ object Program:
           * = tau() :: noop() :: Nil
 
 
+        case π(λ(Symbol(ch)), λ(Symbol(arg)), Some("ν"), opt) if ch == arg =>
+
+          val par: alloc = alloc()
+
+          opt match
+            case Some((Right(term), _)) =>
+              * = par :: nu(par) :: pi(ch, λ(par), None) :: code(term) :: init(Right(ch -> par)) :: Nil
+            case _ =>
+              * = par :: nu(par) :: pi(ch, λ(par), None) :: noop() :: init(Right(ch -> par)) :: Nil
+
         case π(λ(Symbol(ch)), arg @ λ(Symbol(par)), Some("ν"), opt) =>
 
           opt match
             case Some((Right(term), _)) =>
-              * = nu(par) :: pi(ch, arg, None) :: code(term) :: Nil
+              * = nu(Seq(par)) :: pi(ch, arg, None) :: code(term) :: Nil
             case _ =>
-              * = nu(par) :: pi(ch, arg, None) :: noop() :: Nil
+              * = nu(Seq(par)) :: pi(ch, arg, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), arg, None, opt) =>
 
@@ -191,7 +201,7 @@ object Program:
 
         case `⟦⟧`(Definition(_, _, _, variables, _), sum, _, pointers) =>
 
-          * = init((variables zip pointers).map(_.name -> _.name).toList) :: sum.emit
+          * = init(Left((variables zip pointers).map(_.name -> _.name).toList)) :: sum.emit
 
         case _: `{}` => ???
 

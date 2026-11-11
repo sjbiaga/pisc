@@ -74,7 +74,7 @@ func (self Go_NamePi) Go_BoundOutputPi(
                     loop = () Go_TrampolinePi[Go_NamePi] => {
                         bind _ = Go_voidPi(FromError(cb.Await(ctx)).ToOption())
                         bind _ = prev.Acquire1(ctx)
-                        val name = Go_QueuePi(Go_NewBlockingQueuePi())
+                        bind name = Go_NuPi()
                         bind _ = q.Go_EnqueuePi(ctx, name)
                         bind _ = sleep().FlatTapNone(next.Release1().Run())
                         bind _ = next.Release1()

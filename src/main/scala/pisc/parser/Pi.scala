@@ -277,7 +277,9 @@ object Pi:
     case monix extends Emitter(false, false)
     case zs extends Emitter(true, true)
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
-    case go extends Emitter(nullOnEmptyOutput = Lit.Null(), featuresModuloReplication = true)
+    case go extends Emitter(nullOnEmptyOutput = Lit.Null(),
+                            featuresModuloReplication = true,
+                            hasReplicationInputGuardFlaw = { _ => false })
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]
