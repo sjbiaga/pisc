@@ -195,13 +195,6 @@ enum Gala:
         s"${indent}}" ::
         Nil
 
-      case pi(channel, λ(alloc(name)), None) =>
-        s"${indent}bind _ = " + s"$channel match {" ::
-        s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, $name)" ::
-        s"${indentʹ}case it => Panic(it)" ::
-        s"${indent}}" ::
-        Nil
-
       case pi(channel, param, None) =>
         s"${indent}bind _ = " + s"$channel match {" ::
         s"${indentʹ}case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, ${param.toName})" ::
@@ -524,6 +517,7 @@ object Gala:
     def toName: context ?=> String = context ?=> {
       self.`val` match
         case Symbol(it) => it
+        case Gala.alloc(it) => it
         case it: BigDecimal => s"Go_NumberPi(big.NewFloat($it))"
         case it: Boolean => s"Go_BoolPi(${it.toString.toLowerCase})"
         case it: String => s"Go_StringPi(\"$it\")"

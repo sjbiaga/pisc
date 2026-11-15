@@ -12,11 +12,11 @@
 
 @given Conversion[`()`, Long] = _.`()`[Long]
 
-                                                       ⟦ INCLUDE = (fs2,monix) ⟧
+                                                   ⟦ INCLUDE = (cot,fs2,monix) ⟧
 
 @given [F[_]]: Conversion[`()`[F], Long] = _.`()`[Long]
 
-                                                               ⟦ INCLUDE = fs2 ⟧
+                                                         ⟦ INCLUDE = (cot,fs2) ⟧
 
 @import cats.effect.std.Console
 

@@ -35,7 +35,7 @@ package Π:
   import _root_.cats.syntax.applicative.*
 
   import _root_.cats.effect.IO
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
+  import _root_.cats.effect.std.Semaphore
 
   import Π.`Π-magic`.{ ><, >*< }
 
@@ -192,32 +192,30 @@ package Π:
                     (sleep: Expr[IO[Unit]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier[IO]($parallelism)
+            moduloS <- Semaphore[IO](1)
             unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+              def unfold(remaining: Int): IO[Unit] =
                 for
-                  nextS <- Semaphore[IO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- moduloCB.await
-                        _ <- prevS.fold(IO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         _ <- $sleep
-                        _ <- nextS.release
+                        _ <- moduloS.release
                         _ <- $body
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -233,37 +231,35 @@ package Π:
                     (sleep: Expr[IO[Unit]])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier[IO]($parallelism)
-            stopR    <- IO.ref(false)
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+            moduloS <- Semaphore[IO](1)
+            stopR   <- IO.ref(false)
+            unfold   = {
+              def unfold(remaining: Int): IO[Unit] =
                 for
-                  nextS <- Semaphore[IO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- moduloCB.await
-                        _ <- prevS.fold(IO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         n <- ν
                         _ <- stopR.get.ifM(IO.unit,
                                            for
                                              opt <- ><(n.name)($ref)
                                              _   <- stopR.set(true).whenA(opt eq None)
                                            yield ())
-                        _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                           $sleep >> nextS.release >> $body(n) >> loop)
+                        _ <- stopR.get.ifM(moduloS.release >> IO.never.unlessA(remaining == 1),
+                                           $sleep >> moduloS.release >> $body(n) >>loop)
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -276,39 +272,37 @@ package Π:
                   (sleep: Expr[IO[Unit]])
                   (using Quotes): Expr[IO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier[IO]($parallelism)
-          stopR    <- IO.ref(false)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+          moduloS <- Semaphore[IO](1)
+          stopR   <- IO.ref(false)
+          unfold   = {
+            def unfold(remaining: Int): IO[Unit] =
               for
-                nextS <- Semaphore[IO](0)
-                loop   = {
+                loop = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- moduloCB.await
-                      _ <- prevS.fold(IO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       _ <- stopR.get.ifM(IO.unit,
                                          for
                                            opt <- ><($value.name)($ref)
                                            _   <- stopR.set(true).whenA(opt eq None)
                                          yield ())
-                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                         $sleep >> nextS.release >> $body >> loop)
+                      _ <- stopR.get.ifM(moduloS.release >> IO.never.unlessA(remaining == 1),
+                                         $sleep >> moduloS.release >> $body >> loop)
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1
-                         then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
-    }
+      }
 
 
     object `(*)`:
@@ -321,39 +315,37 @@ package Π:
                        (sleep: Expr[IO[Unit]])
                        (using Type[S], Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier[IO]($parallelism)
-            stopR    <- IO.ref(false)
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+            moduloS <- Semaphore[IO](1)
+            stopR   <- IO.ref(false)
+            unfold   = {
+              def unfold(remaining: Int): IO[Unit] =
                 for
-                  nextS <- Semaphore[IO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: IO[Unit] =
                       for
-                        _ <- moduloCB.await
-                        _ <- prevS.fold(IO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         _ <- stopR.get.ifM(IO.unit,
                                            for
                                              opt <- $value().flatMap(><(_)($ref))
                                              _   <- stopR.set(true).whenA(opt eq None)
                                            yield ())
-                        _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                           $sleep >> nextS.release >> $body >> loop)
+                        _ <- stopR.get.ifM(moduloS.release >> IO.never.unlessA(remaining == 1),
+                                           $sleep >> moduloS.release >> $body >> loop)
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
-      }
+        }
 
     /**
       * modulo replication input guard
@@ -363,35 +355,34 @@ package Π:
                  (sleep: Expr[IO[Unit]])
                  (using Quotes): Expr[IO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier[IO]($parallelism)
-          stopR    <- IO.ref(false)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+          moduloS <- Semaphore[IO](1)
+          stopR   <- IO.ref(false)
+          unfold   = {
+            def unfold(remaining: Int): IO[Unit] =
               for
-                nextS <- Semaphore[IO](0)
-                loop   = {
+                loop = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- moduloCB.await
-                      _ <- prevS.fold(IO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       n <- stopR.get.ifM(IO.pure(null),
                                          for
                                            name <- ><()($ref)
                                            _    <- stopR.set(true).whenA(name == null)
                                          yield name)
-                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                         $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
+                      _ <- stopR.get.ifM(moduloS.release >> IO.never.unlessA(remaining == 1),
+                                         $sleep >> moduloS.release >> $body(new `()`(n)) >> loop)
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1 then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }
@@ -404,35 +395,34 @@ package Π:
                     (sleep: Expr[IO[Unit]])
                     (using Type[T], Quotes): Expr[IO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier[IO]($parallelism)
-          stopR    <- IO.ref(false)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[IO]]): IO[Unit] =
+          moduloS <- Semaphore[IO](1)
+          stopR   <- IO.ref(false)
+          unfold   = {
+            def unfold(remaining: Int): IO[Unit] =
               for
-                nextS <- Semaphore[IO](0)
-                loop   = {
+                loop = {
                   lazy val loop: IO[Unit] =
                     for
-                      _ <- moduloCB.await
-                      _ <- prevS.fold(IO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       n <- stopR.get.ifM(IO.pure(null),
                                          for
                                            name <- ><()($ref)($code)
                                            _    <- stopR.set(true).whenA(name == null)
                                          yield name)
-                      _ <- stopR.get.ifM(nextS.release >> IO.never.unlessA(remaining == 1),
-                                         $sleep >> nextS.release >> $body(new `()`(n)) >> loop)
+                      _ <- stopR.get.ifM(moduloS.release >> IO.never.unlessA(remaining == 1),
+                                         $sleep >> moduloS.release >> $body(new `()`(n)) >> loop)
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1 then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }

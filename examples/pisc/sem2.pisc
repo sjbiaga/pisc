@@ -33,7 +33,7 @@
 
 @def println[F[_]: Functor: Console](a: Any) = OptionT.liftF(Console[F].println(a))
 
-@def sleep[F[_]: Async](d: FiniteDuration) = OptionT.sleep(d)
+@def sleep[F[_]: Async](d: FiniteDuration)(using Deferred[[X] =>> OptionT[F, X], Unit]) = OptionT.sleep(d)
 
                                       ⟦ TYPECLASSES = (Async,Console,Parallel) ⟧
 

@@ -34,7 +34,6 @@ package Π:
   import _root_.zio.interop.catz.generic.*
 
   import _root_.zio.{ Duration, Task, UIO, ZIO }
-  import _root_.zio.concurrent.CyclicBarrier
 
   import Π.`Π-magic`.><
 
@@ -191,32 +190,30 @@ package Π:
                     (sleep: Expr[UIO[Unit]])
                     (using Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier.make($parallelism)
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+            moduloS <- Semaphore[UIO](1)
+            unfold   = {
+              def unfold(remaining: Int): UIO[Unit] =
                 for
-                  nextS <- Semaphore[UIO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: UIO[Unit] =
                       for
-                        _ <- moduloCB.await.exit
-                        _ <- prevS.fold(ZIO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         _ <- $sleep
-                        _ <- nextS.release
+                        _ <- moduloS.release
                         _ <- $body
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                  _   <- if remaining == 1
+                         then loop
+                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -232,34 +229,32 @@ package Π:
                     (sleep: Expr[UIO[Unit]])
                     (using Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier.make($parallelism)
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+            moduloS <- Semaphore[UIO](1)
+            unfold   = {
+              def unfold(remaining: Int): UIO[Unit] =
                 for
-                  nextS <- Semaphore[UIO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: UIO[Unit] =
                       for
-                        _ <- moduloCB.await.exit
-                        _ <- prevS.fold(ZIO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         n <- ν
                         _ <- ><(n.name)($q)
                         _ <- $sleep
-                        _ <- nextS.release
+                        _ <- moduloS.release
                         _ <- $body(n)
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                  _   <- if remaining == 1
+                         then loop
+                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -272,33 +267,31 @@ package Π:
                   (sleep: Expr[UIO[Unit]])
                   (using Quotes): Expr[UIO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier.make($parallelism)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+          moduloS <- Semaphore[UIO](1)
+          unfold   = {
+            def unfold(remaining: Int): UIO[Unit] =
               for
-                nextS <- Semaphore[UIO](0)
-                loop   = {
+                loop = {
                   lazy val loop: UIO[Unit] =
                     for
-                      _ <- moduloCB.await.exit
-                      _ <- prevS.fold(ZIO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       _ <- ><($value.name)($q)
                       _ <- $sleep
-                      _ <- nextS.release
+                      _ <- moduloS.release
                       _ <- $body
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1
-                         then loop
-                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                _   <- if remaining == 1
+                       then loop
+                       else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
     }
@@ -314,33 +307,31 @@ package Π:
                        (sleep: Expr[UIO[Unit]])
                        (using Type[S], Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloCB <- CyclicBarrier.make($parallelism)
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+            moduloS <- Semaphore[UIO](1)
+            unfold   = {
+              def unfold(remaining: Int): UIO[Unit] =
                 for
-                  nextS <- Semaphore[UIO](0)
-                  loop   = {
+                  loop = {
                     lazy val loop: UIO[Unit] =
                       for
-                        _ <- moduloCB.await.exit
-                        _ <- prevS.fold(ZIO.unit)(_.acquire)
+                        _ <- moduloS.acquire
                         _ <- $value().flatMap(><(_)($q))
                         _ <- $sleep
-                        _ <- nextS.release
+                        _ <- moduloS.release
                         _ <- $body
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                  _   <- if remaining == 1
+                         then loop
+                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
       }
@@ -353,32 +344,31 @@ package Π:
                  (sleep: Expr[UIO[Unit]])
                  (using Quotes): Expr[UIO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier.make($parallelism)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+          moduloS <- Semaphore[UIO](1)
+          unfold   = {
+            def unfold(remaining: Int): UIO[Unit] =
               for
-                nextS <- Semaphore[UIO](0)
-                loop   = {
+                loop = {
                   lazy val loop: UIO[Unit] =
                     for
-                      _ <- moduloCB.await.exit
-                      _ <- prevS.fold(ZIO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       n <- ><()($q)
                       _ <- $sleep
-                      _ <- nextS.release
+                      _ <- moduloS.release
                       _ <- $body(new `()`(n))
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1 then loop
-                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                _   <- if remaining == 1
+                       then loop
+                       else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }
@@ -391,32 +381,31 @@ package Π:
                     (sleep: Expr[UIO[Unit]])
                     (using Type[T], Quotes): Expr[UIO[Unit]] =
      '{ for
-          moduloCB <- CyclicBarrier.make($parallelism)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[UIO]]): UIO[Unit] =
+          moduloS <- Semaphore[UIO](1)
+          unfold   = {
+            def unfold(remaining: Int): UIO[Unit] =
               for
-                nextS <- Semaphore[UIO](0)
-                loop   = {
+                loop = {
                   lazy val loop: UIO[Unit] =
                     for
-                      _ <- moduloCB.await.exit
-                      _ <- prevS.fold(ZIO.unit)(_.acquire)
+                      _ <- moduloS.acquire
                       n <- ><()($q)($code)
                       _ <- $sleep
-                      _ <- nextS.release
+                      _ <- moduloS.release
                       _ <- $body(new `()`(n))
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1 then loop
-                         else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1, Some(nextS)))
+                _   <- if remaining == 1
+                       then loop
+                       else ZIO.scoped(loop.forkScoped *> unfold(remaining - 1))
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }

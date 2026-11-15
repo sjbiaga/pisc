@@ -124,11 +124,9 @@ object Meta extends emitter.shared.streams.Meta:
 
 
   private def `_ <- +`(parallelism: Int,
-                       cbarrier: String,
+                       semaphore: String,
                        name: String,
                        remaining: String,
-                       acquire: String,
-                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -137,36 +135,31 @@ object Meta extends emitter.shared.streams.Meta:
         name,
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
-          Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("F") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+          Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None) :: Nil) :: Nil
         ) :: Nil,
         `: \\[F, Unit]`,
-        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
-                      :: `_ <- *`(Term.Apply(Term.Select(
-                                               `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                    Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
-                                               "concurrently"),
-                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                                                                    Term.Select(\, "empty"),
-                                                                    Term.Apply(\(name),
-                                                                               Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
+        Term.Apply(Term.Select(
+                     `for * yield ()`(`_ <- *`(Term.Apply(replication,
+                                                          Term.ArgClause(\(semaphore) :: Nil))) :: sum*),
+                     "concurrently"),
+                   Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                          Term.Select(\, "empty"),
+                                          Term.Apply(\(name),
+                                                     Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)) :: Nil))) :: Nil))
       )
 
-    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- Semaphore(…)`(semaphore, 1) ::
     `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
-    `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
+    `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: Nil))) :: Nil
 
   def `_ <- +`(parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
-    `_ <- +`(parallelism, id, id, id, id, id, replication, sum)
+    `_ <- +`(parallelism, id, id, id, replication, sum)
 
   private def `* <- +`(parameter: String,
                        parallelism: Int,
-                       cbarrier: String,
+                       semaphore: String,
                        name: String,
                        remaining: String,
-                       acquire: String,
-                       release: String,
                        replication: Term,
                        sum: List[Enumerator]): List[Enumerator] =
     val definition =
@@ -175,25 +168,22 @@ object Meta extends emitter.shared.streams.Meta:
         name,
         Member.ParamClauseGroup(
           Type.ParamClause(Nil),
-          Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None)
-                        :: Term.Param(Nil, acquire, Some(Type.Apply(\\("Option"), Type.ArgClause(Type.Apply(\\("Semaphore"), Type.ArgClause(\\("F") :: Nil)) :: Nil))), None) :: Nil) :: Nil
+          Term.ParamClause(Term.Param(Nil, remaining, Some(\\("Int")), None) :: Nil) :: Nil
         ) :: Nil,
         `: \\[F, Unit]`,
-        `for * yield ()`(`* <- Semaphore(…)`(release, 0)
-                      :: `_ <- *`(Term.Apply(Term.Select(
-                                               `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                 Term.ArgClause(\(cbarrier) :: \(acquire) :: \(release) :: Nil))) :: sum*),
-                                               "concurrently"),
-                                             Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
-                                                                    Term.Select(\, "empty"),
-                                                                    Term.Apply(\(name),
-                                                                               Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
-                                                                                           :: Term.Apply(\("Some"), Term.ArgClause(\(release) :: Nil)) :: Nil))) :: Nil)))*)
+        Term.Apply(Term.Select(
+                     `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
+                                                                       Term.ArgClause(\(semaphore) :: Nil))) :: sum*),
+                     "concurrently"),
+                   Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
+                                          Term.Select(\, "empty"),
+                                          Term.Apply(\(name),
+                                                     Term.ArgClause(Term.ApplyInfix(\(remaining), \("-"), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)) :: Nil))) :: Nil))
       )
 
-    `* <- liftF(*)`(cbarrier, Term.Apply(`*[F]`("CyclicBarrier"), Term.ArgClause(Lit.Int(parallelism) :: Nil))) ::
+    `* <- Semaphore(…)`(semaphore, 1) ::
     `* <- *`(name -> Term.Apply(Term.Select(\, \\), Term.ArgClause(Term.Block(definition :: \(name) :: Nil) :: Nil))) ::
-    `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: \("None") :: Nil))) :: Nil
+    `_ <- *`(Term.Apply(\(name), Term.ArgClause(Lit.Int(parallelism) :: Nil))) :: Nil
 
   def `* <- +`(parameter: String, parallelism: Int, replication: Term, sum: List[Enumerator])(using id: => String): List[Enumerator] =
-    `* <- +`(parameter, parallelism, id, id, id, id, id, replication, sum)
+    `* <- +`(parameter, parallelism, id, id, id, replication, sum)

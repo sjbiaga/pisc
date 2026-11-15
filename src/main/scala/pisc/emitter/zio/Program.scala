@@ -436,22 +436,26 @@ object Program:
           val υidυ = id
           val υidυʹ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val `π.emit` = π.emit match
             case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               hd :: it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          val `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+          var `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
                                                                                    Type.ArgClause(Nil),
                                                                                    Term.ArgClause(\("None") :: Nil)),
                                                                    `ZIO.unit`,
                                                                    `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil))))
                                             }
 
+          if parallelism >= 0
+          then
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
+
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
-          val sem = if parallelism < 0 then null else id
-
-          var body =
+          val body =
             `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
@@ -463,7 +467,6 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): UIO[Any] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): UIO[Any] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
@@ -472,9 +475,15 @@ object Program:
 
           val υidυ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val πʹ = π.copy(name = λ.copy()(using None))
 
-          val `!.π⋯` = πʹ.emit :+`_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(arg) :: Nil)))
+          var `!.π⋯` = πʹ.emit :+`_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(arg) :: Nil)))
+
+          if parallelism >= 0
+          then
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -492,9 +501,7 @@ object Program:
                                  Term.Block(`val` :+ body))
           }
 
-          val sem = if parallelism < 0 then null else id
-
-          var body =
+          val body =
             `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
@@ -506,7 +513,6 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): UIO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): UIO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
@@ -514,22 +520,26 @@ object Program:
           val υidυ = id
           val υidυʹ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val `μ.emit` = μ.emit match
             case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
               it.copy(pat = Pat.Var(υidυʹ)) :: tl
 
-          val `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
+          var `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
                                                                                    Type.ArgClause(Nil),
                                                                                    Term.ArgClause(\("None") :: Nil)),
                                                                    `ZIO.unit`,
                                                                    `_ <- *`(υidυ))
                                             }
 
+          if parallelism >= 0
+          then
+            `!.μ⋯` ::= `_ <- *.acquire`(sem)
+
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
-          val sem = if parallelism < 0 then null else id
-
-          var body =
+          val body =
             `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
@@ -541,20 +551,23 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, pace, _, sum) =>
           val υidυ = id
 
-          val `!.⋯` = `_ <- *`(υidυ) :: Nil
+          val sem = if parallelism < 0 then null else id
+
+          var `!.⋯` = `_ <- *`(υidυ): List[Enumerator]
+
+          if parallelism >= 0
+          then
+            `!.⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 
-          val sem = if parallelism < 0 then null else id
-
-          var body =
+          val body =
             `List( *, … ).collectAllPar`(
               if parallelism < 0
               then sum.emit
@@ -566,7 +579,6 @@ object Program:
           then
             * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
 

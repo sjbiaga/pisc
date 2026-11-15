@@ -27,13 +27,13 @@ function pi() {
             ;;
         cot)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/pim.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/pim.scala
             ;;
         akka)
@@ -45,7 +45,7 @@ function pi() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -55,7 +55,7 @@ function pi() {
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-streams:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             ;;
         go)
             ;;
@@ -121,13 +121,13 @@ function pi_() {
             ;;
         cot)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/pim_.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/pim_.scala
             ;;
         akka)
@@ -139,7 +139,7 @@ function pi_() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -149,7 +149,7 @@ function pi_() {
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-streams:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             ;;
         go)
             ;;
