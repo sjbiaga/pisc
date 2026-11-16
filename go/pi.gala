@@ -29,7 +29,7 @@ func (self Go_NamePi) Print() Go_TrampolinePi[Go_NamePi] {
             case Go_StringPi(it) => Print(it)
             case _ => Print()
         }
-        Go_returnPi
+        Go_donePi(self)
     })
 }
 
@@ -42,7 +42,7 @@ func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
             case Go_StringPi(it) => Println(it)
             case _ => Println()
         }
-        Go_returnPi
+        Go_donePi(self)
     })
 }
 

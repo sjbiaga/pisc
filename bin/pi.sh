@@ -248,6 +248,9 @@ function pio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 cd ..
                 cp out/"$1".${type}.out "$1".${type}
                 rm -fr "$1_"
@@ -263,6 +266,9 @@ function pio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 popd &>/dev/null
                 ;;
         esac

@@ -220,6 +220,7 @@ package object Π:
           */
         def apply(): Iterant[F, Unit] =
           self.`(!)`.apply(new `()`[F](null))
+
         /**
           * `null` replication output guard w/ pace
           */
@@ -286,7 +287,7 @@ package object Π:
         def apply[S: ClassTag](_1: 1)(value: => F[S]): Iterant[F, Unit] =
           if classTag[S].runtimeClass eq self.getClass
           then
-            Iterant.eval(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`(_))
+            Iterant.liftF(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`(_))
           else
             Iterant.repeatEvalF(Concurrent[F].defer(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(ch)
 
@@ -460,7 +461,7 @@ package object Π:
       def apply[S: ClassTag](_1: 1)(value: => F[S]): Iterant[F, Unit] =
         if classTag[S].runtimeClass eq self.getClass
         then
-          Iterant.eval(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self(_))
+          Iterant.liftF(Concurrent[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self(_))
         else
           Iterant.liftF(Concurrent[F].defer(value.flatMap { it => Deferred[F, Unit].map(new `()`[F](it) -> _) })).through1(ch)
 

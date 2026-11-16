@@ -295,7 +295,7 @@ enum Gala:
 
       case rep(parallelism, _, _, _) if parallelism < -1 => ???
 
-      // REPLICATION ///////////////////////////////////////////////////////////
+      // [SIZED] REPLICATION ///////////////////////////////////////////////////
 
       case rep(-1, it @ _ :: _ :: nu(alloc(_)) :: pi(name, _, _) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
@@ -319,13 +319,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) ::: // allocate
         s"${indentʹ}$υidυ($name)" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.tail.issue(indent) ::: // dont reallocate
         s"${indent}$υidυ($name)" :: // LEAF, tailcall
         Nil
@@ -352,13 +353,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ($name)" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.issue(indent) :::
         s"${indent}$υidυ($name)" :: // LEAF, tailcall
         Nil
@@ -385,13 +387,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func () Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = () Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.issue(indent) :::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
@@ -419,13 +422,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func (Go_NamePi) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($name Go_NamePi) Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ($name)" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.issue(indent) :::
         s"${indent}$υidυ($name)" :: // LEAF, tailcall
         Nil
@@ -451,13 +455,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func () Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = () Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
 
