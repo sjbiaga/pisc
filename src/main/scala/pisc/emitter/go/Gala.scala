@@ -34,6 +34,7 @@ import scala.meta.{ Lit, Term }
 
 import parser.Calculus.{ `(*)`, λ }
 import Gala.*
+import context.*
 
 
 enum Gala:
@@ -592,8 +593,6 @@ enum Gala:
 
 
 object Gala:
-
-  export Gala.*, context.*
 
   enum context:
     case none, number, boolean, string

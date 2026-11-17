@@ -580,7 +580,13 @@ object Program:
 
     def apply(prog: List[Bind])(using Set[String]): List[Stat] =
       val id = new helper.υidυ
+
+      extension (self: Term)
+        def reset: self.type =
+          id.reset
+          self
+
       prog
-        .map(_ -> _.emit(using id()))
+        .map(_ -> _.emit(using id()).reset)
         .map(_.swap)
         .map(defn(_)(_))
