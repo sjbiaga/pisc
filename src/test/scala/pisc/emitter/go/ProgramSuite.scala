@@ -56,16 +56,16 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     bind _ = Go_SpawnPi(() => {
         Go_returnPi
     })
-    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_NuPi()
+    bind name2 = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
 }
-bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_NuPi()
+bind name2 = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
@@ -85,20 +85,21 @@ _υ1υ(name1, name2)""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
 _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
-    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind _ = _υ2υ.Acquire1(go_context)
+    bind name1 = Go_NuPi()
+    bind name2 = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
 }
-bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind _ = _υ2υ.Acquire1(go_context)
+bind name1 = Go_NuPi()
+bind name2 = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
@@ -121,16 +122,16 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
         Go_returnPi
     })
     bind _ = Go_PacePi(go_context, 13, time.seconds)
-    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_NuPi()
+    bind name2 = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
 }
-bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind name1 = Go_NuPi()
+bind name2 = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
@@ -150,21 +151,22 @@ _υ1υ(name1, name2)""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
 _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_PacePi(go_context, 13, time.seconds)
-    bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-    bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+    bind name1 = Go_NuPi()
+    bind name2 = Go_NuPi()
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
         case it => Panic(it)
     }
     _υ1υ(name1, name2)
 }
-bind name1 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
-bind name2 = Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
+bind _ = _υ2υ.Acquire1(go_context)
+bind name1 = Go_NuPi()
+bind name2 = Go_NuPi()
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(name1, name2))
     case it => Panic(it)
@@ -193,7 +195,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     guard match {
         case Go_QueuePi(_υ2υ) => {
             bind _υ2υ = _υ2υ.Go_DequeuePi(go_context)
-            _υ2υ.ToList() match {
+            _υ2υ.AsList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
                 }
@@ -206,7 +208,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 guard match {
     case Go_QueuePi(_υ3υ) => {
         bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
-        _υ3υ.ToList() match {
+        _υ3υ.AsList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
             }
@@ -229,14 +231,14 @@ guard match {
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
 _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     guard match {
         case Go_QueuePi(_υ3υ) => {
             bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
-            _υ3υ.ToList() match {
+            _υ3υ.AsList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
                 }
@@ -246,10 +248,11 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
         case it => Panic(it)
     }
 }
+bind _ = _υ2υ.Acquire1(go_context)
 guard match {
     case Go_QueuePi(_υ4υ) => {
         bind _υ4υ = _υ4υ.Go_DequeuePi(go_context)
-        _υ4υ.ToList() match {
+        _υ4υ.AsList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
             }
@@ -278,7 +281,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
     guard match {
         case Go_QueuePi(_υ2υ) => {
             bind _υ2υ = _υ2υ.Go_DequeuePi(go_context)
-            _υ2υ.ToList() match {
+            _υ2υ.AsList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
                 }
@@ -291,7 +294,7 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
 guard match {
     case Go_QueuePi(_υ3υ) => {
         bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
-        _υ3υ.ToList() match {
+        _υ3υ.AsList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
             }
@@ -314,15 +317,15 @@ guard match {
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func (Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
 _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_PacePi(go_context, 13, time.seconds)
     guard match {
         case Go_QueuePi(_υ3υ) => {
             bind _υ3υ = _υ3υ.Go_DequeuePi(go_context)
-            _υ3υ.ToList() match {
+            _υ3υ.AsList() match {
                 case Cons(name1, Cons(name2, Nil())) => {
                     _υ1υ(name1, name2)
                 }
@@ -332,10 +335,11 @@ _υ1υ = (name1 Go_NamePi, name2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
         case it => Panic(it)
     }
 }
+bind _ = _υ2υ.Acquire1(go_context)
 guard match {
     case Go_QueuePi(_υ4υ) => {
         bind _υ4υ = _υ4υ.Go_DequeuePi(go_context)
-        _υ4υ.ToList() match {
+        _υ4υ.AsList() match {
             case Cons(name1, Cons(name2, Nil())) => {
                 _υ1υ(name1, name2)
             }
@@ -389,16 +393,17 @@ _υ1υ()""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func () Go_TrampolinePi[Go_NamePi]
 _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
         case it => Panic(it)
     }
     _υ1υ()
 }
+bind _ = _υ2υ.Acquire1(go_context)
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
@@ -446,10 +451,10 @@ _υ1υ()""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func () Go_TrampolinePi[Go_NamePi]
 _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_PacePi(go_context, 13, time.seconds)
     bind _ = guard match {
         case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
@@ -457,6 +462,7 @@ _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
     }
     _υ1υ()
 }
+bind _ = _υ2υ.Acquire1(go_context)
 bind _ = guard match {
     case Go_QueuePi(it) => it.Go_EnqueuePi(go_context, Go_NamesPi(guard, guard))
     case it => Panic(it)
@@ -499,12 +505,13 @@ _υ1υ()""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func () Go_TrampolinePi[Go_NamePi]
 _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     _υ1υ()
 }
+bind _ = _υ2υ.Acquire1(go_context)
 _υ1υ()""")
   }
 
@@ -540,13 +547,14 @@ _υ1υ()""")
 """val _υ2υ = Go_NewSemaphorePi(13)
 var _υ1υ func () Go_TrampolinePi[Go_NamePi]
 _υ1υ = () Go_TrampolinePi[Go_NamePi] => {
-    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_Spawn_ReleasablePi(_υ2υ, () => {
         Go_returnPi
     })
+    bind _ = _υ2υ.Acquire1(go_context)
     bind _ = Go_PacePi(go_context, 13, time.seconds)
     _υ1υ()
 }
+bind _ = _υ2υ.Acquire1(go_context)
 _υ1υ()""")
   }
 

@@ -307,7 +307,8 @@ object PolyadicPi:
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     case go extends Emitter(nullOnEmptyOutput = Lit.Null(),
                             allowsMixedOutput = _.fold(true)(_ >= -1),
-                            featuresModuloReplication = true)
+                            featuresModuloReplication = true,
+                            hasReplicationInputGuardFlaw = _ >= -1)
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]

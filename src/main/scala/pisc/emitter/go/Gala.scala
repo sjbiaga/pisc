@@ -52,11 +52,11 @@ enum Gala:
 
   case func(agent: String, names: Seq[String], body: Gala.body)
 
-  case init(assignment: List[(String, String)])
+  case init(assignment: Either[List[(String, String)], (String, alloc)])
 
   case noop()
 
-  case nu(names: String*)
+  case nu(names: alloc | Seq[String])
 
   case pace(amount: Long, paceunit: String)
 
@@ -167,17 +167,26 @@ enum Gala:
         s"${indent}}" ::
         Nil
 
-      case init(it) if it.isEmpty =>
+      case init(Left(Nil)) =>
         Nil
 
-      case init(it) =>
+      case init(Left(it)) =>
         indent + it.map(_._1).mkString("val ", ", ", "") + it.map(_._2).mkString(" = ", ", ", "")
+
+      case init(Right(it)) =>
+        indent + s"val ${it._1} = ${it._2.id}"
 
       case noop() =>
         Nil
 
-      case nu(names*) =>
-        names.map(s"${indent}bind " + _ + " = " + "Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))").toList
+      case nu(alloc(name)) =>
+        s"${indent}bind $name = Go_NuPi()"
+
+      case nu(Nil) =>
+        Nil
+
+      case nu(Seq(names*)) =>
+        names.map(s"${indent}bind " + _ + " = " + "Go_NuPi()").toList
 
       case pace(amount, paceunit) =>
         indent + "bind _ = Go_PacePi(go_context, " + amount + ", time." + paceunit + ")"
@@ -222,7 +231,7 @@ enum Gala:
         val pre = s"${indent}$channel match {" ::
                   s"${indentʹ}case Go_QueuePi($υidυ) => {" ::
                   s"${indentʹʹ}bind $υidυ = $υidυ.$dequeue" ::
-                  s"${indentʹʹ}$υidυ.ToList() match {" ::
+                  s"${indentʹʹ}$υidυ.AsList() match {" ::
                   s"${indentʹʹʹ}case $conses => {" ::
                   Nil
         val post = s"${indentʹʹʹ}}" ::
@@ -236,7 +245,14 @@ enum Gala:
 
       // MODULO REPLICATION ////////////////////////////////////////////////////
 
-      case rep(parallelism, pace :: nu(names*) :: pi(channel, _, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
+      case rep(parallelism, hd :: _ :: nu(alloc(_)) :: nu(names: Seq[String]) :: pi(channel, params, _) :: tl, Some(false), op) if parallelism < -1 =>
+        val paramsʹ = params.map {
+          case λ(alloc(_)) => λ(Symbol(channel))
+          case it => it
+        }
+        rep(parallelism, hd :: nu(names :+ channel) :: pi(channel, paramsʹ, None) :: tl.init, Some(false), op).issueʹ(indent)
+
+      case rep(parallelism, pace :: nu(Seq(names*)) :: pi(channel, _, _) :: code :: Nil, Some(false), op) if parallelism < -1 =>
         val indentʹʹ = indentʹ + " "*4
         val indentʹʹʹ = indentʹʹ + " "*4
         val υidυ = id
@@ -340,13 +356,53 @@ enum Gala:
 
       case rep(parallelism, _, _, _) if parallelism < -1 => ???
 
-      // REPLICATION ///////////////////////////////////////////////////////////
+      // [SIZED] REPLICATION ///////////////////////////////////////////////////
 
-      case rep(-1, it @ _ :: nu(names*) :: _, Some(false), op) =>
+      case rep(-1, it @ _ :: _ :: nu(alloc(_)) :: nu(names: Seq[String]) :: pi(name, _, _) :: _, Some(false), op) =>
+        val namesʹ = names :+ name
+        val indentʹʹ = indentʹ + " "*4
+        val υidυ = id
+        val sig = (", Go_NamePi"*namesʹ.size).substring(2)
+        val sigʹ = namesʹ.map(_ + " Go_NamePi").mkString(", ")
+        s"${indent}var $υidυ func ($sig) Go_TrampolinePi[Go_NamePi]" ::
+        s"${indent}$υidυ = ($sigʹ) Go_TrampolinePi[Go_NamePi] => {" ::
+        s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        it.issue(indentʹ) ::: // allocate
+        s"${indentʹ}$υidυ(${namesʹ.mkString(", ")})" ::
+        s"${indent}}" ::
+        it.tail.tail.issue(indent) ::: // dont reallocate
+        s"${indent}$υidυ(${namesʹ.mkString(", ")})" :: // LEAF, tailcall
+        Nil
+
+      case rep(parallelism, it @ _ :: _ :: nu(alloc(_)) :: nu(names: Seq[String]) :: pi(name, _, _) :: _, Some(false), op) =>
+        val namesʹ = names :+ name
+        val indentʹʹ = indentʹ + " "*4
+        val υidυ = id
+        val sig = (", Go_NamePi"*namesʹ.size).substring(2)
+        val sigʹ = namesʹ.map(_ + " Go_NamePi").mkString(", ")
+        val sem = id
+        s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
+        s"${indent}var $υidυ func ($sig) Go_TrampolinePi[Go_NamePi]" ::
+        s"${indent}$υidυ = ($sigʹ) Go_TrampolinePi[Go_NamePi] => {" ::
+        s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
+        op.issue(indentʹʹ) :::
+        s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
+        it.issue(indentʹ) ::: // allocate
+        s"${indentʹ}$υidυ(${namesʹ.mkString(", ")})" ::
+        s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
+        it.tail.tail.issue(indent) ::: // dont reallocate
+        s"${indent}$υidυ(${namesʹ.mkString(", ")})" :: // LEAF, tailcall
+        Nil
+
+      case rep(-1, it @ _ :: nu(Seq(names*)) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sig = (", Go_NamePi"*names.size).substring(2)
-        val sigʹ = names.map(_ + " Go_NamePi").mkString(", ")
+        val sigʹ = names.map(_.toString + " Go_NamePi").mkString(", ")
         s"${indent}var $υidυ func ($sig) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($sigʹ) Go_TrampolinePi[Go_NamePi] => {" ::
         s"${indentʹ}bind _ = Go_SpawnPi(() => {" ::
@@ -359,22 +415,23 @@ enum Gala:
         s"${indent}$υidυ(${names.mkString(", ")})" :: // LEAF, tailcall
         Nil
 
-      case rep(parallelism, it @ _ :: nu(names*) :: _, Some(false), op) =>
+      case rep(parallelism, it @ _ :: nu(Seq(names*)) :: _, Some(false), op) =>
         val indentʹʹ = indentʹ + " "*4
         val υidυ = id
         val sig = (", Go_NamePi"*names.size).substring(2)
-        val sigʹ = names.map(_ + " Go_NamePi").mkString(", ")
+        val sigʹ = names.map(_.toString + " Go_NamePi").mkString(", ")
         val sem = id
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func ($sig) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($sigʹ) Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ(${names.mkString(", ")})" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.issue(indent) :::
         s"${indent}$υidυ(${names.mkString(", ")})" :: // LEAF, tailcall
         Nil
@@ -401,13 +458,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func () Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = () Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         it.tail.issue(indent) :::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
@@ -456,12 +514,12 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func ($sig) Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = ($sigʹ) Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
         {
           val ((pre, indentʹʹʹ), post) = it.issueʹ(indentʹ)
+          s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
           hd.issue(indentʹ) :::
           pre :::
           tl.issue(indentʹʹʹ) :::
@@ -471,6 +529,7 @@ enum Gala:
         s"${indent}}" ::
         {
           val ((pre, indentʹʹʹ), post) = it.issueʹ(indent)
+          s"${indent}bind _ = $sem.Acquire1(go_context)" ::
           pre :::
           tl.issue(indentʹʹʹ) :::
           s"${indentʹʹʹ}$υidυ(${names.mkString(", ")})" ::
@@ -498,13 +557,14 @@ enum Gala:
         s"${indent}val $sem = Go_NewSemaphorePi($parallelism)" ::
         s"${indent}var $υidυ func () Go_TrampolinePi[Go_NamePi]" ::
         s"${indent}$υidυ = () Go_TrampolinePi[Go_NamePi] => {" ::
-        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         s"${indentʹ}bind _ = Go_Spawn_ReleasablePi($sem, () => {" ::
         op.issue(indentʹʹ) :::
         s"${indentʹ}})" ::
+        s"${indentʹ}bind _ = $sem.Acquire1(go_context)" ::
         it.issue(indentʹ) :::
         s"${indentʹ}$υidυ()" ::
         s"${indent}}" ::
+        s"${indent}bind _ = $sem.Acquire1(go_context)" ::
         s"${indent}$υidυ()" :: // LEAF, tailcall
         Nil
 
@@ -564,6 +624,7 @@ object Gala:
     def toName: context ?=> String = context ?=> {
       self.`val` match
         case Symbol(it) => it
+        case Gala.alloc(it) => it
         case it: BigDecimal => s"Go_NumberPi(big.NewFloat($it))"
         case it: Boolean => s"Go_BoolPi(${it.toString.toLowerCase})"
         case it: String => s"Go_StringPi(\"$it\")"

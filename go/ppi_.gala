@@ -34,7 +34,7 @@ func (self Go_NamePi) Print() Go_TrampolinePi[Go_NamePi] {
             case Go_StringPi(it) => Print(it)
             case Go_SlicePi(it) => ListFromSlice(it).ForEach((it) => Print(it))
         }
-        Go_returnPi
+        Go_donePi(self)
     })
 }
 
@@ -47,18 +47,18 @@ func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
             case Go_StringPi(it) => Println(it)
             case Go_SlicePi(it) => ListFromSlice(it).ForEach((it) => Println(it))
         }
-        Go_returnPi
+        Go_donePi(self)
     })
 }
 
-func (self Go_NamePi) ToNumber() *big.Float {
+func (self Go_NamePi) AsNumber() *big.Float {
     self match {
         case Go_NumberPi(it) => it
         case it => Panic(it)
     }
 }
 
-func (self Go_NamePi) ToFloat64() float64 {
+func (self Go_NamePi) AsFloat64() float64 {
     self match {
         case Go_NumberPi(it) =>
             it.Float64() match {
@@ -69,7 +69,7 @@ func (self Go_NamePi) ToFloat64() float64 {
     }
 }
 
-func (self Go_NamePi) ToInt64() int64 {
+func (self Go_NamePi) AsInt64() int64 {
     self match {
         case Go_NumberPi(it) =>
             it.Int64() match {
@@ -80,25 +80,25 @@ func (self Go_NamePi) ToInt64() int64 {
     }
 }
 
-func (self Go_NamePi) ToInt() int {
-    int(self.ToInt64())
+func (self Go_NamePi) AsInt() int {
+    int(self.AsInt64())
 }
 
-func (self Go_NamePi) ToBool() bool {
+func (self Go_NamePi) AsBool() bool {
     self match {
         case Go_BoolPi(it) => it
         case it => Panic(it)
     }
 }
 
-func (self Go_NamePi) ToString() string {
+func (self Go_NamePi) AsString() string {
     self match {
         case Go_StringPi(it) => it
         case it => Panic(it)
     }
 }
 
-func (self Go_NamePi) ToList() List[Go_NamePi] {
+func (self Go_NamePi) AsList() List[Go_NamePi] {
     self match {
         case Go_SlicePi(it) => ListFromSlice(it)
         case it => Panic(it)
@@ -110,6 +110,10 @@ func (self Go_NamePi) IsEmpty() bool {
         case Go_SlicePi(it) => it == nil
         case _ => false
     }
+}
+
+func Go_NuPi() Go_TrampolinePi[Go_NamePi] {
+    Go_donePi(Go_QueuePi(Go_NewBlockingQueuePi()))
 }
 
 struct Go_BlockingQueuePi(
@@ -143,7 +147,7 @@ func (self Go_BlockingQueuePi) Go_DequeuePi(ctx context.Context) Go_TrampolinePi
     Go_CallPi(() => {
         val (item, b2) = self.queue.Dequeue()
         Go_Call_awaitablePi(ctx, b2, () =>
-            if (item.ToList().Head().IsEmpty()) {
+            if (item.AsList().Head().IsEmpty()) {
                 self.stop.Store(true)
                 Go_nonePi
             } else {
@@ -157,12 +161,12 @@ func (self Go_BlockingQueuePi) Go_DequeuePi_(ctx context.Context, f func (List[G
     Go_CallPi(() => {
         val (item, b2) = self.queue.Dequeue()
         Go_Call_awaitablePi(ctx, b2, () => {
-            bind item = f(item.ToList()).FlatTapNone(self.stop.Store(true))
-            if (item.ToList().Head().IsEmpty()) {
+            bind item = f(item.AsList()).FlatTapNone(self.stop.Store(true))
+            if (item.AsList().Head().IsEmpty()) {
                 self.stop.Store(true)
                 Go_nonePi
             } else {
-                Go_donePi(Go_SlicePi(item.ToList().ToGoSlice()))
+                Go_donePi(Go_SlicePi(item.AsList().ToGoSlice()))
             }
         })
     })

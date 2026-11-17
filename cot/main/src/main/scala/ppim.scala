@@ -37,10 +37,10 @@ package Π:
   import _root_.cats.syntax.applicative.*
   import _root_.cats.syntax.functor.*
 
-  import _root_.cats.{ Defer, Functor, Monad }
+  import _root_.cats.{ Defer, Monad }
   import _root_.cats.data.OptionT
   import _root_.cats.effect.{ Deferred, Temporal }
-  import _root_.cats.effect.std.{ CyclicBarrier, Semaphore }
+  import _root_.cats.effect.std.Semaphore
   import _root_.cats.effect.syntax.spawn.*
 
   import Π.`Π-magic`.><
@@ -200,32 +200,30 @@ package Π:
                           (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
        '{ given Temporal[F] = $temporalF
           for
-            moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+            moduloS <- OptionT.liftF(Semaphore[F](1))
+            unfold   = {
+              def unfold(remaining: Int): OptionT[F, Unit] =
                 for
-                  nextS <- OptionT.liftF(Semaphore[F](0))
-                  loop   = {
+                  loop = {
                     lazy val loop: OptionT[F, Unit] =
                       for
-                        _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
-                        _ <- $sleep.flatTapNone(nextS.release)
-                        _ <- OptionT.liftF(nextS.release)
+                        _ <- OptionT.liftF(moduloS.acquire)
+                        _ <- $sleep.flatTapNone(moduloS.release)
+                        _ <- OptionT.liftF(moduloS.release)
                         _ <- $body
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -246,34 +244,32 @@ package Π:
           given Defer[F] = $deferF
           given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
           for
-            moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+            moduloS <- OptionT.liftF(Semaphore[F](1))
+            unfold   = {
+              def unfold(remaining: Int): OptionT[F, Unit] =
                 for
-                  nextS <- OptionT.liftF(Semaphore[F](0))
-                  loop   = {
+                  loop = {
                     lazy val loop: OptionT[F, Unit] =
                       for
-                        _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
+                        _ <- OptionT.liftF(moduloS.acquire)
                         n <- ν[F].map(identity).replicateA($arity)
                         _ <- ><[F](n.map(_.name))($q)
-                        _ <- $sleep.flatTapNone(nextS.release)
-                        _ <- OptionT.liftF(nextS.release)
+                        _ <- $sleep.flatTapNone(moduloS.release)
+                        _ <- OptionT.liftF(moduloS.release)
                         _ <- $body(n)
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
         }
@@ -290,36 +286,34 @@ package Π:
      '{ given Temporal[F] = $temporalF
         given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
-          moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+          moduloS <- OptionT.liftF(Semaphore[F](1))
+          unfold   = {
+            def unfold(remaining: Int): OptionT[F, Unit] =
               for
-                nextS <- OptionT.liftF(Semaphore[F](0))
-                loop   = {
+                loop = {
                   lazy val loop: OptionT[F, Unit] =
                     for
-                      _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
+                      _ <- OptionT.liftF(moduloS.acquire)
                       _ <- ><[F]($value.map(_.name))($q)
-                      _ <- $sleep.flatTapNone(nextS.release)
-                      _ <- OptionT.liftF(nextS.release)
+                      _ <- $sleep.flatTapNone(moduloS.release)
+                      _ <- OptionT.liftF(moduloS.release)
                       _ <- $body
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1
-                         then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
-    }
+      }
 
 
     object `(*)`:
@@ -336,36 +330,34 @@ package Π:
        '{ given Temporal[F] = $temporalF
           given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
           for
-            moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            unfold    = {
-              def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+            moduloS <- OptionT.liftF(Semaphore[F](1))
+            unfold   = {
+              def unfold(remaining: Int): OptionT[F, Unit] =
                 for
-                  nextS <- OptionT.liftF(Semaphore[F](0))
-                  loop   = {
+                  loop = {
                     lazy val loop: OptionT[F, Unit] =
                       for
-                        _ <- OptionT.liftF(moduloCB.await)
-                        _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
+                        _ <- OptionT.liftF(moduloS.acquire)
                         _ <- $value.flatMap(><(_)($q))
-                        _ <- $sleep.flatTapNone(nextS.release)
-                        _ <- OptionT.liftF(nextS.release)
+                        _ <- $sleep.flatTapNone(moduloS.release)
+                        _ <- OptionT.liftF(moduloS.release)
                         _ <- $body
                         _ <- loop
                       yield
                         ()
                     loop
                   }
-                  _     <- if remaining == 1
-                           then loop
-                           else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                  _   <- if remaining == 1
+                         then loop
+                         else loop.background.use { _ => unfold(remaining - 1) }
                 yield
                   ()
               unfold
             }
-            _        <- unfold($parallelism, None)
+            _       <- unfold($parallelism)
           yield
             ()
-      }
+        }
 
     /**
       * modulo replication input guard
@@ -380,33 +372,31 @@ package Π:
         given Defer[F] = $deferF
         given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
-          moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+          moduloS <- OptionT.liftF(Semaphore[F](1))
+          unfold   = {
+            def unfold(remaining: Int): OptionT[F, Unit] =
               for
-                nextS <- OptionT.liftF(Semaphore[F](0))
-                loop   = {
+                loop = {
                   lazy val loop: OptionT[F, Unit] =
                     for
-                      _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
+                      _ <- OptionT.liftF(moduloS.acquire)
                       n <- ><()($q)
-                      _ <- $sleep.flatTapNone(nextS.release)
-                      _ <- OptionT.liftF(nextS.release)
+                      _ <- $sleep.flatTapNone(moduloS.release)
+                      _ <- OptionT.liftF(moduloS.release)
                       _ <- $body(n.map(new `()`[F](_)))
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1
-                         then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }
@@ -426,33 +416,31 @@ package Π:
         given ClassTag[T] = $classTagT
         given Deferred[[X] =>> OptionT[F, X], Unit] = $signal
         for
-          moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          unfold    = {
-            def unfold(remaining: Int, prevS: Option[Semaphore[F]]): OptionT[F, Unit] =
+          moduloS <- OptionT.liftF(Semaphore[F](1))
+          unfold   = {
+            def unfold(remaining: Int): OptionT[F, Unit] =
               for
-                nextS <- OptionT.liftF(Semaphore[F](0))
-                loop   = {
+                loop = {
                   lazy val loop: OptionT[F, Unit] =
                     for
-                      _ <- OptionT.liftF(moduloCB.await)
-                      _ <- OptionT.liftF(prevS.fold(Temporal[F].unit)(_.acquire))
-                      n <- ><()($q)($code).flatTapNone(nextS.release)
-                      _ <- $sleep.flatTapNone(nextS.release)
-                      _ <- OptionT.liftF(nextS.release)
+                      _ <- OptionT.liftF(moduloS.acquire)
+                      n <- ><()($q)($code).flatTapNone(moduloS.release)
+                      _ <- $sleep.flatTapNone(moduloS.release)
+                      _ <- OptionT.liftF(moduloS.release)
                       _ <- $body(n.map(new `()`[F](_)))
                       _ <- loop
                     yield
                       ()
                   loop
                 }
-                _     <- if remaining == 1
-                         then loop
-                         else loop.background.use { _ => unfold(remaining - 1, Some(nextS)) }
+                _   <- if remaining == 1
+                       then loop
+                       else loop.background.use { _ => unfold(remaining - 1) }
               yield
                 ()
             unfold
           }
-          _        <- unfold($parallelism, None)
+          _       <- unfold($parallelism)
         yield
           ()
       }

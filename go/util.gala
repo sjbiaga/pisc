@@ -12,14 +12,14 @@ import (
 
 func Go_SpawnPi(f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
     Go_CallPi(() => {
-        go_interop.Spawn(() => f().Run())
+        go_interop.Spawn(() => Go_CallPi(f).Run())
         Go_returnPi
     })
 }
 
 func Go_Spawn_ReleasablePi(s Go_SemaphorePi, f func() Go_TrampolinePi[Go_NamePi]) Go_TrampolinePi[Go_NamePi] {
     Go_CallPi(() => {
-        go_interop.Spawn(() => { use r = Go_ReleasablePi(s); f().Run() })
+        go_interop.Spawn(() => { use r = Go_ReleasablePi(s); Go_CallPi(f).Run() })
         Go_returnPi
     })
 }

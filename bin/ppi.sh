@@ -27,13 +27,13 @@ function ppi() {
             ;;
         cot)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/ppim.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/ppim.scala
             ;;
         akka)
@@ -45,7 +45,7 @@ function ppi() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -55,7 +55,7 @@ function ppi() {
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-streams:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             ;;
         go)
             ;;
@@ -78,7 +78,7 @@ function ppi() {
         scala)
             set ${srcs#?} ../${emit}/ppi.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1-RC2 \
+                          -q -O -nowarn -S 3.10.1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -121,13 +121,13 @@ function ppi_() {
             ;;
         cot)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/ppim_.scala
             ;;
         zio)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/ppim_.scala
             ;;
         akka)
@@ -139,7 +139,7 @@ function ppi_() {
             ;;
         fs2)
             local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         monix)
@@ -149,7 +149,7 @@ function ppi_() {
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
                         --dep dev.zio::zio-streams:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             ;;
         go)
             ;;
@@ -172,7 +172,7 @@ function ppi_() {
         scala)
             set ${srcs#?} ../${emit}/ppi_.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1-RC2 \
+                          -q -O -nowarn -S 3.10.1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -248,6 +248,9 @@ function ppio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 cd ..
                 cp out/"$1".${type}.out "$1".${type}
                 rm -fr "$1_"
@@ -263,6 +266,9 @@ function ppio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 popd &>/dev/null
                 ;;
         esac

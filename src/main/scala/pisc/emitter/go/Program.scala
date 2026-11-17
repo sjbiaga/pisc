@@ -116,7 +116,7 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = nu(names*)
+          * = nu(names)
 
 
         case τ(Some((Right(term), _))) =>
@@ -126,15 +126,32 @@ object Program:
           * = tau() :: noop() :: Nil
 
 
+        case π(λ(Symbol(ch)), Some("ν"), opt, params*) if params.filter(_.isSymbol).exists(_.asSymbol.name == ch) =>
+
+          val par: alloc = alloc()
+
+          val paramsʹ = params.map {
+            case λ(Symbol(`ch`)) => λ(par)
+            case it => it
+          }
+
+          val names = paramsʹ.filter(_.isSymbol).map(_.asSymbol.name)
+
+          opt match
+            case Some((Right(term), _)) =>
+              * = par :: nu(par) :: nu(names) :: pi(ch, paramsʹ, None) :: code(term) :: init(Right(ch -> par)) :: Nil
+            case _ =>
+              * = par :: nu(par) :: nu(names) :: pi(ch, paramsʹ, None) :: noop() :: init(Right(ch -> par)) :: Nil
+
         case π(λ(Symbol(ch)), Some("ν"), opt, params*) =>
 
           val names = params.filter(_.isSymbol).map(_.asSymbol.name)
 
           opt match
             case Some((Right(term), _)) =>
-              * = nu(names*) :: pi(ch, params, None) :: code(term) :: Nil
+              * = nu(names) :: pi(ch, params, None) :: code(term) :: Nil
             case _ =>
-              * = nu(names*) :: pi(ch, params, None) :: noop() :: Nil
+              * = nu(names) :: pi(ch, params, None) :: noop() :: Nil
 
         case π(λ(Symbol(ch)), None, opt, params*) =>
 
@@ -193,7 +210,7 @@ object Program:
 
         case `⟦⟧`(Definition(_, _, _, variables, _), sum, _, pointers) =>
 
-          * = init((variables zip pointers).map(_.name -> _.name).toList) :: sum.emit
+          * = init(Left((variables zip pointers).map(_.name -> _.name).toList)) :: sum.emit
 
         case _: `{}` => ???
 

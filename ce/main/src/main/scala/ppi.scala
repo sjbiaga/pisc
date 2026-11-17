@@ -36,7 +36,7 @@ package object Π:
   import _root_.cats.syntax.traverse.*
 
   import _root_.cats.effect.IO
-  import _root_.cats.effect.kernel.Outcome.Succeeded
+  import _root_.cats.effect.kernel.Outcome
   import _root_.cats.effect.std.{ Queue, Supervisor }
 
   import `Π-magic`.*
@@ -48,11 +48,10 @@ package object Π:
     */
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join)
+      .use(_.supervise(code).flatMap(_.join))
       .flatMap {
-        case Succeeded(it) => it
-        case _             => IO.pure(null.asInstanceOf[T])
+        case Outcome.Succeeded(it) => it
+        case _                     => IO.pure(null.asInstanceOf[T])
       }
 
 

@@ -8,7 +8,7 @@ object Dependencies {
   lazy val monix = "io.monix" %% "monix" % "3.5.2"
   lazy val zc = "dev.zio" %% "zio-concurrent" % "2.1.27"
   lazy val zs = "dev.zio" %% "zio-streams" % "2.1.27"
-  lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.14"
+  lazy val zic = "dev.zio" %% "zio-interop-cats" % "23.1.0.15"
   lazy val parsercombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"
   lazy val scalameta = "org.scalameta" %% "scalameta" % "4.17.4"
   lazy val munit = "org.scalameta" %% "munit" % "1.3.6"
