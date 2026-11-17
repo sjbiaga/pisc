@@ -732,7 +732,7 @@ package object Π:
       * input prefix w/ code
       */
     def apply[T]()(code: T => Task[T]): ZStream[Any, Nothing, `()`] =
-      apply().map(_.`()`[T]).mapZIO((code andThen exec)(_).map(new `()`(_)))
+      `s.head`.map(_.`()`[T]).mapZIO((code andThen exec)(_).map(new `()`(_)))
 
     /**
       * input prefix w/ pace w/ code

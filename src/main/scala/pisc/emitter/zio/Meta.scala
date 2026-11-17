@@ -76,6 +76,8 @@ object Meta extends emitter.shared.effects.Meta:
 
   val `ZIO.unit` = Term.Select(\, "unit")
 
+  val `ZIO.yieldNow` = Term.Select(\, "yieldNow")
+
   def `* <- ZIO.succeed(*)`(* : (String, Term)): Enumerator.Generator =
     `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
 

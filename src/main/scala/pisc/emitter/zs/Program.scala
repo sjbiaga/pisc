@@ -542,7 +542,7 @@ object Program:
                        Term.Apply(Term.Select(Term.Select("τ", "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
                        sum.emit())
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // [SIZED] REPLICATION /////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
@@ -666,7 +666,13 @@ object Program:
 
     def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
+
+      extension (self: Term)
+        def reset: self.type =
+          id.reset
+          self
+
       prog
-        .map(_ -> _.emit(using id()))
+        .map(_ -> _.emit(using id()).reset)
         .map(_.swap)
         .map(defn(_)(_))

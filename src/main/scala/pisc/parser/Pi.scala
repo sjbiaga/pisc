@@ -279,7 +279,7 @@ object Pi:
     case kk extends Emitter(canScale = true, hasReplicationInputGuardFlaw = { _ => false })
     case go extends Emitter(nullOnEmptyOutput = Lit.Null(),
                             featuresModuloReplication = true,
-                            hasReplicationInputGuardFlaw = { _ => false })
+                            hasReplicationInputGuardFlaw = _ >= -1)
     private[parser] case test extends Emitter()
 
   type Names = Set[Symbol]

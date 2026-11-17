@@ -430,7 +430,7 @@ object Program:
 
           * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, sum.emit))
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // [SIZED] REPLICATION /////////////////////////////////////////////////
 
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
           val υidυ = id
@@ -445,7 +445,7 @@ object Program:
           var `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
                                                                                    Type.ArgClause(Nil),
                                                                                    Term.ArgClause(\("None") :: Nil)),
-                                                                   `ZIO.unit`,
+                                                                   if parallelism < 0 then `ZIO.yieldNow` else `_ <- *.release`(sem),
                                                                    `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil))))
                                             }
 
@@ -497,7 +497,7 @@ object Program:
 
           val wrap = { (body: Term) =>
             `if * then … else …`(Term.ApplyUnary("!", par),
-                                 `ZIO.unit`,
+                                 if parallelism < 0 then `ZIO.yieldNow` else `_ <- *.release`(sem),
                                  Term.Block(`val` :+ body))
           }
 
@@ -529,7 +529,7 @@ object Program:
           var `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
                                                                                    Type.ArgClause(Nil),
                                                                                    Term.ArgClause(\("None") :: Nil)),
-                                                                   `ZIO.unit`,
+                                                                   if parallelism < 0 then `ZIO.yieldNow` else `_ <- *.release`(sem),
                                                                    `_ <- *`(υidυ))
                                             }
 
@@ -621,7 +621,13 @@ object Program:
 
     def apply(prog: List[Bind]): List[Stat] =
       val id = new helper.υidυ
+
+      extension (self: Term)
+        def reset: self.type =
+          id.reset
+          self
+
       prog
-        .map(_ -> _.emit(using id()))
+        .map(_ -> _.emit(using id()).reset)
         .map(_.swap)
         .map(defn(_)(_))
