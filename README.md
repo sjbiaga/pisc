@@ -110,9 +110,9 @@ that is found in these terms is considered a _free_ name.
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/ambient/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/ambient/ce)
 
-- [ZIO](https://github.com/sjbiaga/pisc/tree/ambient/zio/README.md)
+- [ZIO](https://github.com/sjbiaga/pisc/tree/ambient/zio)
 
 
 Branches

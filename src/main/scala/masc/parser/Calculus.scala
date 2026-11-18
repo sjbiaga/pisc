@@ -41,7 +41,7 @@ import scala.util.parsing.combinator.masc.parser.Expansion.Duplications
 abstract class Calculus extends Ambient:
 
   def equation(using Duplications): Parser[Bind] =
-    invocation(true) >> {
+    positioned(invocation(true)) >> {
       case bind if _settings.exclude =>
         ".*".r ^^ { _ => bind -> ∅() }
       case bind =>
