@@ -140,23 +140,23 @@ It facilitates passing from Scala values in expressions to names in the calculus
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/main/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/main/ce)
 
-- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/main/cot/README.md)
+- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/main/cot)
 
-- [ZIO](https://github.com/sjbiaga/pisc/tree/main/zio/README.md)
+- [ZIO](https://github.com/sjbiaga/pisc/tree/main/zio)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/main/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/main/akka)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/main/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/main/pekko)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/main/fs2/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/main/fs2)
 
-- [Monix](https://github.com/sjbiaga/pisc/tree/main/monix/README.md)
+- [Monix](https://github.com/sjbiaga/pisc/tree/main/monix)
 
-- [ZStream](https://github.com/sjbiaga/pisc/tree/main/zs/README.md)
+- [ZStream](https://github.com/sjbiaga/pisc/tree/main/zs)
 
-- [Go/Gala](https://github.com/sjbiaga/pisc/tree/main/go/README.md)
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/main/go)
 
 
 Branches

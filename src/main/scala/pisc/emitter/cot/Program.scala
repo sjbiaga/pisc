@@ -441,7 +441,7 @@ object Program:
 
           * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, sum.emit))
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // [SIZED] REPLICATION /////////////////////////////////////////////////
 
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
           val υidυ = id

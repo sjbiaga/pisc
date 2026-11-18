@@ -407,7 +407,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `val` =
             λ.`type` match
@@ -443,7 +443,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
+            `!.μ⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
             `Observable( *, … ).mapParF`(
@@ -469,7 +469,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
+            `!.⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
             `Observable( *, … ).mapParF`(
