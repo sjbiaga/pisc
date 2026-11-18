@@ -16,13 +16,13 @@ function ma() {
     esac
     case "$emit" in
         ce)
-            local deps='--dep org.typelevel::cats-effect:3.7.0
+            local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.github.timwspence::cats-stm:0.13.5
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
         zio)
-            local deps='--dep dev.zio::zio:2.1.26
-                        --dep dev.zio::zio-interop-cats:23.1.0.13'
+            local deps='--dep dev.zio::zio:2.1.27
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             ;;
     esac
     while [ $# -gt 0 ]
@@ -41,7 +41,7 @@ function ma() {
     done
     set ${srcs#?} ../${emit}/ma.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.9.0-RC6 \
+                  -q -O -nowarn -S 3.10.1 \
                   ${args#?} \
                   2>&1
 }
@@ -60,14 +60,9 @@ function maio() {
         *)
             ;;
     esac
-    case "$emit" in
-        *)
-            local F=
-            ;;
-    esac
     while [ $# -gt 0 ]
     do
-        { cat ../${emit}/${F}main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
+        { cat ../${emit}/main.scala.in; cat in/"$1".scala.in | sed -e 's/^/  /'; } >| out/"$1".scala.out
         cat out/"$1".scala.out |
         scalafmt --quiet --non-interactive --stdin >| "$1".scala || cp out/"$1".scala.out "$1".scala
         shift

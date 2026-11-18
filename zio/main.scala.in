@@ -60,5 +60,7 @@ object π:
   extension (self: πLs[UIO[?]])
     private[π] inline def πcollectAllPar: UIO[Unit] =
       ZIO.collectAllParDiscard(self)
+    private[π] inline def πcollectAllPar(N: Int): UIO[Unit] =
+      ZIO.foreachParDiscard(1 to N)(_ => self.πcollectAllPar)
 
 

@@ -87,6 +87,8 @@ object Meta extends emitter.shared.effects.Meta:
 
   val `ZIO.unit` = Term.Select(\, "unit")
 
+  val `ZIO.yieldNow` = Term.Select(\, "yieldNow")
+
 
   private val `ZIO.*`: Term => Boolean =
     case Term.Select(Term.Name(`\\`), _) => true
@@ -112,6 +114,15 @@ object Meta extends emitter.shared.effects.Meta:
     } match
       case Nil => Term.Select(\\, "unit")
       case it => Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar")
+
+  def `List( *, … ).collectAllPar(N)`(* : Term*)(N: Int): Term =
+    *.flatMap {
+      case Term.Select(Term.Name(`\\`), Term.Name("unit")) => None
+      case it => Some(it)
+    } match
+      case Nil => `ZIO.unit`
+      case it => Term.Apply(Term.Select(Term.Apply(\("πLs"), Term.ArgClause(it.toList)), "πcollectAllPar"),
+                            Term.ArgClause(Lit.Int(N) :: Nil))
 
 
   override def `* <- Semaphore(…)`(* : String, `…`: Int = 1): Enumerator =

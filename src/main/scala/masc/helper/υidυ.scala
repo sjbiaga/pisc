@@ -77,6 +77,9 @@ final class υidυ:
         paste(it)
         None
 
+  def reset: Unit =
+    paste(0 -> Seq[Char]('0'))
+
 
 object υidυ:
 

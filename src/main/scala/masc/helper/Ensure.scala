@@ -83,7 +83,7 @@ object Ensure:
                  (using prog: List[Bind])
                  (implicit repl: Int = 0): Unit =
 
-      ast.foreach(_.recursive) {
+      ast.foreachʹ {
 
         case _: <> =>
 

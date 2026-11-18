@@ -33,7 +33,8 @@ package shared
 import scala.meta.*
 import dialects.Scala3
 
-import parser.Ambient.{ AST, ζ, Λ }
+import parser.ast.Cap
+import Cap.{ ζ, Λ }
 
 
 abstract trait Meta:
@@ -77,7 +78,7 @@ abstract trait Meta:
     )
 
 
-  def `ζ(op, *, …)`(head: AST, tail: Seq[AST]): Term =
+  def `ζ(op, *, …)`(head: Cap, tail: Seq[Cap]): Term =
     val next = if tail.isEmpty then \("None")
                else Term.Apply(\("Some"), Term.ArgClause(`ζ(op, *, …)`(tail.head, tail.tail) :: Nil))
 

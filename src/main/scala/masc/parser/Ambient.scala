@@ -37,7 +37,7 @@ import scala.collection.mutable.{
 }
 
 import Ambient.*
-import Calculus.{ AST => _, * }
+import Calculus.*
 import Directive.Settings
 import Encoding.*
 import scala.util.parsing.combinator.masc.parser.Expansion
@@ -46,19 +46,19 @@ import Expansion.Duplications
 
 abstract class Ambient extends Expression:
 
-  def caps: Parser[(List[AST], Names)] =
-    rep1sep(cap, ".") ^^ { _.unzip match
-      case (cs, ns) =>
-        cs.filterNot(_.isInstanceOf[ε.type]) -> ns.reduceOption(_ ++ _).getOrElse(Names())
+  def caps: Parser[(List[Cap], Names)] =
+    rep1sep(positioned(cap), ".") ^^ {
+      case cs =>
+        cs.filterNot(_.isInstanceOf[ε]) -> cs.map(_.free).reduce(_ ++ _)
     }
 
-  def cap: Parser[(AST, Names)] =
-    "ε" ^^ { _ => ε -> Names() } | // null
+  def cap: Parser[Cap] =
+    "ε" ^^ { _ => ε() } | // null
     ("in"|"out"|"open") ~ name ^^ { // enter | exit | open
       case op ~ (amb, free) =>
-        ζ(Op.valueOf(op), amb) -> free
+        ζ(Cap.Op.valueOf(op), amb).free = free
     } |
-    not("ν" | "τ") ~> name <~ not("[") ^^ { Λ(_) -> _ }
+    not("ν" | "τ") ~> name <~ not("[") ^^ { Λ(_).free = _ }
 
   def name: Parser[(String, Names)] = ident ^^ { it => it -> Set(it) }
 
@@ -180,26 +180,9 @@ abstract class Ambient extends Expression:
 
 object Ambient:
 
-  enum Op { case in, out, open }
-
-  export AST.*
-
-  enum AST:
-
-    case Λ(name: String)
-
-    case ε
-
-    case ζ(op: Op, amb: String)
-
-    override def toString: String = this match
-      case Λ(name) => name
-      case ζ(op, amb) => s"$op $amb"
-      case _ => "ε"
-
   enum Emitter(val canScale: Boolean = false):
-    case ce extends Emitter()
-    case zio extends Emitter()
+    case ce extends Emitter(canScale = true)
+    case zio extends Emitter(canScale = true)
     private[parser] case test extends Emitter()
 
   type Names = Set[String]
@@ -209,16 +192,31 @@ object Ambient:
     def apply(names: Names): Names = Set.from(names)
 
 
+  trait Bound:
+    private var _bound = Names()
+    inline final def bound = _bound
+    inline final def bound_=(bound: Names): this.type =
+      _bound = bound
+      this
+
+  trait Free:
+    private var _free = Names()
+    inline final def free = _free
+    inline final def free_=(free: Names): this.type =
+      _free = free
+      this
+
+
   // functions
 
   extension [T <: Calculus.AST](ast: T)
 
     def shallow: T =
 
-      ast.map(_.shallow) {
+      ast.map {
 
-        case `{}`(identifier, pointers, true, params*) =>
-          `(*)`(identifier, Nil, (params ++ pointers)*)
+        case it @ `{}`(identifier, pointers, true, params*) =>
+          `(*)`(identifier, Nil, (params ++ pointers)*)(using it.lc).setPos(it.pos).free = it.free ++ Set.from(pointers)
 
         case it => it
 
@@ -282,11 +280,21 @@ object Ambient:
       val r =
         (source.getLines() ++ Some(""))
           .zipWithIndex
-          .foldLeft(List[(String, (Int, Int))]() -> false) {
-            case ((r, false), (l, n)) => (r :+ (l, (n, n))) -> l.endsWith("\\")
-            case ((r, true), (l, n)) => (r.init :+ (r.last._1.stripSuffix("\\") + l, (r.last._2._1, n))) -> l.endsWith("\\")
+          .foldLeft(List[((Int, Int), List[String])]() -> false) {
+            case ((r, false), (t, n)) => (r :+ ((n, n) -> List(t.stripSuffix("\\")))) -> t.endsWith("\\")
+            case ((r, true), (t, n))  => (r.init :+ ((r.last._1._1, n) -> (r.last._2 :+ t.stripSuffix("\\")))) -> t.endsWith("\\")
           }._1
-          .flatMap { case (it, (m, n)) =>
+          .flatMap { case ((m, n), itʹ) =>
+            lc = { col =>
+              var i = 0
+              var l = 0
+              while itʹ(i).length + l < col
+              do
+                l += itʹ(i).length
+                i += 1
+              (m+i+1, (if l == 0 then col else col%l)+1)
+            }
+            val it = itʹ.mkString
             l = (m+1, n+1)
             if it.matches("^[ ]*#.*") // commented lines
             || it.isBlank // empty lines

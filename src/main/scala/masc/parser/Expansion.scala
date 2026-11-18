@@ -41,7 +41,7 @@ import scala.meta.{ Lit, Term }
 import _root_.masc.parser.Expression
 import Expression.Code
 import _root_.masc.parser.Encoding
-import _root_.masc.parser.Ambient.{ AST => _, * }
+import _root_.masc.parser.Ambient.*
 import _root_.masc.parser.Calculus.*
 import Encoding.*
 import Expansion.*
@@ -68,12 +68,12 @@ abstract class Expansion extends Encoding:
   }
 
 
-  def instance(defs: List[Define], end: String)
-              (using Bindings, Duplications, Int): Parser[(`⟦⟧`, Names)] =
+  override def instance(defs: List[Define], end: String)
+                       (using Bindings, Duplications, Int): Parser[`⟦⟧`] =
     var idx = -1
     val xid = χ_id
 
-    new Parser[(`⟦⟧`, Names)] {
+    new Parser[`⟦⟧`] {
 
       def expand(in: Input, shadows: List[Option[String]], key: CacheKey)
                 (_op: Either[String, Lit], end: Either[String, String])
@@ -117,8 +117,8 @@ abstract class Expansion extends Encoding:
 
                 _cache.get(key) match
 
-                  case Some((exp: `⟦⟧`, cp, freeʹ, given Bindings, inʹ)) =>
-                    bf(freeʹ)
+                  case Some((exp: `⟦⟧`, cp, given Bindings, inʹ)) =>
+                    bf(exp.free)
 
                     substitution(op) = exp
 
@@ -129,9 +129,9 @@ abstract class Expansion extends Encoding:
                   case _ =>
 
                     given Bindings = Bindings(bindings)
-                    parse(instantiation, in) match
+                    parse(positioned(instantiation), in) match
 
-                      case Success((exp, freeʹ), in) =>
+                      case Success(exp, in) =>
                         val source = in.source
                         val offset = in.offset
                         val start = handleWhiteSpace(source, offset)
@@ -141,13 +141,13 @@ abstract class Expansion extends Encoding:
                         if start + n <= source.length
                         && (n == 0 || SubSequence(source, start, n).toString == end.right.get)
                         then
-                          bf(freeʹ)
+                          bf(exp.free)
 
                           substitution(op) = exp
 
                           val inʹ = in.drop(start + n - offset)
 
-                          _cache(key) = (exp, copy, freeʹ, given_Bindings, inʹ)
+                          _cache(key) = (exp, copy, given_Bindings, inʹ)
 
                           success(inʹ)
 
@@ -178,7 +178,7 @@ abstract class Expansion extends Encoding:
 
                   if op.charAt(0).isUpper
                   then
-                    substitution(op) = ∅()
+                    substitution(op) = ∅().setPos(in.drop(start - offset).pos)
 
                     val inʹ = in.drop(start + n - offset)
                     success(inʹ)
@@ -238,12 +238,16 @@ abstract class Expansion extends Encoding:
                       case _ =>
                         Failure("name expected", in) -> Nil
 
+                  else if op == "_"
+                  then
+                    Failure("nothing expected", in) -> Nil
+
                   else
 
                     _cache.get(key) match
 
-                      case Some((par: ∥, cp, freeʹ, given Bindings, inʹ)) =>
-                        bf(freeʹ)
+                      case Some((par: ∥, cp, given Bindings, inʹ)) =>
+                        bf(par.free)
 
                         substitution(op) = par
 
@@ -254,18 +258,32 @@ abstract class Expansion extends Encoding:
                       case _ =>
 
                         given Bindings = Bindings(bindings)
-                        parseAll(parallel, result) match
+                        parseAll(positioned(parallel), result) match
 
-                          case Success((par, freeʹ), _) =>
-                            bf(freeʹ)
+                          case Success(par, _) =>
+                            bf(par.free)
 
                             val parʹ = par.flatten.update(using Bindings(given_Bindings))
+
+                            val colʹ = in.drop(start - offset).pos.column
+
+                            extension (self: AST)
+                              def shift: Unit =
+                                val col = self.pos.column
+                                self.pos =
+                                  new scala.util.parsing.input.Position {
+                                    override val line: Int = 1
+                                    override val column: Int = colʹ + col - 1
+                                    override protected val lineContents: String = "N/A"
+                                  }
+
+                            parʹ.foreach(_.shift)
 
                             substitution(op) = parʹ
 
                             val inʹ = in.drop(start + n - offset)
 
-                            _cache(key) = (parʹ, copy, freeʹ, given_Bindings, inʹ)
+                            _cache(key) = (parʹ, copy, given_Bindings, inʹ)
 
                             success(inʹ)
 
@@ -324,7 +342,7 @@ abstract class Expansion extends Encoding:
         case _ => ??? // caught by template
 
 
-      override def apply(in: Input): ParseResult[(`⟦⟧`, Names)] =
+      override def apply(in: Input): ParseResult[`⟦⟧`] =
         val duplications = summon[Duplications]
         duplications += xid -> (false, Map())
 
@@ -363,7 +381,7 @@ abstract class Expansion extends Encoding:
 
               bindings ++= purged
 
-              Success(exp.copy(xid = xid) -> free, inʹ)
+              Success(exp.cc(xid = xid).free = free, inʹ)
 
             case _ => throw UndefinedParsingException
 
@@ -425,8 +443,8 @@ object Expansion:
 
   type Substitution = Map[String, String | (∥ | `⟦⟧`)]
 
-  private val open_r = """⟦\d*""".r
-  private val closed_r = """\d*⟧""".r
+  private lazy val open_r = """⟦\d*""".r
+  private lazy val closed_r = """\d*⟧""".r
 
   // exceptions
 
@@ -500,11 +518,8 @@ object Expansion:
                      (using substitution: Substitution = null)
                      (using updating: Bindings = null): Option[Code] =
     code.map { (_, orig) =>
-      Expression(orig)._1 match
-        case term @ Term.ForYield(enums, _) =>
-          (Left(enums), term)
-        case term =>
-          (Right(term), term)
+      val term = Expression(orig)._1
+      Expression.recode(term)
     }
 
 
@@ -514,44 +529,43 @@ object Expansion:
                (using substitution: Substitution)
                (using rename: ∥ | `⟦⟧` => ∥ | `⟦⟧`): T =
 
-      ast.mapʹ(_.replace(tooMP)) {
+      ast.mapʹ {
 
         case it @ `.`(_, prefixes*) =>
           val prefixesʹ = prefixes.map {
             case it @ τ(given Option[Code]) =>
-              it.copy(code = recoded)
-            case `..`(_path*) =>
+              it.cc(code = recoded)
+            case it @ `..`(_path*) =>
               val path = _path.map {
-                case Λ(name) => Λ(replaced(name))
-                case ζ(op, amb) => ζ(op, replaced(amb))
+                case it @ Λ(name) => it.cc(name = replaced(name))
+                case it @ ζ(_, amb) => it.cc(amb = replaced(amb))
                 case it => it
               }
-              `..`(path*)
+              it.cc(path = path)
             case it @ `()`(_, given Option[Code]) =>
-              it.copy(code = recoded)
+              it.cc(code = recoded)
             case it => it
           }
-          it.copy(prefixes = prefixesʹ)
+          it.cc(prefixes = prefixesʹ)
 
-        case <>(given Option[Code], _path*) =>
+        case it @ <>(given Option[Code], _path*) =>
           val path = _path.map {
-            case Λ(name) => Λ(replaced(name))
-            case ζ(op, amb) => ζ(op, replaced(amb))
+            case it @ Λ(name) => it.cc(name = replaced(name))
+            case it @ ζ(_, amb) => it.cc(amb = replaced(amb))
             case it => it
           }
-          <>(recoded, path*)
+          it.cc(code = recoded, path = path)
 
         case it @ `[]`(amb, _) =>
-          it.copy(amb = replaced(amb))
+          it.cc(amb = replaced(amb))
 
         case it @ `go.`(amb, _) =>
-          it.copy(amb = replaced(amb))
+          it.cc(amb = replaced(amb))
 
         case it @ `⟦⟧`(_, _, _, pointers) =>
-          val pointersʹ = pointers.map(replaced(_))
-          it.copy(pointers = pointersʹ)
+          it.cc(pointers = pointers.map(replaced(_)))
 
-        case `{}`(identifier, pointers, false) =>
+        case it @ `{}`(identifier, pointers, false) =>
           val ast = rename(substitution(identifier).asInstanceOf[∥ | `⟦⟧`])
           given List[String] = pointers.map(replaced(_))
           if given_List_String.nonEmpty
@@ -561,15 +575,12 @@ object Expansion:
             ast
 
         case it @ `{}`(_, pointers, true, params*) =>
-          val pointersʹ = pointers.map(replaced(_))
-          val paramsʹ = params.map(replaced(_))
-          it.copy(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointers.map(replaced(_)), params = params.map(replaced(_)))
 
         case _: `{}` => ???
 
         case it @ `(*)`(_, _, params*) =>
-          val paramsʹ = params.map(replaced(_))
-          it.copy(params = paramsʹ)
+          it.cc(params = params.map(replaced(_)))
 
       }
 
@@ -577,19 +588,18 @@ object Expansion:
                    (using pointers: List[String]): T =
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
-      import _root_.masc.parser.Calculus.given
 
-      ast.mapʹʹ(_.concatenate(tooMP)) {
+      ast.mapʹʹ {
 
         case it: `⟦⟧` =>
           val pointersʹ = it.pointers ::: pointers
           if pointersʹ.size > it.definition.variables.size
           then
             tooMP(it.definition.code, pointersʹ.size - it.definition.variables.size)
-          it.copy(pointers = pointersʹ) -> true
+          it.cc(pointers = pointersʹ) -> true
 
         case it: `{}` =>
-          it.copy(pointers = it.pointers ::: pointers)
+          it.cc(pointers = it.pointers ::: pointers)
 
         case it => it
 
@@ -599,62 +609,57 @@ object Expansion:
     def update(using bindings: Bindings): T =
 
       given Conversion[AST, (T, Boolean)] = _.asInstanceOf[T] -> false
-      import _root_.masc.parser.Calculus.given
 
-      ast.mapʹʹ(_.update) {
+      ast.mapʹʹ {
 
-        case `.`(end, prefixes*) =>
+        case it @ `.`(end, prefixes*) =>
           given Bindings = Bindings(bindings)
           val prefixesʹ = prefixes.map {
             case it @ ν(names*) =>
               given_Bindings --= names
               it
             case it @ τ(given Option[Code]) =>
-              it.copy(code = recoded)
-            case `..`(_path*) =>
+              it.cc(code = recoded)
+            case it @ `..`(_path*) =>
               val path = _path.map {
-                case Λ(name) => Λ(updated(name))
-                case ζ(op, amb) => ζ(op, updated(amb))
+                case it @ Λ(name) => it.cc(name = updated(name))
+                case it @ ζ(_, amb) => it.cc(amb = updated(amb))
                 case it => it
               }
-              `..`(path*)
+              it.cc(path = path)
             case it @ `()`(name, given Option[Code]) =>
               given_Bindings -= name
-              it.copy(code = recoded)
+              it.cc(code = recoded)
           }
-          `.`(end.update, prefixesʹ*) -> true
+          it.cc(end = end.update, prefixes = prefixesʹ) -> true
 
-        case <>(given Option[Code], _path*) =>
+        case it @ <>(given Option[Code], _path*) =>
           val path = _path.map {
-            case Λ(name) => Λ(updated(name))
-            case ζ(op, amb) => ζ(op, updated(amb))
+            case it @ Λ(name) => it.cc(name = updated(name))
+            case it @ ζ(_, amb) => it.cc(amb = updated(amb))
             case it => it
           }
-          <>(recoded, path*)
+          it.cc(code = recoded, path = path)
 
         case it @ !(_, _, Some(name), par) =>
           given Bindings = Bindings(bindings)
           given_Bindings -= name
-          it.copy(par = par.update) -> true
+          it.cc(par = par.update) -> true
 
         case it @ `[]`(amb, _) =>
-          it.copy(amb = updated(amb))
+          it.cc(amb = updated(amb))
 
         case it @ `go.`(amb, _) =>
-          it.copy(amb = updated(amb))
+          it.cc(amb = updated(amb))
 
         case it @ `⟦⟧`(_, _, _, pointers) =>
-          val pointersʹ = pointers.map(updated(_))
-          it.copy(pointers = pointersʹ)
+          it.cc(pointers = pointers.map(updated(_)))
 
         case it @ `{}`(_, pointers, _, params*) =>
-          val pointersʹ = pointers.map(updated(_))
-          val paramsʹ = params.map(updated(_))
-          it.copy(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointers.map(updated(_)), params = params.map(updated(_)))
 
         case it @ `(*)`(_, _, params*) =>
-          val paramsʹ = params.map(updated(_))
-          it.copy(params = paramsʹ)
+          it.cc(params = params.map(updated(_)))
 
         case it => it
 
