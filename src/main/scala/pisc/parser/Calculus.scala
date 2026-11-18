@@ -129,18 +129,16 @@ abstract class Calculus extends PolyadicPi:
     }
 
   def prefix(using Bindings, Int): Parser[Pre] =
-    positioned {
-      "ν"~>"("~>names<~")" ^^ { // restriction
-        case it if !it.forall(_._1.isSymbol) =>
-          throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
-        case it => it.unzip match
-          case (λs, bs) =>
-            val bound = bs.reduce(_ ++ _)
-            BindingOccurrence(bound)
-            ν(λs.map(_.asSymbol.name)*).bound = bound
-      }
+    "ν"~>"("~>names<~")" ^^ { // restriction
+      case it if !it.forall(_._1.isSymbol) =>
+        throw PrefixChannelsParsingException(it.filterNot(_._1.isSymbol).map(_._1)*)
+      case it => it.unzip match
+        case (λs, bs) =>
+          val bound = bs.reduce(_ ++ _)
+          BindingOccurrence(bound)
+          ν(λs.map(_.asSymbol.name)*).bound = bound
     } |
-    positioned(μ(None))<~"." ^^ { it =>
+    μ(None)<~"." ^^ { it =>
       PendingOccurrence(it.free)
       BindingOccurrence(it.bound)
       it

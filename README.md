@@ -142,23 +142,23 @@ spliced as `vararg` parameter(s).
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/polyadic/ce)
 
-- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/polyadic/cot/README.md)
+- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/polyadic/cot)
 
-- [ZIO](https://github.com/sjbiaga/pisc/tree/polyadic/zio/README.md)
+- [ZIO](https://github.com/sjbiaga/pisc/tree/polyadic/zio)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/polyadic/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/polyadic/akka)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/polyadic/pekko)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic/fs2/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/polyadic/fs2)
 
-- [Monix](https://github.com/sjbiaga/pisc/tree/polyadic/monix/README.md)
+- [Monix](https://github.com/sjbiaga/pisc/tree/polyadic/monix)
 
-- [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic/zs/README.md)
+- [ZStream](https://github.com/sjbiaga/pisc/tree/polyadic/zs)
 
-- [Go/Gala](https://github.com/sjbiaga/pisc/tree/polyadic/go/README.md)
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/polyadic/go)
 
 
 Branches

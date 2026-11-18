@@ -634,7 +634,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `val` = params.zipWithIndex.flatMap {
             case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
@@ -673,7 +673,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
+            `!.μ⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
             `List( *, … ).collectAllPar`(
@@ -699,7 +699,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
+            `!.⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
             `List( *, … ).collectAllPar`(

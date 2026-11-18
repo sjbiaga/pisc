@@ -446,7 +446,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        // REPLICATION /////////////////////////////////////////////////////////
+        // [SIZED] REPLICATION /////////////////////////////////////////////////
 
         case !(parallelism, given Option[(Long, String)], Some(π @ π(_, Some(_), _, params*)), sum) =>
           val args = params.map {
@@ -456,9 +456,15 @@ object Program:
 
           val υidυ = id
 
+          val sem = if parallelism < 0 then null else id
+
           val πʹ = π.cc(names = params.map(_.copy()(using None)))
 
-          val `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(pace(params.map(_.asSymbol.name).map(\(_)).toList))))
+          var `!.π⋯` = πʹ.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(pace(params.map(_.asSymbol.name).map(\(_)).toList))))
+
+          if parallelism >= 0
+          then
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `val` = params.zipWithIndex.flatMap {
             case (λ @ λ(Symbol(arg)), i) if λ.`type`.isDefined =>
@@ -473,9 +479,7 @@ object Program:
 
           val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
-          val sem = if parallelism < 0 then null else id
-
-          var body =
+          val body =
             `Observable( *, … ).mapParF`(
               if parallelism < 0
               then sum.emit()
@@ -487,18 +491,21 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F], ⋯): \\[F, Unit] = …; * }`(υidυ, wrap(body), args*)) :: `!.π⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F], ⋯): \\[F, Unit] = …; * }`(υidυ, wrap(body), args*)) :: `!.π⋯`
 
         case !(parallelism, given Option[(Long, String)], Some(μ), sum) =>
           val υidυ = id
 
-          val `!.μ⋯` = μ.emit :+ `_ <- *`(υidυ)
-
           val sem = if parallelism < 0 then null else id
 
-          var body =
+          var `!.μ⋯` = μ.emit :+ `_ <- *`(υidυ)
+
+          if parallelism >= 0
+          then
+            `!.μ⋯` ::= `_ <- *.acquire`(sem)
+
+          val body =
             `Observable( *, … ).mapParF`(
               if parallelism < 0
               then sum.emit()
@@ -510,18 +517,21 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, given Option[(Long, String)], _, sum) =>
           val υidυ = id
 
-          val `!.⋯` = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil)))) :+ `_ <- *`(υidυ)
-
           val sem = if parallelism < 0 then null else id
 
-          var body =
+          var `!.⋯` = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(pace(Nil)))) :+ `_ <- *`(υidυ)
+
+          if parallelism >= 0
+          then
+            `!.⋯` ::= `_ <- *.acquire`(sem)
+
+          val body =
             `Observable( *, … ).mapParF`(
               if parallelism < 0
               then sum.emit()
@@ -533,7 +543,6 @@ object Program:
           then
             * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
           else
-            body = `_ <- *.acquire`(sem) :: `_ <- *`(body)
             * = `* <- Semaphore(…)`(sem, parallelism) ::
                 `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
 

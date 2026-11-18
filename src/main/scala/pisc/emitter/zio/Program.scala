@@ -456,7 +456,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -491,7 +491,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.π⋯` = `_ <- *.acquire`(sem) :: `!.π⋯`
+            `!.π⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.π⋯`).getOrElse(`!.π⋯`)
 
@@ -546,7 +546,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.μ⋯` = `_ <- *.acquire`(sem) :: `!.μ⋯`
+            `!.μ⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.μ⋯`).getOrElse(`!.μ⋯`)
 
@@ -574,7 +574,7 @@ object Program:
 
           if parallelism >= 0
           then
-            `!.⋯` = `_ <- *.acquire`(sem) :: `!.⋯`
+            `!.⋯` ::= `_ <- *.acquire`(sem)
 
           val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 

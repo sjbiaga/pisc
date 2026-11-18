@@ -238,14 +238,13 @@ object Encoding:
           }
         }
         given (+ | `⟦⟧` => + | `⟦⟧`) = { ast =>
-          def count(ast: AST): Unit =
-            ast.foreachʹ {
-              case it: `⟦⟧` if ids.contains(it.xid) =>
-                duplications += it.xid -> (true -> duplications(it.xid)._2)
-              case it: `⟦⟧` if idsʹ.contains(it.xid) =>
-              case it: `⟦⟧` =>
-                ids += it.xid
-            }
+          ast.foreachʹ {
+            case it: `⟦⟧` if ids.contains(it.xid) =>
+              duplications += it.xid -> (true -> duplications(it.xid)._2)
+            case it: `⟦⟧` if idsʹ.contains(it.xid) =>
+            case it: `⟦⟧` =>
+              ids += it.xid
+          }
           try
             given MutableList[(Symbol, Symbol)]()
             ast.rename(dups, duplicated)(id)
