@@ -94,6 +94,8 @@ abstract trait Meta extends emitter.shared.effects.Meta:
 
   val `ZIO.unit` = Term.Select(\, "unit")
 
+  val `ZIO.yieldNow` = Term.Select(\, "yieldNow")
+
 
   def `* <- ZIO.succeed(*)`(* : (String, Term)): Enumerator.Generator =
     `* <- *`(*._1 -> Term.Apply(Term.Select(\, \\), Term.ArgClause(*._2 :: Nil)))
@@ -121,6 +123,13 @@ abstract trait Meta extends emitter.shared.effects.Meta:
                                     Term.ArgClause(Lit.Int(`…`) :: Nil)
                          )
     )
+
+
+  def `? <- *.onInterrupt(….release)`(* : List[Enumerator], `…`: String): List[Enumerator] =
+    *.last match
+      case it: Enumerator.Generator =>
+        *.init :+ it.copy(rhs = Term.Apply(Term.Select(it.rhs, "onInterrupt"),
+                                           Term.ArgClause(Term.Select(`…`, "release") :: Nil)))
 
 
   val `: String ?=> UIO[Any]` =

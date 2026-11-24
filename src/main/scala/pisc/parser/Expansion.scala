@@ -629,8 +629,7 @@ object Expansion:
           it.cc(guard = Some(π.cc(channel = replaced(ch), code = recoded)()))
 
         case it @ `⟦⟧`(_, _, _, pointers) =>
-          val pointersʹ = pointers.map(replaced(_).asSymbol)
-          it.cc(pointers = pointersʹ)
+          it.cc(pointers = pointers.map(replaced(_).asSymbol))
 
         case it @ `{}`(identifier, pointers, false) =>
           val ast = rename(substitution(identifier).asInstanceOf[+ | `⟦⟧`])
@@ -642,13 +641,12 @@ object Expansion:
             ast
 
         case it @ `{}`(_, pointers, true, params*) =>
-          val pointersʹ = pointers.map(replaced(_).asSymbol)
           val paramsʹ: Seq[λ] = params
             .map {
               case λ(it: Symbol) => replaced(it)
               case it => it
             }
-          it.cc(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointers.map(replaced(_).asSymbol), params = paramsʹ)
 
         case _: `{}` => ???
 
@@ -745,17 +743,15 @@ object Expansion:
           it.cc(guard = Some(π.cc(channel = updated(ch), code = recoded)()))
 
         case it @ `⟦⟧`(_, _, _, pointers) =>
-          val pointersʹ = pointers.map(updated(_).asSymbol)
-          it.cc(pointers = pointersʹ)
+          it.cc(pointers = pointers.map(updated(_).asSymbol))
 
         case it @ `{}`(_, pointers, _, params*) =>
-          val pointersʹ = pointers.map(updated(_).asSymbol)
           val paramsʹ: Seq[λ] = params
             .map {
               case λ(it: Symbol) => updated(it)
               case it => it
             }
-          it.cc(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointers.map(updated(_).asSymbol), params = paramsʹ)
 
         case it @ `(*)`(_, params*) =>
           val paramsʹ: Seq[λ] = params

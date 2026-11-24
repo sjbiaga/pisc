@@ -22,21 +22,21 @@ function spi() {
     case "$emit" in
         ce|cef)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep org.http4s::http4s-ember-server:0.23.38
+                        --dep org.http4s::http4s-ember-server:0.23.39
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
             ;;
         cot)
             local deps='--dep org.typelevel::cats-effect:3.7.1
-                        --dep org.http4s::http4s-ember-server:0.23.38
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep org.http4s::http4s-ember-server:0.23.39
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http4s.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-http:3.11.6
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-http:3.12.0
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/spim.scala\ ../${emit}/http.scala
             ;;
         akka)
@@ -47,17 +47,17 @@ function spi() {
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.1'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
-                        --dep org.http4s::http4s-ember-server:0.23.38
+            local deps='--dep co.fs2::fs2-core:3.16.0
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
+                        --dep org.http4s::http4s-ember-server:0.23.39
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s.scala
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-http:3.11.6
+                        --dep dev.zio::zio-http:3.12.0
                         --dep dev.zio::zio-streams:2.1.27
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/http.scala
             ;;
         go)
@@ -81,13 +81,12 @@ function spi() {
         scala)
             set ${srcs#?} ../${emit}/spi.scala  ../${emit}/dump.scala ../${emit}/loop.scala ../${emit}/stats.scala ../${emit}/traces.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1-RC2 \
+                          -q -O -nowarn -S 3.10.2-RC1 \
                           --dep org.scalanlp::breeze:2.1.0 \
                           --dep com.github.blemale::scaffeine:5.3.0 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
-#                          -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                          -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                          -Dpisc.stochastic.communications.batch.threshold=0 \
 #                          -Dpisc.stochastic.communications.timeout.microseconds=123456 \
@@ -127,10 +126,10 @@ function spi_() {
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.circe::circe-generic:0.14.17
                         --dep org.gnieh::fs2-data-json-circe:1.14.1
-                        --dep org.http4s::http4s-circe:0.23.38
-                        --dep org.http4s::http4s-dsl:0.23.38
-                        --dep org.http4s::http4s-ember-client:0.23.38
-                        --dep org.http4s::http4s-ember-server:0.23.38
+                        --dep org.http4s::http4s-circe:0.23.39
+                        --dep org.http4s::http4s-dsl:0.23.39
+                        --dep org.http4s::http4s-ember-client:0.23.39
+                        --dep org.http4s::http4s-ember-server:0.23.39
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http4s_.scala
             ;;
@@ -138,19 +137,19 @@ function spi_() {
             local deps='--dep org.typelevel::cats-effect:3.7.1
                         --dep io.circe::circe-generic:0.14.17
                         --dep org.gnieh::fs2-data-json-circe:1.14.1
-                        --dep org.http4s::http4s-circe:0.23.38
-                        --dep org.http4s::http4s-dsl:0.23.38
-                        --dep org.http4s::http4s-ember-client:0.23.38
-                        --dep org.http4s::http4s-ember-server:0.23.38
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+                        --dep org.http4s::http4s-circe:0.23.39
+                        --dep org.http4s::http4s-dsl:0.23.39
+                        --dep org.http4s::http4s-ember-client:0.23.39
+                        --dep org.http4s::http4s-ember-server:0.23.39
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http4s_.scala
             ;;
         zio|ziof)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-http:3.11.6
+                        --dep dev.zio::zio-http:3.12.0
                         --dep io.circe::circe-generic:0.14.17
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/spim_.scala\ ../${emit}/http_.scala
             ;;
         akka)
@@ -163,23 +162,23 @@ function spi_() {
                         --dep io.circe::circe-generic:0.14.17'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.14.0
-                        --dep dev.zio::zio-interop-cats:23.1.0.14
+            local deps='--dep co.fs2::fs2-core:3.16.0
+                        --dep dev.zio::zio-interop-cats:23.1.0.15
                         --dep io.circe::circe-generic:0.14.17
                         --dep org.gnieh::fs2-data-json-circe:1.14.1
-                        --dep org.http4s::http4s-circe:0.23.38
-                        --dep org.http4s::http4s-dsl:0.23.38
-                        --dep org.http4s::http4s-ember-client:0.23.38
-                        --dep org.http4s::http4s-ember-server:0.23.38
+                        --dep org.http4s::http4s-circe:0.23.39
+                        --dep org.http4s::http4s-dsl:0.23.39
+                        --dep org.http4s::http4s-ember-client:0.23.39
+                        --dep org.http4s::http4s-ember-server:0.23.39
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             local srcs=\ ../${emit}/http4s_.scala
             ;;
         zs)
             local deps='--dep dev.zio::zio-concurrent:2.1.27
-                        --dep dev.zio::zio-http:3.11.6
+                        --dep dev.zio::zio-http:3.12.0
                         --dep dev.zio::zio-streams:2.1.27
                         --dep io.circe::circe-generic:0.14.17
-                        --dep dev.zio::zio-interop-cats:23.1.0.14'
+                        --dep dev.zio::zio-interop-cats:23.1.0.15'
             local srcs=\ ../${emit}/http_.scala
             ;;
         go)
@@ -203,19 +202,18 @@ function spi_() {
         scala)
             set ${srcs#?} ../${emit}/spi_.scala  ../${emit}/dump_.scala ../${emit}/loop_.scala ../${emit}/stats_.scala ../${emit}/traces_.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1-RC2 \
+                          -q -O -nowarn -S 3.10.2-RC1 \
                           --dep org.scalanlp::breeze:2.1.0 \
                           --dep com.github.blemale::scaffeine:5.3.0 \
                           --dep eu.timepit::refined:0.11.4 \
                           --repo https://packages.confluent.io/maven \
-                          --dep org.apache.kafka:kafka-clients:4.3.1 \
+                          --dep org.apache.kafka:kafka-clients:4.4.0 \
                           --dep org.apache.avro:avro:1.12.2 \
-                          --dep io.confluent:kafka-avro-serializer:8.3.2,exclude=org.apache.kafka%kafka-clients \
-                          --dep com.rabbitmq:amqp-client:5.37.0 \
-                          --dep software.amazon.awssdk:sqs:2.56.0 \
+                          --dep io.confluent:kafka-avro-serializer:8.4.1,exclude=org.apache.kafka%kafka-clients \
+                          --dep com.rabbitmq:amqp-client:5.38.0 \
+                          --dep software.amazon.awssdk:sqs:2.59.8 \
                           ${args#?} \
                           2>&1
-#                          -Dpisc.stochastic.replications.exitcode.ignore=false \
 #                          -Dpisc.stochastic.communications.bind.address=localhost \
 #                          -Dpisc.stochastic.communications.parallelism.level=2147483647 \
 #                          -Dpisc.stochastic.communications.batch.threshold=0 \
@@ -298,6 +296,12 @@ function spio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hashicorp/go-uuid --go &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/hxxshidage/go-blocking-queue --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add github.com/r0fls/gostats --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 cd ..
                 cp out/"$1".${type}.out "$1".${type}
                 rm -fr "$1_"
@@ -316,6 +320,12 @@ function spio() {
                 ln -s ../../../${emit}/util.${type}
                 cd ..
                 gala mod init main &>/dev/null
+                gala mod add github.com/hashicorp/go-uuid --go &>/dev/null
+                gala mod add github.com/hut8/goq --go &>/dev/null
+                gala mod add github.com/hxxshidage/go-blocking-queue --go &>/dev/null
+                gala mod add github.com/marusama/cyclicbarrier --go &>/dev/null
+                gala mod add github.com/r0fls/gostats --go &>/dev/null
+                gala mod add golang.org/x/sync --go &>/dev/null
                 popd &>/dev/null
                 ;;
         esac

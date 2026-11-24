@@ -30,11 +30,9 @@ import _root_.scala.collection.immutable.Seq
 import _root_.scala.Option.unless
 
 import _root_.cats.Order
-import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
-import _root_.cats.syntax.functor.*
 import _root_.cats.syntax.flatMap.*
-import _root_.cats.syntax.traverse.*
+import _root_.cats.syntax.functor.*
 
 import _root_.cats.effect.{ Async, ExitCode, Ref }
 import _root_.cats.effect.std.PQueue
@@ -44,9 +42,6 @@ import `Π-traces`.*
 
 
 package object `Π-dump`:
-
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
 
   type -[F[_]] = PQueue[F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
 
@@ -71,26 +66,8 @@ package object `Π-dump`:
         case _ =>
           Async[F].unit
 
-    private def doExit(using % : %[F], ! : ![F]): F[Unit] =
-      %.get.flatMap { m =>
-        val ks = m.keys.toList
-        val ec =
-          if ks.isEmpty
-          then
-            ExitCode.Success
-          else
-            if !sys.BooleanProp.keyExists(spirsx).value
-            && ks.forall(_.charAt(36) == '!')
-            then ExitCode.Success
-            else ExitCode.Error
-        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1._1.complete(None)) >>
-        ks.traverse(m(_).asInstanceOf[(Boolean, +[F])]._2._1._1._2 match { case null => Async[F].unit
-                                                                           case it => it.get.flatMap(_.complete(None).void) }) >>
-        !.complete(ec).void
-      }
-
     def dump(clock: Ref[F, Double], feedback: Feedback[F])
-            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
+            (using !! : !![F], - : -[F]): F[Unit] =
       -.take.flatMap {
         case Some(_) if `π-traces` eq null =>
           dump(clock, feedback)
@@ -106,5 +83,5 @@ package object `Π-dump`:
           yield
             ()
         case _ =>
-          Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
+          Async[F].blocking(`π-traces`.close).whenA(`π-traces` ne null) >> !!.complete(()).void
       }

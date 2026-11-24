@@ -29,6 +29,7 @@
 import _root_.scala.collection.immutable.Seq
 
 import _root_.cats.Order
+import _root_.cats.syntax.functor.*
 import _root_.cats.effect.{ Concurrent, Ref }
 import _root_.cats.effect.std.PQueue
 
@@ -47,5 +48,5 @@ package object `Π-dump`:
   final class πdump[F[_]: Concurrent]:
 
     def dump(_clock: Ref[F, Double], _feedback: Feedback[F])
-            (using % : %[F], ! : ![F], - : -[F]): F[Unit] =
-      Concurrent[F].unit
+            (using !! : !![F], - : -[F]): F[Unit] =
+      !!.complete(()).void

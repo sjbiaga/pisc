@@ -30,9 +30,7 @@ import _root_.scala.collection.immutable.Seq
 import _root_.scala.Option.unless
 
 import _root_.cats.Order
-import _root_.cats.instances.list.*
 import _root_.cats.syntax.applicative.*
-import _root_.cats.syntax.traverse.*
 
 import _root_.cats.effect.{ IO, ExitCode, Ref }
 import _root_.cats.effect.std.PQueue
@@ -42,9 +40,6 @@ import `Π-traces`.*
 
 
 package object `Π-dump`:
-
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
 
   type - = PQueue[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
 
@@ -66,26 +61,8 @@ package object `Π-dump`:
       case _ =>
         IO.unit
 
-  private def doExit(using % : %, ! : !): IO[Unit] =
-    %.get.flatMap { m =>
-      val ks = m.keys.toList
-      val ec =
-        if ks.isEmpty
-        then
-          ExitCode.Success
-        else
-          if !sys.BooleanProp.keyExists(spirsx).value
-          && ks.forall(_.charAt(36) == '!')
-          then ExitCode.Success
-          else ExitCode.Error
-      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None)) >>
-      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => IO.unit
-                                                                      case it => it.get.flatMap(_.complete(None).void) }) >>
-      !.complete(ec).void
-    }
-
   def dump(clock: Ref[IO, Double], feedback: Feedback)
-          (using % : %, ! : !, - : -): IO[Unit] =
+          (using !! : !!, - : -): IO[Unit] =
     -.take.flatMap {
       case Some(_) if `π-traces` eq null =>
         dump(clock, feedback)
@@ -101,5 +78,5 @@ package object `Π-dump`:
         yield
           ()
       case _ =>
-        IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> doExit
+        IO.blocking(`π-traces`.close).whenA(`π-traces` ne null) >> !!.complete(()).void
     }

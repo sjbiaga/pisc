@@ -382,7 +382,7 @@ func Go_PollPi(queue Go_EnabledQueuePi, hmap Go_EnabledMapPi, callback func(func
     Go_CallPi(() => {
         val (scope, key, query) = queue.queue.Dequeue()
         bind _ =
-            if (query.reply.Get().promise.Get().IsCompleted())
+            if (query.reply.promise.IsCompleted())
                 Go_Call_unlockablePi(hmap.mutex, () => {
                     *hmap.hmap = hmap.hmap.Put(scope + key, Go_ActionPi(false, query))
                     Go_returnPi

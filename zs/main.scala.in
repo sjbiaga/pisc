@@ -58,7 +58,8 @@ object App extends _root_.zio.ZIOApp:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[Long], batch: Ref[Long], clock: Ref[Double], feedback: Feedback)
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|): URIO[Scope, ExitCode] =
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, !! : !!, ! : !, &| : &|): URIO[Scope, ExitCode] =
+    val ec = feedback.pauseRP_stopR_exitRP.get.map(_._1._2).map(if _ then ExitCode.failure else ExitCode.success)
     val batchMode = parameters.threshold > 0
     val \ =
       if batchMode
@@ -66,14 +67,14 @@ object App extends _root_.zio.ZIOApp:
       else { (it: UIO[Unit]) => ^.withPermit(it *> peek(parameters.plugins)(using %, **)(π.`π-wand`)) }
     for
       _ <- if batchMode
-           then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, /, !, &|, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
-           else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, /, !, &|, -, *, **)(π.`π-wand`) }.disconnect.fork
+           then ZIO.uninterruptibleMask { loopʹ(parameters, started, batch, _, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`) }.disconnect.fork
+           else ZIO.uninterruptibleMask { loop0(parameters, started, _, feedback)(using %, !, &|, -, *, **)(π.`π-wand`) }.disconnect.fork
       _ <- poll(using %, /, \).uninterruptible.disconnect.fork
-      _ <- dump(clock, feedback)(using %, !, -).uninterruptible.disconnect.fork
+      _ <- dump(clock, feedback)(using !!, -).uninterruptible.disconnect.fork
       ^ <- π.`π-uuid`
       ? <- ZIO.scoped(FiberRef.make[sΠ.`[]`](Set.empty))
       x <- http(parameters.address, batchMode, parameters.plugins, started, feedback, π.`π-AST`)(using !) {
-             π.Main(args*)(using ^, ?)(using %, /, \).runDrain.uninterruptible.disconnect.fork
+             π.Main(args*)(using ^, ?)(using %, /, \).runDrain.ensuring(ec.flatMap(!!.await *> !.succeed(_) *> /.offer(null) *> **.offer(Nil))).uninterruptible.disconnect.fork
            }.provideSome[Scope](http(parameters.address), Server.live, Client.default).either
     yield
       x.getOrElse(ExitCode.failure)
@@ -138,6 +139,7 @@ object App extends _root_.zio.ZIOApp:
       * <- Semaphore[UIO](0)
       ** <- Queue.unbounded[List[((String, String), ++++)]]
       - <- TPriorityQueue.empty[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]].commit
+      !! <- Promise.make[Nothing, Unit]
       ! <- Promise.make[Nothing, ExitCode]
       &| <- Ref.make(0L)
       n <- Ref.make(0L)
@@ -152,7 +154,7 @@ object App extends _root_.zio.ZIOApp:
         .modifyZIO { case ((pauseP, _), exitP) =>
           (pauseP.succeed(()) *> exitP.succeed(())).map(_ -> (pauseP -> true -> exitP))
         }
-      x <- run(args.toList, p, n, b, c, f)(%, /, *, **, ^, -, !, &|).onInterrupt(st)
+      x <- run(args.toList, p, n, b, c, f)(%, /, *, **, ^, -, !!, !, &|).onInterrupt(st)
       _ <- exit(x)
     yield
       ()

@@ -40,7 +40,7 @@ import _root_.zio.Ref
 
 package object `Π-stats`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, `()` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `{}`, `()` }
 
   sealed trait Rate extends Any
   case class ∞(weight: Long) extends AnyVal with Rate
@@ -48,7 +48,7 @@ package object `Π-stats`:
     def apply(whatIf: `ℝ⁺`): this.type = this
   case class ⊤(weight: Long) extends AnyVal with Rate
 
-  private final case class EtherPolarity(ether: {}, polarity: Option[Either[Unit, Ref[`()`]]]):
+  private final case class EtherPolarity(ether: `{}`, polarity: Option[Either[Unit, Ref[`()`]]]):
     override def equals(any: Any): Boolean = any match
       case that: EtherPolarity =>
         (this.ether eq that.ether) && { (this.polarity -> that.polarity) match
@@ -80,11 +80,11 @@ package object `Π-stats`:
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
   @annotation.tailrec
-  def ∥(% : Map[String, ({}, Option[Either[Unit, Ref[`()`]]], Rate)])
+  def ∥(% : Map[String, (`{}`, Option[Either[Unit, Ref[`()`]]], Rate)])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (check: Boolean = false, acc: List[(String, String, Ref[`()`], Double)] = Nil): List[(String, String, Ref[`()`], Double)] =
-                                                                                          // ^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^
-                                                                                          // key1    key1|2  input      delay
+       (check: Boolean = false, acc: List[(String, String, (`{}`, Ref[`()`]), Double)] = Nil): List[(String, String, (`{}`, Ref[`()`]), Double)] =
+                                                                                                  // ^^^^^^  ^^^^^^   ^^^^  ^^^^^^^^^   ^^^^^^
+                                                                                                  // key1    key1|2   ether input       delay
 
     val mls = HashMap[EtherPolarity, List[Either[Long, Either[BigDecimal, Long]]]]() // lists
 
@@ -164,9 +164,9 @@ package object `Π-stats`:
         case (k, (e, p, r: ⊤)) => k -> (EtherPolarity(e, p), BigDecimal(0) -> r.weight) // passive
       }.toSeq
 
-    var r = List[((String, String, Ref[`()`], Double), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^    ^^^  ^^^^^^
-    //             key1    key1|2  input      delay     pri  delay
+    var r = List[((String, String, (`{}`, Ref[`()`]), Double), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^   ^^^^  ^^^^^^^^^   ^^^^^^    ^^^  ^^^^^^
+    //             key1    key1|2   ether input       delay     pri  delay
 
     for
       i <- 0 until χ.size
@@ -187,7 +187,7 @@ package object `Π-stats`:
           else
             ???
         val delay = if rate == .0 then Double.PositiveInfinity else delta(rate)
-        r ::= (key1, key1, null, delay) -> (priority -> delay)
+        r ::= (key1, key1, ep1.ether -> null, delay) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -232,7 +232,7 @@ package object `Π-stats`:
             val rate = _rate.toDouble
             val delay = delta(rate)
             val ref = ep1.polarity.get.orElse(ep2.polarity.get).right.get
-            r ::= (key1, key2, ref, delay) -> (priority -> delay)
+            r ::= (key1, key2, ep2.ether -> ref, delay) -> (priority -> delay)
 
     r
       .sortBy(_._2)

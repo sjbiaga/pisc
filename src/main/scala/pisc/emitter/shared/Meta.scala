@@ -178,6 +178,15 @@ abstract trait Meta:
     )
 
 
+  def flatify(* : Seq[Enumerator]): Seq[Enumerator] =
+    *.flatMap {
+      case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
+        flatify(it.enums)
+      case it =>
+        Some(it)
+    }
+
+
   def `π-exclude`(enabled: Actions): Term =
     Term.Apply(\("π-exclude"),
                Term.ArgClause(enabled.map(Lit.String(_)).toList))

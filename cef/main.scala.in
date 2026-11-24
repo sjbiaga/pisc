@@ -56,7 +56,8 @@ object App extends _root_.cats.effect.IOApp:
 
 
   private def run(args: List[String], parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], clock: Ref[IO, Double], feedback: Feedback)
-                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, ! : !, &| : &|): IO[ExitCode] =
+                 (% : %, / : /, * : *, ** : **, ^ : ^, - : -, !! : !!, ! : !, &| : &|): IO[ExitCode] =
+    val ec = feedback.pauseRD_stopR_exitRD.get.map(_._1._2).map { if _ then ExitCode.Error else ExitCode.Success }
     val batchMode = parameters.threshold > 0
     val \ =
       if batchMode
@@ -65,13 +66,13 @@ object App extends _root_.cats.effect.IOApp:
     ( for
         _ <- http4s(parameters.address, batchMode, started, feedback, π.`π-AST`).flatMap(http4s(batchMode, parameters.plugins, _))
         _ <- if batchMode
-             then loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
-             else loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
+             then loopʹ(parameters, started, batch, feedback)(using %, &|, -, *, **, ^)(π.`π-wand`).background
+             else loop0(parameters, started, feedback)(using %, &|, -, *, **)(π.`π-wand`).background
         _ <- poll(using %, /, \).background
-        _ <- dump(clock, feedback)(using %, !, -).background
+        _ <- dump(clock, feedback)(using !!, -).background
         ^ <- Resource.eval(π.`π-uuid`)
         ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
-        _ <- π.Main(args*)(using ^, ?)(using %, /, \).background
+        _ <- π.Main(args*)(using ^, ?)(using %, /, \).guarantee(ec.flatMap(!!.get >> !.complete(_).void)).background
       yield
         ()
     ).use { _ =>
@@ -111,6 +112,7 @@ object App extends _root_.cats.effect.IOApp:
       * <- Semaphore[IO](0)
       ** <- Queue.unbounded[IO, List[((String, String), ++++)]]
       - <- PQueue.unbounded[IO, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
+      !! <- IO.deferred[Unit]
       ! <- IO.deferred[ExitCode]
       &| <- IO.ref(0L)
       n <- IO.ref(0L)
@@ -128,7 +130,7 @@ object App extends _root_.cats.effect.IOApp:
       doneR    <- IO.ref(false)
       feedback  = Feedback(paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`(π.`π-main`)(using %)
-      x <- run(args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !, &|)
+      x <- run(args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !!, !, &|)
     yield
       x
 

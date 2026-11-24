@@ -56,7 +56,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ pace
@@ -64,7 +64,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ code
@@ -72,7 +72,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ pace w/ code
@@ -80,7 +80,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
@@ -90,7 +90,7 @@ package sΠ:
     protected inline def output(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ pace
@@ -98,7 +98,7 @@ package sΠ:
     protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ code
@@ -106,7 +106,7 @@ package sΠ:
     protected inline def output(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ pace w/ code
@@ -114,7 +114,7 @@ package sΠ:
     protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     //////////////////////////////////////////////////////////////// VARIABLE //
 
@@ -124,7 +124,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ pace
@@ -132,7 +132,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ code
@@ -140,7 +140,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ pace w/ code
@@ -148,7 +148,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => IO[S])(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /////////////////////////////////////////////////////////////////// INPUT //
 
@@ -158,7 +158,7 @@ package sΠ:
     protected inline def input(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ pace
@@ -166,7 +166,7 @@ package sΠ:
     protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ code
@@ -174,7 +174,7 @@ package sΠ:
     protected inline def input[T](_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => IO[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
                                            (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ pace w/ code
@@ -182,7 +182,7 @@ package sΠ:
     protected inline def input[T](_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => IO[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
                                            (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     ////////////////////////////////////////////////////// modulo replication //
 
@@ -191,7 +191,7 @@ package sΠ:
 
   trait τ:
 
-    protected val `new {}` = new {}
+    protected val `None {}`: `{}` = None
 
     import Macros.τ.*
 
@@ -201,7 +201,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ IO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ pace
@@ -209,7 +209,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ code
@@ -217,7 +217,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ exec(code).void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ pace w/ code
@@ -225,7 +225,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => IO[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): IO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ exec(code) >> IO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
 
   object Macros:
@@ -241,68 +241,63 @@ package sΠ:
       /**
         * modulo replication guard
         */
-      def silentCode(ether: Expr[{}])
+      def silentCode(ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function0`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloD  <- IO.deferred[Boolean]
             moduloCB <- CyclicBarrier[IO]($parallelism)
-            firstS   <- Semaphore[IO](1)
+            moduloD  <- IO.deferred[Boolean]
+            moduloS  <- Semaphore[IO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val sync = moduloCB.await >> prevS.acquire
-                for
-                  nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                  main   =
-                    for
-                      stop <- if first then IO.pure(false) else moduloD.get
-                      _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
-                                  continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                  deferred <- IO.deferred[Option[<>]]
-                                  _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, None, $rate)))
-                                  opt      <- deferred.get
-                                  _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): IO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, _) = opt.get
-                                      _   <- b.await
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- supervise($body()(using ^^))
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
+                val main =
+                  for
+                    stop <- if first then IO.pure(false) else moduloD.get
+                    _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
+                    loop <- ( for
+                                _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
+                                continue <- IO.deferred[Option[<>]] >>= IO.ref
+                                deferred <- IO.deferred[Option[<>]]
+                                _        <- deferred.complete(None).unlessA(first)
+                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, None, $rate)))
+                                opt      <- deferred.get
+                                _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
+                              yield {
+                                def loop(enabled: Boolean = first): IO[Unit] =
+                                  for
+                                    _   <- moduloS.acquire.unlessA(enabled)
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    opt <- continue.get.flatMap(_.get)
+                                    _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
+                                    _   <- IO.deferred[Option[<>]] >>= continue.set
+                                    (_, b,
+                                     f, _) = opt.get
+                                    _   <- b.await
+                                    _   <- f.join
+                                    _   <- $sleep
+                                    _   <- moduloS.release
+                                    _   <- supervise($body()(using ^^))
+                                    _   <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
               unfold
             }
             _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                        then supervise(unfold($parallelism)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
           yield
             ()
         }
@@ -313,95 +308,21 @@ package sΠ:
       /**
         * modulo replication bound output guard
         */
-      def outputCode(ether: Expr[{}])
+      def outputCode(ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloD  <- IO.deferred[Boolean]
             moduloCB <- CyclicBarrier[IO]($parallelism)
-            firstS   <- Semaphore[IO](1)
+            moduloD  <- IO.deferred[Boolean]
+            moduloS  <- Semaphore[IO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val sync = moduloCB.await >> prevS.acquire
-                for
-                  nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                  main   =
-                    for
-                      stop <- if first then IO.pure(false) else moduloD.get
-                      _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
-                                  continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                  deferred <- IO.deferred[Option[<>]]
-                                  _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
-                                  opt      <- deferred.get
-                                  _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): IO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, i) = opt.get
-                                      n   <- ν
-                                      _   <- i.set(n)
-                                      _   <- b.await
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- supervise($body(n)(using ^^))
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
-              unfold
-            }
-            _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
-          yield
-            ()
-        }
-
-    /**
-      * modulo constant replication output guard
-      */
-    def outputCode(ether: Expr[{}])
-                  (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`])(key: Expr[String])(body: Expr[`Π-Function0`])
-                  (sleep: Expr[IO[Unit]])
-                  (% : Expr[%], / : Expr[/], \ : Expr[\])
-                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
-                  (using Quotes): Expr[IO[Unit]] =
-     '{ for
-          moduloD  <- IO.deferred[Boolean]
-          moduloCB <- CyclicBarrier[IO]($parallelism)
-          firstS   <- Semaphore[IO](1)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
-              val first = remaining == $parallelism
-              val last = remaining == 1
-              val sync = moduloCB.await >> prevS.acquire
-              for
-                nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                main   =
+                val main =
                   for
                     stop <- if first then IO.pure(false) else moduloD.get
                     _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
@@ -416,19 +337,20 @@ package sΠ:
                               yield {
                                 def loop(enabled: Boolean = first): IO[Unit] =
                                   for
-                                    _   <- sync
+                                    _   <- moduloS.acquire.unlessA(enabled)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
                                     opt <- continue.get.flatMap(_.get)
-                                    _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
+                                    _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
                                     _   <- IO.deferred[Option[<>]] >>= continue.set
                                     (_, b,
                                      f, i) = opt.get
-                                    _   <- i.set($value)
+                                    n   <- ν
+                                    _   <- i.set(n)
                                     _   <- b.await
                                     _   <- f.join
                                     _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- supervise($body()(using ^^))
+                                    _   <- moduloS.release
+                                    _   <- supervise($body(n)(using ^^))
                                     _   <- loop(false)
                                   yield ()
                                 loop()
@@ -437,16 +359,79 @@ package sΠ:
                     _    <- loop
                   yield
                     ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+                if last
+                then main
+                else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
+              unfold
+            }
+            _        <- if $parallelism == 1
+                        then supervise(unfold($parallelism)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
+          yield
+            ()
+        }
+
+    /**
+      * modulo constant replication output guard
+      */
+    def outputCode(ether: Expr[`{}`])
+                  (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`])(key: Expr[String])(body: Expr[`Π-Function0`])
+                  (sleep: Expr[IO[Unit]])
+                  (% : Expr[%], / : Expr[/], \ : Expr[\])
+                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                  (using Quotes): Expr[IO[Unit]] =
+     '{ for
+          moduloCB <- CyclicBarrier[IO]($parallelism)
+          moduloD  <- IO.deferred[Boolean]
+          moduloS  <- Semaphore[IO](0)
+          unfold    = {
+            def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
+              val first = remaining == $parallelism
+              val last = remaining == 1
+              val main =
+                for
+                  stop <- if first then IO.pure(false) else moduloD.get
+                  _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
+                              continue <- IO.deferred[Option[<>]] >>= IO.ref
+                              deferred <- IO.deferred[Option[<>]]
+                              _        <- deferred.complete(None).unlessA(first)
+                              _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
+                              opt      <- deferred.get
+                              _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
+                            yield {
+                              def loop(enabled: Boolean = first): IO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unlessA(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                  opt <- continue.get.flatMap(_.get)
+                                  _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
+                                  _   <- IO.deferred[Option[<>]] >>= continue.set
+                                  (_, b,
+                                   f, i) = opt.get
+                                  _   <- i.set($value)
+                                  _   <- b.await
+                                  _   <- f.join
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- supervise($body()(using ^^))
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
         yield
           ()
       }
@@ -457,69 +442,64 @@ package sΠ:
       /**
         * modulo variable replication output guard
         */
-      def outputCode[S](ether: Expr[{}])
+      def outputCode[S](ether: Expr[`{}`])
                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[() => IO[S]])(key: Expr[String])(body: Expr[`Π-Function0`])
                        (sleep: Expr[IO[Unit]])
                        (% : Expr[%], / : Expr[/], \ : Expr[\])
                        (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                        (using Type[S], Quotes): Expr[IO[Unit]] =
        '{ for
-            moduloD  <- IO.deferred[Boolean]
             moduloCB <- CyclicBarrier[IO]($parallelism)
-            firstS   <- Semaphore[IO](1)
+            moduloD  <- IO.deferred[Boolean]
+            moduloS  <- Semaphore[IO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val sync = moduloCB.await >> prevS.acquire
-                for
-                  nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                  main   =
-                    for
-                      stop <- if first then IO.pure(false) else moduloD.get
-                      _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
-                                  continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                  deferred <- IO.deferred[Option[<>]]
-                                  _        <- deferred.complete(None).unlessA(first)
-                                  _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
-                                  opt      <- deferred.get
-                                  _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): IO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                      opt <- continue.get.flatMap(_.get)
-                                      _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
-                                      _   <- IO.deferred[Option[<>]] >>= continue.set
-                                      (_, b,
-                                       f, i) = opt.get
-                                      _   <- $value().map(new `()`(_)) >>= i.set
-                                      _   <- b.await
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- supervise($body()(using ^^))
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
+                val main =
+                  for
+                    stop <- if first then IO.pure(false) else moduloD.get
+                    _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
+                    loop <- ( for
+                                _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
+                                continue <- IO.deferred[Option[<>]] >>= IO.ref
+                                deferred <- IO.deferred[Option[<>]]
+                                _        <- deferred.complete(None).unlessA(first)
+                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate)))
+                                opt      <- deferred.get
+                                _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
+                              yield {
+                                def loop(enabled: Boolean = first): IO[Unit] =
+                                  for
+                                    _   <- moduloS.acquire.unlessA(enabled)
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                    opt <- continue.get.flatMap(_.get)
+                                    _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
+                                    _   <- IO.deferred[Option[<>]] >>= continue.set
+                                    (_, b,
+                                     f, i) = opt.get
+                                    _   <- $value().map(new `()`(_)) >>= i.set
+                                    _   <- b.await
+                                    _   <- f.join
+                                    _   <- $sleep
+                                    _   <- moduloS.release
+                                    _   <- supervise($body()(using ^^))
+                                    _   <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
               unfold
             }
             _        <- if $parallelism == 1
-                        then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                        then supervise(unfold($parallelism)(${^})(${^}))
+                        else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
           yield
             ()
         }
@@ -528,70 +508,65 @@ package sΠ:
     /**
       * modulo replication input guard
       */
-    def inputCode(ether: Expr[{}])
+    def inputCode(ether: Expr[`{}`])
                  (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`])
                  (sleep: Expr[IO[Unit]])
                  (% : Expr[%], / : Expr[/], \ : Expr[\])
                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                  (using Quotes): Expr[IO[Unit]] =
      '{ for
-          moduloD  <- IO.deferred[Boolean]
           moduloCB <- CyclicBarrier[IO]($parallelism)
-          firstS   <- Semaphore[IO](1)
+          moduloD  <- IO.deferred[Boolean]
+          moduloS  <- Semaphore[IO](0)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              val sync = moduloCB.await >> prevS.acquire
-              for
-                nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                main   =
-                  for
-                    stop <- if first then IO.pure(false) else moduloD.get
-                    _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
-                    loop <- ( for
-                                _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
-                                continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                deferred <- IO.deferred[Option[<>]]
-                                _        <- deferred.complete(None).unlessA(first)
-                                result   <- IO.ref(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
-                                opt      <- deferred.get
-                                _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
-                              yield {
-                                def loop(enabled: Boolean = first): IO[Unit] =
-                                  for
-                                    _   <- sync
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                    opt <- continue.get.flatMap(_.get)
-                                    _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
-                                    _   <- IO.deferred[Option[<>]] >>= continue.set
-                                    (_, b,
-                                     f, _) = opt.get
-                                    _   <- b.await
-                                    _   <- f.join
-                                    n   <- result.get
-                                    _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- supervise($body(n)(using ^^))
-                                    _   <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+              val main =
+                for
+                  stop <- if first then IO.pure(false) else moduloD.get
+                  _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
+                              continue <- IO.deferred[Option[<>]] >>= IO.ref
+                              deferred <- IO.deferred[Option[<>]]
+                              _        <- deferred.complete(None).unlessA(first)
+                              result   <- IO.ref(null.asInstanceOf[`()`])
+                              _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
+                              opt      <- deferred.get
+                              _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
+                            yield {
+                              def loop(enabled: Boolean = first): IO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unlessA(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                  opt <- continue.get.flatMap(_.get)
+                                  _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
+                                  _   <- IO.deferred[Option[<>]] >>= continue.set
+                                  (_, b,
+                                   f, _) = opt.get
+                                  _   <- b.await
+                                  _   <- f.join
+                                  n   <- result.get
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- supervise($body(n)(using ^^))
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
         yield
           ()
       }
@@ -599,79 +574,70 @@ package sΠ:
     /**
       * modulo replication input guard w/ code
       */
-    def inputCode[T](ether: Expr[{}])
+    def inputCode[T](ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(code: Expr[T => IO[T]])(body: Expr[`Π-Function1`])
                     (sleep: Expr[IO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Type[T], Quotes): Expr[IO[Unit]] =
      '{ for
-          moduloD  <- IO.deferred[Boolean]
           moduloCB <- CyclicBarrier[IO]($parallelism)
-          firstS   <- Semaphore[IO](1)
+          moduloD  <- IO.deferred[Boolean]
+          moduloS  <- Semaphore[IO](0)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[IO])(^ : String)(^^ : String): IO[Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): IO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              val sync = moduloCB.await >> prevS.acquire
-              for
-                nextS <- if last then IO.pure(firstS) else Semaphore[IO](0)
-                main   =
-                  for
-                    stop <- if first then IO.pure(false) else moduloD.get
-                    _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
-                    loop <- ( for
-                                _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
-                                continue <- IO.deferred[Option[<>]] >>= IO.ref
-                                deferred <- IO.deferred[Option[<>]]
-                                _        <- deferred.complete(None).unlessA(first)
-                                result   <- IO.ref(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
-                                opt      <- deferred.get
-                                _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
-                              yield {
-                                def loop(enabled: Boolean = first): IO[Unit] =
-                                  for
-                                    _   <- sync
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
-                                    opt <- continue.get.flatMap(_.get)
-                                    _   <- ((moduloCB.await >> IO.canceled).whenA(last) >> nextS.release >> sync).whenA(opt eq None)
-                                    _   <- IO.deferred[Option[<>]] >>= continue.set
-                                    (_, b,
-                                     f, _) = opt.get
-                                    _   <- b.await
-                                    _   <- f.join
-                                    n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
-                                    _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- supervise($body(n)(using ^^))
-                                    _   <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+              val main =
+                for
+                  stop <- if first then IO.pure(false) else moduloD.get
+                  _    <- (IO.canceled.whenA(last) >> IO.never).whenA(stop)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).whenA(first)
+                              continue <- IO.deferred[Option[<>]] >>= IO.ref
+                              deferred <- IO.deferred[Option[<>]]
+                              _        <- deferred.complete(None).unlessA(first)
+                              result   <- IO.ref(null.asInstanceOf[`()`])
+                              _        <- ${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate)))
+                              opt      <- deferred.get
+                              _        <- (moduloD.complete(opt eq None) >> (IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)).whenA(first)
+                            yield {
+                              def loop(enabled: Boolean = first): IO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unlessA(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unlessA(enabled)
+                                  opt <- continue.get.flatMap(_.get)
+                                  _   <- (moduloS.release >> moduloCB.await >> IO.canceled.whenA(last) >> IO.never).whenA(opt eq None)
+                                  _   <- IO.deferred[Option[<>]] >>= continue.set
+                                  (_, b,
+                                   f, _) = opt.get
+                                  _   <- b.await
+                                  _   <- f.join
+                                  n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- supervise($body(n)(using ^^))
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => UUIDGen.randomString[IO] >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then supervise(unfold($parallelism, firstS)(${^})(${^}))
-                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism, firstS)(${^}))
+                      then supervise(unfold($parallelism)(${^})(${^}))
+                      else supervise(UUIDGen.randomString[IO] >>= unfold($parallelism)(${^}))
         yield
           ()
       }
 
-    // duplicated value to avoid cyclic dependencies
-    private val `null` = new `()`(null)
-
     // duplicated method to avoid cyclic dependencies
     private def supervise(code: IO[Any]): IO[Unit] =
       Supervisor[IO](await = true)
-        .use(_.supervise(code))
-        .flatMap(_.join.void)
+        .use(_.supervise(code).flatMap(_.join.void))

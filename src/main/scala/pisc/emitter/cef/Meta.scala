@@ -38,7 +38,8 @@ import dialects.Scala3
 
 object Meta extends emitter.ce.Meta:
 
-  def `*.flatMap { null else … }`(* : Term, `…`: List[Enumerator])(implicit υidυ: String): Term =
+  def `*.flatMap { null else … }`(* : Term, `…`: List[Enumerator])(using id: => String, ifNull: Term): Term =
+    val υidυ = id
     Term.Apply(
       Term.Select(*, "flatMap"),
       Term.ArgClause(
@@ -49,13 +50,14 @@ object Meta extends emitter.ce.Meta:
               Term.ApplyInfix(\(υidυ), \("eq"),
                               Type.ArgClause(Nil),
                               Term.ArgClause(Lit.Null()::Nil)),
-              `IO.cede`,
+              ifNull,
               `for * yield ()`(`…`*)
             )
           ) :: Nil) :: Nil)
     )
 
-  def `*.flatMap { null else … }`(* : Term, `…`: List[Enumerator])(par: String)(implicit υidυ: String): Term =
+  def `*.flatMap { null else … }`(* : Term, `…`: List[Enumerator])(par: String)(using id: => String, ifNull: Term): Term =
+    val υidυ = id
     Term.Apply(
       Term.Select(*, "flatMap"),
       Term.ArgClause(
@@ -67,7 +69,7 @@ object Meta extends emitter.ce.Meta:
               Term.ApplyInfix(\(υidυ), \("eq"),
                               Type.ArgClause(Nil),
                               Term.ArgClause(Lit.Null()::Nil)),
-              `IO.cede`,
+              ifNull,
               `for * yield ()`(`…`*)
             )
           ) :: Nil) :: Nil)

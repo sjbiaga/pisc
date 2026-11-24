@@ -21,20 +21,13 @@ func Go_SilentPi(
         val moduloP = NewPromise[Go_NamePi]()
         val moduloCB = cyclicbarrier.New(int(parallelism))
 
-        val firstS = Go_NewSemaphorePi(1)
+        val moduloS = Go_NewSemaphorePi(1)
+        moduloS.TryAcquire1().Run()
 
-        var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
-        unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+        var unfold func(int, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+        unfold = (remaining int, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
             val first = remaining == int(parallelism)
             val last = remaining == 1
-
-            val nextS =
-                if (last) firstS
-                else {
-                    val sem = Go_NewSemaphorePi(1)
-                    sem.TryAcquire1().Run()
-                    sem
-                }
 
             var continue_at = NewPromise[Go_NamePi]()
 
@@ -66,7 +59,7 @@ func Go_SilentPi(
             var loop func (bool) Go_TrampolinePi[Go_NamePi]
             loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
                 bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
-                bind _ = prevS.Acquire1(ctx)
+                bind _ = if (enabled) Go_returnPi else moduloS.Acquire1(ctx)
                 bind _ =
                     if (!enabled)
                         go_stochastic.Go_callbackPi(() => {
@@ -83,15 +76,15 @@ func Go_SilentPi(
                     else
                         Go_returnPi
                 bind opt = Go_AwaitPi(continue_at)
-                bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                bind opt = Go_DonePi(opt.asOption()).FlatTapNone(moduloS.Release1().Run())
                 continue_at = NewPromise[Go_NamePi]()
                 val ptr = opt.asPointer()
                 val barrier = ptr.barrier
                 bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                 bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                 bind _ = sleep()
-                bind _ = nextS.Release1()
-                bind _ = body(scope2)
+                bind _ = moduloS.Release1()
+                bind _ = body(scope2).OrElse(Go_ReturnPi)
                 loop(false)
             }
 
@@ -105,15 +98,15 @@ func Go_SilentPi(
             } else {
                 bind _ = Go_Spawn_ReleasablePi(end, start)
                 bind scope3 = Go_UUIDPi()
-                unfold(remaining - 1, nextS, scope2, scope3)
+                unfold(remaining - 1, scope2, scope3)
             }
         }
 
         if (parallelism == 1)
-            unfold(int(parallelism), firstS, scope, scope)
+            unfold(int(parallelism), scope, scope)
         else {
             bind scope2 = Go_UUIDPi()
-            unfold(int(parallelism), firstS, scope, scope2)
+            unfold(int(parallelism), scope, scope2)
         }
     })
 }
@@ -135,20 +128,13 @@ func (self Go_NamePi) Go_BoundOutputPi(
                     val moduloP = NewPromise[Go_NamePi]()
                     val moduloCB = cyclicbarrier.New(int(parallelism))
 
-                    val firstS = Go_NewSemaphorePi(1)
+                    val moduloS = Go_NewSemaphorePi(1)
+                    moduloS.TryAcquire1().Run()
 
-                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
-                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                    var unfold func(int, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
                         val first = remaining == int(parallelism)
                         val last = remaining == 1
-
-                        val nextS =
-                            if (last) firstS
-                            else {
-                                val sem = Go_NewSemaphorePi(1)
-                                sem.TryAcquire1().Run()
-                                sem
-                            }
 
                         var continue_at = NewPromise[Go_NamePi]()
 
@@ -180,7 +166,7 @@ func (self Go_NamePi) Go_BoundOutputPi(
                         var loop func (bool) Go_TrampolinePi[Go_NamePi]
                         loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
                             bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
-                            bind _ = prevS.Acquire1(ctx)
+                            bind _ = if (enabled) Go_returnPi else moduloS.Acquire1(ctx)
                             bind _ =
                                 if (!enabled)
                                     go_stochastic.Go_callbackPi(() => {
@@ -197,7 +183,7 @@ func (self Go_NamePi) Go_BoundOutputPi(
                                 else
                                     Go_returnPi
                             bind opt = Go_AwaitPi(continue_at)
-                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(moduloS.Release1().Run())
                             continue_at = NewPromise[Go_NamePi]()
                             val ptr = opt.asPointer()
                             val input = ptr.input.Get()
@@ -207,8 +193,8 @@ func (self Go_NamePi) Go_BoundOutputPi(
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = sleep()
-                            bind _ = nextS.Release1()
-                            bind _ = body(name, scope2)
+                            bind _ = moduloS.Release1()
+                            bind _ = body(name, scope2).OrElse(Go_ReturnPi)
                             loop(false)
                         }
 
@@ -222,15 +208,15 @@ func (self Go_NamePi) Go_BoundOutputPi(
                         } else {
                             bind _ = Go_Spawn_ReleasablePi(end, start)
                             bind scope3 = Go_UUIDPi()
-                            unfold(remaining - 1, nextS, scope2, scope3)
+                            unfold(remaining - 1, scope2, scope3)
                         }
                     }
 
                     if (parallelism == 1)
-                        unfold(int(parallelism), firstS, scope, scope)
+                        unfold(int(parallelism), scope, scope)
                     else {
                         bind scope2 = Go_UUIDPi()
-                        unfold(int(parallelism), firstS, scope, scope2)
+                        unfold(int(parallelism), scope, scope2)
                     }
                 })
             }
@@ -257,20 +243,13 @@ func (self Go_NamePi) Go_OutputPi(
                     val moduloP = NewPromise[Go_NamePi]()
                     val moduloCB = cyclicbarrier.New(int(parallelism))
 
-                    val firstS = Go_NewSemaphorePi(1)
+                    val moduloS = Go_NewSemaphorePi(1)
+                    moduloS.TryAcquire1().Run()
 
-                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
-                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                    var unfold func(int, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
                         val first = remaining == int(parallelism)
                         val last = remaining == 1
-
-                        val nextS =
-                            if (last) firstS
-                            else {
-                                val sem = Go_NewSemaphorePi(1)
-                                sem.TryAcquire1().Run()
-                                sem
-                            }
 
                         var continue_at = NewPromise[Go_NamePi]()
 
@@ -302,7 +281,7 @@ func (self Go_NamePi) Go_OutputPi(
                         var loop func (bool) Go_TrampolinePi[Go_NamePi]
                         loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
                             bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
-                            bind _ = prevS.Acquire1(ctx)
+                            bind _ = if (enabled) Go_returnPi else moduloS.Acquire1(ctx)
                             bind _ =
                                 if (!enabled)
                                     go_stochastic.Go_callbackPi(() => {
@@ -319,7 +298,7 @@ func (self Go_NamePi) Go_OutputPi(
                                 else
                                     Go_returnPi
                             bind opt = Go_AwaitPi(continue_at)
-                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(moduloS.Release1().Run())
                             continue_at = NewPromise[Go_NamePi]()
                             val ptr = opt.asPointer()
                             val input = ptr.input.Get()
@@ -329,8 +308,8 @@ func (self Go_NamePi) Go_OutputPi(
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = sleep()
-                            bind _ = nextS.Release1()
-                            bind _ = body(scope2)
+                            bind _ = moduloS.Release1()
+                            bind _ = body(scope2).OrElse(Go_ReturnPi)
                             loop(false)
                         }
 
@@ -344,15 +323,15 @@ func (self Go_NamePi) Go_OutputPi(
                         } else {
                             bind _ = Go_Spawn_ReleasablePi(end, start)
                             bind scope3 = Go_UUIDPi()
-                            unfold(remaining - 1, nextS, scope2, scope3)
+                            unfold(remaining - 1, scope2, scope3)
                         }
                     }
 
                     if (parallelism == 1)
-                        unfold(int(parallelism), firstS, scope, scope)
+                        unfold(int(parallelism), scope, scope)
                     else {
                         bind scope2 = Go_UUIDPi()
-                        unfold(int(parallelism), firstS, scope, scope2)
+                        unfold(int(parallelism), scope, scope2)
                     }
                 })
             }
@@ -378,20 +357,13 @@ func (self Go_NamePi) Go_InputPi(
                     val moduloP = NewPromise[Go_NamePi]()
                     val moduloCB = cyclicbarrier.New(int(parallelism))
 
-                    val firstS = Go_NewSemaphorePi(1)
+                    val moduloS = Go_NewSemaphorePi(1)
+                    moduloS.TryAcquire1().Run()
 
-                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
-                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                    var unfold func(int, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
                         val first = remaining == int(parallelism)
                         val last = remaining == 1
-
-                        val nextS =
-                            if (last) firstS
-                            else {
-                                val sem = Go_NewSemaphorePi(1)
-                                sem.TryAcquire1().Run()
-                                sem
-                            }
 
                         var result = NewPromise[Go_NamePi]()
                         var continue_at = NewPromise[Go_NamePi]()
@@ -424,7 +396,7 @@ func (self Go_NamePi) Go_InputPi(
                         var loop func (bool) Go_TrampolinePi[Go_NamePi]
                         loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
                             bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
-                            bind _ = prevS.Acquire1(ctx)
+                            bind _ = if (enabled) Go_returnPi else moduloS.Acquire1(ctx)
                             bind _ =
                                 if (!enabled)
                                     go_stochastic.Go_callbackPi(() => {
@@ -441,17 +413,17 @@ func (self Go_NamePi) Go_InputPi(
                                 else
                                     Go_returnPi
                             bind opt = Go_AwaitPi(continue_at)
-                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(moduloS.Release1().Run())
                             continue_at = NewPromise[Go_NamePi]()
                             val ptr = opt.asPointer()
                             val barrier = ptr.barrier
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = sleep()
-                            bind _ = nextS.Release1()
+                            bind _ = moduloS.Release1()
                             bind name = Go_AwaitPi(result)
                             result = NewPromise[Go_NamePi]()
-                            bind _ = body(name, scope2)
+                            bind _ = body(name, scope2).OrElse(Go_ReturnPi)
                             loop(false)
                         }
 
@@ -465,15 +437,15 @@ func (self Go_NamePi) Go_InputPi(
                         } else {
                             bind _ = Go_Spawn_ReleasablePi(end, start)
                             bind scope3 = Go_UUIDPi()
-                            unfold(remaining - 1, nextS, scope2, scope3)
+                            unfold(remaining - 1, scope2, scope3)
                         }
                     }
 
                     if (parallelism == 1)
-                        unfold(int(parallelism), firstS, scope, scope)
+                        unfold(int(parallelism), scope, scope)
                     else {
                         bind scope2 = Go_UUIDPi()
-                        unfold(int(parallelism), firstS, scope, scope2)
+                        unfold(int(parallelism), scope, scope2)
                     }
                 })
             }
@@ -500,20 +472,13 @@ func (self Go_NamePi) Go_InputPi_(
                     val moduloP = NewPromise[Go_NamePi]()
                     val moduloCB = cyclicbarrier.New(int(parallelism))
 
-                    val firstS = Go_NewSemaphorePi(1)
+                    val moduloS = Go_NewSemaphorePi(1)
+                    moduloS.TryAcquire1().Run()
 
-                    var unfold func(int, Go_SemaphorePi, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
-                    unfold = (remaining int, prevS Go_SemaphorePi, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
+                    var unfold func(int, Go_NamePi, Go_NamePi) Go_TrampolinePi[Go_NamePi]
+                    unfold = (remaining int, scope1 Go_NamePi, scope2 Go_NamePi) Go_TrampolinePi[Go_NamePi] => {
                         val first = remaining == int(parallelism)
                         val last = remaining == 1
-
-                        val nextS =
-                            if (last) firstS
-                            else {
-                                val sem = Go_NewSemaphorePi(1)
-                                sem.TryAcquire1().Run()
-                                sem
-                            }
 
                         var result = NewPromise[Go_NamePi]()
                         var continue_at = NewPromise[Go_NamePi]()
@@ -546,7 +511,7 @@ func (self Go_NamePi) Go_InputPi_(
                         var loop func (bool) Go_TrampolinePi[Go_NamePi]
                         loop = (enabled bool) Go_TrampolinePi[Go_NamePi] => {
                             bind _ = Go_voidPi(FromError(moduloCB.Await(ctx)).ToOption())
-                            bind _ = prevS.Acquire1(ctx)
+                            bind _ = if (enabled) Go_returnPi else moduloS.Acquire1(ctx)
                             bind _ =
                                 if (!enabled)
                                     go_stochastic.Go_callbackPi(() => {
@@ -563,18 +528,18 @@ func (self Go_NamePi) Go_InputPi_(
                                 else
                                     Go_returnPi
                             bind opt = Go_AwaitPi(continue_at)
-                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(nextS.Release1().Run())
+                            bind opt = Go_DonePi(opt.asOption()).FlatTapNone(moduloS.Release1().Run())
                             continue_at = NewPromise[Go_NamePi]()
                             val ptr = opt.asPointer()
                             val barrier = ptr.barrier
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = Go_voidPi(FromError(barrier.Await(go_stochastic.Go_ctxPi)).ToOption())
                             bind _ = sleep()
-                            bind _ = nextS.Release1()
+                            bind _ = moduloS.Release1()
                             bind name = Go_AwaitPi(result)
                             result = NewPromise[Go_NamePi]()
                             bind name = fun(name)
-                            bind _ = body(name, scope2)
+                            bind _ = body(name, scope2).OrElse(Go_ReturnPi)
                             loop(false)
                         }
 
@@ -588,15 +553,15 @@ func (self Go_NamePi) Go_InputPi_(
                         } else {
                             bind _ = Go_Spawn_ReleasablePi(end, start)
                             bind scope3 = Go_UUIDPi()
-                            unfold(remaining - 1, nextS, scope2, scope3)
+                            unfold(remaining - 1, scope2, scope3)
                         }
                     }
 
                     if (parallelism == 1)
-                        unfold(int(parallelism), firstS, scope, scope)
+                        unfold(int(parallelism), scope, scope)
                     else {
                         bind scope2 = Go_UUIDPi()
-                        unfold(int(parallelism), firstS, scope, scope2)
+                        unfold(int(parallelism), scope, scope2)
                     }
                 })
             }

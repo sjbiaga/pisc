@@ -34,6 +34,7 @@ import scala.meta.{ Lit, Term }
 
 import parser.Calculus.{ `(*)`, λ }
 import Gala.*
+import context.*
 
 
 enum Gala:
@@ -211,7 +212,7 @@ enum Gala:
           case Term.Name(fun) =>
             s"${indent}bind $υidυ = $channel.Go_InputPrefixPi_($rate, $key, go_scope.AsString(), $fun, go_stochastic)"
         ) ::
-        s"${indent}val ($name, _) = $υidυ.AsTuple()" ::
+        s"""${indent}val (${if name.startsWith("_") then "_" else name}, _) = $υidυ.AsTuple()""" ::
         Nil
 
       case _: pi => ???
@@ -451,8 +452,6 @@ enum Gala:
 
 
 object Gala:
-
-  export Gala.*, context.*
 
   enum context:
     case none, number, boolean, string

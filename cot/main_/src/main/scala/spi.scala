@@ -41,7 +41,7 @@ package object sΠ:
   import _root_.cats.{ Applicative, Defer, Functor, Monad }
   import _root_.cats.data.OptionT
   import _root_.cats.effect.{ Deferred, Ref, Temporal }
-  import _root_.cats.effect.std.UUIDGen
+  import _root_.cats.effect.std.{ Semaphore, UUIDGen }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-stats`.Rate
@@ -53,6 +53,11 @@ package object sΠ:
 
   type `Π-Function0`[F[_]] = () => String ?=> OptionT[F, Unit]
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> OptionT[F, Unit]
+
+  /**
+    * Type of ether.
+    */
+  type `{}`[F[_]] = Option[Semaphore[F]]
 
   /**
     * Type of causal sets.
@@ -105,7 +110,7 @@ package object sΠ:
   final class ν[F[_]: Defer: Temporal: UUIDGen]:
 
     def map[B](f: `()`[F] => B): OptionT[F, B] = flatMap(f andThen OptionT.pure[F].apply)
-    def flatMap[B](f: `()`[F] => OptionT[F, B]): OptionT[F, B] = f(new {})
+    def flatMap[B](f: `()`[F] => OptionT[F, B]): OptionT[F, B] = OptionT.liftF(Semaphore[F](1)).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -122,7 +127,7 @@ package object sΠ:
         deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
         `][`     <- OptionT.liftF(`[]`.get)
         timestamp <- OptionT.liftF(Temporal[F].realTime.map(_.toMillis) >>= Ref[F].of[Long])
-        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`new {}`, None, rate, `][`))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`None {}`, None, rate, `][`))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f,
          _, s)    = tuple
@@ -441,7 +446,7 @@ package object sΠ:
         deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
         `][`     <- OptionT.liftF(`[]`.get)
         timestamp <- OptionT.liftF(Temporal[F].realTime.map(_.toMillis) >>= Ref[F].of[Long])
-        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Left(())), rate, `][`))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[`{}`[F]], Some(Left(())), rate, `][`))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f,
          i, s)    = tuple
@@ -473,7 +478,7 @@ package object sΠ:
         result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
         `][`     <- OptionT.liftF(`[]`.get)
         timestamp <- OptionT.liftF(Temporal[F].realTime.map(_.toMillis) >>= Ref[F].of[Long])
-        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[{}], Some(Right(result)), rate, `][`))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> ((deferred -> null, timestamp), (`()`[`{}`[F]], Some(Right(result)), rate, `][`))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f,
          _, s)    = tuple

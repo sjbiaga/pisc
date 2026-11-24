@@ -59,13 +59,14 @@ object App extends _root_.cats.effect.IOApp:
 
 
   private def run[T](args: List[String], parameters: `Π-Parameters`, started: Ref[π.F, Long], batch: Ref[π.F, Long], clock: Ref[π.F, Double], feedback: Feedback[π.F])
-                    (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], ! : ![π.F], &| : &|[π.F])
+                    (% : %[π.F], / : /[π.F], * : *[π.F], ** : **[π.F], ^ : ^[π.F], - : -[π.F], !! : !![π.F], ! : ![π.F], &| : &|[π.F])
                     (using ClassTag[T]): π.F[ExitCode] =
     val F = classTag[T].runtimeClass.getCanonicalName
     val lπ = πloop[π.F]()
     val dπ = πdump[π.F]()
     val hπ = πhttp4s[π.F]()
     val mπ = π.πmain[π.F]()
+    val ec = feedback.pauseRD_stopR_exitRD.get.map(_._1._2).map { if _ then ExitCode.Error else ExitCode.Success }
     val batchMode = parameters.threshold > 0
     val \ =
       if batchMode
@@ -74,13 +75,13 @@ object App extends _root_.cats.effect.IOApp:
     ( for
         _ <- hπ.http4s(parameters.address, batchMode, started, feedback, π.`π-AST`).flatMap(hπ.http4s(F, batchMode, parameters.plugins, _))
         _ <- if batchMode
-             then lπ.loopʹ(parameters, started, batch, feedback)(using %, !, &|, -, *, **, ^)(π.`π-wand`).background
-             else lπ.loop0(parameters, started, feedback)(using %, !, &|, -, *, **)(π.`π-wand`).background
+             then lπ.loopʹ(parameters, started, batch, feedback)(using %, &|, -, *, **, ^)(π.`π-wand`).background
+             else lπ.loop0(parameters, started, feedback)(using %, &|, -, *, **)(π.`π-wand`).background
         _ <- lπ.poll(using %, /, \).background
-        _ <- dπ.dump(clock, feedback)(using %, !, -).background
+        _ <- dπ.dump(clock, feedback)(using !!, -).background
         ^ <- Resource.eval(π.`π-uuid`[π.F])
         ? <- Resource.eval(IOLocal[sΠ.`[]`](Set.empty))
-        _ <- mπ.Main(args*)(using ^, π.`Π-IOLocal`(?))(using %, /, \).compile.drain.background
+        _ <- mπ.Main(args*)(using ^, π.`Π-IOLocal`(?))(using %, /, \).onFinalize(ec.flatMap(!!.get >> !.complete(_).void)).compile.drain.background
       yield
         ()
     ).use { _ =>
@@ -120,6 +121,7 @@ object App extends _root_.cats.effect.IOApp:
       * <- Semaphore[π.F](0)
       ** <- Queue.unbounded[π.F, List[((String, String), ++++[π.F])]]
       - <- PQueue.unbounded[π.F, Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
+      !! <- Deferred[π.F, Unit]
       ! <- Deferred[π.F, ExitCode]
       &| <- Ref[π.F].of(0L)
       n <- Ref[π.F].of(0L)
@@ -137,7 +139,7 @@ object App extends _root_.cats.effect.IOApp:
       doneR    <- Ref[π.F].of(false)
       feedback  = Feedback[π.F](paramsRD, paramsR, tracesR, keyByR, lastR, ps_st_ex, initR, doneR)
       _ <- `π-enable`[π.F](π.`π-main`)(using %)
-      x <- run[π.F[Unit]](args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !, &|)
+      x <- run[π.F[Unit]](args, params, n, b, c, feedback)(%, /, *, **, ^.permit, -, !!, !, &|)
     yield
       x
 

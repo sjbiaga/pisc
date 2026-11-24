@@ -124,25 +124,25 @@ It facilitates passing from Scala values in expressions to names in the calculus
 Emitters
 --------
 
-- [Cats Effect](https://github.com/sjbiaga/pisc/tree/stochastic/ce/README.md)
+- [Cats Effect](https://github.com/sjbiaga/pisc/tree/stochastic/ce)
 
-- [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/cef/README.md)
+- [Cats Effect (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/cef)
 
-- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/stochastic/cot/README.md)
+- [Cats' `OptionT`](https://github.com/sjbiaga/pisc/tree/stochastic/cot)
 
-- [ZIO](https://github.com/sjbiaga/pisc/tree/stochastic/zio/README.md)
+- [ZIO](https://github.com/sjbiaga/pisc/tree/stochastic/zio)
 
-- [ZIO (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/ziof/README.md)
+- [ZIO (flatMap)](https://github.com/sjbiaga/pisc/tree/stochastic/ziof)
 
-- [Akka](https://github.com/sjbiaga/pisc/tree/stochastic/akka/README.md)
+- [Akka](https://github.com/sjbiaga/pisc/tree/stochastic/akka)
 
-- [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic/pekko/README.md)
+- [Pekko](https://github.com/sjbiaga/pisc/tree/stochastic/pekko)
 
-- [FS2](https://github.com/sjbiaga/pisc/tree/stochastic/fs2/README.md)
+- [FS2](https://github.com/sjbiaga/pisc/tree/stochastic/fs2)
 
-- [ZStream](https://github.com/sjbiaga/pisc/tree/stochastic/zs/README.md)
+- [ZStream](https://github.com/sjbiaga/pisc/tree/stochastic/zs)
 
-- [Go/Gala](https://github.com/sjbiaga/pisc/tree/stochastic/go/README.md)
+- [Go/Gala](https://github.com/sjbiaga/pisc/tree/stochastic/go)
 
 
 Branches

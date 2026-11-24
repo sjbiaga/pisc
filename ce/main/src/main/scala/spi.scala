@@ -37,8 +37,8 @@ package object sΠ:
   import _root_.cats.syntax.applicative.*
 
   import _root_.cats.effect.IO
-  import _root_.cats.effect.kernel.Outcome.Succeeded
-  import _root_.cats.effect.std.Supervisor
+  import _root_.cats.effect.kernel.Outcome
+  import _root_.cats.effect.std.{ Semaphore, Supervisor }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-stats`.Rate
@@ -52,6 +52,11 @@ package object sΠ:
   type `Π-Function1` = `()` => String ?=> IO[Any]
 
   /**
+    * Type of ether.
+    */
+  type `{}` = Option[Semaphore[IO]]
+
+  /**
     * Type of causal sets.
     */
   type `[]` = Set[Long]
@@ -63,11 +68,10 @@ package object sΠ:
     */
   private def exec[T](code: => IO[T]): IO[T] =
     Supervisor[IO](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join)
+      .use(_.supervise(code).flatMap(_.join))
       .flatMap {
-        case Succeeded(it) => it
-        case _             => IO.pure(null.asInstanceOf[T])
+        case Outcome.Succeeded(it) => it
+        case _                     => IO.pure(null.asInstanceOf[T])
       }
 
 
@@ -99,7 +103,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): IO[B] = flatMap(f andThen IO.pure)
-    def flatMap[B](f: `()` => IO[B]): IO[B] = f(new {})
+    def flatMap[B](f: `()` => IO[B]): IO[B] = Semaphore[IO](1).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -114,7 +118,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null, (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`None {}`, None, rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -431,7 +435,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[`{}`], Some(Left(())), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,
@@ -460,8 +464,8 @@ package object sΠ:
       for
         _        <- exclude(key)
         deferred <- IO.deferred[Option[<>]]
-        result   <- IO.ref[`()`](sΠ.`()`.`null`)
-        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate)))
+        result   <- IO.ref(null.asInstanceOf[`()`])
+        _        <- /.offer(^ -> key -> (deferred -> null, (`()`[`{}`], Some(Right(result)), rate)))
         opt      <- deferred.get
         _        <- if opt eq None then IO.canceled else IO.unit
         (delay,

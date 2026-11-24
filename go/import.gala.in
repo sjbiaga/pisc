@@ -32,11 +32,9 @@ package main
 
 import (
     "context"
-gbq "github.com/hxxshidage/go-blocking-queue"
   . "martianoff/gala/std"
   . "martianoff/gala/collection_immutable"
     "martianoff/gala/go_interop"
-    "martianoff/gala/resource"
     "math/big"
     "os"
     "time"

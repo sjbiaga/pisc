@@ -4,11 +4,9 @@ package spi
 
 import (
     "context"
-gbq "github.com/hxxshidage/go-blocking-queue"
   . "martianoff/gala/concurrent"
   . "martianoff/gala/collection_immutable"
     "martianoff/gala/go_interop"
-    "martianoff/gala/resource"
     "math/big"
 )
 
@@ -52,7 +50,7 @@ func (self Go_NamePi) Print() Go_TrampolinePi[Go_NamePi] {
         }
         case _ => Print()
     }
-    Go_returnPi
+    Go_donePi(self)
 }
 
 func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
@@ -77,7 +75,7 @@ func (self Go_NamePi) PrintLn() Go_TrampolinePi[Go_NamePi] {
         }
         case _ => Print()
     }
-    Go_returnPi
+    Go_donePi(self)
 }
 
 func (self Go_NamePi) AsNumber() *big.Float {

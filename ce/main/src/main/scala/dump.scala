@@ -45,5 +45,5 @@ package object `Π-dump`:
 
 
   def dump(_clock: Ref[IO, Double], _feedback: Feedback)
-          (using % : %, ! : !, - : -): IO[Unit] =
-    IO.unit
+          (using !! : !!, - : -): IO[Unit] =
+    !!.complete(()).void

@@ -33,6 +33,8 @@ import scala.meta.{ Lit, Pat, Term, Type }
 
 import io.circe.Json
 
+import emitter.go.Gala.alloc
+
 
 package object ast:
 
@@ -68,7 +70,7 @@ package object ast:
 
     val kind: String = `val` match
       case _: Symbol => "channel name"
-      case _: emitter.go.Gala.alloc => "channel name"
+      case _: alloc => "channel name"
       case _: BigDecimal => "decimal number"
       case _: Boolean => "True False"
       case _: String => "string literal"
@@ -110,11 +112,11 @@ package object ast:
 
     override def toString: String = `val` match
       case it: Symbol => it.name
-      case emitter.go.Gala.alloc(null) => "N/A"
-      case emitter.go.Gala.alloc(it) => it
+      case alloc(null) => "N/A"
+      case alloc(it) => it
       case it: BigDecimal => "" + it
       case it: Boolean => it.toString.capitalize
-      case it: String => "\"" + it.replaceAll("[\"]", "\\\"") + "\""
+      case it: String => "\"" + it + "\""
       case it: Lit.Int => "/*" + it.value + "*/"
       case it: Lit.Long => "/*" + it.value + "*/"
       case it: Lit.Boolean => "/*" + it.value + "*/"

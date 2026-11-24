@@ -43,7 +43,7 @@ import `Π-traces`.Plugin
 
 package object `Π-stats`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, `()`, `[]` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `{}`, `[]`, `()` }
 
   sealed trait Rate extends Any:
     var whatIf: Option[`ℝ⁺`] = None
@@ -54,7 +54,7 @@ package object `Π-stats`:
       this
   case class ⊤(weight: Long) extends AnyVal with Rate
 
-  private final case class EtherPolarity(ether: {}, polarity: Option[Either[Unit, Ref[IO, `()`]]]):
+  private final case class EtherPolarity(ether: `{}`, polarity: Option[Either[Unit, Ref[IO, `()`]]]):
     override def equals(any: Any): Boolean = any match
       case that: EtherPolarity =>
         (this.ether eq that.ether) && { (this.polarity -> that.polarity) match
@@ -86,11 +86,11 @@ package object `Π-stats`:
       extends StatisticsException("The immediate and/or timed and/or passive activities must not be " + how)
 
   @annotation.tailrec
-  def ∥(% : Map[String, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate, `[]`)], plugins: Set[String])
+  def ∥(% : Map[String, (`{}`, Option[Either[Unit, Ref[IO, `()`]]], Rate, `[]`)], plugins: Set[String])
        (`π-trick`: `Π-Map`[String, `Π-Set`[String]])
-       (check: Boolean = false, acc: List[(String, String, Ref[IO, `()`], (Double, Seq[Plugin]))] = Nil): List[(String, String, Ref[IO, `()`], (Double, Seq[Plugin]))] =
-                                                                                                             // ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^
-                                                                                                             // key1    key1|2  input           delay   plugins
+       (check: Boolean = false, acc: List[(String, String, (`{}`, Ref[IO, `()`]), (Double, Seq[Plugin]))] = Nil): List[(String, String, (`{}`, Ref[IO, `()`]), (Double, Seq[Plugin]))] =
+                                                                                                                     // ^^^^^^  ^^^^^^   ^^^^  ^^^^^^^^^^^^^    ^^^^^^  ^^^^^^^^^^^
+                                                                                                                     // key1    key1|2   ether input            delay   plugins
 
     val causesPlugin = plugins.contains(classOf[Plugin.causes].getSimpleName)
     val parentsPlugin = plugins.contains(classOf[Plugin.parents].getSimpleName)
@@ -262,9 +262,9 @@ package object `Π-stats`:
         }.toSeq
       else null
 
-    var r = List[((String, String, Ref[IO, `()`], (Double, Seq[Plugin])), (Int, Double))]()
-    //             ^^^^^^  ^^^^^^  ^^^^^^^^^^^^^   ^^^^^^  ^^^^^^^^^^^     ^^^  ^^^^^^
-    //             key1    key1|2  input           delay   plugins         pri  delay
+    var r = List[((String, String, (`{}`, Ref[IO, `()`]), (Double, Seq[Plugin])), (Int, Double))]()
+    //             ^^^^^^  ^^^^^^   ^^^^  ^^^^^^^^^^^^^    ^^^^^^  ^^^^^^^^^^^     ^^^  ^^^^^^
+    //             key1    key1|2   ether input            delay   plugins         pri  delay
 
     for
       i <- 0 until χ.size
@@ -316,7 +316,7 @@ package object `Π-stats`:
               // (Λʹ-Λ)*Δt: rates are zero if passive | delay is zero if immediate
               ps :+= Plugin.whatIf(BigDecimal(1) -> BigDecimal(1), null)
 
-        r ::= (key1, key1, null, delay -> ps) -> (priority -> delay)
+        r ::= (key1, key1, ep1.ether -> null, delay -> ps) -> (priority -> delay)
       else
         val ^ = key1.substring(0, 36)
         for
@@ -390,7 +390,7 @@ package object `Π-stats`:
               ps :+= Plugin.whatIf(rateʹ -> rate, null)
 
             val ref = ep1.polarity.get.orElse(ep2.polarity.get).right.get
-            r ::= (key1, key2, ref, delay -> ps) -> (priority -> delay)
+            r ::= (key1, key2, ep2.ether -> ref, delay -> ps) -> (priority -> delay)
 
     r
       .sortBy(_._2)

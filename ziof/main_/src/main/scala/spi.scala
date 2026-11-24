@@ -32,6 +32,8 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.generic.*
   import _root_.zio.{ Duration, Exit, FiberRef, Promise, Ref, Task, UIO, ZIO }
 
   import `Π-loop`.{ <>, %, /, \, currentTimeMillis }
@@ -44,6 +46,11 @@ package object sΠ:
 
   type `Π-Function0` = () => String ?=> UIO[Any]
   type `Π-Function1` = `()` => String ?=> UIO[Any]
+
+  /**
+    * Type of ether.
+    */
+  type `{}` = Option[Semaphore[UIO]]
 
   /**
     * Type of causal sets.
@@ -97,7 +104,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
-    def flatMap[B](f: `()` => UIO[B]): UIO[B] = f(new {})
+    def flatMap[B](f: `()` => UIO[B]): UIO[B] = Semaphore[UIO](1).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -114,7 +121,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`new {}`, None, rate, `][`)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`None {}`, None, rate, `][`)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -440,7 +447,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate, `][`)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[`{}`], Some(Left(())), rate, `][`)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -470,7 +477,7 @@ package object sΠ:
         promise  <- Promise.make[Nothing, Option[<>]]
         `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Left(())), rate, `][`)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[`{}`], Some(Left(())), rate, `][`)))
         opt      <- promise.await
         delay    <- ( if opt eq None
                       then
@@ -499,10 +506,10 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        result   <- Ref.make[`()`](sΠ.`()`.`null`)
+        result   <- Ref.make(null.asInstanceOf[`()`])
         `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate, `][`)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[`{}`], Some(Right(result)), rate, `][`)))
         opt      <- promise.await
         (name,
          delay)  <- ( if opt eq None
@@ -531,10 +538,10 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        result   <- Ref.make[`()`](sΠ.`()`.`null`)
+        result   <- Ref.make(null.asInstanceOf[`()`])
         `][`     <- `[]`.get
         timestamp <- currentTimeMillis.flatMap(Ref.make)
-        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[{}], Some(Right(result)), rate, `][`)))
+        _        <- /.offer(^ -> key -> ((promise -> null, timestamp), (`()`[`{}`], Some(Right(result)), rate, `][`)))
         opt      <- promise.await
         (name,
          delay)  <- ( if opt eq None

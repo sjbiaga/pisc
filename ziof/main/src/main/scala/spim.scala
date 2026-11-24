@@ -54,7 +54,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ pace
@@ -62,7 +62,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                                     (using inline % : %, inline / : /, inline \ : \)
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ code
@@ -70,7 +70,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication bound output guard w/ pace w/ code
@@ -78,7 +78,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function1`)
                                                    (using inline % : %, inline / : /, inline \ : \)
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
@@ -88,7 +88,7 @@ package sΠ:
     protected inline def output(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ pace
@@ -96,7 +96,7 @@ package sΠ:
     protected inline def output(_f: false)(inline pace: Duration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ code
@@ -104,7 +104,7 @@ package sΠ:
     protected inline def output(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo constant replication output guard w/ pace w/ code
@@ -112,7 +112,7 @@ package sΠ:
     protected inline def output(_t: true)(inline pace: Duration, inline parallelism: Int, inline rate: Rate, inline value: `()`)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ outputCode('{ `()`[`{}`] })('parallelism, 'rate, 'value)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     //////////////////////////////////////////////////////////////// VARIABLE //
 
@@ -122,7 +122,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: => Task[S])(inline key: String)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ pace
@@ -130,7 +130,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline pace: Duration, inline parallelism: Int, inline rate: Rate, inline value: => Task[S])(inline key: String)(inline body: `Π-Function0`)
                                                       (using inline % : %, inline / : /, inline \ : \)
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ code
@@ -138,7 +138,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: => Task[S])(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo variable replication output guard w/ pace w/ code
@@ -146,7 +146,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline pace: Duration, inline parallelism: Int, inline rate: Rate, inline value: => Task[S])(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                                      (using inline % : %, inline / : /, inline \ : \)
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ `(*)`.outputCode('{ `()`[`{}`] })('parallelism, 'rate, '{ () => value })('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /////////////////////////////////////////////////////////////////// INPUT //
 
@@ -156,7 +156,7 @@ package sΠ:
     protected inline def input(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ pace
@@ -164,7 +164,7 @@ package sΠ:
     protected inline def input(_f: false)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ code
@@ -172,7 +172,7 @@ package sΠ:
     protected inline def input[T](_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => Task[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
                                            (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication input guard w/ pace w/ code
@@ -180,7 +180,7 @@ package sΠ:
     protected inline def input[T](_t: true)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => Task[T])(inline body: `Π-Function1`)
                                            (using inline % : %, inline / : /, inline \ : \)
                                            (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ inputCode('{ `()`[`{}`] })('parallelism, 'rate)('key)('{ code andThen exec })('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     ////////////////////////////////////////////////////// modulo replication //
 
@@ -189,7 +189,7 @@ package sΠ:
 
   trait τ:
 
-    protected val `new {}` = new {}
+    protected val `None {}`: `{}` = None
 
     import Macros.τ.*
 
@@ -199,7 +199,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ ZIO.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ pace
@@ -207,7 +207,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`)
                                           (using inline % : %, inline / : /, inline \ : \)
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ code
@@ -215,7 +215,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ exec(code).unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
     /**
       * modulo replication guard w/ pace w/ code
@@ -223,7 +223,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline pace: Duration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => Task[Any])(inline body: `Π-Function0`)
                                          (using inline % : %, inline / : /, inline \ : \)
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): UIO[Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ exec(code) *> ZIO.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^}) }
 
 
   object Macros:
@@ -239,72 +239,62 @@ package sΠ:
       /**
         * modulo replication guard
         */
-      def silentCode(ether: Expr[{}])
+      def silentCode(ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function0`])
                     (sleep: Expr[UIO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloP  <- Promise.make[Nothing, Boolean]
             moduloCB <- CyclicBarrier.make($parallelism)
-            firstS   <- Semaphore[UIO](1)
+            moduloP  <- Promise.make[Nothing, Boolean]
+            moduloS  <- Semaphore[UIO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val intR = ints.head
-                val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-                for
-                  nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                  sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                  main   =
-                    for
-                      stop <- if first then ZIO.succeed(false) else moduloP.await
-                      _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
-                                  continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
-                                  promise  <- Promise.make[Nothing, Option[<>]]
-                                  _        <- promise.succeed(None).unless(first)
-                                  _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, None, $rate)))
-                                  opt      <- promise.await
-                                  _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): UIO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
-                                      opt <- continue.get.flatMap(_.await)
-                                      _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
-                                      _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
-                                      (_, b,
-                                       f, _) = opt.get
-                                      _   <- b.await.exit
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body()(using ^^)
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  intR  <- Ref.make(false)
-                  _     <- if last
-                           then main
-                           else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-                yield
-                  ()
+                val main =
+                  for
+                    _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
+                    loop <- ( for
+                                _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
+                                continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
+                                promise  <- Promise.make[Nothing, Option[<>]]
+                                _        <- promise.succeed(None).unless(first)
+                                _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, None, $rate)))
+                                opt      <- promise.await
+                                _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
+                              yield {
+                                def loop(enabled: Boolean = first): UIO[Unit] =
+                                  for
+                                    _   <- moduloS.acquire.unless(enabled)
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
+                                    opt <- continue.get.flatMap(_.await)
+                                    _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
+                                    _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
+                                    (_, b,
+                                     f, _) = opt.get
+                                    _   <- b.await.exit
+                                    _   <- f.join
+                                    _   <- $sleep
+                                    _   <- moduloS.release
+                                    _   <- $body()(using ^^)
+                                    _   <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
               unfold
             }
-            intR     <- Ref.make(false)
             _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
+                        then unfold($parallelism)(${^})(${^}).exit
+                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
           yield
             ()
         }
@@ -315,105 +305,23 @@ package sΠ:
       /**
         * modulo replication bound output guard
         */
-      def outputCode(ether: Expr[{}])
+      def outputCode(ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`])
                     (sleep: Expr[UIO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloP  <- Promise.make[Nothing, Boolean]
             moduloCB <- CyclicBarrier.make($parallelism)
-            firstS   <- Semaphore[UIO](1)
+            moduloP  <- Promise.make[Nothing, Boolean]
+            moduloS  <- Semaphore[UIO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val intR = ints.head
-                val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-                for
-                  nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                  sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                  main   =
-                    for
-                      stop <- if first then ZIO.succeed(false) else moduloP.await
-                      _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
-                                  continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
-                                  promise  <- Promise.make[Nothing, Option[<>]]
-                                  _        <- promise.succeed(None).unless(first)
-                                  _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Left(())), $rate)))
-                                  opt      <- promise.await
-                                  _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): UIO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
-                                      opt <- continue.get.flatMap(_.await)
-                                      _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
-                                      _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
-                                      (_, b,
-                                       f, i) = opt.get
-                                      n   <- ν
-                                      _   <- i.set(n)
-                                      _   <- b.await.exit
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body(n)(using ^^)
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  intR  <- Ref.make(false)
-                  _     <- if last
-                           then main
-                           else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-                yield
-                  ()
-              unfold
-            }
-            intR     <- Ref.make(false)
-            _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
-          yield
-            ()
-        }
-
-
-    /**
-      * modulo constant replication output guard
-      */
-    def outputCode(ether: Expr[{}])
-                  (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`])(key: Expr[String])(body: Expr[`Π-Function0`])
-                  (sleep: Expr[UIO[Unit]])
-                  (% : Expr[%], / : Expr[/], \ : Expr[\])
-                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
-                  (using Quotes): Expr[UIO[Unit]] =
-     '{ for
-          moduloP  <- Promise.make[Nothing, Boolean]
-          moduloCB <- CyclicBarrier.make($parallelism)
-          firstS   <- Semaphore[UIO](1)
-          unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
-              val first = remaining == $parallelism
-              val last = remaining == 1
-              val intR = ints.head
-              val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-              for
-                nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                main   =
+                val main =
                   for
-                    stop <- if first then ZIO.succeed(false) else moduloP.await
-                    _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
+                    _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
                     loop <- ( for
                                 _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
                                 continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
@@ -421,23 +329,24 @@ package sΠ:
                                 _        <- promise.succeed(None).unless(first)
                                 _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Left(())), $rate)))
                                 opt      <- promise.await
-                                _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
+                                _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
                               yield {
                                 def loop(enabled: Boolean = first): UIO[Unit] =
                                   for
-                                    _   <- sync
+                                    _   <- moduloS.acquire.unless(enabled)
                                     _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
                                     opt <- continue.get.flatMap(_.await)
-                                    _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
+                                    _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
                                     _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
                                     (_, b,
                                      f, i) = opt.get
-                                    _   <- i.set($value)
+                                    n   <- ν
+                                    _   <- i.set(n)
                                     _   <- b.await.exit
                                     _   <- f.join
                                     _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- $body()(using ^^)
+                                    _   <- moduloS.release
+                                    _   <- $body(n)(using ^^)
                                     _   <- loop(false)
                                   yield ()
                                 loop()
@@ -446,18 +355,79 @@ package sΠ:
                     _    <- loop
                   yield
                     ()
-                intR  <- Ref.make(false)
-                _     <- if last
-                         then main
-                         else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-              yield
-                ()
+                if last
+                then main
+                else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
+              unfold
+            }
+            _        <- if $parallelism == 1
+                        then unfold($parallelism)(${^})(${^}).exit
+                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
+          yield
+            ()
+        }
+
+
+    /**
+      * modulo constant replication output guard
+      */
+    def outputCode(ether: Expr[`{}`])
+                  (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`])(key: Expr[String])(body: Expr[`Π-Function0`])
+                  (sleep: Expr[UIO[Unit]])
+                  (% : Expr[%], / : Expr[/], \ : Expr[\])
+                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                  (using Quotes): Expr[UIO[Unit]] =
+     '{ for
+          moduloCB <- CyclicBarrier.make($parallelism)
+          moduloP  <- Promise.make[Nothing, Boolean]
+          moduloS  <- Semaphore[UIO](0)
+          unfold    = {
+            def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
+              val first = remaining == $parallelism
+              val last = remaining == 1
+              val main =
+                for
+                  _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
+                              continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
+                              promise  <- Promise.make[Nothing, Option[<>]]
+                              _        <- promise.succeed(None).unless(first)
+                              _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Left(())), $rate)))
+                              opt      <- promise.await
+                              _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
+                            yield {
+                              def loop(enabled: Boolean = first): UIO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unless(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
+                                  opt <- continue.get.flatMap(_.await)
+                                  _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
+                                  _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
+                                  (_, b,
+                                   f, i) = opt.get
+                                  _   <- i.set($value)
+                                  _   <- b.await.exit
+                                  _   <- f.join
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- $body()(using ^^)
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
             unfold
           }
-          intR     <- Ref.make(false)
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
+                      then unfold($parallelism)(${^})(${^}).exit
+                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
         yield
           ()
       }
@@ -468,73 +438,63 @@ package sΠ:
       /**
         * modulo variable replication output guard
         */
-      def outputCode[S](ether: Expr[{}])
+      def outputCode[S](ether: Expr[`{}`])
                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[() => Task[S]])(key: Expr[String])(body: Expr[`Π-Function0`])
                        (sleep: Expr[UIO[Unit]])
                        (% : Expr[%], / : Expr[/], \ : Expr[\])
                        (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                        (using Type[S], Quotes): Expr[UIO[Unit]] =
        '{ for
-            moduloP  <- Promise.make[Nothing, Boolean]
             moduloCB <- CyclicBarrier.make($parallelism)
-            firstS   <- Semaphore[UIO](1)
+            moduloP  <- Promise.make[Nothing, Boolean]
+            moduloS  <- Semaphore[UIO](0)
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                val intR = ints.head
-                val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-                for
-                  nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                  sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                  main   =
-                    for
-                      stop <- if first then ZIO.succeed(false) else moduloP.await
-                      _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
-                      loop <- ( for
-                                  _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
-                                  continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
-                                  promise  <- Promise.make[Nothing, Option[<>]]
-                                  _        <- promise.succeed(None).unless(first)
-                                  _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Left(())), $rate)))
-                                  opt      <- promise.await
-                                  _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
-                                yield {
-                                  def loop(enabled: Boolean = first): UIO[Unit] =
-                                    for
-                                      _   <- sync
-                                      _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
-                                      opt <- continue.get.flatMap(_.await)
-                                      _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
-                                      _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
-                                      (_, b,
-                                       f, i) = opt.get
-                                      _   <- $value().map(new `()`(_)).flatMap(i.set)
-                                      _   <- b.await.exit
-                                      _   <- f.join
-                                      _   <- $sleep
-                                      _   <- nextS.release
-                                      _   <- $body()(using ^^)
-                                      _   <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  intR  <- Ref.make(false)
-                  _     <- if last
-                           then main
-                           else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-                yield
-                  ()
+                val main =
+                  for
+                    _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
+                    loop <- ( for
+                                _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
+                                continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
+                                promise  <- Promise.make[Nothing, Option[<>]]
+                                _        <- promise.succeed(None).unless(first)
+                                _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Left(())), $rate)))
+                                opt      <- promise.await
+                                _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
+                              yield {
+                                def loop(enabled: Boolean = first): UIO[Unit] =
+                                  for
+                                    _   <- moduloS.acquire.unless(enabled)
+                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
+                                    opt <- continue.get.flatMap(_.await)
+                                    _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
+                                    _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
+                                    (_, b,
+                                     f, i) = opt.get
+                                    _   <- $value().map(new `()`(_)).flatMap(i.set)
+                                    _   <- b.await.exit
+                                    _   <- f.join
+                                    _   <- $sleep
+                                    _   <- moduloS.release
+                                    _   <- $body()(using ^^)
+                                    _   <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
               unfold
             }
-            intR     <- Ref.make(false)
             _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
+                        then unfold($parallelism)(${^})(${^}).exit
+                        else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
           yield
             ()
         }
@@ -543,74 +503,64 @@ package sΠ:
     /**
       * modulo replication input guard
       */
-    def inputCode(ether: Expr[{}])
+    def inputCode(ether: Expr[`{}`])
                  (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`])
                  (sleep: Expr[UIO[Unit]])
                  (% : Expr[%], / : Expr[/], \ : Expr[\])
                  (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                  (using Quotes): Expr[UIO[Unit]] =
      '{ for
-          moduloP  <- Promise.make[Nothing, Boolean]
           moduloCB <- CyclicBarrier.make($parallelism)
-          firstS   <- Semaphore[UIO](1)
+          moduloP  <- Promise.make[Nothing, Boolean]
+          moduloS  <- Semaphore[UIO](0)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              val intR = ints.head
-              val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-              for
-                nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                main   =
-                  for
-                    stop <- if first then ZIO.succeed(false) else moduloP.await
-                    _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
-                    loop <- ( for
-                                _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
-                                continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
-                                promise  <- Promise.make[Nothing, Option[<>]]
-                                _        <- promise.succeed(None).unless(first)
-                                result   <- Ref.make(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Right(result)), $rate)))
-                                opt      <- promise.await
-                                _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
-                              yield {
-                                def loop(enabled: Boolean = first): UIO[Unit] =
-                                  for
-                                    _   <- sync
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
-                                    opt <- continue.get.flatMap(_.await)
-                                    _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
-                                    _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
-                                    (_, b,
-                                     f, _) = opt.get
-                                    _   <- b.await.exit
-                                    _   <- f.join
-                                    n   <- result.get
-                                    _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- $body(n)(using ^^)
-                                    _   <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                intR  <- Ref.make(false)
-                _     <- if last
-                         then main
-                         else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-              yield
-                ()
+              val main =
+                for
+                  _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
+                              continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
+                              promise  <- Promise.make[Nothing, Option[<>]]
+                              _        <- promise.succeed(None).unless(first)
+                              result   <- Ref.make(null.asInstanceOf[`()`])
+                              _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Right(result)), $rate)))
+                              opt      <- promise.await
+                              _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
+                            yield {
+                              def loop(enabled: Boolean = first): UIO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unless(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
+                                  opt <- continue.get.flatMap(_.await)
+                                  _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
+                                  _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
+                                  (_, b,
+                                   f, _) = opt.get
+                                  _   <- b.await.exit
+                                  _   <- f.join
+                                  n   <- result.get
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- $body(n)(using ^^)
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
             unfold
           }
-          intR     <- Ref.make(false)
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
+                      then unfold($parallelism)(${^})(${^}).exit
+                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
         yield
           ()
       }
@@ -618,77 +568,64 @@ package sΠ:
     /**
       * modulo replication input guard w/ code
       */
-    def inputCode[T](ether: Expr[{}])
+    def inputCode[T](ether: Expr[`{}`])
                     (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(code: Expr[T => Task[T]])(body: Expr[`Π-Function1`])
                     (sleep: Expr[UIO[Unit]])
                     (% : Expr[%], / : Expr[/], \ : Expr[\])
                     (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
                     (using Type[T], Quotes): Expr[UIO[Unit]] =
      '{ for
-          moduloP  <- Promise.make[Nothing, Boolean]
           moduloCB <- CyclicBarrier.make($parallelism)
-          firstS   <- Semaphore[UIO](1)
+          moduloP  <- Promise.make[Nothing, Boolean]
+          moduloS  <- Semaphore[UIO](0)
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[UIO], ints: List[Ref[Boolean]])(^ : String)(^^ : String): UIO[Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): UIO[Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              val intR = ints.head
-              val interrupt = ZIO.collectAllDiscard(ints.map(_.set(true))) *> firstS.release *> ZIO.interrupt
-              for
-                nextS <- if last then ZIO.succeed(firstS) else Semaphore[UIO](0)
-                sync   = moduloCB.await.exit *> prevS.acquire *> intR.get.flatMap { if _ then nextS.release *> ZIO.interrupt else ZIO.unit }
-                main   =
-                  for
-                    stop <- if first then ZIO.succeed(false) else moduloP.await
-                    _    <- (interrupt.when(last) *> ZIO.interrupt).when(stop)
-                    loop <- ( for
-                                _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
-                                continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
-                                promise  <- Promise.make[Nothing, Option[<>]]
-                                _        <- promise.succeed(None).unless(first)
-                                result   <- Ref.make(`null`)
-                                _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Right(result)), $rate)))
-                                opt      <- promise.await
-                                _        <- (moduloP.succeed(opt eq None) *> (interrupt.when(last) *> ZIO.interrupt).when(opt eq None)).when(first)
-                              yield {
-                                def loop(enabled: Boolean = first): UIO[Unit] =
-                                  for
-                                    _   <- sync
-                                    _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
-                                    opt <- continue.get.flatMap(_.await)
-                                    _   <- ((moduloCB.await.exit *> interrupt).when(last) *> nextS.release *> sync).when(opt eq None)
-                                    _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
-                                    (_, b,
-                                     f, _) = opt.get
-                                    _   <- b.await.exit
-                                    _   <- f.join
-                                    n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
-                                    _   <- $sleep
-                                    _   <- nextS.release
-                                    _   <- $body(n)(using ^^)
-                                    _   <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                intR  <- Ref.make(false)
-                _     <- if last
-                         then main
-                         else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1, nextS, intR :: ints)(^^)))
-              yield
-                ()
+              val main =
+                for
+                  _    <- (moduloCB.await.exit *> ZIO.interrupt).whenZIO(moduloP.await).unless(first)
+                  loop <- ( for
+                              _        <- exclude($key)(${%})(${`π-elvis`}).when(first)
+                              continue <- Promise.make[Nothing, Option[<>]].flatMap(Ref.make)
+                              promise  <- Promise.make[Nothing, Option[<>]]
+                              _        <- promise.succeed(None).unless(first)
+                              result   <- Ref.make(null.asInstanceOf[`()`])
+                              _        <- ${/}.offer(^ -> $key -> (promise -> continue, ($ether, Some(Right(result)), $rate)))
+                              opt      <- promise.await
+                              _        <- (moduloP.succeed(opt eq None) *> (moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)).when(first)
+                            yield {
+                              def loop(enabled: Boolean = first): UIO[Unit] =
+                                for
+                                  _   <- moduloS.acquire.unless(enabled)
+                                  _   <- ${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +)]._2)) }).unless(enabled)
+                                  opt <- continue.get.flatMap(_.await)
+                                  _   <- (moduloS.release *> moduloCB.await.exit *> ZIO.interrupt).when(opt eq None)
+                                  _   <- Promise.make[Nothing, Option[<>]].flatMap(continue.set)
+                                  (_, b,
+                                   f, _) = opt.get
+                                  _   <- b.await.exit
+                                  _   <- f.join
+                                  n   <- result.get.map(_.name.asInstanceOf[T]).flatMap($code).map(new `()`(_))
+                                  _   <- $sleep
+                                  _   <- moduloS.release
+                                  _   <- $body(n)(using ^^)
+                                  _   <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else ZIO.scoped(main.forkScoped *> Random.nextUUID.map(_.toString).flatMap(unfold(remaining - 1)(^^)))
             unfold
           }
-          intR     <- Ref.make(false)
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS, intR :: Nil)(${^})(${^}).exit
-                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism, firstS, intR :: Nil)(${^})(_).exit)
+                      then unfold($parallelism)(${^})(${^}).exit
+                      else Random.nextUUID.map(_.toString).flatMap(unfold($parallelism)(${^})(_).exit)
         yield
           ()
       }
-
-    // duplicated value to avoid cyclic dependencies
-    private val `null` = new `()`(null)

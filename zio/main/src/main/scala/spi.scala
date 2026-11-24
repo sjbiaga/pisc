@@ -32,6 +32,8 @@ package object sΠ:
 
   import _root_.scala.reflect.{ ClassTag, classTag }
 
+  import _root_.cats.effect.std.Semaphore
+  import _root_.zio.interop.catz.generic.*
   import _root_.zio.{ Duration, Exit, Promise, Ref, Task, UIO, ZIO }
 
   import `Π-loop`.{ <>, %, /, \ }
@@ -44,6 +46,11 @@ package object sΠ:
 
   type `Π-Function0` = () => String ?=> UIO[Any]
   type `Π-Function1` = `()` => String ?=> UIO[Any]
+
+  /**
+    * Type of ether.
+    */
+  type `{}` = Option[Semaphore[UIO]]
 
   /**
     * Type of causal sets.
@@ -97,7 +104,7 @@ package object sΠ:
   object ν:
 
     def map[B](f: `()` => B): UIO[B] = flatMap(f andThen ZIO.succeed)
-    def flatMap[B](f: `()` => UIO[B]): UIO[B] = f(new {})
+    def flatMap[B](f: `()` => UIO[B]): UIO[B] = Semaphore[UIO](1).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -112,7 +119,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        _        <- /.offer(^ -> key -> (promise -> null, (`new {}`, None, rate)))
+        _        <- /.offer(^ -> key -> (promise -> null, (`None {}`, None, rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -429,7 +436,7 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        _        <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Left(())), rate)))
+        _        <- /.offer(^ -> key -> (promise -> null, (`()`[`{}`], Some(Left(())), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,
@@ -458,8 +465,8 @@ package object sΠ:
       for
         _        <- exclude(key)
         promise  <- Promise.make[Nothing, Option[<>]]
-        result   <- Ref.make[`()`](sΠ.`()`.`null`)
-        _        <- /.offer(^ -> key -> (promise -> null, (`()`[{}], Some(Right(result)), rate)))
+        result   <- Ref.make(null.asInstanceOf[`()`])
+        _        <- /.offer(^ -> key -> (promise -> null, (`()`[`{}`], Some(Right(result)), rate)))
         opt      <- promise.await
         _        <- if opt eq None then ZIO.interrupt else ZIO.unit
         (delay,

@@ -47,16 +47,17 @@ import `Π-traces`.{ KeyBy, Plugin }
 
 package object `Π-loop`:
 
-  import sΠ.{ `Π-Map`, `Π-Set`, `()`, `[]` }
+  import sΠ.{ `Π-Map`, `Π-Set`, `{}`, `[]`, `()` }
 
 
   type <> = (Double, CyclicBarrier[IO], FiberIO[Unit], Ref[IO, `()`], `[]`)
 
   type ++ = ((Deferred[IO, Option[<>]], Ref[IO, Deferred[IO, Option[<>]]]), Ref[IO, Long])
-  type + = (++, ({}, Option[Either[Unit, Ref[IO, `()`]]], Rate, `[]`))
+  type + = (++, (`{}`, Option[Either[Unit, Ref[IO, `()`]]], Rate, `[]`))
 
   type % = AtomicCell[IO, Map[String, Int | (Boolean, +)]]
 
+  type !! = Deferred[IO, Unit]
   type ! = Deferred[IO, ExitCode]
 
   type &| = Ref[IO, Long]
@@ -65,7 +66,7 @@ package object `Π-loop`:
 
   type \ = IO[Unit] => IO[Unit]
 
-  type ++++ = ((Double, Seq[Plugin]), Ref[IO, `()`], (++, ++))
+  type ++++ = ((Double, Seq[Plugin]), (`{}`, Ref[IO, `()`]), (++, ++))
   type ** = Queue[IO, List[((String, String), ++++)]]
 
   type * = Semaphore[IO]
@@ -143,36 +144,39 @@ package object `Π-loop`:
              .toMap
       if it.isEmpty
       then
-        **.offer(Nil).map(m -> _)
+        IO.pure(m -> ())
       else
-        val nel = ∥(it, plugins)(`π-wand`._1)().map {
-          case (key1, key2, in, dp) =>
+        ∥(it, plugins)(`π-wand`._1)().map {
+          case (key1, key2, ein, dp) =>
             val (dcts1, _) = m(key1).asInstanceOf[(Boolean, +)]._2
             val (dcts2, _) = m(key2).asInstanceOf[(Boolean, +)]._2
-            (key1, key2) -> (dp, in, (dcts1, dcts2))
-        }
-        nel.traverse {
-          case ((key1, key2), _) =>
-            val k1 = key1.substring(36)
-            val k2 = key2.substring(36)
-            val  ^ = key1.substring(0, 36)
-            val ^^ = key2.substring(0, 36)
-            val (((d1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-            val (((d2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
-            for
-              s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
-              s2 <- if k1 == k2
-                    then IO.pure(Set.empty)
-                    else d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
-            yield
-              (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
-           -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
-        }.map(_.foldRight(m) {
-                case ((ks, ls), map) =>
-                  ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
-                    .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
-              }
-        ).flatMap(mʹ => **.offer(nel).map(mʹ -> _))
+            (key1, key2) -> (dp, ein, (dcts1, dcts2))
+        } match
+          case Nil =>
+            IO.pure(m -> ())
+          case nel =>
+            nel.traverse {
+              case ((key1, key2), _) =>
+                val k1 = key1.substring(36)
+                val k2 = key2.substring(36)
+                val  ^ = key1.substring(0, 36)
+                val ^^ = key2.substring(0, 36)
+                val (((d1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
+                val (((d2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
+                for
+                  s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else IO.pure(Set.empty) }
+                  s2 <- if k1 == k2
+                        then IO.pure(Set.empty)
+                        else d2.tryGet.map(_ eq None).flatMap { if _ then discard(k2, m)(using ^^) else IO.pure(Set.empty) }
+                yield
+                  (s1 ++ s2 ++ when(c1 eq null)(key1) ++ when(c2 eq null)(key2))
+               -> (Nil ++ unless(c1 eq null)(key1) ++ unless(k1 == k2)(unless(c2 eq null)(key2)).flatten)
+            }.map(_.foldRight(m) {
+                    case ((ks, ls), map) =>
+                      ls.map { key => key -> (false, map(key).asInstanceOf[(Boolean, +)]._2) }
+                        .foldLeft(ks.foldLeft(map)(_ - _))(_ + _)
+                  }
+            ).flatMap(mʹ => **.offer(nel).map(mʹ -> _))
     }
 
 
@@ -200,34 +204,43 @@ package object `Π-loop`:
          }
     %.modify { m => m -> exit(m) }
 
+  private def doExit(feedback: Feedback)
+                    (using % : %): IO[Unit] =
+    feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> %.get.flatMap { m =>
+      val ks = m.filterNot(_._2.isInstanceOf[Int]).keys.toList
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.complete(None)) >>
+      ks.traverse(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => IO.unit
+                                                                      case it => it.get.flatMap(_.complete(None).void) }).void
+    }
+
+
   def loopʹ(parameters: `Π-Parameters`, started: Ref[IO, Long], batch: Ref[IO, Long], feedback: Feedback)
-           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **, ^ : ^)
+           (using % : %, &| : &|, - : -, * : *, ** : **, ^ : ^)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
       _ <- batch.set(0L) >> *.acquire.guaranteeCase { case Succeeded(_) => batch.update(_ + 1) case _ => IO.unit }.replicateA_(parameters.threshold).timeoutTo(parameters.timeout.microseconds, IO.unit)
       m  =
         for
-          nel <- **.take
-          l   <-
+          nel <- **.tryTake.map(_.getOrElse(Nil))
+          stp <-
             if nel.isEmpty
             then
               (started.get product batch.get).map(_ + _).flatMap {
                 case 0L =>
-                  canExit.ifM(feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(doExit(feedback) >> -.offer(None) >> IO.pure(None), IO.pure(Some(false)))
                 case _  =>
-                  IO.pure(true)
+                  feedback.pauseRD_stopR_exitRD.get.map(_._1._2).ifM(doExit(feedback) >> -.offer(None) >> IO.pure(Some(true)), IO.pure(Some(false)))
               }
             else
               (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
                 &|.get.flatMap { i =>
                   val fun = { (f: ((((String, String), ++++), Int)) => IO[Unit]) => if parameters.parallelism == 1 then nel.zipWithIndex.traverse(f) else nel.zipWithIndex.parTraverse(f) }
-                  fun { case (((key1, key2), (dp @ (delay, plugins), in, (((d1, c1), ts1), ((d2, c2), ts2)))), j) =>
+                  fun { case (((key1, key2), (dp @ (delay, plugins), (eth, in), (((d1, c1), ts1), ((d2, c2), ts2)))), j) =>
                           val k1 = key1.substring(36)
                           val k2 = key2.substring(36)
                           if stop
                           then
                             for
-                              _ <- **.offer(Nil)
                               _ <- d1.complete(None)
                               _ <- d2.complete(None).unlessA(k1 == k2)
                               _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
@@ -239,6 +252,7 @@ package object `Π-loop`:
                               cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                               no <- &|.updateAndGet(_ + 1)
                               _  <- sem.acquire
+                              _  <- eth.fold(IO.unit)(_.acquire)
                               _  <- started.update(_ + 1)
                               fb <- ( for
                                         _  <- cb.await
@@ -249,6 +263,7 @@ package object `Π-loop`:
                                               else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                         now <- currentTimeMillis
                                         _  <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp)))).whenA
+                                        _  <- eth.fold(IO.unit)(_.release)
                                         _  <- sem.release
                                         _  <- started.update(_ - 1)
                                       yield
@@ -271,24 +286,52 @@ package object `Π-loop`:
                               ()
                       }
                 }
-              } >> IO.pure(true)
+              } >> IO.pure(Some(false))
         yield
-          l
-      l <- ^.use(_ => (*.available >>= *.acquireN) >> peek(parameters.plugins) >> m)
-      _ <- feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
-      _ <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
-             case Some(params) =>
-               feedback.paramsR.set(params) >>
-               IO.deferred[`Π-Parameters`].flatMap(feedback.paramsRD.set) >>
-               IO.cede >> loopʹ(params, started, batch, feedback)
-             case _ =>
-               IO.cede >> loopʹ(parameters, started, batch, feedback)
-           }.whenA(l)
+          stp
+      s <- ^.use(_ => (*.available >>= *.acquireN) >> peek(parameters.plugins) >> m)
+      _ <- s.fold(IO.never)(if _ then stopʹ(parameters)
+                            else feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
+                              >> feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
+                                   case Some(params) =>
+                                     feedback.paramsR.set(params) >>
+                                     IO.deferred[`Π-Parameters`].flatMap(feedback.paramsRD.set) >>
+                                     IO.cede >> loopʹ(params, started, batch, feedback)
+                                   case _ =>
+                                     IO.cede >> loopʹ(parameters, started, batch, feedback)
+                                 })
+    yield
+      ()
+
+  private def stopʹ(parameters: `Π-Parameters`)
+                   (using % : %, * : *, ** : **, ^ : ^)
+                   (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
+    for
+      _ <- *.acquireN(parameters.threshold).timeoutTo(parameters.timeout.microseconds, IO.unit)
+      m  =
+        for
+          nel  <- **.tryTake.map(_.getOrElse(Nil))
+          _    <- nel.traverse {
+                    case ((key1, key2), (_, _, (((d1, c1), _), ((d2, c2), _)))) =>
+                      val k1 = key1.substring(36)
+                      val k2 = key2.substring(36)
+                      for
+                        _ <- d1.complete(None)
+                        _ <- d2.complete(None).unlessA(k1 == k2)
+                        _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                        _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                      yield
+                        ()
+                  }
+        yield
+          ()
+      _ <- ^.use(_ => (*.available >>= *.acquireN) >> peek(parameters.plugins) >> m)
+      _ <- IO.cede >> stopʹ(parameters)
     yield
       ()
 
   def loop0(parameters: `Π-Parameters`, started: Ref[IO, Long], feedback: Feedback)
-           (using % : %, ! : !, &| : &|, - : -, * : *, ** : **)
+           (using % : %, &| : &|, - : -, * : *, ** : **)
            (implicit `π-wand`: (`Π-Map`[String, `Π-Set`[String]], `Π-Map`[String, `Π-Set`[String]])): IO[Unit] =
     for
       nel  <- **.take
@@ -303,18 +346,18 @@ package object `Π-loop`:
                 else
                   IO.pure(Some(nel))
               )
-      l    <- ( if opt eq None
+      _    <- ( if opt eq None
                 then
-                  canExit.ifM(feedback.doneR.set(true) >> feedback.pauseRD_stopR_exitRD.get.flatMap(_._2.get) >> -.offer(None) >> IO.pure(false), IO.pure(true))
+                  canExit.ifM(doExit(feedback) >> -.offer(None) >> IO.never, IO.unit)
                 else if opt.get.isEmpty
                 then
-                  IO.pure(true)
+                  feedback.pauseRD_stopR_exitRD.get.map(_._1._2).ifM(doExit(feedback) >> -.offer(None) >> stop0, IO.unit)
                 else
                   val nel = opt.get
                   (feedback.pauseRD_stopR_exitRD.get.map(_._1._2) product Semaphore[IO](parameters.parallelism)).flatMap { (stop, sem) =>
                     &|.get.flatMap { i =>
                       val fun = { (f: ((((String, String), ++++), Int)) => IO[Unit]) => if parameters.parallelism == 1 then nel.zipWithIndex.traverse(f) else nel.zipWithIndex.parTraverse(f) }
-                      fun { case (((key1, key2), (dp @ (delay, plugins), in, (((d1, c1), ts1), ((d2, c2), ts2)))), j) =>
+                      fun { case (((key1, key2), (dp @ (delay, plugins), (eth, in), (((d1, c1), ts1), ((d2, c2), ts2)))), j) =>
                               val k1 = key1.substring(36)
                               val k2 = key2.substring(36)
                               if stop
@@ -332,6 +375,7 @@ package object `Π-loop`:
                                   cb <- CyclicBarrier[IO](if k1 == k2 then 2 else 3)
                                   no <- &|.updateAndGet(_ + 1)
                                   _  <- sem.acquire
+                                  _  <- eth.fold(IO.unit)(_.acquire)
                                   _  <- started.update(_ + 1)
                                   fb <- ( for
                                             _  <- cb.await
@@ -342,8 +386,9 @@ package object `Π-loop`:
                                                   else feedback.keyByR.get.map(if _ then KeyBy.AGENT_LABEL else KeyBy.ANY)
                                             now <- currentTimeMillis
                                             _  <- feedback.tracesR.get >>= -.offer(Some((no, (ss, now), (k1, k2, kb), (i -> j, dp)))).whenA
+                                            _  <- eth.fold(IO.unit)(_.release)
                                             _  <- sem.release
-                                            _  <- started.updateAndGet(_ - 1).map(_ == 0) >>= peek(parameters.plugins).whenA
+                                            _  <- started.updateAndGet(_ - 1).map(_ == 0) >>= **.offer(Nil).whenA
                                           yield
                                             ()
                                         ).start
@@ -364,7 +409,7 @@ package object `Π-loop`:
                                   ()
                           }
                     }
-                  } >> IO.pure(true)
+                  }.void
               )
       _    <- feedback.pauseRD_stopR_exitRD.get.flatMap(_._1._1.get)
       _    <- feedback.paramsRD.get.flatMap(_.tryGet).flatMap {
@@ -374,7 +419,26 @@ package object `Π-loop`:
                   IO.cede >> loop0(params, started, feedback)
                 case _ =>
                   IO.cede >> loop0(parameters, started, feedback)
-              }.whenA(l)
+              }
+    yield
+      ()
+
+  private def stop0(using ** : **): IO[Unit] =
+    for
+      nel  <- **.take
+      _    <- nel.traverse {
+                case ((key1, key2), (_, _, (((d1, c1), _), ((d2, c2), _)))) =>
+                  val k1 = key1.substring(36)
+                  val k2 = key2.substring(36)
+                  for
+                    _ <- d1.complete(None)
+                    _ <- d2.complete(None).unlessA(k1 == k2)
+                    _ <- c1.get.flatMap(_.complete(None)).unlessA(c1 eq null)
+                    _ <- c2.get.flatMap(_.complete(None)).unlessA(c2 eq null).unlessA(k1 == k2)
+                  yield
+                    ()
+              }
+      _    <- IO.cede >> stop0
     yield
       ()
 

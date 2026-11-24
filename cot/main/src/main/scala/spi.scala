@@ -41,7 +41,7 @@ package object sΠ:
   import _root_.cats.{ Applicative, Defer, Functor, Monad }
   import _root_.cats.data.OptionT
   import _root_.cats.effect.{ Deferred, Ref, Temporal }
-  import _root_.cats.effect.std.UUIDGen
+  import _root_.cats.effect.std.{ Semaphore, UUIDGen }
 
   import `Π-loop`.{ <>, %, /, \ }
   import `Π-stats`.Rate
@@ -53,6 +53,11 @@ package object sΠ:
 
   type `Π-Function0`[F[_]] = () => String ?=> OptionT[F, Unit]
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> OptionT[F, Unit]
+
+  /**
+    * Type of ether.
+    */
+  type `{}`[F[_]] = Option[Semaphore[F]]
 
   /**
     * Type of causal sets.
@@ -105,7 +110,7 @@ package object sΠ:
   final class ν[F[_]: Defer: Temporal: UUIDGen]:
 
     def map[B](f: `()`[F] => B): OptionT[F, B] = flatMap(f andThen OptionT.pure[F].apply)
-    def flatMap[B](f: `()`[F] => OptionT[F, B]): OptionT[F, B] = f(new {})
+    def flatMap[B](f: `()`[F] => OptionT[F, B]): OptionT[F, B] = OptionT.liftF(Semaphore[F](1)).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -120,7 +125,7 @@ package object sΠ:
       for
         _        <- OptionT.liftF(exclude(key))
         deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`new {}`, None, rate))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`None {}`, None, rate))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f, _) = tuple
         _        <- OptionT.liftF(b.await)
@@ -164,7 +169,7 @@ package object sΠ:
   /**
     * names and values
     */
-  final implicit class `()`[F[_]: Defer: Temporal: UUIDGen](/*private[sΠ] */val name: Any) extends Macros[F]:
+  final implicit class `()`[F[_]: Defer: Temporal: UUIDGen](val name: Any) extends Macros[F]:
 
     def ====(that: `()`[F]) = this.name == that.name
 
@@ -435,7 +440,7 @@ package object sΠ:
       for
         _        <- OptionT.liftF(exclude(key))
         deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Left(())), rate))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f, i) = tuple
         _        <- OptionT.liftF(i.set(value))
@@ -463,7 +468,7 @@ package object sΠ:
         _        <- OptionT.liftF(exclude(key))
         deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
         result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
-        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate))))
+        _        <- OptionT.liftF(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Right(result)), rate))))
         tuple    <- OptionT.liftF(deferred.get).semiflatten
         (b, f, _) = tuple
         _        <- OptionT.liftF(b.await)

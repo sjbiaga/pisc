@@ -40,7 +40,7 @@ package object sΠ:
   import _root_.cats.syntax.flatMap.*
 
   import _root_.cats.effect.{ Async, Deferred, Ref }
-  import _root_.cats.effect.Outcome.Succeeded
+  import _root_.cats.effect.Outcome
   import _root_.cats.effect.std.{ CyclicBarrier, Semaphore, Supervisor }
 
   import _root_.fs2.Stream
@@ -57,6 +57,11 @@ package object sΠ:
   type `Π-Function1`[F[_]] = `()`[F] => String ?=> Stream[F, Unit]
 
   /**
+    * Type of ether.
+    */
+  type `{}`[F[_]] = Option[Semaphore[F]]
+
+  /**
     * Type of causal sets.
     */
   type `[]` = Set[Long]
@@ -67,19 +72,16 @@ package object sΠ:
   open case class `Π-FiberLocal`[F[_], A](get: F[A], set: A => F[Unit])
 
 
-  private val `Duration.Zero` = FiniteDuration(0, java.util.concurrent.TimeUnit.DAYS)
-
   /**
     * Supervised [[code]].
     * @param code
     */
   private def exec[F[_]: Async, T](code: => F[T]): F[T] =
     Supervisor[F](await = true)
-      .use(_.supervise(code))
-      .flatMap(_.join)
+      .use(_.supervise(code).flatMap(_.join))
       .flatMap {
-        case Succeeded(it) => it
-        case _             => Async[F].pure(null.asInstanceOf[T])
+        case Outcome.Succeeded(it) => it
+        case _                     => Async[F].pure(null.asInstanceOf[T])
       }
 
 
@@ -111,7 +113,7 @@ package object sΠ:
   final class ν[F[_]: Async]:
 
     def map[B](f: `()`[F] => B): Stream[F, B] = flatMap(f andThen Stream.emit[F, B])
-    def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] = f(new {})
+    def flatMap[B](f: `()`[F] => Stream[F, B]): Stream[F, B] = Stream.eval(Semaphore[F](1)).map(Some(_)).flatMap(f(_))
 
 
   /**
@@ -126,35 +128,27 @@ package object sΠ:
         /**
           * modulo replication guard
           */
-        def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
-
-        /**
-          * modulo replication guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply(rate: Rate)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
           for
-            _        <- if None eq * then Stream.eval(exclude(key))
-                        else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(exclude(key))
+                        else Stream.eval(?.get)
+                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-            _        <- if None eq * then Stream.unit
+            _        <- if ! then Stream.unit
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (τ.`new {}`, None, rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (τ.`None {}`, None, rate))))
             cb_fb_in <- Stream.eval(deferred.get)
-            _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
-                                                .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                        .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
             _  <- Stream.repeatEval {
               for
-                _        <- -.await
-                _        <- *.fold(Async[F].unit)(_.acquire)
+                _        <- enabled.get >>= +.acquire.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -166,26 +160,33 @@ package object sΠ:
               yield
                 it
             }.takeWhile(_.isDefined)
-            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
           yield
             ()
 
         /**
+          * modulo replication guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+          apply(rate)(key)(!, ?, -, +, *) <* Stream.sleep(pace)
+
+        /**
           * modulo replication guard w/ code
           */
-        def apply[T](rate: Rate)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                    (using %[F], /[F], \[F])
-                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+        def apply[T](rate: Rate)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+          apply(rate)(key)(!, ?, -, +, *).evalTap(_ => exec(code))
 
         /**
           * modulo replication guard w/ pace w/ code
           */
-        def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                    (using %[F], /[F], \[F])
-                    (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate, pace)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+        def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+          apply[T](rate)(key)(code)(!, ?, -, +, *) <* Stream.sleep(pace)
 
       /**
         * replication guard
@@ -199,7 +200,7 @@ package object sΠ:
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (τ.`new {}`, None, rate))))
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (τ.`None {}`, None, rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           _  <- Stream.repeatEval {
@@ -224,7 +225,7 @@ package object sΠ:
       def apply(rate: Rate, pace: FiniteDuration)(key: String)
                (using %[F], /[F], \[F])
                (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-        apply(rate)(key).spaced(pace)
+        apply(rate)(key) <* Stream.sleep(pace)
 
       /**
         * replication guard w/ code
@@ -240,7 +241,7 @@ package object sΠ:
       def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])
                   (using %[F], /[F], \[F])
                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-        apply(rate, pace)(key).evalTap(_ => exec(code))
+        apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
     /**
       * prefix
@@ -252,7 +253,7 @@ package object sΠ:
       for
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (τ.`new {}`, None, rate))))
+        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (τ.`None {}`, None, rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -282,12 +283,12 @@ package object sΠ:
     def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])
                 (using %[F], /[F])
                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-      apply(rate, pace)(key).evalTap(_ => exec(code))
+      apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
 
   object τ:
 
-    private val `new {}` = new {}
+    private def `None {}`[F[_]]: `{}`[F] = None
 
 
   /**
@@ -309,100 +310,91 @@ package object sΠ:
           /**
             * modulo replication bound output guard
             */
-          def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                   (using %[F], /[F], \[F])
-                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
-
-          /**
-            * modulo replication bound output guard w/ pace
-            */
-          def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply(rate: Rate)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                    (using % : %[F], / : /[F], \ : \[F])
                    (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                              ^ : String): Stream[F, `()`[F]] =
             for
-              _        <- if None eq * then Stream.eval(exclude(key))
-                          else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+              _        <- if ! then Stream.eval(exclude(key))
+                          else Stream.eval(?.get)
+                                     .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-              _        <- if None eq * then Stream.unit
+              _        <- if ! then Stream.unit
                           else Stream.eval(deferred.complete(None))
               enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
-              _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
-                                                  .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+              _        <- if ! then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                          .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                           else Stream.unit
               it <- Stream.repeatEval {
                 for
-                  _        <- -.await
-                  _        <- *.fold(Async[F].unit)(_.acquire)
+                  _        <- enabled.get >>= +.acquire.unlessA
                   _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                   cb_fb_in <- continue.get.flatMap(_.get)
                   _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                   _        <- enabled.set(false)
-                  it        = new {}
+                  eth      <- Semaphore[F](1).map(Some(_))
                   it       <- if cb_fb_in eq None then +.release >> -.await >> Async[F].pure(None)
                               else
                                 val (cbarrier, fiber, input) = cb_fb_in.get
-                                (input.set(it) >> cbarrier.await >> fiber.join).as(Some(it))
+                                (input.set(eth) >> cbarrier.await >> fiber.join).as(Some(eth))
                 yield
                   it
               }.takeWhile(_.isDefined).map(_.get)
-              _  <- Stream.sleep(pace)
               _  <- Stream.eval(+.release)
             yield
               it
 
           /**
+            * modulo replication bound output guard w/ pace
+            */
+          def apply(rate: Rate, pace: FiniteDuration)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+            apply(rate)(key)(!, ?, -, +, *) <* Stream.sleep(pace)
+
+          /**
             * modulo replication bound output guard w/ code
             */
-          def apply[T](rate: Rate)(key: String)(code: F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                      (using %[F], /[F], \[F])
-                      (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+          def apply[T](rate: Rate)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+            apply(rate)(key)(!, ?, -, +, *).evalTap(_ => exec(code))
 
           /**
             * modulo replication bound output guard w/ pace w/ code
             */
-          def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                      (using %[F], /[F], \[F])
-                      (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-            apply(rate, pace)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+          def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                   (using %[F], /[F], \[F])
+                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+            apply[T](rate)(key)(code)(!, ?, -, +, *) <* Stream.sleep(pace)
 
         /**
           * modulo constant replication output guard
           */
-        def apply(rate: Rate, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate,`Duration.Zero` , value)(key)(?, -, *, <, >, +)
-
-        /**
-          * modulo constant replication output guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply(rate: Rate, value: `()`[F])(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, Unit] =
           for
-            _        <- if None eq * then Stream.eval(exclude(key))
-                        else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(exclude(key))
+                        else Stream.eval(?.get)
+                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-            _        <- if None eq * then Stream.unit
+            _        <- if ! then Stream.unit
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
-            _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
-                                                .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                        .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
             _  <- Stream.repeatEval {
               for
-                _        <- -.await
-                _        <- *.fold(Async[F].unit)(_.acquire)
+                _        <- enabled.get >>= +.acquire.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -414,117 +406,116 @@ package object sΠ:
               yield
                 it
             }.takeWhile(_.isDefined)
-            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
           yield
             ()
 
         /**
+          * modulo constant replication output guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+          apply(rate, value)(key)(!, ?, -, +, *) <* Stream.sleep(pace)
+
+        /**
           * modulo constant replication output guard w/ code
           */
-        def apply[T](rate: Rate, value: `()`[F])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply[T](rate: Rate, value: `()`[F])(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                     (using %[F], /[F], \[F])
                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+          apply(rate, value)(key)(!, ?, -, +, *).evalTap(_ => exec(code))
 
         /**
           * modulo constant replication output guard w/ pace w/ code
           */
-        def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                     (using %[F], /[F], \[F])
                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply(rate, pace, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+          apply[T](rate, value)(key)(code)(!, ?, -, +, *) <* Stream.sleep(pace)
 
         object `(*)`:
 
           /**
             * modulo variable replication output guard
             */
-          def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag](_1: 1)(rate: Rate, value: => S)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                        (using DummyImplicit)
                                        (using %[F], /[F], \[F])
                                        (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              self.`(!)`.`(+)`(rate, value.asInstanceOf[`()`[F]])(key)(?, -, *, <, >, +)
+              self.`(!)`.`(+)`(rate, value.asInstanceOf[`()`[F]])(key)(!, ?, -, +, *)
             else
-              apply[S](1)(rate, Async[F].delay(value))(key)(?, -, *, <, >, +)
+              apply[S](1)(rate, Async[F].delay(value))(key)(!, ?, -, +, *)
 
           /**
             * modulo variable replication output guard w/ pace
             */
-          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                        (using DummyImplicit)
                                        (using %[F], /[F], \[F])
                                        (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              self.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`[F]])(key)(?, -, *, <, >, +)
+              self.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`[F]])(key)(!, ?, -, +, *)
             else
-              apply[S](2)(rate, pace, Async[F].delay(value))(key)(?, -, *, <, >, +)
+              apply[S](2)(rate, pace, Async[F].delay(value))(key)(!, ?, -, +, *)
 
           /**
             * modulo variable replication output guard w/ code
             */
-          def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => S)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                           (using DummyImplicit)
                                           (using %[F], /[F], \[F])
                                           (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              self.`(!)`.`(+)`(rate, value.asInstanceOf[`()`[F]])(key)(code)(?, -, *, <, >, +)
+              self.`(!)`.`(+)`(rate, value.asInstanceOf[`()`[F]])(key)(code)(!, ?, -, +, *)
             else
-              apply[S, T](3)(rate, Async[F].delay(value))(key)(code)(?, -, *, <, >, +)
+              apply[S, T](3)(rate, Async[F].delay(value))(key)(code)(!, ?, -, +, *)
 
           /**
             * modulo variable replication output guard w/ pace w/ code
             */
-          def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => S)(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                           (using DummyImplicit)
                                           (using %[F], /[F], \[F])
                                           (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              self.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`[F]])(key)(code)(?, -, *, <, >, +)
+              self.`(!)`.`(+)`(rate, pace, value.asInstanceOf[`()`[F]])(key)(code)(!, ?, -, +, *)
             else
-              apply[S, T](4)(rate, pace, Async[F].delay(value))(key)(code)(?, -, *, <, >, +)
+              apply[S, T](4)(rate, pace, Async[F].delay(value))(key)(code)(!, ?, -, +, *)
 
           /**
             * modulo variable replication output guard
             */
-          def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                                       (using %[F], /[F], \[F])
-                                       (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply[S](2)(rate, `Duration.Zero`, value)(key)(?, -, *, <, >, +)
-
-          /**
-            * modulo variable replication output guard w/ pace
-            */
-          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag](_1: 1)(rate: Rate, value: => F[S])(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                        (using % : %[F], / : /[F], \ : \[F])
                                        (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                                                  ^ : String): Stream[F, Unit] =
             if classTag[S].runtimeClass eq self.getClass
             then
-              Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`.`(+)`(rate, pace, _)(key)(?, -, *, <, >, +))
+              Stream.eval(Async[F].defer(value.asInstanceOf[F[`()`[F]]])).flatMap(self.`(!)`.`(+)`(rate, _)(key)(!, ?, -, +, *))
             else
               for
-                _        <- if None eq * then Stream.eval(exclude(key))
-                            else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+                _        <- if ! then Stream.eval(exclude(key))
+                            else Stream.eval(?.get)
+                                       .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                 deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
                 continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                _        <- if None eq * then Stream.unit
+                _        <- if ! then Stream.unit
                             else Stream.eval(deferred.complete(None))
                 enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
-                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+                _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
                 cb_fb_in <- Stream.eval(deferred.get)
-                _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
-                                                    .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+                _        <- if ! then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                            .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                             else Stream.unit
                 _  <- Stream.repeatEval {
                   for
-                    _        <- -.await
-                    _        <- *.fold(Async[F].unit)(_.acquire)
+                    _        <- enabled.get >>= +.acquire.unlessA
                     _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                     cb_fb_in <- continue.get.flatMap(_.get)
                     _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -536,60 +527,59 @@ package object sΠ:
                   yield
                     it
                 }.takeWhile(_.isDefined)
-                _  <- Stream.sleep(pace)
                 _  <- Stream.eval(+.release)
               yield
                 ()
 
           /**
-            * modulo variable replication output guard w/ code
+            * modulo variable replication output guard w/ pace
             */
-          def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => F[S])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                           (using %[F], /[F], \[F])
                                           (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply[S](1)(rate, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+            apply[S](1)(rate, value)(key)(!, ?, -, +, *) <* Stream.sleep(pace)
+
+          /**
+            * modulo variable replication output guard w/ code
+            */
+          def apply[S: ClassTag, T](_3: 3)(rate: Rate, value: => F[S])(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                                          (using %[F], /[F], \[F])
+                                          (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
+            apply[S](1)(rate, value)(key)(!, ?, -, +, *).evalTap(_ => exec(code))
 
           /**
             * modulo variable replication output guard w/ pace w/ code
             */
-          def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(code: => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+          def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(code: => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                                           (using %[F], /[F], \[F])
                                           (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-            apply[S](2)(rate, pace, value)(key)(?, -, *, <, >, +).evalTap(_ => exec(code))
+            apply[S, T](3)(rate, value)(key)(code)(!, ?, -, +, *) <* Stream.sleep(pace)
 
         /**
           * modulo replication input guard
           */
-        def apply(rate: Rate)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
-                 (using %[F], /[F], \[F])
-                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-          apply(rate, `Duration.Zero`)(key)(?, -, *, <, >, +)
-
-        /**
-          * modulo replication input guard w/ pace
-          */
-        def apply(rate: Rate, pace: FiniteDuration)(key: String)(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply(rate: Rate)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                  (using % : %[F], / : /[F], \ : \[F])
                  (implicit `π-elvis`: `Π-Map`[String, `Π-Set`[String]],
                            ^ : String): Stream[F, `()`[F]] =
           for
-            _        <- if None eq * then Stream.eval(exclude(key))
-                        else Stream.eval(?.get).ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(exclude(key))
+                        else Stream.eval(?.get)
+                                   .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-            _        <- if None eq * then Stream.unit
+            _        <- if ! then Stream.unit
                         else Stream.eval(deferred.complete(None))
             enabled  <- Stream.eval(deferred.tryGet.map(_ eq None) >>= Ref[F].of)
             result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Right(result)), rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Right(result)), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
-            _        <- if None eq * then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
-                                                .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
+            _        <- if ! then Stream.eval(?.complete(cb_fb_in eq None) >> ?.get)
+                                        .ifM(Stream.eval(-.await) >> Stream.empty, Stream.unit)
                         else Stream.unit
             _  <- Stream.repeatEval {
               for
-                _        <- -.await
-                _        <- *.fold(Async[F].unit)(_.acquire)
+                _        <- enabled.get >>= +.acquire.unlessA
                 _        <- enabled.get >>= \(%.update { m => m + (^ + key -> (true, m(^ + key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
@@ -601,27 +591,34 @@ package object sΠ:
               yield
                 it
             }.takeWhile(_.isDefined)
-            _  <- Stream.sleep(pace)
             _  <- Stream.eval(+.release)
             it <- Stream.eval(result.get)
           yield
             it
 
         /**
+          * modulo replication input guard w/ pace
+          */
+        def apply(rate: Rate, pace: FiniteDuration)(key: String)(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
+                 (using %[F], /[F], \[F])
+                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
+          apply(rate)(key)(!, ?, -, +, *) <* Stream.sleep(pace)
+
+        /**
           * modulo replication input guard w/ code
           */
-        def apply[T](rate: Rate)(key: String)(code: T => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply[T](rate: Rate)(key: String)(code: T => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                     (using %[F], /[F], \[F])
                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-          apply(rate)(key)(?, -, *, <, >, +).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+          apply(rate)(key)(!, ?, -, +, *).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
         /**
           * modulo replication input guard w/ pace w/ code
           */
-        def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: T => F[T])(? : Deferred[F, Boolean], - : CyclicBarrier[F], * : Option[Semaphore[F]], < : Ref[F, `[]`], > : Ref[F, `[]`], + : Semaphore[F])
+        def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: T => F[T])(! : Boolean, ? : Deferred[F, Boolean], - : CyclicBarrier[F], + : Semaphore[F], * : Ref[F, `[]`])
                     (using %[F], /[F], \[F])
                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-          apply(rate, pace)(key)(?, -, *, <, >, +).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+          apply[T](rate)(key)(code)(!, ?, -, +, *) <* Stream.sleep(pace)
 
       object `(ν)`:
 
@@ -637,7 +634,7 @@ package object sΠ:
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
             continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
             enabled  <- Stream.eval(Ref[F].of(true))
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
             it <- Stream.repeatEval {
@@ -646,11 +643,11 @@ package object sΠ:
                 cb_fb_in <- continue.get.flatMap(_.get)
                 _        <- Deferred[F, Option[<>[F]]] >>= continue.set
                 _        <- enabled.set(false)
-                it        = new {}
+                eth      <- Semaphore[F](1).map(Some(_))
                 it       <- if cb_fb_in eq None then Async[F].pure(None)
                             else
                               val (cbarrier, fiber, input) = cb_fb_in.get
-                              (input.set(it) >> cbarrier.await >> fiber.join).as(Some(it))
+                              (input.set(eth) >> cbarrier.await >> fiber.join).as(Some(eth))
               yield
                 it
             }.takeWhile(_.isDefined).map(_.get)
@@ -663,7 +660,7 @@ package object sΠ:
         def apply(rate: Rate, pace: FiniteDuration)(key: String)
                  (using %[F], /[F], \[F])
                  (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-          apply(rate)(key).spaced(pace)
+          apply(rate)(key) <* Stream.sleep(pace)
 
         /**
           * replication bound output guard w/ code
@@ -679,7 +676,7 @@ package object sΠ:
         def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])
                     (using %[F], /[F], \[F])
                     (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-          apply(rate, pace)(key).evalTap(_ => exec(code))
+          apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
       /**
         * constant replication output guard
@@ -693,7 +690,7 @@ package object sΠ:
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           _  <- Stream.repeatEval {
@@ -718,7 +715,7 @@ package object sΠ:
       def apply(rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)
                (using %[F], /[F], \[F])
                (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-        apply(rate, value)(key).spaced(pace)
+        apply(rate, value)(key) <* Stream.sleep(pace)
 
       /**
         * constant replication output guard w/ code
@@ -734,7 +731,7 @@ package object sΠ:
       def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(code: => F[T])
                   (using %[F], /[F], \[F])
                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-        apply(rate, pace, value)(key).evalTap(_ => exec(code))
+        apply[T](rate, value)(key)(code) <* Stream.sleep(pace)
 
       object `(*)`:
 
@@ -806,7 +803,7 @@ package object sΠ:
               deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
               continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
               enabled  <- Stream.eval(Ref[F].of(true))
-              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Left(())), rate))))
+              _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Left(())), rate))))
               cb_fb_in <- Stream.eval(deferred.get)
               if cb_fb_in ne None
               _  <- Stream.repeatEval {
@@ -831,7 +828,7 @@ package object sΠ:
         def apply[S: ClassTag](_2: 2)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)
                                      (using %[F], /[F], \[F])
                                      (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply[S](1)(rate, value)(key).spaced(pace)
+          apply[S](1)(rate, value)(key) <* Stream.sleep(pace)
 
         /**
           * variable replication output guard w/ code
@@ -847,7 +844,7 @@ package object sΠ:
         def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(code: => F[T])
                                         (using %[F], /[F], \[F])
                                         (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-          apply[S](2)(rate, pace, value)(key).evalTap(_ => exec(code))
+          apply[S, T](3)(rate, value)(key)(code) <* Stream.sleep(pace)
 
       /**
         * replication input guard
@@ -862,7 +859,7 @@ package object sΠ:
           continue <- Stream.eval(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
           enabled  <- Stream.eval(Ref[F].of(true))
           result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[{}], Some(Right(result)), rate))))
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> continue, (`()`[`{}`[F]], Some(Right(result)), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           _  <- Stream.repeatEval {
@@ -888,7 +885,7 @@ package object sΠ:
       def apply(rate: Rate, pace: FiniteDuration)(key: String)
                (using %[F], /[F], \[F])
                (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-        apply(rate)(key).spaced(pace)
+        apply(rate)(key) <* Stream.sleep(pace)
 
       /**
         * replication input guard w/ code
@@ -896,7 +893,7 @@ package object sΠ:
       def apply[T](rate: Rate)(key: String)(code: T => F[T])
                   (using %[F], /[F], \[F])
                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-        apply(rate)(key).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+        apply(rate)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
       /**
         * replication input guard w/ pace w/ code
@@ -904,7 +901,7 @@ package object sΠ:
       def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: T => F[T])
                   (using %[F], /[F], \[F])
                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-        apply(rate, pace)(key).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+        apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
     object `(ν)`:
 
@@ -918,7 +915,7 @@ package object sΠ:
         for
           _        <- Stream.eval(exclude(key))
           deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate))))
+          _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Left(())), rate))))
           cb_fb_in <- Stream.eval(deferred.get)
           if cb_fb_in ne None
           (cbarrier, fiber, input) = cb_fb_in.get
@@ -949,7 +946,7 @@ package object sΠ:
       def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: => F[T])
                   (using %[F], /[F])
                   (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-        apply(rate, pace)(key).evalTap(_ => exec(code))
+        apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
     /**
       * constant output prefix
@@ -961,7 +958,7 @@ package object sΠ:
       for
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate))))
+        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Left(())), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, input) = cb_fb_in.get
@@ -991,7 +988,7 @@ package object sΠ:
     def apply[T](rate: Rate, pace: FiniteDuration, value: `()`[F])(key: String)(code: => F[T])
                 (using %[F], /[F])
                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-      apply(rate, pace, value)(key).evalTap(_ => exec(code))
+      apply[T](rate, value)(key)(code) <* Stream.sleep(pace)
 
     object `(*)`:
 
@@ -1030,7 +1027,7 @@ package object sΠ:
                                       (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
         if classTag[S].runtimeClass eq self.getClass
         then
-          self(rate, value.asInstanceOf[`()`[F]])(key)(code)
+          self[T](rate, value.asInstanceOf[`()`[F]])(key)(code)
         else
           apply[S, T](3)(rate, Async[F].delay(value))(key)(code)
 
@@ -1043,7 +1040,7 @@ package object sΠ:
                                       (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
         if classTag[S].runtimeClass eq self.getClass
         then
-          self(rate, pace, value.asInstanceOf[`()`[F]])(key)(code)
+          self[T](rate, pace, value.asInstanceOf[`()`[F]])(key)(code)
         else
           apply[S, T](4)(rate, pace, Async[F].delay(value))(key)(code)
 
@@ -1061,7 +1058,7 @@ package object sΠ:
           for
             _        <- Stream.eval(exclude(key))
             deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
-            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Left(())), rate))))
+            _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Left(())), rate))))
             cb_fb_in <- Stream.eval(deferred.get)
             if cb_fb_in ne None
             (cbarrier, fiber, input) = cb_fb_in.get
@@ -1091,7 +1088,7 @@ package object sΠ:
       def apply[S: ClassTag, T](_4: 4)(rate: Rate, pace: FiniteDuration, value: => F[S])(key: String)(code: => F[T])
                                       (using %[F], /[F])
                                       (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, Unit] =
-        apply[S](2)(rate, pace, value)(key).evalTap(_ => exec(code))
+        apply[S, T](3)(rate, value)(key)(code) <* Stream.sleep(pace)
 
     /**
       * input prefix
@@ -1104,7 +1101,7 @@ package object sΠ:
         _        <- Stream.eval(exclude(key))
         deferred <- Stream.eval(Deferred[F, Option[<>[F]]])
         result   <- Stream.eval(Ref[F].of[`()`[F]](null))
-        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[{}], Some(Right(result)), rate))))
+        _        <- Stream.eval(/.offer(^ -> key -> (deferred -> null, (`()`[`{}`[F]], Some(Right(result)), rate))))
         cb_fb_in <- Stream.eval(deferred.get)
         if cb_fb_in ne None
         (cbarrier, fiber, _) = cb_fb_in.get
@@ -1127,7 +1124,7 @@ package object sΠ:
     def apply[T](rate: Rate)(key: String)(code: T => F[T])
                 (using %[F], /[F])
                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-      apply(rate)(key).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+      apply(rate)(key).map(_.`()`[T]).evalMap((code andThen exec)(_).map(new `()`[F](_)))
 
     /**
       * input prefix w/ pace w/ code
@@ -1135,7 +1132,7 @@ package object sΠ:
     def apply[T](rate: Rate, pace: FiniteDuration)(key: String)(code: T => F[T])
                 (using %[F], /[F])
                 (using `Π-Map`[String, `Π-Set`[String]], String): Stream[F, `()`[F]] =
-      apply(rate, pace)(key).evalMap { it => exec(code(it.`()`[T])).map(new `()`[F](_)) }
+      apply[T](rate)(key)(code) <* Stream.sleep(pace)
 
     override def toString: String = if name == null then "null" else name.toString
 

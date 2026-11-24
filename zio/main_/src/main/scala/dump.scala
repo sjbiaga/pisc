@@ -38,9 +38,6 @@ import `Π-traces`.*
 
 package object `Π-dump`:
 
-  private val spirsx = "pisc.stochastic.replications.exitcode.ignore"
-
-
   type - = TPriorityQueue[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]]
 
   given Ordering[Option[(Long, ((Long, Long), Long), (String, String, KeyBy), ((Long, Int), (Double, Seq[Plugin])))]] =
@@ -62,26 +59,8 @@ package object `Π-dump`:
       case _ =>
         ZIO.unit
 
-  private def doExit(using % : %, ! : !): UIO[Unit] =
-    %.get.flatMap { m =>
-      val ks = m.keys.toList
-      val ec =
-        if ks.isEmpty
-        then
-          ExitCode.success
-        else
-          if !sys.BooleanProp.keyExists(spirsx).value
-          && ks.forall(_.charAt(36) == '!')
-          then ExitCode.success
-          else ExitCode.failure
-      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._1._1.succeed(None))) *>
-      ZIO.collectAllParDiscard(ks.map(m(_).asInstanceOf[(Boolean, +)]._2._1._1._2 match { case null => ZIO.unit
-                                                                                          case it => it.get.flatMap(_.succeed(None).unit) })) *>
-      !.succeed(ec).unit
-    }
-
   def dump(clock: Ref[Double], feedback: Feedback)
-          (using % : %, ! : !, - : -): UIO[Unit] =
+          (using !! : !!, - : -): UIO[Unit] =
     -.take.commit.flatMap {
       case Some(_) if `π-traces` eq null =>
         dump(clock, feedback)
@@ -97,5 +76,5 @@ package object `Π-dump`:
         yield
           ()
       case _ =>
-        ZIO.attemptBlocking(`π-traces`.close).when(`π-traces` ne null).either *> doExit
+        ZIO.attemptBlocking(`π-traces`.close).when(`π-traces` ne null).either *> !!.succeed(()).unit
     }

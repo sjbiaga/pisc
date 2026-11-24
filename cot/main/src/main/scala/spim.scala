@@ -62,7 +62,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`[F])
                                                     (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication bound output guard w/ pace
@@ -70,7 +70,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`[F])
                                                     (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                     (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication bound output guard w/ code
@@ -78,7 +78,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function1`[F])
                                                    (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication bound output guard w/ pace w/ code
@@ -86,7 +86,7 @@ package sΠ:
     protected inline def output(_nu: "ν")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function1`[F])
                                                    (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                    (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(ν)`.outputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(ν)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     //////////////////////////////////////////////////////////////// CONSTANT //
 
@@ -96,7 +96,7 @@ package sΠ:
     protected inline def output(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: `()`[F])(inline key: String)(inline body: `Π-Function0`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, 'value)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo constant replication output guard w/ pace
@@ -104,7 +104,7 @@ package sΠ:
     protected inline def output(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`[F])(inline key: String)(inline body: `Π-Function0`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, 'value)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo constant replication output guard w/ code
@@ -112,7 +112,7 @@ package sΠ:
     protected inline def output(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: `()`[F])(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                          (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, 'value)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo constant replication output guard w/ pace w/ code
@@ -120,7 +120,7 @@ package sΠ:
     protected inline def output(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: `()`[F])(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                          (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ outputCode('{ `()`[{}] })('parallelism, 'rate, 'value)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, 'value)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     //////////////////////////////////////////////////////////////// VARIABLE //
 
@@ -130,7 +130,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline parallelism: Int, inline rate: Rate, inline value: => OptionT[F, S])(inline key: String)(inline body: `Π-Function0`[F])
                                                       (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(*)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, '{ () => value })('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo variable replication output guard w/ pace
@@ -138,7 +138,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => OptionT[F, S])(inline key: String)(inline body: `Π-Function0`[F])
                                                       (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                       (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(*)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, '{ () => value })('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo variable replication output guard w/ code
@@ -146,7 +146,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline parallelism: Int, inline rate: Rate, inline value: => OptionT[F, S])(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                                      (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(*)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, '{ () => value })('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo variable replication output guard w/ pace w/ code
@@ -154,7 +154,7 @@ package sΠ:
     protected inline def output[S](_s: "*")(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate, inline value: => OptionT[F, S])(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                                      (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ `(*)`.outputCode('{ `()`[{}] })('parallelism, 'rate, '{ () => value })('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ `(*)`.outputCode('{ `()`[`{}`[F]] })('parallelism, 'rate, '{ () => value })('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /////////////////////////////////////////////////////////////////// INPUT //
 
@@ -164,7 +164,7 @@ package sΠ:
     protected inline def input(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ inputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication input guard w/ pace
@@ -172,7 +172,7 @@ package sΠ:
     protected inline def input(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function1`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ inputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication input guard w/ code
@@ -180,7 +180,7 @@ package sΠ:
     protected inline def input[T: ClassTag](_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => OptionT[F, Any])(inline body: `Π-Function1`[F])
                                                      (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('code)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }, '{ classTag[T] }) }
+      ${ inputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('code)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }, '{ classTag[T] }) }
 
     /**
       * modulo replication input guard w/ pace w/ code
@@ -188,7 +188,7 @@ package sΠ:
     protected inline def input[T: ClassTag](_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(code: T => OptionT[F, Any])(inline body: `Π-Function1`[F])
                                                      (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                                      (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ inputCode('{ `()`[{}] })('parallelism, 'rate)('key)('code)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }, '{ classTag[T] }) }
+      ${ inputCode('{ `()`[`{}`[F]] })('parallelism, 'rate)('key)('code)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[Defer[F]] }, '{ summon[UUIDGen[F]] }, '{ classTag[T] }) }
 
     ////////////////////////////////////////////////////// modulo replication //
 
@@ -197,7 +197,7 @@ package sΠ:
 
   trait τMacros[F[_]: Temporal: UUIDGen]:
 
-    protected val `new {}` = new {}
+    protected val `None {}`: `{}`[F] = None
 
     import Macros.τ.*
 
@@ -207,7 +207,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ OptionT.unit })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication guard w/ pace
@@ -215,7 +215,7 @@ package sΠ:
     protected inline def silent(_f: false)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline body: `Π-Function0`[F])
                                           (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                           (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication guard w/ code
@@ -223,7 +223,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                          (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ code.void })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
     /**
       * modulo replication guard w/ pace w/ code
@@ -231,7 +231,7 @@ package sΠ:
     protected inline def silent(_t: true)(inline pace: FiniteDuration, inline parallelism: Int, inline rate: Rate)(inline key: String)(inline code: => OptionT[F, Any])(inline body: `Π-Function0`[F])
                                          (using inline % : %[F], inline / : /[F], inline \ : \[F])
                                          (using inline `π-elvis`: `Π-Map`[String, `Π-Set`[String]], inline ^ : String): OptionT[F, Unit] =
-      ${ silentCode('{`new {}`})('parallelism, 'rate)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
+      ${ silentCode('{`None {}`})('parallelism, 'rate)('key)('body)('{ code >> OptionT.sleep(pace) })('{%}, '{/}, '{\})('{`π-elvis`}, '{^})('{ summon[Temporal[F]] }, '{ summon[UUIDGen[F]] }) }
 
 
   object Macros:
@@ -247,7 +247,7 @@ package sΠ:
       /**
         * modulo replication guard
         */
-      def silentCode[F[_]](ether: Expr[{}])
+      def silentCode[F[_]](ether: Expr[`{}`[F]])
                           (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function0`[F]])
                           (sleep: Expr[OptionT[F, Unit]])
                           (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
@@ -257,61 +257,57 @@ package sΠ:
        '{ given Temporal[F] = $temporalF
           given UUIDGen[F] = $uuidGenF
           for
-            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            firstS   <- OptionT.liftF(Semaphore[F](1))
+            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+            moduloS  <- OptionT.liftF(Semaphore[F](0))
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                for
-                  nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                  main   =
-                    for
-                      _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
-                      loop <- ( for
-                                  _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
-                                  continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                                  deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-                                  _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
-                                  _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, None, $rate))))
-                                  _        <- OptionT.liftF(deferred.get)
-                                                .semiflatten
-                                                .flatTapNone(moduloD.complete(true).whenA(first))
-                                                .orElse(OptionT.unless(first)(null))
-                                  _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
-                                yield {
-                                  def loop(enabled: Boolean = first): OptionT[F, Unit] =
-                                    for
-                                      _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
-                                      _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                      tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
-                                      _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
-                                      (b, f,
-                                       _   ) = tuple
-                                      _     <- OptionT.liftF(b.await)
-                                      _     <- OptionT.liftF(f.join)
-                                      _     <- $sleep
-                                      _     <- OptionT.liftF(nextS.release)
-                                      _     <- $body()(using ^^)
-                                      _     <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
+                val main =
+                  for
+                    _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
+                    loop <- ( for
+                                _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
+                                continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+                                deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
+                                _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
+                                _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, None, $rate))))
+                                _        <- OptionT.liftF(deferred.get)
+                                              .semiflatten
+                                              .flatTapNone(moduloD.complete(true).whenA(first))
+                                              .orElse(OptionT.unless(first)(null))
+                                _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
+                              yield {
+                                def loop(enabled: Boolean = first): OptionT[F, Unit] =
+                                  for
+                                    _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
+                                    _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
+                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
+                                    _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
+                                    (b, f,
+                                     _   ) = tuple
+                                    _     <- OptionT.liftF(b.await)
+                                    _     <- OptionT.liftF(f.join)
+                                    _     <- $sleep
+                                    _     <- OptionT.liftF(moduloS.release)
+                                    _     <- $body()(using ^^).orElse(OptionT.unit[F])
+                                    _     <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
               unfold
             }
             _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS)(${^})(${^})
-                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
+                        then unfold($parallelism)(${^})(${^})
+                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
           yield
             ()
         }
@@ -322,7 +318,7 @@ package sΠ:
       /**
         * modulo replication bound output guard
         */
-      def outputCode[F[_]](ether: Expr[{}])
+      def outputCode[F[_]](ether: Expr[`{}`[F]])
                           (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`[F]])
                           (sleep: Expr[OptionT[F, Unit]])
                           (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
@@ -333,90 +329,14 @@ package sΠ:
           given Defer[F] = $deferF
           given UUIDGen[F] = $uuidGenF
           for
-            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            firstS   <- OptionT.liftF(Semaphore[F](1))
+            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+            moduloS  <- OptionT.liftF(Semaphore[F](0))
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                for
-                  nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                  main   =
-                    for
-                      _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
-                      loop <- ( for
-                                  _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
-                                  continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                                  deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-                                  _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
-                                  _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate))))
-                                  _        <- OptionT.liftF(deferred.get)
-                                                .semiflatten
-                                                .flatTapNone(moduloD.complete(true).whenA(first))
-                                                .orElse(OptionT.unless(first)(null))
-                                  _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
-                                yield {
-                                  def loop(enabled: Boolean = first): OptionT[F, Unit] =
-                                    for
-                                      _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
-                                      _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                      tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
-                                      _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
-                                      (b, f,
-                                       i   ) = tuple
-                                      n     <- ν[F]
-                                      _     <- OptionT.liftF(i.set(n))
-                                      _     <- OptionT.liftF(b.await)
-                                      _     <- OptionT.liftF(f.join)
-                                      _     <- $sleep
-                                      _     <- OptionT.liftF(nextS.release)
-                                      _     <- $body(n)(using ^^)
-                                      _     <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
-              unfold
-            }
-            _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS)(${^})(${^})
-                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
-          yield
-            ()
-        }
-
-    /**
-      * modulo constant replication output guard
-      */
-    def outputCode[F[_]](ether: Expr[{}])
-                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`[F]])(key: Expr[String])(body: Expr[`Π-Function0`[F]])
-                        (sleep: Expr[OptionT[F, Unit]])
-                        (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
-                        (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
-                        (temporalF: Expr[Temporal[F]], uuidGenF: Expr[UUIDGen[F]])
-                        (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
-     '{ given Temporal[F] = $temporalF
-        given UUIDGen[F] = $uuidGenF
-        for
-          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
-          moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          firstS   <- OptionT.liftF(Semaphore[F](1))
-          unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
-              val first = remaining == $parallelism
-              val last = remaining == 1
-              for
-                nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                main   =
+                val main =
                   for
                     _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
                     loop <- ( for
@@ -433,18 +353,19 @@ package sΠ:
                               yield {
                                 def loop(enabled: Boolean = first): OptionT[F, Unit] =
                                   for
-                                    _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
+                                    _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
                                     _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
+                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
                                     _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
                                     (b, f,
                                      i   ) = tuple
-                                    _     <- OptionT.liftF(i.set($value))
+                                    n     <- ν[F]
+                                    _     <- OptionT.liftF(i.set(n))
                                     _     <- OptionT.liftF(b.await)
                                     _     <- OptionT.liftF(f.join)
                                     _     <- $sleep
-                                    _     <- OptionT.liftF(nextS.release)
-                                    _     <- $body()(using ^^)
+                                    _     <- OptionT.liftF(moduloS.release)
+                                    _     <- $body(n)(using ^^).orElse(OptionT.unit[F])
                                     _     <- loop(false)
                                   yield ()
                                 loop()
@@ -453,16 +374,83 @@ package sΠ:
                     _    <- loop
                   yield
                     ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+                if last
+                then main
+                else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
+              unfold
+            }
+            _        <- if $parallelism == 1
+                        then unfold($parallelism)(${^})(${^})
+                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
+          yield
+            ()
+        }
+
+    /**
+      * modulo constant replication output guard
+      */
+    def outputCode[F[_]](ether: Expr[`{}`[F]])
+                        (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[`()`[F]])(key: Expr[String])(body: Expr[`Π-Function0`[F]])
+                        (sleep: Expr[OptionT[F, Unit]])
+                        (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
+                        (`π-elvis`: Expr[`Π-Map`[String, `Π-Set`[String]]], ^ : Expr[String])
+                        (temporalF: Expr[Temporal[F]], uuidGenF: Expr[UUIDGen[F]])
+                        (using Quotes, Type[F]): Expr[OptionT[F, Unit]] =
+     '{ given Temporal[F] = $temporalF
+        given UUIDGen[F] = $uuidGenF
+        for
+          moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
+          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+          moduloS  <- OptionT.liftF(Semaphore[F](0))
+          unfold    = {
+            def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
+              val first = remaining == $parallelism
+              val last = remaining == 1
+              val main =
+                for
+                  _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
+                  loop <- ( for
+                              _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
+                              continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+                              deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
+                              _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
+                              _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate))))
+                              _        <- OptionT.liftF(deferred.get)
+                                            .semiflatten
+                                            .flatTapNone(moduloD.complete(true).whenA(first))
+                                            .orElse(OptionT.unless(first)(null))
+                              _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
+                            yield {
+                              def loop(enabled: Boolean = first): OptionT[F, Unit] =
+                                for
+                                  _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
+                                  _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
+                                  tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
+                                  _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
+                                  (b, f,
+                                   i   ) = tuple
+                                  _     <- OptionT.liftF(i.set($value))
+                                  _     <- OptionT.liftF(b.await)
+                                  _     <- OptionT.liftF(f.join)
+                                  _     <- $sleep
+                                  _     <- OptionT.liftF(moduloS.release)
+                                  _     <- $body()(using ^^).orElse(OptionT.unit[F])
+                                  _     <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS)(${^})(${^})
-                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
+                      then unfold($parallelism)(${^})(${^})
+                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
         yield
           ()
       }
@@ -473,7 +461,7 @@ package sΠ:
       /**
         * modulo variable replication output guard
         */
-      def outputCode[F[_], S](ether: Expr[{}])
+      def outputCode[F[_], S](ether: Expr[`{}`[F]])
                           (parallelism: Expr[Int], rate: Expr[Rate], value: Expr[() => OptionT[F, S]])(key: Expr[String])(body: Expr[`Π-Function0`[F]])
                           (sleep: Expr[OptionT[F, Unit]])
                           (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
@@ -484,62 +472,58 @@ package sΠ:
           given Defer[F] = $deferF
           given UUIDGen[F] = $uuidGenF
           for
-            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
             moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-            firstS   <- OptionT.liftF(Semaphore[F](1))
+            moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+            moduloS  <- OptionT.liftF(Semaphore[F](0))
             unfold    = {
-              def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
+              def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
                 val first = remaining == $parallelism
                 val last = remaining == 1
-                for
-                  nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                  main   =
-                    for
-                      _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
-                      loop <- ( for
-                                  _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
-                                  continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                                  deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-                                  _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
-                                  _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate))))
-                                  _        <- OptionT.liftF(deferred.get)
-                                                .semiflatten
-                                                .flatTapNone(moduloD.complete(true).whenA(first))
-                                                .orElse(OptionT.unless(first)(null))
-                                  _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
-                                yield {
-                                  def loop(enabled: Boolean = first): OptionT[F, Unit] =
-                                    for
-                                      _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
-                                      _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                      tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
-                                      _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
-                                      (b, f,
-                                       i   ) = tuple
-                                      _     <- $value().map(new `()`[F](_)).semiflatMap(i.set)
-                                      _     <- OptionT.liftF(b.await)
-                                      _     <- OptionT.liftF(f.join)
-                                      _     <- $sleep
-                                      _     <- OptionT.liftF(nextS.release)
-                                      _     <- $body()(using ^^)
-                                      _     <- loop(false)
-                                    yield ()
-                                  loop()
-                                }
-                              )
-                      _    <- loop
-                    yield
-                      ()
-                  _     <- if last
-                           then main
-                           else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-                yield
-                  ()
+                val main =
+                  for
+                    _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
+                    loop <- ( for
+                                _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
+                                continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+                                deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
+                                _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
+                                _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Left(())), $rate))))
+                                _        <- OptionT.liftF(deferred.get)
+                                              .semiflatten
+                                              .flatTapNone(moduloD.complete(true).whenA(first))
+                                              .orElse(OptionT.unless(first)(null))
+                                _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
+                              yield {
+                                def loop(enabled: Boolean = first): OptionT[F, Unit] =
+                                  for
+                                    _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
+                                    _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
+                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
+                                    _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
+                                    (b, f,
+                                     i   ) = tuple
+                                    _     <- $value().map(new `()`[F](_)).semiflatMap(i.set)
+                                    _     <- OptionT.liftF(b.await)
+                                    _     <- OptionT.liftF(f.join)
+                                    _     <- $sleep
+                                    _     <- OptionT.liftF(moduloS.release)
+                                    _     <- $body()(using ^^).orElse(OptionT.unit[F])
+                                    _     <- loop(false)
+                                  yield ()
+                                loop()
+                              }
+                            )
+                    _    <- loop
+                  yield
+                    ()
+                if last
+                then main
+                else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
               unfold
             }
             _        <- if $parallelism == 1
-                        then unfold($parallelism, firstS)(${^})(${^})
-                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
+                        then unfold($parallelism)(${^})(${^})
+                        else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
           yield
             ()
         }
@@ -548,7 +532,7 @@ package sΠ:
     /**
       * modulo replication input guard
       */
-    def inputCode[F[_]](ether: Expr[{}])
+    def inputCode[F[_]](ether: Expr[`{}`[F]])
                        (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(body: Expr[`Π-Function1`[F]])
                        (sleep: Expr[OptionT[F, Unit]])
                        (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
@@ -558,63 +542,59 @@ package sΠ:
      '{ given Temporal[F] = $temporalF
         given UUIDGen[F] = $uuidGenF
         for
-          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
           moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          firstS   <- OptionT.liftF(Semaphore[F](1))
+          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+          moduloS  <- OptionT.liftF(Semaphore[F](0))
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              for
-                nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                main   =
-                  for
-                    _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
-                    loop <- ( for
-                                _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
-                                continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                                deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-                                _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
-                                result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
-                                _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate))))
-                                _        <- OptionT.liftF(deferred.get)
-                                              .semiflatten
-                                              .flatTapNone(moduloD.complete(true).whenA(first))
-                                              .orElse(OptionT.unless(first)(null))
-                                _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
-                              yield {
-                                def loop(enabled: Boolean = first): OptionT[F, Unit] =
-                                  for
-                                    _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
-                                    _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
-                                    _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
-                                    (b, f,
-                                     _   ) = tuple
-                                    _     <- OptionT.liftF(b.await)
-                                    _     <- OptionT.liftF(f.join)
-                                    n     <- OptionT.liftF(result.get)
-                                    _     <- $sleep
-                                    _     <- OptionT.liftF(nextS.release)
-                                    _     <- $body(n)(using ^^)
-                                    _     <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+              val main =
+                for
+                  _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
+                  loop <- ( for
+                              _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
+                              continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+                              deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
+                              _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
+                              result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
+                              _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate))))
+                              _        <- OptionT.liftF(deferred.get)
+                                            .semiflatten
+                                            .flatTapNone(moduloD.complete(true).whenA(first))
+                                            .orElse(OptionT.unless(first)(null))
+                              _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
+                            yield {
+                              def loop(enabled: Boolean = first): OptionT[F, Unit] =
+                                for
+                                  _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
+                                  _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
+                                  tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
+                                  _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
+                                  (b, f,
+                                   _   ) = tuple
+                                  _     <- OptionT.liftF(b.await)
+                                  _     <- OptionT.liftF(f.join)
+                                  n     <- OptionT.liftF(result.get)
+                                  _     <- $sleep
+                                  _     <- OptionT.liftF(moduloS.release)
+                                  _     <- $body(n)(using ^^).orElse(OptionT.unit[F])
+                                  _     <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS)(${^})(${^})
-                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
+                      then unfold($parallelism)(${^})(${^})
+                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
         yield
           ()
       }
@@ -622,7 +602,7 @@ package sΠ:
     /**
       * modulo replication input guard w/ code
       */
-    def inputCode[F[_], T](ether: Expr[{}])
+    def inputCode[F[_], T](ether: Expr[`{}`[F]])
                           (parallelism: Expr[Int], rate: Expr[Rate])(key: Expr[String])(code: Expr[T => OptionT[F, Any]])(body: Expr[`Π-Function1`[F]])
                           (sleep: Expr[OptionT[F, Unit]])
                           (% : Expr[%[F]], / : Expr[/[F]], \ : Expr[\[F]])
@@ -634,68 +614,64 @@ package sΠ:
         given UUIDGen[F] = $uuidGenF
         given ClassTag[T] = $classTag
         for
-          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
           moduloCB <- OptionT.liftF(CyclicBarrier[F]($parallelism))
-          firstS   <- OptionT.liftF(Semaphore[F](1))
+          moduloD  <- OptionT.liftF(Deferred[F, Boolean])
+          moduloS  <- OptionT.liftF(Semaphore[F](0))
           unfold    = {
-            def unfold(remaining: Int, prevS: Semaphore[F])(^ : String)(^^ : String): OptionT[F, Unit] =
+            def unfold(remaining: Int)(^ : String)(^^ : String): OptionT[F, Unit] =
               val first = remaining == $parallelism
               val last = remaining == 1
-              for
-                nextS <- OptionT.liftF(if last then Temporal[F].pure(firstS) else Semaphore[F](0))
-                main   =
-                  for
-                    _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
-                    loop <- ( for
-                                _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
-                                continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
-                                deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
-                                _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
-                                result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
-                                _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate))))
-                                _        <- OptionT.liftF(deferred.get)
-                                              .semiflatten
-                                              .flatTapNone(moduloD.complete(true).whenA(first))
-                                              .orElse(OptionT.unless(first)(null))
-                                _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
-                              yield {
-                                def loop(enabled: Boolean = first): OptionT[F, Unit] =
-                                  for
-                                    _     <- OptionT.liftF(moduloCB.await >> prevS.acquire)
-                                    _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
-                                    tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(nextS.release)
-                                    _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
-                                    (b, f,
-                                     _   ) = tuple
-                                    _     <- OptionT.liftF(b.await)
-                                    _     <- OptionT.liftF(f.join)
-                                    n     <- OptionT.liftF(result.get)
-                                               .map(_.name)
-                                               .flatMap {
-                                                 case it @ null => OptionT.pure(it)
-                                                 case it: T => $code(it)
-                                               }.map(new `()`[F](_))
-                                    _     <- $sleep
-                                    _     <- OptionT.liftF(nextS.release)
-                                    _     <- $body(n)(using ^^)
-                                    _     <- loop(false)
-                                  yield ()
-                                loop()
-                              }
-                            )
-                    _    <- loop
-                  yield
-                    ()
-                _     <- if last
-                         then main
-                         else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1, nextS)(^^) }
-              yield
-                ()
+              val main =
+                for
+                  _    <- OptionT.unlessM(if first then Temporal[F].pure(false) else moduloD.get)(Temporal[F].unit)
+                  loop <- ( for
+                              _        <- OptionT.liftF(exclude($key)(${%})(${`π-elvis`}).whenA(first))
+                              continue <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= Ref[F].of)
+                              deferred <- OptionT.liftF(Deferred[F, Option[<>[F]]])
+                              _        <- OptionT.liftF(deferred.complete(None).unlessA(first))
+                              result   <- OptionT.liftF(Ref[F].of[`()`[F]](null))
+                              _        <- OptionT.liftF(${/}.offer(^ -> $key -> (deferred -> continue, ($ether, Some(Right(result)), $rate))))
+                              _        <- OptionT.liftF(deferred.get)
+                                            .semiflatten
+                                            .flatTapNone(moduloD.complete(true).whenA(first))
+                                            .orElse(OptionT.unless(first)(null))
+                              _        <- OptionT.liftF(moduloD.complete(false).whenA(first))
+                            yield {
+                              def loop(enabled: Boolean = first): OptionT[F, Unit] =
+                                for
+                                  _     <- OptionT.liftF(moduloS.acquire.unlessA(enabled))
+                                  _     <- OptionT.liftF(${\}(${%}.update { m => m + (^ + $key -> (true, m(^ + $key).asInstanceOf[(Boolean, +[F])]._2)) }).unlessA(enabled))
+                                  tuple <- OptionT.liftF(continue.get.flatMap(_.get)).semiflatten.flatTapNone(moduloS.release >> moduloCB.await)
+                                  _     <- OptionT.liftF(Deferred[F, Option[<>[F]]] >>= continue.set)
+                                  (b, f,
+                                   _   ) = tuple
+                                  _     <- OptionT.liftF(b.await)
+                                  _     <- OptionT.liftF(f.join)
+                                  n     <- OptionT.liftF(result.get)
+                                             .map(_.name)
+                                             .flatMap {
+                                               case it @ null => OptionT.pure(it)
+                                               case it: T => $code(it)
+                                             }.map(new `()`[F](_))
+                                  _     <- $sleep
+                                  _     <- OptionT.liftF(moduloS.release)
+                                  _     <- $body(n)(using ^^).orElse(OptionT.unit[F])
+                                  _     <- loop(false)
+                                yield ()
+                              loop()
+                            }
+                          )
+                  _    <- loop
+                yield
+                  ()
+              if last
+              then main
+              else main.background.use { _ => OptionT.liftF(UUIDGen.randomString[F]) >>= unfold(remaining - 1)(^^) }
             unfold
           }
           _        <- if $parallelism == 1
-                      then unfold($parallelism, firstS)(${^})(${^})
-                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism, firstS)(${^})
+                      then unfold($parallelism)(${^})(${^})
+                      else OptionT.liftF(UUIDGen.randomString[F]) >>= unfold($parallelism)(${^})
         yield
           ()
       }

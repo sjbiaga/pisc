@@ -109,6 +109,13 @@ abstract trait Meta extends emitter.shared.effects.Meta:
       Enumerator.Generator(`* <- …`(), Term.Apply(\(\), Term.ArgClause(Term.Block(* :: Nil) :: Nil)))
 
 
+  def `? <- *.onCancel(….release)`(* : List[Enumerator], `…`: String): List[Enumerator] =
+    *.last match
+      case it: Enumerator.Generator =>
+        *.init :+ it.copy(rhs = Term.Apply(Term.Select(it.rhs, "onCancel"),
+                                           Term.ArgClause(Term.Select(`…`, "release") :: Nil)))
+
+
   val `: String ?=> IO[Any]` =
     `: IO[Any]`.map(Type.ContextFunction(Type.FuncParamClause(\\("String") :: Nil), _))
 

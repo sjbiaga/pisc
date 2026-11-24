@@ -44,5 +44,5 @@ package object `Π-dump`:
 
 
   def dump(_clock: Ref[Double], _feedback: Feedback)
-          (using % : %, ! : !, - : -): UIO[Unit] =
-    ZIO.unit
+          (using !! : !!, - : -): UIO[Unit] =
+    !!.succeed(()).unit

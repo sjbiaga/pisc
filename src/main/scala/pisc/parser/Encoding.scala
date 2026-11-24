@@ -542,13 +542,12 @@ object Encoding:
           it.cc(definition = dfnʹ, sum = sumʹ, xid = xidʹ, pointers = pointersʹ) -> true
 
         case it @ `{}`(_, pointers, _, params*) =>
-          val pointersʹ = pointers.map(renamed(_).asSymbol)
           val paramsʹ: Seq[λ] = params
             .map {
               case λ(it: Symbol) => renamed(it)
               case it => it
             }
-          it.cc(pointers = pointersʹ, params = paramsʹ)
+          it.cc(pointers = pointers.map(renamed(_).asSymbol), params = paramsʹ)
 
         case it @ `(*)`(_, params*) =>
           val paramsʹ: Seq[λ] = params
