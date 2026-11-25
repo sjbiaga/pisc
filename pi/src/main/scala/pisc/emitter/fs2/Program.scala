@@ -671,7 +671,7 @@ object Program:
 
         ////////////////////////////////////////////////////////// invocation //
 
-      *
+      flatify(*).toList
 
 
   final class Main:

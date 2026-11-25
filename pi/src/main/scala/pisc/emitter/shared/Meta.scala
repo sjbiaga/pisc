@@ -161,6 +161,15 @@ abstract trait Meta:
     )
 
 
+  def flatify(* : Seq[Enumerator]): Seq[Enumerator] =
+    *.flatMap {
+      case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
+        flatify(it.enums)
+      case it =>
+        Some(it)
+    }
+
+
 object Meta extends Meta:
 
   val `()(null)`: Term =

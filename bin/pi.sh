@@ -44,7 +44,7 @@ function pi() {
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.1'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.14.0
+            local deps='--dep co.fs2::fs2-core:3.16.0
                         --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
@@ -78,7 +78,7 @@ function pi() {
         scala)
             set ${srcs#?} ../${emit}/pi.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1 \
+                          -q -O -nowarn -S 3.10.2-RC1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1
@@ -138,7 +138,7 @@ function pi_() {
             local deps='--dep org.apache.pekko::pekko-actor-typed:1.7.1'
             ;;
         fs2)
-            local deps='--dep co.fs2::fs2-core:3.14.0
+            local deps='--dep co.fs2::fs2-core:3.16.0
                         --dep dev.zio::zio-interop-cats:23.1.0.15
                         -Dcats.effect.warnOnNonMainThreadDetected=false'
             ;;
@@ -172,7 +172,7 @@ function pi_() {
         scala)
             set ${srcs#?} ../${emit}/pi_.scala
             scala-cli run "$@" $deps \
-                          -q -O -nowarn -S 3.10.1 \
+                          -q -O -nowarn -S 3.10.2-RC1 \
                           --dep eu.timepit::refined:0.11.4 \
                           ${args#?} \
                           2>&1

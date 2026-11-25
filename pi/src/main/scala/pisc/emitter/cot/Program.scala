@@ -28,14 +28,14 @@
 
 package pisc
 package emitter
-package ce
+package cot
 
 import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
 import parser.Encoding.*
-import ce.Meta.*
+import cot.Meta.*
 
 
 object Program:
@@ -66,13 +66,21 @@ object Program:
                 else
                   `if * then … else …`(====(lhs, rhs), cases(t), Nil)
               case _ =>
-                `_ <- *.tryAcquire.ifM`(semaphore.get, sum.emit)
+                val υidυ = id
+                `* <- liftF(*)`(υidυ, Term.Select(semaphore.get, "tryAcquire")) ::
+                `_ <- *`(Term.Select(
+                           Term.Apply(
+                             Term.Apply(Term.Select("OptionT", "when"),
+                                        Term.ArgClause(υidυ :: Nil)),
+                             Term.ArgClause((sum.emit: Term) :: Nil)),
+                           "flatten")) ::
+                Nil
 
           `_ <- *`(cases(`+`(-1, ∥(-1, it))))
 
         case _ => ???
 
-    def emit: List[Enumerator] =
+    def emit(implicit _pace: Option[(Long, String)] = None): List[Enumerator] =
 
       var * = List[Enumerator]()
 
@@ -88,15 +96,15 @@ object Program:
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val ios = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val ots = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
             `* <- Semaphore(…)`(sem.get, 1),
-            `_ <- *`(`List( *, … ).parSequence`(ios*))
+            `_ <- *`(`List( *, … ).parSequence`(ots*))
           )
 
         case it: + =>
-          val ios = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val ots = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val sem = id
 
@@ -104,12 +112,12 @@ object Program:
           then
             * = List(
               `* <- Semaphore(…)`(sem, 1),
-              `_ <- *`(`List( *, … ).parTraverse(…)`(ios*)(sem))
+              `_ <- *`(`List( *, … ).parSequence(…)`(ots*)(sem))
             )
           else
             * = List(
               `* <- Semaphore(…)`(sem, 1),
-              `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parTraverse(…)`(ios*)(sem), "parReplicateA_"),
+              `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parSequence(…)`(ots*)(sem), "parReplicateA_"),
                                   Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
             )
 
@@ -122,13 +130,13 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
+          val ots = it.components.foldRight(List[Term]())(_.emit :: _)
 
           if it.scaling.abs == 1
           then
-            * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+            * = `_ <- *`(`List( *, … ).parSequence`(ots*))
           else
-            * = `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parSequence`(ios*), "parReplicateA_"),
+            * = `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parSequence`(ots*), "parReplicateA_"),
                                     Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
 
         ///////////////////////////////////////////////////////// composition //
@@ -145,41 +153,41 @@ object Program:
         // RESTRICTION | PREFIXES //////////////////////////////////////////////
 
         case ν(names*) =>
-          * = names.map { it => `* <- *`(it -> "ν") }.toList
+          * = names.map { it => `* <- *`(it -> `*[F]`("ν")) }.toList
 
 
         case τ(Some((Left(enums), _))) =>
-          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
+          * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)))
           * = * ::: enums
 
         case τ(Some((Right(term), _))) =>
-          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
-          * :+= `_ <- IO { * }`(term)
+          * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)))
+          * :+= `_ <- liftF(*)`(term)
 
         case τ(_) =>
-          * = `_ <- *`(Term.Apply(\("τ"), Term.ArgClause(Nil)))
+          * = `_ <- *`(Term.Apply(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), Term.ArgClause(Nil)))
 
 
         case π(λ(Symbol(ch)), arg @ λ(_: Term), None, code) =>
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
-                                        Term.ArgClause(arg.toTerm::Nil)),
-                             Term.ArgClause(expr::Nil)
+                                        Term.ArgClause(arg.toTerm :: Nil)),
+                             Term.ArgClause(expr :: Nil)
                            ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr: Term = `_ <- liftF(*)`(term)
               * = `_ <- *`(Term.Apply(
                              Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(true) :: Nil)),
-                                        Term.ArgClause(arg.toTerm::Nil)),
-                             Term.ArgClause(expr::Nil)
+                                        Term.ArgClause(arg.toTerm :: Nil)),
+                             Term.ArgClause(expr :: Nil)
                            ))
             case _ =>
               * = `_ <- *`(Term.Apply(Term.Apply(\(ch), Term.ArgClause(Lit.Boolean(false) :: Nil)),
-                                      Term.ArgClause(arg.toTerm::Nil)))
+                                      Term.ArgClause(arg.toTerm :: Nil)))
 
         case π(λ(Symbol(ch)), arg, nu @ (None | Some("ν")), code) =>
           val argʹ =
@@ -194,19 +202,19 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
-                               Term.ArgClause(expr::Nil)
+                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm :: Nil)),
+                               Term.ArgClause(expr :: Nil)
                              ))
             case Some((Right(term), _)) =>
-              val expr = `for * yield ()`(`_ <- IO { * }`(term))
+              val expr: Term = `_ <- liftF(*)`(term)
               * :+= `_ <- *`(Term.Apply(
-                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)),
-                               Term.ArgClause(expr::Nil)
+                               Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm :: Nil)),
+                               Term.ArgClause(expr :: Nil)
                              ))
             case _ =>
-              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm::Nil)))
+              * :+= `_ <- *`(Term.Apply(\(ch), Term.ArgClause(argʹ.toTerm :: Nil)))
 
           nu match
             case None =>
@@ -238,7 +246,7 @@ object Program:
 
           code match
             case Some((Right(term), _)) =>
-              * :+= `_ <- IO { * }`(term)
+              * :+= `_ <- liftF(*)`(term)
             case _ =>
 
         case π(λ(Symbol(ch)), λ @ λ(Symbol(arg)), Some(_), code) =>
@@ -248,7 +256,7 @@ object Program:
             case Some((Right(term), _)) =>
               * = `* <- *`(par -> Term.Apply(
                                     Term.Apply(\(ch), Term.ArgClause(Nil)),
-                                    Term.ArgClause(term::Nil)
+                                    Term.ArgClause(term :: Nil)
                            ))
             case _ =>
               * = `* <- *`(par -> Term.Apply(\(ch), Term.ArgClause(Nil)))
@@ -293,7 +301,7 @@ object Program:
 
           code match
             case Some((Left(enums), _)) =>
-              val expr = `for * yield ()`(enums*)
+              val expr: Term = enums
               * = `_ <- *`(Term.Apply(
                              Term.Apply(
                                Term.Apply(
@@ -327,7 +335,7 @@ object Program:
 
           val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
-          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, wrap(sum.emit)))
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, wrap(sum.emit)))
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg @ λ(_: Term), None, code)), sum) if parallelism < -1 =>
           val υidυ = id
@@ -364,7 +372,7 @@ object Program:
                                Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: arg.toTerm :: Nil))),
                              Term.ArgClause(\(υidυ) :: Nil)))
 
-          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, sum.emit))
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, sum.emit))
 
         case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), arg, None, code)), sum) if parallelism < -1 =>
           val υidυ = id
@@ -395,7 +403,7 @@ object Program:
                                Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: arg.toTerm :: Nil))),
                              Term.ArgClause(\(υidυ) :: Nil)))
 
-          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, sum.emit))
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, sum.emit))
 
         case !(parallelism, given Option[(Long, String)], opt, sum) if parallelism < -1 =>
           val υidυ = id
@@ -431,26 +439,16 @@ object Program:
                                Term.ArgClause(pace(Lit.Int(-(parallelism % Int.MaxValue)) :: Nil))),
                              Term.ArgClause(\(υidυ) :: Nil)))
 
-          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, sum.emit))
+          * ::= `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, sum.emit))
 
         // [SIZED] REPLICATION /////////////////////////////////////////////////
 
         case !(parallelism, pace, Some(π @ π(_, λ(Symbol(par)), Some("ν"), _)), sum) =>
           val υidυ = id
-          val υidυʹ = id
 
           val sem = if parallelism < 0 then null else id
 
-          val `π.emit` = π.emit match
-            case hd :: (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              hd :: it.copy(pat = Pat.Var(υidυʹ)) :: tl
-
-          var `!.π⋯` = `π.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   if parallelism < 0 then `IO.cede` else `_ <- *.release`(sem),
-                                                                   `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil))))
-                                            }
+          var `!.π⋯` = π.emit :+ `_ <- *`(Term.Apply(\(υidυ), Term.ArgClause(\(par) :: Nil)))
 
           if parallelism >= 0
           then
@@ -462,16 +460,16 @@ object Program:
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
+              else `_ <- *.flatTapNone(….release)`(sum.emit, sem) :: `_ <- *.release`(sem),
               `!⋯`
             )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, body)) :: `!.π⋯`
 
         case !(parallelism, pace, Some(π @ π(_, λ @ λ(Symbol(arg)), Some(_), _)), sum) =>
           val par = if λ.`type`.isDefined then id else arg
@@ -498,43 +496,29 @@ object Program:
                 `val * = *: *`(arg, par, tpe) :: Nil
               case _ => Nil
 
-          val wrap = { (body: Term) =>
-            `if * then … else …`(Term.ApplyUnary("!", par),
-                                 if parallelism < 0 then `IO.cede` else `_ <- *.release`(sem),
-                                 Term.Block(`val` :+ body))
-          }
+          val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
           val body =
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
+              else `_ <- *.flatTapNone(….release)`(sum.emit, sem) :: `_ <- *.release`(sem),
               `!⋯`
             )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()): IO[Any] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: ()[F]): \\[F, Unit] = …; * }`(υidυ -> par, wrap(body))) :: `!.π⋯`
 
         case !(parallelism, pace, Some(μ), sum) =>
           val υidυ = id
-          val υidυʹ = id
 
           val sem = if parallelism < 0 then null else id
 
-          val `μ.emit` = μ.emit match
-            case (it @ Enumerator.Generator(Pat.Wildcard(), _)) :: tl =>
-              it.copy(pat = Pat.Var(υidυʹ)) :: tl
-
-          var `!.μ⋯` = `μ.emit` :+ `_ <- *` { `if * then … else …`(Term.ApplyInfix(\(υidυʹ), \("eq"),
-                                                                                   Type.ArgClause(Nil),
-                                                                                   Term.ArgClause(\("None") :: Nil)),
-                                                                   if parallelism < 0 then `IO.cede` else `_ <- *.release`(sem),
-                                                                   `_ <- *`(υidυ))
-                                            }
+          var `!.μ⋯` = μ.emit :+ `_ <- *`(υidυ)
 
           if parallelism >= 0
           then
@@ -546,16 +530,16 @@ object Program:
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
+              else `_ <- *.flatTapNone(….release)`(sum.emit, sem) :: `_ <- *.release`(sem),
               `!⋯`
             )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.μ⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.μ⋯`
 
         case !(parallelism, pace, _, sum) =>
           val υidυ = id
@@ -574,16 +558,16 @@ object Program:
             `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit
-              else sum.emit :+ `_ <- *.release`(sem),
+              else `_ <- *.flatTapNone(….release)`(sum.emit, sem) :: `_ <- *.release`(sem),
               `_ <- \\.unit` :: `!⋯`
             )
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+            * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ, `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+                `* <- *`(υidυ, `\\.\\\\ { lazy val *: \\[F, Unit] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -613,16 +597,20 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * = `_ <- *`(Term.Apply(term, Term.ArgClause(args)))
+          * = `_ <- *`(Term.Apply(Term.ApplyType(term, Type.ArgClause(\\("F") :: Nil)), Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
-      *
+      flatify(*).toList
 
 
   final class Main:
 
-    def apply(prog: List[Bind]): List[Stat] =
+    implicit private def `*[F]`(* : List[Enumerator]): Term =
+      if *.nonEmpty then `for *[F] yield ()`(* *)
+      else \(`_ <- \\.unit`)
+
+    def apply(prog: List[Bind])(using Set[String]): List[Stat] =
       val id = new helper.υidυ
 
       extension (self: Term)

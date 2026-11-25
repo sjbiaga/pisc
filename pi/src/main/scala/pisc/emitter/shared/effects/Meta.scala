@@ -73,22 +73,21 @@ abstract trait Meta extends shared.Meta:
       if !(*.head.isInstanceOf[Enumerator.Generator])
       then
         `for * yield ()`((`_ <- \\.unit` +: *)*)
-      else if *.size == 1
-      then
-        *.head match
-          case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
-            `for * yield ()`(it.enums*)
-          case Enumerator.Generator(Pat.Wildcard(), it) =>
-            it
-          case _ =>
-            Term.ForYield(*.toList, Lit.Unit())
       else
-        *.last match
-          case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")))
-             | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)), Lit.Unit() :: Nil)) =>
-            `for * yield ()`(*.init*)
-          case _ =>
-            Term.ForYield(*.toList, Lit.Unit())
+        flatify(*) match
+          case Seq(head) =>
+            head match
+              case Enumerator.Generator(Pat.Wildcard(), it) =>
+                it
+              case _ =>
+                Term.ForYield(List(head), Lit.Unit())
+          case it @ (init :+ last) =>
+            last match
+              case Enumerator.Generator(Pat.Wildcard(), Term.Select(Term.Name(`\\`), Term.Name("unit" | "cede")))
+                 | Enumerator.Generator(Pat.Wildcard(), Term.Apply(Term.Select(Term.Name(`\\`), Term.Name(`\\\\`)), Lit.Unit() :: Nil)) =>
+                `for * yield ()`(init*)
+              case _ =>
+                Term.ForYield(it.toList, Lit.Unit())
     else
       `for * yield ()`(`_ <- \\.unit`)
 
