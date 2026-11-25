@@ -28,7 +28,7 @@
 
 package masc
 package emitter
-package ce
+package zio
 
 import scala.meta.*
 import dialects.Scala3
@@ -58,14 +58,13 @@ object Program:
           * = operand.emit
 
         case it: ∥ =>
-          val ios = it.components.foldRight(List[Term]())(_.emit :: _)
+          val uios = it.components.foldRight(List[Term]())(_.emit :: _)
 
           if it.scaling.abs == 1
           then
-            * = `_ <- *`(`List( *, … ).parSequence`(ios*))
+            * = `_ <- *`(`List( *, … ).collectAllPar`(uios*))
           else
-            * = `_ <- *`(Term.Apply(Term.Select(`List( *, … ).parSequence`(ios*), "parReplicateA_"),
-                                    Term.ArgClause(Lit.Int(it.scaling) :: Nil)))
+            * = `_ <- *`(`List( *, … ).collectAllPar(N)`(uios*)(it.scaling))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -90,7 +89,7 @@ object Program:
 
         case τ(Some((Right(term), _))) =>
           * = `_ <- *`("τ")
-          * :+= `_ <- IO { * }`(term)
+          * :+= `_ <- ZIO { * }`(term)
 
         case τ(_) =>
           * = `_ <- *`("τ")
@@ -130,16 +129,16 @@ object Program:
           then
             `!.().⋯` ::= `_ <- *.acquire`(sem)
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.().⋯`).getOrElse(`!.().⋯`)
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.().⋯`).getOrElse(`!.().⋯`)
 
           val wrap = { (body: Term) =>
             Term.If(Term.ApplyUnary("!", name),
-                    if parallelism < 0 then `IO.cede` else `_ <- *.release`(sem): Term,
+                    if parallelism < 0 then `ZIO.yieldNow` else `_ <- *.release`(sem): Term,
                     body)
           }
 
           val body =
-            `List( *, … ).parSequence`(
+            `List( *, … ).collectAllPar`(
               if parallelism < 0
               then par.emit
               else par.emit :+ `_ <- *.release`(sem),
@@ -148,10 +147,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
+            * = `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): IO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
+                `* <- *`(υidυ -> `\\.\\\\ { def *(*: )(): UIO[Any] = …; * }`(υidυ -> name, wrap(body))) :: `!.().⋯`
 
         case !(parallelism, pace, _, par) =>
           val υidυ = id
@@ -164,10 +163,10 @@ object Program:
           then
             `!.⋯` ::= `_ <- *.acquire`(sem)
 
-          val `!⋯` = pace.map(`_ <- IO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
+          val `!⋯` = pace.map(`_ <- ZIO.sleep(*.…)`(_, _) :: `!.⋯`).getOrElse(`!.⋯`)
 
           val body =
-            `List( *, … ).parSequence`(
+            `List( *, … ).collectAllPar`(
               if parallelism < 0
               then par.emit
               else par.emit :+ `_ <- *.release`(sem),
@@ -176,10 +175,10 @@ object Program:
 
           if parallelism < 0
           then
-            * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+            * = `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
           else
             * = `* <- Semaphore(…)`(sem, parallelism) ::
-                `* <- *`(υidυ, `\\.\\\\ { lazy val *: IO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
+                `* <- *`(υidυ, `\\.\\\\ { lazy val *: UIO[Any] = …; * }`(υidυ, body)) :: `!.⋯`
 
         ///////////////////////////////////////////////////////// replication //
 
@@ -189,7 +188,7 @@ object Program:
         case `[]`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(Term.Select("}{", "}{"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.emit))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(** ::: par.emit))
 
         ///////////////////////////////////////////////////////////// ambient //
 
@@ -199,7 +198,7 @@ object Program:
         case `go.`(amb, par) =>
           val ** = `_ <- *`(Term.Apply(Term.Select("}{", "ζ"), Term.ArgClause(\(")(") :: \(amb) :: Nil)))
 
-          * = `_ <- *`(`List( *, … ).parSequence`(** ::: par.emit))
+          * = `_ <- *`(`List( *, … ).collectAllPar`(** ::: par.emit))
 
         ////////////////////////////////////////////////////////////////// go //
 
@@ -252,12 +251,12 @@ object Program:
             case h :: t => (t.map(\(_)) :+ \("π") :+ \(identifier)).foldLeft(h: Term)(Term.Select(_, _))
             case _ => \(identifier)
 
-          * = `_ <- *`(Term.Apply(Term.Apply(term, Term.ArgClause(\(")(") :: \("}{") :: Nil)),
+          * = `_ <- *`(Term.Apply(Term.Apply(term, Term.ArgClause(\(")(") :: Nil)),
                                   Term.ArgClause(args)))
 
         ////////////////////////////////////////////////////////// invocation //
 
-      *
+      flatify(*).toList
 
 
   final class Main:

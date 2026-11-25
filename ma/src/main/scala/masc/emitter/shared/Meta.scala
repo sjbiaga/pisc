@@ -69,6 +69,15 @@ abstract trait Meta:
     Enumerator.Generator(`* <- …`(), *)
 
 
+  def flatify(* : Seq[Enumerator]): Seq[Enumerator] =
+    *.flatMap {
+      case Enumerator.Generator(Pat.Wildcard(), it: Term.ForYield) =>
+        flatify(it.enums)
+      case it =>
+        Some(it)
+    }
+
+
   val `<>(null)`: Term =
     Term.Apply(Term.Select("}{", "<>"),
                Term.ArgClause(Term.Apply(

@@ -41,7 +41,7 @@ function ma() {
     done
     set ${srcs#?} ../${emit}/ma.scala
     scala-cli run "$@" $deps \
-                  -q -O -nowarn -S 3.10.1 \
+                  -q -O -nowarn -S 3.10.2-RC1 \
                   ${args#?} \
                   2>&1
 }
