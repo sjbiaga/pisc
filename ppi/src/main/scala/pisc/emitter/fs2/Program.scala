@@ -28,14 +28,14 @@
 
 package pisc
 package emitter
-package monix
+package fs2
 
 import scala.meta.*
 import dialects.Scala3
 
 import parser.Calculus.*
 import parser.Encoding.*
-import monix.Meta.*
+import fs2.Meta.*
 
 
 object Program:
@@ -84,41 +84,52 @@ object Program:
 
         case ∅() =>
 
-        case +(_, operand) =>
+        case +(-1|1, operand) =>
           * = operand.emit
 
         case it: + if it.scaling == -1 && it.choices.forall { case ∥(-1, `.`(?:(_, _, None))) => true case _ => false } =>
           implicit val sem = Some(id)
 
-          val ifs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
+          val sfs = it.choices.foldRight(List[Term]())(_.emitʹ :: _)
 
           * = List(
             `* <- Semaphore(…)`(sem.get, 1),
-            `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
+            `_ <- *`(`List( *, … ).parSequence`(sfs*))
           )
 
         case it: + =>
-          val ifs = it.choices.foldRight(List[Term]())(_.emit :: _)
+          val sfs = it.choices.foldRight(List[Term]())(_.emit :: _)
 
           val sem = id
 
-          * = List(
-            `* <- Semaphore(…)`(sem, 1),
-            `_ <- *`(`Observable( *, … ).mapParF(…)`(ifs*)(sem))
-          )
+          if it.scaling.abs == 1
+          then
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(`List( *, … ).parSequence(…)`(sfs*)(sem))
+            )
+          else
+            * = List(
+              `* <- Semaphore(…)`(sem, 1),
+              `_ <- *`(`List( *, … ).parSequence(N, …)`(sfs*)(it.scaling, sem))
+            )
 
         /////////////////////////////////////////////////////////// summation //
 
 
         // COMPOSITION /////////////////////////////////////////////////////////
 
-        case ∥(_, operand) =>
+        case ∥(-1|1, operand) =>
           * = operand.emit
 
         case it: ∥ =>
-          val ifs = it.components.foldRight(List[Term]())(_.emit :: _)
+          val sfs = it.components.foldRight(List[Term]())(_.emit :: _)
 
-          * = `_ <- *`(`Observable( *, … ).mapParF`(ifs*))
+          if it.scaling.abs == 1
+          then
+            * = `_ <- *`(`List( *, … ).parSequence`(sfs*))
+          else
+            * = `_ <- *`(`List( *, … ).parSequence(N)`(sfs*)(it.scaling))
 
         ///////////////////////////////////////////////////////// composition //
 
@@ -304,7 +315,7 @@ object Program:
 
         // (UNIT) REPLICATION //////////////////////////////////////////////////
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some("ν"), code, params*)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some("ν"), code, params*)), sum) =>
 
           val args = params.map(_.asSymbol.name)
           val arity = Lit.Int(args.size)
@@ -323,7 +334,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some(_), code, params*)), sum) =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -359,7 +370,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if args.forall { case λ(Lit.Null()) => true case _ => false } =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if args.forall { case λ(Lit.Null()) => true case _ => false } =>
 
           val arity = Lit.Int(args.size)
 
@@ -377,7 +388,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if args.forall { case λ(_: Term) => true case _ => false } =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if args.forall { case λ(_: Term) => true case _ => false } =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -401,7 +412,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) =>
+        case !(Int.MinValue, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) =>
 
           val n = (_pace, code) match
             case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
@@ -425,7 +436,7 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], Some(τ(code)), sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], Some(τ(code)), sum) =>
 
           code match
             case Some((Left(enums), _)) =>
@@ -440,11 +451,178 @@ object Program:
 
           * = * ::: sum.emit()
 
-        case !(1, given Option[(Long, String)], _, sum) =>
+        case !(Int.MinValue, given Option[(Long, String)], _, sum) =>
 
           * = `_ <- *`(Term.Apply(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), Term.ArgClause(pace(Nil))))
 
           * = * ::: sum.emit()
+
+        // (MODULO) REPLICATION ////////////////////////////////////////////////
+
+        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some("ν"), code, params*)), sum) if parallelism < -1 =>
+
+          val args = params.map(_.asSymbol.name)
+          val arity = Lit.Int(args.size)
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr: Term = enums
+              * = `* <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(ν)"), Term.ArgClause(arity :: pace(Nil))),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit(),
+                           args*)
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `* <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(ν)"), Term.ArgClause(arity :: pace(Nil))),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit(),
+                           args*)
+            case _ =>
+              * = `* <- +`(-parallelism,
+                           Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(ν)"), Term.ArgClause(arity :: pace(Nil))),
+                           sum.emit(),
+                           args*)
+
+        case !(parallelism, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), Some(_), code, params*)), sum) if parallelism < -1 =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
+
+          val args = params.map {
+            case λ @ λ(Symbol(_)) if λ.`type`.isDefined => id
+            case λ(Symbol(par)) => par
+          }
+
+          params.zipWithIndex.foreach {
+            case (λ @ λ(Symbol(arg)), i) =>
+              val par = args(i)
+              λ.`type` match
+                case Some((tpe, Some(refined))) =>
+                  * :+= `* = *: * …`(arg, par, tpe, refined)
+                case Some((tpe, _)) =>
+                  * :+= `* = *: *`(arg, par, tpe)
+                case _ =>
+          }
+
+          code match
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `* <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), n), Term.ArgClause(pace(Nil))),
+                                      Term.ArgClause(expr :: Nil)),
+                           * ::: sum.emit(),
+                           args*)
+            case _ =>
+              * = `* <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), n), Term.ArgClause(pace(Nil))),
+                           * ::: sum.emit(),
+                           args*)
+
+        case !(parallelism, given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if parallelism < -1 && args.forall { case λ(Lit.Null()) => true case _ => false } =>
+
+          val arity = Lit.Int(args.size)
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr: Term = enums
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(null)"), Term.ArgClause(arity :: pace(Nil))),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(null)"), Term.ArgClause(arity :: pace(Nil))),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case _ =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(null)"), Term.ArgClause(arity :: pace(Nil))),
+                           sum.emit())
+
+        case !(parallelism, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if parallelism < -1 && args.forall { case λ(_: Term) => true case _ => false } =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
+
+          val argc = Term.ArgClause(pace(args.map(_.toTerm).toList))
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr: Term = enums
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n), argc),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n), argc),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case _ =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Select(ch, "(!)"), "(+)"), "(*)"), n), argc),
+                           sum.emit())
+
+        case !(parallelism, _pace @ given Option[(Long, String)], Some(π(λ(Symbol(ch)), None, code, args*)), sum) if parallelism < -1 =>
+
+          val n = (_pace, code) match
+            case (None, None)       => Term.ArgClause(Lit.Int(1) :: Nil)
+            case (Some(_), None)    => Term.ArgClause(Lit.Int(2) :: Nil)
+            case (None, Some(_))    => Term.ArgClause(Lit.Int(3) :: Nil)
+            case (Some(_), Some(_)) => Term.ArgClause(Lit.Int(4) :: Nil)
+
+          val argc = Term.ArgClause(pace(args.map(_.toTerm).toList))
+
+          code match
+            case Some((Left(enums), _)) =>
+              val expr: Term = enums
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), n), argc),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case Some((Right(term), _)) =>
+              val expr = term
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), n), argc),
+                                      Term.ArgClause(expr :: Nil)),
+                           sum.emit())
+            case _ =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(ch, "(!)"), "(+)"), n), argc),
+                           sum.emit())
+
+        case !(parallelism, given Option[(Long, String)], Some(τ(code)), sum) if parallelism < -1 =>
+
+          code match
+            case Some((Left(enums), _)) =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Select(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
+                           `liftF(…)`(enums) ::: sum.emit())
+            case Some((Right(term), _)) =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Apply(Term.Select(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
+                                      Term.ArgClause(term :: Nil)),
+                           sum.emit())
+            case _ =>
+              * = `_ <- +`(-parallelism,
+                           Term.Apply(Term.Select(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
+                           sum.emit())
+
+        case !(parallelism, given Option[(Long, String)], None, sum) if parallelism < -1 =>
+
+          * = `_ <- +`(-parallelism,
+                       Term.Apply(Term.Select(Term.Select(Term.Apply(`*[F]`("τ"), Term.ArgClause(Nil)), "(!)"), "(+)"), Term.ArgClause(pace(Nil))),
+                       sum.emit())
 
         // [SIZED] REPLICATION /////////////////////////////////////////////////
 
@@ -480,7 +658,7 @@ object Program:
           val wrap = { (body: Term) => Term.Block(`val` :+ body) }
 
           val body =
-            `Observable( *, … ).mapParF`(
+            `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit()
               else sum.emit() :+ `_ <- *.release`(sem),
@@ -506,7 +684,7 @@ object Program:
             `!.μ⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
-            `Observable( *, … ).mapParF`(
+            `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit()
               else sum.emit() :+ `_ <- *.release`(sem),
@@ -532,7 +710,7 @@ object Program:
             `!.⋯` ::= `_ <- *.acquire`(sem)
 
           val body =
-            `Observable( *, … ).mapParF`(
+            `List( *, … ).parSequence`(
               if parallelism < 0
               then sum.emit()
               else sum.emit() :+ `_ <- *.release`(sem),
@@ -578,7 +756,7 @@ object Program:
 
         ////////////////////////////////////////////////////////// invocation //
 
-      *
+      flatify(*).toList
 
 
   final class Main:

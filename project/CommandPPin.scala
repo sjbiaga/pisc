@@ -18,7 +18,7 @@ object CommandPPin {
 
     // https://stackoverflow.com/questions/30653900/sbt-parsers-and-dynamic-completions
 
-    val dir = extracted.get(baseDirectory).getPath.toString
+    val dir = Path.of(extracted.get(baseDirectory).getPath).getParent.toString
 
     def examples(path: String, prefix: String) = {
       val fileExamples = new FileExamples(new File(Path.of(dir, "examples", path).toString), prefix)
