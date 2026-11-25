@@ -211,7 +211,7 @@ object Meta extends emitter.shared.effects.Meta:
         `for * yield ()`(^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`_ <- *`(Term.Apply(replication,
-                                                                                    Term.ArgClause(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
+                                                                                    Term.ArgClause(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(parallelism) :: Nil))
                                                                                                 :: \(promise) :: \(cbarrier) :: \(semaphore) :: \(ref) :: Nil))) :: sum*),
                                                "πdrainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),
@@ -259,7 +259,7 @@ object Meta extends emitter.shared.effects.Meta:
         `for * yield ()`(^._1
                       :: `_ <- *`(Term.Apply(Term.Select(
                                                `for * yield ()`(`* <- *`(parameter -> Term.Apply(replication,
-                                                                                                 Term.ArgClause(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil))
+                                                                                                 Term.ArgClause(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(parallelism) :: Nil))
                                                                                                              :: \(promise) :: \(cbarrier) :: \(semaphore) :: \(ref) :: Nil))) :: sum*),
                                                "πdrainFork"),
                                              Term.ArgClause(Term.If(Term.ApplyInfix(\(remaining), \("=="), Type.ArgClause(Nil), Term.ArgClause(Lit.Int(1) :: Nil)),

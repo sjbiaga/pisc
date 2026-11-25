@@ -151,13 +151,11 @@ package object `Π-loop`:
           case nel =>
             ZIO.collectAll {
               nel.map {
-                case ((key1, key2), _) =>
+                case ((key1, key2), (_, _, (((p1, c1), _), ((p2, c2), _)))) =>
                   val k1 = key1.substring(36)
                   val k2 = key2.substring(36)
                   val  ^ = key1.substring(0, 36)
                   val ^^ = key2.substring(0, 36)
-                  val (((p1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +)]._2
-                  val (((p2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +)]._2
                   for
                     s1 <- p1.isDone.negate.flatMap { if _ then discard(k1, m)(using  ^) else ZIO.succeed(Set.empty) }
                     s2 <- if k1 == k2

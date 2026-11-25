@@ -18,7 +18,7 @@ object Dependencies {
   lazy val avro = "org.apache.avro" % "avro" % "1.12.2"
   lazy val avroʹ = "io.confluent" % "kafka-avro-serializer" % "8.4.1" exclude ("org.apache.kafka", "kafka-clients")
   lazy val rabbitmq = "com.rabbitmq" % "amqp-client" % "5.38.0"
-  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.59.8"
+  lazy val amazonsqs = "software.amazon.awssdk" % "sqs" % "2.59.9"
   lazy val circe = "io.circe" %% "circe-generic" % "0.14.17"
   lazy val fs2circe = "org.gnieh" %% "fs2-data-json-circe" % "1.14.1"
   lazy val elastic4s = Seq("nl.gn0s1s" %% "elastic4s-client-sttp4",

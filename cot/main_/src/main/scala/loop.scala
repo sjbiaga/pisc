@@ -162,13 +162,11 @@ package object `Π-loop`:
               Temporal[F].pure(m -> ())
             case nel =>
               nel.traverse {
-                case ((key1, key2), _) =>
+                case ((key1, key2), (_, _, (((d1, c1), _), ((d2, c2), _)))) =>
                   val k1 = key1.substring(36)
                   val k2 = key2.substring(36)
                   val  ^ = key1.substring(0, 36)
                   val ^^ = key2.substring(0, 36)
-                  val (((d1, c1), _), _) = m(key1).asInstanceOf[(Boolean, +[F])]._2
-                  val (((d2, c2), _), _) = m(key2).asInstanceOf[(Boolean, +[F])]._2
                   for
                     s1 <- d1.tryGet.map(_ eq None).flatMap { if _ then discard(k1, m)(using  ^) else Temporal[F].pure(Set.empty) }
                     s2 <- if k1 == k2

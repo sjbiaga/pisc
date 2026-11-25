@@ -211,7 +211,7 @@ function spi_() {
                           --dep org.apache.avro:avro:1.12.2 \
                           --dep io.confluent:kafka-avro-serializer:8.4.1,exclude=org.apache.kafka%kafka-clients \
                           --dep com.rabbitmq:amqp-client:5.38.0 \
-                          --dep software.amazon.awssdk:sqs:2.59.8 \
+                          --dep software.amazon.awssdk:sqs:2.59.9 \
                           ${args#?} \
                           2>&1
 #                          -Dpisc.stochastic.communications.bind.address=localhost \
